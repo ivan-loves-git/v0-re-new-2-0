@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { formatDistanceToNow } from "date-fns"
 import { useRouter } from "next/navigation"
+import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
 import type { Repreneur } from "@/lib/types/repreneur"
 
 interface RepreneurCardProps {
@@ -19,9 +20,14 @@ export function RepreneurCard({ repreneur, isDragging = false }: RepreneurCardPr
       onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
     >
       <div className="space-y-2">
-        <h3 className="font-semibold text-sm">
-          {repreneur.first_name} {repreneur.last_name}
-        </h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-sm">
+            {repreneur.first_name} {repreneur.last_name}
+          </h3>
+          {repreneur.journey_stage && (
+            <JourneyStageBadge stage={repreneur.journey_stage} showIcon={false} />
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">{repreneur.email}</p>
         <p className="text-xs text-muted-foreground">
           Added {formatDistanceToNow(new Date(repreneur.created_at), { addSuffix: true })}

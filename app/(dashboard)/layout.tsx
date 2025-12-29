@@ -9,7 +9,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const isV0Preview = process.env.VERCEL_ENV === undefined || process.env.VERCEL_ENV === "preview"
+  // Only bypass auth in V0 preview (where VERCEL_ENV is undefined)
+  // Vercel production AND preview deployments will have VERCEL_ENV set, so auth is enforced
+  const isV0Preview = process.env.VERCEL_ENV === undefined
 
   let userEmail = "preview@renew.com"
 

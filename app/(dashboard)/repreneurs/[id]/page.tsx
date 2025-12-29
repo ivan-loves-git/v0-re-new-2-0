@@ -1,11 +1,12 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Target } from "lucide-react"
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Target, Compass } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
+import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
 import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { UpdateStatusForm } from "@/components/repreneurs/update-status-form"
 import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
@@ -108,6 +109,17 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 </div>
               </div>
             </div>
+            {repreneur.journey_stage && (
+              <div className="flex items-center gap-3">
+                <Compass className="h-5 w-5 text-gray-400" />
+                <div>
+                  <Label className="text-xs text-gray-500">Journey Stage</Label>
+                  <div className="mt-1">
+                    <JourneyStageBadge stage={repreneur.journey_stage} />
+                  </div>
+                </div>
+              </div>
+            )}
             {repreneur.source && (
               <div>
                 <Label className="text-xs text-gray-500">Source</Label>
