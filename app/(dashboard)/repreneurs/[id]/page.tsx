@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
 import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { UpdateStatusForm } from "@/components/repreneurs/update-status-form"
+import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
 import type { Note } from "@/lib/types/repreneur"
+import type { RepreneurOffer, Offer } from "@/lib/types/offer"
 
 export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -36,6 +38,23 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     ...note,
     created_by_email: note.created_by_email?.email || "Unknown",
   }))
+
+  // Fetch repreneur offers with offer details
+  const { data: repreneurOffers } = await supabase
+    .from("repreneur_offers")
+    .select(`
+      *,
+      offer:offers(*)
+    `)
+    .eq("repreneur_id", id)
+    .order("offered_at", { ascending: false })
+
+  // Fetch all active offers for assignment
+  const { data: allOffers } = await supabase
+    .from("offers")
+    .select("*")
+    .eq("is_active", true)
+    .order("name")
 
   return (
     <div className="space-y-6">
@@ -156,6 +175,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </CardContent>
         </Card>
       )}
+
+      <RepreneurOffersList
+        repreneurId={id}
+        repreneurOffers={(repreneurOffers || []) as RepreneurOffer[]}
+        allOffers={(allOffers || []) as Offer[]}
+      />
 
       <RepreneurNotes repreneurId={id} notes={notesWithEmail as Note[]} />
     </div>
