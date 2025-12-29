@@ -29,6 +29,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const isV0Preview = process.env.VERCEL_ENV === undefined || process.env.VERCEL_ENV === "preview"
+
+  if (isV0Preview) {
+    return supabaseResponse
+  }
+
   // Protected routes - redirect to login if not authenticated
   const protectedPaths = ["/dashboard", "/repreneurs", "/pipeline", "/offers"]
   const isProtectedPath = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path))
