@@ -124,3 +124,21 @@ export async function createNote(repreneurId: string, content: string) {
 
   revalidatePath(`/repreneurs/${repreneurId}`)
 }
+
+export async function deleteRepreneur(id: string) {
+  const supabase = await createServerClient()
+
+  // Delete related records first (notes, repreneur_offers)
+  await supabase.from("notes").delete().eq("repreneur_id", id)
+  await supabase.from("repreneur_offers").delete().eq("repreneur_id", id)
+
+  // Delete the repreneur
+  const { error } = await supabase.from("repreneurs").delete().eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  redirect("/repreneurs")
+}
