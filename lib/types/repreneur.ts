@@ -1,4 +1,5 @@
 export type LifecycleStatus = "lead" | "qualified" | "client"
+export type JourneyStage = "explorer" | "learner" | "ready" | "serial_acquirer"
 
 export interface Repreneur {
   id: string
@@ -12,6 +13,7 @@ export interface Repreneur {
   target_location?: string
   target_acquisition_size?: string
   lifecycle_status: LifecycleStatus
+  journey_stage?: JourneyStage
   source?: string
   created_at: string
   updated_at: string
@@ -38,6 +40,7 @@ export interface Repreneur_Insert {
   target_location?: string
   target_acquisition_size?: string
   lifecycle_status?: LifecycleStatus
+  journey_stage?: JourneyStage
   source?: string
   created_by: string
 }

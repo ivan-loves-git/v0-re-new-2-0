@@ -13,6 +13,7 @@ const TEST_REPRENEURS = [
     target_location: "Paris, Île-de-France",
     target_acquisition_size: "€500K - €1M revenue",
     lifecycle_status: "lead",
+    journey_stage: "explorer",
     source: "LinkedIn",
   },
   {
@@ -26,6 +27,7 @@ const TEST_REPRENEURS = [
     target_location: "Lyon, Auvergne-Rhône-Alpes",
     target_acquisition_size: "€1M - €2M revenue",
     lifecycle_status: "qualified",
+    journey_stage: "ready",
     source: "Referral",
   },
   {
@@ -39,6 +41,7 @@ const TEST_REPRENEURS = [
     target_location: "Bordeaux, Nouvelle-Aquitaine",
     target_acquisition_size: "€2M - €5M revenue",
     lifecycle_status: "client",
+    journey_stage: "serial_acquirer",
     source: "Website",
   },
   {
@@ -52,6 +55,7 @@ const TEST_REPRENEURS = [
     target_location: "Marseille, Provence-Alpes-Côte d'Azur",
     target_acquisition_size: "€200K - €500K revenue",
     lifecycle_status: "lead",
+    journey_stage: "explorer",
     source: "BPI France",
   },
   {
@@ -65,6 +69,7 @@ const TEST_REPRENEURS = [
     target_location: "Toulouse, Occitanie",
     target_acquisition_size: "€500K - €1M revenue",
     lifecycle_status: "qualified",
+    journey_stage: "learner",
     source: "LinkedIn",
   },
   {
@@ -78,6 +83,7 @@ const TEST_REPRENEURS = [
     target_location: "Nantes, Pays de la Loire",
     target_acquisition_size: "€1M - €2M revenue",
     lifecycle_status: "lead",
+    journey_stage: "learner",
     source: "Trade Show",
   },
   {
@@ -91,6 +97,7 @@ const TEST_REPRENEURS = [
     target_location: "Strasbourg, Grand Est",
     target_acquisition_size: "€800K - €1.5M revenue",
     lifecycle_status: "qualified",
+    journey_stage: "ready",
     source: "Referral",
   },
   {
@@ -104,6 +111,7 @@ const TEST_REPRENEURS = [
     target_location: "Nice, Provence-Alpes-Côte d'Azur",
     target_acquisition_size: "€300K - €600K revenue",
     lifecycle_status: "client",
+    journey_stage: "ready",
     source: "Website",
   },
   {
@@ -117,6 +125,7 @@ const TEST_REPRENEURS = [
     target_location: "Lille, Hauts-de-France",
     target_acquisition_size: "€1.5M - €3M revenue",
     lifecycle_status: "lead",
+    journey_stage: "learner",
     source: "CCI",
   },
   {
@@ -130,6 +139,7 @@ const TEST_REPRENEURS = [
     target_location: "Montpellier, Occitanie",
     target_acquisition_size: "€400K - €800K revenue",
     lifecycle_status: "qualified",
+    journey_stage: "explorer",
     source: "LinkedIn",
   },
 ]
