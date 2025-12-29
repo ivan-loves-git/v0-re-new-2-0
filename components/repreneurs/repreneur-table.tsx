@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,6 +14,7 @@ interface RepreneurTableProps {
 }
 
 export function RepreneurTable({ repreneurs }: RepreneurTableProps) {
+  const router = useRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
 
@@ -72,14 +73,15 @@ export function RepreneurTable({ repreneurs }: RepreneurTableProps) {
               </TableRow>
             ) : (
               filtered.map((repreneur) => (
-                <TableRow key={repreneur.id} className="cursor-pointer hover:bg-gray-50">
+                <TableRow
+                  key={repreneur.id}
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
+                >
                   <TableCell>
-                    <Link
-                      href={`/repreneurs/${repreneur.id}`}
-                      className="font-medium text-gray-900 hover:text-blue-600"
-                    >
+                    <span className="font-medium text-gray-900">
                       {repreneur.first_name} {repreneur.last_name}
-                    </Link>
+                    </span>
                   </TableCell>
                   <TableCell className="text-gray-600">{repreneur.email}</TableCell>
                   <TableCell>

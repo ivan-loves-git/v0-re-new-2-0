@@ -10,11 +10,12 @@ import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { UpdateStatusForm } from "@/components/repreneurs/update-status-form"
 import type { Note } from "@/lib/types/repreneur"
 
-export default async function RepreneurDetailPage({ params }: { params: { id: string } }) {
+export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createServerClient()
 
   // Fetch repreneur
-  const { data: repreneur } = await supabase.from("repreneurs").select("*").eq("id", params.id).single()
+  const { data: repreneur } = await supabase.from("repreneurs").select("*").eq("id", id).single()
 
   if (!repreneur) {
     notFound()
@@ -27,7 +28,7 @@ export default async function RepreneurDetailPage({ params }: { params: { id: st
       *,
       created_by_email:auth.users!notes_created_by_fkey(email)
     `)
-    .eq("repreneur_id", params.id)
+    .eq("repreneur_id", id)
     .order("created_at", { ascending: false })
 
   // Transform notes to include email
@@ -156,7 +157,7 @@ export default async function RepreneurDetailPage({ params }: { params: { id: st
         </Card>
       )}
 
-      <RepreneurNotes repreneurId={params.id} notes={notesWithEmail as Note[]} />
+      <RepreneurNotes repreneurId={id} notes={notesWithEmail as Note[]} />
     </div>
   )
 }
