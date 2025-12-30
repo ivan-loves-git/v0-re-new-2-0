@@ -222,43 +222,36 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {optimisticActivities.map((activity) => (
               <div
                 key={activity.id}
-                className={`flex items-start justify-between p-3 rounded-lg border ${
+                className={`flex items-center justify-between p-4 border rounded-lg ${
                   activity.id.startsWith("temp-") ? "opacity-70" : ""
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 p-2 rounded-full bg-gray-50 border">
-                    {getActivityIcon(activity.activity_type)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">
-                        {getActivityLabel(activity.activity_type)}
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">
+                      {getActivityLabel(activity.activity_type)}
+                    </span>
+                    {activity.duration_minutes && (
+                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                        {activity.duration_minutes} min
                       </span>
-                      {activity.duration_minutes && (
-                        <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
-                          {activity.duration_minutes} min
-                        </span>
-                      )}
-                    </div>
-                    {activity.notes && (
-                      <p className="text-sm text-gray-600 mt-1">{activity.notes}</p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
-                      {formatDate(activity.created_at)} by {activity.created_by_email}
-                    </p>
                   </div>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(activity.created_at)} · {activity.created_by_email}
+                    {activity.notes && ` · ${activity.notes}`}
+                  </p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 flex-shrink-0"
                       disabled={deletingId === activity.id || activity.id.startsWith("temp-")}
                     >
                       <MoreHorizontal className="h-4 w-4" />

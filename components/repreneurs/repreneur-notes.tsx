@@ -47,7 +47,6 @@ type OptimisticAction =
 export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
   const [content, setContent] = useState("")
   const [isOpen, setIsOpen] = useState(false)
-  const [expandedNote, setExpandedNote] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -149,21 +148,18 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
             <p className="text-sm text-gray-500">No notes yet</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {optimisticNotes.map((note) => (
               <div
                 key={note.id}
-                className={`flex items-start justify-between p-3 border rounded-lg hover:bg-gray-50/50 cursor-pointer ${
+                className={`flex items-center justify-between p-4 border rounded-lg ${
                   note.id.startsWith("temp-") ? "opacity-70" : ""
                 }`}
-                onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)}
               >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm text-gray-700 ${expandedNote === note.id ? "" : "line-clamp-2"}`}>
-                    {note.content}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formatDate(note.created_at)} by {note.created_by_email}
+                <div className="space-y-1 min-w-0 flex-1">
+                  <p className="font-medium text-sm line-clamp-1">{note.content}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(note.created_at)} · {note.created_by_email}
                   </p>
                 </div>
                 <DropdownMenu>
@@ -171,19 +167,15 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 ml-2"
+                      className="h-8 w-8 ml-2 flex-shrink-0"
                       disabled={deletingId === note.id || note.id.startsWith("temp-")}
-                      onClick={(e) => e.stopPropagation()}
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete(note.id)
-                      }}
+                      onClick={() => handleDelete(note.id)}
                       className="text-red-600"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
