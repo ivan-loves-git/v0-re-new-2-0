@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import type { Repreneur_Insert, LifecycleStatus } from "@/lib/types/repreneur"
+import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
 
 export async function createRepreneur(formData: FormData) {
   const supabase = await createServerClient()
@@ -306,4 +307,95 @@ export async function unrejectRepreneur(id: string) {
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
   revalidatePath("/pipeline")
+}
+
+/**
+ * Questionnaire data input type
+ */
+export interface QuestionnaireInput {
+  q1_employment_status: string | null
+  q2_years_experience: string | null
+  q3_industry_sectors: string[]
+  q4_has_ma_experience: boolean | null
+  q5_team_size: string | null
+  q6_involved_in_ma: boolean | null
+  q7_ma_details: string | null
+  q8_executive_roles: string[]
+  q9_board_experience: boolean | null
+  q10_journey_stages: string[]
+  q11_target_sectors: string[]
+  q12_has_identified_targets: boolean | null
+  q13_target_details: string | null
+  q14_investment_capacity: string | null
+  q15_funding_status: string | null
+  q16_network_training: string[]
+  q17_open_to_co_acquisition: boolean | null
+}
+
+/**
+ * Save questionnaire data and calculate Tier 1 score
+ * Score is calculated ONCE and stored as a static snapshot
+ */
+export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
+  const supabase = await createServerClient()
+
+  // Calculate the Tier 1 score
+  const scoringInput: Tier1ScoringInput = {
+    q1_employment_status: data.q1_employment_status,
+    q2_years_experience: data.q2_years_experience,
+    q3_industry_sectors: data.q3_industry_sectors,
+    q4_has_ma_experience: data.q4_has_ma_experience,
+    q5_team_size: data.q5_team_size,
+    q6_involved_in_ma: data.q6_involved_in_ma,
+    q8_executive_roles: data.q8_executive_roles,
+    q9_board_experience: data.q9_board_experience,
+    q10_journey_stages: data.q10_journey_stages,
+    q11_target_sectors: data.q11_target_sectors,
+    q12_has_identified_targets: data.q12_has_identified_targets,
+    q14_investment_capacity: data.q14_investment_capacity,
+    q15_funding_status: data.q15_funding_status,
+    q16_network_training: data.q16_network_training,
+    q17_open_to_co_acquisition: data.q17_open_to_co_acquisition,
+  }
+
+  const scoreBreakdown = calculateTier1Score(scoringInput)
+
+  // Update the repreneur with questionnaire data and score
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      // Questionnaire fields
+      q1_employment_status: data.q1_employment_status,
+      q2_years_experience: data.q2_years_experience,
+      q3_industry_sectors: data.q3_industry_sectors,
+      q4_has_ma_experience: data.q4_has_ma_experience,
+      q5_team_size: data.q5_team_size,
+      q6_involved_in_ma: data.q6_involved_in_ma,
+      q7_ma_details: data.q7_ma_details,
+      q8_executive_roles: data.q8_executive_roles,
+      q9_board_experience: data.q9_board_experience,
+      q10_journey_stages: data.q10_journey_stages,
+      q11_target_sectors: data.q11_target_sectors,
+      q12_has_identified_targets: data.q12_has_identified_targets,
+      q13_target_details: data.q13_target_details,
+      q14_investment_capacity: data.q14_investment_capacity,
+      q15_funding_status: data.q15_funding_status,
+      q16_network_training: data.q16_network_training,
+      q17_open_to_co_acquisition: data.q17_open_to_co_acquisition,
+      // Score fields
+      tier1_score: scoreBreakdown.total,
+      tier1_score_breakdown: scoreBreakdown,
+      questionnaire_completed_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+
+  return scoreBreakdown
 }

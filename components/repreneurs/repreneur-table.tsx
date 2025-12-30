@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "./status-badge"
 import { Badge } from "@/components/ui/badge"
+import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
 
 interface RepreneurWithOffers extends Repreneur {
@@ -251,9 +252,18 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                     onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                   >
                     <TableCell>
-                      <span className="font-medium text-gray-900">
-                        {repreneur.first_name} {repreneur.last_name}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <RepreneurAvatar
+                          repreneurId={repreneur.id}
+                          avatarUrl={repreneur.avatar_url}
+                          firstName={repreneur.first_name}
+                          lastName={repreneur.last_name}
+                          size="sm"
+                        />
+                        <span className="font-medium text-gray-900">
+                          {repreneur.first_name} {repreneur.last_name}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-gray-600">{repreneur.email}</TableCell>
                     <TableCell>
@@ -356,9 +366,18 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                           onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                         >
                           <TableCell>
-                            <span className="font-medium text-gray-900">
-                              {repreneur.first_name} {repreneur.last_name}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <RepreneurAvatar
+                                repreneurId={repreneur.id}
+                                avatarUrl={repreneur.avatar_url}
+                                firstName={repreneur.first_name}
+                                lastName={repreneur.last_name}
+                                size="sm"
+                              />
+                              <span className="font-medium text-gray-900">
+                                {repreneur.first_name} {repreneur.last_name}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-gray-600">{repreneur.email}</TableCell>
                           <TableCell>{renderStatusColumn(repreneur)}</TableCell>

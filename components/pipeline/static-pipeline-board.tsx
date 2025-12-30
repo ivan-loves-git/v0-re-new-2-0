@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { KanbanFilters, type KanbanFiltersState } from "./kanban-filters"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
 
 interface RepreneurWithOffers extends Repreneur {
@@ -101,12 +102,21 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
       onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
     >
       <div className="space-y-1.5">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-medium text-sm leading-tight">
-            {repreneur.first_name} {repreneur.last_name}
-          </h3>
+        <div className="flex items-center gap-2">
+          <RepreneurAvatar
+            repreneurId={repreneur.id}
+            avatarUrl={repreneur.avatar_url}
+            firstName={repreneur.first_name}
+            lastName={repreneur.last_name}
+            size="sm"
+          />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium text-sm leading-tight truncate">
+              {repreneur.first_name} {repreneur.last_name}
+            </h3>
+            <p className="text-xs text-gray-500 truncate">{repreneur.email}</p>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 truncate">{repreneur.email}</p>
         {renderStatusInfo()}
       </div>
     </Card>

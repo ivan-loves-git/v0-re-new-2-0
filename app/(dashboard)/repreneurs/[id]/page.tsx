@@ -1,23 +1,25 @@
 import { notFound } from "next/navigation"
-import { Mail, Phone, MapPin, DollarSign, Target, Compass, Building, Briefcase, Star } from "lucide-react"
+import { Mail, Phone, MapPin, DollarSign, Building, Briefcase, Star } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
 import { UpdateJourneyStageForm } from "@/components/repreneurs/update-journey-stage-form"
+import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import { EditableTextField } from "@/components/repreneurs/editable-text-field"
 import { EditableSelectField } from "@/components/repreneurs/editable-select-field"
 import { EditableMultiSelect } from "@/components/repreneurs/editable-multi-select"
 import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
 import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
+import { Tier1ScoreCard } from "@/components/repreneurs/tier1-score-card"
 import { RejectButton } from "@/components/repreneurs/reject-button"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
 import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/lib/constants/investment-ranges"
-import type { Note, Activity } from "@/lib/types/repreneur"
+import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
 import type { RepreneurOffer, Offer } from "@/lib/types/offer"
 
 export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -86,38 +88,54 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         <BackButton label="Back" />
       </div>
 
-      {/* Header with name and main status controls */}
+      {/* Header with avatar, name and main status controls */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <EditableTextField
-              repreneurId={id}
-              field="first_name"
-              value={repreneur.first_name}
-              label="First Name"
-              placeholder="First name"
-              textClassName="text-2xl font-semibold text-gray-900"
-            />
-            <EditableTextField
-              repreneurId={id}
-              field="last_name"
-              value={repreneur.last_name}
-              label="Last Name"
-              placeholder="Last name"
-              textClassName="text-2xl font-semibold text-gray-900"
-            />
-            <StatusBadge status={repreneur.lifecycle_status} />
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <Mail className="h-4 w-4" />
-            <EditableTextField
-              repreneurId={id}
-              field="email"
-              value={repreneur.email}
-              label="Email"
-              type="email"
-              placeholder="email@example.com"
-            />
+        <div className="flex items-start gap-4">
+          <RepreneurAvatar
+            repreneurId={id}
+            avatarUrl={repreneur.avatar_url}
+            firstName={repreneur.first_name}
+            lastName={repreneur.last_name}
+            size="xl"
+            editable
+          />
+          <div className="space-y-3">
+            <div className="flex gap-6">
+              <div>
+                <Label className="text-xs text-gray-500 mb-1 block">Name</Label>
+                <EditableTextField
+                  repreneurId={id}
+                  field="first_name"
+                  value={repreneur.first_name}
+                  label="First Name"
+                  placeholder="First name"
+                  textClassName="text-2xl font-semibold text-gray-900"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500 mb-1 block">Surname</Label>
+                <EditableTextField
+                  repreneurId={id}
+                  field="last_name"
+                  value={repreneur.last_name}
+                  label="Last Name"
+                  placeholder="Last name"
+                  textClassName="text-2xl font-semibold text-gray-900"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <StatusBadge status={repreneur.lifecycle_status} />
+              <Mail className="h-4 w-4" />
+              <EditableTextField
+                repreneurId={id}
+                field="email"
+                value={repreneur.email}
+                label="Email"
+                type="email"
+                placeholder="email@example.com"
+              />
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -137,27 +155,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
 
       {/* Scoring Section */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Tier 1 Score (Automated) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Tier 1 Score (Automated)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {repreneur.tier1_score !== null && repreneur.tier1_score !== undefined ? (
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold">{repreneur.tier1_score}</span>
-                <span className="text-sm text-gray-500">points</span>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Score not calculated yet. Will be computed from form data.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {/* Tier 1 Score (Automated) - with modal for questionnaire */}
+        <Tier1ScoreCard repreneur={repreneur as Repreneur} />
 
         {/* Tier 2 Rating (Manual) */}
         <Card>
