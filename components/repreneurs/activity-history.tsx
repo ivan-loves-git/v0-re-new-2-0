@@ -97,7 +97,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
   }
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
@@ -167,11 +167,13 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
           </DialogContent>
         </Dialog>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col">
         {activities.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">
-            No activities logged yet. Click "Log Activity" to add one.
-          </p>
+          <div className="flex-1 flex items-center justify-center min-h-[200px]">
+            <p className="text-sm text-gray-500 text-center">
+              No activities logged yet. Click "Log Activity" to add one.
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
             {activities.map((activity) => (

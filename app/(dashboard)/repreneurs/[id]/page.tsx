@@ -210,7 +210,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <p className="text-xs text-muted-foreground">Calculated from questionnaire</p>
+              <p className="text-xs text-muted-foreground mb-3">Calculated from questionnaire</p>
               {repreneur.tier1_score !== null && repreneur.tier1_score !== undefined ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
@@ -282,7 +282,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <p className="text-xs text-muted-foreground">Post-interview Re-New rating</p>
+              <p className="text-xs text-muted-foreground mb-3">Post-interview Re-New rating</p>
               <Tier2StarRating
                 repreneurId={repreneur.id}
                 currentStars={repreneur.tier2_stars}
@@ -341,21 +341,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 placeholder="Select sectors..."
               />
             </div>
-            <div>
-              <Label className="text-xs text-gray-500">Source</Label>
-              <EditableSelectField
-                repreneurId={id}
-                field="source"
-                value={repreneur.source}
-                options={SOURCE_OPTIONS}
-                placeholder="Select source..."
-              />
-            </div>
           </CardContent>
         </Card>
 
         {/* Col 3, Row 1+2: Activity History (spans both rows) */}
-        <div className="md:row-span-2">
+        <div className="md:row-span-2 h-full">
           <ActivityHistory repreneurId={id} activities={activitiesWithEmail as Activity[]} />
         </div>
 
@@ -370,10 +360,10 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         <RepreneurNotes repreneurId={id} notes={notesWithEmail as Note[]} />
       </div>
 
-      {/* ROW 3: Questionnaire Details (no cards, blank bg, 2-col list) */}
+      {/* ROW 3: Questionnaire Details (no cards, blank bg, 3-col list) */}
       <div className="pt-6 border-t">
         <h3 className="text-sm font-medium text-gray-500 mb-4">Questionnaire Details</h3>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-3">
           <div>
             <Label className="text-xs text-gray-500">Employment Status</Label>
             <p className="text-sm">
@@ -487,6 +477,16 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             <p className="text-sm">
               {repreneur.company_background || <span className="text-gray-400">Not specified</span>}
             </p>
+          </div>
+          <div>
+            <Label className="text-xs text-gray-500">Source</Label>
+            <EditableSelectField
+              repreneurId={id}
+              field="source"
+              value={repreneur.source}
+              options={SOURCE_OPTIONS}
+              placeholder="Select source..."
+            />
           </div>
         </div>
       </div>
