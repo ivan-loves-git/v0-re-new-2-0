@@ -1,0 +1,25 @@
+export const SECTORS = [
+  "Industrie",
+  "Services aux entreprises",
+  "Commerce de détail",
+  "Commerce de gros",
+  "BTP / Construction",
+  "Restauration / Hôtellerie",
+  "Santé / Médical",
+  "Transport / Logistique",
+  "Agriculture / Agroalimentaire",
+  "Technologie / IT",
+  "Énergie / Environnement",
+  "Immobilier",
+  "Artisanat",
+  "Automobile",
+  "Chimie / Pharmacie",
+  "Formation / Éducation",
+  "Conseil / Consulting",
+  "Finance / Assurance",
+  "Tourisme / Loisirs",
+  "Communication / Marketing",
+  "Autre",
+] as const
+
+export type Sector = (typeof SECTORS)[number]

@@ -98,6 +98,36 @@ export async function updateRepreneurStatus(id: string, status: LifecycleStatus)
 
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+}
+
+export async function updateRepreneurJourneyStage(id: string, stage: string | null) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.from("repreneurs").update({ journey_stage: stage }).eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/journey")
+}
+
+export async function updateRepreneurField(id: string, field: string, value: string | string[] | null) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.from("repreneurs").update({ [field]: value }).eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+  revalidatePath("/journey")
 }
 
 export async function createNote(repreneurId: string, content: string) {

@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { JourneyStageBadge, stageConfig } from "@/components/journey/journey-stage-badge"
-import { Compass, BookOpen, FileCheck, Trophy, ArrowRight, User } from "lucide-react"
+import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
+import { stageConfig } from "@/lib/journey-config"
+import { Compass, BookOpen, FileCheck, Trophy, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import type { JourneyStage, Repreneur } from "@/lib/types/repreneur"
 
@@ -15,6 +16,13 @@ const stageIcons: Record<JourneyStage, React.ElementType> = {
   serial_acquirer: Trophy,
 }
 
+const stageDetails: Record<JourneyStage, string> = {
+  explorer: "Typically new leads who are still learning about the process",
+  learner: "Attending training, workshops, or actively researching",
+  ready: "Has financing, knows their criteria, ready to make offers",
+  serial_acquirer: "Has successfully completed at least one acquisition",
+}
+
 export default async function JourneyPage() {
   const supabase = await createClient()
 
@@ -23,17 +31,17 @@ export default async function JourneyPage() {
     .select("*")
     .order("created_at", { ascending: false })
 
-  // Group repreneurs by journey stage
+  // Group repreneurs by journey stage (default to "explorer" if no stage set)
   const byStage = stages.reduce(
     (acc, stage) => {
-      acc[stage] = repreneurs?.filter((r) => r.journey_stage === stage) || []
+      acc[stage] = repreneurs?.filter((r) => {
+        const repreneurStage = r.journey_stage || "explorer"
+        return repreneurStage === stage
+      }) || []
       return acc
     },
     {} as Record<JourneyStage, Repreneur[]>,
   )
-
-  // Count repreneurs without a journey stage
-  const unassigned = repreneurs?.filter((r) => !r.journey_stage) || []
 
   const totalRepreneurs = repreneurs?.length || 0
 
@@ -101,20 +109,6 @@ export default async function JourneyPage() {
         </CardContent>
       </Card>
 
-      {/* Unassigned warning */}
-      {unassigned.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-amber-800">
-              <User className="h-5 w-5" />
-              <span className="font-medium">
-                {unassigned.length} repreneur{unassigned.length > 1 ? "s" : ""} without a journey stage assigned
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Stage Columns */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stages.map((stage) => {
@@ -123,20 +117,21 @@ export default async function JourneyPage() {
           const stageRepreneurs = byStage[stage]
 
           return (
-            <Card key={stage} className="h-fit">
-              <CardHeader className={`${config.color} rounded-t-lg`}>
+            <Card key={stage} className="h-fit overflow-hidden pt-0 gap-0">
+              <CardHeader className={`${config.color} py-4`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Icon className="h-5 w-5" />
                     <CardTitle className="text-base">{config.label}</CardTitle>
                   </div>
-                  <Badge variant="secondary" className="bg-white">
+                  <Badge variant="secondary" className="bg-white/80">
                     {stageRepreneurs.length}
                   </Badge>
                 </div>
                 <CardDescription className={config.color.includes("text-") ? "" : "text-gray-600"}>
                   {config.description}
                 </CardDescription>
+                <p className="text-xs opacity-70 mt-1">{stageDetails[stage]}</p>
               </CardHeader>
               <CardContent className="pt-4">
                 {stageRepreneurs.length > 0 ? (
@@ -167,53 +162,6 @@ export default async function JourneyPage() {
           )
         })}
       </div>
-
-      {/* Stage Descriptions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Journey Stages Explained</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            {stages.map((stage) => {
-              const Icon = stageIcons[stage]
-              const config = stageConfig[stage]
-
-              return (
-                <div key={stage} className="flex gap-3 p-3 rounded-lg border">
-                  <div className={`p-2 rounded-lg ${config.color} h-fit`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{config.label}</p>
-                    <p className="text-sm text-muted-foreground">{config.description}</p>
-                    {stage === "explorer" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Typically new leads who are still learning about the process
-                      </p>
-                    )}
-                    {stage === "learner" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Attending training, workshops, or actively researching
-                      </p>
-                    )}
-                    {stage === "ready" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Has financing, knows their criteria, ready to make offers
-                      </p>
-                    )}
-                    {stage === "serial_acquirer" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Has successfully completed at least one acquisition
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
