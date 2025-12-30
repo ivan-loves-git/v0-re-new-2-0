@@ -68,11 +68,12 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
   async function handleSubmit() {
     if (!content.trim()) return
 
+    const savedContent = content.trim()
     const tempId = `temp-${Date.now()}`
     const optimisticNote: Note = {
       id: tempId,
       repreneur_id: repreneurId,
-      content: content.trim(),
+      content: savedContent,
       created_at: new Date().toISOString(),
       created_by: "",
       created_by_email: "You",
@@ -84,7 +85,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
     startTransition(async () => {
       updateOptimisticNotes({ type: "add", note: optimisticNote })
       try {
-        await createNote(repreneurId, content.trim())
+        await createNote(repreneurId, savedContent)
       } catch (error) {
         console.error("Failed to create note:", error)
       }
