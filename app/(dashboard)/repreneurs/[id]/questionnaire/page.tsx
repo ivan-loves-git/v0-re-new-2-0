@@ -47,7 +47,7 @@ type Step = {
 
 const STEPS: Step[] = [
   { id: 1, title: "Professional Background", shortTitle: "Background", description: "Your experience and career history" },
-  { id: 2, title: "M&A Experience", shortTitle: "M&A", description: "Mergers and acquisitions background" },
+  { id: 2, title: "M&A\nExperience", shortTitle: "M&A", description: "Mergers and acquisitions background" },
   { id: 3, title: "Acquisition Journey", shortTitle: "Journey", description: "Current stage and targets" },
   { id: 4, title: "Financial & Network", shortTitle: "Financial", description: "Investment capacity and affiliations" },
 ]
@@ -172,8 +172,45 @@ export default function QuestionnairePage() {
   }
 
   const isAllComplete = STEPS.every((step) => isStepComplete(step.id))
-  const completedSteps = STEPS.filter((step) => isStepComplete(step.id)).length
-  const progress = (completedSteps / STEPS.length) * 100
+
+  // Calculate per-step progress percentage
+  const getStepProgress = (step: number): number => {
+    switch (step) {
+      case 1: {
+        let answered = 0
+        if (formData.q1_employment_status) answered++
+        if (formData.q2_years_experience) answered++
+        if (formData.q3_industry_sectors.length > 0) answered++
+        if (formData.q5_team_size) answered++
+        if (formData.q8_executive_roles.length > 0) answered++
+        return (answered / 5) * 100
+      }
+      case 2: {
+        let answered = 0
+        if (formData.q4_has_ma_experience !== null) answered++
+        if (formData.q6_involved_in_ma !== null) answered++
+        if (formData.q9_board_experience !== null) answered++
+        return (answered / 3) * 100
+      }
+      case 3: {
+        let answered = 0
+        if (formData.q10_journey_stages.length > 0) answered++
+        if (formData.q11_target_sectors.length > 0) answered++
+        if (formData.q12_has_identified_targets !== null) answered++
+        return (answered / 3) * 100
+      }
+      case 4: {
+        let answered = 0
+        if (formData.q14_investment_capacity) answered++
+        if (formData.q15_funding_status) answered++
+        if (formData.q16_network_training.length > 0) answered++
+        if (formData.q17_open_to_co_acquisition !== null) answered++
+        return (answered / 4) * 100
+      }
+      default:
+        return 0
+    }
+  }
 
   const YesNoSkipQuestion = ({
     label,
@@ -190,7 +227,7 @@ export default function QuestionnairePage() {
         <Button
           type="button"
           variant={value === true ? "default" : "outline"}
-          className="flex-1 min-w-[100px]"
+          className={`flex-1 min-w-[100px] ${value === true ? "bg-primary" : ""}`}
           onClick={() => onChange(true)}
         >
           <Check className="h-4 w-4 mr-2" />
@@ -199,7 +236,7 @@ export default function QuestionnairePage() {
         <Button
           type="button"
           variant={value === false ? "default" : "outline"}
-          className="flex-1 min-w-[100px]"
+          className={`flex-1 min-w-[100px] ${value === false ? "bg-primary" : ""}`}
           onClick={() => onChange(false)}
         >
           <X className="h-4 w-4 mr-2" />
@@ -221,9 +258,9 @@ export default function QuestionnairePage() {
     <div className="flex flex-col flex-1 min-h-0">
       {/* Unified Header */}
       <div className="bg-white border-b shadow-sm shrink-0">
-        {/* Top row: Back button, title, progress */}
+        {/* Top row: Back button and title */}
         <div className="px-4 py-3 border-b border-gray-100">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="max-w-4xl mx-auto flex items-center">
             <Button
               variant="ghost"
               size="sm"
@@ -238,45 +275,58 @@ export default function QuestionnairePage() {
               <h1 className="font-semibold text-gray-900">Intake Questionnaire</h1>
               <p className="text-xs text-muted-foreground">{repreneurName}</p>
             </div>
-            <div className="text-right text-sm">
-              <span className="text-muted-foreground">{completedSteps}/{STEPS.length}</span>
-            </div>
+            <div className="w-[100px]" /> {/* Spacer for centering */}
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="h-1 bg-gray-100">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Step pills */}
+        {/* Step cards with integrated progress */}
         <div className="px-4 py-3">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="max-w-xl mx-auto">
+            <div className="grid grid-cols-4 gap-2">
               {STEPS.map((step) => {
                 const complete = isStepComplete(step.id)
                 const active = currentStep === step.id
+                const progress = getStepProgress(step.id)
                 return (
                   <button
                     key={step.id}
                     onClick={() => setCurrentStep(step.id)}
                     className={`
-                      flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-                      whitespace-nowrap transition-all shrink-0
+                      relative overflow-hidden rounded-lg border-2 text-left transition-all min-h-[60px] flex flex-col
                       ${active
-                        ? "bg-primary text-primary-foreground shadow-sm"
+                        ? "border-primary ring-2 ring-primary/20"
                         : complete
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-200 hover:border-gray-300"
                       }
                     `}
                   >
-                    {complete && !active && <Check className="h-3.5 w-3.5" />}
-                    <span className="hidden sm:inline">{step.id}. {step.title}</span>
-                    <span className="sm:hidden">{step.id}. {step.shortTitle}</span>
+                    {/* Card content */}
+                    <div className="px-2 py-2 flex-1">
+                      <div className="flex items-start gap-1.5">
+                        {complete && (
+                          <div className="flex-shrink-0 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
+                            <Check className="h-2.5 w-2.5 text-white" />
+                          </div>
+                        )}
+                        <span className={`text-xs font-medium leading-tight whitespace-pre-line ${complete ? "text-green-700" : active ? "text-primary" : "text-gray-700"}`}>
+                          {step.id}. {step.title}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Progress bar at bottom */}
+                    {!complete && (
+                      <div className="h-1 bg-gray-100 mt-auto">
+                        <div
+                          className={`h-full transition-all duration-300 ${active ? "bg-primary" : "bg-gray-300"}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    )}
+                    {/* Full green bar when complete */}
+                    {complete && (
+                      <div className="h-1 bg-green-500 mt-auto" />
+                    )}
                   </button>
                 )
               })}
@@ -293,7 +343,7 @@ export default function QuestionnairePage() {
               <CardTitle className="text-xl">{STEPS[currentStep - 1].title}</CardTitle>
               <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-10">
               {/* Step 1: Professional Background */}
               {currentStep === 1 && (
                 <>
@@ -303,7 +353,7 @@ export default function QuestionnairePage() {
                     <RadioGroup
                       value={formData.q1_employment_status ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q1_employment_status: v })}
-                      className="grid gap-2"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2"
                     >
                       {EMPLOYMENT_STATUS_WITH_SKIP.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q1_employment_status === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -322,7 +372,7 @@ export default function QuestionnairePage() {
                     <RadioGroup
                       value={formData.q2_years_experience ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q2_years_experience: v })}
-                      className="grid gap-2"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2"
                     >
                       {YEARS_EXPERIENCE_OPTIONS.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q2_years_experience === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -360,7 +410,7 @@ export default function QuestionnairePage() {
                     <RadioGroup
                       value={formData.q5_team_size ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q5_team_size: v })}
-                      className="grid gap-2"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2"
                     >
                       {TEAM_SIZE_WITH_SKIP.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q5_team_size === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -436,9 +486,9 @@ export default function QuestionnairePage() {
                   {/* Q10: Journey Stages */}
                   <div className="space-y-3">
                     <Label className="text-base font-medium">Q10. Current journey stage (select all that apply)</Label>
-                    <div className="grid gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {JOURNEY_STAGE_OPTIONS.map((opt) => (
-                        <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50">
+                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q10_journey_stages.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
                           <Checkbox
                             id={`q10-${opt.value}`}
                             checked={formData.q10_journey_stages.includes(opt.value)}
@@ -455,9 +505,9 @@ export default function QuestionnairePage() {
                   {/* Q11: Target Sectors */}
                   <div className="space-y-3">
                     <Label className="text-base font-medium">Q11. Target acquisition sectors (select all that apply)</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {INDUSTRY_SECTOR_OPTIONS.map((opt) => (
-                        <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50">
+                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q11_target_sectors.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
                           <Checkbox
                             id={`q11-${opt.value}`}
                             checked={formData.q11_target_sectors.includes(opt.value)}
@@ -501,10 +551,10 @@ export default function QuestionnairePage() {
                     <RadioGroup
                       value={formData.q14_investment_capacity ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q14_investment_capacity: v })}
-                      className="grid gap-2"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2"
                     >
                       {INVESTMENT_CAPACITY_OPTIONS.map((opt) => (
-                        <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50">
+                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q14_investment_capacity === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
                           <RadioGroupItem value={opt.value} id={`q14-${opt.value}`} />
                           <Label htmlFor={`q14-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -520,10 +570,10 @@ export default function QuestionnairePage() {
                     <RadioGroup
                       value={formData.q15_funding_status ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q15_funding_status: v })}
-                      className="grid gap-2"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2"
                     >
                       {FUNDING_STATUS_WITH_SKIP.map((opt) => (
-                        <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50">
+                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q15_funding_status === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
                           <RadioGroupItem value={opt.value} id={`q15-${opt.value}`} />
                           <Label htmlFor={`q15-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -536,9 +586,9 @@ export default function QuestionnairePage() {
                   {/* Q16: Network/Training */}
                   <div className="space-y-3">
                     <Label className="text-base font-medium">Q16. Network or training affiliations (select all that apply)</Label>
-                    <div className="grid gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {NETWORK_TRAINING_OPTIONS.map((opt) => (
-                        <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50">
+                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q16_network_training.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
                           <Checkbox
                             id={`q16-${opt.value}`}
                             checked={formData.q16_network_training.includes(opt.value)}

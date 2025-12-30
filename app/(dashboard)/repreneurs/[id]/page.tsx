@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { Mail, Phone, MapPin, DollarSign, Building, Briefcase, Star } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { BackButton } from "@/components/ui/back-button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
 import { UpdateJourneyStageForm } from "@/components/repreneurs/update-journey-stage-form"
@@ -14,7 +14,7 @@ import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
 import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
 import { Tier1ScoreCard } from "@/components/repreneurs/tier1-score-card"
-import { RejectButton } from "@/components/repreneurs/reject-button"
+import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
@@ -124,18 +124,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <StatusBadge status={repreneur.lifecycle_status} />
-              <Mail className="h-4 w-4" />
-              <EditableTextField
-                repreneurId={id}
-                field="email"
-                value={repreneur.email}
-                label="Email"
-                type="email"
-                placeholder="email@example.com"
-              />
-            </div>
+            <StatusBadge status={repreneur.lifecycle_status} />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -144,7 +133,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             <UpdateJourneyStageForm repreneurId={repreneur.id} currentStage={repreneur.journey_stage} />
           </div>
           <div className="pt-5">
-            <RejectButton
+            <RepreneurActionsMenu
               repreneurId={repreneur.id}
               currentStatus={repreneur.lifecycle_status}
               repreneurName={`${repreneur.first_name} ${repreneur.last_name}`}
@@ -160,11 +149,14 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
 
         {/* Tier 2 Rating (Manual) */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <Star className="h-5 w-5" />
-              Tier 2 Rating (Post-Interview)
+              Tier 2 Rating
             </CardTitle>
+            <CardDescription className="mt-1">
+              Post-interview Re-New rating
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Tier2StarRating
@@ -186,15 +178,32 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
+              <Label className="text-xs text-gray-500">Email</Label>
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gray-400" />
+                <EditableTextField
+                  repreneurId={id}
+                  field="email"
+                  value={repreneur.email}
+                  label="Email"
+                  type="email"
+                  placeholder="email@example.com"
+                />
+              </div>
+            </div>
+            <div>
               <Label className="text-xs text-gray-500">Phone</Label>
-              <EditableTextField
-                repreneurId={id}
-                field="phone"
-                value={repreneur.phone}
-                label="Phone"
-                type="tel"
-                placeholder="+33 6 12 34 56 78"
-              />
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-gray-400" />
+                <EditableTextField
+                  repreneurId={id}
+                  field="phone"
+                  value={repreneur.phone}
+                  label="Phone"
+                  type="tel"
+                  placeholder="+33 6 12 34 56 78"
+                />
+              </div>
             </div>
             <div>
               <Label className="text-xs text-gray-500">Source</Label>
