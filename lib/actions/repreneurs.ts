@@ -156,6 +156,18 @@ export async function createNote(repreneurId: string, content: string) {
   revalidatePath(`/repreneurs/${repreneurId}`)
 }
 
+export async function deleteNote(noteId: string, repreneurId: string) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.from("notes").delete().eq("id", noteId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath(`/repreneurs/${repreneurId}`)
+}
+
 export async function deleteRepreneur(id: string) {
   const supabase = await createServerClient()
 

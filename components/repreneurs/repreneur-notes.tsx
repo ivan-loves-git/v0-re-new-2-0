@@ -2,8 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useOptimistic, useTransition } from "react"
 import { Plus, StickyNote, MoreHorizontal, Trash2 } from "lucide-react"
 import { createNote, deleteNote } from "@/lib/actions/repreneurs"
 import { Button } from "@/components/ui/button"
@@ -30,24 +29,80 @@ interface RepreneurNotesProps {
   notes: Note[]
 }
 
+function formatDate(dateString: string) {
+  const date = new Date(dateString)
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+type OptimisticAction =
+  | { type: "add"; note: Note }
+  | { type: "delete"; noteId: string }
+
 export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
   const [content, setContent] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [expandedNote, setExpandedNote] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const [optimisticNotes, updateOptimisticNotes] = useOptimistic(
+    notes,
+    (state: Note[], action: OptimisticAction) => {
+      switch (action.type) {
+        case "add":
+          return [action.note, ...state]
+        case "delete":
+          return state.filter((n) => n.id !== action.noteId)
+        default:
+          return state
+      }
+    }
+  )
 
   async function handleSubmit() {
     if (!content.trim()) return
 
-    setIsSubmitting(true)
-    try {
-      await createNote(repreneurId, content)
-      setContent("")
-      setIsOpen(false)
-    } catch (error) {
-      console.error("Failed to create note:", error)
-    } finally {
-      setIsSubmitting(false)
+    const tempId = `temp-${Date.now()}`
+    const optimisticNote: Note = {
+      id: tempId,
+      repreneur_id: repreneurId,
+      content: content.trim(),
+      created_at: new Date().toISOString(),
+      created_by: "",
+      created_by_email: "You",
     }
+
+    setContent("")
+    setIsOpen(false)
+
+    startTransition(async () => {
+      updateOptimisticNotes({ type: "add", note: optimisticNote })
+      try {
+        await createNote(repreneurId, content.trim())
+      } catch (error) {
+        console.error("Failed to create note:", error)
+      }
+    })
+  }
+
+  async function handleDelete(noteId: string) {
+    setDeletingId(noteId)
+    startTransition(async () => {
+      updateOptimisticNotes({ type: "delete", noteId })
+      try {
+        await deleteNote(noteId, repreneurId)
+      } catch (error) {
+        console.error("Failed to delete note:", error)
+      } finally {
+        setDeletingId(null)
+      }
+    })
   }
 
   return (
@@ -80,28 +135,61 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
               <Button variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting || !content.trim()}>
-                {isSubmitting ? "Saving..." : "Save Note"}
+              <Button onClick={handleSubmit} disabled={isPending || !content.trim()}>
+                {isPending ? "Saving..." : "Save Note"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
-        {notes.length === 0 ? (
+        {optimisticNotes.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <p className="text-sm text-gray-500">No notes yet</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {notes.map((note) => (
-              <div key={note.id} className="border-l-2 border-gray-200 pl-4 py-2">
-                <p className="text-sm text-gray-700 leading-relaxed">{note.content}</p>
-                <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                  <span>{note.created_by_email}</span>
-                  <span>•</span>
-                  <span>{new Date(note.created_at).toLocaleString()}</span>
+          <div className="space-y-3">
+            {optimisticNotes.map((note) => (
+              <div
+                key={note.id}
+                className={`flex items-start justify-between p-3 border rounded-lg hover:bg-gray-50/50 cursor-pointer ${
+                  note.id.startsWith("temp-") ? "opacity-70" : ""
+                }`}
+                onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm text-gray-700 ${expandedNote === note.id ? "" : "line-clamp-2"}`}>
+                    {note.content}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formatDate(note.created_at)} by {note.created_by_email}
+                  </p>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 ml-2"
+                      disabled={deletingId === note.id || note.id.startsWith("temp-")}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(note.id)
+                      }}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
           </div>
