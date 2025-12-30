@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Target, Star, Calculator, Info } from "lucide-react"
+import { Filter, Star, Calculator, Info } from "lucide-react"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import type { Repreneur } from "@/lib/types/repreneur"
 
@@ -21,7 +21,7 @@ export function Tier1ScoreCard({ repreneur }: Tier1ScoreCardProps) {
       <CardHeader className="pb-3">
         <div>
           <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
+            <Filter className="h-5 w-5" />
             Tier 1 Rating
             <TooltipProvider delayDuration={0}>
               <Tooltip>
