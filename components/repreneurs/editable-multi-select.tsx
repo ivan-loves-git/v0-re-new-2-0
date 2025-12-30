@@ -126,7 +126,7 @@ export function EditableMultiSelect({
 
   return (
     <div className="group">
-      <div className="flex items-start gap-2">
+      <div className="flex items-center gap-2 min-h-[24px]">
         {value && value.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {value.map((item) => (
@@ -136,7 +136,7 @@ export function EditableMultiSelect({
             ))}
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground italic">Not set</span>
+          <p className="text-sm text-muted-foreground italic">Not set</p>
         )}
         <Button
           variant="ghost"

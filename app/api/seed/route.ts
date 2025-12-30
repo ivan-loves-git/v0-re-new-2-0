@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { calculateTier1Score } from "@/lib/utils/tier1-scoring"
 
 const TEST_REPRENEURS = [
   {
@@ -15,6 +16,24 @@ const TEST_REPRENEURS = [
     lifecycle_status: "lead",
     journey_stage: "explorer",
     source: "LinkedIn",
+    // Questionnaire fields
+    q1_employment_status: "transition",
+    q2_years_experience: "16_20",
+    q3_industry_sectors: ["commerce_detail", "commerce_gros"],
+    q4_has_ma_experience: false,
+    q5_team_size: "20_50",
+    q6_involved_in_ma: false,
+    q7_ma_details: null,
+    q8_executive_roles: ["division_director"],
+    q9_board_experience: false,
+    q10_journey_stages: ["info_only", "first_contacts"],
+    q11_target_sectors: ["commerce_detail"],
+    q12_has_identified_targets: false,
+    q13_target_details: null,
+    q14_investment_capacity: "251_350",
+    q15_funding_status: "in_progress",
+    q16_network_training: ["cci"],
+    q17_open_to_co_acquisition: true,
   },
   {
     email: "test.bob@example.com",
@@ -29,6 +48,24 @@ const TEST_REPRENEURS = [
     lifecycle_status: "qualified",
     journey_stage: "ready",
     source: "Referral",
+    // Questionnaire fields
+    q1_employment_status: "sans_emploi",
+    q2_years_experience: "20_plus",
+    q3_industry_sectors: ["construction", "immobilier", "gestion_entreprises"],
+    q4_has_ma_experience: true,
+    q5_team_size: "50_plus",
+    q6_involved_in_ma: true,
+    q7_ma_details: "Led acquisition of 2 smaller construction firms in 2019",
+    q8_executive_roles: ["ceo", "coo"],
+    q9_board_experience: true,
+    q10_journey_stages: ["training_done", "target_search", "financing_defined"],
+    q11_target_sectors: ["construction", "immobilier"],
+    q12_has_identified_targets: true,
+    q13_target_details: "3 potential targets in Lyon area, revenue €800K-€1.5M",
+    q14_investment_capacity: "450_plus",
+    q15_funding_status: "secured",
+    q16_network_training: ["cra", "cci"],
+    q17_open_to_co_acquisition: false,
   },
   {
     email: "test.charlie@example.com",
@@ -43,6 +80,25 @@ const TEST_REPRENEURS = [
     lifecycle_status: "client",
     journey_stage: "serial_acquirer",
     source: "Website",
+    tier2_stars: 5,
+    // Questionnaire fields
+    q1_employment_status: "independant",
+    q2_years_experience: "20_plus",
+    q3_industry_sectors: ["information_medias", "services_pro", "scientifiques_techniques"],
+    q4_has_ma_experience: true,
+    q5_team_size: "50_plus",
+    q6_involved_in_ma: true,
+    q7_ma_details: "2 tech company exits, 1 acquisition as buyer",
+    q8_executive_roles: ["ceo", "cfo"],
+    q9_board_experience: true,
+    q10_journey_stages: ["financing_defined", "letter_of_intent"],
+    q11_target_sectors: ["industrie", "hebergement_restauration"],
+    q12_has_identified_targets: true,
+    q13_target_details: "Winery in Bordeaux region, €2.5M revenue",
+    q14_investment_capacity: "450_plus",
+    q15_funding_status: "secured",
+    q16_network_training: ["cra"],
+    q17_open_to_co_acquisition: true,
   },
   {
     email: "test.diana@example.com",
@@ -57,6 +113,24 @@ const TEST_REPRENEURS = [
     lifecycle_status: "lead",
     journey_stage: "explorer",
     source: "BPI France",
+    // Questionnaire fields
+    q1_employment_status: "temps_plein",
+    q2_years_experience: "less_10",
+    q3_industry_sectors: ["services_pro", "gestion_entreprises"],
+    q4_has_ma_experience: false,
+    q5_team_size: "less_10",
+    q6_involved_in_ma: false,
+    q7_ma_details: null,
+    q8_executive_roles: ["other"],
+    q9_board_experience: false,
+    q10_journey_stages: ["info_only"],
+    q11_target_sectors: ["services_pro"],
+    q12_has_identified_targets: false,
+    q13_target_details: null,
+    q14_investment_capacity: "151_250",
+    q15_funding_status: "in_progress",
+    q16_network_training: ["none"],
+    q17_open_to_co_acquisition: true,
   },
   {
     email: "test.ethan@example.com",
@@ -71,6 +145,24 @@ const TEST_REPRENEURS = [
     lifecycle_status: "qualified",
     journey_stage: "learner",
     source: "LinkedIn",
+    // Questionnaire fields
+    q1_employment_status: "transition",
+    q2_years_experience: "16_20",
+    q3_industry_sectors: ["information_medias", "commerce_gros"],
+    q4_has_ma_experience: false,
+    q5_team_size: "20_50",
+    q6_involved_in_ma: false,
+    q7_ma_details: null,
+    q8_executive_roles: ["cco"],
+    q9_board_experience: false,
+    q10_journey_stages: ["first_contacts", "training_done"],
+    q11_target_sectors: ["information_medias", "services_pro"],
+    q12_has_identified_targets: false,
+    q13_target_details: null,
+    q14_investment_capacity: "351_450",
+    q15_funding_status: "in_progress",
+    q16_network_training: ["cci", "other"],
+    q17_open_to_co_acquisition: false,
   },
   {
     email: "test.fiona@example.com",
@@ -82,9 +174,28 @@ const TEST_REPRENEURS = [
     sector_preferences: ["Agriculture", "Food & Beverage"],
     target_location: "Nantes, Pays de la Loire",
     target_acquisition_size: "€1M - €2M revenue",
-    lifecycle_status: "lead",
-    journey_stage: "learner",
+    lifecycle_status: "client",
+    journey_stage: "ready",
     source: "Trade Show",
+    tier2_stars: 4,
+    // Questionnaire fields
+    q1_employment_status: "independant",
+    q2_years_experience: "11_15",
+    q3_industry_sectors: ["agriculture", "hebergement_restauration", "commerce_detail"],
+    q4_has_ma_experience: true,
+    q5_team_size: "11_20",
+    q6_involved_in_ma: true,
+    q7_ma_details: "Participated in family business merger in 2020",
+    q8_executive_roles: ["ceo"],
+    q9_board_experience: true,
+    q10_journey_stages: ["training_done", "target_search"],
+    q11_target_sectors: ["agriculture", "hebergement_restauration"],
+    q12_has_identified_targets: true,
+    q13_target_details: "Organic farm with processing facility near Nantes",
+    q14_investment_capacity: "450_plus",
+    q15_funding_status: "secured",
+    q16_network_training: ["cra", "other"],
+    q17_open_to_co_acquisition: true,
   },
   {
     email: "test.george@example.com",
@@ -99,6 +210,24 @@ const TEST_REPRENEURS = [
     lifecycle_status: "qualified",
     journey_stage: "ready",
     source: "Referral",
+    // Questionnaire fields
+    q1_employment_status: "sans_emploi",
+    q2_years_experience: "16_20",
+    q3_industry_sectors: ["finance_assurances", "gestion_entreprises"],
+    q4_has_ma_experience: true,
+    q5_team_size: "11_20",
+    q6_involved_in_ma: true,
+    q7_ma_details: "Advised on 5+ M&A deals as investment banker",
+    q8_executive_roles: ["cfo", "division_director"],
+    q9_board_experience: false,
+    q10_journey_stages: ["training_done", "financing_defined"],
+    q11_target_sectors: ["finance_assurances", "services_pro"],
+    q12_has_identified_targets: true,
+    q13_target_details: "Insurance brokerage in Alsace region",
+    q14_investment_capacity: "351_450",
+    q15_funding_status: "secured",
+    q16_network_training: ["cra", "cci"],
+    q17_open_to_co_acquisition: false,
   },
   {
     email: "test.hannah@example.com",
@@ -113,6 +242,25 @@ const TEST_REPRENEURS = [
     lifecycle_status: "client",
     journey_stage: "ready",
     source: "Website",
+    tier2_stars: 3,
+    // Questionnaire fields
+    q1_employment_status: "temps_plein",
+    q2_years_experience: "11_15",
+    q3_industry_sectors: ["hebergement_restauration", "spectacles_loisirs"],
+    q4_has_ma_experience: false,
+    q5_team_size: "less_10",
+    q6_involved_in_ma: false,
+    q7_ma_details: null,
+    q8_executive_roles: ["cco"],
+    q9_board_experience: false,
+    q10_journey_stages: ["first_contacts", "target_search"],
+    q11_target_sectors: ["hebergement_restauration", "spectacles_loisirs"],
+    q12_has_identified_targets: true,
+    q13_target_details: "Boutique hotel in Nice old town",
+    q14_investment_capacity: "151_250",
+    q15_funding_status: "in_progress",
+    q16_network_training: ["other"],
+    q17_open_to_co_acquisition: true,
   },
   {
     email: "test.ivan@example.com",
@@ -127,6 +275,24 @@ const TEST_REPRENEURS = [
     lifecycle_status: "lead",
     journey_stage: "learner",
     source: "CCI",
+    // Questionnaire fields
+    q1_employment_status: "temps_plein",
+    q2_years_experience: "20_plus",
+    q3_industry_sectors: ["industrie", "transport", "construction"],
+    q4_has_ma_experience: false,
+    q5_team_size: "50_plus",
+    q6_involved_in_ma: false,
+    q7_ma_details: null,
+    q8_executive_roles: ["coo", "cto"],
+    q9_board_experience: false,
+    q10_journey_stages: ["first_contacts", "training_done"],
+    q11_target_sectors: ["industrie"],
+    q12_has_identified_targets: false,
+    q13_target_details: null,
+    q14_investment_capacity: "450_plus",
+    q15_funding_status: "in_progress",
+    q16_network_training: ["cci"],
+    q17_open_to_co_acquisition: true,
   },
   {
     email: "test.julia@example.com",
@@ -141,6 +307,24 @@ const TEST_REPRENEURS = [
     lifecycle_status: "qualified",
     journey_stage: "explorer",
     source: "LinkedIn",
+    // Questionnaire fields
+    q1_employment_status: "temps_plein",
+    q2_years_experience: "16_20",
+    q3_industry_sectors: ["sante"],
+    q4_has_ma_experience: false,
+    q5_team_size: "less_10",
+    q6_involved_in_ma: false,
+    q7_ma_details: null,
+    q8_executive_roles: ["other"],
+    q9_board_experience: false,
+    q10_journey_stages: ["info_only", "first_contacts"],
+    q11_target_sectors: ["sante", "services_pro"],
+    q12_has_identified_targets: false,
+    q13_target_details: null,
+    q14_investment_capacity: "251_350",
+    q15_funding_status: "in_progress",
+    q16_network_training: ["none"],
+    q17_open_to_co_acquisition: true,
   },
 ]
 
@@ -187,17 +371,37 @@ const TEST_OFFERS = [
   },
 ]
 
-const TEST_NOTES = [
-  "Initial call - very interested in retail sector. Has experience managing multiple locations.",
+// Note templates - will be combined with context
+const NOTE_TEMPLATES = [
+  "Initial call completed. Candidate seems motivated and has clear acquisition criteria.",
   "Sent information pack about our services. Will follow up next week.",
-  "Meeting scheduled for next Tuesday to discuss acquisition criteria.",
-  "Reviewed financial capacity - well-positioned for mid-market acquisition.",
-  "Introduced to potential target company. Waiting for feedback.",
-  "Due diligence started. Client is thorough and asks good questions.",
-  "Negotiation phase - helping with price discussions.",
-  "Deal closed successfully! Client very satisfied with our support.",
-  "Follow-up call - checking in on business transition progress.",
-  "Referral received from this client - they recommended us to a colleague.",
+  "Meeting scheduled for next Tuesday to discuss acquisition criteria in detail.",
+  "Reviewed financial capacity documents. Well-positioned for mid-market acquisition.",
+  "Introduced candidate to potential target company in their sector. Waiting for feedback.",
+  "Due diligence support started. Candidate is thorough and asks good questions.",
+  "Helped prepare initial offer letter. Strong negotiation skills observed.",
+  "Follow-up call completed. Candidate is progressing well in their search.",
+  "Referral received from this candidate. They recommended us to a colleague.",
+  "Discussed financing options. Candidate has strong bank relationships.",
+  "Provided market analysis for target sector. Candidate found it very helpful.",
+  "Coaching session on negotiation tactics completed.",
+  "Candidate attended our workshop on due diligence best practices.",
+  "Reviewed their acquisition criteria. Helped refine target profile.",
+  "Connected candidate with our legal partner for preliminary consultation.",
+]
+
+// Activity templates with types
+const ACTIVITY_TEMPLATES: { type: "welcome_email" | "interview" | "offer_submitted" | "meeting"; notes: string; duration?: number }[] = [
+  { type: "welcome_email", notes: "Sent welcome email with Re-New introduction and next steps" },
+  { type: "interview", notes: "Initial screening interview completed. Good fit for our program.", duration: 45 },
+  { type: "interview", notes: "In-depth interview about acquisition criteria and timeline.", duration: 60 },
+  { type: "meeting", notes: "Strategy session to define target profile and search criteria.", duration: 90 },
+  { type: "meeting", notes: "Follow-up meeting to review progress and adjust strategy.", duration: 45 },
+  { type: "meeting", notes: "Coaching session on valuation methods and deal structuring.", duration: 60 },
+  { type: "offer_submitted", notes: "Presented service package options. Candidate reviewing proposal." },
+  { type: "interview", notes: "Final qualification interview before onboarding.", duration: 30 },
+  { type: "meeting", notes: "Kick-off meeting for active engagement. Defined milestones.", duration: 75 },
+  { type: "meeting", notes: "Monthly check-in call. Candidate making good progress.", duration: 30 },
 ]
 
 export async function POST() {
@@ -213,17 +417,46 @@ export async function POST() {
   }
 
   try {
+    // Calculate tier1 scores for all repreneurs
+    const repreneursWithScores = TEST_REPRENEURS.map((r) => {
+      const scoreBreakdown = calculateTier1Score({
+        q1_employment_status: r.q1_employment_status,
+        q2_years_experience: r.q2_years_experience,
+        q3_industry_sectors: r.q3_industry_sectors,
+        q4_has_ma_experience: r.q4_has_ma_experience,
+        q5_team_size: r.q5_team_size,
+        q6_involved_in_ma: r.q6_involved_in_ma,
+        q8_executive_roles: r.q8_executive_roles,
+        q9_board_experience: r.q9_board_experience,
+        q10_journey_stages: r.q10_journey_stages,
+        q11_target_sectors: r.q11_target_sectors,
+        q12_has_identified_targets: r.q12_has_identified_targets,
+        q14_investment_capacity: r.q14_investment_capacity,
+        q15_funding_status: r.q15_funding_status,
+        q16_network_training: r.q16_network_training,
+        q17_open_to_co_acquisition: r.q17_open_to_co_acquisition,
+      })
+
+      return {
+        ...r,
+        tier1_score: scoreBreakdown.total,
+        tier1_score_breakdown: scoreBreakdown,
+        questionnaire_completed_at: new Date().toISOString(),
+        created_by: user.id,
+      }
+    })
+
     // Insert repreneurs
     const { data: repreneurs, error: repreneurError } = await supabase
       .from("repreneurs")
-      .insert(TEST_REPRENEURS.map((r) => ({ ...r, created_by: user.id })))
+      .insert(repreneursWithScores)
       .select()
 
     if (repreneurError) {
       return NextResponse.json({ error: `Repreneur error: ${repreneurError.message}` }, { status: 500 })
     }
 
-    // Insert offers (skip if Starter Pack already exists from previous test)
+    // Insert offers (skip if already exists)
     const { data: existingOffers } = await supabase.from("offers").select("name")
     const existingNames = existingOffers?.map((o) => o.name) || []
     const newOffers = TEST_OFFERS.filter((o) => !existingNames.includes(o.name))
@@ -241,20 +474,29 @@ export async function POST() {
     // Get all offers for assignment
     const { data: allOffers } = await supabase.from("offers").select("*")
 
-    // Add notes to some repreneurs (2-3 notes each for first 5 repreneurs)
+    // Add 2-5 notes to ALL repreneurs
     const notesToInsert = []
-    for (let i = 0; i < 5; i++) {
-      const repreneur = repreneurs?.[i]
-      if (repreneur) {
-        const numNotes = Math.floor(Math.random() * 2) + 2 // 2-3 notes
-        for (let j = 0; j < numNotes; j++) {
-          const noteIndex = (i * 2 + j) % TEST_NOTES.length
-          notesToInsert.push({
-            repreneur_id: repreneur.id,
-            content: TEST_NOTES[noteIndex],
-            created_by: user.id,
-          })
-        }
+    for (const repreneur of repreneurs || []) {
+      const numNotes = Math.floor(Math.random() * 4) + 2 // 2-5 notes
+      const usedNotes = new Set<number>()
+
+      for (let j = 0; j < numNotes; j++) {
+        let noteIndex
+        do {
+          noteIndex = Math.floor(Math.random() * NOTE_TEMPLATES.length)
+        } while (usedNotes.has(noteIndex) && usedNotes.size < NOTE_TEMPLATES.length)
+        usedNotes.add(noteIndex)
+
+        // Stagger creation dates (notes from past 30 days)
+        const createdAt = new Date()
+        createdAt.setDate(createdAt.getDate() - Math.floor(Math.random() * 30))
+
+        notesToInsert.push({
+          repreneur_id: repreneur.id,
+          content: NOTE_TEMPLATES[noteIndex],
+          created_by: user.id,
+          created_at: createdAt.toISOString(),
+        })
       }
     }
 
@@ -262,6 +504,59 @@ export async function POST() {
       const { error: noteError } = await supabase.from("notes").insert(notesToInsert)
       if (noteError) {
         console.error("Note error:", noteError)
+      }
+    }
+
+    // Add 3-4 activities to ALL repreneurs
+    const activitiesToInsert = []
+    for (const repreneur of repreneurs || []) {
+      const numActivities = Math.floor(Math.random() * 2) + 3 // 3-4 activities
+      const usedActivities = new Set<number>()
+
+      // Always start with welcome email
+      const welcomeActivity = ACTIVITY_TEMPLATES.find(a => a.type === "welcome_email")!
+      const welcomeDate = new Date()
+      welcomeDate.setDate(welcomeDate.getDate() - Math.floor(Math.random() * 60) - 30) // 30-90 days ago
+
+      activitiesToInsert.push({
+        repreneur_id: repreneur.id,
+        activity_type: welcomeActivity.type,
+        notes: welcomeActivity.notes,
+        duration_minutes: welcomeActivity.duration || null,
+        created_by: user.id,
+        created_at: welcomeDate.toISOString(),
+      })
+      usedActivities.add(0) // Mark welcome email as used
+
+      // Add remaining activities
+      for (let j = 1; j < numActivities; j++) {
+        let activityIndex
+        do {
+          activityIndex = Math.floor(Math.random() * ACTIVITY_TEMPLATES.length)
+        } while (usedActivities.has(activityIndex) && usedActivities.size < ACTIVITY_TEMPLATES.length)
+        usedActivities.add(activityIndex)
+
+        const activity = ACTIVITY_TEMPLATES[activityIndex]
+
+        // Stagger creation dates after welcome email
+        const createdAt = new Date(welcomeDate)
+        createdAt.setDate(createdAt.getDate() + Math.floor(Math.random() * 25) + (j * 5))
+
+        activitiesToInsert.push({
+          repreneur_id: repreneur.id,
+          activity_type: activity.type,
+          notes: activity.notes,
+          duration_minutes: activity.duration || null,
+          created_by: user.id,
+          created_at: createdAt.toISOString(),
+        })
+      }
+    }
+
+    if (activitiesToInsert.length > 0) {
+      const { error: activityError } = await supabase.from("activities").insert(activitiesToInsert)
+      if (activityError) {
+        console.error("Activity error:", activityError)
       }
     }
 
@@ -318,6 +613,7 @@ export async function POST() {
         repreneurs: repreneurs?.length || 0,
         offers: newOffers.length,
         notes: notesToInsert.length,
+        activities: activitiesToInsert.length,
         offerAssignments: offersToAssign.length,
       },
     })

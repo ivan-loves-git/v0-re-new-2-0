@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useOptimistic, useTransition } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, Mail, Phone, FileText, CheckCircle, XCircle, Calendar, Trash2, MoreHorizontal } from "lucide-react"
 import { createActivity, deleteActivity } from "@/lib/actions/activities"
 import { Button } from "@/components/ui/button"
@@ -45,11 +46,6 @@ const ACTIVITY_TYPES: { value: ActivityType; label: string; icon: React.ReactNod
   { value: "meeting", label: "Meeting", icon: <Calendar className="h-4 w-4" /> },
 ]
 
-function getActivityIcon(type: ActivityType) {
-  const activityType = ACTIVITY_TYPES.find((t) => t.value === type)
-  return activityType?.icon || <FileText className="h-4 w-4" />
-}
-
 function getActivityLabel(type: ActivityType) {
   const activityType = ACTIVITY_TYPES.find((t) => t.value === type)
   return activityType?.label || type
@@ -61,86 +57,107 @@ function formatDate(dateString: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   })
 }
 
-type OptimisticAction =
-  | { type: "add"; activity: Activity }
-  | { type: "delete"; activityId: string }
-
 export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProps) {
+  const router = useRouter()
+  const [localActivities, setLocalActivities] = useState<Activity[]>(activities)
   const [isOpen, setIsOpen] = useState(false)
   const [activityType, setActivityType] = useState<ActivityType>("welcome_email")
   const [notes, setNotes] = useState("")
   const [durationMinutes, setDurationMinutes] = useState("")
-  const [isPending, startTransition] = useTransition()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const [optimisticActivities, updateOptimisticActivities] = useOptimistic(
-    activities,
-    (state: Activity[], action: OptimisticAction) => {
-      switch (action.type) {
-        case "add":
-          return [action.activity, ...state]
-        case "delete":
-          return state.filter((a) => a.id !== action.activityId)
-        default:
-          return state
-      }
+  // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
+  const isMutatingRef = useRef(false)
+
+  // Sync local state when props change, but only if we're not mid-mutation
+  useEffect(() => {
+    if (!isMutatingRef.current) {
+      setLocalActivities(activities)
     }
-  )
+  }, [activities])
 
   async function handleSubmit() {
-    const tempId = `temp-${Date.now()}`
-    const optimisticActivity: Activity = {
-      id: tempId,
+    const savedNotes = notes
+    const savedDuration = durationMinutes
+    const savedType = activityType
+
+    // Create optimistic activity
+    const tempActivity: Activity = {
+      id: `temp-${Date.now()}`,
       repreneur_id: repreneurId,
-      activity_type: activityType,
-      notes: notes || null,
-      duration_minutes: durationMinutes ? parseInt(durationMinutes) : null,
+      activity_type: savedType,
+      notes: savedNotes || undefined,
+      duration_minutes: savedDuration ? parseInt(savedDuration) : undefined,
       created_at: new Date().toISOString(),
       created_by: "",
       created_by_email: "You",
     }
 
-    const savedNotes = notes
-    const savedDuration = durationMinutes
-    const savedType = activityType
+    // Set mutation flag BEFORE state updates
+    isMutatingRef.current = true
 
+    // Optimistically update UI
+    setLocalActivities(prev => [tempActivity, ...prev])
     setNotes("")
     setDurationMinutes("")
     setActivityType("welcome_email")
     setIsOpen(false)
+    setIsSubmitting(true)
 
-    startTransition(async () => {
-      updateOptimisticActivities({ type: "add", activity: optimisticActivity })
-      try {
-        await createActivity(
-          repreneurId,
-          savedType,
-          savedNotes || undefined,
-          savedDuration ? parseInt(savedDuration) : undefined
-        )
-      } catch (error) {
-        console.error("Failed to create activity:", error)
-      }
-    })
+    try {
+      await createActivity(
+        repreneurId,
+        savedType,
+        savedNotes || undefined,
+        savedDuration ? parseInt(savedDuration) : undefined
+      )
+      await new Promise(resolve => setTimeout(resolve, 100))
+      router.refresh()
+      setTimeout(() => {
+        isMutatingRef.current = false
+      }, 500)
+    } catch (error) {
+      console.error("Failed to create activity:", error)
+      // Revert on error
+      setLocalActivities(prev => prev.filter(a => a.id !== tempActivity.id))
+      isMutatingRef.current = false
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function handleDelete(activityId: string) {
+    // Store for potential revert
+    const activityToDelete = localActivities.find(a => a.id === activityId)
+
+    // Set mutation flag BEFORE state updates
+    isMutatingRef.current = true
+
+    // Optimistically remove
+    setLocalActivities(prev => prev.filter(a => a.id !== activityId))
     setDeletingId(activityId)
-    startTransition(async () => {
-      updateOptimisticActivities({ type: "delete", activityId })
-      try {
-        await deleteActivity(activityId, repreneurId)
-      } catch (error) {
-        console.error("Failed to delete activity:", error)
-      } finally {
-        setDeletingId(null)
+
+    try {
+      await deleteActivity(activityId, repreneurId)
+      await new Promise(resolve => setTimeout(resolve, 100))
+      router.refresh()
+      setTimeout(() => {
+        isMutatingRef.current = false
+      }, 500)
+    } catch (error) {
+      console.error("Failed to delete activity:", error)
+      // Revert on error
+      if (activityToDelete) {
+        setLocalActivities(prev => [activityToDelete, ...prev])
       }
-    })
+      isMutatingRef.current = false
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -207,15 +224,15 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
               <Button variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={isPending}>
-                {isPending ? "Saving..." : "Save Activity"}
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Activity"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
-        {optimisticActivities.length === 0 ? (
+        {localActivities.length === 0 ? (
           <div className="flex-1 flex items-center justify-center min-h-[200px]">
             <p className="text-sm text-gray-500 text-center">
               No activities logged yet. Click "Log Activity" to add one.
@@ -223,7 +240,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
           </div>
         ) : (
           <div className="space-y-4">
-            {optimisticActivities.map((activity) => (
+            {localActivities.map((activity) => (
               <div
                 key={activity.id}
                 className={`flex items-center justify-between p-4 border rounded-lg ${

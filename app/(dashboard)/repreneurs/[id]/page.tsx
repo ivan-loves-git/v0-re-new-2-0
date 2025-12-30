@@ -45,20 +45,21 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     notFound()
   }
 
-  // Fetch notes with user email
-  const { data: notes } = await supabase
+  // Fetch notes (simple query without join)
+  const { data: notes, error: notesError } = await supabase
     .from("notes")
-    .select(`
-      *,
-      created_by_email:auth.users!notes_created_by_fkey(email)
-    `)
+    .select("*")
     .eq("repreneur_id", id)
     .order("created_at", { ascending: false })
 
-  // Transform notes to include email
+  if (notesError) {
+    console.error("Error fetching notes:", notesError)
+  }
+
+  // Transform notes to include placeholder email
   const notesWithEmail = (notes || []).map((note: any) => ({
     ...note,
-    created_by_email: note.created_by_email?.email || "Unknown",
+    created_by_email: "Team",
   }))
 
   // Fetch repreneur offers with offer details
@@ -78,20 +79,21 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     .eq("is_active", true)
     .order("name")
 
-  // Fetch activities with user email
-  const { data: activities } = await supabase
+  // Fetch activities (simple query without join)
+  const { data: activities, error: activitiesError } = await supabase
     .from("activities")
-    .select(`
-      *,
-      created_by_email:auth.users!activities_created_by_fkey(email)
-    `)
+    .select("*")
     .eq("repreneur_id", id)
     .order("created_at", { ascending: false })
 
-  // Transform activities to include email
+  if (activitiesError) {
+    console.error("Error fetching activities:", activitiesError)
+  }
+
+  // Transform activities to include placeholder email
   const activitiesWithEmail = (activities || []).map((activity: any) => ({
     ...activity,
-    created_by_email: activity.created_by_email?.email || "Unknown",
+    created_by_email: "Team",
   }))
 
   return (

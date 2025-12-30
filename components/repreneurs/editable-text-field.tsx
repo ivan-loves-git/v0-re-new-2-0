@@ -24,7 +24,7 @@ export function EditableTextField({
   label,
   type = "text",
   placeholder,
-  textClassName = "text-sm font-medium",
+  textClassName = "text-sm",
 }: EditableTextFieldProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value || "")
@@ -101,12 +101,12 @@ export function EditableTextField({
   }
 
   return (
-    <div className="group flex items-center gap-2">
+    <div className="group flex items-center gap-2 min-h-[24px]">
       <p className={textClassName}>{value || <span className="text-muted-foreground italic">Not set</span>}</p>
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
         onClick={() => setIsEditing(true)}
       >
         <Pencil className="h-3 w-3" />

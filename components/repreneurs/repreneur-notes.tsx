@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useOptimistic, useTransition } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, StickyNote, MoreHorizontal, Trash2 } from "lucide-react"
 import { createNote, deleteNote } from "@/lib/actions/repreneurs"
 import { Button } from "@/components/ui/button"
@@ -35,42 +34,35 @@ function formatDate(dateString: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   })
 }
 
-type OptimisticAction =
-  | { type: "add"; note: Note }
-  | { type: "delete"; noteId: string }
-
 export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
+  const router = useRouter()
+  const [localNotes, setLocalNotes] = useState<Note[]>(notes)
   const [content, setContent] = useState("")
   const [isOpen, setIsOpen] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const [optimisticNotes, updateOptimisticNotes] = useOptimistic(
-    notes,
-    (state: Note[], action: OptimisticAction) => {
-      switch (action.type) {
-        case "add":
-          return [action.note, ...state]
-        case "delete":
-          return state.filter((n) => n.id !== action.noteId)
-        default:
-          return state
-      }
+  // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
+  const isMutatingRef = useRef(false)
+
+  // Sync local state when props change, but only if we're not mid-mutation
+  useEffect(() => {
+    if (!isMutatingRef.current) {
+      setLocalNotes(notes)
     }
-  )
+  }, [notes])
 
   async function handleSubmit() {
     if (!content.trim()) return
 
     const savedContent = content.trim()
-    const tempId = `temp-${Date.now()}`
-    const optimisticNote: Note = {
-      id: tempId,
+
+    // Create optimistic note
+    const tempNote: Note = {
+      id: `temp-${Date.now()}`,
       repreneur_id: repreneurId,
       content: savedContent,
       created_at: new Date().toISOString(),
@@ -78,31 +70,62 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
       created_by_email: "You",
     }
 
+    // Set mutation flag BEFORE state updates
+    isMutatingRef.current = true
+
+    // Optimistically update UI
+    setLocalNotes(prev => [tempNote, ...prev])
     setContent("")
     setIsOpen(false)
+    setIsSubmitting(true)
 
-    startTransition(async () => {
-      updateOptimisticNotes({ type: "add", note: optimisticNote })
-      try {
-        await createNote(repreneurId, savedContent)
-      } catch (error) {
-        console.error("Failed to create note:", error)
-      }
-    })
+    try {
+      await createNote(repreneurId, savedContent)
+      // Small delay to allow server to process before refresh
+      await new Promise(resolve => setTimeout(resolve, 100))
+      router.refresh()
+      // Keep mutation flag on a bit longer to let the refresh complete
+      setTimeout(() => {
+        isMutatingRef.current = false
+      }, 500)
+    } catch (error) {
+      console.error("Failed to create note:", error)
+      // Revert on error
+      setLocalNotes(prev => prev.filter(n => n.id !== tempNote.id))
+      isMutatingRef.current = false
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function handleDelete(noteId: string) {
+    // Store for potential revert
+    const noteToDelete = localNotes.find(n => n.id === noteId)
+
+    // Set mutation flag BEFORE state updates
+    isMutatingRef.current = true
+
+    // Optimistically remove
+    setLocalNotes(prev => prev.filter(n => n.id !== noteId))
     setDeletingId(noteId)
-    startTransition(async () => {
-      updateOptimisticNotes({ type: "delete", noteId })
-      try {
-        await deleteNote(noteId, repreneurId)
-      } catch (error) {
-        console.error("Failed to delete note:", error)
-      } finally {
-        setDeletingId(null)
+
+    try {
+      await deleteNote(noteId, repreneurId)
+      await new Promise(resolve => setTimeout(resolve, 100))
+      router.refresh()
+      setTimeout(() => {
+        isMutatingRef.current = false
+      }, 500)
+    } catch (error) {
+      console.error("Failed to delete note:", error)
+      // Revert on error
+      if (noteToDelete) {
+        setLocalNotes(prev => [noteToDelete, ...prev])
       }
-    })
+      isMutatingRef.current = false
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -135,21 +158,21 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
               <Button variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={isPending || !content.trim()}>
-                {isPending ? "Saving..." : "Save Note"}
+              <Button onClick={handleSubmit} disabled={isSubmitting || !content.trim()}>
+                {isSubmitting ? "Saving..." : "Save Note"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
-        {optimisticNotes.length === 0 ? (
+        {localNotes.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <p className="text-sm text-gray-500">No notes yet</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {optimisticNotes.map((note) => (
+            {localNotes.map((note) => (
               <div
                 key={note.id}
                 className={`flex items-center justify-between p-4 border rounded-lg ${
