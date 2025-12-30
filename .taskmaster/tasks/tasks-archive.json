@@ -1,0 +1,98 @@
+{
+  "archived": {
+    "description": "Completed tasks archived on 2025-12-30. Full details preserved for reference.",
+    "tasks": [
+      {
+        "id": "11",
+        "title": "Set up Next.js project with Supabase integration",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "Initialized Next.js with V0, configured Supabase client, auth context, and Vercel deployment"
+      },
+      {
+        "id": "12",
+        "title": "Implement email/password authentication system",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "Created login page, auth flow, protected routes, session persistence"
+      },
+      {
+        "id": "13",
+        "title": "Create database schema and models",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "Created Repreneur, Offer, Repreneur_Offer, Note, Activity tables with relationships and RLS"
+      },
+      {
+        "id": "14",
+        "title": "Implement Repreneur List and Detail Views",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "List view with sorting/filtering, detail page with inline editing"
+      },
+      {
+        "id": "15",
+        "title": "Build Kanban Pipeline View",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "Static pipeline view (converted from drag-drop Kanban to action-driven status)"
+      },
+      {
+        "id": "16",
+        "title": "Implement Notes System",
+        "status": "done",
+        "completedAt": "2025-12-30",
+        "summary": "Notes component with add/delete, chronological display, author tracking"
+      },
+      {
+        "id": "17",
+        "title": "Develop Offer Management System",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "Offer CRUD, association with repreneurs, status tracking"
+      },
+      {
+        "id": "18",
+        "title": "Create Dashboard with Statistics",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "Dashboard with repreneur counts by status, navigation links"
+      },
+      {
+        "id": "20",
+        "title": "Create New Repreneur Form and Add/Edit Functionality",
+        "status": "done",
+        "completedAt": "2025-12-29",
+        "summary": "Form with validation, create/edit modes, success notifications"
+      },
+      {
+        "id": "24",
+        "title": "Implement Tier 1 and Tier 2 scoring systems",
+        "status": "done",
+        "completedAt": "2025-12-30",
+        "summary": "Tier 1 automated scoring from questionnaire, Tier 2 star rating, status transitions"
+      },
+      {
+        "id": "25",
+        "title": "Redesign Repreneur list and pipeline views",
+        "status": "done",
+        "completedAt": "2025-12-30",
+        "summary": "Status grouping, dynamic columns, static pipeline, rejected functionality"
+      },
+      {
+        "id": "27",
+        "title": "Develop Activity tracking and Notes system",
+        "status": "done",
+        "completedAt": "2025-12-30",
+        "summary": "Activity types, forms, chronological display. Notes system complete. Dashboard feed pending."
+      },
+      {
+        "id": "28",
+        "title": "Pre-populate the 3 consulting offer packages",
+        "status": "done",
+        "completedAt": "2025-12-30",
+        "summary": "Starter Pack, Deal Flow, Sparring Partner seeded. Auto Client status on offer assignment."
+      }
+    ]
+  }
+}

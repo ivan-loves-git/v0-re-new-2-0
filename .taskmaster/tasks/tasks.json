@@ -1,0 +1,157 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": "11",
+        "title": "Set up Next.js project with Supabase integration",
+        "description": "Initialize Next.js with V0, configure Supabase",
+        "status": "done",
+        "priority": "high",
+        "dependencies": []
+      },
+      {
+        "id": "12",
+        "title": "Implement email/password authentication system",
+        "description": "Auth flow with Supabase for 3 team members",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["11"]
+      },
+      {
+        "id": "13",
+        "title": "Create database schema and models",
+        "description": "Repreneur, Offer, Note, Activity tables",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["11"]
+      },
+      {
+        "id": "14",
+        "title": "Implement Repreneur List and Detail Views",
+        "description": "List with sorting/filtering, detail with inline edit",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": ["12", "13"]
+      },
+      {
+        "id": "15",
+        "title": "Build Kanban Pipeline View",
+        "description": "Static pipeline (action-driven, no drag-drop)",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": ["13", "14"]
+      },
+      {
+        "id": "16",
+        "title": "Implement Notes System",
+        "description": "Notes with add/delete, author tracking",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": ["12", "13", "14"]
+      },
+      {
+        "id": "17",
+        "title": "Develop Offer Management System",
+        "description": "Offer CRUD and repreneur association",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": ["13", "14"]
+      },
+      {
+        "id": "18",
+        "title": "Create Dashboard with Statistics",
+        "description": "Stats cards and navigation",
+        "status": "done",
+        "priority": "low",
+        "dependencies": ["14", "15", "16", "17"]
+      },
+      {
+        "id": "19",
+        "title": "Implement Flatchr Data Import Script",
+        "description": "One-time migration script to import repreneur profiles from Flatchr export (CSV or JSON)",
+        "details": "BLOCKED: Waiting for Flatchr export format from Bertrand.\n\nWhen unblocked:\n1. Parse CSV/JSON from Flatchr\n2. Map fields to Re-New schema\n3. Validate required fields\n4. UI for upload and progress tracking\n5. Set default status to 'Lead'",
+        "testStrategy": "Test with sample exports, verify field mapping, validate error handling",
+        "priority": "medium",
+        "dependencies": ["13"],
+        "status": "blocked"
+      },
+      {
+        "id": "20",
+        "title": "Create New Repreneur Form and Add/Edit Functionality",
+        "description": "Form with validation, create/edit modes",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["13", "14"]
+      },
+      {
+        "id": "24",
+        "title": "Implement Tier 1 and Tier 2 scoring systems",
+        "description": "Automated Tier 1 + manual Tier 2 stars + status transitions",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["14", "20"]
+      },
+      {
+        "id": "25",
+        "title": "Redesign Repreneur list and pipeline views",
+        "description": "Status grouping, dynamic columns, rejected functionality",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": ["14", "15", "24"]
+      },
+      {
+        "id": "27",
+        "title": "Develop Activity tracking and Notes system",
+        "description": "Activity types, forms, chronological display",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": ["14", "16"],
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Activity Model and Database Schema",
+            "status": "done"
+          },
+          {
+            "id": 2,
+            "title": "Create Activity Form Component and API Endpoint",
+            "status": "done"
+          },
+          {
+            "id": 3,
+            "title": "Implement Notes System and API",
+            "status": "done"
+          },
+          {
+            "id": 4,
+            "title": "Display Chronological Activity and Notes Lists",
+            "status": "done"
+          },
+          {
+            "id": 5,
+            "title": "Create Activity Feed Component for Dashboard",
+            "description": "Dashboard activity feed showing recent activities across all repreneurs",
+            "details": "Build React component for aggregated activity feed with pagination and filtering. Low priority - can be done in future iteration.",
+            "status": "pending",
+            "dependencies": [1, 2, 4]
+          }
+        ]
+      },
+      {
+        "id": "28",
+        "title": "Pre-populate the 3 consulting offer packages",
+        "description": "Starter Pack, Deal Flow, Sparring Partner + auto Client status",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["17", "24"]
+      }
+    ],
+    "metadata": {
+      "version": "1.0.0",
+      "lastModified": "2025-12-30T18:00:00.000Z",
+      "taskCount": 14,
+      "completedCount": 13,
+      "note": "Verbose details for completed tasks archived in tasks-archive.json"
+    }
+  }
+}
