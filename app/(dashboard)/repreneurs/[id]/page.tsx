@@ -114,7 +114,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           <div className="space-y-2">
             <div className="flex gap-6">
               <div>
-                <Label className="text-xs text-gray-500 mb-1 block">Name</Label>
+                <Label className="text-xs text-gray-400 mb-1 block">Name</Label>
                 <EditableTextField
                   repreneurId={id}
                   field="first_name"
@@ -125,7 +125,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500 mb-1 block">Surname</Label>
+                <Label className="text-xs text-gray-400 mb-1 block">Surname</Label>
                 <EditableTextField
                   repreneurId={id}
                   field="last_name"
@@ -137,7 +137,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </div>
             </div>
             {/* Email and Phone inline */}
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-3 text-sm text-gray-600">
               <div className="flex items-center gap-1.5">
                 <Mail className="h-4 w-4 text-gray-400" />
                 <EditableTextField
@@ -149,7 +149,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   placeholder="email@example.com"
                 />
               </div>
-              <span className="text-gray-300">|</span>
               <div className="flex items-center gap-1.5">
                 <Phone className="h-4 w-4 text-gray-400" />
                 <EditableTextField

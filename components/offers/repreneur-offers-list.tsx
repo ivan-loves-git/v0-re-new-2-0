@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { MoreHorizontal, Check, X, Clock, Trash2 } from "lucide-react"
+import { MoreHorizontal, Check, X, Clock, Trash2, Package } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -62,7 +62,10 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Offers</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          Offers
+        </CardTitle>
         <AssignOfferForm
           repreneurId={repreneurId}
           offers={allOffers}
@@ -71,7 +74,9 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
       </CardHeader>
       <CardContent>
         {repreneurOffers.length === 0 ? (
-          <p className="text-sm text-gray-500">No offers assigned yet.</p>
+          <div className="flex items-center justify-center py-8">
+            <p className="text-sm text-gray-500">No offers assigned yet.</p>
+          </div>
         ) : (
           <div className="space-y-4">
             {repreneurOffers.map((ro) => (
