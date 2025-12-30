@@ -4,7 +4,7 @@ import { createServerClient } from "@/lib/supabase/server"
 import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { UpdateStatusForm } from "@/components/repreneurs/update-status-form"
+import { StatusBadge } from "@/components/repreneurs/status-badge"
 import { UpdateJourneyStageForm } from "@/components/repreneurs/update-journey-stage-form"
 import { EditableTextField } from "@/components/repreneurs/editable-text-field"
 import { EditableSelectField } from "@/components/repreneurs/editable-select-field"
@@ -96,6 +96,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               value={repreneur.first_name}
               label="First Name"
               placeholder="First name"
+              textClassName="text-2xl font-semibold text-gray-900"
             />
             <EditableTextField
               repreneurId={id}
@@ -103,7 +104,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               value={repreneur.last_name}
               label="Last Name"
               placeholder="Last name"
+              textClassName="text-2xl font-semibold text-gray-900"
             />
+            <StatusBadge status={repreneur.lifecycle_status} />
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <Mail className="h-4 w-4" />
@@ -117,20 +120,18 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             />
           </div>
         </div>
-        <div className="flex flex-wrap items-start gap-3">
-          <div>
-            <Label className="text-xs text-gray-500 mb-1 block">Status</Label>
-            <UpdateStatusForm repreneurId={repreneur.id} currentStatus={repreneur.lifecycle_status} />
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
           <div>
             <Label className="text-xs text-gray-500 mb-1 block">Journey Stage</Label>
             <UpdateJourneyStageForm repreneurId={repreneur.id} currentStage={repreneur.journey_stage} />
           </div>
-          <RejectButton
-            repreneurId={repreneur.id}
-            currentStatus={repreneur.lifecycle_status}
-            repreneurName={`${repreneur.first_name} ${repreneur.last_name}`}
-          />
+          <div className="pt-5">
+            <RejectButton
+              repreneurId={repreneur.id}
+              currentStatus={repreneur.lifecycle_status}
+              repreneurName={`${repreneur.first_name} ${repreneur.last_name}`}
+            />
+          </div>
         </div>
       </div>
 

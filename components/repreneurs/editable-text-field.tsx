@@ -14,6 +14,7 @@ interface EditableTextFieldProps {
   label: string
   type?: "text" | "textarea" | "email" | "tel"
   placeholder?: string
+  textClassName?: string
 }
 
 export function EditableTextField({
@@ -23,6 +24,7 @@ export function EditableTextField({
   label,
   type = "text",
   placeholder,
+  textClassName = "text-sm font-medium",
 }: EditableTextFieldProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value || "")
@@ -100,7 +102,7 @@ export function EditableTextField({
 
   return (
     <div className="group flex items-center gap-2">
-      <p className="text-sm font-medium">{value || <span className="text-muted-foreground italic">Not set</span>}</p>
+      <p className={textClassName}>{value || <span className="text-muted-foreground italic">Not set</span>}</p>
       <Button
         variant="ghost"
         size="sm"
