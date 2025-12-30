@@ -3,8 +3,9 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Plus, StickyNote } from "lucide-react"
-import { createNote } from "@/lib/actions/repreneurs"
+import { useRouter } from "next/navigation"
+import { Plus, StickyNote, MoreHorizontal, Trash2 } from "lucide-react"
+import { createNote, deleteNote } from "@/lib/actions/repreneurs"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +17,12 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { Note } from "@/lib/types/repreneur"
 
 interface RepreneurNotesProps {

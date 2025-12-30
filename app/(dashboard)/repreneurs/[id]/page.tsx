@@ -341,6 +341,20 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 placeholder="Select sectors..."
               />
             </div>
+            <div>
+              <Label className="text-xs text-gray-500">Years of Experience</Label>
+              <p className="text-sm">
+                {repreneur.q2_years_experience || <span className="text-gray-400">Not specified</span>}
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">Identified Targets</Label>
+              <p className="text-sm">
+                {repreneur.q12_has_identified_targets !== undefined
+                  ? (repreneur.q12_has_identified_targets ? "Yes" : "No")
+                  : <span className="text-gray-400">Not specified</span>}
+              </p>
+            </div>
           </CardContent>
         </Card>
 
