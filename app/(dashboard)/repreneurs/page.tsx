@@ -5,10 +5,31 @@ import { Button } from "@/components/ui/button"
 import { RepreneurTable } from "@/components/repreneurs/repreneur-table"
 import type { Repreneur } from "@/lib/types/repreneur"
 
+interface RepreneurWithOffers extends Repreneur {
+  offer_names?: string[]
+}
+
 export default async function RepreneursPage() {
   const supabase = await createServerClient()
 
-  const { data: repreneurs } = await supabase.from("repreneurs").select("*").order("created_at", { ascending: false })
+  // Fetch repreneurs with their offers
+  const { data: repreneurs } = await supabase
+    .from("repreneurs")
+    .select(`
+      *,
+      repreneur_offers(
+        offer:offers(name)
+      )
+    `)
+    .order("created_at", { ascending: false })
+
+  // Transform to include offer_names array
+  const repreneursWithOffers: RepreneurWithOffers[] = (repreneurs || []).map((r: any) => ({
+    ...r,
+    offer_names: r.repreneur_offers
+      ?.map((ro: any) => ro.offer?.name)
+      .filter(Boolean) || [],
+  }))
 
   return (
     <div className="space-y-6">
@@ -25,7 +46,7 @@ export default async function RepreneursPage() {
         </Link>
       </div>
 
-      <RepreneurTable repreneurs={(repreneurs as Repreneur[]) || []} />
+      <RepreneurTable repreneurs={repreneursWithOffers} />
     </div>
   )
 }

@@ -83,7 +83,8 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
     throw new Error("Not authenticated")
   }
 
-  const { error } = await supabase.from("repreneur_offers").insert({
+  // Insert the offer assignment
+  const { error: offerError } = await supabase.from("repreneur_offers").insert({
     repreneur_id: repreneurId,
     offer_id: offerId,
     status: "offered",
@@ -91,12 +92,25 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
     created_by: user.id,
   })
 
-  if (error) {
-    throw new Error(error.message)
+  if (offerError) {
+    throw new Error(offerError.message)
+  }
+
+  // Auto-set lifecycle_status to "client" when an offer is assigned
+  // This is part of the action-driven status system
+  const { error: statusError } = await supabase
+    .from("repreneurs")
+    .update({ lifecycle_status: "client" })
+    .eq("id", repreneurId)
+
+  if (statusError) {
+    throw new Error(statusError.message)
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/offers")
+  revalidatePath("/repreneurs")
+  revalidatePath("/pipeline")
 }
 
 export async function updateRepreneurOfferStatus(repreneurOfferId: string, newStatus: OfferStatus, repreneurId: string) {

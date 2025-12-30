@@ -27,6 +27,7 @@ export function UpdateStatusForm({ repreneurId, currentStatus }: UpdateStatusFor
         <SelectItem value="lead">Lead</SelectItem>
         <SelectItem value="qualified">Qualified</SelectItem>
         <SelectItem value="client">Client</SelectItem>
+        <SelectItem value="rejected">Rejected</SelectItem>
       </SelectContent>
     </Select>
   )

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { Mail, Phone, MapPin, DollarSign, Target, Compass, Building, Briefcase } from "lucide-react"
+import { Mail, Phone, MapPin, DollarSign, Target, Compass, Building, Briefcase, Star } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,10 +11,13 @@ import { EditableSelectField } from "@/components/repreneurs/editable-select-fie
 import { EditableMultiSelect } from "@/components/repreneurs/editable-multi-select"
 import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
+import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
+import { RejectButton } from "@/components/repreneurs/reject-button"
+import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
 import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/lib/constants/investment-ranges"
-import type { Note } from "@/lib/types/repreneur"
+import type { Note, Activity } from "@/lib/types/repreneur"
 import type { RepreneurOffer, Offer } from "@/lib/types/offer"
 
 export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -61,6 +64,22 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     .eq("is_active", true)
     .order("name")
 
+  // Fetch activities with user email
+  const { data: activities } = await supabase
+    .from("activities")
+    .select(`
+      *,
+      created_by_email:auth.users!activities_created_by_fkey(email)
+    `)
+    .eq("repreneur_id", id)
+    .order("created_at", { ascending: false })
+
+  // Transform activities to include email
+  const activitiesWithEmail = (activities || []).map((activity: any) => ({
+    ...activity,
+    created_by_email: activity.created_by_email?.email || "Unknown",
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -98,7 +117,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             />
           </div>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-start gap-3">
           <div>
             <Label className="text-xs text-gray-500 mb-1 block">Status</Label>
             <UpdateStatusForm repreneurId={repreneur.id} currentStatus={repreneur.lifecycle_status} />
@@ -107,7 +126,53 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             <Label className="text-xs text-gray-500 mb-1 block">Journey Stage</Label>
             <UpdateJourneyStageForm repreneurId={repreneur.id} currentStage={repreneur.journey_stage} />
           </div>
+          <RejectButton
+            repreneurId={repreneur.id}
+            currentStatus={repreneur.lifecycle_status}
+            repreneurName={`${repreneur.first_name} ${repreneur.last_name}`}
+          />
         </div>
+      </div>
+
+      {/* Scoring Section */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Tier 1 Score (Automated) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Tier 1 Score (Automated)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {repreneur.tier1_score !== null && repreneur.tier1_score !== undefined ? (
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-bold">{repreneur.tier1_score}</span>
+                <span className="text-sm text-gray-500">points</span>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Score not calculated yet. Will be computed from form data.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tier 2 Rating (Manual) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5" />
+              Tier 2 Rating (Post-Interview)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tier2StarRating
+              repreneurId={repreneur.id}
+              currentStars={repreneur.tier2_stars}
+            />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -244,6 +309,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         repreneurOffers={(repreneurOffers || []) as RepreneurOffer[]}
         allOffers={(allOffers || []) as Offer[]}
       />
+
+      <ActivityHistory repreneurId={id} activities={activitiesWithEmail as Activity[]} />
 
       <RepreneurNotes repreneurId={id} notes={notesWithEmail as Note[]} />
     </div>

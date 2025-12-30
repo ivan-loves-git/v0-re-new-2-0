@@ -158,9 +158,10 @@ export async function createNote(repreneurId: string, content: string) {
 export async function deleteRepreneur(id: string) {
   const supabase = await createServerClient()
 
-  // Delete related records first (notes, repreneur_offers)
+  // Delete related records first (notes, repreneur_offers, activities)
   await supabase.from("notes").delete().eq("repreneur_id", id)
   await supabase.from("repreneur_offers").delete().eq("repreneur_id", id)
+  await supabase.from("activities").delete().eq("repreneur_id", id)
 
   // Delete the repreneur
   const { error } = await supabase.from("repreneurs").delete().eq("id", id)
@@ -171,4 +172,138 @@ export async function deleteRepreneur(id: string) {
 
   revalidatePath("/repreneurs")
   redirect("/repreneurs")
+}
+
+/**
+ * Set Tier 2 star rating (1-5) for a repreneur
+ * This automatically sets lifecycle_status to "qualified" (action-driven status)
+ */
+export async function setTier2Stars(id: string, stars: number) {
+  const supabase = await createServerClient()
+
+  if (stars < 1 || stars > 5) {
+    throw new Error("Star rating must be between 1 and 5")
+  }
+
+  // Setting Tier 2 stars automatically qualifies the repreneur
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      tier2_stars: stars,
+      lifecycle_status: "qualified",
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+}
+
+/**
+ * Clear Tier 2 star rating (set back to null)
+ * Does NOT change lifecycle_status - manual intervention required
+ */
+export async function clearTier2Stars(id: string) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({ tier2_stars: null })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+}
+
+/**
+ * Reject a repreneur
+ * Stores the previous status for potential un-reject, sets rejected_at timestamp
+ */
+export async function rejectRepreneur(id: string) {
+  const supabase = await createServerClient()
+
+  // First, get the current status to store as previous_status
+  const { data: repreneur, error: fetchError } = await supabase
+    .from("repreneurs")
+    .select("lifecycle_status")
+    .eq("id", id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
+  // Don't reject if already rejected
+  if (repreneur.lifecycle_status === "rejected") {
+    throw new Error("Repreneur is already rejected")
+  }
+
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      lifecycle_status: "rejected",
+      previous_status: repreneur.lifecycle_status,
+      rejected_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+}
+
+/**
+ * Un-reject a repreneur (restore to previous status)
+ */
+export async function unrejectRepreneur(id: string) {
+  const supabase = await createServerClient()
+
+  // Get the previous status
+  const { data: repreneur, error: fetchError } = await supabase
+    .from("repreneurs")
+    .select("lifecycle_status, previous_status")
+    .eq("id", id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
+  // Can only un-reject if currently rejected
+  if (repreneur.lifecycle_status !== "rejected") {
+    throw new Error("Repreneur is not rejected")
+  }
+
+  // Restore to previous status, or default to "lead" if no previous status
+  const restoredStatus = repreneur.previous_status || "lead"
+
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      lifecycle_status: restoredStatus,
+      previous_status: null,
+      rejected_at: null,
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
 }
