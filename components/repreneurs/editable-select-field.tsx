@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+const CLEAR_VALUE = "__CLEAR__"
+
 interface EditableSelectFieldProps {
   repreneurId: string
   field: string
@@ -32,7 +34,8 @@ export function EditableSelectField({
   const handleChange = async (newValue: string) => {
     setIsSaving(true)
     try {
-      await updateRepreneurField(repreneurId, field, newValue || null)
+      const valueToSave = newValue === CLEAR_VALUE ? null : newValue
+      await updateRepreneurField(repreneurId, field, valueToSave)
       setIsEditing(false)
     } catch (error) {
       console.error("Failed to update field:", error)
@@ -63,7 +66,7 @@ export function EditableSelectField({
                 />
               </div>
             )}
-            <SelectItem value="">
+            <SelectItem value={CLEAR_VALUE}>
               <span className="text-muted-foreground italic">Clear</span>
             </SelectItem>
             {filteredOptions.map((option) => (
