@@ -13,6 +13,7 @@ interface RadarDataPoint {
   dimension: string
   score: number
   fullMark: 100
+  description: string
 }
 
 // Calculate experience score (0-100)
@@ -169,26 +170,31 @@ export function CandidateRadarChart({ repreneur }: CandidateRadarChartProps) {
       dimension: "Experience",
       score: calculateExperienceScore(repreneur),
       fullMark: 100,
+      description: "Based on years of experience, employment status, and industry sectors",
     },
     {
       dimension: "Leadership",
       score: calculateLeadershipScore(repreneur),
       fullMark: 100,
+      description: "Based on team size managed, executive roles, and board experience",
     },
     {
       dimension: "M&A Knowledge",
       score: calculateMAKnowledgeScore(repreneur),
       fullMark: 100,
+      description: "Based on prior M&A experience and involvement in transactions",
     },
     {
       dimension: "Readiness",
       score: calculateReadinessScore(repreneur),
       fullMark: 100,
+      description: "Based on journey stage and identified acquisition targets",
     },
     {
       dimension: "Financial",
       score: calculateFinancialScore(repreneur),
       fullMark: 100,
+      description: "Based on investment capacity and funding status",
     },
   ]
 
@@ -233,8 +239,21 @@ export function CandidateRadarChart({ repreneur }: CandidateRadarChartProps) {
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
                     boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    maxWidth: "250px",
                   }}
-                  formatter={(value: number) => [`${value} / 100`, "Score"]}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const dataPoint = payload[0].payload as RadarDataPoint
+                      return (
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                          <p className="font-medium text-gray-900">{dataPoint.dimension}</p>
+                          <p className="text-lg font-bold text-blue-600">{dataPoint.score} / 100</p>
+                          <p className="text-xs text-gray-500 mt-1">{dataPoint.description}</p>
+                        </div>
+                      )
+                    }
+                    return null
+                  }}
                 />
               </RadarChart>
             </ResponsiveContainer>

@@ -182,11 +182,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
-      {/* Profile Overview Row: Radar Chart + Rating */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <CandidateRadarChart repreneur={repreneur as Repreneur} />
-
-        {/* Rating Card */}
+      {/* Profile Overview Row: Rating | Investment Profile | Radar Chart */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Col 1: Rating Card */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
@@ -295,11 +293,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Main Grid: 3 columns, 2 rows with Activity History spanning both rows */}
-      <div className="grid gap-6 md:grid-cols-3 md:grid-rows-[auto_auto]">
-        {/* Col 1, Row 1: Investment Profile */}
+        {/* Col 2: Investment Profile */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
@@ -366,20 +361,24 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </CardContent>
         </Card>
 
-        {/* Col 3, Row 1+2: Activity History (spans both rows) */}
-        <div className="md:row-span-2 h-full">
-          <ActivityHistory repreneurId={id} activities={activitiesWithEmail as Activity[]} />
-        </div>
+        {/* Col 3: Radar Chart */}
+        <CandidateRadarChart repreneur={repreneur as Repreneur} />
+      </div>
 
-        {/* Col 1, Row 2: Offers */}
+      {/* Second Row: Activity History | Notes | Offers */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Col 1: Activity History */}
+        <ActivityHistory repreneurId={id} activities={activitiesWithEmail as Activity[]} />
+
+        {/* Col 2: Notes */}
+        <RepreneurNotes repreneurId={id} notes={notesWithEmail as Note[]} />
+
+        {/* Col 3: Offers */}
         <RepreneurOffersList
           repreneurId={id}
           repreneurOffers={(repreneurOffers || []) as RepreneurOffer[]}
           allOffers={(allOffers || []) as Offer[]}
         />
-
-        {/* Col 2, Row 2: Notes */}
-        <RepreneurNotes repreneurId={id} notes={notesWithEmail as Note[]} />
       </div>
 
       {/* ROW 3: Questionnaire Details (no cards, blank bg, 3-col list) */}
