@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createOffer, updateOffer } from "@/lib/actions/offers"
+import { toast } from "sonner"
 import type { Offer } from "@/lib/types/offer"
 
 interface OfferFormProps {
@@ -19,11 +20,18 @@ export function OfferForm({ offer }: OfferFormProps) {
   const isEditing = !!offer
 
   const handleSubmit = async (formData: FormData) => {
-    if (isEditing) {
-      await updateOffer(offer.id, formData)
-      router.push("/offers")
-    } else {
-      await createOffer(formData)
+    try {
+      if (isEditing) {
+        await updateOffer(offer.id, formData)
+        toast.success("Offer updated")
+        router.push("/offers")
+      } else {
+        await createOffer(formData)
+        toast.success("Offer created")
+      }
+    } catch (error) {
+      console.error("Failed to save offer:", error)
+      toast.error("Failed to save offer. Please try again.")
     }
   }
 

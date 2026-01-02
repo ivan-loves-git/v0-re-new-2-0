@@ -15,6 +15,7 @@ import { RepreneurCard } from "./repreneur-card"
 import { KanbanFilters, type KanbanFiltersState } from "./kanban-filters"
 import { updateRepreneurStatusPipeline } from "@/lib/actions/pipeline"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
 
 interface KanbanBoardProps {
@@ -108,10 +109,12 @@ export function KanbanBoard({ repreneurs }: KanbanBoardProps) {
 
     try {
       await updateRepreneurStatusPipeline(repreneurId, newStatus)
+      toast.success("Status updated")
       router.refresh()
     } catch (error) {
       // Revert on error
       setOptimisticRepreneurs(repreneurs)
+      toast.error("Failed to update status. Please try again.")
       console.error("Failed to update status:", error)
     }
   }

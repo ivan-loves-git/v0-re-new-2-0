@@ -250,6 +250,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                     key={repreneur.id}
                     className="cursor-pointer hover:bg-gray-50"
                     onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
+                    onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -364,6 +365,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                           key={repreneur.id}
                           className="cursor-pointer hover:bg-gray-50"
                           onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
+                          onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">

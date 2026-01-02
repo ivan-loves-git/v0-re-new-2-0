@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Pencil, X, Check, Plus } from "lucide-react"
+import { toast } from "sonner"
 
 interface EditableMultiSelectProps {
   repreneurId: string
@@ -41,8 +42,10 @@ export function EditableMultiSelect({
     try {
       await updateRepreneurField(repreneurId, field, selectedItems.length > 0 ? selectedItems : null)
       setIsEditing(false)
+      toast.success("Saved successfully")
     } catch (error) {
       console.error("Failed to update field:", error)
+      toast.error("Failed to save. Please try again.")
     } finally {
       setIsSaving(false)
     }

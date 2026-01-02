@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Pencil, Check, X } from "lucide-react"
+import { toast } from "sonner"
 
 interface EditableTextFieldProps {
   repreneurId: string
@@ -28,6 +29,7 @@ export function EditableTextField({
 }: EditableTextFieldProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value || "")
+  const [optimisticValue, setOptimisticValue] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
 
@@ -37,13 +39,29 @@ export function EditableTextField({
     }
   }, [isEditing])
 
+  // Reset optimistic value when prop value changes (server confirmed)
+  useEffect(() => {
+    setOptimisticValue(null)
+  }, [value])
+
   const handleSave = async () => {
+    const newValue = editValue || null
+    const oldValue = value || ""
+
+    // Optimistic update - immediately close and show new value
+    setOptimisticValue(editValue)
+    setIsEditing(false)
     setIsSaving(true)
+
     try {
-      await updateRepreneurField(repreneurId, field, editValue || null)
-      setIsEditing(false)
+      await updateRepreneurField(repreneurId, field, newValue)
+      toast.success("Saved successfully")
     } catch (error) {
       console.error("Failed to update field:", error)
+      toast.error("Failed to save. Please try again.")
+      // Revert on error
+      setOptimisticValue(null)
+      setEditValue(oldValue)
     } finally {
       setIsSaving(false)
     }
@@ -100,14 +118,19 @@ export function EditableTextField({
     )
   }
 
+  const displayValue = optimisticValue !== null ? optimisticValue : value
+
   return (
     <div className="group flex items-center gap-2 min-h-[24px]">
-      <p className={textClassName}>{value || <span className="text-muted-foreground italic">Not set</span>}</p>
+      <p className={`${textClassName} ${isSaving ? "opacity-70" : ""}`}>
+        {displayValue || <span className="text-muted-foreground italic">Not set</span>}
+      </p>
       <Button
         variant="ghost"
         size="sm"
         className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
         onClick={() => setIsEditing(true)}
+        disabled={isSaving}
       >
         <Pencil className="h-3 w-3" />
       </Button>

@@ -18,6 +18,7 @@ export function RepreneurCard({ repreneur, isDragging = false }: RepreneurCardPr
     <Card
       className={`p-4 mb-3 cursor-pointer hover:shadow-md transition-shadow ${isDragging ? "opacity-50 rotate-2" : ""}`}
       onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
+      onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">

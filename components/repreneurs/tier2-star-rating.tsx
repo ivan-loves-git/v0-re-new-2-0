@@ -6,6 +6,7 @@ import { setTier2Stars, clearTier2Stars } from "@/lib/actions/repreneurs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface Tier2StarRatingProps {
   repreneurId: string
@@ -38,8 +39,10 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
     setIsUpdating(true)
     try {
       await setTier2Stars(repreneurId, stars)
+      toast.success("Rating saved")
     } catch (error) {
       console.error("Failed to set star rating:", error)
+      toast.error("Failed to save rating. Please try again.")
     } finally {
       setIsUpdating(false)
     }
@@ -49,8 +52,10 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
     setIsUpdating(true)
     try {
       await clearTier2Stars(repreneurId)
+      toast.success("Rating cleared")
     } catch (error) {
       console.error("Failed to clear star rating:", error)
+      toast.error("Failed to clear rating. Please try again.")
     } finally {
       setIsUpdating(false)
     }

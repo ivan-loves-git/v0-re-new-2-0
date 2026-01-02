@@ -6,6 +6,7 @@ import { Plus, StickyNote, MoreHorizontal, Trash2 } from "lucide-react"
 import { createNote, deleteNote } from "@/lib/actions/repreneurs"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -81,6 +82,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
 
     try {
       await createNote(repreneurId, savedContent)
+      toast.success("Note added")
       // Small delay to allow server to process before refresh
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
@@ -90,6 +92,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
       }, 500)
     } catch (error) {
       console.error("Failed to create note:", error)
+      toast.error("Failed to add note. Please try again.")
       // Revert on error
       setLocalNotes(prev => prev.filter(n => n.id !== tempNote.id))
       isMutatingRef.current = false
@@ -111,6 +114,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
 
     try {
       await deleteNote(noteId, repreneurId)
+      toast.success("Note deleted")
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
       setTimeout(() => {
@@ -118,6 +122,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
       }, 500)
     } catch (error) {
       console.error("Failed to delete note:", error)
+      toast.error("Failed to delete note. Please try again.")
       // Revert on error
       if (noteToDelete) {
         setLocalNotes(prev => [noteToDelete, ...prev])

@@ -19,6 +19,7 @@ import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
 import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
 import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
+import { CandidateRadarChart } from "@/components/repreneurs/candidate-radar-chart"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
@@ -181,9 +182,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
-      {/* Main Grid: 3 columns, 2 rows with Activity History spanning both rows */}
-      <div className="grid gap-6 md:grid-cols-3 md:grid-rows-[auto_auto]">
-        {/* Col 1, Row 1: Combined Rating Card */}
+      {/* Profile Overview Row: Radar Chart + Rating */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <CandidateRadarChart repreneur={repreneur as Repreneur} />
+
+        {/* Rating Card */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
@@ -292,8 +295,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Col 2, Row 1: Investment Profile */}
+      {/* Main Grid: 3 columns, 2 rows with Activity History spanning both rows */}
+      <div className="grid gap-6 md:grid-cols-3 md:grid-rows-[auto_auto]">
+        {/* Col 1, Row 1: Investment Profile */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
