@@ -27,11 +27,15 @@ export async function createRepreneur(formData: FormData) {
         .filter(Boolean)
     : []
 
+  // Parse marketing consent checkbox
+  const marketingConsent = formData.get("marketing_consent") === "on"
+
   const repreneur: Repreneur_Insert = {
     email: formData.get("email") as string,
     first_name: formData.get("first_name") as string,
     last_name: formData.get("last_name") as string,
     phone: (formData.get("phone") as string) || undefined,
+    linkedin_url: (formData.get("linkedin_url") as string) || undefined,
     company_background: (formData.get("company_background") as string) || undefined,
     investment_capacity: (formData.get("investment_capacity") as string) || undefined,
     sector_preferences: sector_preferences.length > 0 ? sector_preferences : undefined,
@@ -39,6 +43,10 @@ export async function createRepreneur(formData: FormData) {
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || undefined,
     lifecycle_status: (formData.get("lifecycle_status") as LifecycleStatus) || "lead",
     source: (formData.get("source") as string) || undefined,
+    // GDPR Consent
+    marketing_consent: marketingConsent,
+    consent_timestamp: marketingConsent ? new Date().toISOString() : undefined,
+    consent_source: (formData.get("consent_source") as string) || "manual",
     created_by: user.id,
   }
 
@@ -64,11 +72,25 @@ export async function updateRepreneur(id: string, formData: FormData) {
         .filter(Boolean)
     : []
 
-  const updates = {
+  // Parse marketing consent checkbox
+  const marketingConsent = formData.get("marketing_consent") === "on"
+
+  // Get existing repreneur to check if consent status changed
+  const { data: existing } = await supabase
+    .from("repreneurs")
+    .select("marketing_consent")
+    .eq("id", id)
+    .single()
+
+  // Only update consent_timestamp if consent status changed
+  const consentChanged = existing?.marketing_consent !== marketingConsent
+
+  const updates: Record<string, unknown> = {
     email: formData.get("email") as string,
     first_name: formData.get("first_name") as string,
     last_name: formData.get("last_name") as string,
     phone: (formData.get("phone") as string) || null,
+    linkedin_url: (formData.get("linkedin_url") as string) || null,
     company_background: (formData.get("company_background") as string) || null,
     investment_capacity: (formData.get("investment_capacity") as string) || null,
     sector_preferences: sector_preferences.length > 0 ? sector_preferences : null,
@@ -76,6 +98,14 @@ export async function updateRepreneur(id: string, formData: FormData) {
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || null,
     lifecycle_status: formData.get("lifecycle_status") as LifecycleStatus,
     source: (formData.get("source") as string) || null,
+    // GDPR Consent
+    marketing_consent: marketingConsent,
+  }
+
+  // Update consent timestamp only if consent status changed
+  if (consentChanged) {
+    updates.consent_timestamp = new Date().toISOString()
+    updates.consent_source = (formData.get("consent_source") as string) || "manual"
   }
 
   const { error } = await supabase.from("repreneurs").update(updates).eq("id", id)

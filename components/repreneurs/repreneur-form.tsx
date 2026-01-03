@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
+import { SOURCE_OPTIONS } from "@/lib/types/repreneur"
 
 interface RepreneurFormProps {
   repreneur?: Repreneur
@@ -60,6 +62,17 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="linkedin_url">LinkedIn URL</Label>
+              <Input
+                id="linkedin_url"
+                name="linkedin_url"
+                type="url"
+                placeholder="https://linkedin.com/in/..."
+                defaultValue={repreneur?.linkedin_url}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="lifecycle_status">Status</Label>
               <Select name="lifecycle_status" defaultValue={repreneur?.lifecycle_status || "lead"}>
                 <SelectTrigger>
@@ -75,12 +88,18 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
 
             <div className="space-y-2">
               <Label htmlFor="source">Source</Label>
-              <Input
-                id="source"
-                name="source"
-                placeholder="e.g., Referral, Website, LinkedIn"
-                defaultValue={repreneur?.source}
-              />
+              <Select name="source" defaultValue={repreneur?.source || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOURCE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -134,6 +153,30 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
               placeholder="e.g., Northeast US, Remote"
               defaultValue={repreneur?.target_location}
             />
+          </div>
+
+          {/* GDPR Consent Section */}
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-sm font-medium mb-4">GDPR Consent</h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="marketing_consent"
+                  name="marketing_consent"
+                  defaultChecked={repreneur?.marketing_consent}
+                />
+                <Label htmlFor="marketing_consent" className="text-sm font-normal">
+                  Marketing consent given
+                </Label>
+              </div>
+              {repreneur?.consent_timestamp && (
+                <p className="text-xs text-muted-foreground">
+                  Consent recorded: {new Date(repreneur.consent_timestamp).toLocaleDateString()}
+                  {repreneur.consent_source && ` via ${repreneur.consent_source}`}
+                </p>
+              )}
+              <input type="hidden" name="consent_source" value="manual" />
+            </div>
           </div>
 
           <Button type="submit" disabled={isSubmitting}>
