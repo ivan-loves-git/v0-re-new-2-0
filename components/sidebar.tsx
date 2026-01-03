@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, GitBranch, FileText, Compass, UserPlus } from "lucide-react"
+import { LayoutDashboard, Users, GitBranch, FileText, Compass, UserPlus, ExternalLink } from "lucide-react"
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -18,7 +18,7 @@ const navigation = [
 ]
 
 const secondaryNavigation = [
-  { name: "Public Intake", href: "/intake", icon: UserPlus, isHighlighted: true },
+  { name: "Public Intake", href: "/intake", icon: UserPlus, isHighlighted: true, opensNewTab: true },
 ]
 
 export function Sidebar() {
@@ -103,6 +103,30 @@ export function Sidebar() {
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Public Forms</p>
         </div>
         {secondaryNavigation.map((item) => {
+          // For items that open in new tab, use <a> tag
+          if (item.opensNewTab) {
+            return (
+              <a
+                key={item.name}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "relative flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  item.isHighlighted
+                    ? "text-blue-400 hover:bg-blue-900/30 hover:text-blue-300"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-white",
+                )}
+              >
+                <span className="flex items-center gap-3">
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </span>
+                <ExternalLink className="h-3.5 w-3.5 opacity-50" />
+              </a>
+            )
+          }
+
           const isActive = getIsActive(item.href)
           return (
             <Link
