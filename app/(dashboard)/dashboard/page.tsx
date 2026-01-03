@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     .select("*")
     .order("created_at", { ascending: false })
 
-  // Fetch all activities
+  // Fetch all activities with creator info
   const { data: allActivities } = await supabase
     .from("activities")
     .select(`
@@ -32,6 +32,7 @@ export default async function DashboardPage() {
       notes,
       duration_minutes,
       created_at,
+      created_by,
       repreneur_id,
       repreneurs (
         first_name,
@@ -39,6 +40,19 @@ export default async function DashboardPage() {
       )
     `)
     .order("created_at", { ascending: false })
+
+  // Fetch user emails for activity creators
+  const creatorIds = [...new Set(allActivities?.map(a => a.created_by).filter(Boolean) || [])]
+  let userEmailMap: Record<string, string> = {}
+
+  if (creatorIds.length > 0) {
+    // Try to get user info from auth.users via a simple approach
+    // For now we'll use a placeholder, but this could be enhanced with a profiles table
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      userEmailMap[user.id] = user.email?.split('@')[0] || 'Team'
+    }
+  }
 
   // Calculate lifecycle stats
   const totalRepreneurs = repreneurs?.length || 0
@@ -121,6 +135,7 @@ export default async function DashboardPage() {
     created_at: a.created_at,
     repreneur_id: a.repreneur_id,
     repreneur_name: `${a.repreneurs?.first_name || ""} ${a.repreneurs?.last_name || ""}`.trim() || "Unknown",
+    owner: userEmailMap[a.created_by] || "Team",
   })) || []
 
   return (

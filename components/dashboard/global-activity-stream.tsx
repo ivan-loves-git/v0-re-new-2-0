@@ -15,6 +15,7 @@ interface ActivityItem {
   created_at: string
   repreneur_id: string
   repreneur_name: string
+  owner?: string
 }
 
 interface GlobalActivityStreamProps {
@@ -72,6 +73,7 @@ export function GlobalActivityStream({ activities, maxHeight = "400px" }: Global
                     )}
                     <p className="text-xs text-gray-400 mt-1">
                       {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                      {activity.owner && <span> · by {activity.owner}</span>}
                     </p>
                   </div>
                 </div>

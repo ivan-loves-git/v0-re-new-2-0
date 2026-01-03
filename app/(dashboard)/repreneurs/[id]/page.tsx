@@ -122,10 +122,18 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     console.error("Error fetching activities:", activitiesError)
   }
 
-  // Transform activities to include placeholder email
+  // Get current user to map creator emails
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  const userEmailMap: Record<string, string> = {}
+  if (currentUser) {
+    // Use first part of email as display name
+    userEmailMap[currentUser.id] = currentUser.email?.split('@')[0] || 'Team'
+  }
+
+  // Transform activities to include creator email
   const activitiesWithEmail = (activities || []).map((activity: any) => ({
     ...activity,
-    created_by_email: "Team",
+    created_by_email: userEmailMap[activity.created_by] || "Team",
   }))
 
   return (
