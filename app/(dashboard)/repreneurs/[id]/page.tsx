@@ -27,6 +27,9 @@ import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/li
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
 import type { RepreneurOffer, Offer } from "@/lib/types/offer"
 
+// Cache for 30 seconds
+export const revalidate = 30
+
 // Source options for dropdown
 const SOURCE_OPTIONS = [
   { value: "linkedin", label: "LinkedIn" },
@@ -39,99 +42,97 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   const { id } = await params
   const supabase = await createServerClient()
 
-  // Fetch repreneur
+  // First fetch repreneur (required to validate page exists)
   const { data: repreneur } = await supabase.from("repreneurs").select("*").eq("id", id).single()
 
   if (!repreneur) {
     notFound()
   }
 
-  // Fetch notes (simple query without join)
-  const { data: notes, error: notesError } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("repreneur_id", id)
-    .order("created_at", { ascending: false })
+  // Parallel fetch all related data - runs simultaneously instead of sequentially
+  const [
+    notesResult,
+    repreneurOffersResult,
+    allOffersResult,
+    activitiesResult,
+    userResult
+  ] = await Promise.all([
+    // Fetch notes
+    supabase
+      .from("notes")
+      .select("*")
+      .eq("repreneur_id", id)
+      .order("created_at", { ascending: false }),
+    // Fetch repreneur offers with offer details
+    supabase
+      .from("repreneur_offers")
+      .select(`*, offer:offers(*)`)
+      .eq("repreneur_id", id)
+      .order("offered_at", { ascending: false }),
+    // Fetch all active offers for assignment
+    supabase
+      .from("offers")
+      .select("*")
+      .eq("is_active", true)
+      .order("name"),
+    // Fetch activities
+    supabase
+      .from("activities")
+      .select("*")
+      .eq("repreneur_id", id)
+      .order("created_at", { ascending: false }),
+    // Get current user
+    supabase.auth.getUser()
+  ])
 
-  if (notesError) {
-    console.error("Error fetching notes:", notesError)
+  const notes = notesResult.data || []
+  const repreneurOffers = repreneurOffersResult.data || []
+  const allOffers = allOffersResult.data || []
+  const activities = activitiesResult.data || []
+  const currentUser = userResult.data?.user
+
+  // Try to fetch milestones separately (table may not exist yet)
+  let milestonesMap: Record<string, any[]> = {}
+  if (repreneurOffers.length > 0) {
+    try {
+      const { data: allMilestones } = await supabase
+        .from("offer_milestones")
+        .select("*")
+        .in("repreneur_offer_id", repreneurOffers.map(ro => ro.id))
+
+      if (allMilestones) {
+        milestonesMap = allMilestones.reduce((acc: Record<string, any[]>, m: any) => {
+          if (!acc[m.repreneur_offer_id]) acc[m.repreneur_offer_id] = []
+          acc[m.repreneur_offer_id].push(m)
+          return acc
+        }, {})
+      }
+    } catch (e) {
+      // offer_milestones table may not exist yet
+      console.log("Milestones table not available yet")
+    }
+  }
+
+  // Build user email map
+  const userEmailMap: Record<string, string> = {}
+  if (currentUser) {
+    userEmailMap[currentUser.id] = currentUser.email?.split('@')[0] || 'Team'
   }
 
   // Transform notes to include placeholder email
-  const notesWithEmail = (notes || []).map((note: any) => ({
+  const notesWithEmail = notes.map((note: any) => ({
     ...note,
     created_by_email: "Team",
   }))
 
-  // Fetch repreneur offers with offer details
-  // Note: milestones are fetched separately to avoid query failure if table doesn't exist
-  const { data: repreneurOffers, error: offersError } = await supabase
-    .from("repreneur_offers")
-    .select(`
-      *,
-      offer:offers(*)
-    `)
-    .eq("repreneur_id", id)
-    .order("offered_at", { ascending: false })
-
-  if (offersError) {
-    console.error("Error fetching repreneur offers:", offersError)
-  }
-
-  // Try to fetch milestones separately (table may not exist yet)
-  let milestonesMap: Record<string, any[]> = {}
-  try {
-    const { data: allMilestones } = await supabase
-      .from("offer_milestones")
-      .select("*")
-      .in("repreneur_offer_id", (repreneurOffers || []).map(ro => ro.id))
-
-    if (allMilestones) {
-      milestonesMap = allMilestones.reduce((acc: Record<string, any[]>, m: any) => {
-        if (!acc[m.repreneur_offer_id]) acc[m.repreneur_offer_id] = []
-        acc[m.repreneur_offer_id].push(m)
-        return acc
-      }, {})
-    }
-  } catch (e) {
-    // offer_milestones table may not exist yet
-    console.log("Milestones table not available yet")
-  }
-
   // Merge milestones into offers
-  const repreneurOffersWithMilestones = (repreneurOffers || []).map(ro => ({
+  const repreneurOffersWithMilestones = repreneurOffers.map(ro => ({
     ...ro,
     milestones: milestonesMap[ro.id] || []
   }))
 
-  // Fetch all active offers for assignment
-  const { data: allOffers } = await supabase
-    .from("offers")
-    .select("*")
-    .eq("is_active", true)
-    .order("name")
-
-  // Fetch activities (simple query without join)
-  const { data: activities, error: activitiesError } = await supabase
-    .from("activities")
-    .select("*")
-    .eq("repreneur_id", id)
-    .order("created_at", { ascending: false })
-
-  if (activitiesError) {
-    console.error("Error fetching activities:", activitiesError)
-  }
-
-  // Get current user to map creator emails
-  const { data: { user: currentUser } } = await supabase.auth.getUser()
-  const userEmailMap: Record<string, string> = {}
-  if (currentUser) {
-    // Use first part of email as display name
-    userEmailMap[currentUser.id] = currentUser.email?.split('@')[0] || 'Team'
-  }
-
   // Transform activities to include creator email
-  const activitiesWithEmail = (activities || []).map((activity: any) => ({
+  const activitiesWithEmail = activities.map((activity: any) => ({
     ...activity,
     created_by_email: userEmailMap[activity.created_by] || "Team",
   }))

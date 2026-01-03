@@ -2,17 +2,15 @@ import type React from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Only bypass auth in V0 preview (where VERCEL_ENV is undefined)
-  // Vercel production AND preview deployments will have VERCEL_ENV set, so auth is enforced
+  // Auth check is now handled by middleware - this just gets user info for display
+  // V0 preview fallback
   const isV0Preview = process.env.VERCEL_ENV === undefined
-
   let userEmail = "preview@renew.com"
 
   if (!isV0Preview) {
@@ -20,12 +18,8 @@ export default async function DashboardLayout({
     const {
       data: { user },
     } = await supabase.auth.getUser()
-
-    if (!user) {
-      redirect("/auth/login")
-    }
-
-    userEmail = user.email || "unknown@renew.com"
+    // User is guaranteed to exist here because middleware redirects if not authenticated
+    userEmail = user?.email || "unknown@renew.com"
   }
 
   return (

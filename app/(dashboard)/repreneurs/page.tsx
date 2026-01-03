@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { RepreneurTable } from "@/components/repreneurs/repreneur-table"
 import type { Repreneur } from "@/lib/types/repreneur"
 
+// Cache for 30 seconds - prevents re-fetching on rapid navigation
+export const revalidate = 30
+
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
 }

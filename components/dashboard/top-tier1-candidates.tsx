@@ -74,7 +74,7 @@ export function TopTier1Candidates({ candidates, itemsPerPage = ITEMS_PER_PAGE }
                 <Link
                   key={candidate.id}
                   href={`/repreneurs/${candidate.id}`}
-                  className="flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors h-10"
                 >
                   <div className="flex items-center justify-center w-6">
                     {actualIndex < 3 ? (

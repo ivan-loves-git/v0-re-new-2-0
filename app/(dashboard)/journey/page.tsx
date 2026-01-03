@@ -7,6 +7,9 @@ import { Compass, BookOpen, FileCheck, Trophy, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import type { JourneyStage, Repreneur } from "@/lib/types/repreneur"
 
+// Cache for 30 seconds - prevents re-fetching on rapid navigation
+export const revalidate = 30
+
 const stages: JourneyStage[] = ["explorer", "learner", "ready", "serial_acquirer"]
 
 const stageIcons: Record<JourneyStage, React.ElementType> = {

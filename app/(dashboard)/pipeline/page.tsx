@@ -2,6 +2,9 @@ import { createServerClient } from "@/lib/supabase/server"
 import { StaticPipelineBoard } from "@/components/pipeline/static-pipeline-board"
 import type { Repreneur } from "@/lib/types/repreneur"
 
+// Cache for 30 seconds - prevents re-fetching on rapid navigation
+export const revalidate = 30
+
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
 }

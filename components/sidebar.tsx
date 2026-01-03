@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, GitBranch, FileText, Compass } from "lucide-react"
+import { LayoutDashboard, Users, GitBranch, FileText, Compass, UserPlus } from "lucide-react"
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -15,6 +15,10 @@ const navigation = [
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Journey", href: "/journey", icon: Compass },
   { name: "Offers", href: "/offers", icon: FileText },
+]
+
+const secondaryNavigation = [
+  { name: "Public Intake", href: "/intake", icon: UserPlus, isHighlighted: true },
 ]
 
 export function Sidebar() {
@@ -69,6 +73,48 @@ export function Sidebar() {
               className={cn(
                 "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive ? "text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white",
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active-indicator"
+                  className="absolute inset-0 bg-gray-800 rounded-lg"
+                  initial={false}
+                  transition={{
+                    type: "spring",
+                    stiffness: 350,
+                    damping: 30,
+                  }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-3">
+                <item.icon className="h-5 w-5" />
+                {item.name}
+              </span>
+            </Link>
+          )
+        })}
+
+        {/* Divider */}
+        <div className="my-4 border-t border-gray-800" />
+
+        {/* Secondary Navigation - Public Forms */}
+        <div className="px-3 mb-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Public Forms</p>
+        </div>
+        {secondaryNavigation.map((item) => {
+          const isActive = getIsActive(item.href)
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "text-white"
+                  : item.isHighlighted
+                    ? "text-blue-400 hover:bg-blue-900/30 hover:text-blue-300"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-white",
               )}
             >
               {isActive && (

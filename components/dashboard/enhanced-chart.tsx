@@ -104,14 +104,15 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <TrendingUp className="h-5 w-5 text-gray-900" />
-            Pipeline & Activity Trends
+            <span className="hidden sm:inline">Pipeline & Activity Trends</span>
+            <span className="sm:hidden">Trends</span>
             <CardInfoButton info="Weekly view showing cumulative repreneurs (blue area) and activity count (orange line). Use arrows to navigate or calendar to select date range." />
           </CardTitle>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Navigation arrows */}
             <Button
               variant="outline"
@@ -125,10 +126,13 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
             {/* Date picker */}
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-2">
+                <Button variant="outline" size="sm" className="h-8 gap-1 sm:gap-2 px-2 sm:px-3">
                   <Calendar className="h-4 w-4" />
-                  <span className="text-xs">
+                  <span className="text-xs hidden sm:inline">
                     {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
+                  </span>
+                  <span className="text-xs sm:hidden">
+                    {format(startDate, "M/d")} - {format(endDate, "M/d")}
                   </span>
                 </Button>
               </PopoverTrigger>
@@ -186,7 +190,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] w-full">
+        <div className="h-[240px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
