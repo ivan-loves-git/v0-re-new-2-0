@@ -33,7 +33,7 @@ const activityIcons: Record<string, React.ElementType> = {
 
 export function GlobalActivityStream({ activities, maxHeight = "400px" }: GlobalActivityStreamProps) {
   return (
-    <Card className="h-full">
+    <Card className="h-full gap-0">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Activity className="h-5 w-5 text-gray-900" />

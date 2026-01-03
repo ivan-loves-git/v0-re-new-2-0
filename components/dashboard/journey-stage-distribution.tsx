@@ -39,8 +39,8 @@ export function JourneyStageDistribution({
   const total = explorerCount + learnerCount + readyCount + serialAcquirerCount + noStageCount
 
   return (
-    <Card className="h-full overflow-hidden">
-      <CardHeader className="pb-2 pt-4">
+    <Card className="h-full overflow-hidden gap-0">
+      <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Map className="h-5 w-5 text-gray-900" />
           Journey Stages
