@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { updateRepreneurField } from "@/lib/actions/repreneurs"
 
-const TOTAL_DEFAULT_AVATARS = 24
+const TOTAL_DEFAULT_AVATARS = 16
 
 // Generate a consistent avatar number from repreneur ID
 function getDefaultAvatarNumber(repreneurId: string): number {
@@ -67,7 +67,7 @@ export function RepreneurAvatar({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const defaultAvatarNumber = getDefaultAvatarNumber(repreneurId)
-  const imageSrc = currentAvatarUrl || `/avatars/default-${defaultAvatarNumber}.jpg`
+  const imageSrc = currentAvatarUrl || `/avatars/default-${defaultAvatarNumber}.png`
   const initials = `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase()
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
