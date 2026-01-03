@@ -267,7 +267,7 @@ export default function IntakePage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 -m-6">
+    <div className="flex flex-col min-h-screen">
       {/* Header with progress */}
       <div className="bg-white border-b shadow-sm shrink-0">
         {/* Brand row */}
