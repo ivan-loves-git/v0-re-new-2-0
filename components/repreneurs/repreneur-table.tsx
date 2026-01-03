@@ -71,14 +71,20 @@ function OfferDisplay({ offers }: { offers: string[] | undefined }) {
   if (!offers || offers.length === 0) {
     return <span className="text-gray-400 text-sm">No offers</span>
   }
+
+  // Show first offer + count of additional offers
+  const firstOffer = offers[0]
+  const additionalCount = offers.length - 1
+
   return (
-    <div className="flex flex-wrap gap-1">
-      {offers.map((offer, idx) => (
-        <Badge key={idx} variant="outline" className="text-xs">
-          <Package className="h-3 w-3 mr-1" />
-          {offer}
-        </Badge>
-      ))}
+    <div className="flex items-center gap-1">
+      <Badge variant="outline" className="text-xs">
+        <Package className="h-3 w-3 mr-1" />
+        {firstOffer}
+      </Badge>
+      {additionalCount > 0 && (
+        <span className="text-xs text-gray-500">+{additionalCount}</span>
+      )}
     </div>
   )
 }
@@ -347,14 +353,14 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort("name")}>
+                        <TableHead className="w-[25%] cursor-pointer" onClick={() => handleSort("name")}>
                           Name {sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
                         </TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort("email")}>
+                        <TableHead className="w-[25%] cursor-pointer" onClick={() => handleSort("email")}>
                           Email {sortField === "email" && (sortDirection === "asc" ? "↑" : "↓")}
                         </TableHead>
-                        <TableHead>{getStatusColumnHeader(status)}</TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort("created_at")}>
+                        <TableHead className="w-[30%]">{getStatusColumnHeader(status)}</TableHead>
+                        <TableHead className="w-[20%] text-right cursor-pointer" onClick={() => handleSort("created_at")}>
                           Created {sortField === "created_at" && (sortDirection === "asc" ? "↑" : "↓")}
                         </TableHead>
                       </TableRow>
@@ -367,7 +373,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                           onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                           onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
                         >
-                          <TableCell>
+                          <TableCell className="w-[25%]">
                             <div className="flex items-center gap-3">
                               <RepreneurAvatar
                                 repreneurId={repreneur.id}
@@ -381,9 +387,9 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-gray-600">{repreneur.email}</TableCell>
-                          <TableCell>{renderStatusColumn(repreneur)}</TableCell>
-                          <TableCell className="text-gray-600">
+                          <TableCell className="w-[25%] text-gray-600">{repreneur.email}</TableCell>
+                          <TableCell className="w-[30%]">{renderStatusColumn(repreneur)}</TableCell>
+                          <TableCell className="w-[20%] text-right text-gray-600">
                             {new Date(repreneur.created_at).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
