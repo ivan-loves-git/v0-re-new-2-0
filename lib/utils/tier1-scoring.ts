@@ -73,6 +73,34 @@ export const NETWORK_TRAINING_OPTIONS = [
   { value: "none", label: "Non, aucune", score: 0 },
 ] as const
 
+export const TARGET_ACQUISITION_SIZE_OPTIONS = [
+  { value: "less_500k", label: "<500 K€ CA" },
+  { value: "500k_1m", label: "500 K€ - 1 M€ CA" },
+  { value: "1m_3m", label: "1 M€ - 3 M€ CA" },
+  { value: "3m_5m", label: "3 M€ - 5 M€ CA" },
+  { value: "5m_10m", label: "5 M€ - 10 M€ CA" },
+  { value: "10m_plus", label: ">10 M€ CA" },
+] as const
+
+export const TARGET_LOCATION_OPTIONS = [
+  { value: "ile_de_france", label: "Île-de-France" },
+  { value: "auvergne_rhone_alpes", label: "Auvergne-Rhône-Alpes" },
+  { value: "provence_alpes_cote_azur", label: "Provence-Alpes-Côte d'Azur" },
+  { value: "occitanie", label: "Occitanie" },
+  { value: "nouvelle_aquitaine", label: "Nouvelle-Aquitaine" },
+  { value: "hauts_de_france", label: "Hauts-de-France" },
+  { value: "grand_est", label: "Grand Est" },
+  { value: "pays_de_la_loire", label: "Pays de la Loire" },
+  { value: "bretagne", label: "Bretagne" },
+  { value: "normandie", label: "Normandie" },
+  { value: "bourgogne_franche_comte", label: "Bourgogne-Franche-Comté" },
+  { value: "centre_val_de_loire", label: "Centre-Val de Loire" },
+  { value: "corse", label: "Corse" },
+  { value: "dom_tom", label: "DOM-TOM" },
+  { value: "toute_france", label: "Toute la France" },
+  { value: "international", label: "International" },
+] as const
+
 export const INDUSTRY_SECTOR_OPTIONS = [
   { value: "agriculture", label: "Agriculture" },
   { value: "arts", label: "Arts" },

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS } from "@/lib/types/repreneur"
-import { INVESTMENT_CAPACITY_OPTIONS, INDUSTRY_SECTOR_OPTIONS } from "@/lib/utils/tier1-scoring"
+import { INVESTMENT_CAPACITY_OPTIONS, INDUSTRY_SECTOR_OPTIONS, TARGET_ACQUISITION_SIZE_OPTIONS, TARGET_LOCATION_OPTIONS } from "@/lib/utils/tier1-scoring"
 
 interface RepreneurFormProps {
   repreneur?: Repreneur
@@ -146,12 +146,18 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
 
             <div className="space-y-2">
               <Label htmlFor="target_acquisition_size">Target Acquisition Size</Label>
-              <Input
-                id="target_acquisition_size"
-                name="target_acquisition_size"
-                placeholder="e.g., $1M - $5M revenue"
-                defaultValue={repreneur?.target_acquisition_size}
-              />
+              <Select name="target_acquisition_size" defaultValue={repreneur?.target_acquisition_size || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {TARGET_ACQUISITION_SIZE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -175,12 +181,18 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
 
           <div className="space-y-2">
             <Label htmlFor="target_location">Target Location</Label>
-            <Input
-              id="target_location"
-              name="target_location"
-              placeholder="e.g., Northeast US, Remote"
-              defaultValue={repreneur?.target_location}
-            />
+            <Select name="target_location" defaultValue={repreneur?.target_location || ""}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select region..." />
+              </SelectTrigger>
+              <SelectContent>
+                {TARGET_LOCATION_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* GDPR Consent Section */}
