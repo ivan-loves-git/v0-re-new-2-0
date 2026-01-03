@@ -1,6 +1,6 @@
 "use client"
 
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip } from "recharts"
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Radar as RadarIcon } from "lucide-react"
 import type { Repreneur } from "@/lib/types/repreneur"
@@ -10,6 +10,8 @@ import {
   calculateMAKnowledgeScore,
   calculateReadinessScore,
   calculateFinancialScore,
+  getRawDimensionScores,
+  DIMENSION_MAX_SCORES,
 } from "@/lib/scoring-utils"
 
 interface CandidateRadarChartProps {
@@ -19,46 +21,60 @@ interface CandidateRadarChartProps {
 interface RadarDataPoint {
   dimension: string
   score: number
-  fullMark: 100
+  rawScore: number
+  maxScore: number
+  fullMark: number
   description: string
 }
 
 export function CandidateRadarChart({ repreneur }: CandidateRadarChartProps) {
+  const rawScores = getRawDimensionScores(repreneur)
+
   const data: RadarDataPoint[] = [
     {
       dimension: "Experience",
       score: calculateExperienceScore(repreneur),
+      rawScore: rawScores?.experience.score || 0,
+      maxScore: DIMENSION_MAX_SCORES.experience,
       fullMark: 100,
-      description: "Based on years of experience, employment status, and industry sectors",
+      description: "Employment status, years of experience, and industry sectors (Q1+Q2+Q3)",
     },
     {
       dimension: "Leadership",
       score: calculateLeadershipScore(repreneur),
+      rawScore: rawScores?.leadership.score || 0,
+      maxScore: DIMENSION_MAX_SCORES.leadership,
       fullMark: 100,
-      description: "Based on team size managed, executive roles, and board experience",
+      description: "Team size managed, executive roles, and board experience (Q5+Q8+Q9)",
     },
     {
-      dimension: "M&A Knowledge",
+      dimension: "M&A",
       score: calculateMAKnowledgeScore(repreneur),
+      rawScore: rawScores?.maKnowledge.score || 0,
+      maxScore: DIMENSION_MAX_SCORES.maKnowledge,
       fullMark: 100,
-      description: "Based on prior M&A experience and involvement in transactions",
+      description: "M&A transaction involvement (Q6)",
     },
     {
       dimension: "Readiness",
       score: calculateReadinessScore(repreneur),
+      rawScore: rawScores?.readiness.score || 0,
+      maxScore: DIMENSION_MAX_SCORES.readiness,
       fullMark: 100,
-      description: "Based on journey stage and identified acquisition targets",
+      description: "Journey stage, target sectors, identified targets (Q10+Q11+Q12)",
     },
     {
       dimension: "Financial",
       score: calculateFinancialScore(repreneur),
+      rawScore: rawScores?.financial.score || 0,
+      maxScore: DIMENSION_MAX_SCORES.financial,
       fullMark: 100,
-      description: "Based on investment capacity and funding status",
+      description: "Investment capacity, funding status, network, co-acquisition (Q14-Q17)",
     },
   ]
 
-  // Check if we have any data to display
-  const hasData = data.some((d) => d.score > 0)
+  // Check if we have any data to display (questionnaire completed)
+  const hasData = repreneur.tier1_score_breakdown !== null && repreneur.tier1_score_breakdown !== undefined
 
   return (
     <Card>
@@ -76,7 +92,7 @@ export function CandidateRadarChart({ repreneur }: CandidateRadarChartProps) {
                 <PolarGrid stroke="#e5e7eb" />
                 <PolarAngleAxis
                   dataKey="dimension"
-                  tick={{ fill: "#6b7280", fontSize: 12 }}
+                  tick={{ fill: "#6b7280", fontSize: 11 }}
                 />
                 <PolarRadiusAxis
                   angle={90}
@@ -98,7 +114,7 @@ export function CandidateRadarChart({ repreneur }: CandidateRadarChartProps) {
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
                     boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                    maxWidth: "250px",
+                    maxWidth: "280px",
                   }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -106,7 +122,12 @@ export function CandidateRadarChart({ repreneur }: CandidateRadarChartProps) {
                       return (
                         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
                           <p className="font-medium text-gray-900">{dataPoint.dimension}</p>
-                          <p className="text-lg font-bold text-blue-600">{dataPoint.score} / 100</p>
+                          <div className="flex items-baseline gap-2 mt-1">
+                            <p className="text-lg font-bold text-blue-600">{dataPoint.score}%</p>
+                            <p className="text-sm text-gray-500">
+                              ({dataPoint.rawScore}/{dataPoint.maxScore} pts)
+                            </p>
+                          </div>
                           <p className="text-xs text-gray-500 mt-1">{dataPoint.description}</p>
                         </div>
                       )

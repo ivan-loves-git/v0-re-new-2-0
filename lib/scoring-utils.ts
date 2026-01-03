@@ -1,155 +1,83 @@
 import type { Repreneur } from "@/lib/types/repreneur"
 
-// Calculate experience score (0-100)
+/**
+ * Radar chart dimension configuration
+ * Uses actual Tier 1 score breakdown stored from questionnaire
+ *
+ * Dimensions and their source questions:
+ * - Experience: Q1 (employment) + Q2 (years) + Q3 (sectors) = max 25
+ * - Leadership: Q5 (team size) + Q8 (exec roles) + Q9 (board) = max 26
+ * - M&A Knowledge: Q6 (M&A involvement) = max 10
+ * - Readiness: Q10 (journey stages) + Q11 (target sectors) + Q12 (targets identified) = max 25
+ * - Financial: Q14 (investment) + Q15 (funding) + Q16 (network) + Q17 (co-acquisition) = max 22
+ */
+
+export const DIMENSION_MAX_SCORES = {
+  experience: 25,   // Q1 (10) + Q2 (10) + Q3 (5)
+  leadership: 26,   // Q5 (10) + Q8 (6) + Q9 (10)
+  maKnowledge: 10,  // Q6 (10)
+  readiness: 25,    // Q10 (10) + Q11 (5) + Q12 (10)
+  financial: 22,    // Q14 (10) + Q15 (3) + Q16 (4) + Q17 (5)
+}
+
+// Calculate experience score using actual Tier 1 breakdown
 export function calculateExperienceScore(repreneur: Repreneur): number {
-  let score = 0
+  const breakdown = repreneur.tier1_score_breakdown as Record<string, number> | undefined
+  if (!breakdown) return 0
 
-  // Years of experience (max 40 points)
-  const yearsMap: Record<string, number> = {
-    "less_10": 10,
-    "10_15": 20,
-    "15_20": 30,
-    "more_20": 40,
-  }
-  if (repreneur.q2_years_experience) {
-    score += yearsMap[repreneur.q2_years_experience] || 0
-  }
-
-  // Employment status (max 30 points)
-  const statusMap: Record<string, number> = {
-    "employee": 15,
-    "executive": 25,
-    "entrepreneur": 30,
-    "in_transition": 20,
-    "retired": 15,
-  }
-  if (repreneur.q1_employment_status) {
-    score += statusMap[repreneur.q1_employment_status] || 0
-  }
-
-  // Industry sectors (max 30 points)
-  if (repreneur.q3_industry_sectors?.length) {
-    score += Math.min(repreneur.q3_industry_sectors.length * 10, 30)
-  }
-
-  return Math.min(score, 100)
+  const raw = (breakdown.q1_score || 0) + (breakdown.q2_score || 0) + (breakdown.q3_score || 0)
+  // Normalize to percentage (0-100)
+  return Math.round((raw / DIMENSION_MAX_SCORES.experience) * 100)
 }
 
-// Calculate leadership score (0-100)
+// Calculate leadership score using actual Tier 1 breakdown
 export function calculateLeadershipScore(repreneur: Repreneur): number {
-  let score = 0
+  const breakdown = repreneur.tier1_score_breakdown as Record<string, number> | undefined
+  if (!breakdown) return 0
 
-  // Team size managed (max 35 points)
-  const teamMap: Record<string, number> = {
-    "none": 0,
-    "1_5": 10,
-    "5_20": 20,
-    "20_50": 30,
-    "more_50": 35,
-  }
-  if (repreneur.q5_team_size) {
-    score += teamMap[repreneur.q5_team_size] || 0
-  }
-
-  // Executive roles (max 40 points)
-  if (repreneur.q8_executive_roles?.length) {
-    score += Math.min(repreneur.q8_executive_roles.length * 15, 40)
-  }
-
-  // Board experience (25 points)
-  if (repreneur.q9_board_experience) {
-    score += 25
-  }
-
-  return Math.min(score, 100)
+  const raw = (breakdown.q5_score || 0) + (breakdown.q8_score || 0) + (breakdown.q9_score || 0)
+  // Normalize to percentage (0-100)
+  return Math.round((raw / DIMENSION_MAX_SCORES.leadership) * 100)
 }
 
-// Calculate M&A knowledge score (0-100)
+// Calculate M&A knowledge score using actual Tier 1 breakdown
 export function calculateMAKnowledgeScore(repreneur: Repreneur): number {
-  let score = 0
+  const breakdown = repreneur.tier1_score_breakdown as Record<string, number> | undefined
+  if (!breakdown) return 0
 
-  // Prior M&A experience (35 points)
-  if (repreneur.q4_has_ma_experience) {
-    score += 35
-  }
-
-  // Involved in M&A (30 points)
-  if (repreneur.q6_involved_in_ma) {
-    score += 30
-  }
-
-  // M&A details provided (35 points)
-  if (repreneur.q7_ma_details && repreneur.q7_ma_details.length > 20) {
-    score += 35
-  } else if (repreneur.q7_ma_details) {
-    score += 15
-  }
-
-  return Math.min(score, 100)
+  const raw = breakdown.q6_score || 0
+  // Normalize to percentage (0-100)
+  return Math.round((raw / DIMENSION_MAX_SCORES.maKnowledge) * 100)
 }
 
-// Calculate acquisition readiness score (0-100)
+// Calculate acquisition readiness score using actual Tier 1 breakdown
 export function calculateReadinessScore(repreneur: Repreneur): number {
-  let score = 0
+  const breakdown = repreneur.tier1_score_breakdown as Record<string, number> | undefined
+  if (!breakdown) return 0
 
-  // Journey stages (max 40 points)
-  const stageMap: Record<string, number> = {
-    "explorer": 10,
-    "learner": 25,
-    "ready": 40,
-    "serial_acquirer": 40,
-  }
-  if (repreneur.journey_stage) {
-    score += stageMap[repreneur.journey_stage] || 0
-  }
-
-  // Has identified targets (30 points)
-  if (repreneur.q12_has_identified_targets) {
-    score += 30
-  }
-
-  // Target details provided (30 points)
-  if (repreneur.q13_target_details && repreneur.q13_target_details.length > 20) {
-    score += 30
-  } else if (repreneur.q13_target_details) {
-    score += 15
-  }
-
-  return Math.min(score, 100)
+  const raw = (breakdown.q10_score || 0) + (breakdown.q11_score || 0) + (breakdown.q12_score || 0)
+  // Normalize to percentage (0-100)
+  return Math.round((raw / DIMENSION_MAX_SCORES.readiness) * 100)
 }
 
-// Calculate financial capacity score (0-100)
+// Calculate financial capacity score using actual Tier 1 breakdown
 export function calculateFinancialScore(repreneur: Repreneur): number {
-  let score = 0
+  const breakdown = repreneur.tier1_score_breakdown as Record<string, number> | undefined
+  if (!breakdown) return 0
 
-  // Investment capacity (max 50 points)
-  const capacityMap: Record<string, number> = {
-    "€0 - €50,000": 10,
-    "€50,000 - €100,000": 20,
-    "€100,000 - €200,000": 30,
-    "€200,000 - €500,000": 40,
-    "€500,000+": 50,
-  }
-  if (repreneur.investment_capacity) {
-    score += capacityMap[repreneur.investment_capacity] || 0
-  }
-
-  // Funding status (max 50 points)
-  const fundingMap: Record<string, number> = {
-    "not_started": 5,
-    "exploring": 15,
-    "in_progress": 30,
-    "secured": 50,
-  }
-  if (repreneur.q15_funding_status) {
-    score += fundingMap[repreneur.q15_funding_status] || 0
-  }
-
-  return Math.min(score, 100)
+  const raw = (breakdown.q14_score || 0) + (breakdown.q15_score || 0) + (breakdown.q16_score || 0) + (breakdown.q17_score || 0)
+  // Normalize to percentage (0-100)
+  return Math.round((raw / DIMENSION_MAX_SCORES.financial) * 100)
 }
 
-// Calculate overall score (average of all dimensions)
+// Calculate overall score (uses tier1_score directly, or average of dimensions as fallback)
 export function calculateOverallScore(repreneur: Repreneur): number {
+  // Use stored tier1_score if available (max 98)
+  if (repreneur.tier1_score !== undefined && repreneur.tier1_score !== null) {
+    return repreneur.tier1_score
+  }
+
+  // Fallback: calculate from dimensions
   const experience = calculateExperienceScore(repreneur)
   const leadership = calculateLeadershipScore(repreneur)
   const maKnowledge = calculateMAKnowledgeScore(repreneur)
@@ -157,4 +85,33 @@ export function calculateOverallScore(repreneur: Repreneur): number {
   const financial = calculateFinancialScore(repreneur)
 
   return Math.round((experience + leadership + maKnowledge + readiness + financial) / 5)
+}
+
+// Get raw scores for each dimension (not normalized)
+export function getRawDimensionScores(repreneur: Repreneur) {
+  const breakdown = repreneur.tier1_score_breakdown as Record<string, number> | undefined
+  if (!breakdown) return null
+
+  return {
+    experience: {
+      score: (breakdown.q1_score || 0) + (breakdown.q2_score || 0) + (breakdown.q3_score || 0),
+      max: DIMENSION_MAX_SCORES.experience,
+    },
+    leadership: {
+      score: (breakdown.q5_score || 0) + (breakdown.q8_score || 0) + (breakdown.q9_score || 0),
+      max: DIMENSION_MAX_SCORES.leadership,
+    },
+    maKnowledge: {
+      score: breakdown.q6_score || 0,
+      max: DIMENSION_MAX_SCORES.maKnowledge,
+    },
+    readiness: {
+      score: (breakdown.q10_score || 0) + (breakdown.q11_score || 0) + (breakdown.q12_score || 0),
+      max: DIMENSION_MAX_SCORES.readiness,
+    },
+    financial: {
+      score: (breakdown.q14_score || 0) + (breakdown.q15_score || 0) + (breakdown.q16_score || 0) + (breakdown.q17_score || 0),
+      max: DIMENSION_MAX_SCORES.financial,
+    },
+  }
 }

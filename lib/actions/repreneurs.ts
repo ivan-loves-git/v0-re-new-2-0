@@ -3,7 +3,7 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import type { Repreneur_Insert, LifecycleStatus } from "@/lib/types/repreneur"
+import type { Repreneur_Insert, LifecycleStatus, PersonaType } from "@/lib/types/repreneur"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
 
 export async function createRepreneur(formData: FormData) {
@@ -45,6 +45,7 @@ export async function createRepreneur(formData: FormData) {
     target_location: (formData.get("target_location") as string) || undefined,
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || undefined,
     lifecycle_status: (formData.get("lifecycle_status") as LifecycleStatus) || "lead",
+    persona: (formData.get("persona") as PersonaType) || undefined,
     source: (formData.get("source") as string) || undefined,
     // GDPR Consent
     marketing_consent: marketingConsent,
@@ -103,6 +104,7 @@ export async function updateRepreneur(id: string, formData: FormData) {
     target_location: (formData.get("target_location") as string) || null,
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || null,
     lifecycle_status: formData.get("lifecycle_status") as LifecycleStatus,
+    persona: (formData.get("persona") as string) || null,
     source: (formData.get("source") as string) || null,
     // GDPR Consent
     marketing_consent: marketingConsent,
@@ -167,7 +169,7 @@ export async function updateRepreneurField(id: string, field: string, value: str
   revalidatePath("/journey")
 }
 
-export async function createNote(repreneurId: string, content: string) {
+export async function createNote(repreneurId: string, content: string, noteType: string = "other") {
   const supabase = await createServerClient()
 
   // Get current user
@@ -182,6 +184,7 @@ export async function createNote(repreneurId: string, content: string) {
   const { error } = await supabase.from("notes").insert({
     repreneur_id: repreneurId,
     content,
+    note_type: noteType,
     created_by: user.id,
   })
 

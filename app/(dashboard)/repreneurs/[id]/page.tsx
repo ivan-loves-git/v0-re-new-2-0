@@ -64,7 +64,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   }))
 
   // Fetch repreneur offers with offer details
-  const { data: repreneurOffers } = await supabase
+  // Note: milestones are fetched separately to avoid query failure if table doesn't exist
+  const { data: repreneurOffers, error: offersError } = await supabase
     .from("repreneur_offers")
     .select(`
       *,
@@ -72,6 +73,36 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     `)
     .eq("repreneur_id", id)
     .order("offered_at", { ascending: false })
+
+  if (offersError) {
+    console.error("Error fetching repreneur offers:", offersError)
+  }
+
+  // Try to fetch milestones separately (table may not exist yet)
+  let milestonesMap: Record<string, any[]> = {}
+  try {
+    const { data: allMilestones } = await supabase
+      .from("offer_milestones")
+      .select("*")
+      .in("repreneur_offer_id", (repreneurOffers || []).map(ro => ro.id))
+
+    if (allMilestones) {
+      milestonesMap = allMilestones.reduce((acc: Record<string, any[]>, m: any) => {
+        if (!acc[m.repreneur_offer_id]) acc[m.repreneur_offer_id] = []
+        acc[m.repreneur_offer_id].push(m)
+        return acc
+      }, {})
+    }
+  } catch (e) {
+    // offer_milestones table may not exist yet
+    console.log("Milestones table not available yet")
+  }
+
+  // Merge milestones into offers
+  const repreneurOffersWithMilestones = (repreneurOffers || []).map(ro => ({
+    ...ro,
+    milestones: milestonesMap[ro.id] || []
+  }))
 
   // Fetch all active offers for assignment
   const { data: allOffers } = await supabase
@@ -376,7 +407,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         {/* Col 3: Offers */}
         <RepreneurOffersList
           repreneurId={id}
-          repreneurOffers={(repreneurOffers || []) as RepreneurOffer[]}
+          repreneurOffers={repreneurOffersWithMilestones as RepreneurOffer[]}
           allOffers={(allOffers || []) as Offer[]}
         />
       </div>

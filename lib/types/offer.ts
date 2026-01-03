@@ -40,11 +40,38 @@ export interface RepreneurOffer {
     last_name: string
     email: string
   }
+  milestones?: OfferMilestone[]
 }
 
 export interface RepreneurOffer_Insert {
   repreneur_id: string
   offer_id: string
   status?: OfferStatus
+  created_by: string
+}
+
+// Milestone types for tracking deliverables and checkpoints
+export type MilestoneType = "deliverable" | "checkpoint"
+
+export interface OfferMilestone {
+  id: string
+  repreneur_offer_id: string
+  milestone_type: MilestoneType
+  title: string
+  notes?: string
+  is_completed: boolean
+  completed_at?: string
+  due_date?: string
+  created_at: string
+  created_by: string
+  created_by_email?: string
+}
+
+export interface OfferMilestone_Insert {
+  repreneur_offer_id: string
+  milestone_type: MilestoneType
+  title: string
+  notes?: string
+  due_date?: string
   created_by: string
 }

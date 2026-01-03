@@ -3,7 +3,7 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import type { Offer_Insert, OfferStatus } from "@/lib/types/offer"
+import type { Offer_Insert, OfferStatus, MilestoneType } from "@/lib/types/offer"
 
 export async function createOffer(formData: FormData) {
   const supabase = await createServerClient()
@@ -160,4 +160,106 @@ export async function deleteRepreneurOffer(repreneurOfferId: string, repreneurId
 
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/offers")
+}
+
+// === Milestone Actions ===
+
+export async function createMilestone(
+  repreneurOfferId: string,
+  repreneurId: string,
+  milestoneType: MilestoneType,
+  title: string,
+  notes?: string,
+  dueDate?: string
+) {
+  const supabase = await createServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Not authenticated")
+  }
+
+  const { error } = await supabase.from("offer_milestones").insert({
+    repreneur_offer_id: repreneurOfferId,
+    milestone_type: milestoneType,
+    title,
+    notes: notes || null,
+    due_date: dueDate || null,
+    created_by: user.id,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath(`/repreneurs/${repreneurId}`)
+}
+
+export async function toggleMilestoneComplete(
+  milestoneId: string,
+  repreneurId: string,
+  isCompleted: boolean
+) {
+  const supabase = await createServerClient()
+
+  const updates: Record<string, unknown> = {
+    is_completed: isCompleted,
+  }
+
+  if (isCompleted) {
+    updates.completed_at = new Date().toISOString()
+  } else {
+    updates.completed_at = null
+  }
+
+  const { error } = await supabase
+    .from("offer_milestones")
+    .update(updates)
+    .eq("id", milestoneId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath(`/repreneurs/${repreneurId}`)
+}
+
+export async function updateMilestone(
+  milestoneId: string,
+  repreneurId: string,
+  title: string,
+  notes?: string,
+  dueDate?: string
+) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase
+    .from("offer_milestones")
+    .update({
+      title,
+      notes: notes || null,
+      due_date: dueDate || null,
+    })
+    .eq("id", milestoneId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath(`/repreneurs/${repreneurId}`)
+}
+
+export async function deleteMilestone(milestoneId: string, repreneurId: string) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.from("offer_milestones").delete().eq("id", milestoneId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath(`/repreneurs/${repreneurId}`)
 }

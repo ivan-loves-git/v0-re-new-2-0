@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
-import { SOURCE_OPTIONS } from "@/lib/types/repreneur"
+import { SOURCE_OPTIONS, PERSONA_OPTIONS } from "@/lib/types/repreneur"
 import { INVESTMENT_CAPACITY_OPTIONS, INDUSTRY_SECTOR_OPTIONS, TARGET_ACQUISITION_SIZE_OPTIONS, TARGET_LOCATION_OPTIONS } from "@/lib/utils/tier1-scoring"
 
 interface RepreneurFormProps {
@@ -108,6 +108,22 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
                 </SelectTrigger>
                 <SelectContent>
                   {SOURCE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="persona">Persona</Label>
+              <Select name="persona" defaultValue={repreneur?.persona || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select persona..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERSONA_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

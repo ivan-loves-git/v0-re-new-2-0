@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Mail, Phone, FileText, CheckCircle, XCircle, Calendar, Trash2, MoreHorizontal } from "lucide-react"
+import { Plus, Mail, Phone, FileText, CheckCircle, XCircle, Calendar, Trash2, MoreHorizontal, Eye } from "lucide-react"
 import { createActivity, deleteActivity } from "@/lib/actions/activities"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import {
   DropdownMenu,
@@ -69,6 +70,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
   const [durationMinutes, setDurationMinutes] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [viewingActivity, setViewingActivity] = useState<Activity | null>(null)
 
   // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
   const isMutatingRef = useRef(false)
@@ -161,6 +163,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
   }
 
   return (
+    <>
     <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="flex items-center gap-2">
@@ -275,6 +278,10 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setViewingActivity(activity)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleDelete(activity.id)}
                       className="text-red-600"
@@ -290,5 +297,34 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
         )}
       </CardContent>
     </Card>
+
+    {/* View Activity Dialog */}
+    <Dialog open={!!viewingActivity} onOpenChange={(open) => !open && setViewingActivity(null)}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {viewingActivity && ACTIVITY_TYPES.find(t => t.value === viewingActivity.activity_type)?.icon}
+            {viewingActivity && getActivityLabel(viewingActivity.activity_type)}
+          </DialogTitle>
+          <DialogDescription>
+            {viewingActivity && formatDate(viewingActivity.created_at)} · {viewingActivity?.created_by_email || "Unknown"}
+            {viewingActivity?.duration_minutes && ` · ${viewingActivity.duration_minutes} minutes`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          {viewingActivity?.notes ? (
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingActivity.notes}</p>
+          ) : (
+            <p className="text-sm text-gray-400 italic">No notes recorded for this activity.</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setViewingActivity(null)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

@@ -1,5 +1,14 @@
 export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected"
 export type JourneyStage = "explorer" | "learner" | "ready" | "serial_acquirer"
+export type PersonaType = "first_time_buyer" | "serial_acquirer" | "corporate_spinoff" | "family_succession"
+
+// Persona options for the dropdown
+export const PERSONA_OPTIONS = [
+  { value: "first_time_buyer", label: "First-time buyer" },
+  { value: "serial_acquirer", label: "Serial acquirer" },
+  { value: "corporate_spinoff", label: "Corporate spin-off" },
+  { value: "family_succession", label: "Family succession" },
+] as const
 
 // Source options for the dropdown
 export const SOURCE_OPTIONS = [
@@ -29,6 +38,7 @@ export interface Repreneur {
   target_acquisition_size?: string
   lifecycle_status: LifecycleStatus
   journey_stage?: JourneyStage
+  persona?: PersonaType // Acquisition style/profile type
   source?: string
   // GDPR Consent fields
   marketing_consent?: boolean
@@ -63,10 +73,21 @@ export interface Repreneur {
   created_by: string
 }
 
+export type NoteType = "call" | "email" | "meeting" | "other"
+
+// Note type options for the dropdown
+export const NOTE_TYPE_OPTIONS = [
+  { value: "call", label: "Call", icon: "Phone" },
+  { value: "email", label: "Email", icon: "Mail" },
+  { value: "meeting", label: "Meeting", icon: "Users" },
+  { value: "other", label: "Other", icon: "FileText" },
+] as const
+
 export interface Note {
   id: string
   repreneur_id: string
   content: string
+  note_type: NoteType
   created_at: string
   created_by: string
   created_by_email?: string
@@ -113,6 +134,7 @@ export interface Repreneur_Insert {
   target_acquisition_size?: string
   lifecycle_status?: LifecycleStatus
   journey_stage?: JourneyStage
+  persona?: PersonaType
   source?: string
   // GDPR Consent
   marketing_consent?: boolean
