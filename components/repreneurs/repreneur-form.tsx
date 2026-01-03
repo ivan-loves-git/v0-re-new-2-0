@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS } from "@/lib/types/repreneur"
+import { INVESTMENT_CAPACITY_OPTIONS, INDUSTRY_SECTOR_OPTIONS } from "@/lib/utils/tier1-scoring"
 
 interface RepreneurFormProps {
   repreneur?: Repreneur
@@ -19,8 +20,21 @@ interface RepreneurFormProps {
 
 export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: RepreneurFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedSectors, setSelectedSectors] = useState<string[]>(repreneur?.sector_preferences || [])
+
+  const toggleSector = (value: string) => {
+    setSelectedSectors(prev =>
+      prev.includes(value)
+        ? prev.filter(v => v !== value)
+        : [...prev, value]
+    )
+  }
 
   async function handleSubmit(formData: FormData) {
+    // Add selected sectors to form data
+    formData.delete("sector_preferences")
+    formData.append("sector_preferences", JSON.stringify(selectedSectors))
+
     setIsSubmitting(true)
     try {
       await action(formData)
@@ -116,12 +130,18 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="investment_capacity">Investment Capacity</Label>
-              <Input
-                id="investment_capacity"
-                name="investment_capacity"
-                placeholder="e.g., $500K - $2M"
-                defaultValue={repreneur?.investment_capacity}
-              />
+              <Select name="investment_capacity" defaultValue={repreneur?.investment_capacity || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select range..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVESTMENT_CAPACITY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -136,13 +156,21 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="sector_preferences">Sector Preferences</Label>
-            <Input
-              id="sector_preferences"
-              name="sector_preferences"
-              placeholder="e.g., SaaS, Manufacturing, Healthcare (comma-separated)"
-              defaultValue={repreneur?.sector_preferences?.join(", ")}
-            />
+            <Label>Sector Preferences</Label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
+              {INDUSTRY_SECTOR_OPTIONS.map((option) => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`sector-${option.value}`}
+                    checked={selectedSectors.includes(option.value)}
+                    onCheckedChange={() => toggleSector(option.value)}
+                  />
+                  <label htmlFor={`sector-${option.value}`} className="text-sm cursor-pointer">
+                    {option.label}
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">

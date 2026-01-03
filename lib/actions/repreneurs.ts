@@ -18,14 +18,17 @@ export async function createRepreneur(formData: FormData) {
     throw new Error("Not authenticated")
   }
 
-  // Parse sector preferences
+  // Parse sector preferences (now sent as JSON array)
   const sectorPrefsRaw = formData.get("sector_preferences") as string
-  const sector_preferences = sectorPrefsRaw
-    ? sectorPrefsRaw
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : []
+  let sector_preferences: string[] = []
+  if (sectorPrefsRaw) {
+    try {
+      sector_preferences = JSON.parse(sectorPrefsRaw)
+    } catch {
+      // Fallback to comma-separated for backwards compatibility
+      sector_preferences = sectorPrefsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    }
+  }
 
   // Parse marketing consent checkbox
   const marketingConsent = formData.get("marketing_consent") === "on"
@@ -63,14 +66,17 @@ export async function createRepreneur(formData: FormData) {
 export async function updateRepreneur(id: string, formData: FormData) {
   const supabase = await createServerClient()
 
-  // Parse sector preferences
+  // Parse sector preferences (now sent as JSON array)
   const sectorPrefsRaw = formData.get("sector_preferences") as string
-  const sector_preferences = sectorPrefsRaw
-    ? sectorPrefsRaw
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : []
+  let sector_preferences: string[] = []
+  if (sectorPrefsRaw) {
+    try {
+      sector_preferences = JSON.parse(sectorPrefsRaw)
+    } catch {
+      // Fallback to comma-separated for backwards compatibility
+      sector_preferences = sectorPrefsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    }
+  }
 
   // Parse marketing consent checkbox
   const marketingConsent = formData.get("marketing_consent") === "on"
