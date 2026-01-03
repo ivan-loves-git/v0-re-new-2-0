@@ -28,9 +28,8 @@ export default async function DashboardPage() {
     .from("activities")
     .select(`
       id,
-      type,
-      title,
-      description,
+      activity_type,
+      notes,
       duration_minutes,
       created_at,
       repreneur_id,
@@ -103,11 +102,21 @@ export default async function DashboardPage() {
   const activitiesForChart = allActivities?.map(a => ({ created_at: a.created_at })) || []
 
   // Transform activities for the stream (limit to 20 for larger display)
+  // Map activity_type to readable titles
+  const activityTypeLabels: Record<string, string> = {
+    welcome_email: "Welcome Email",
+    interview: "Interview",
+    offer_submitted: "Offer Submitted",
+    offer_rejected: "Offer Rejected",
+    offer_approved: "Offer Approved",
+    meeting: "Meeting",
+  }
+
   const activityItems = allActivities?.slice(0, 20).map((a: any) => ({
     id: a.id,
-    type: a.type,
-    title: a.title,
-    description: a.description,
+    type: a.activity_type,
+    title: activityTypeLabels[a.activity_type] || a.activity_type,
+    description: a.notes,
     duration_minutes: a.duration_minutes,
     created_at: a.created_at,
     repreneur_id: a.repreneur_id,
