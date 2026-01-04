@@ -133,7 +133,7 @@ export function AppSidebar({
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">Wave 1.0</span>
-                <span className="truncate text-xs text-muted-foreground">the repreneur CRM</span>
+                <span className="truncate text-xs opacity-60">the repreneur CRM</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -158,7 +158,7 @@ export function AppSidebar({
                       <item.icon />
                       <span>{item.name}</span>
                       {item.badge && (
-                        <span className="ml-auto text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        <span className="ml-auto text-[10px] font-medium opacity-50 bg-sidebar-accent px-1.5 py-0.5 rounded">
                           {item.badge}
                         </span>
                       )}
@@ -253,9 +253,9 @@ export function AppSidebar({
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">{displayName}</span>
-                    <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+                    <span className="truncate text-xs opacity-60">{userEmail}</span>
                   </div>
-                  <ChevronsUpDown className="ml-auto size-4" />
+                  <ChevronsUpDown className="ml-auto size-4 opacity-50" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent

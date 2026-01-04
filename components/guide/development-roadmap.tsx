@@ -9,6 +9,33 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Jan 4, 2026 (PM)",
+    title: "Email System Hardening",
+    isCompleted: true,
+    events: [
+      {
+        title: "Email error handling fixed",
+        type: "fix",
+        description: "Manual email send now properly checks Resend API response. UI displays actual errors instead of false success messages. Prevents silent failures.",
+      },
+      {
+        title: "To Do guide page",
+        type: "feature",
+        description: "New guide page listing pending items for founders: domain verification, environment variables, Flatchr import, team onboarding. Actionable steps with external links.",
+      },
+      {
+        title: "Test repreneur script",
+        type: "feature",
+        description: "Utility script to add test repreneur with Resend-verified email. Enables email testing while in sandbox mode.",
+      },
+      {
+        title: "Learning: Resend sandbox mode",
+        type: "learning",
+        description: "Resend sandbox (onboarding@resend.dev) can only send to account owner email. Production requires verified domain. Added to To Do with step-by-step instructions.",
+      },
+    ],
+  },
+  {
     period: "Jan 4, 2026",
     title: "Production Ready",
     isCompleted: true,

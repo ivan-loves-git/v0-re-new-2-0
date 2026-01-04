@@ -2,7 +2,7 @@ import type React from "react"
 import { cookies } from "next/headers"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { DashboardHeader } from "@/components/dashboard-header"
+import { FloatingNav } from "@/components/floating-nav"
 import { createClient } from "@/lib/supabase/server"
 
 export default async function DashboardLayout({
@@ -34,9 +34,11 @@ export default async function DashboardLayout({
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar userEmail={userEmail} userName={userName} />
       <SidebarInset>
-        <DashboardHeader />
-        <main className="flex-1 overflow-y-auto bg-gray-50/50 p-4 md:p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6">
+            <FloatingNav />
+            {children}
+          </div>
         </main>
       </SidebarInset>
     </SidebarProvider>

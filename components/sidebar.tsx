@@ -18,9 +18,9 @@ import {
   Mail,
   Target,
   BookOpen,
-  Map,
-  ClipboardList
+  Map
 } from "lucide-react"
+import { pendingTodos } from "@/lib/data/todos"
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -36,8 +36,7 @@ const mainNavigation = [
 const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
-  { name: "Roadmap", href: "/guide/roadmap", icon: Map },
-  { name: "To Do", href: "/guide/todo", icon: ClipboardList },
+  { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
 const externalUsersNavigation = [
@@ -76,7 +75,9 @@ export function Sidebar() {
     return pathname.startsWith(href)
   }
 
-  const renderNavItem = (item: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; opensNewTab?: boolean }) => {
+  const hasPendingTodos = pendingTodos.length > 0
+
+  const renderNavItem = (item: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; opensNewTab?: boolean; showNotification?: boolean }) => {
     // For items that open in new tab, use <a> tag
     if (item.opensNewTab) {
       return (
@@ -97,6 +98,8 @@ export function Sidebar() {
     }
 
     const isActive = getIsActive(item.href)
+    const showRedDot = item.showNotification && hasPendingTodos
+
     return (
       <Link
         key={item.name}
@@ -119,7 +122,12 @@ export function Sidebar() {
           />
         )}
         <span className="relative z-10 flex items-center gap-3">
-          <item.icon className="h-5 w-5" />
+          <span className="relative">
+            <item.icon className="h-5 w-5" />
+            {showRedDot && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+            )}
+          </span>
           {item.name}
         </span>
       </Link>
