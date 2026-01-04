@@ -17,17 +17,17 @@ function TodoCard({ todo, isExpanded, onToggle }: { todo: TodoItem; isExpanded: 
 
   return (
     <Card className="border-red-200 bg-red-50/50 hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent className="px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="destructive" className="text-xs">
+            <div className="flex items-center gap-2">
+              <Badge variant="destructive" className="text-xs py-0">
                 {todo.priority}
               </Badge>
               <span className="text-xs text-gray-500">{todo.category}</span>
             </div>
-            <h3 className="font-medium text-gray-900">{todo.title}</h3>
-            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+            <h3 className="font-medium text-gray-900 text-sm mt-1">{todo.title}</h3>
+            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
               <span className="flex items-center gap-1">
                 <User className="h-3 w-3" />
                 {todo.owner}
@@ -40,9 +40,9 @@ function TodoCard({ todo, isExpanded, onToggle }: { todo: TodoItem; isExpanded: 
           </div>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={onToggle}
-            className="flex-shrink-0"
+            className="flex-shrink-0 h-8 w-8"
           >
             {isExpanded ? (
               <ChevronUp className="h-4 w-4" />
@@ -113,7 +113,7 @@ export function PendingTodos() {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {displayedTodos.map((todo) => (
           <TodoCard
             key={todo.id}
