@@ -6,7 +6,21 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { LayoutDashboard, Users, GitBranch, Compass, FileText } from "lucide-react"
+import { LayoutDashboard, Users, GitBranch, Compass, FileText, Mail } from "lucide-react"
+
+// Helper to render text with **bold** and *italic* markdown syntax
+function renderFormattedText(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+    }
+    if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
+      return <em key={index} className="text-gray-700">{part.slice(1, -1)}</em>
+    }
+    return part
+  })
+}
 
 const pages = [
   {
@@ -99,6 +113,45 @@ This ensures data integrity — status always reflects real actions taken.`,
 • The stage badge appears on profile cards throughout the platform`,
   },
   {
+    id: "emails",
+    icon: Mail,
+    title: "Emails",
+    content: `The Emails page is your command center for automated email communications with repreneurs.
+
+**Email Cockpit:**
+• View email analytics (opens, clicks, bounces)
+• Browse email history with filters by type and status
+• Enable/disable specific email templates
+• Send manual emails to any repreneur
+
+**Automated Email Triggers:**
+
+**Intake Flow:**
+• Welcome — when step 1 is completed
+• Form Step Complete — after contact info captured
+• Abandoned Reminder — 48h after abandonment (cron job)
+• Thank You — when full form is completed
+• High Score Alert — when Tier 1 score is 70+
+
+**Offer Flow:**
+• Offer Received — when an offer is assigned
+• Offer Accepted — when client accepts
+• Offer Activated — when engagement begins
+• Milestone Completed — when any milestone is checked off
+
+**Other:**
+• Rejection — when marked as rejected
+
+**GDPR Compliance:**
+• Transactional emails (welcome, offers, rejection) always send
+• Marketing emails check marketing_consent field first
+• Abandoned reminders limited to 2 per repreneur
+
+**Rate Limits (Free Tier):**
+• 100 emails/day, 3,000 emails/month
+• System tracks daily counts automatically`,
+  },
+  {
     id: "offers",
     icon: FileText,
     title: "Offers",
@@ -141,7 +194,7 @@ export function PageInstructions() {
             </AccordionTrigger>
             <AccordionContent>
               <div className="pl-12 pr-4 pb-2 text-sm text-gray-600 whitespace-pre-line">
-                {page.content}
+                {renderFormattedText(page.content)}
               </div>
             </AccordionContent>
           </AccordionItem>

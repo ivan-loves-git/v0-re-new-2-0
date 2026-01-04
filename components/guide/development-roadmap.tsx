@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ChevronDown, Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw } from "lucide-react"
+import { motion } from "framer-motion"
+import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 // This captures the strategic development journey of Wave 1.0
 const roadmapEvents = [
   {
-    period: "Jan 2026",
+    period: "Jan 4, 2026",
     title: "Polish & Consolidation",
     isCompleted: true,
     events: [
@@ -32,7 +31,7 @@ const roadmapEvents = [
     ],
   },
   {
-    period: "Jan 2026",
+    period: "Jan 3, 2026",
     title: "Dashboard Redesign (Wave 1.0)",
     isCompleted: true,
     events: [
@@ -64,7 +63,7 @@ const roadmapEvents = [
     ],
   },
   {
-    period: "Jan 2026",
+    period: "Jan 2, 2026",
     title: "V1.0 Enhancements",
     isCompleted: true,
     events: [
@@ -96,7 +95,7 @@ const roadmapEvents = [
     ],
   },
   {
-    period: "Jan 2026",
+    period: "Jan 1, 2026",
     title: "UI/UX Polish Sprint",
     isCompleted: true,
     events: [
@@ -133,7 +132,7 @@ const roadmapEvents = [
     ],
   },
   {
-    period: "Dec 2025",
+    period: "Dec 30, 2025",
     title: "Core Platform Build",
     isCompleted: true,
     events: [
@@ -170,7 +169,7 @@ const roadmapEvents = [
     ],
   },
   {
-    period: "Dec 2025",
+    period: "Dec 27, 2025",
     title: "Foundation",
     isCompleted: true,
     events: [
@@ -206,20 +205,6 @@ const typeConfig = {
 }
 
 export function DevelopmentRoadmap() {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(0)
-
-  const toggleExpand = (index: number) => {
-    if (expandedIndex === index) {
-      setExpandedIndex(null)
-    } else {
-      setExpandedIndex(null)
-      const timer = setTimeout(() => {
-        setExpandedIndex(index)
-        clearTimeout(timer)
-      }, 300)
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -245,12 +230,9 @@ export function DevelopmentRoadmap() {
             <div className="absolute left-0 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-sm" />
 
             {/* Period card */}
-            <Card className="overflow-hidden border-blue-100 hover:shadow-md transition-shadow py-0 gap-0">
+            <Card className="overflow-hidden border-blue-100 py-0 gap-0">
               <CardContent className="p-0">
-                <div
-                  className="p-4 cursor-pointer flex justify-between items-center bg-gradient-to-r from-blue-50 to-white"
-                  onClick={() => toggleExpand(index)}
-                >
+                <div className="p-4 flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-xs bg-white">
@@ -268,58 +250,40 @@ export function DevelopmentRoadmap() {
                       {period.events.length} updates
                     </p>
                   </div>
-                  <motion.div
-                    animate={{ rotate: expandedIndex === index ? 180 : 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  </motion.div>
                 </div>
 
-                <AnimatePresence>
-                  {expandedIndex === index && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-3 pb-3 pt-2 border-t border-blue-100 space-y-2">
-                        {period.events.map((event, i) => {
-                          const config = typeConfig[event.type as keyof typeof typeConfig]
-                          const Icon = config.icon
-                          return (
-                            <motion.div
-                              key={i}
-                              className="flex gap-2.5 py-2 px-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.3, delay: i * 0.05 }}
-                            >
-                              <div className={`p-1.5 rounded-md ${config.bgColor} h-fit`}>
-                                <Icon className={`w-3.5 h-3.5 ${config.color}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-gray-900 text-sm">
-                                    {event.title}
-                                  </span>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {config.label}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-gray-600 mt-0.5">
-                                  {event.description}
-                                </p>
-                              </div>
-                            </motion.div>
-                          )
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <div className="px-3 pb-3 pt-2 border-t border-blue-100 space-y-2">
+                  {period.events.map((event, i) => {
+                    const config = typeConfig[event.type as keyof typeof typeConfig]
+                    const Icon = config.icon
+                    return (
+                      <motion.div
+                        key={i}
+                        className="flex gap-2.5 py-2 px-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: i * 0.05 }}
+                      >
+                        <div className={`p-1.5 rounded-md ${config.bgColor} h-fit`}>
+                          <Icon className={`w-3.5 h-3.5 ${config.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 text-sm">
+                              {event.title}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">
+                              {config.label}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            {event.description}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
               </CardContent>
             </Card>
           </motion.div>

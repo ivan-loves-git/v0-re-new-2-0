@@ -13,9 +13,9 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Repreneurs", href: "/repreneurs", icon: Users },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
-  { name: "Journey", href: "/journey", icon: Compass },
-  { name: "Offers", href: "/offers", icon: FileText },
+  { name: "Journey (WIP)", href: "/journey", icon: Compass },
   { name: "Emails", href: "/emails", icon: Mail },
+  { name: "Offers (WIP)", href: "/offers", icon: FileText },
   { name: "Wave Guide", href: "/guide", icon: BookOpen },
 ]
 
@@ -67,9 +67,9 @@ export function Sidebar() {
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {/* Re-New Users Section */}
+        {/* Re-New Team Section */}
         <div className="px-3 mb-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Re-New Users</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Re-New Team</p>
         </div>
         {navigation.map((item) => {
           const isActive = getIsActive(item.href)

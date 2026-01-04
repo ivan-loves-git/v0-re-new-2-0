@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlatformGoal, KeyPrinciples, PageInstructions, CoreConcepts, DevelopmentRoadmap } from "@/components/guide"
 import { ArrowRight, Workflow, HelpCircle } from "lucide-react"
 
@@ -24,17 +24,19 @@ export default function GuidePage() {
 
       {/* Detailed Guide CTAs */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-blue-100 bg-gradient-to-br from-blue-50 to-white">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Workflow className="h-5 w-5 text-blue-600" />
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-2 rounded-lg bg-blue-50">
+                <Workflow className="h-4 w-4 text-blue-600" />
+              </div>
               Common Workflows
             </CardTitle>
-            <CardDescription>
-              Step-by-step guides for processing leads, managing clients, and running weekly pipeline reviews.
-            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Step-by-step guides for processing leads, managing clients, and running weekly pipeline reviews.
+            </p>
             <Link href="/guide/details#workflows">
               <Button className="gap-2">
                 View Workflows
@@ -44,17 +46,19 @@ export default function GuidePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-amber-100 bg-gradient-to-br from-amber-50 to-white">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-amber-600" />
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-2 rounded-lg bg-amber-50">
+                <HelpCircle className="h-4 w-4 text-amber-600" />
+              </div>
               FAQ
             </CardTitle>
-            <CardDescription>
-              Answers to common questions about status changes, scoring, rejections, and time tracking.
-            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Answers to common questions about status changes, scoring, rejections, and time tracking.
+            </p>
             <Link href="/guide/details#faq">
               <Button variant="outline" className="gap-2">
                 View FAQ
