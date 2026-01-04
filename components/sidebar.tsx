@@ -13,10 +13,10 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Repreneurs", href: "/repreneurs", icon: Users },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
-  { name: "Journey (WIP)", href: "/journey", icon: Compass },
   { name: "Emails", href: "/emails", icon: Mail },
-  { name: "Offers (WIP)", href: "/offers", icon: FileText },
   { name: "Wave Guide", href: "/guide", icon: BookOpen },
+  { name: "Journey (WIP)", href: "/journey", icon: Compass },
+  { name: "Offers (WIP)", href: "/offers", icon: FileText },
 ]
 
 const externalUsersNavigation = [

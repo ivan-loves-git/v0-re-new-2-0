@@ -91,28 +91,6 @@ const pages = [
 This ensures data integrity — status always reflects real actions taken.`,
   },
   {
-    id: "journey",
-    icon: Compass,
-    title: "Journey",
-    content: `The Journey page tracks where repreneurs are in their acquisition readiness — independent of their status with Re-New.
-
-**Journey Stages:**
-1. **Explorer**: Just starting to think about acquisition, gathering information
-2. **Learner**: Actively learning, attending workshops, building knowledge
-3. **Ready**: Has clear investment thesis, actively looking for targets
-4. **Serial Acquirer**: Has completed at least one acquisition, looking for the next
-
-**Why this matters:**
-• A repreneur can be a "Lead" in Re-New's pipeline but already "Ready" in their journey
-• This helps prioritize who to focus on — a Ready lead is more urgent than an Explorer
-• It informs which offer makes sense for each person
-
-**How to use:**
-• Set journey stage on the repreneur profile
-• Use this page to see distribution and filter by stage
-• The stage badge appears on profile cards throughout the platform`,
-  },
-  {
     id: "emails",
     icon: Mail,
     title: "Emails",
@@ -152,9 +130,31 @@ This ensures data integrity — status always reflects real actions taken.`,
 • System tracks daily counts automatically`,
   },
   {
+    id: "journey",
+    icon: Compass,
+    title: "Journey (WIP)",
+    content: `The Journey page tracks where repreneurs are in their acquisition readiness — independent of their status with Re-New.
+
+**Journey Stages:**
+1. **Explorer**: Just starting to think about acquisition, gathering information
+2. **Learner**: Actively learning, attending workshops, building knowledge
+3. **Ready**: Has clear investment thesis, actively looking for targets
+4. **Serial Acquirer**: Has completed at least one acquisition, looking for the next
+
+**Why this matters:**
+• A repreneur can be a "Lead" in Re-New's pipeline but already "Ready" in their journey
+• This helps prioritize who to focus on — a Ready lead is more urgent than an Explorer
+• It informs which offer makes sense for each person
+
+**How to use:**
+• Set journey stage on the repreneur profile
+• Use this page to see distribution and filter by stage
+• The stage badge appears on profile cards throughout the platform`,
+  },
+  {
     id: "offers",
     icon: FileText,
-    title: "Offers",
+    title: "Offers (WIP)",
     content: `The Offers page manages Re-New's service packages and tracks which clients have which offers.
 
 **Current Offers:**
