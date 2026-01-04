@@ -1,0 +1,706 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>HR Process and campaign Action tracker</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="27236d8d-ca88-81dd-a175-c70e64ebff3a" class="page sans"><header><h1 class="page-title">HR Process and campaign Action tracker</h1><p class="page-description"></p></header><div class="page-body"><table class="collection-content"><thead><tr><th><span class="icon property-icon"><img src="https://www.notion.so/icons/font_gray.svg" style="width:14px;height:14px;display:block"/></span>Category </th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/description_gray.svg" style="width:14px;height:14px;display:block"/></span>Task</th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/description_gray.svg" style="width:14px;height:14px;display:block"/></span>Action </th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/arrow-circle-down_gray.svg" style="width:14px;height:14px;display:block"/></span>Priority</th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/arrow-circle-down_gray.svg" style="width:14px;height:14px;display:block"/></span>Owner</th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/arrow-circle-down_gray.svg" style="width:14px;height:14px;display:block"/></span>Status</th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/calendar_gray.svg" style="width:14px;height:14px;display:block"/></span>End date</th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/description_gray.svg" style="width:14px;height:14px;display:block"/></span>Deliverable</th><th><span class="icon property-icon"><img src="https://www.notion.so/icons/description_gray.svg" style="width:14px;height:14px;display:block"/></span>Notes</th></tr></thead><tbody><tr id="27236d8d-ca88-819d-95d0-fdb9b2cf9c96"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Grow%20audience%2027236d8dca88819d95d0fdb9b2cf9c96.html">Grow audience</a></td><td class="cell-QQuB">Launch campain </td><td class="cell-:tk_">Communication campaign program</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 2, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Need to have the plan for Tuesday 2nd Sept<br/>1) wc 09/01 give update on Re-New + explain that we launch a new selection campaign on 22nd <br/>2) wc 09/08<br/>3) wc 09/15 <br/>4) 09/22 =&gt; LAUNCH !</td></tr><tr id="27236d8d-ca88-8159-920e-ea7f41df0e7e"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Grow%20audience%2027236d8dca888159920eea7f41df0e7e.html">Grow audience</a></td><td class="cell-QQuB">Launch campain </td><td class="cell-:tk_">Linkedin Campaign annoucement #1</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 3, 2025</time></td><td class="cell-G:Pf">6. LinkedIn 5th post - Campaign launch</td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81a3-9d40-ec8a84443d2f"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Communication%20and%20Marketing%20Campaign%2027236d8dca8881a39d40ec8a84443d2f.html">Communication and Marketing Campaign </a></td><td class="cell-QQuB">Com&amp;Marketing campaign</td><td class="cell-:tk_">Finalise Application Form questions </td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 4, 2025</time></td><td class="cell-G:Pf"><a href="https://www.notion.so/27236d8dca888198b319ca954bd342a3?pvs=21">Application Form </a></td><td class="cell-lYfI">Validated during 08/29 weekly call</td></tr><tr id="27236d8d-ca88-81d8-99f7-c54d01345456"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca8881d899f7c54d01345456.html">Campaign #2 structure</a></td><td class="cell-QQuB">Automation / Flatchr +</td><td class="cell-:tk_">Design infrastructure / Map overall process flow</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 7, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Map process and list automation requirements to speed up campaign execution and efficiency</td></tr><tr id="27236d8d-ca88-81cb-b1e0-ee4c61ed3714"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca8881cbb1e0ee4c61ed3714.html">Recruitment process </a></td><td class="cell-QQuB">Recruitment Process</td><td class="cell-:tk_">Validate stages and rounds + outcomes</td><td class="cell-;Uuc"><span class="selected-value select-value-color-gray">P0</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 9, 2025</time></td><td class="cell-G:Pf"><a href="https://www.notion.so/27236d8dca8881e59485deaec570dc20?pvs=21">Campaign 2.0 Process </a></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-8191-b161-cbf35f509f6f"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca888191b161cbf35f509f6f.html">Campaign #2 structure</a></td><td class="cell-QQuB">Launch campain </td><td class="cell-:tk_">Linkedin Campaign annoucement #2</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 10, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-814e-9caf-cea4999271bf"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca88814e9cafcea4999271bf.html">Recruitment process </a></td><td class="cell-QQuB">Recruitment Process</td><td class="cell-:tk_">Ensure availabiity of interviewers </td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 11, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Option A: Founders + Angels + ICP 2.0    ; Option B: Founders + Angels + Martin (tough on slot)</td></tr><tr id="27236d8d-ca88-81a6-b73d-ec84a38b674d"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca8881a6b73dec84a38b674d.html">Recruitment process </a></td><td class="cell-QQuB">Recruitment Process</td><td class="cell-:tk_">Evaluation Grid for interviews </td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 11, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">To be reviewed BGA</td></tr><tr id="27236d8d-ca88-81cd-abd3-e91a7dd898c2"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca8881cdabd3e91a7dd898c2.html">Campaign #2 structure</a></td><td class="cell-QQuB">Flatchr set-up</td><td class="cell-:tk_">Update columns kanban</td><td class="cell-;Uuc"><span class="selected-value select-value-color-brown">P2</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 12, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81a7-acc7-cb7163a5c56b"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca8881a7acc7cb7163a5c56b.html">Campaign #2 structure</a></td><td class="cell-QQuB">Automation / Flatchr +</td><td class="cell-:tk_">Automation configuration </td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-gray">Ignacio Campos</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 15, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Need to be ready before campaign</td></tr><tr id="27236d8d-ca88-8152-a926-c05cdce7f0e1"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca888152a926c05cdce7f0e1.html">Campaign #2 structure</a></td><td class="cell-QQuB">Calendar interview</td><td class="cell-:tk_">Find app / process to organize group interviews</td><td class="cell-;Uuc"><span class="selected-value select-value-color-brown">P2</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-yellow">In progress</span></td><td class="cell-t]qo"><time>@September 19, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Calendly</td></tr><tr id="27236d8d-ca88-8100-8baf-c03e636bbb93"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca8881008bafc03e636bbb93.html">Recruitment process </a></td><td class="cell-QQuB">Flatchr</td><td class="cell-:tk_">Create email template for all stages </td><td class="cell-;Uuc"><span class="selected-value select-value-color-brown">P2</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 15, 2025</time></td><td class="cell-G:Pf"><a href="https://www.notion.so/27236d8dca8881fab0e8d620acd0ab3d?pvs=21">candidates emails</a></td><td class="cell-lYfI">Acknowledgement of receipt, go / no-go etc... ok, misses specific message for silver medalists<br/>Need to check how to consolidate calendly agendas</td></tr><tr id="27236d8d-ca88-81ea-8a4b-fa6236e480bb"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca8881ea8a4bfa6236e480bb.html">Campaign #2 structure</a></td><td class="cell-QQuB">Flatchr</td><td class="cell-:tk_">Grant Renew team with Flatchr access</td><td class="cell-;Uuc"><span class="selected-value select-value-color-brown">P2</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 15, 2025</time></td><td class="cell-G:Pf">Tomas, Fabio, Alex, Gabriele</td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-813e-b043-c93a06466870"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca88813eb043c93a06466870.html">Campaign #2 structure</a></td><td class="cell-QQuB">Create campaign offer</td><td class="cell-:tk_">Create campaign #2 offer in Flatchr</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 15, 2025</time></td><td class="cell-G:Pf">With support from Naxo on the formAmelie on Kanban + automated messages</td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-8117-94ba-cf2aa73d72fa"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Grow%20audience%2027236d8dca88811794bacf2aa73d72fa.html">Grow audience</a></td><td class="cell-QQuB">Launch campain </td><td class="cell-:tk_">Linkedin post opening #3</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 17, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-8158-af49-c37afc42981a"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca888158af49c37afc42981a.html">Recruitment process </a></td><td class="cell-QQuB">Recruitment Process</td><td class="cell-:tk_">Training of Interviewers </td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 20, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Date to be set</td></tr><tr id="27236d8d-ca88-81d3-9634-f890fd1e7e8a"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca8881d39634f890fd1e7e8a.html">Campaign #2 structure</a></td><td class="cell-QQuB">Automation / Flatchr +</td><td class="cell-:tk_">Automation testing</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-gray">Ignacio Campos</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 17, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Need to be ready before campaign</td></tr><tr id="27236d8d-ca88-8136-99c9-ee986fa3a7b5"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Campaign%20#2%20structure%2027236d8dca88813699c9ee986fa3a7b5.html">Campaign #2 structure</a></td><td class="cell-QQuB">Mailing automation</td><td class="cell-:tk_">Configure automated messages based on Kanban columns</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 19, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Application review = accusé de réception ; A recevoir = mail invitation HR…</td></tr><tr id="27236d8d-ca88-8191-a06f-d9797d4c859e"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Grow%20audience%2027236d8dca888191a06fd9797d4c859e.html">Grow audience</a></td><td class="cell-QQuB">Launch campaign</td><td class="cell-:tk_">Find a campaign sponsor </td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 21, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">A &quot;public person&quot;<br/>Need to define sponsor role so we can &quot;sell&quot; the idea<br/>eg Laurent Moisson (FFI), Martial Le Terrier, G. De Chillaz ? <br/>Role: coaching, support, whatsapp </td></tr><tr id="27236d8d-ca88-81f7-9d1f-cbbf09149442"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca8881f79d1fcbbf09149442.html">Recruitment process </a></td><td class="cell-QQuB">Recruitment Process</td><td class="cell-:tk_">Test and check offer and all process</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 21, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Configure form ; detail offer ; configure distribution (Linkedin, jobboards...)</td></tr><tr id="27236d8d-ca88-81d9-b4b9-ce886e9438a5"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Prepartion%20Operations%20&amp;%20Tools%2027236d8dca8881d9b4b9ce886e9438a5.html">Prepartion Operations &amp; Tools </a></td><td class="cell-QQuB">Preparation&amp; ops tools</td><td class="cell-:tk_">Monitoring tools: How we extarct KPI from campaign / dashboard</td><td class="cell-;Uuc"><span class="selected-value select-value-color-brown">P2</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-gray">Ignacio Campos</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-yellow">In progress</span></td><td class="cell-t]qo"><time>@October 2, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-8173-9450-e295bc05a629"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20output%2027236d8dca8881739450e295bc05a629.html">Recruitment output</a></td><td class="cell-QQuB">Design partners’ output</td><td class="cell-:tk_">Candidate file design and test</td><td class="cell-;Uuc"><span class="selected-value select-value-color-brown">P2</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-yellow">In progress</span></td><td class="cell-t]qo"><time>@October 5, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Need to elaborate </td></tr><tr id="27236d8d-ca88-8188-a4e9-d99a7fa9ebb1"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Spontaneous%20application%2027236d8dca888188a4e9d99a7fa9ebb1.html">Spontaneous application</a></td><td class="cell-QQuB">Process proposal</td><td class="cell-:tk_"></td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-yellow">In progress</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81ef-bba4-f6b0d9731223"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca8881efbba4f6b0d9731223.html">Recruitment process </a></td><td class="cell-QQuB">Note taking</td><td class="cell-:tk_">Determine which best AI tool for note taking (Sana, Granola, Notion ?)</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-purple">Amelie Lyon</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 17, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81d0-9685-cd32728ad38c"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Other%20campaign%20requirements%2027236d8dca8881d09685cd32728ad38c.html">Other campaign requirements</a></td><td class="cell-QQuB">GDPR</td><td class="cell-:tk_">Update terms and conditions website + check Flatchr notice</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"><span class="selected-value select-value-color-blue">Bertrand Galas</span></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@September 19, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81a5-aa27-eca1d0169c95"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Candidates%20%E2%80%98%20management%2027236d8dca8881a5aa27eca1d0169c95.html">Candidates ‘ management</a></td><td class="cell-QQuB">Output of scoring and notes from interviews</td><td class="cell-:tk_">Determine Partners’ support pathway and monetization ways for each candidate</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI">How we manage and collect all relevant info from candidates, make informed decision, connect candidates with relevant partners, and follow up on our actions</td></tr><tr id="27236d8d-ca88-8184-8b51-c0542f49f4eb"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Decision,%20Feedback%20and%20Onboarding%2027236d8dca8881848b51c0542f49f4eb.html">Decision, Feedback and Onboarding </a></td><td class="cell-QQuB">Application decision </td><td class="cell-:tk_">Short-list committee</td><td class="cell-;Uuc"><span class="selected-value select-value-color-blue">P3</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"><time>@October 15, 2025</time></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-8150-ae14-ff7ef20bee4f"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Recruitment%20process%2027236d8dca888150ae14ff7ef20bee4f.html">Recruitment process </a></td><td class="cell-QQuB">Recruitment Process</td><td class="cell-:tk_">Application gathering (FlatchR) / Revision of scoring</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI">Need manual input on a daily basis :<br/>-check scoring obtained<br/>-report scoring and &quot;move&quot; candidate accordingly</td></tr><tr id="27236d8d-ca88-8124-a2c3-f6dbe267fc82"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Application%20Reception%20and%20Screening%2027236d8dca888124a2c3f6dbe267fc82.html">Application Reception and Screening </a></td><td class="cell-QQuB">Application reception  &amp;screening </td><td class="cell-:tk_">Daily reviews from team</td><td class="cell-;Uuc"><span class="selected-value select-value-color-blue">P3</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81c8-98d5-c114ef49c3dc"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Application%20Reception%20and%20Screening%2027236d8dca8881c898d5c114ef49c3dc.html">Application Reception and Screening </a></td><td class="cell-QQuB">Application screening </td><td class="cell-:tk_">Notes for each applicants to be shared </td><td class="cell-;Uuc"><span class="selected-value select-value-color-blue">P3</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-green">Completed</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81d1-acb3-fb75e1116884"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Application%20Reception%20and%20Screening%2027236d8dca8881d1acb3fb75e1116884.html">Application Reception and Screening </a></td><td class="cell-QQuB">Feedback to applicants </td><td class="cell-:tk_">Send email post screening</td><td class="cell-;Uuc"><span class="selected-value select-value-color-blue">P3</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-red">Not started</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81fe-8c4b-fc2acfc8e211"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Interview%20and%20Asssement%2027236d8dca8881fe8c4bfc2acfc8e211.html">Interview and Asssement </a></td><td class="cell-QQuB">1st Interview</td><td class="cell-:tk_">Leadership and Project </td><td class="cell-;Uuc"><span class="selected-value select-value-color-blue">P3</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-yellow">In progress</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-815f-80e9-f0e4f9ce1c3a"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Interview%20and%20Asssement%2027236d8dca88815f80e9f0e4f9ce1c3a.html">Interview and Asssement </a></td><td class="cell-QQuB">2nd interview </td><td class="cell-:tk_">Finance and entrepreneurship</td><td class="cell-;Uuc"><span class="selected-value select-value-color-blue">P3</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-red">Not started</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81d5-b043-e5c0fb5a03a5"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Interview%20and%20Asssement%2027236d8dca8881d5b043e5c0fb5a03a5.html">Interview and Asssement </a></td><td class="cell-QQuB">Case 1</td><td class="cell-:tk_">Schedule  Bcase + Panel Slots with 2 finalists</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-red">Not started</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81ef-ba22-e713cc6efd84"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Interview%20and%20Asssement%2027236d8dca8881efba22e713cc6efd84.html">Interview and Asssement </a></td><td class="cell-QQuB">Case 2</td><td class="cell-:tk_">Prepare document and instruction on the BC for candidates</td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-red">Not started</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-815e-8bce-d5609700c568"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Interview%20and%20Asssement%2027236d8dca88815e8bced5609700c568.html">Interview and Asssement </a></td><td class="cell-QQuB"></td><td class="cell-:tk_">Prepare template for BC minutes </td><td class="cell-;Uuc"><span class="selected-value select-value-color-purple">P1</span></td><td class="cell-mrw{"></td><td class="cell-M^S;"><span class="selected-value select-value-color-red">Not started</span></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-81cb-abc7-e079b2059fa3"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Untitled%2027236d8dca8881cbabc7e079b2059fa3.html">Untitled</a></td><td class="cell-QQuB"></td><td class="cell-:tk_"></td><td class="cell-;Uuc"></td><td class="cell-mrw{"></td><td class="cell-M^S;"></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="28f36d8d-ca88-80cc-bdef-cb6d61d2a2df"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Untitled%2028f36d8dca8880ccbdefcb6d61d2a2df.html">Untitled</a></td><td class="cell-QQuB"></td><td class="cell-:tk_"></td><td class="cell-;Uuc"></td><td class="cell-mrw{"></td><td class="cell-M^S;"></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="28f36d8d-ca88-80e2-87d0-cf1ae57b6f7b"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Untitled%2028f36d8dca8880e287d0cf1ae57b6f7b.html">Untitled</a></td><td class="cell-QQuB"></td><td class="cell-:tk_"></td><td class="cell-;Uuc"></td><td class="cell-mrw{"></td><td class="cell-M^S;"></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-8125-88de-f8b9f6da78bd"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Untitled%2027236d8dca88812588def8b9f6da78bd.html">Untitled</a></td><td class="cell-QQuB"></td><td class="cell-:tk_"></td><td class="cell-;Uuc"></td><td class="cell-mrw{"></td><td class="cell-M^S;"></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr><tr id="27236d8d-ca88-816f-ba51-fe747dbfc80b"><td class="cell-title"><a href="HR%20Process%20and%20campaign%20Action%20tracker%2027236d8dca8881dda175c70e64ebff3a/Untitled%2027236d8dca88816fba51fe747dbfc80b.html">Untitled</a></td><td class="cell-QQuB"></td><td class="cell-:tk_"></td><td class="cell-;Uuc"></td><td class="cell-mrw{"></td><td class="cell-M^S;"></td><td class="cell-t]qo"></td><td class="cell-G:Pf"></td><td class="cell-lYfI"></td></tr></tbody></table><br/><br/></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

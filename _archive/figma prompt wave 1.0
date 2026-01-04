@@ -1,0 +1,3191 @@
+# RE-NEW CUSTOMER DASHBOARD - COMPLETE PLANNING DOCUMENTATION
+# Figma Prompt Wave 1.0
+
+---
+
+## STEP 1: COMPLETE APP OVERVIEW
+
+### 1. App Type & Purpose
+
+**Type**: Customer-facing dashboard for Re-New platform
+
+**Problem**: People searching to acquire businesses face a fragmented, overwhelming journey with no structured guidance. They struggle to assess their readiness, define what they're looking for, find suitable opportunities, learn the acquisition process, connect with experienced people, and access expert help when needed.
+
+**Solution**: A comprehensive dashboard that guides searchers from preparation through deal closure with:
+- Structured readiness assessment to identify gaps
+- Strategic criteria framework (Lead de Cadrage) for focused searching
+- Intelligent business matching with transparent scoring
+- Community network and expert access
+- Educational resources and practical tools
+- Event-based learning opportunities
+
+---
+
+### 2. Core Features
+
+1. **Readiness Assessment** - Multi-dimensional scoring across financial readiness, experience & skills, and personal readiness with clear gap identification and improvement pathways
+
+2. **Lead de Cadrage (Strategic Advantage)** - Sophisticated 7-step acquisition criteria builder covering industry preferences, geography, financial parameters, business size, deal structure, characteristics, and timeline
+
+3. **Business Search & Matching** - Intelligent deal flow with matching scores (0-100) that show transparent rationale for why each business aligns with user's criteria, with pipeline management
+
+4. **Network** - User directory with mentor capabilities allowing searchers to connect with experienced acquirers and peers for guidance and support
+
+5. **Events** - Curated meetups and remote sessions hosted by Bertrand for community learning, networking, and skill development
+
+6. **Expert Support** - Topic-based expert directory (8-10 specialized areas) connecting users with professionals for targeted consultation via email
+
+7. **Resources & Tools** - Dual offering: downloadable educational content (guides, articles, case studies) and practical tools (financial calculators, due diligence checklists, valuation tools)
+
+---
+
+### 3. User Flow
+
+**Main Acquisition Journey:**
+
+```
+Login
+  ↓
+Dashboard Home (overview of readiness, criteria status, new matches, events)
+  ↓
+Complete Readiness Assessment
+  → Overall score (0-100)
+  → Three dimension scores: Financial, Experience, Personal
+  → Identify gaps and strengths
+  ↓
+Build Lead de Cadrage (acquisition criteria)
+  → 7-step process defining ideal business profile
+  → Creates matching algorithm basis
+  → Strategic advantage unlocked
+  ↓
+Browse Business Search
+  → See matched opportunities
+  → Click matching score → View detailed rationale
+  → Save favorite businesses
+  → Organize pipeline by stage
+  ↓
+[Continuous learning & support loop:]
+  → Identify knowledge gaps → Download Resources
+  → Need calculation help → Use Tools
+  → Need expert guidance → Contact Experts
+  → Want community connection → Browse Network, connect with mentors
+  → Join learning events → Register for Events
+  ↓
+Return to Dashboard Home
+  → Track progress
+  → See new matches
+  → Update criteria as needed
+  → Monitor pipeline
+```
+
+**Supporting Flows:**
+
+- **Gap Closing Flow**: Readiness gaps → Resources section → Download guides → Tools section → Use calculators → Retake assessment
+- **Expert Consultation Flow**: Question arises → Experts section → Select topic area → View expert profiles → Email expert
+- **Community Learning Flow**: Events calendar → RSVP for event → Attend → Network section → Connect with attendees
+- **Deal Progression Flow**: Business Search → Save business → Move through pipeline stages (Watching → Evaluating → Due Diligence → Negotiating)
+
+---
+
+### 4. Page Structure
+
+| # | Page Name | Description |
+|---|-----------|-------------|
+| 1 | **Dashboard Home** | Personal hub showing readiness score snapshot, Lead de Cadrage completion status, count of new matched opportunities, active deals summary, upcoming events, recent activity feed, and recommended next actions |
+| 2 | **My Readiness** | Comprehensive assessment results displaying overall readiness score (0-100), three dimensional breakdowns (Financial, Experience & Skills, Personal), identified gaps and strengths, recommended improvement actions with links to resources, and progress tracking over time |
+| 3 | **Lead de Cadrage** | Strategic acquisition criteria builder featuring 7-step framework (Industry & Business Type, Geographic Preferences, Financial Criteria, Business Size, Deal Structure, Characteristics, Timeline), edit/review modes, completion status, and matching quality score |
+| 4 | **Business Search** | Deal flow interface with filtered/searchable business listings, matching scores (clickable to show detailed rationale), saved/favorited businesses, pipeline stage organization (Watching, Evaluating, Due Diligence, Negotiating), and sorting options |
+| 5 | **Network** | User directory with searchable/filterable profiles, mentor capability indicators, expertise tags, location and industry filters, detailed profile views, and contact functionality |
+| 6 | **Events** | Calendar view of upcoming meetups and remote sessions hosted by Bertrand, event details (date, time, topic, host), RSVP/registration, past events archive, user's registered events, and add-to-calendar functionality |
+| 7 | **Experts** | Topic-area selection interface (8-10 specialized areas like Financial Due Diligence, Legal, Valuation, Negotiation, etc.) that opens expert cards showing name, photo, background, expertise, and email contact button |
+| 8 | **Resources** | Downloadable document library with content tagged by type (Guides, Articles, Blog Posts, Case Studies), search functionality, filtering by tag, bookmark/save capability, and download actions |
+| 9 | **Tools** | Practical toolkit featuring financial calculators, due diligence checklists, valuation tools, ROI calculators, and other hands-on resources for deal evaluation |
+
+---
+
+## STEP 2: DETAILED PAGE ARCHITECTURES
+
+---
+
+### PAGE 1: DASHBOARD HOME
+
+**Page Name**: Dashboard Home
+
+**Purpose**: Serves as the central command center for Re-New customers, providing at-a-glance visibility into their entire acquisition journey status, highlighting what needs attention, celebrating progress, and directing users to their next most important actions.
+
+**Layout Structure**:
+- **Desktop**: Sticky header with logo + main navigation, hero section with personalized greeting and key stats, main content area with 3-column card grid, right sidebar with quick actions and notifications
+- **Tablet**: Sticky header, hero section, 2-column card grid, sidebar moves below content
+- **Mobile**: Sticky header with hamburger menu, hero section, single column cards, bottom navigation bar for quick access
+
+**Key Components**:
+
+1. **Header Component**
+   - Logo (links to dashboard home)
+   - Main navigation menu (Dashboard, Readiness, Lead de Cadrage, Search, Network, Events, Experts, Resources, Tools)
+   - User avatar dropdown (Profile, Settings, Logout)
+   - Notification bell icon with badge count
+
+2. **Hero Section**
+   - Personalized greeting: "Welcome back, [User Name]!"
+   - Time-based message: "Here's what's happening with your acquisition journey"
+   - Overall status badge: "On Track" / "Needs Attention" / "Getting Started"
+
+3. **Key Stats Pills** (Horizontal row of 4 stat cards)
+   - Readiness Score: Large number (0-100) with color indicator (red <50, yellow 50-70, green 70+)
+   - Lead de Cadrage: Completion percentage with progress ring
+   - New Matches: Count with "new" badge
+   - Active Deals: Number in pipeline
+
+4. **Main Content Cards Grid** (3 columns desktop, 2 tablet, 1 mobile)
+
+   **Card: My Readiness Overview**
+   - Card header: "My Readiness" + view details link
+   - Overall score: 68/100 with color-coded progress bar
+   - Three sub-scores:
+     - Financial: 72/100 (green check)
+     - Experience: 58/100 (yellow warning)
+     - Personal: 75/100 (green check)
+   - Action: "Improve Experience Score" button
+
+   **Card: Lead de Cadrage Status**
+   - Card header: "Lead de Cadrage" + edit link
+   - Completion status: "6 of 7 steps completed"
+   - Visual: 7 step dots with 6 filled, 1 empty
+   - Missing item highlighted: "Complete Timeline & Urgency"
+   - Action: "Complete Now" button
+
+   **Card: Matched Opportunities**
+   - Card header: "New Matches" + view all link
+   - Count: "3 new businesses match your criteria"
+   - Mini list of 3 businesses:
+     - Business name
+     - Match score badge (e.g., "92% match")
+     - Location + industry tags
+   - Action: "View All Opportunities" button
+
+   **Card: Active Pipeline**
+   - Card header: "My Deals"
+   - Stage breakdown:
+     - Watching: 5 businesses
+     - Evaluating: 2 businesses
+     - Due Diligence: 1 business
+     - Negotiating: 0 businesses
+   - Visual: Horizontal stage tracker with counts
+   - Action: "Manage Pipeline" button
+
+   **Card: Upcoming Events**
+   - Card header: "Events" + view calendar link
+   - Next 2 upcoming events:
+     - Event title
+     - Date, time
+     - Format badge (Meetup / Remote)
+     - RSVP status
+   - Action: "Browse All Events" button
+
+   **Card: Recent Activity**
+   - Card header: "Activity Feed"
+   - Timeline of last 5 activities:
+     - "New match: [Business Name] (92% match)" - 2 hours ago
+     - "Completed Financial Readiness module" - 1 day ago
+     - "Updated Lead de Cadrage criteria" - 3 days ago
+     - "Saved [Business Name] to favorites" - 5 days ago
+     - "Contacted expert: John Doe (Valuation)" - 1 week ago
+   - Icon for each activity type
+
+5. **Right Sidebar** (Desktop only)
+
+   **Recommended Actions Panel**
+   - Title: "Next Steps"
+   - Prioritized list of 3-5 actions:
+     - [ ] Complete Timeline step in Lead de Cadrage
+     - [ ] Improve Experience readiness (take module)
+     - [ ] Review 3 new matched businesses
+     - [ ] RSVP for upcoming event "Deal Structure Basics"
+   - Each with checkbox and link to relevant page
+
+   **Quick Links Panel**
+   - Contact an Expert
+   - Download Resources
+   - Use Tools
+   - Join Network
+
+6. **Footer**
+   - Help Center link
+   - Contact Support
+   - Terms & Privacy
+   - Version info
+
+**Interactive Elements**:
+
+- **Click readiness score** → Navigate to My Readiness page
+- **Click Lead de Cadrage completion** → Navigate to Lead de Cadrage page
+- **Click "View All Opportunities"** → Navigate to Business Search page
+- **Click matched business** → Open business detail view
+- **Click event** → Open event details / RSVP
+- **Check action item** → Mark complete, update progress
+- **Click notification bell** → Open notifications dropdown
+- **Hover stat card** → Subtle lift animation
+- **Click activity item** → Navigate to relevant page/detail
+- **Refresh data** → Pull latest matches, events, activities
+
+**Navigation**:
+
+- **To this page**: From login, from all other pages via "Dashboard" in main nav, from logo click
+- **From this page**:
+  - To My Readiness (via readiness card or stat pill)
+  - To Lead de Cadrage (via Lead de Cadrage card or recommended action)
+  - To Business Search (via matches card or "View All Opportunities")
+  - To Events (via events card)
+  - To Experts (via quick links)
+  - To Resources (via quick links)
+  - To Tools (via quick links)
+  - To Network (via main nav)
+
+**Content**:
+
+**Headings:**
+- H1: "Welcome back, [First Name]!"
+- H2 (section): "Your Acquisition Journey"
+- H3 (cards): "My Readiness", "Lead de Cadrage", "Matched Opportunities", "Active Pipeline", "Upcoming Events", "Recent Activity", "Next Steps"
+
+**Instructional Copy:**
+- "Here's what's happening with your acquisition journey today"
+- "Complete these actions to improve your chances of finding the perfect business"
+- "You have [X] new businesses that match your criteria"
+
+**Data Examples:**
+- Readiness score: 68/100
+- Financial: 72/100, Experience: 58/100, Personal: 75/100
+- Lead de Cadrage: 6/7 steps completed (86%)
+- New matches: 3 businesses
+- Pipeline: 5 watching, 2 evaluating, 1 due diligence
+- Next event: "Deal Structure Basics" - March 15, 2024, 6:00 PM
+
+**CTA Text:**
+- "Improve Experience Score"
+- "Complete Now"
+- "View All Opportunities"
+- "Manage Pipeline"
+- "Browse All Events"
+- "Contact Expert"
+
+**Help Text:**
+- Tooltip on readiness score: "Your overall readiness is calculated from Financial, Experience, and Personal scores"
+- Tooltip on match score: "How well this business aligns with your Lead de Cadrage criteria"
+
+**Empty States:**
+- "No new matches yet - we'll notify you when businesses matching your criteria become available"
+- "No upcoming events - check back soon for new learning opportunities"
+- "Start your journey by completing your Readiness Assessment"
+
+**States**:
+
+- **Loading**:
+  - Skeleton screens for all cards
+  - Shimmer effect on stat pills
+  - Animated placeholders for activity feed
+
+- **Empty** (First-time user):
+  - Welcome modal overlay: "Welcome to Re-New! Let's get started."
+  - Highlighted next steps: 1) Take Readiness Assessment, 2) Build Lead de Cadrage, 3) Browse Opportunities
+  - Empty state illustrations in cards
+  - Encouraging copy: "Your journey starts here"
+
+- **Populated** (Normal state):
+  - All cards filled with real data
+  - Dynamic stats updating
+  - Activity feed showing recent actions
+
+- **Error**:
+  - If data fails to load: Friendly error card with retry button
+  - Message: "We couldn't load your dashboard. Please try again."
+  - Fallback to cached data if available
+
+- **Success** (After completing action):
+  - Toast notification: "✓ Lead de Cadrage updated successfully"
+  - Subtle celebration for major milestones
+  - Updated stats reflect change immediately
+
+- **Attention Needed**:
+  - Red badge on incomplete items
+  - Yellow warning indicators on low scores
+  - Alert banner if critical action needed: "Your Lead de Cadrage is incomplete - complete it to see matched businesses"
+
+- **Progress Celebration**:
+  - Green checkmarks on completed items
+  - Positive messaging: "Great progress! You've improved your readiness by 12 points"
+  - Milestone indicators when thresholds reached
+
+**Special Considerations**:
+- Dashboard data refreshes every 5 minutes automatically
+- Show "Last updated: X minutes ago" timestamp
+- Priority ranking for recommended actions based on completion status and impact
+- Mobile bottom nav provides quick access to: Dashboard, Search, Events, Network, Profile
+- If Lead de Cadrage incomplete (< 100%), limit business matches shown and display upgrade prompt
+- Gamification kept subtle: progress bars, completion percentages, minimal celebratory elements
+- Personalization based on user behavior: highlight most-used sections, suggest relevant experts based on gaps
+
+---
+
+### PAGE 2: MY READINESS
+
+**Page Name**: My Readiness
+
+**Purpose**: Provide comprehensive visibility into the user's acquisition readiness across three critical dimensions (Financial, Experience & Skills, Personal), identify specific gaps and strengths, and guide users toward resources and actions that will improve their readiness scores.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb navigation, page header with overall score hero, 3-column grid for dimension breakdowns, bottom section with recommended actions and resources
+- **Tablet**: Breadcrumb, hero, 2-column grid, stacked actions section
+- **Mobile**: Breadcrumb, hero, single column cards, bottom action panel
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > My Readiness
+
+2. **Page Header & Hero Section**
+   - Title: "My Readiness Assessment"
+   - Subtitle: "Last updated: [Date]"
+   - Large circular progress indicator: Overall score 68/100
+   - Status label: "Getting Ready" (color-coded: red <50 "Not Ready", yellow 50-70 "Getting Ready", green 70+ "Ready to Acquire")
+   - CTA button: "Retake Assessment"
+
+3. **Score Comparison Bar**
+   - Your score: 68
+   - Average first-time buyer: 55
+   - Successful acquirer benchmark: 82
+   - Visual: Horizontal bar chart showing three markers
+
+4. **Three Dimension Cards** (Main content grid)
+
+   **Financial Readiness Card**
+   - Header: "Financial Readiness" + info icon
+   - Large score: 72/100 with green progress ring
+   - Status badge: "Strong" (green check)
+
+   Strengths section:
+   - ✓ Cash available for down payment ($150K)
+   - ✓ Strong credit score (740+)
+   - ✓ Diversified income sources
+
+   Gaps section:
+   - ✗ Limited SBA loan knowledge
+   - ✗ No seller financing experience
+
+   Recommended actions:
+   - Download: "SBA Loan Guide"
+   - Use tool: "Financing Calculator"
+   - Contact expert: "Financing Specialist"
+
+   **Experience & Skills Card**
+   - Header: "Experience & Skills" + info icon
+   - Large score: 58/100 with yellow progress ring
+   - Status badge: "Needs Improvement" (yellow warning)
+
+   Strengths section:
+   - ✓ 10+ years management experience
+   - ✓ P&L responsibility background
+
+   Gaps section:
+   - ✗ No acquisition experience
+   - ✗ Limited financial statement analysis skills
+   - ✗ No due diligence experience
+
+   Recommended actions:
+   - Download: "Due Diligence Checklist"
+   - Attend event: "First-Time Buyer Workshop"
+   - Connect: "Find a mentor in Network"
+
+   **Personal Readiness Card**
+   - Header: "Personal Readiness" + info icon
+   - Large score: 75/100 with green progress ring
+   - Status badge: "Ready" (green check)
+
+   Strengths section:
+   - ✓ Clear motivation and goals
+   - ✓ Family support secured
+   - ✓ Willing to relocate
+
+   Gaps section:
+   - ✗ Work-life balance concerns
+   - ✗ Risk tolerance needs clarification
+
+   Recommended actions:
+   - Download: "Entrepreneur Mindset Guide"
+   - Contact expert: "Transition Coach"
+
+5. **Progress Tracking Section**
+   - Title: "Your Progress Over Time"
+   - Line chart showing score evolution:
+     - Overall score trend (last 6 months)
+     - Three dimension trends (toggle view)
+   - Data points: Initial assessment, current, goal
+   - Milestone markers for significant improvements
+
+6. **Action Plan Panel**
+   - Title: "Priority Actions to Improve Your Readiness"
+   - Numbered list of top 5 priority actions:
+     1. [High Priority] Complete financial statement analysis course (Experience +8 points)
+     2. [High Priority] Download and study SBA Loan Guide (Financial +5 points)
+     3. [Medium] Attend "Due Diligence Basics" event (Experience +6 points)
+     4. [Medium] Connect with acquisition mentor (Experience +4 points)
+     5. [Low] Clarify risk tolerance assessment (Personal +3 points)
+   - Each shows impact estimate and links to action
+   - "Show All Actions" expandable
+
+7. **Comparison Insights**
+   - Title: "How You Compare"
+   - Stats:
+     - "You're ahead of 65% of first-time buyers"
+     - "Most users like you are ready in 4-6 months"
+     - "Top gap to address: Due diligence experience"
+   - Visual: Percentile indicator
+
+8. **Assessment Detail Modal** (Triggered by "View Details")
+   - Full breakdown of all assessment questions and answers
+   - Score calculation methodology
+   - Option to edit specific answers
+   - Timestamp of completion
+
+**Interactive Elements**:
+
+- **Click "Retake Assessment"** → Navigate to assessment quiz (multi-step form)
+- **Click dimension card** → Expand to show full question breakdown
+- **Click "Download [Resource]"** → Open resource download modal or direct download
+- **Click "Use tool: [Tool Name]"** → Navigate to Tools page with that tool open
+- **Click "Contact expert: [Expert]"** → Navigate to Experts page, filtered to that specialty
+- **Click "Attend event"** → Navigate to Events page, event detail open
+- **Click "Find a mentor"** → Navigate to Network page with mentor filter active
+- **Toggle chart view** → Switch between overall and dimensional trends
+- **Click action item** → Navigate to relevant page/resource
+- **Hover info icon** → Tooltip explaining how that dimension is calculated
+- **Click comparison stat** → Expand to show detailed methodology
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home (readiness card or stat pill)
+  - From main navigation menu
+  - From recommended actions
+  - From Lead de Cadrage page (if incomplete readiness blocks access)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb or back button)
+  - To Resources page (via recommended downloads)
+  - To Tools page (via recommended tools)
+  - To Experts page (via expert contact links)
+  - To Events page (via event registration links)
+  - To Network page (via mentor connection link)
+  - To Assessment quiz (via "Retake Assessment")
+
+**Content**:
+
+**Headings:**
+- H1: "My Readiness Assessment"
+- H2: "Your Readiness Score: 68/100"
+- H3: "Financial Readiness", "Experience & Skills", "Personal Readiness"
+- H3: "Your Progress Over Time", "Priority Actions", "How You Compare"
+
+**Instructional Copy:**
+- "Your readiness score helps you understand if you're prepared to acquire a business and identifies areas for improvement."
+- "Complete the recommended actions to increase your chances of a successful acquisition."
+- "Most successful acquirers score 70+ before making their first offer."
+
+**Data Examples:**
+- Overall score: 68/100 (Getting Ready)
+- Financial: 72/100 (Strong)
+- Experience: 58/100 (Needs Improvement)
+- Personal: 75/100 (Ready)
+- Last assessed: February 28, 2024
+- Progress: +12 points since initial assessment (3 months ago)
+- Benchmark comparison: You (68) vs Avg buyer (55) vs Successful acquirer (82)
+
+**CTA Text:**
+- "Retake Assessment"
+- "Download SBA Loan Guide"
+- "Use Financing Calculator"
+- "Contact Financing Specialist"
+- "Attend First-Time Buyer Workshop"
+- "Find a Mentor"
+- "View All Actions"
+- "See Assessment Details"
+
+**Help Text / Tooltips:**
+- Financial Readiness: "Measures cash availability, credit profile, financial knowledge, and funding readiness"
+- Experience & Skills: "Evaluates management experience, industry knowledge, acquisition experience, and due diligence capabilities"
+- Personal Readiness: "Assesses motivation, family support, risk tolerance, lifestyle fit, and commitment level"
+- Match score impact: "Higher readiness scores help you evaluate opportunities more effectively"
+
+**Empty States:**
+- If never taken assessment: "Take your first Readiness Assessment to get started" with large CTA
+- If no progress data: "Retake your assessment in 30 days to see progress trends"
+
+**Success Messages:**
+- "Assessment completed successfully! Your readiness score is 68/100."
+- "Great progress! You've improved by 12 points since your last assessment."
+
+**States**:
+
+- **Loading**:
+  - Skeleton screens for score circles
+  - Shimmer on cards
+  - Chart loading placeholder
+
+- **Empty** (Never taken assessment):
+  - Large hero section with: "Discover Your Readiness to Acquire a Business"
+  - Explanation of what assessment covers
+  - Benefits: "Identify gaps", "Get personalized recommendations", "Track improvement"
+  - Primary CTA: "Take Assessment (15 minutes)"
+  - Empty dimension cards showing "Not yet assessed"
+
+- **Populated** (Normal state):
+  - All scores displayed
+  - Strengths and gaps listed
+  - Recommended actions populated
+  - Progress chart showing trend
+
+- **Recently Updated**:
+  - "NEW" badge on score
+  - Highlighted changes: "↑ Experience score improved by 8 points!"
+  - Comparison to previous score
+
+- **Low Score Alert** (<50 overall):
+  - Yellow alert banner: "Your readiness score indicates you may not be ready to acquire yet"
+  - Emphasized action plan
+  - Encouraging message: "Follow these steps to improve your readiness"
+
+- **High Score Celebration** (>70 overall):
+  - Green success banner: "Congratulations! You're ready to start seriously evaluating businesses"
+  - Unlocked message: "You now have full access to Business Search with matching"
+  - CTA: "Browse Matched Opportunities"
+
+- **Stale Assessment** (>6 months old):
+  - Warning badge: "Assessment is 8 months old"
+  - Prompt: "Retake to ensure accuracy - your situation may have changed"
+  - Dimmed scores with note
+
+- **In Progress** (Retaking assessment):
+  - Progress bar showing "Question 12 of 45"
+  - Save draft functionality
+  - Resume from where left off
+
+**Special Considerations**:
+- Score calculation is transparent - users can click to see methodology
+- Gap identification is specific and actionable, not vague
+- Recommended actions are prioritized by impact (potential score improvement)
+- Resources and tools linked are directly relevant to gaps
+- Progress tracking motivates improvement through visualization
+- Comparison to benchmarks provides context but doesn't demoralize
+- Assessment can be retaken anytime, but suggested cadence is every 3 months
+- If readiness score < 60, show additional encouragement and learning path
+- Each dimension score has threshold: <50 critical, 50-70 improvement needed, 70+ ready
+- Mobile view collapses dimension cards into accordions for easier navigation
+
+---
+
+### PAGE 3: LEAD DE CADRAGE
+
+**Page Name**: Lead de Cadrage
+
+**Purpose**: Guide users through a comprehensive 7-step framework to define their ideal business acquisition criteria, creating the foundation for intelligent matching and focused deal flow. This strategic tool differentiates Re-New and ensures users search efficiently.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb navigation, page header with completion status, left progress sidebar showing 7 steps, main content area for active step, right summary panel, sticky save/next buttons
+- **Tablet**: Breadcrumb, header, horizontal step indicator, main content, collapsible summary, sticky action bar
+- **Mobile**: Breadcrumb, header, step dots indicator, single column form, bottom sticky navigation (Previous/Save/Next)
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > Lead de Cadrage
+
+2. **Page Header**
+   - Title: "Lead de Cadrage" with subtitle "(Your Strategic Acquisition Framework)"
+   - Completion indicator: "6 of 7 Steps Complete (86%)"
+   - Progress ring visual
+   - Mode toggle: "Edit Mode" / "Review Mode"
+   - Last saved timestamp: "Last saved: 2 hours ago"
+
+3. **Left Progress Sidebar** (Desktop)
+   - 7 steps listed vertically:
+     1. ✓ Industry & Business Type (complete - green)
+     2. ✓ Geographic Preferences (complete - green)
+     3. ✓ Financial Criteria (complete - green)
+     4. ✓ Business Size (complete - green)
+     5. ✓ Deal Structure (complete - green)
+     6. ✓ Business Characteristics (complete - green)
+     7. ⚠ Timeline & Urgency (incomplete - yellow)
+   - Click step → Jump to that section
+   - Current step highlighted
+
+4. **Main Content Area - Step Forms**
+
+   **STEP 1: Industry & Business Type**
+
+   Form fields:
+   - Multi-select checkboxes: "Which industries interest you?"
+     - [ ] Healthcare
+     - [ ] Technology & Software
+     - [ ] Professional Services
+     - [ ] Manufacturing
+     - [ ] Retail & E-commerce
+     - [ ] Food & Hospitality
+     - [ ] Construction & Trades
+     - [ ] Other (specify text input)
+
+   - Radio buttons: "Business model preference?"
+     - ( ) B2B
+     - ( ) B2C
+     - ( ) Both
+     - ( ) No preference
+
+   - Optional text area: "Specific industry notes or requirements"
+
+   **STEP 2: Geographic Preferences**
+
+   Form fields:
+   - Multi-select checkboxes: "Preferred locations?"
+     - [ ] Paris & Île-de-France
+     - [ ] Lyon
+     - [ ] Marseille
+     - [ ] Bordeaux
+     - [ ] Other major cities
+     - [ ] Rural areas
+     - [ ] Anywhere in France
+
+   - Toggle: "Willing to relocate?"
+     - Yes / No
+
+   - Range slider: "Maximum distance from current location"
+     - 0 km ←——●——→ 500 km
+     - Display: "250 km"
+
+   - Optional: "Current location" (city input with autocomplete)
+
+   **STEP 3: Financial Criteria**
+
+   Form fields:
+   - Number inputs with preset buttons:
+     "Purchase price range?"
+     - Min: €_____ Max: €_____
+     - Preset chips: <€500K | €500K-€1M | €1M-€3M | €3M-€5M | €5M+
+
+   - Number inputs:
+     "Annual revenue range?"
+     - Min: €_____ Max: €_____
+
+   - Slider:
+     "Minimum EBITDA margin"
+     - 0% ←——●——→ 50%
+     - Display: "15%"
+
+   - Number input:
+     "Cash available for down payment"
+     - €_____
+
+   - Info tooltip: "This helps us recommend appropriate financing structures"
+
+   **STEP 4: Business Size**
+
+   Form fields:
+   - Number inputs with presets:
+     "Number of employees?"
+     - Min: ___ Max: ___
+     - Presets: 1-5 | 5-20 | 20-50 | 50-100 | 100+
+
+   - Slider:
+     "Minimum years in operation"
+     - 0 ←——●——→ 50 years
+     - Display: "5 years"
+
+   - Optional number input:
+     "Preferred customer base size"
+     - _____ customers
+
+   **STEP 5: Deal Structure**
+
+   Form fields:
+   - Multi-select checkboxes: "Deal types of interest?"
+     - [ ] Full acquisition (100%)
+     - [ ] Majority stake (51-99%)
+     - [ ] Partnership (50-50)
+     - [ ] Management buyout
+
+   - Radio buttons: "Seller transition preference?"
+     - ( ) Seller must stay 6+ months
+     - ( ) Some transition assistance (3-6 months)
+     - ( ) Clean exit preferred
+     - ( ) No preference
+
+   - Multi-select checkboxes: "Financing preferences?"
+     - [ ] SBA loan eligible
+     - [ ] Seller financing
+     - [ ] All cash
+     - [ ] Investor partnership
+     - [ ] Open to any structure
+
+   **STEP 6: Business Characteristics**
+
+   Form fields:
+   - Radio buttons: "Growth stage preference?"
+     - ( ) High growth (20%+ annually)
+     - ( ) Steady growth (5-20%)
+     - ( ) Stable/mature
+     - ( ) Turnaround opportunity
+     - ( ) No preference
+
+   - Radio buttons: "Technology adoption?"
+     - ( ) Tech-enabled/digital
+     - ( ) Traditional with digital potential
+     - ( ) Traditional only
+     - ( ) No preference
+
+   - Slider: "Recurring revenue importance"
+     - Not Important ←——●——→ Critical
+     - Labels: Not Important | Preferred | Important | Critical
+
+   - Multi-select checkboxes: "Business attributes you value?" (optional)
+     - [ ] Strong brand reputation
+     - [ ] Loyal customer base
+     - [ ] Scalable operations
+     - [ ] Multiple revenue streams
+     - [ ] Low employee turnover
+     - [ ] Real estate included
+
+   **STEP 7: Timeline & Urgency**
+
+   Form fields:
+   - Radio buttons: "When do you plan to acquire?"
+     - ( ) Next 3 months
+     - ( ) 3-6 months
+     - ( ) 6-12 months
+     - ( ) 12+ months
+     - ( ) Flexible/opportunistic
+
+   - Radio buttons: "Current status?"
+     - ( ) Actively searching daily
+     - ( ) Preparing/researching
+     - ( ) Still exploring the idea
+     - ( ) Ready to make offer on right deal
+
+   - Toggle: "Enable deal alerts?"
+     - Yes / No
+     - If Yes, dropdown: "Alert frequency"
+       - Instant (as posted)
+       - Daily digest
+       - Weekly digest
+
+   - Optional text area: "Any additional notes or special requirements?"
+
+5. **Right Summary Panel** (Desktop, collapsible on tablet/mobile)
+   - Title: "Your Criteria Summary"
+   - Condensed view of all completed steps:
+     - Industries: Technology, Professional Services
+     - Location: Paris, willing to relocate
+     - Price: €500K - €1.5M
+     - Revenue: €800K - €3M
+     - Employees: 5-20
+     - Deal: Full acquisition, seller financing
+     - etc.
+   - "Matching Quality Score: 85%" (how well-defined criteria are)
+   - Explanation: "Well-defined criteria will yield better matches"
+   - Link: "Download Criteria PDF"
+
+6. **Navigation Buttons** (Sticky at bottom)
+   - "Previous Step" (secondary button, disabled on step 1)
+   - "Save Draft" (ghost button, auto-saves every 30 seconds)
+   - "Next Step" (primary button) / "Complete & Save" (on step 7)
+   - Save status indicator: "All changes saved" with checkmark
+
+7. **Review Mode View** (When "Review Mode" toggled)
+   - Single page showing all 7 steps expanded
+   - Each step shows filled values in read-only format
+   - "Edit" button next to each step → switches to edit mode for that step
+   - Print-friendly layout
+   - Export buttons: "Download PDF" | "Email to Me"
+
+8. **Completion Celebration Modal**
+   - Triggered when step 7 completed
+   - Message: "Excellent! Your Lead de Cadrage is Complete"
+   - Visual: Checkmark animation
+   - Summary: "You've defined clear criteria across 7 dimensions"
+   - Next steps:
+     - "View Matched Businesses" (primary CTA)
+     - "Review My Criteria"
+     - "Return to Dashboard"
+
+**Interactive Elements**:
+
+- **Click step in sidebar** → Jump to that step in form
+- **Click "Edit Mode/Review Mode" toggle** → Switch between editing form and viewing summary
+- **Fill form field** → Auto-save after 30 seconds or on blur
+- **Click "Next Step"** → Validate current step, save, move to next
+- **Click "Previous Step"** → Save current, move to previous
+- **Click "Save Draft"** → Immediate save, show confirmation toast
+- **Click "Complete & Save"** → Save final step, show completion modal
+- **Select preset chip** → Auto-fill min/max fields with preset range
+- **Move slider** → Update display value in real-time
+- **Toggle switch** → Show/hide dependent fields
+- **Click "Download PDF"** → Generate and download criteria document
+- **Click "Edit" in review mode** → Jump to that step in edit mode
+- **Type in text area** → Character counter shows (e.g., "125/500 characters")
+- **Hover info tooltip** → Show explanation of why that field matters
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home (Lead de Cadrage card or recommended action)
+  - From main navigation menu
+  - From My Readiness (if prompted to complete criteria)
+  - From Business Search (if criteria incomplete, redirected here)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb, "Cancel" button with save prompt)
+  - To Business Search (after completion via "View Matched Businesses")
+  - Stay on page (between steps)
+  - To My Readiness (if readiness linked in tooltips)
+
+**Content**:
+
+**Headings:**
+- H1: "Lead de Cadrage"
+- H2 (subtitle): "Your Strategic Acquisition Framework"
+- H3 (steps): "Step 1: Industry & Business Type", "Step 2: Geographic Preferences", etc.
+- H3 (sidebar): "Your Criteria Summary"
+
+**Instructional Copy:**
+- "Define your ideal business acquisition criteria to receive highly targeted matches"
+- "Take your time - you can save your progress and return anytime"
+- "More specific criteria lead to better matches and save you time"
+- "Your criteria can be updated anytime as your preferences evolve"
+
+**Data Examples:**
+- Completion: 6/7 steps (86%)
+- Last saved: "2 hours ago" or "Just now"
+- Matching quality score: "85% - Well-defined"
+- Industries selected: Technology & Software, Professional Services
+- Location: Paris, Lyon (willing to relocate within 250km)
+- Price range: €500,000 - €1,500,000
+- Revenue range: €800,000 - €3,000,000
+- EBITDA margin: Minimum 15%
+- Employees: 5-20
+- Years operating: Minimum 5 years
+- Deal type: Full acquisition with seller financing
+- Timeline: 6-12 months
+
+**CTA Text:**
+- "Next Step"
+- "Previous Step"
+- "Save Draft"
+- "Complete & Save"
+- "View Matched Businesses"
+- "Download Criteria PDF"
+- "Edit This Step"
+- "Switch to Review Mode"
+
+**Help Text / Tooltips:**
+- Industry selection: "Choose all industries you'd consider - you can always narrow later"
+- EBITDA margin: "Measures business profitability - higher margins generally mean healthier businesses"
+- Seller transition: "Extended seller transition can ease your learning curve but may slow changes"
+- Recurring revenue: "Businesses with recurring revenue are generally more stable and valuable"
+- Deal alerts: "Get notified when new businesses matching your criteria become available"
+- Matching quality: "Based on completeness and specificity of your criteria - higher is better"
+
+**Validation Messages:**
+- "Please select at least one industry"
+- "Maximum price must be greater than minimum price"
+- "Please complete this step before proceeding"
+
+**Success Messages:**
+- "Step 1 saved successfully ✓"
+- "Criteria auto-saved"
+- "Lead de Cadrage completed! You'll now see matched businesses."
+
+**States**:
+
+- **Loading**:
+  - Skeleton form fields while fetching saved criteria
+  - Loading spinner on "Next Step" during save
+
+- **Empty** (Never started):
+  - Welcome message: "Let's define your ideal acquisition target"
+  - Benefits callout: "Why this matters: Focused criteria = Better matches = Faster success"
+  - All steps shown as "Not started"
+  - Only Step 1 accessible
+
+- **In Progress** (Partially complete):
+  - Progress indicator shows X/7 complete
+  - Completed steps have green checkmarks
+  - Current step highlighted
+  - Incomplete steps accessible but show warning if jumping ahead
+  - Auto-save working in background
+
+- **Complete** (All 7 steps done):
+  - 100% completion badge
+  - Green success indicator
+  - All steps show checkmarks
+  - Review mode easily accessible
+  - "Edit" CTAs available for adjustments
+
+- **Editing** (Active form input):
+  - Field focus states
+  - Real-time validation
+  - Character counters on text areas
+  - Preview of selections
+  - "Unsaved changes" warning if navigating away
+
+- **Saving**:
+  - Button shows spinner: "Saving..."
+  - Disabled during save
+  - Success toast: "Saved ✓"
+
+- **Error** (Save failed):
+  - Error message: "Failed to save. Please try again."
+  - Retry button
+  - Data preserved in form
+
+- **Validation Error**:
+  - Red border on invalid fields
+  - Inline error messages
+  - "Next Step" disabled until valid
+  - Error summary at top: "Please fix 2 errors before continuing"
+
+- **Review Mode**:
+  - Read-only display
+  - Print-optimized layout
+  - Edit buttons overlay on hover
+  - Export options visible
+
+**Special Considerations**:
+- **Auto-save**: Form auto-saves every 30 seconds or on field blur to prevent data loss
+- **Matching Quality Score**: Calculated based on completeness (70%) and specificity (30%)
+  - Incomplete steps reduce score
+  - Vague ranges (e.g., €0-€10M) reduce score
+  - "No preference" selections reduce score slightly
+  - Score explanation available via tooltip
+- **Progressive disclosure**: Only show dependent fields when relevant (e.g., alert frequency only if alerts enabled)
+- **Validation rules**:
+  - Price max > price min
+  - At least 1 industry selected
+  - Geographic range logical
+  - All required fields have values before marking step complete
+- **Mobile optimization**:
+  - Single step visible at a time
+  - Bottom nav for Previous/Save/Next
+  - Summary panel becomes full-page view (swipe access)
+  - Sliders replaced with number inputs for easier mobile input
+- **Accessibility**:
+  - Keyboard navigation between fields
+  - Screen reader labels on all inputs
+  - Focus indicators
+  - Skip links to jump between steps
+- **Rationale for matching**: These criteria directly feed the matching algorithm that scores businesses
+  - Each criterion has a weight (price and location weighted higher)
+  - Businesses scored 0-100 based on alignment
+  - Users can click match scores to see this breakdown
+- **Edit anytime**: Users can return and edit criteria, which immediately updates match scores for all businesses
+- **Export**: PDF export shows professional summary suitable for sharing with advisors/partners
+- **Gamification (subtle)**: Completion percentage provides motivation, but no heavy-handed game mechanics
+
+---
+
+### PAGE 4: BUSINESS SEARCH
+
+**Page Name**: Business Search
+
+**Purpose**: Enable users to discover, evaluate, and organize business opportunities that match their Lead de Cadrage criteria, with transparent matching scores and pipeline management to track deals through various evaluation stages.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb, page header with search/filter bar, left filter sidebar, main content area with business listing grid, right detail panel (when business selected)
+- **Tablet**: Breadcrumb, header with search/filter, collapsible filter drawer, 2-column listing grid, detail view overlays as modal
+- **Mobile**: Breadcrumb, header with search icon, filter button opens bottom sheet, single column cards, detail view as full-page overlay
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > Business Search
+
+2. **Page Header**
+   - Title: "Business Opportunities"
+   - Subtitle: "[X] businesses match your criteria"
+   - Search bar: "Search by name, industry, location..."
+   - View toggle: Grid view / List view
+   - Sort dropdown: "Most Relevant" | "Highest Match %" | "Lowest Price" | "Highest Revenue" | "Newest First"
+
+3. **Left Filter Sidebar** (Desktop, drawer on mobile)
+
+   **Filters:**
+   - **Match Score** (slider)
+     - 0% ←——●——→ 100%
+     - "Show only: 70%+ matches"
+
+   - **Price Range** (dual slider)
+     - €0 ←—●———●—→ €10M
+     - Display: "€500K - €1.5M"
+
+   - **Industry** (checkboxes with search)
+     - [ ] Technology & Software (12)
+     - [ ] Professional Services (8)
+     - [ ] Healthcare (5)
+     - [ ] Manufacturing (15)
+     - (number = matching businesses)
+
+   - **Location** (checkboxes)
+     - [ ] Paris & Île-de-France (18)
+     - [ ] Lyon (4)
+     - [ ] Marseille (3)
+     - [ ] Other regions (10)
+
+   - **Revenue Range** (dual slider)
+     - €0 ←—●———●—→ €5M
+     - Display: "€800K - €3M"
+
+   - **Employees** (presets + custom)
+     - Pills: 1-5 | 5-20 | 20-50 | 50+
+
+   - **Pipeline Stage** (checkboxes)
+     - [ ] Not saved
+     - [ ] Watching (5)
+     - [ ] Evaluating (2)
+     - [ ] Due Diligence (1)
+     - [ ] Negotiating (0)
+
+   - **Advanced Filters** (collapsible)
+     - Years in operation
+     - Growth rate
+     - Deal structure
+     - Technology level
+
+   - Clear all filters button
+   - Save search button
+
+4. **Business Listing Cards** (Grid or List)
+
+   **Card Content (Grid View):**
+   - Business thumbnail image/logo placeholder
+   - Business name: "TechConsult SARL"
+   - Tagline/description: "IT consulting services for SMBs"
+   - Location: "Paris, 10th arrondissement"
+   - Industry tags: "Professional Services" "Technology"
+   - Key metrics row:
+     - Price: €850,000
+     - Revenue: €1.2M/year
+     - EBITDA: 22%
+     - Employees: 12
+   - Match score badge (large, prominent): "92% match" (color-coded: green 80+, yellow 60-79, gray <60)
+   - Favorite/save icon (heart, toggleable)
+   - Pipeline stage dropdown (if saved)
+   - "View Details" button
+   - "New" badge if posted within 7 days
+
+   **Card Content (List View):**
+   - Same info, horizontal layout
+   - More space for description
+   - Additional quick actions visible
+
+5. **Business Detail Panel** (Right side when card clicked, or modal/overlay)
+
+   **Detail View Sections:**
+
+   **Header:**
+   - Business name
+   - Match score badge with "View Matching Rationale" link
+   - Favorite/save toggle
+   - Pipeline stage selector dropdown
+   - Share button
+   - Contact seller button (primary CTA)
+
+   **Overview Tab:**
+   - Full description
+   - Location with map
+   - Industry and business model
+   - Years established
+   - Key selling points (bullet list)
+
+   **Financials Tab:**
+   - Asking price: €850,000
+   - Annual revenue: €1.2M
+   - EBITDA: €264K (22% margin)
+   - Revenue trend chart (last 3 years)
+   - Financing options available
+
+   **Details Tab:**
+   - Number of employees: 12
+   - Customer base: 85 active clients
+   - Growth rate: 15% YoY
+   - Recurring revenue: 70%
+   - Real estate: Leased office
+   - Technology stack
+   - Certifications/licenses
+
+   **Seller Info Tab:**
+   - Reason for selling
+   - Transition support offered: "6 months"
+   - Timeline to close
+   - Preferred deal structure
+
+   **Documents Tab:**
+   - Financial statements (request access)
+   - Business overview deck
+   - Asset list
+   - Customer contracts (anonymized)
+   - Download all button
+
+   **Actions:**
+   - Request more information
+   - Schedule viewing
+   - Contact seller
+   - Add to pipeline stage
+   - Add notes (private)
+   - Flag for expert review
+
+6. **Matching Rationale Modal** (Triggered by clicking match score)
+
+   **Modal Content:**
+   - Title: "Why This is a 92% Match"
+   - Overall score: 92/100 with progress ring
+
+   **Criteria Breakdown Table:**
+   | Your Criteria | This Business | Match |
+   |--------------|---------------|-------|
+   | Industry: Technology, Prof Services | Professional Services | ✓ 100% |
+   | Location: Paris, within 250km | Paris 10th | ✓ 100% |
+   | Price: €500K - €1.5M | €850K | ✓ 100% |
+   | Revenue: €800K - €3M | €1.2M | ✓ 100% |
+   | EBITDA: Min 15% | 22% | ✓ 100% |
+   | Employees: 5-20 | 12 | ✓ 100% |
+   | Years operating: Min 5 | 8 years | ✓ 100% |
+   | Growth: Steady 5-20% | 15% YoY | ✓ 100% |
+   | Deal: Full acquisition | Available | ✓ 100% |
+   | Seller transition: 6+ months | 6 months | ✓ 100% |
+   | Financing: Seller financing | Offered | ✓ 100% |
+   | Recurring revenue: Important | 70% recurring | ⚠ 70% |
+
+   - Summary: "This business strongly aligns with 11 of 12 criteria"
+   - Minor gaps highlighted with explanation
+   - Weighted scoring methodology link
+   - "Update My Criteria" button
+
+7. **Empty/Zero Results State**
+   - Illustration
+   - Message: "No businesses match your current filters"
+   - Suggestions:
+     - Broaden your criteria
+     - Adjust price range
+     - Remove some filters
+   - CTA: "Edit Lead de Cadrage" or "Clear Filters"
+
+8. **Pipeline Management** (Accessible from each card)
+   - Dropdown to change stage: Watching → Evaluating → Due Diligence → Negotiating
+   - Each stage change prompts for notes: "Why are you moving this to Evaluating?"
+   - Timeline view of stage changes
+   - Reminder/task setting per deal
+
+**Interactive Elements**:
+
+- **Click business card** → Open detail panel/modal
+- **Click match score badge** → Open matching rationale modal
+- **Click favorite icon** → Toggle save, add to "Watching" pipeline
+- **Change pipeline stage dropdown** → Update stage, prompt for notes
+- **Click filter** → Apply filter, update results count and listings
+- **Adjust slider** → Real-time filter update
+- **Type in search** → Debounced search, update results
+- **Click "View Matching Rationale"** → Open modal with criteria breakdown
+- **Click "Contact Seller"** → Open contact form or redirect to messaging
+- **Click "Request Information"** → Send info request, track in activity feed
+- **Click "Save Search"** → Save current filters as named search, enable alerts
+- **Click sort dropdown** → Re-order listings
+- **Toggle grid/list view** → Change layout
+- **Hover card** → Subtle lift, show quick actions
+- **Click document** → Download or request access
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home ("View All Opportunities" or matched business click)
+  - From main navigation menu
+  - From Lead de Cadrage completion ("View Matched Businesses")
+  - From My Readiness (if exploring opportunities)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb)
+  - To business detail view (card click) - stays on same page
+  - To Lead de Cadrage (edit criteria link)
+  - To Experts (via "Flag for expert review")
+  - To Resources/Tools (via help links)
+
+**Content**:
+
+**Headings:**
+- H1: "Business Opportunities"
+- H2: "Matching Your Criteria"
+- H3 (sections): "Filters", "Matching Rationale", "Business Details"
+
+**Instructional Copy:**
+- "Browse businesses that match your Lead de Cadrage criteria"
+- "Click the match score to see why each business aligns with your preferences"
+- "Save businesses to your pipeline to track your evaluation progress"
+- "Refine your search using the filters on the left"
+
+**Data Examples:**
+- Total results: "47 businesses match your criteria"
+- Filtered results: "12 businesses match your filters"
+- Business: "TechConsult SARL"
+- Location: "Paris, 10th arrondissement"
+- Price: €850,000
+- Revenue: €1.2M/year
+- EBITDA: 22% (€264K)
+- Employees: 12
+- Match score: 92%
+- Industry: "Professional Services, Technology"
+- Years operating: 8 years
+- Growth: 15% YoY
+
+**CTA Text:**
+- "View Details"
+- "Contact Seller"
+- "Request Information"
+- "Schedule Viewing"
+- "Save to Pipeline"
+- "View Matching Rationale"
+- "Edit My Criteria"
+- "Clear Filters"
+- "Save This Search"
+
+**Help Text / Tooltips:**
+- Match score: "How well this business aligns with your Lead de Cadrage - click to see detailed breakdown"
+- EBITDA: "Earnings Before Interest, Taxes, Depreciation, and Amortization - a measure of profitability"
+- Pipeline stages: "Organize businesses by your evaluation progress: Watching → Evaluating → Due Diligence → Negotiating"
+- Save search: "Get alerts when new businesses match this specific search"
+
+**Empty States:**
+- No matches: "No businesses match your current criteria. Try broadening your search or updating your Lead de Cadrage."
+- No saved businesses: "You haven't saved any businesses yet. Click the heart icon on listings you're interested in."
+- Incomplete criteria: "Complete your Lead de Cadrage to see matched businesses tailored to your preferences."
+
+**Success Messages:**
+- "Business saved to Watching"
+- "Moved to Evaluating stage"
+- "Information request sent to seller"
+- "Search saved - you'll receive alerts for new matches"
+
+**States**:
+
+- **Loading**:
+  - Skeleton cards in grid
+  - Shimmer effect
+  - Filter sidebar loads
+
+- **Empty Criteria** (Lead de Cadrage incomplete):
+  - Alert banner: "Complete your Lead de Cadrage to see personalized matches"
+  - Limited generic listing shown (no match scores)
+  - CTA: "Complete Lead de Cadrage"
+
+- **No Results**:
+  - Empty state illustration
+  - "No businesses match your current filters (showing 0 of 47 total)"
+  - Suggestions to adjust filters
+  - "Clear Filters" and "Edit Criteria" CTAs
+
+- **Populated** (Normal):
+  - Grid/list of business cards
+  - Match scores displayed
+  - Filters applied count shown
+  - Results count accurate
+
+- **Filtered**:
+  - Active filters highlighted
+  - Results count: "12 of 47 businesses"
+  - "Clear filters" link visible
+
+- **Detail Open**:
+  - Right panel slides in (desktop)
+  - Modal overlay (tablet/mobile)
+  - Listing grid remains visible (desktop) or hidden (mobile)
+
+- **Saving/Loading Action**:
+  - Button spinner when saving to pipeline
+  - Toast confirmation: "Saved ✓"
+  - Card updates with new pipeline badge
+
+- **Error**:
+  - Failed to load: Error card with retry
+  - Failed to save: Toast error "Failed to save. Try again."
+
+- **New Matches Alert**:
+  - Badge on nav: "3 new matches"
+  - Highlighted "NEW" on recent listings
+  - Toast on dashboard: "3 new businesses match your criteria"
+
+**Special Considerations**:
+- **Matching Algorithm**:
+  - Weighted scoring: Price (20%), Location (20%), Industry (15%), Revenue (15%), EBITDA (10%), other criteria (20%)
+  - Must match at least 50% to appear in results
+  - Partial matches reduce score proportionally
+  - User can view full methodology
+
+- **Match Score Rationale**:
+  - Transparent breakdown of how score calculated
+  - Show which criteria met, partially met, not met
+  - Visual table with ✓, ⚠, ✗ indicators
+  - Helps user understand if "close enough" or critical gap
+
+- **Pipeline Management**:
+  - Stages: Not Saved → Watching → Evaluating → Due Diligence → Negotiating
+  - Stage change tracked with timestamp
+  - Optional notes when changing stages
+  - Businesses can move backward in pipeline
+  - Email digest of pipeline progress weekly
+
+- **Saved Searches**:
+  - User can save filter combinations
+  - Name saved searches (e.g., "Paris Tech Deals Under €1M")
+  - Enable alerts for new matches to saved search
+  - Manage saved searches in profile
+
+- **Privacy & Contact**:
+  - Seller identities may be anonymized initially
+  - Contact requires verified account
+  - Information requests tracked
+  - Seller can approve/deny info requests
+
+- **Mobile Optimization**:
+  - Cards optimized for thumb interaction
+  - Swipe gestures for pipeline stage changes
+  - Bottom sheet for filters
+  - Condensed match rationale view
+
+- **Performance**:
+  - Lazy load cards as user scrolls
+  - Image optimization
+  - Debounced search (300ms)
+  - Cache filter states
+
+- **Accessibility**:
+  - Keyboard navigation for card grid
+  - Screen reader labels on match scores
+  - Focus management when opening detail panel
+  - High contrast mode support
+
+---
+
+### PAGE 5: NETWORK
+
+**Page Name**: Network
+
+**Purpose**: Connect Re-New users with each other, enabling searchers to find mentors, exchange experiences, ask questions, and build relationships with others on similar acquisition journeys.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb, page header with search bar, filter sidebar (left), user directory grid (main), user profile detail panel (right when selected)
+- **Tablet**: Breadcrumb, header with search, collapsible filter drawer, 2-column user grid, profile opens as modal
+- **Mobile**: Breadcrumb, header with search icon, filter button (bottom sheet), single column user cards, profile as full-page overlay
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > Network
+
+2. **Page Header**
+   - Title: "Network"
+   - Subtitle: "[X] members in the Re-New community"
+   - Search bar: "Search by name, expertise, industry, location..."
+   - View toggle: Grid view / List view
+
+3. **Filter Sidebar** (Desktop, drawer on mobile)
+
+   **Filters:**
+   - **User Type** (checkboxes)
+     - [ ] All Users
+     - [ ] Mentors Only (users who have activated mentor function)
+     - [ ] Active Searchers
+     - [ ] Successful Acquirers
+
+   - **Expertise** (checkboxes)
+     - [ ] Financial Due Diligence
+     - [ ] Legal & Compliance
+     - [ ] Operations
+     - [ ] Technology Businesses
+     - [ ] Healthcare Industry
+     - [ ] Valuation
+     - [ ] Negotiation
+     - [ ] SBA Financing
+     - [ ] Transition Planning
+
+   - **Industry Experience** (checkboxes)
+     - [ ] Technology & Software
+     - [ ] Professional Services
+     - [ ] Healthcare
+     - [ ] Manufacturing
+     - [ ] Retail & E-commerce
+     - [ ] Food & Hospitality
+     - [ ] Construction
+
+   - **Location** (checkboxes)
+     - [ ] Paris & Île-de-France
+     - [ ] Lyon
+     - [ ] Marseille
+     - [ ] Other regions
+     - [ ] International
+
+   - **Acquisition Stage** (checkboxes)
+     - [ ] Preparing
+     - [ ] Actively searching
+     - [ ] In due diligence
+     - [ ] Recently acquired (last 12 months)
+     - [ ] Experienced owner (1+ years)
+
+   - Clear all filters button
+
+4. **User Directory Cards** (Grid or List)
+
+   **Card Content (Grid View):**
+   - Profile photo (60px circle)
+   - Name: "Jean Dupont"
+   - Mentor badge (if activated): "🎓 Mentor" (gold badge)
+   - Location: "Paris"
+   - Headline: "Technology acquirer, SaaS specialist"
+   - Expertise tags (max 3 shown): "Tech Businesses" "SBA Financing" "Due Diligence"
+   - Experience indicator: "Successfully acquired 2 businesses"
+   - Availability status: "Available to connect" / "Limited availability"
+   - "View Profile" button
+   - "Contact" button
+
+   **Card Content (List View):**
+   - Same info, horizontal layout
+   - More space for bio snippet (2 lines)
+   - Industry experience visible
+   - Member since date
+
+5. **User Profile Detail Panel** (Right side when card clicked, or modal/overlay)
+
+   **Profile View Sections:**
+
+   **Header:**
+   - Large profile photo (120px)
+   - Name
+   - Mentor badge (if applicable)
+   - Location
+   - Member since date
+   - "Contact" button (primary CTA)
+
+   **About Section:**
+   - Headline/title
+   - Full bio (user-written, max 500 chars)
+   - Current status: "Actively searching" / "Successfully acquired" / etc.
+
+   **Expertise Section:**
+   - List of expertise areas with icons
+   - Industry experience
+   - Skills and knowledge areas
+
+   **Experience Section:**
+   - Acquisition journey summary:
+     - "Acquired [Business Name] in [Year]" (if applicable)
+     - "Currently evaluating deals in [Industry]"
+     - "Completed X acquisitions"
+   - Years of business experience
+   - Professional background (brief)
+
+   **Mentor Info Section** (if mentor):
+   - "Why I'm a mentor" (user-written, max 200 chars)
+   - Areas I can help with (list)
+   - Typical response time
+   - Preferred contact method
+
+   **Activity Section** (optional):
+   - Events attended
+   - Resources contributed
+   - Community engagement level (subtle indicator)
+
+   **Contact Section:**
+   - "Send Message" button → Opens contact form/email
+   - Response rate (if mentor): "Usually responds within 24 hours"
+
+6. **Contact Modal** (When "Contact" clicked)
+   - Recipient name and photo
+   - Subject line input
+   - Message text area (max 1000 chars)
+   - Purpose dropdown: "Seeking advice" / "Networking" / "Partnership opportunity" / "Question about [topic]"
+   - Character counter
+   - "Send" button
+   - Confirmation: "Message sent! [Name] will respond via email."
+
+7. **Empty/No Results State**
+   - Illustration
+   - Message: "No users match your current filters"
+   - Suggestions: "Try removing some filters or broadening your search"
+   - CTA: "Clear Filters" or "View All Users"
+
+8. **My Profile Section** (Accessible from header dropdown)
+   - Edit my profile
+   - Toggle mentor status
+   - Manage expertise tags
+   - Update bio and experience
+   - Set availability status
+   - Privacy settings
+
+**Interactive Elements**:
+
+- **Click user card** → Open profile detail panel/modal
+- **Click "Contact"** → Open contact modal with pre-filled recipient
+- **Type in search** → Debounced search, filter users by name/expertise/keywords
+- **Click filter checkbox** → Apply filter, update user count and directory
+- **Toggle mentor filter** → Show only users with mentor badge
+- **Click expertise tag** → Filter directory to users with that expertise
+- **Click "View Profile"** → Same as clicking card
+- **Click "Send Message"** → Validate form, send email, show confirmation
+- **Toggle list/grid view** → Change layout
+- **Hover card** → Subtle lift, highlight contact button
+- **Click "Edit Profile"** (own profile) → Navigate to profile edit form
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home (quick links or main nav)
+  - From main navigation menu
+  - From My Readiness ("Find a mentor" recommendation)
+  - From Events page (after event, to connect with attendees)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb)
+  - To user profile detail (card click) - stays on same page
+  - To own profile edit (from header dropdown)
+  - Email client opens for contact (external)
+
+**Content**:
+
+**Headings:**
+- H1: "Network"
+- H2: "Connect with the Re-New Community"
+- H3 (sections): "Filters", "User Profile", "Contact [Name]"
+
+**Instructional Copy:**
+- "Connect with experienced acquirers, find mentors, and build relationships with others on similar journeys"
+- "Filter by expertise to find users who can help with specific challenges"
+- "Mentors have volunteered to share their experience - respect their time"
+- "Building relationships in the community increases your chances of success"
+
+**Data Examples:**
+- Total users: "247 members in the Re-New community"
+- Filtered results: "18 mentors match your filters"
+- User: "Jean Dupont"
+- Location: "Paris"
+- Headline: "Technology acquirer, SaaS specialist"
+- Expertise: "Tech Businesses, SBA Financing, Due Diligence"
+- Experience: "Successfully acquired 2 businesses"
+- Member since: "June 2023"
+- Bio: "Acquired my first SaaS business in 2022 using SBA 7(a) financing. Happy to help first-time searchers navigate the process, especially in tech/software deals."
+
+**CTA Text:**
+- "View Profile"
+- "Contact"
+- "Send Message"
+- "Clear Filters"
+- "Edit My Profile"
+- "Become a Mentor"
+- "View All Users"
+
+**Help Text / Tooltips:**
+- Mentor badge: "This user has activated mentor status and is available to help others"
+- Expertise tags: "Areas where this user has knowledge and experience"
+- Availability: "How responsive this user typically is to contact requests"
+- Contact button: "Send a message to this user via email"
+
+**Empty States:**
+- No results: "No users match your current filters. Try removing some filters to see more members."
+- No mentors: "No mentors available in this category. Check back soon or broaden your search."
+- New user: "Welcome! Complete your profile to connect with the community and find mentors."
+
+**Success Messages:**
+- "Message sent to [Name]! They'll respond via email."
+- "Profile updated successfully"
+- "You're now visible as a mentor - thank you for giving back!"
+- "Filters applied - showing [X] users"
+
+**States**:
+
+- **Loading**:
+  - Skeleton user cards in grid
+  - Shimmer effect on cards
+  - Filter sidebar loads
+
+- **Empty Profile** (User hasn't completed profile):
+  - Prompt to complete profile
+  - "Complete your profile to connect with others"
+  - CTA: "Edit My Profile"
+
+- **No Results**:
+  - Empty state illustration
+  - "No users match your current filters (0 of 247 total)"
+  - Suggestions to adjust filters
+  - "Clear Filters" CTA
+
+- **Populated** (Normal):
+  - Grid/list of user cards
+  - Mentor badges visible
+  - Expertise tags displayed
+  - Contact buttons enabled
+
+- **Filtered**:
+  - Active filters highlighted
+  - Results count: "18 of 247 users"
+  - "Clear filters" link visible
+
+- **Profile Detail Open**:
+  - Right panel slides in (desktop)
+  - Modal overlay (tablet/mobile)
+  - Directory grid remains visible (desktop) or hidden (mobile)
+
+- **Sending Message**:
+  - Button spinner when sending
+  - Toast confirmation: "Message sent ✓"
+  - Modal closes
+
+- **Error**:
+  - Failed to load: Error card with retry
+  - Failed to send message: Toast "Failed to send. Try again."
+
+- **Mentor Activated**:
+  - Gold mentor badge appears on profile
+  - Congrats message: "You're now a mentor! Your expertise will help others."
+  - Profile visibility increased
+
+**Special Considerations**:
+
+- **Privacy & Safety**:
+  - Email addresses not publicly visible
+  - Messages routed through Re-New system initially
+  - Users can block others if needed
+  - Report inappropriate behavior option
+  - Optional profile visibility settings
+
+- **Mentor Function**:
+  - Users opt-in to mentor status (toggle in profile)
+  - Mentors indicate expertise areas and availability
+  - No compensation - volunteer community support
+  - Mentors can deactivate status anytime
+  - Badge distinguishes mentors visually
+
+- **Contact Method**:
+  - Email-based initially (no in-app chat in v1.0)
+  - Contact form sends email to recipient
+  - Subject line and purpose help organize
+  - Encourages thoughtful, asynchronous communication
+
+- **Search & Discovery**:
+  - Full-text search across name, bio, expertise, industry
+  - Debounced search (300ms)
+  - Highlight search terms in results
+  - Recently viewed users (optional)
+
+- **Profile Completeness**:
+  - Encourage users to complete profiles
+  - Profile strength indicator (optional)
+  - Incomplete profiles have lower visibility
+  - Suggested fields: photo, bio, expertise, experience
+
+- **Community Guidelines**:
+  - Link to community guidelines/code of conduct
+  - Respectful communication expectations
+  - Focus on helping, not soliciting
+  - No spam or self-promotion
+
+- **Mobile Optimization**:
+  - Cards optimized for thumb interaction
+  - Bottom sheet for filters
+  - Condensed profile view
+  - Tap to contact (opens email app)
+
+- **Accessibility**:
+  - Keyboard navigation for card grid
+  - Screen reader labels on badges and tags
+  - Focus management when opening profile panel
+  - Alt text on profile photos
+
+---
+
+### PAGE 6: EVENTS
+
+**Page Name**: Events
+
+**Purpose**: Showcase upcoming and past meetups and remote sessions hosted by Bertrand and the Re-New team, enabling users to register, learn, network, and stay engaged with the community.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb, page header, tab navigation (Upcoming / Past), calendar view toggle, main content area with event cards grid (3 columns), event detail modal
+- **Tablet**: Breadcrumb, header, tabs, 2-column event grid, detail as modal
+- **Mobile**: Breadcrumb, header, tabs, single column event cards, detail as full-page overlay
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > Events
+
+2. **Page Header**
+   - Title: "Events"
+   - Subtitle: "Learn, network, and grow with the Re-New community"
+   - View toggle: Calendar view / List view
+   - Filter dropdown: "All Events" | "Meetups Only" | "Remote Sessions Only" | "My Registered Events"
+
+3. **Tab Navigation**
+   - **Upcoming Events** (default, active)
+   - **Past Events**
+
+4. **Calendar View** (Optional toggle from list)
+   - Month calendar grid
+   - Event dots on dates with events
+   - Click date → Show events that day
+   - Navigation: Previous/Next month arrows
+   - "Today" button
+
+5. **Event Cards Grid** (3 columns desktop, 2 tablet, 1 mobile) - UPCOMING TAB
+
+   **Card Content:**
+   - Event thumbnail image/banner (if available)
+   - Event type badge: "Meetup" (purple) / "Remote Session" (blue)
+   - Event title: "Deal Structure Basics for First-Time Buyers"
+   - Host: "Hosted by Bertrand Laurent"
+   - Date & time: "March 15, 2024 at 6:00 PM CET"
+   - Duration: "2 hours"
+   - Location:
+     - For Meetup: "Paris - Le Marais" with map pin icon
+     - For Remote: "Zoom" with video icon
+   - Attendee count: "24 registered" with avatar stack (first 3)
+   - Max capacity indicator: "24/30 spots filled"
+   - RSVP status:
+     - If not registered: "Register" button (primary)
+     - If registered: "Registered ✓" (green) + "Cancel RSVP" link
+   - "View Details" link
+   - Countdown badge (if within 48 hours): "Starts in 6 hours"
+
+6. **Event Cards Grid** - PAST EVENTS TAB
+
+   **Card Content:**
+   - Event thumbnail (grayscale tint)
+   - Event type badge
+   - Event title
+   - Host
+   - Date held: "Held on February 10, 2024"
+   - Attendee count: "32 attended"
+   - Recording badge (if available): "Recording Available"
+   - "View Recording" button (if available)
+   - "View Details" link
+   - "Your attendance" badge if user attended
+
+7. **Event Detail Modal** (Triggered by clicking card or "View Details")
+
+   **Modal Content:**
+
+   **Header:**
+   - Event title
+   - Event type badge
+   - Host name and photo
+   - Close button (X)
+
+   **Details Section:**
+   - Date & time with timezone
+   - Duration
+   - Location (with map for meetups, Zoom link for remote)
+   - Max capacity
+   - Registration deadline (if applicable)
+
+   **Description:**
+   - Full event description (markdown supported)
+   - What you'll learn (bullet list)
+   - Who should attend
+   - Prerequisites (if any)
+
+   **Agenda:** (if provided)
+   - Time-based schedule
+   - Topics covered
+   - Breaks and networking time
+
+   **Attendees:**
+   - Avatar stack of registered users (first 10)
+   - "24 people registered" count
+   - "View All Attendees" link → Shows list with names (if public)
+
+   **Host Bio:**
+   - Host photo and name
+   - Short bio about host
+   - Host's expertise and background
+
+   **Actions:**
+   - **If upcoming & not registered**:
+     - "Register Now" button (primary, large)
+     - "Add to Calendar" button (secondary)
+   - **If upcoming & registered**:
+     - "Registered ✓" status
+     - "Add to Calendar" button
+     - "Cancel RSVP" link
+     - Zoom link (if remote, visible 1 hour before start)
+   - **If past**:
+     - "View Recording" button (if available)
+     - "Download Materials" button (if available)
+
+   **Related:**
+   - "Similar Upcoming Events" (2-3 recommendations)
+
+8. **Registration Confirmation Modal** (After clicking "Register")
+   - Success checkmark animation
+   - Message: "You're registered for [Event Title]!"
+   - Event details summary
+   - Calendar file download: "Add to Calendar" (.ics file)
+   - For remote: "You'll receive the Zoom link via email 1 hour before the event"
+   - For meetup: "Location details" with map link
+   - "View My Events" button
+   - "Done" button
+
+9. **Empty States**
+   - **No upcoming events**:
+     - Illustration
+     - "No upcoming events scheduled"
+     - "Check back soon for new learning opportunities"
+     - "Browse Past Events" button
+   - **No past events**:
+     - "No past events to display"
+   - **No registered events**:
+     - "You haven't registered for any events yet"
+     - "Browse upcoming events to get started"
+
+10. **My Registered Events Filter**
+    - Shows only events user has RSVP'd
+    - Count indicator: "You're registered for 3 events"
+    - Sorted by date (soonest first)
+
+**Interactive Elements**:
+
+- **Click event card** → Open event detail modal
+- **Click "Register"** → Register user, show confirmation modal, send email
+- **Click "Cancel RSVP"** → Confirm cancellation, update registration, send email
+- **Click "Add to Calendar"** → Download .ics calendar file
+- **Click "View Recording"** → Open video player or link to recording platform
+- **Click "View All Attendees"** → Expand attendee list modal
+- **Click attendee avatar** → Open user profile from Network
+- **Toggle calendar/list view** → Switch event display format
+- **Click date in calendar** → Filter to events on that date
+- **Select filter dropdown** → Update event list (all, meetups, remote, registered)
+- **Switch Upcoming/Past tab** → Show respective events
+- **Click host name/photo** → Open host profile (if available)
+- **Hover card** → Subtle lift, highlight CTA
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home (events card or quick links)
+  - From main navigation menu
+  - From My Readiness ("Attend event" recommendation)
+  - From email notifications (event reminders)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb)
+  - To event detail modal (card click) - stays on same page
+  - To Network (via attendee profiles)
+  - External: Zoom link (for remote events)
+  - External: Calendar app (add to calendar)
+  - External: Video platform (for recordings)
+
+**Content**:
+
+**Headings:**
+- H1: "Events"
+- H2: "Upcoming Events" / "Past Events"
+- H3 (modal): Event title, "Event Details", "Attendees"
+
+**Instructional Copy:**
+- "Join Bertrand and the Re-New community for educational sessions and networking"
+- "Register early - spots are limited for in-person meetups"
+- "Remote sessions are recorded - register even if you can't attend live"
+- "Connect with attendees in the Network after events"
+
+**Data Examples:**
+- Event title: "Deal Structure Basics for First-Time Buyers"
+- Host: "Bertrand Laurent"
+- Date: "March 15, 2024 at 6:00 PM CET"
+- Duration: "2 hours"
+- Location (meetup): "Paris - Le Marais, 25 Rue du Temple"
+- Location (remote): "Zoom (link sent to registered attendees)"
+- Registered: "24/30 spots filled"
+- Past event: "Held on February 10, 2024 - 32 attended"
+
+**CTA Text:**
+- "Register Now"
+- "Registered ✓"
+- "Cancel RSVP"
+- "Add to Calendar"
+- "View Details"
+- "View Recording"
+- "Download Materials"
+- "View All Attendees"
+- "Browse Past Events"
+
+**Help Text / Tooltips:**
+- Event type badges: "Meetup = In-person event | Remote Session = Online via Zoom"
+- Capacity: "Limited spots available - register early"
+- Recording: "Remote sessions are recorded and available to all registered users"
+- Calendar: "Download .ics file to add to your calendar app"
+
+**Empty States:**
+- No upcoming: "No upcoming events scheduled. Check back soon for new learning opportunities!"
+- No past: "No past events to display yet."
+- No registered: "You haven't registered for any events. Browse upcoming events to join the community."
+
+**Success Messages:**
+- "Registration confirmed! You'll receive a reminder email before the event."
+- "Event added to your calendar"
+- "RSVP cancelled. We hope to see you at future events!"
+
+**States**:
+
+- **Loading**:
+  - Skeleton event cards
+  - Shimmer effect
+  - Calendar grid loading
+
+- **Empty** (No upcoming events):
+  - Empty state illustration
+  - Encouraging message
+  - "Browse Past Events" CTA
+
+- **Populated - Upcoming**:
+  - Event cards sorted by date (soonest first)
+  - Registration status visible
+  - Countdown badges for imminent events
+
+- **Populated - Past**:
+  - Event cards with grayscale effect
+  - Recording badges visible
+  - Attendance indicators
+
+- **Registering**:
+  - Button spinner: "Registering..."
+  - Success modal appears
+  - Email confirmation sent
+
+- **Registered**:
+  - Green "Registered ✓" badge
+  - Zoom link appears 1 hour before (if remote)
+  - Reminder emails sent (24 hours, 1 hour before)
+
+- **Capacity Full**:
+  - "Sold Out" badge
+  - "Join Waitlist" button (optional)
+  - Disabled "Register" button
+
+- **Event Detail Open**:
+  - Modal overlay
+  - Full event information
+  - Registration CTA prominent
+
+- **Calendar View**:
+  - Month grid with event dots
+  - Clicked date shows events
+  - Easy navigation between months
+
+- **Filtered**:
+  - Active filter shown
+  - Results count: "Showing 3 registered events"
+  - "Clear filter" option
+
+**Special Considerations**:
+
+- **Event Types**:
+  - **Meetups**: In-person, location-based, capacity limited
+  - **Remote Sessions**: Online via Zoom, higher capacity, recorded
+
+- **Registration Flow**:
+  - Single-click registration (no complex form)
+  - Immediate confirmation modal
+  - Email confirmation sent with details
+  - Calendar invite (.ics) available
+  - Zoom link sent 1 hour before remote events
+
+- **Capacity Management**:
+  - Hard limit on meetups (e.g., 30 spots)
+  - Higher limit on remote (e.g., 100 spots)
+  - Waitlist option when full (optional)
+  - "Almost full" warning when >80% capacity
+
+- **Recordings**:
+  - Remote sessions automatically recorded
+  - Available to all registered users (even if missed)
+  - Hosted on external platform (Zoom, YouTube, Vimeo)
+  - Downloadable materials (slides, handouts)
+
+- **Reminders & Notifications**:
+  - Email confirmations on registration
+  - Reminder 24 hours before event
+  - Reminder 1 hour before (includes Zoom link if remote)
+  - Follow-up email after event with recording link
+
+- **Networking Integration**:
+  - View attendee list (if public)
+  - Click attendees to view Network profiles
+  - Encourage connections after events
+  - "Connect with attendees" prompt post-event
+
+- **Calendar Integration**:
+  - .ics file download for all calendar apps
+  - Includes event details, location/Zoom link, host info
+  - Automatic timezone conversion
+
+- **Mobile Optimization**:
+  - Cards optimized for mobile
+  - One-tap registration
+  - Calendar view responsive
+  - Add to mobile calendar apps
+
+- **Accessibility**:
+  - Keyboard navigation
+  - Screen reader labels on badges
+  - Focus management in modals
+  - Captions on recordings (if available)
+
+- **Host Management** (Admin/Bertrand):
+  - Create/edit events (admin only)
+  - Set capacity limits
+  - View attendee list
+  - Send messages to attendees
+  - Upload recording post-event
+
+---
+
+### PAGE 7: EXPERTS
+
+**Page Name**: Experts
+
+**Purpose**: Connect users with specialized experts across 8-10 topic areas for targeted consultation via email, providing access to professional guidance on specific acquisition challenges.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb, page header, topic area selection grid (2x4 or 3x3), expert cards view (when area selected)
+- **Tablet**: Breadcrumb, header, 2-column topic grid, expert cards in 2 columns
+- **Mobile**: Breadcrumb, header, single column topic cards, single column expert cards
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > Experts
+
+2. **Page Header**
+   - Title: "Expert Support"
+   - Subtitle: "Get professional guidance on specific acquisition challenges"
+   - Back button (appears when viewing experts in a topic area)
+
+3. **Topic Area Selection Grid** (Initial View)
+
+   **Topic Area Cards** (8-10 cards in grid):
+
+   Each card contains:
+   - Icon representing topic area
+   - Topic title
+   - Brief description (1-2 sentences)
+   - Expert count: "3 experts available"
+   - Arrow or "View Experts" button
+
+   **Topics:**
+
+   1. **Financial Due Diligence**
+      - Icon: 📊
+      - "Expert analysis of financial statements, cash flow, and business valuation"
+      - "4 experts available"
+
+   2. **Legal & Compliance**
+      - Icon: ⚖️
+      - "Contract review, regulatory compliance, and legal structure guidance"
+      - "3 experts available"
+
+   3. **Valuation**
+      - Icon: 💰
+      - "Business valuation methodologies, fair price assessment, and offer strategy"
+      - "2 experts available"
+
+   4. **Negotiation**
+      - Icon: 🤝
+      - "Deal negotiation tactics, term sheets, and closing strategies"
+      - "3 experts available"
+
+   5. **SBA & Financing**
+      - Icon: 🏦
+      - "SBA loan process, financing structures, and lender relationships"
+      - "4 experts available"
+
+   6. **Industry-Specific (Technology)**
+      - Icon: 💻
+      - "Tech/software business evaluation, SaaS metrics, and technology due diligence"
+      - "2 experts available"
+
+   7. **Operations & Integration**
+      - Icon: ⚙️
+      - "Post-acquisition operations, team integration, and process improvement"
+      - "3 experts available"
+
+   8. **Transition Planning**
+      - Icon: 🔄
+      - "Seller transition management, knowledge transfer, and first 100 days planning"
+      - "2 experts available"
+
+   9. **Tax & Accounting**
+      - Icon: 📋
+      - "Tax implications, asset vs stock sale, and accounting structure"
+      - "3 experts available"
+
+   10. **Industry-Specific (Healthcare)**
+       - Icon: 🏥
+       - "Healthcare business regulations, compliance, and industry dynamics"
+       - "2 experts available"
+
+4. **Expert Cards View** (After selecting topic area)
+
+   **Page State Change:**
+   - Breadcrumb updates: Dashboard > Experts > Financial Due Diligence
+   - Header shows topic name: "Financial Due Diligence Experts"
+   - Back button to return to topic selection
+
+   **Expert Cards** (2-3 experts per topic area):
+
+   **Card Content:**
+   - Expert profile photo (80px circle)
+   - Name: "Marie Leblanc"
+   - Professional title: "CPA, Business Valuation Specialist"
+   - Location: "Paris"
+   - Years of experience: "15+ years"
+   - Credentials/certifications: "Certified Business Appraiser (CBA)"
+   - Expertise areas (tags): "Financial Analysis" "Valuation" "SaaS Metrics"
+   - Brief bio (3-4 lines):
+     "Former CFO turned advisor specializing in small business acquisitions. Helped 50+ buyers evaluate financials and avoid costly mistakes. Expertise in SaaS and tech businesses."
+   - Typical response time: "Within 24 hours"
+   - Consultation approach: "Email consultation with detailed written analysis"
+   - "Contact Expert" button (primary CTA)
+
+5. **Contact Expert Modal** (Triggered by clicking "Contact Expert")
+
+   **Modal Content:**
+
+   **Header:**
+   - Expert name and photo
+   - Topic area: "Financial Due Diligence"
+   - Close button (X)
+
+   **Form:**
+   - Your name (pre-filled from profile)
+   - Your email (pre-filled from profile)
+   - Subject line input: "Question about [specific topic]"
+   - Topic dropdown: Select specific sub-topic
+     - For Financial DD: "Financial statement analysis" / "Cash flow evaluation" / "Valuation questions" / "Red flags to watch for" / "Other"
+   - Message text area (required, 100-2000 chars):
+     - Placeholder: "Describe your question or situation in detail. The more context you provide, the better the expert can help."
+   - Character counter: "245/2000 characters"
+   - Business context (optional):
+     - Checkbox: "I'm evaluating a specific business"
+     - If checked: "Brief business description" text area
+   - Urgency (optional):
+     - Radio: "No rush" / "Within a few days" / "Urgent"
+
+   **Info Box:**
+   - "What to expect:"
+     - "Marie will respond via email within 24 hours"
+     - "First consultation is free for Re-New members"
+     - "Detailed questions get better answers - include relevant context"
+
+   **Actions:**
+   - "Send Message" button (primary)
+   - "Cancel" button (secondary)
+
+6. **Confirmation Modal** (After sending message)
+   - Success checkmark animation
+   - Message: "Your message has been sent to Marie Leblanc!"
+   - Details: "You'll receive a response via email within 24 hours."
+   - Email copy: "A copy has been sent to your email: [user@email.com]"
+   - "Contact Another Expert" button
+   - "Return to Dashboard" button
+   - "Done" button
+
+7. **Empty State** (If no experts in topic area)
+   - Illustration
+   - Message: "We're currently recruiting experts in this area"
+   - "We'll notify you when experts become available"
+   - "Contact Support" for urgent needs
+
+**Interactive Elements**:
+
+- **Click topic area card** → Navigate to expert cards view for that topic
+- **Click "View Experts"** → Same as clicking card
+- **Click "Back"** → Return to topic area selection grid
+- **Click "Contact Expert"** → Open contact modal with expert pre-selected
+- **Type in message field** → Character counter updates
+- **Check "evaluating specific business"** → Show additional context field
+- **Select urgency** → Included in email to expert
+- **Click "Send Message"** → Validate form, send email, show confirmation
+- **Click expert photo/name** → Expand expert bio (optional detail view)
+- **Hover topic card** → Subtle lift, highlight arrow
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home (quick links or recommended actions)
+  - From main navigation menu
+  - From My Readiness ("Contact expert" recommendation)
+  - From Business Search ("Flag for expert review")
+  - From Resources page (related expert suggestions)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb)
+  - To topic area selection (back button from experts view)
+  - To experts in topic (topic card click)
+  - Email client opens (when message sent)
+  - To Dashboard or another topic (from confirmation modal)
+
+**Content**:
+
+**Headings:**
+- H1: "Expert Support"
+- H2 (section): "Choose Your Topic Area"
+- H2 (experts view): "[Topic Area] Experts"
+- H3 (modal): "Contact [Expert Name]"
+
+**Instructional Copy:**
+- "Get professional guidance on specific acquisition challenges from experienced experts"
+- "Select a topic area to view available experts and their specialties"
+- "First consultation is free for Re-New members - experts typically respond within 24 hours"
+- "Be specific in your questions to get the most helpful answers"
+
+**Data Examples:**
+- Topic area: "Financial Due Diligence"
+- Experts available: "4 experts"
+- Expert: "Marie Leblanc"
+- Title: "CPA, Business Valuation Specialist"
+- Experience: "15+ years"
+- Location: "Paris"
+- Response time: "Within 24 hours"
+- Bio: "Former CFO turned advisor specializing in small business acquisitions. Helped 50+ buyers evaluate financials and avoid costly mistakes."
+
+**CTA Text:**
+- "View Experts"
+- "Contact Expert"
+- "Send Message"
+- "Contact Another Expert"
+- "Return to Topic Areas"
+- "Back to Topics"
+- "Done"
+
+**Help Text / Tooltips:**
+- Topic areas: "Select the topic that best matches your question or challenge"
+- Response time: "Average time for this expert to respond to inquiries"
+- Free consultation: "First question to each expert is free for Re-New members"
+- Character limit: "Detailed questions (500+ characters) get more thorough responses"
+
+**Empty States:**
+- No experts in topic: "We're recruiting experts in this area. Check back soon!"
+- Message failed: "Failed to send message. Please try again or contact support."
+
+**Success Messages:**
+- "Message sent successfully! [Expert Name] will respond via email within 24 hours."
+- "Copy sent to your email inbox for your records"
+
+**States**:
+
+- **Loading**:
+  - Skeleton topic cards
+  - Skeleton expert cards
+
+- **Topic Selection** (Initial view):
+  - Grid of 8-10 topic area cards
+  - Expert counts visible
+  - Hover effects active
+
+- **Experts View**:
+  - Breadcrumb shows topic
+  - 2-4 expert cards displayed
+  - Back button visible
+  - Contact CTAs prominent
+
+- **Contact Modal Open**:
+  - Modal overlay
+  - Form pre-filled with user info
+  - Character counter active
+  - Validation on required fields
+
+- **Sending Message**:
+  - Button spinner: "Sending..."
+  - Form disabled during send
+  - Success modal appears on completion
+
+- **Message Sent**:
+  - Confirmation modal
+  - Success checkmark animation
+  - Expert notified via email
+  - User receives copy
+
+- **Error**:
+  - Failed to send: "Failed to send message. Please try again."
+  - Network error: Retry button
+
+- **No Experts Available**:
+  - Empty state in topic area
+  - "Coming soon" message
+  - Alternative contact options
+
+**Special Considerations**:
+
+- **Expert Profiles**:
+  - Curated by Re-New team (not user-generated)
+  - Verified credentials and experience
+  - Each expert covers 1-3 topic areas
+  - Professional headshots and bios
+  - Response time commitments
+
+- **Contact Method**:
+  - Email-based (no real-time chat in v1.0)
+  - Contact form sends email to expert
+  - CC to user for record-keeping
+  - Expert responds directly to user's email
+
+- **First Consultation Free**:
+  - Initial question to each expert is free
+  - Follow-up or paid consultations handled externally
+  - Clear expectations set upfront
+
+- **Topic-Expert Mapping**:
+  - Some experts appear in multiple topic areas
+  - Topic determines email subject line and context
+  - Helps experts understand query context
+
+- **Response Expectations**:
+  - Typical response time: 24-48 hours
+  - Displayed on each expert card
+  - Reminder that these are busy professionals
+  - Encourage detailed, thoughtful questions
+
+- **Quality Control**:
+  - User can rate expert responses (optional future feature)
+  - Re-New monitors expert responsiveness
+  - Experts who don't respond removed from directory
+
+- **Mobile Optimization**:
+  - Topic cards stack on mobile
+  - Expert cards single column
+  - Contact form optimized for mobile keyboard
+  - Easy back navigation
+
+- **Accessibility**:
+  - Keyboard navigation through topic grid
+  - Screen reader labels on all form fields
+  - Focus management in modals
+  - Clear error messages
+
+---
+
+### PAGE 8: RESOURCES
+
+**Page Name**: Resources
+
+**Purpose**: Provide a searchable, filterable library of downloadable educational content (guides, articles, blog posts, case studies) to help users learn about business acquisition and close knowledge gaps.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb, page header with search bar, filter sidebar (left), resource card grid (main, 3 columns), resource preview modal
+- **Tablet**: Breadcrumb, header with search, collapsible filter drawer, 2-column card grid, preview as modal
+- **Mobile**: Breadcrumb, header with search, filter button (bottom sheet), single column cards, preview as full-page overlay
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > Resources
+
+2. **Page Header**
+   - Title: "Resources"
+   - Subtitle: "Educational content to guide your acquisition journey"
+   - Search bar: "Search guides, articles, case studies..."
+   - View toggle: Grid view / List view
+   - Sort dropdown: "Most Recent" | "Most Downloaded" | "A-Z" | "Recommended for You"
+
+3. **Filter Sidebar** (Desktop, drawer on mobile)
+
+   **Filters:**
+   - **Content Type** (checkboxes)
+     - [ ] All Types
+     - [ ] Guides (15)
+     - [ ] Articles (23)
+     - [ ] Blog Posts (18)
+     - [ ] Case Studies (12)
+     - (number = available resources)
+
+   - **Topic** (checkboxes)
+     - [ ] Financial Due Diligence
+     - [ ] Legal & Contracts
+     - [ ] Valuation
+     - [ ] Negotiation
+     - [ ] SBA Financing
+     - [ ] Transition Planning
+     - [ ] Operations
+     - [ ] Industry-Specific
+     - [ ] Getting Started
+
+   - **Difficulty Level** (checkboxes)
+     - [ ] Beginner
+     - [ ] Intermediate
+     - [ ] Advanced
+
+   - **Industry Focus** (checkboxes)
+     - [ ] Technology
+     - [ ] Healthcare
+     - [ ] Professional Services
+     - [ ] Manufacturing
+     - [ ] Retail
+     - [ ] General (all industries)
+
+   - **My Bookmarks** (toggle)
+     - Show only bookmarked resources
+
+   - Clear all filters button
+
+4. **Resource Cards Grid** (3 columns desktop, 2 tablet, 1 mobile)
+
+   **Card Content:**
+   - Resource thumbnail/icon (content type specific)
+   - Content type badge: "Guide" / "Article" / "Blog Post" / "Case Study"
+   - Resource title: "SBA 7(a) Loan Complete Guide"
+   - Author/source: "By Re-New Team"
+   - Publication date: "Updated Feb 2024"
+   - Brief description (2-3 lines): "Comprehensive guide to securing SBA financing for your acquisition, including eligibility, process, and tips."
+   - Topic tags (max 3): "SBA Financing" "Financial" "Getting Started"
+   - Difficulty badge: "Beginner" / "Intermediate" / "Advanced"
+   - File info: "PDF, 24 pages, 2.3 MB"
+   - Download count: "Downloaded 456 times"
+   - Bookmark icon (toggleable, filled if bookmarked)
+   - "Download" button (primary)
+   - "Preview" link
+
+5. **Resource Preview Modal** (Triggered by clicking "Preview")
+
+   **Modal Content:**
+
+   **Header:**
+   - Resource title
+   - Content type badge
+   - Close button (X)
+
+   **Preview Section:**
+   - Thumbnail or first page preview (if PDF)
+   - Full description
+   - Table of contents (if applicable)
+   - Key takeaways (bullet list)
+
+   **Metadata:**
+   - Author/source
+   - Publication/update date
+   - File type and size
+   - Page count (if applicable)
+   - Difficulty level
+   - Estimated read/study time: "30 minutes"
+
+   **Topics Covered:**
+   - List of tags/topics
+   - Related topics
+
+   **What You'll Learn:**
+   - Bullet list of key learnings
+   - Prerequisites (if any)
+
+   **Actions:**
+   - "Download" button (primary, large)
+   - "Bookmark" toggle
+   - "Share" button (copy link or email)
+
+   **Related Resources:**
+   - "You might also like..." section
+   - 2-3 related resource cards
+
+6. **Download Confirmation** (After clicking "Download")
+   - File downloads automatically
+   - Toast notification: "Downloading [Resource Name]..."
+   - Success toast: "Download complete ✓"
+   - Option: "Open File" or "Download Another"
+   - Bookmark prompt (if not already bookmarked): "Bookmark this for later?"
+
+7. **Bookmarks Section** (Accessible via filter toggle or profile)
+   - Shows all bookmarked resources
+   - Count: "You have 8 bookmarked resources"
+   - Same card layout as main grid
+   - "Remove bookmark" option
+   - Empty state if no bookmarks
+
+8. **Empty/No Results State**
+   - Illustration
+   - Message: "No resources match your current filters"
+   - Suggestions: "Try removing some filters or broadening your search"
+   - CTA: "Clear Filters" or "Browse All Resources"
+
+9. **Recommended for You Section** (Optional, at top of page)
+   - Personalized recommendations based on:
+     - Readiness gaps
+     - Lead de Cadrage criteria
+     - Recent activity
+     - Browsing history
+   - "Recommended for You" heading
+   - 3-5 resource cards
+   - "Based on your Financial Readiness gap" label
+
+**Interactive Elements**:
+
+- **Type in search** → Debounced search, filter resources by title/description/tags
+- **Click filter checkbox** → Apply filter, update count and grid
+- **Click "Download"** → Initiate file download, show toast, track download count
+- **Click "Preview"** → Open preview modal
+- **Click bookmark icon** → Toggle bookmark, update saved resources
+- **Click resource card** → Open preview modal (same as "Preview")
+- **Select sort dropdown** → Re-order resource grid
+- **Toggle grid/list view** → Change layout
+- **Click topic tag** → Filter to that topic
+- **Click "Share"** → Copy link or open email share
+- **Hover card** → Subtle lift, highlight download button
+- **Click "Clear Filters"** → Reset all filters, show all resources
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home (quick links)
+  - From main navigation menu
+  - From My Readiness ("Download [Resource]" recommendation)
+  - From Experts page (related resource suggestions)
+  - From Events page (event materials)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb)
+  - To resource preview modal (card click) - stays on same page
+  - To My Readiness (if recommended from there)
+  - To Tools (via related suggestions)
+  - File downloads to device (external)
+
+**Content**:
+
+**Headings:**
+- H1: "Resources"
+- H2: "Educational Content Library"
+- H3 (sections): "Filters", "Recommended for You", "[Resource Title]"
+
+**Instructional Copy:**
+- "Download guides, articles, and case studies to learn about business acquisition"
+- "Bookmark resources to access them quickly later"
+- "Filter by topic to find content relevant to your current needs"
+- "All resources are free for Re-New members"
+
+**Data Examples:**
+- Total resources: "68 resources available"
+- Filtered results: "12 resources match your filters"
+- Resource: "SBA 7(a) Loan Complete Guide"
+- Type: "Guide"
+- Author: "Re-New Team"
+- Published: "Updated Feb 2024"
+- File: "PDF, 24 pages, 2.3 MB"
+- Downloads: "456 times"
+- Topics: "SBA Financing, Financial, Getting Started"
+- Difficulty: "Beginner"
+
+**CTA Text:**
+- "Download"
+- "Preview"
+- "Bookmark"
+- "Share"
+- "Clear Filters"
+- "Browse All Resources"
+- "Download Another"
+- "Remove Bookmark"
+
+**Help Text / Tooltips:**
+- Content type badges: "Guide = Comprehensive resource | Article = Shorter focused content | Case Study = Real-world example"
+- Bookmark: "Save this resource for quick access later"
+- Difficulty: "Beginner = No prior knowledge needed | Intermediate = Some familiarity helpful | Advanced = In-depth expertise"
+- Download count: "Number of times this resource has been downloaded by the community"
+
+**Empty States:**
+- No results: "No resources match your current filters. Try removing some filters or searching with different keywords."
+- No bookmarks: "You haven't bookmarked any resources yet. Click the bookmark icon on resources you want to save."
+
+**Success Messages:**
+- "Download complete ✓"
+- "Resource bookmarked"
+- "Bookmark removed"
+- "Link copied to clipboard"
+
+**States**:
+
+- **Loading**:
+  - Skeleton resource cards
+  - Shimmer effect
+  - Filter sidebar loads
+
+- **Empty** (No resources - unlikely):
+  - Empty state illustration
+  - "Check back soon for new resources"
+
+- **Populated** (Normal):
+  - Grid of resource cards
+  - Download buttons active
+  - Bookmark icons toggleable
+  - Download counts visible
+
+- **Filtered**:
+  - Active filters highlighted
+  - Results count: "12 of 68 resources"
+  - "Clear filters" link visible
+
+- **No Results**:
+  - Empty state with suggestions
+  - "0 resources match your filters"
+  - Clear filters CTA
+
+- **Preview Modal Open**:
+  - Modal overlay
+  - Full resource details
+  - Download CTA prominent
+
+- **Downloading**:
+  - Toast notification: "Downloading..."
+  - File downloads to device
+  - Success toast on completion
+
+- **Bookmarked**:
+  - Filled bookmark icon (gold/blue)
+  - Appears in "My Bookmarks" filter
+  - Quick access from profile
+
+- **Searching**:
+  - Results update as user types (debounced)
+  - Search term highlighted in results
+  - Clear search button (X) appears
+
+- **Recommended**:
+  - Personalized section at top
+  - Label explaining why recommended
+  - Different visual treatment (highlighted)
+
+**Special Considerations**:
+
+- **Content Types**:
+  - **Guides**: Comprehensive, multi-page documents (15-50 pages)
+  - **Articles**: Focused content, shorter (3-10 pages)
+  - **Blog Posts**: Informal, educational posts (2-5 pages)
+  - **Case Studies**: Real-world acquisition examples (5-15 pages)
+
+- **File Formats**:
+  - Primarily PDF for downloadability and offline access
+  - Occasional Excel templates (categorized under Tools)
+  - Consistent formatting and branding
+
+- **Personalization**:
+  - "Recommended for You" based on readiness gaps
+  - If Financial score low → Show financial resources
+  - If evaluating specific industry → Show industry resources
+  - Recent downloads influence recommendations
+
+- **Bookmarks**:
+  - User-specific saved resources
+  - Persists across sessions
+  - Accessible via filter toggle
+  - Quick access from profile dropdown
+
+- **Search**:
+  - Full-text search across title, description, tags, content (if indexed)
+  - Debounced (300ms) for performance
+  - Highlight search terms in results
+  - Suggest popular searches if no query
+
+- **Download Tracking**:
+  - Track download count per resource
+  - Track user downloads for personalization
+  - Popular resources bubble up in "Most Downloaded" sort
+
+- **Content Curation**:
+  - Resources curated/created by Re-New team
+  - Regular updates (show "Updated [Date]")
+  - Quality control ensures accuracy
+  - Mix of original and third-party content (with attribution)
+
+- **Related Resources**:
+  - Algorithm suggests related content
+  - Based on topic similarity, difficulty progression
+  - Encourages deeper learning on topics
+
+- **Mobile Optimization**:
+  - Cards optimized for mobile
+  - Bottom sheet for filters
+  - One-tap download
+  - Preview optimized for small screens
+
+- **Accessibility**:
+  - Keyboard navigation for card grid
+  - Screen reader labels on badges and icons
+  - Focus management in preview modal
+  - PDF accessibility (tagged PDFs preferred)
+
+---
+
+### PAGE 9: TOOLS
+
+**Page Name**: Tools
+
+**Purpose**: Provide practical, interactive tools including financial calculators, due diligence checklists, valuation tools, and ROI calculators to help users evaluate and analyze business opportunities.
+
+**Layout Structure**:
+- **Desktop**: Breadcrumb, page header, tool category cards grid (2x2 or 3x2), tool interface (opens in-page or modal)
+- **Tablet**: Breadcrumb, header, 2-column category grid, tool opens as modal
+- **Mobile**: Breadcrumb, header, single column category cards, tool opens as full-page overlay
+
+**Key Components**:
+
+1. **Breadcrumb Navigation**
+   - Dashboard > Tools
+
+2. **Page Header**
+   - Title: "Tools"
+   - Subtitle: "Practical calculators and checklists for evaluating businesses"
+   - Search bar: "Search tools..." (optional)
+
+3. **Tool Category Cards Grid** (Initial View)
+
+   **Tool Category Cards:**
+
+   Each card contains:
+   - Icon representing tool category
+   - Tool name
+   - Brief description (1-2 sentences)
+   - Tool type badge: "Calculator" / "Checklist" / "Template"
+   - "Use Tool" button
+
+   **Tools:**
+
+   1. **SBA Loan Calculator**
+      - Icon: 🏦
+      - Type: "Calculator"
+      - "Calculate loan payments, total interest, and cash flow for SBA 7(a) and 504 loans"
+      - "Use Calculator" button
+
+   2. **Business Valuation Calculator**
+      - Icon: 💰
+      - Type: "Calculator"
+      - "Estimate business value using multiple methods: SDE, EBITDA multiples, and DCF"
+      - "Use Calculator" button
+
+   3. **ROI & Payback Calculator**
+      - Icon: 📊
+      - Type: "Calculator"
+      - "Calculate return on investment, payback period, and cash-on-cash return"
+      - "Use Calculator" button
+
+   4. **Due Diligence Checklist**
+      - Icon: ✅
+      - Type: "Checklist"
+      - "Comprehensive 100-point checklist covering financial, legal, operational, and customer due diligence"
+      - "Open Checklist" button
+
+   5. **Financing Structure Calculator**
+      - Icon: 🔢
+      - Type: "Calculator"
+      - "Compare different financing structures: all cash, SBA loan, seller financing, combinations"
+      - "Use Calculator" button
+
+   6. **Cash Flow Projection Tool**
+      - Icon: 📈
+      - Type: "Calculator"
+      - "Project 3-year cash flow scenarios with revenue growth and expense assumptions"
+      - "Use Tool" button
+
+   7. **Letter of Intent (LOI) Template**
+      - Icon: 📄
+      - Type: "Template"
+      - "Downloadable LOI template with guidance on key terms and negotiation points"
+      - "Download Template" button
+
+   8. **Transition Plan Checklist**
+      - Icon: 🔄
+      - Type: "Checklist"
+      - "90-day transition plan checklist for post-acquisition integration"
+      - "Open Checklist" button
+
+4. **Tool Interface - Example: SBA Loan Calculator**
+
+   (Opens in-page or as modal/overlay when "Use Calculator" clicked)
+
+   **Header:**
+   - Tool name: "SBA Loan Calculator"
+   - Tool type badge
+   - Close/Back button
+   - "Save Results" / "Print" buttons
+
+   **Calculator Inputs:**
+
+   *Loan Details:*
+   - Loan Type: Dropdown (SBA 7(a) | SBA 504)
+   - Purchase Price: € _____ (number input)
+   - Down Payment %: ___% (slider or number, 10-30%)
+   - Down Payment €: €_____ (calculated automatically)
+   - Loan Amount: €_____ (calculated: Price - Down Payment)
+
+   *Loan Terms:*
+   - Interest Rate: ___% (number input, default 8.5%)
+   - Loan Term: ___ years (dropdown: 10, 15, 20, 25)
+   - Fees & Closing Costs: €_____ (number input, suggested 2-5%)
+
+   *Business Cash Flow:*
+   - Annual Revenue: €_____ (number input)
+   - EBITDA or SDE: €_____ (number input)
+   - Owner Salary Needed: €_____ (number input)
+
+   **Results Panel** (Updates in real-time as inputs change):
+
+   *Loan Payment:*
+   - Monthly Payment: €_____ (large, prominent)
+   - Annual Payment: €_____
+   - Total Interest Paid: €_____ (over life of loan)
+   - Total Amount Paid: €_____
+
+   *Amortization Summary:*
+   - Year 1 Interest: €_____
+   - Year 1 Principal: €_____
+   - Remaining Balance after Year 1: €_____
+   - (Show first 3 years)
+
+   *Cash Flow Analysis:*
+   - EBITDA/SDE: €_____
+   - Less: Loan Payment: -€_____
+   - Less: Owner Salary: -€_____
+   - **Net Cash Flow: €_____** (green if positive, red if negative)
+
+   *Debt Service Coverage Ratio (DSCR):*
+   - DSCR: 1.42x (color-coded: green >1.25, yellow 1.0-1.25, red <1.0)
+   - Explanation: "Lenders typically require minimum 1.25x DSCR"
+
+   *Cash-on-Cash Return:*
+   - Annual Cash Return: €_____
+   - Cash Invested: €_____ (down payment + fees)
+   - **Cash-on-Cash Return: ___%**
+
+   **Actions:**
+   - "Save Calculation" button → Save to profile
+   - "Download PDF Report" button → Generate detailed PDF
+   - "Email Results" button → Send to self
+   - "Reset" button → Clear all inputs
+   - "Try Different Scenario" → Save current, start new
+
+   **Help Section** (Collapsible):
+   - "How to use this calculator" instructions
+   - Definitions of terms (DSCR, cash-on-cash, etc.)
+   - Tips for getting accurate results
+   - Link to SBA Loan Guide resource
+
+5. **Tool Interface - Example: Due Diligence Checklist**
+
+   (Opens as interactive checklist)
+
+   **Header:**
+   - Tool name: "Due Diligence Checklist"
+   - Progress indicator: "12 of 100 items completed (12%)"
+   - Close/Back button
+   - "Download PDF" / "Print" buttons
+
+   **Checklist Sections** (Expandable accordions):
+
+   **1. Financial Due Diligence (30 items)**
+   - [ ] Review 3 years of financial statements
+   - [ ] Verify revenue sources and trends
+   - [ ] Analyze expense categories
+   - [ ] Examine cash flow statements
+   - [ ] Review accounts receivable aging
+   - [ ] Check accounts payable and liabilities
+   - [ ] Verify inventory (if applicable)
+   - [ ] Review tax returns (3 years)
+   - [ ] Identify one-time or unusual expenses
+   - [ ] Calculate key financial ratios
+   - ... (30 total)
+
+   **2. Legal & Compliance (20 items)**
+   - [ ] Review all contracts (customers, vendors, leases)
+   - [ ] Verify business licenses and permits
+   - [ ] Check intellectual property ownership
+   - [ ] Review employment agreements
+   - [ ] Identify pending or potential litigation
+   - [ ] Verify regulatory compliance
+   - ... (20 total)
+
+   **3. Operational (25 items)**
+   - [ ] Understand key business processes
+   - [ ] Meet key employees
+   - [ ] Review employee turnover and satisfaction
+   - [ ] Evaluate technology and systems
+   - [ ] Assess facility and equipment condition
+   - [ ] Review supplier relationships
+   - ... (25 total)
+
+   **4. Customer & Market (15 items)**
+   - [ ] Analyze customer concentration
+   - [ ] Verify customer retention rates
+   - [ ] Review customer contracts
+   - [ ] Assess market position and competition
+   - [ ] Understand growth opportunities
+   - ... (15 total)
+
+   **5. Seller & Transaction (10 items)**
+   - [ ] Understand reason for selling
+   - [ ] Negotiate seller transition support
+   - [ ] Review seller representations and warranties
+   - [ ] Verify asking price justification
+   - ... (10 total)
+
+   **Features:**
+   - Check items as completed → Progress bar updates
+   - Add notes to each item (expandable text field)
+   - Mark items as N/A (not applicable)
+   - Flag items for expert review
+   - Business-specific: Save checklist per business
+   - Track completion over time
+
+   **Actions:**
+   - "Save Progress" (auto-saves every 30 seconds)
+   - "Download Completed Checklist PDF"
+   - "Email to Advisor/Expert"
+   - "Reset Checklist"
+
+6. **Saved Calculations/Checklists** (Accessible from profile or tool page)
+   - List of saved calculator results and checklist progress
+   - Organized by business (if applicable)
+   - Click to reload and review
+   - Delete or archive old saves
+
+7. **Empty State**
+   - "Select a tool above to get started"
+   - Brief overview of available tools
+
+**Interactive Elements**:
+
+- **Click tool category card** → Open tool interface
+- **Type in calculator input** → Results update in real-time
+- **Move slider** → Update value, recalculate
+- **Check checklist item** → Mark complete, update progress
+- **Click "Save Calculation"** → Save to profile, show confirmation
+- **Click "Download PDF"** → Generate and download report
+- **Click "Email Results"** → Send results to user's email
+- **Click "Reset"** → Clear inputs, confirm first
+- **Click "Try Different Scenario"** → Save current, open fresh calculator
+- **Add notes to checklist** → Expand note field, type, auto-save
+- **Toggle accordion sections** → Expand/collapse checklist categories
+- **Click help icon** → Show tooltip or expand help section
+
+**Navigation**:
+
+- **To this page**:
+  - From Dashboard Home (quick links)
+  - From main navigation menu
+  - From My Readiness ("Use tool" recommendation)
+  - From Business Search (evaluate specific business)
+  - From Resources (related tools suggested)
+
+- **From this page**:
+  - Back to Dashboard (breadcrumb)
+  - To tool category selection (close tool interface)
+  - Between tools (if multiple open as tabs)
+  - To Resources (related guides linked from tools)
+  - To Experts (for complex calculations)
+
+**Content**:
+
+**Headings:**
+- H1: "Tools"
+- H2: "Practical Calculators and Checklists"
+- H3 (tool names): "SBA Loan Calculator", "Due Diligence Checklist"
+
+**Instructional Copy:**
+- "Use these tools to evaluate businesses, calculate financing options, and ensure thorough due diligence"
+- "All calculations are estimates - consult with experts for critical decisions"
+- "Save your calculations to review later or compare different scenarios"
+- "Checklists help ensure you don't miss important due diligence steps"
+
+**Data Examples:**
+- Loan amount: €500,000
+- Interest rate: 8.5%
+- Term: 10 years
+- Monthly payment: €6,234
+- DSCR: 1.42x
+- Cash-on-cash return: 18.5%
+- Checklist progress: "12 of 100 items (12%)"
+
+**CTA Text:**
+- "Use Calculator"
+- "Open Checklist"
+- "Download Template"
+- "Save Calculation"
+- "Download PDF Report"
+- "Email Results"
+- "Reset"
+- "Try Different Scenario"
+- "Save Progress"
+
+**Help Text / Tooltips:**
+- DSCR: "Debt Service Coverage Ratio - measures ability to pay loan from cash flow. Lenders require minimum 1.25x"
+- Cash-on-Cash Return: "Annual pre-tax cash flow divided by total cash invested"
+- SDE: "Seller's Discretionary Earnings - EBITDA plus owner salary and discretionary expenses"
+- Down payment: "SBA loans typically require 10-20% down payment"
+
+**Empty States:**
+- No tool selected: "Select a tool above to get started"
+- No saved calculations: "You haven't saved any calculations yet. Use a calculator and click 'Save' to store results."
+
+**Success Messages:**
+- "Calculation saved successfully"
+- "PDF downloaded"
+- "Results emailed to [user@email.com]"
+- "Checklist progress saved (42% complete)"
+
+**States**:
+
+- **Loading**:
+  - Skeleton tool cards
+  - Calculator interface loading
+
+- **Tool Selection** (Initial):
+  - Grid of tool category cards
+  - Descriptions and types visible
+
+- **Calculator Active**:
+  - Input fields active
+  - Results update in real-time
+  - Save/download buttons enabled
+
+- **Checklist Active**:
+  - Sections expandable
+  - Progress bar updates as items checked
+  - Notes fields available
+
+- **Calculating**:
+  - Real-time results as inputs change
+  - No loading spinner (instant calculation)
+
+- **Saving**:
+  - Button spinner: "Saving..."
+  - Success toast on completion
+
+- **Saved Calculation**:
+  - Appears in "Saved Calculations" list
+  - Can be reloaded and edited
+
+- **Downloading PDF**:
+  - Button spinner: "Generating PDF..."
+  - File downloads automatically
+  - Success toast
+
+- **Validation Error**:
+  - Red border on invalid input
+  - Inline error message
+  - Results show "N/A" or error state
+
+- **Empty Inputs**:
+  - Results panel shows placeholders
+  - "Enter values to see results" message
+
+**Special Considerations**:
+
+- **Calculator Logic**:
+  - Real-time calculation (no "calculate" button needed)
+  - Validation on inputs (e.g., down payment must be 10-30%)
+  - Sensible defaults to guide users
+  - Formulas transparent and accurate
+  - Currency formatting (€ symbol, thousands separators)
+
+- **SBA Loan Calculator Specifics**:
+  - Current interest rate ranges suggested
+  - DSCR calculation and benchmarks
+  - Amortization schedule (first 3 years shown, full schedule in PDF)
+  - Cash flow adequacy warnings
+  - Link to SBA Loan Guide resource
+
+- **Checklist Functionality**:
+  - Business-specific: Save separate checklist per business being evaluated
+  - Progress tracking over time
+  - Note fields for each item (user can record findings)
+  - Flag items for expert review
+  - Export completed checklist as PDF
+  - Resume from where left off
+
+- **Saved Calculations**:
+  - Store in user profile
+  - Organize by business (if evaluating multiple)
+  - Compare scenarios side-by-side
+  - Edit and recalculate saved scenarios
+  - Export history
+
+- **PDF Reports**:
+  - Professional formatting
+  - Include all inputs and results
+  - Re-New branding
+  - Date generated
+  - Disclaimer: "Estimates only - consult professionals"
+
+- **Mobile Optimization**:
+  - Calculator inputs optimized for mobile
+  - Numeric keyboards for number inputs
+  - Sliders work on touch
+  - Results panel scrollable
+  - Checklists collapsible for easier navigation
+
+- **Accessibility**:
+  - Keyboard navigation through form fields
+  - Screen reader labels on all inputs
+  - Focus indicators
+  - Error messages read by screen readers
+  - High contrast for results
+
+---
+
+## SUMMARY
+
+This completes the detailed page architectures for all 9 pages of the Re-New customer dashboard:
+
+1. **Dashboard Home** - Central hub with overview of journey status
+2. **My Readiness** - Assessment results with gap analysis and improvement paths
+3. **Lead de Cadrage** - 7-step acquisition criteria builder
+4. **Business Search** - Deal flow with matching scores and pipeline management
+5. **Network** - User directory with mentor connections
+6. **Events** - Meetups and remote sessions with RSVP
+7. **Experts** - Topic-based expert directory for consultation
+8. **Resources** - Downloadable educational content library
+9. **Tools** - Practical calculators and checklists
+
+Each page specification includes:
+- Purpose
+- Layout structure (desktop/tablet/mobile)
+- Key components with detailed descriptions
+- Interactive elements
+- Navigation flows
+- Content examples
+- All UI states (loading, empty, populated, error, success)
+- Special considerations
+
+This documentation provides everything needed to build the Re-New customer dashboard in FigmaMake or hand off to developers.
+
+---
+
+## NEXT STEP: FIGMAMAKE PROMPT
+
+Use this complete planning documentation to create the FigmaMake prompt following the standard structure:
+
+```
+Build this following engineering best practices:
+- Write all code to WCAG AA accessibility standards
+- Create and use reusable components throughout
+- Use semantic HTML and proper component architecture
+- Avoid absolute positioning; use flexbox/grid layouts
+- Build actual code components, not image SVGs
+- Keep code clean, maintainable, and well-structured
+
+**IMPORTANT**: This project has an existing design system in Figma. Heavily leverage ALL tokens, components, and styles from the existing design system.
+
+**PROJECT OVERVIEW:**
+[Paste Step 1: Complete App Overview from above]
+
+**ALL PAGES & DETAILED SPECIFICATIONS:**
+[Paste Step 2: Detailed Page Architectures from above]
+
+**DESIGN SYSTEM:**
+[Specify your existing design system details - colors, typography, spacing, components, etc.]
+
+Build out all 9 pages as separate page components with full functionality, content, and styling according to the design system. Make this a complete, working prototype.
+```

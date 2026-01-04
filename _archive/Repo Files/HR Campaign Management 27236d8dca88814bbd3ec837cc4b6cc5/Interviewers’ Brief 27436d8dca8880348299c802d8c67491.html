@@ -1,0 +1,707 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>Interviewers’ Brief</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="27436d8d-ca88-8034-8299-c802d8c67491" class="page sans"><header><div class="page-header-icon undefined"><span class="icon">👥</span></div><h1 class="page-title">Interviewers’ Brief</h1><p class="page-description"></p></header><div class="page-body"><p id="27436d8d-ca88-8049-95de-d500d84405b6" class="">
+</p><h1 id="27436d8d-ca88-80a3-8b29-d1db0d1d9054" class=""><strong>Re-New Interviewer Training Guide / Guide de Formation des Intervieweurs Re-New</strong></h1><hr id="27436d8d-ca88-8087-92d1-dfe49087f17c"/><h2 id="27436d8d-ca88-8013-9d98-db35b94b2ca1" class=""><strong>English Version</strong></h2><h3 id="27436d8d-ca88-8090-9095-ec32ff549a08" class=""><strong>📋 Table of Contents</strong></h3><ol type="1" id="27436d8d-ca88-80b9-b51c-e3039a92514c" class="numbered-list" start="1"><li>Presentation of the Re-New process</li></ol><ol type="1" id="27436d8d-ca88-80e0-a64d-fa2440f2d1b4" class="numbered-list" start="2"><li>Your role as an interviewer</li></ol><ol type="1" id="27436d8d-ca88-8067-b2e2-c2c3e4980fba" class="numbered-list" start="3"><li>The step-by-step process</li></ol><ol type="1" id="27436d8d-ca88-80a3-acc9-cf1356429899" class="numbered-list" start="4"><li>Ideal candidate profile</li></ol><ol type="1" id="27436d8d-ca88-809c-9d2f-e7eca5dc87de" class="numbered-list" start="5"><li>Interview methodology</li></ol><ol type="1" id="27436d8d-ca88-801d-af72-fbb28a2e603c" class="numbered-list" start="6"><li>Evaluation grids and sample questions</li></ol><ol type="1" id="27436d8d-ca88-802d-b0f4-c53337ff26d3" class="numbered-list" start="7"><li>Warning signs</li></ol><h3 id="27436d8d-ca88-80db-80ad-c1c166d36775" class=""><strong>🎯 Presentation of the Re-New Process</strong></h3><p id="27436d8d-ca88-80fb-bd84-e65c160512f1" class="">Re-New is a rigorous selection program designed to identify and support highly qualified business acquirers. Our objective is to match experienced entrepreneurs with high-potential SMEs.</p><p id="27436d8d-ca88-807d-afb9-d30aa2cad391" class=""><strong>Process Objectives:</strong></p><ul id="27436d8d-ca88-808b-b86a-f3fb1eb02a59" class="bulleted-list"><li style="list-style-type:disc">Select candidates with proven business credibility</li></ul><ul id="27436d8d-ca88-80e1-af2f-e47d57ae2486" class="bulleted-list"><li style="list-style-type:disc">Validate their ability to convince investors and partners</li></ul><ul id="27436d8d-ca88-8022-af72-dd5f1fe7c9c4" class="bulleted-list"><li style="list-style-type:disc">Test their managerial maturity and strategic vision</li></ul><ul id="27436d8d-ca88-805a-a139-fc72f0e842a7" class="bulleted-list"><li style="list-style-type:disc">Ensure optimal matching with our partner ecosystem</li></ul><h3 id="27436d8d-ca88-8042-a576-de7f905b5818" class=""><strong>👥 Your Role as an Interviewer</strong></h3><p id="27436d8d-ca88-8068-a8f8-d0d12ceb27e0" class="">You are the guarantor of process quality and a showcase for Re-New. Your mission consists of:</p><ol type="1" id="27436d8d-ca88-80db-89d0-d60dd191461a" class="numbered-list" start="1"><li>Objectively evaluating candidates&#x27; skills and credibility</li></ol><ol type="1" id="27436d8d-ca88-8099-9d0a-e2e8522b439d" class="numbered-list" start="2"><li>Challenging their project and motivations with kindness</li></ol><ol type="1" id="27436d8d-ca88-8076-9c28-cffa893046d5" class="numbered-list" start="3"><li>Collecting factual evidence of their experience and achievements</li></ol><ol type="1" id="27436d8d-ca88-80b3-b8f0-c1b55d12a2b3" class="numbered-list" start="4"><li>Detecting inconsistencies between storytelling and reality</li></ol><ol type="1" id="27436d8d-ca88-806d-a5c5-ef409b971e73" class="numbered-list" start="5"><li>Providing structured deliverables to enable decision-making</li></ol><p id="27436d8d-ca88-8031-a9b1-f5a8b00e4d38" class=""><strong>Principles:</strong></p><ul id="27436d8d-ca88-8014-999d-c57a2e8c6496" class="bulleted-list"><li style="list-style-type:disc"><strong>Rigor</strong>: Systematically require concrete, dated, and quantified examples + reports</li></ul><ul id="27436d8d-ca88-80d6-a173-ea9962e73d43" class="bulleted-list"><li style="list-style-type:disc"><strong>Kindness</strong>: Create a safe framework to reveal true potential</li></ul><ul id="27436d8d-ca88-8097-8546-d5dc606bb49a" class="bulleted-list"><li style="list-style-type:disc"><strong>Objectivity</strong>: Base your evaluations on facts, not impressions</li></ul><ul id="27436d8d-ca88-8058-8d7d-fe9a95b26ddc" class="bulleted-list"><li style="list-style-type:disc"><strong>Collaboration</strong>: Share your observations with the team</li></ul><h3 id="27436d8d-ca88-8078-bd2b-ef12a7da6d36" class=""><strong>🔄 The Step-by-Step Process</strong></h3><p id="27436d8d-ca88-8033-a9dc-cb583488dac5" class=""><strong>Round 0 — Pre-selection (on scoring)</strong></p><ul id="27436d8d-ca88-801d-820a-fc773a315859" class="bulleted-list"><li style="list-style-type:disc"><em>Check</em>: Amélie + Bertrand</li></ul><ul id="27436d8d-ca88-8089-b435-c13b2491490e" class="bulleted-list"><li style="list-style-type:disc"><em>Objective</em>: Build a shortlist of &quot;deal-likely&quot; candidates</li></ul><ul id="27436d8d-ca88-8089-8e5c-c217980d2fe5" class="bulleted-list"><li style="list-style-type:disc"><em>How</em>: Assign a 1-5 star scoring, analyze candidate file (CV, cover letter, form)</li></ul><ul id="27436d8d-ca88-80d2-8371-f368d923da3a" class="bulleted-list"><li style="list-style-type:disc"><em>Expected deliverables</em>: Global score ⭐, persona hypothesis, Go/NoGo decision to Round 1</li></ul><p id="27436d8d-ca88-80c9-b914-f784daa5ff6d" class=""><strong>Round 1A — Leadership &amp; HR Interview</strong></p><ul id="27436d8d-ca88-80df-b69f-f1e33c34dae5" class="bulleted-list"><li style="list-style-type:disc"><em>Interviewers</em>: Amélie + Bertrand</li></ul><ul id="27436d8d-ca88-806b-8506-e1bec40a10cc" class="bulleted-list"><li style="list-style-type:disc"><em>Objective</em>: Understand the leader and their maturity regarding their project and acquisition challenges</li></ul><ul id="27436d8d-ca88-801e-9b62-fc29ac81fa53" class="bulleted-list"><li style="list-style-type:disc"><em>Interview focus</em>: Leadership style and authenticity, middle management handling, ability to engage teams and stakeholders, executive loneliness and transition management, ability to surround oneself (board, mentors, investors)</li></ul><ul id="27436d8d-ca88-8004-8558-cf481c137ad8" class="bulleted-list"><li style="list-style-type:disc"><em>Expected deliverables</em>: Report, 1-5 score on 4 dimensions (leadership/management/stakeholders/maturity), suspected persona, warning signs, Go/NoGo decision to Round 1B (a priori 90% go to B)</li></ul><p id="27436d8d-ca88-8020-b808-c55de8df1d85" class=""><strong>Round 1B — Business &amp; Finance Interview</strong></p><ul id="27436d8d-ca88-8023-a0d4-f662d8f60bdd" class="bulleted-list"><li style="list-style-type:disc"><em>Interviewers</em>: Antoine + Bertrand + Tomas + Fabio +?</li></ul><ul id="27436d8d-ca88-8092-b9b8-ccd8a7f966f6" class="bulleted-list"><li style="list-style-type:disc"><em>Objective</em>: Validate business and financial credibility</li></ul><ul id="27436d8d-ca88-80b1-9b2d-c2a384aefe89" class="bulleted-list"><li style="list-style-type:disc"><em>Interview focus</em>: Acquisition thesis (sector, size, rationale), deal structuring (contribution, debt, equity, earn-out), EBITDA/WCR trajectory, post-acquisition growth levers, investor/banker simulation</li></ul><ul id="27436d8d-ca88-8039-827e-e74bfe58762c" class="bulleted-list"><li style="list-style-type:disc"><em>Expected deliverables</em>: Complete report, 1-5 score on 4 dimensions (strategy/structuring/finance/credibility), suspected &quot;techno-business&quot; persona, warning signs, Round 2 admission decision</li></ul><p id="27436d8d-ca88-80f8-8587-c89f7ee430a6" class=""><strong>Round 2 — DistriMat Business Case</strong></p><ul id="27436d8d-ca88-8032-850e-c0c29596c5ab" class="bulleted-list"><li style="list-style-type:disc"><em>Panel</em>: Multi-stakeholder (tbd)</li></ul><ul id="27436d8d-ca88-80c5-a7b0-e3a57cbe0285" class="bulleted-list"><li style="list-style-type:disc"><em>Objective</em>: Evaluate candidate in quasi-real situation</li></ul><ul id="27436d8d-ca88-80b2-bb06-f103542e2032" class="bulleted-list"><li style="list-style-type:disc"><em>Format</em>: Written note (3 pages), pitch (10 minutes), contradictory Q&amp;A, two missions to choose from: Leadership/Commercial/Finance/Digital/ESG</li></ul><ul id="27436d8d-ca88-808c-b710-c5c20b8119fe" class="bulleted-list"><li style="list-style-type:disc"><em>Expected deliverables</em>: Completed panel scoring grids, persona in action synthesis (strengths/gaps), recommendation (Strong+/Positive reserve/Neutral/Negative), next steps</li></ul><p id="27436d8d-ca88-807b-bd46-de3a5f656875" class=""><strong>Round 3 — Feedback and Wrap-up Interview</strong></p><ul id="27436d8d-ca88-80ff-893e-f91d207756fb" class="bulleted-list"><li style="list-style-type:disc"><em>Jury</em>: Complete + sponsor?</li></ul><ul id="27436d8d-ca88-8048-90a7-e6f6bad9e62b" class="bulleted-list"><li style="list-style-type:disc"><em>Objective</em>: Give feedback to candidate - test external credibility and ecosystem fit</li></ul><ul id="27436d8d-ca88-80b4-8a52-e8098d998094" class="bulleted-list"><li style="list-style-type:disc"><em>Focus</em>: Consolidated project presentation, inspired confidence, added value for partners, execution capacity</li></ul><ul id="27436d8d-ca88-8087-b4b3-d66ba8d5afc4" class="bulleted-list"><li style="list-style-type:disc"><em>Expected deliverables</em>: Status (Winner/Finalist/Not selected), matching map, prioritized outreach plan</li></ul><p id="27436d8d-ca88-80ab-ad8c-f0e6290522b3" class=""><strong>Round 4 — References &amp; Formalities</strong></p><ul id="27436d8d-ca88-80f0-babc-cf2cf83666cf" class="bulleted-list"><li style="list-style-type:disc"><em>Objective</em>: Secure candidate reliability</li></ul><ul id="27436d8d-ca88-8082-bb64-f7a216a31233" class="bulleted-list"><li style="list-style-type:disc"><em>Actions</em>: Reference calls (N+1, peers, clients), leadership results and style verification, integrity validation</li></ul><ul id="27436d8d-ca88-800e-b510-d3593b0e9b4c" class="bulleted-list"><li style="list-style-type:disc"><em>Expected deliverables</em>: Structured reference report, persona validation/adjustment, risk mitigation measures</li></ul><p id="27436d8d-ca88-80e1-94fa-cfbc9c8c37dd" class=""><strong>Round 5 — Go-to-Market Support</strong></p><ul id="27436d8d-ca88-808a-887c-f915cf88c9cc" class="bulleted-list"><li style="list-style-type:disc"><em>Objective</em>: Make the winner operational</li></ul><ul id="27436d8d-ca88-80ef-9564-dbef8df6ac5f" class="bulleted-list"><li style="list-style-type:disc"><em>Actions</em>: Investor pack preparation, pitch training, partner introduction plan</li></ul><ul id="27436d8d-ca88-8049-a220-fb9744b6d872" class="bulleted-list"><li style="list-style-type:disc"><em>Expected deliverables</em>: Finalized Re-New candidate file, investor pack, 90-day outreach plan</li></ul><h3 id="27436d8d-ca88-80f1-a534-f7c360097fa4" class=""><strong>🎯 Ideal Candidate Profile</strong></h3><p id="27436d8d-ca88-8066-beb0-da5f05ed1bb2" class=""><strong>Personal Maturity:</strong></p><ul id="27436d8d-ca88-80e3-ac42-d267102c7b72" class="bulleted-list"><li style="list-style-type:disc">Good knowledge of their levers and limits</li></ul><ul id="27436d8d-ca88-8026-aa02-fb2c0870850f" class="bulleted-list"><li style="list-style-type:disc">Fine understanding of the SME ecosystem</li></ul><ul id="27436d8d-ca88-803b-a119-e22d2a6300ac" class="bulleted-list"><li style="list-style-type:disc">Capacity for introspection and clarity about difficulties</li></ul><p id="27436d8d-ca88-802e-a4f4-cfde6e995907" class=""><strong>Business Credibility:</strong></p><ul id="27436d8d-ca88-80b5-b9cb-f701a09a577b" class="bulleted-list"><li style="list-style-type:disc">Proven and quantifiable experience</li></ul><ul id="27436d8d-ca88-80c6-a200-d1520997801b" class="bulleted-list"><li style="list-style-type:disc">Ability to structure a complex project</li></ul><ul id="27436d8d-ca88-8017-a617-e1bb6f7c2a8d" class="bulleted-list"><li style="list-style-type:disc">Aptitude to reassure financiers and partners</li></ul><p id="27436d8d-ca88-806e-b7b9-c65cf9e71a1c" class=""><strong>Method and Vision:</strong></p><ul id="27436d8d-ca88-80a7-92ee-ce2adfa78d48" class="bulleted-list"><li style="list-style-type:disc">Clear and documented project</li></ul><ul id="27436d8d-ca88-80b8-8c58-e85515705dcd" class="bulleted-list"><li style="list-style-type:disc">Realistic and measurable ambition</li></ul><ul id="27436d8d-ca88-8054-a505-dc40dcf73780" class="bulleted-list"><li style="list-style-type:disc">Ability to engage a team</li></ul><ul id="27436d8d-ca88-8031-9a07-c9e02c7d0d36" class="bulleted-list"><li style="list-style-type:disc">Coherent long-term projection</li></ul><h3 id="27436d8d-ca88-80d1-9f8b-d977714aeb0f" class=""><strong>🎤 Interview Methodology</strong></h3><p id="27436d8d-ca88-80a2-9312-fcf554ceccf6" class=""><strong>Essential Listening Codes:</strong></p><ol type="1" id="27436d8d-ca88-80c3-a554-f25d615c8f45" class="numbered-list" start="1"><li><strong>Require concrete proof</strong><ul id="27436d8d-ca88-804c-ada9-eb02e1309f34" class="bulleted-list"><li style="list-style-type:disc">Always ask for lived examples</li></ul><ul id="27436d8d-ca88-805c-b6fc-e7e3adb0800f" class="bulleted-list"><li style="list-style-type:disc">Obtain quantified results</li></ul><ul id="27436d8d-ca88-80e0-92b7-decdea74dbf7" class="bulleted-list"><li style="list-style-type:disc">Have them specify chronology</li></ul><ul id="27436d8d-ca88-80eb-9108-ea41c7c19873" class="bulleted-list"><li style="list-style-type:disc">Use the STAR method (Situation, Task, Action, Result)</li></ul></li></ol><ol type="1" id="27436d8d-ca88-80d2-a945-e115ebf4c2c6" class="numbered-list" start="2"><li><strong>Challenge alignment</strong><ul id="27436d8d-ca88-8061-89ef-df21d709cc2d" class="bulleted-list"><li style="list-style-type:disc">&quot;Can you tell me about a deal you led from A to Z?&quot;</li></ul><ul id="27436d8d-ca88-80ec-8903-e0e86c9ec6a0" class="bulleted-list"><li style="list-style-type:disc">&quot;What tangible proof can you share?&quot;</li></ul><ul id="27436d8d-ca88-80bb-ae04-d4e4678b33b1" class="bulleted-list"><li style="list-style-type:disc">Confront storytelling with real experience</li></ul></li></ol><ol type="1" id="27436d8d-ca88-808e-ac38-d8686550d09c" class="numbered-list" start="3"><li><strong>Detect introspection capacity</strong><ul id="27436d8d-ca88-80c1-9af9-e019c1bd362a" class="bulleted-list"><li style="list-style-type:disc">Look for clarity about failures</li></ul><ul id="27436d8d-ca88-8016-978f-fa1bbf38f207" class="bulleted-list"><li style="list-style-type:disc">Evaluate learning capacity</li></ul><ul id="27436d8d-ca88-80df-8f4e-c49f586fe6c1" class="bulleted-list"><li style="list-style-type:disc">Measure humility and open-mindedness</li></ul></li></ol><p id="27436d8d-ca88-80e1-86cb-eaee127b2ad0" class=""><strong>Interview Techniques:</strong></p><ul id="27436d8d-ca88-801d-99a8-ea4651d38e90" class="bulleted-list"><li style="list-style-type:disc">Open questions: &quot;Tell me...&quot;</li></ul><ul id="27436d8d-ca88-807a-a95f-d7077265b24f" class="bulleted-list"><li style="list-style-type:disc">Dig deeper: &quot;Can you specify...&quot;, &quot;What do you mean by...&quot;</li></ul><ul id="27436d8d-ca88-80ad-a7cf-f4b6b501dc1b" class="bulleted-list"><li style="list-style-type:disc">Benevolent confrontation: &quot;How do you explain the gap between...&quot;</li></ul><ul id="27436d8d-ca88-8053-8bd1-f4a6c203f462" class="bulleted-list"><li style="list-style-type:disc">Situational: &quot;How would you react if...&quot;</li></ul><h3 id="27436d8d-ca88-80b6-95d3-da479de2ff91" class=""><strong>📊 Evaluation Grids and Sample Questions</strong></h3><p id="27436d8d-ca88-8026-ace3-ca86b4d3651b" class=""><strong>Leadership &amp; HR Questions:</strong></p><p id="27436d8d-ca88-805c-b4aa-e3bceef93f5b" class=""><em>Difficult decisions</em></p><ul id="27436d8d-ca88-80ae-8e69-c2b4e4b2dfe3" class="bulleted-list"><li style="list-style-type:disc">&quot;Tell me about a difficult decision: context, arbitration, short and long-term results?&quot;</li></ul><p id="27436d8d-ca88-8034-b335-ec8440390747" class=""><em>Project advancement</em></p><ul id="27436d8d-ca88-80d6-b3a9-d76c5a671a5d" class="bulleted-list"><li style="list-style-type:disc">&quot;What precise stage are you at? What are the concrete next steps?&quot;</li></ul><p id="27436d8d-ca88-80c9-863f-e8748d709fd9" class=""><em>Team building</em></p><ul id="27436d8d-ca88-80cb-84c6-d05176290709" class="bulleted-list"><li style="list-style-type:disc">&quot;What team do you imagine? Why would they follow you?&quot;</li></ul><p id="27436d8d-ca88-80bc-a67f-c11cce7e5a99" class=""><em>Learning from mistakes</em></p><ul id="27436d8d-ca88-8061-92ff-d501a305b4f5" class="bulleted-list"><li style="list-style-type:disc">&quot;What was your biggest managerial mistake? How did you learn from it?&quot;</li></ul><p id="27436d8d-ca88-80b8-b393-e192e3bb6557" class=""><strong>Business &amp; Finance Questions:</strong></p><p id="27436d8d-ca88-80dc-9cd7-cd3603809edf" class=""><em>Business Model</em></p><ul id="27436d8d-ca88-80ff-8d5f-f3cb6e47f180" class="bulleted-list"><li style="list-style-type:disc">&quot;Describe the business model BEFORE and AFTER acquisition&quot;</li></ul><p id="27436d8d-ca88-80f5-821a-c088595739e0" class=""><em>Strategic resilience</em></p><ul id="27436d8d-ca88-8037-b4fa-e90b13c5ee88" class="bulleted-list"><li style="list-style-type:disc">&quot;An investor challenges your strategy: arguments and plan B?&quot;</li></ul><p id="27436d8d-ca88-80c4-923e-da0b170e7b07" class=""><em>Banking simulation</em></p><ul id="27436d8d-ca88-8077-bbf3-fe5d004db9b2" class="bulleted-list"><li style="list-style-type:disc">&quot;Personal contribution? Financial coverage? Backup plan?&quot;</li></ul><p id="27436d8d-ca88-8054-ac5d-cddc224310f3" class=""><em>Risk management</em></p><ul id="27436d8d-ca88-80fb-ae27-d3014dc75227" class="bulleted-list"><li style="list-style-type:disc">&quot;Name the three main deal risks (excluding execution)&quot;</li></ul><p id="27436d8d-ca88-80d2-993e-fbb689588ee6" class=""><strong>Commercial Questions:</strong></p><p id="27436d8d-ca88-8031-a110-c31e11e176ae" class=""><em>Growth levers</em></p><ul id="27436d8d-ca88-80ca-b210-f23097ccc69a" class="bulleted-list"><li style="list-style-type:disc">&quot;Three concrete levers to triple revenue over three years?&quot;</li></ul><p id="27436d8d-ca88-8093-b6cd-c7179f7147af" class=""><em>Go-to-market diagnosis</em></p><ul id="27436d8d-ca88-80d1-9d71-dbd394b0785e" class="bulleted-list"><li style="list-style-type:disc">&quot;How do you identify a commercial weakness in a target SME?&quot;</li></ul><h3 id="27436d8d-ca88-801d-b7a8-e9124c72688e" class=""><strong>⚠️ Warning Signs</strong></h3><p id="27436d8d-ca88-80f1-a300-dd6e3296a933" class=""><strong>Red flags to watch for:</strong> ❌ Inconsistencies between background, discourse, and execution plan ❌ Lack of quantified evidence and vague justifications ❌ Theoretical discourse without experience anchoring ❌ Systematic overestimation without recognizing difficulties ❌ Isolation - absence of network or refusal to surround oneself</p><p id="27436d8d-ca88-80f3-b556-e0e52c723f88" class=""><strong>Positive signals to value:</strong> ✅ Humility and recognition of limits ✅ Tangible evidence with figures and dates ✅ Project-background-ambition coherence ✅ Realism in projections ✅ Demonstrated learning capacity</p><h3 id="27436d8d-ca88-80fc-8d15-e5ce733e25d3" class=""><strong>🎯 Tips</strong></h3><p id="27436d8d-ca88-8027-bbad-c4c863e11a85" class=""><strong>Before the interview:</strong></p><ul id="27436d8d-ca88-808b-b4e8-fbb8e0c5d97c" class="bulleted-list"><li style="list-style-type:disc">Read the complete candidate file</li></ul><ul id="27436d8d-ca88-8023-93da-e2a7dd037443" class="bulleted-list"><li style="list-style-type:disc">Prepare 3-5 specific questions based on CV</li></ul><ul id="27436d8d-ca88-8063-bcf9-c57113e9368c" class="bulleted-list"><li style="list-style-type:disc">Plan 60-90 minutes without interruption</li></ul><p id="27436d8d-ca88-808a-b0c9-e33c07de9fb2" class=""><strong>During the interview:</strong></p><ul id="27436d8d-ca88-8064-b1bb-ec08aa848615" class="bulleted-list"><li style="list-style-type:disc">Create a climate of trust</li></ul><ul id="27436d8d-ca88-80e2-b51e-f50c0c62ab7d" class="bulleted-list"><li style="list-style-type:disc">Take factual and detailed notes + AI</li></ul><ul id="27436d8d-ca88-8079-b3d3-dc9276bbb130" class="bulleted-list"><li style="list-style-type:disc">Challenge with kindness</li></ul><hr id="27436d8d-ca88-8049-b7bb-e5718c283107"/><h2 id="27436d8d-ca88-8052-98cf-ebeeec6f57b4" class=""><strong>Version Française</strong></h2><h3 id="27436d8d-ca88-80a1-a10c-f940642985f4" class=""><strong>📋 Table des matières</strong></h3><ol type="1" id="27436d8d-ca88-80fd-9a1b-e6b3a8870b0d" class="numbered-list" start="1"><li>Présentation du processus Re-New</li></ol><ol type="1" id="27436d8d-ca88-8092-b451-f07da117d3be" class="numbered-list" start="2"><li>Votre rôle en tant qu&#x27;interviewer</li></ol><ol type="1" id="27436d8d-ca88-80b3-b23b-db71931cd41e" class="numbered-list" start="3"><li>Le processus étape par étape</li></ol><ol type="1" id="27436d8d-ca88-80e5-a664-f568cd3d05ff" class="numbered-list" start="4"><li>Profil du candidat idéal</li></ol><ol type="1" id="27436d8d-ca88-805c-8181-c00aff7ae1bc" class="numbered-list" start="5"><li>Méthodologie d&#x27;entretien</li></ol><ol type="1" id="27436d8d-ca88-80e5-b17b-c6ff69a58f7a" class="numbered-list" start="6"><li>Grilles d&#x27;évaluation et questions types</li></ol><ol type="1" id="27436d8d-ca88-8023-9440-eb29bcbd586c" class="numbered-list" start="7"><li>Points de vigilance</li></ol><h3 id="27436d8d-ca88-8040-ac3f-f5d3a27aa976" class=""><strong>🎯 Présentation du processus Re-New</strong></h3><p id="27436d8d-ca88-8078-bc69-d166eedfc521" class="">Re-New est un programme de sélection rigoureux destiné à identifier et accompagner des repreneurs d&#x27;entreprises hautement qualifiés. Notre objectif est de matcher des entrepreneurs expérimentés avec des PME à fort potentiel.</p><p id="27436d8d-ca88-8091-a275-f4346f8f8b0e" class=""><strong>Objectifs du processus :</strong></p><ul id="27436d8d-ca88-80c9-96c2-c504eed32c77" class="bulleted-list"><li style="list-style-type:disc">Sélectionner des candidats avec une crédibilité business avérée</li></ul><ul id="27436d8d-ca88-801e-9541-fea98933f618" class="bulleted-list"><li style="list-style-type:disc">Valider leur capacité à convaincre investisseurs et partenaires</li></ul><ul id="27436d8d-ca88-804b-93dc-dc91477a053b" class="bulleted-list"><li style="list-style-type:disc">Tester leur maturité managériale et leur vision stratégique</li></ul><ul id="27436d8d-ca88-8005-86d6-cadc6eb1bb1f" class="bulleted-list"><li style="list-style-type:disc">Assurer un matching optimal avec notre écosystème de partenaires</li></ul><h3 id="27436d8d-ca88-80f4-ada9-ec1f9b78f2f6" class=""><strong>👥 Votre rôle en tant qu&#x27;interviewer</strong></h3><p id="27436d8d-ca88-8069-ad62-f2f90038ef2d" class="">Vous êtes le garant de la qualité du processus et une vitrine pour Re-New. Votre mission consiste à :</p><ol type="1" id="27436d8d-ca88-8061-86ef-ee6345ac74cb" class="numbered-list" start="1"><li>Évaluer objectivement les compétences et la crédibilité des candidats</li></ol><ol type="1" id="27436d8d-ca88-80f8-9803-fff9edb99bf7" class="numbered-list" start="2"><li>Challenger leur projet et leurs motivations avec bienveillance</li></ol><ol type="1" id="27436d8d-ca88-80aa-bc70-f095249a7ece" class="numbered-list" start="3"><li>Collecter des preuves factuelles de leur expérience et réalisations</li></ol><ol type="1" id="27436d8d-ca88-80fb-9866-d0bc2f8c8807" class="numbered-list" start="4"><li>Détecter les incohérences entre storytelling et réalité</li></ol><ol type="1" id="27436d8d-ca88-80ad-a107-c22e6e59f593" class="numbered-list" start="5"><li>Fournir des livrables structurés pour permettre la prise de décision</li></ol><p id="27436d8d-ca88-80de-9e7b-e83ff6cb2fb7" class=""><strong>Principes :</strong></p><ul id="27436d8d-ca88-8004-8b20-ddcecde59793" class="bulleted-list"><li style="list-style-type:disc"><strong>Rigueur</strong> : Exiger systématiquement des exemples concrets, datés et chiffrés + CR</li></ul><ul id="27436d8d-ca88-8075-a8a0-e37b30652deb" class="bulleted-list"><li style="list-style-type:disc"><strong>Bienveillance</strong> : Créer un cadre sécurisant pour révéler le véritable potentiel</li></ul><ul id="27436d8d-ca88-80ba-a06e-efd432801909" class="bulleted-list"><li style="list-style-type:disc"><strong>Objectivité</strong> : Baser vos évaluations sur des faits, pas sur des impressions</li></ul><ul id="27436d8d-ca88-8086-b9be-e82c7679649e" class="bulleted-list"><li style="list-style-type:disc"><strong>Collaboration</strong> : Partager vos observations avec l&#x27;équipe</li></ul><h3 id="27436d8d-ca88-8071-8236-ee5c54a85637" class=""><strong>🔄 Le processus étape par étape</strong></h3><p id="27436d8d-ca88-8049-ac3f-d73bcb790610" class=""><strong>Round 0 — Pré-sélection (sur scoring)</strong></p><ul id="27436d8d-ca88-8000-b1b6-d4929c42c191" class="bulleted-list"><li style="list-style-type:disc"><em>Check</em> : Amélie + Bertrand</li></ul><ul id="27436d8d-ca88-802b-9b46-ee21c2273868" class="bulleted-list"><li style="list-style-type:disc"><em>Objectif</em> : Constitution d&#x27;une shortlist de candidats &quot;deal-likely&quot;</li></ul><ul id="27436d8d-ca88-8048-beb2-fd754ccc9b65" class="bulleted-list"><li style="list-style-type:disc"><em>Comment</em> : Attribuer un scoring 1 à 5 étoiles, analyser le dossier candidat (CV, lettre de motivation, formulaire)</li></ul><ul id="27436d8d-ca88-8019-a9f1-e0c518a5a9ce" class="bulleted-list"><li style="list-style-type:disc"><em>Livrables attendus</em> : Score global ⭐, hypothèse de persona, décision Go/NoGo vers Round 1</li></ul><p id="27436d8d-ca88-80d5-a504-c25504ce342c" class=""><strong>Round 1A — Entretien Leadership &amp; RH</strong></p><ul id="27436d8d-ca88-8064-bdd9-cae1ac80f1ed" class="bulleted-list"><li style="list-style-type:disc"><em>Intervieweurs</em> : Amélie + Bertrand</li></ul><ul id="27436d8d-ca88-802f-a15b-c67d7ecf6429" class="bulleted-list"><li style="list-style-type:disc"><em>Objectif</em> : Comprendre le leader et sa maturité face à son projet et aux enjeux de reprise</li></ul><ul id="27436d8d-ca88-80c2-a328-d2a914b01948" class="bulleted-list"><li style="list-style-type:disc"><em>Focus de l&#x27;entretien</em> : Style de leadership et authenticité, gestion du management intermédiaire, capacité à embarquer équipes et parties prenantes, solitude du dirigeant et gestion de la transition, capacité à s&#x27;entourer (board, mentors, investisseurs)</li></ul><ul id="27436d8d-ca88-80bf-b1c5-d82f5469f08a" class="bulleted-list"><li style="list-style-type:disc"><em>Livrables attendus</em> : CR, score 1-5 sur 4 dimensions (leadership/management/parties prenantes/maturité), persona pressenti, points de vigilance, décision Go/NoGo vers Round 1B (à priori 90% vont en B)</li></ul><p id="27436d8d-ca88-80c2-a27c-e7d5be7920ca" class=""><strong>Round 1B — Entretien Business &amp; Finance</strong></p><ul id="27436d8d-ca88-8027-b9c0-cd056592becf" class="bulleted-list"><li style="list-style-type:disc"><em>Intervieweurs</em> : Antoine + Bertrand + Tomas + Fabio +?</li></ul><ul id="27436d8d-ca88-80f5-b671-c2d3592f6053" class="bulleted-list"><li style="list-style-type:disc"><em>Objectif</em> : Valider la crédibilité business et financière</li></ul><ul id="27436d8d-ca88-807d-9d1d-ec1489c5e648" class="bulleted-list"><li style="list-style-type:disc"><em>Focus de l&#x27;entretien</em> : Thèse d&#x27;acquisition (secteur, taille, rationalité), structuration du deal (apport, dette, equity, earn-out), trajectoire EBITDA/BFR, leviers de croissance post-reprise, simulation investisseur/banquier</li></ul><ul id="27436d8d-ca88-809f-a620-da622fff9e0f" class="bulleted-list"><li style="list-style-type:disc"><em>Livrables attendus</em> : CR complet, score 1-5 sur 4 dimensions (stratégie/structuration/finances/crédibilité), persona pressenti côté &quot;techno-business&quot;, points de vigilance, décision d&#x27;admission au Round 2</li></ul><p id="27436d8d-ca88-80eb-b697-dcc60223fff9" class=""><strong>Round 2 — Business Case DistriMat</strong></p><ul id="27436d8d-ca88-805c-a449-ce3121ca9429" class="bulleted-list"><li style="list-style-type:disc"><em>Panel</em> : Multi-acteurs (tbd)</li></ul><ul id="27436d8d-ca88-8071-ae49-ca996265aee7" class="bulleted-list"><li style="list-style-type:disc"><em>Objectif</em> : Évaluer le candidat en situation quasi-réelle</li></ul><ul id="27436d8d-ca88-8078-a026-fea5e58132f6" class="bulleted-list"><li style="list-style-type:disc"><em>Format</em> : Note écrite (3 pages), pitch (10 minutes), Q&amp;A contradictoire, deux missions au choix parmi : Leadership/Commercial/Finance/Digital/ESG</li></ul><ul id="27436d8d-ca88-8062-bf99-e54177e5b2e9" class="bulleted-list"><li style="list-style-type:disc"><em>Livrables attendus</em> : Grilles de scoring panel complétées, synthèse persona en action (forces/gaps), recommandation (Strong+/Positif réserve/Neutre/Négatif), next steps</li></ul><p id="27436d8d-ca88-807f-98ff-fad92669c824" class=""><strong>Round 3 — Feedback and wrap up Interview</strong></p><ul id="27436d8d-ca88-804c-9a84-c364dd2aab52" class="bulleted-list"><li style="list-style-type:disc"><em>Jury</em> : Complet + sponsor?</li></ul><ul id="27436d8d-ca88-80ab-9121-c7954748893b" class="bulleted-list"><li style="list-style-type:disc"><em>Objectif</em> : Donner du feedback au candidat - Éprouver la crédibilité externe et le fit écosystème</li></ul><ul id="27436d8d-ca88-8097-ae7c-dabececbdbf3" class="bulleted-list"><li style="list-style-type:disc"><em>Focus</em> : Présentation projet consolidé, confiance inspirée, valeur ajoutée pour partenaires, capacité d&#x27;exécution</li></ul><ul id="27436d8d-ca88-80c8-a846-fbec7661c0d1" class="bulleted-list"><li style="list-style-type:disc"><em>Livrables attendus</em> : Statut (Lauréat/Finaliste/Non retenu), carte de matching, plan d&#x27;adressage priorisé</li></ul><p id="27436d8d-ca88-8006-9522-ca08d9d3eb5b" class=""><strong>Round 4 — Références &amp; Formalités</strong></p><ul id="27436d8d-ca88-8015-ae06-cc6f0dc87307" class="bulleted-list"><li style="list-style-type:disc"><em>Objectif</em> : Sécuriser la fiabilité du candidat</li></ul><ul id="27436d8d-ca88-80dd-8375-eff6d10b4883" class="bulleted-list"><li style="list-style-type:disc"><em>Actions</em> : Appels référents (N+1, pairs, clients), vérification résultats et style de leadership, validation intégrité</li></ul><ul id="27436d8d-ca88-80c9-89b0-ee900458bbbc" class="bulleted-list"><li style="list-style-type:disc"><em>Livrables attendus</em> : Rapport de références structuré, validation/ajustement persona, mesures de mitigation des risques</li></ul><p id="27436d8d-ca88-80f2-824f-eb11c49c8700" class=""><strong>Round 5 — Accompagnement Go-to-Market</strong></p><ul id="27436d8d-ca88-808e-9d73-dfc5bcb140b4" class="bulleted-list"><li style="list-style-type:disc"><em>Objectif</em> : Rendre le lauréat opérationnel</li></ul><ul id="27436d8d-ca88-80ad-a387-d076b49a02fb" class="bulleted-list"><li style="list-style-type:disc"><em>Actions</em> : Préparation pack investisseur, entraînement pitch, plan d&#x27;introduction partenaires</li></ul><ul id="27436d8d-ca88-80e6-94fb-f6fb9c545a6d" class="bulleted-list"><li style="list-style-type:disc"><em>Livrables attendus</em> : Dossier Candidat Re-New finalisé, pack investisseur, plan d&#x27;outreach 90 jours</li></ul><h3 id="27436d8d-ca88-80fa-b114-c41f823ee2fb" class=""><strong>🎯 Profil du candidat idéal</strong></h3><p id="27436d8d-ca88-80dc-bad4-c8a05c5ee1a4" class=""><strong>Maturité personnelle :</strong></p><ul id="27436d8d-ca88-80f4-9959-cdb38b739116" class="bulleted-list"><li style="list-style-type:disc">Bonne connaissance de ses leviers et limites</li></ul><ul id="27436d8d-ca88-80b6-9006-d0924f12fb9b" class="bulleted-list"><li style="list-style-type:disc">Compréhension fine de l&#x27;écosystème PME</li></ul><ul id="27436d8d-ca88-806a-b681-cda926edb9d0" class="bulleted-list"><li style="list-style-type:disc">Capacité d&#x27;introspection et lucidité sur les difficultés</li></ul><p id="27436d8d-ca88-8047-bb1c-c0e9bd8d27bd" class=""><strong>Crédibilité business :</strong></p><ul id="27436d8d-ca88-8042-944f-d73b297cb2a8" class="bulleted-list"><li style="list-style-type:disc">Expérience avérée et quantifiable</li></ul><ul id="27436d8d-ca88-80d0-8607-f89edfba514e" class="bulleted-list"><li style="list-style-type:disc">Capacité à structurer un projet complexe</li></ul><ul id="27436d8d-ca88-8064-bcd1-e3eef8f76cb0" class="bulleted-list"><li style="list-style-type:disc">Aptitude à rassurer financeurs et partenaires</li></ul><p id="27436d8d-ca88-80bd-a416-d86b812d1488" class=""><strong>Méthode et vision :</strong></p><ul id="27436d8d-ca88-80fa-9b42-cb68b8536371" class="bulleted-list"><li style="list-style-type:disc">Projet clair et documenté</li></ul><ul id="27436d8d-ca88-8042-b1bd-e208aa31c6d4" class="bulleted-list"><li style="list-style-type:disc">Ambition réaliste et mesurable</li></ul><ul id="27436d8d-ca88-80f9-bcd0-d47995aed0e7" class="bulleted-list"><li style="list-style-type:disc">Capacité à embarquer une équipe</li></ul><ul id="27436d8d-ca88-8005-a404-f261db53c0ee" class="bulleted-list"><li style="list-style-type:disc">Projection long terme cohérente</li></ul><h3 id="27436d8d-ca88-80b7-b00d-fdf2abd88041" class=""><strong>🎤 Méthodologie d&#x27;entretien</strong></h3><p id="27436d8d-ca88-80b1-a6e0-f892902bad33" class=""><strong>Codes d&#x27;écoute essentiels :</strong></p><ol type="1" id="27436d8d-ca88-80d4-9571-f139d85b1ae3" class="numbered-list" start="1"><li><strong>Exiger la preuve concrète</strong><ul id="27436d8d-ca88-8003-8908-c2b99d1a2056" class="bulleted-list"><li style="list-style-type:disc">Toujours demander des exemples vécus</li></ul><ul id="27436d8d-ca88-8096-a812-d4237fc7737d" class="bulleted-list"><li style="list-style-type:disc">Obtenir des résultats chiffrés</li></ul><ul id="27436d8d-ca88-800d-8ba0-c2318cf6ba64" class="bulleted-list"><li style="list-style-type:disc">Faire préciser la chronologie</li></ul><ul id="27436d8d-ca88-808f-91f2-e0ef093d0f89" class="bulleted-list"><li style="list-style-type:disc">Utiliser la méthode STAR (Situation, Tâche, Action, Résultat)</li></ul></li></ol><ol type="1" id="27436d8d-ca88-802e-b425-e3cb7e445157" class="numbered-list" start="2"><li><strong>Challenge l&#x27;alignement</strong><ul id="27436d8d-ca88-809d-83ab-c66e81fd4ab5" class="bulleted-list"><li style="list-style-type:disc">&quot;Pouvez-vous raconter un deal mené de A à Z ?&quot;</li></ul><ul id="27436d8d-ca88-8023-9f74-d3dc0516911f" class="bulleted-list"><li style="list-style-type:disc">&quot;Quelles preuves tangibles pouvez-vous partager ?&quot;</li></ul><ul id="27436d8d-ca88-8057-9d1d-dc8037db4444" class="bulleted-list"><li style="list-style-type:disc">Confronter storytelling et expérience réelle</li></ul></li></ol><ol type="1" id="27436d8d-ca88-806f-ba9b-c6d85db68eed" class="numbered-list" start="3"><li><strong>Détecter la capacité d&#x27;introspection</strong><ul id="27436d8d-ca88-80b4-b989-d6e4b291d353" class="bulleted-list"><li style="list-style-type:disc">Rechercher la lucidité sur les échecs</li></ul><ul id="27436d8d-ca88-80c6-89ca-ff7cb134698d" class="bulleted-list"><li style="list-style-type:disc">Évaluer la capacité d&#x27;apprentissage</li></ul><ul id="27436d8d-ca88-80a9-87c5-dccc7163d34f" class="bulleted-list"><li style="list-style-type:disc">Mesurer l&#x27;humilité et l&#x27;ouverture d&#x27;esprit</li></ul></li></ol><p id="27436d8d-ca88-80b7-ac4d-d4be785c8ab3" class=""><strong>Techniques d&#x27;entretien :</strong></p><ul id="27436d8d-ca88-80d0-a597-c5411a69570d" class="bulleted-list"><li style="list-style-type:disc">Questions ouvertes : &quot;Racontez-moi...&quot;</li></ul><ul id="27436d8d-ca88-8021-898c-d509ccc89a30" class="bulleted-list"><li style="list-style-type:disc">Creuser : &quot;Pouvez-vous préciser...&quot;, &quot;Qu&#x27;entendez-vous par...&quot;</li></ul><ul id="27436d8d-ca88-80e1-b102-dfede1b4d64a" class="bulleted-list"><li style="list-style-type:disc">Confrontation bienveillante : &quot;Comment expliquez-vous l&#x27;écart entre...&quot;</li></ul><ul id="27436d8d-ca88-8014-b8d0-c1b5a774d7e3" class="bulleted-list"><li style="list-style-type:disc">Mise en situation : &quot;Comment réagiriez-vous si...&quot;</li></ul><h3 id="27436d8d-ca88-8062-9651-e162591e983f" class=""><strong>📊 Grilles d&#x27;évaluation et questions types</strong></h3><p id="27436d8d-ca88-8019-91da-d3f2b103f97e" class=""><strong>Questions Leadership &amp; RH :</strong></p><p id="27436d8d-ca88-80d5-9891-f923ce7429a2" class=""><em>Décisions difficiles</em></p><ul id="27436d8d-ca88-8093-9396-dbb64a659f4a" class="bulleted-list"><li style="list-style-type:disc">&quot;Racontez une décision difficile : contexte, arbitrage, résultats à court et long terme ?&quot;</li></ul><p id="27436d8d-ca88-8090-b187-d30200941b0b" class=""><em>Avancement du projet</em></p><ul id="27436d8d-ca88-80ff-b6c9-d839d00ed2cc" class="bulleted-list"><li style="list-style-type:disc">&quot;À quel stade précis êtes-vous ? Quelles sont les prochaines étapes concrètes ?&quot;</li></ul><p id="27436d8d-ca88-80f2-a6a0-cd895d3efdff" class=""><em>Constitution d&#x27;équipe</em></p><ul id="27436d8d-ca88-80b9-866b-f2596ba53823" class="bulleted-list"><li style="list-style-type:disc">&quot;Quelle équipe imaginez-vous ? Pourquoi vous suivrait-elle ?&quot;</li></ul><p id="27436d8d-ca88-8014-9cbc-c2fcdf1bc390" class=""><em>Apprentissage des erreurs</em></p><ul id="27436d8d-ca88-8035-a54a-d717ac464265" class="bulleted-list"><li style="list-style-type:disc">&quot;Quelle a été votre plus grosse erreur managériale ? Comment avez-vous appris ?&quot;</li></ul><p id="27436d8d-ca88-8070-b084-f003d24f9896" class=""><strong>Questions Business &amp; Finance :</strong></p><p id="27436d8d-ca88-8014-9f89-d52fbad1fa8a" class=""><em>Business Model</em></p><ul id="27436d8d-ca88-80e6-b2a5-ceb97fc24d4f" class="bulleted-list"><li style="list-style-type:disc">&quot;Décrivez le business model AVANT et APRÈS acquisition&quot;</li></ul><p id="27436d8d-ca88-80bb-973e-cd5688328c7a" class=""><em>Résilience stratégique</em></p><ul id="27436d8d-ca88-808d-b0db-db697e59b2eb" class="bulleted-list"><li style="list-style-type:disc">&quot;Un investisseur challenge votre stratégie : arguments et plan B ?&quot;</li></ul><p id="27436d8d-ca88-80da-a1a4-ca40d164c0fe" class=""><em>Simulation bancaire</em></p><ul id="27436d8d-ca88-805b-97f0-f18c2f4ba57c" class="bulleted-list"><li style="list-style-type:disc">&quot;Apport personnel ? Couvertures financières ? Plan de secours ?&quot;</li></ul><p id="27436d8d-ca88-80e5-a4db-ea90d66f99a0" class=""><em>Gestion des risques</em></p><ul id="27436d8d-ca88-8031-b020-e47ea04240ca" class="bulleted-list"><li style="list-style-type:disc">&quot;Citez les trois principaux risques du deal (hors exécution)&quot;</li></ul><p id="27436d8d-ca88-8093-87ff-c740bf496c28" class=""><strong>Questions Commerciales :</strong></p><p id="27436d8d-ca88-8087-aa91-db2fd6e81ee3" class=""><em>Leviers de croissance</em></p><ul id="27436d8d-ca88-8092-8e05-c44a0dee8253" class="bulleted-list"><li style="list-style-type:disc">&quot;Trois leviers concrets pour tripler le CA sur trois ans ?&quot;</li></ul><p id="27436d8d-ca88-80ba-a4d8-ce7f4dc871a5" class=""><em>Diagnostic go-to-market</em></p><ul id="27436d8d-ca88-8027-be80-e4f1ac7a7bfc" class="bulleted-list"><li style="list-style-type:disc">&quot;Comment identifiez-vous une faiblesse commerciale dans une PME cible ?&quot;</li></ul><h3 id="27436d8d-ca88-8045-85d5-d60c03da3190" class=""><strong>⚠️ Points de vigilance</strong></h3><p id="27436d8d-ca88-8050-8505-d3028b151fe8" class=""><strong>Drapeaux rouges à surveiller :</strong> ❌ Incohérences entre parcours, discours et plan d&#x27;exécution ❌ Manque de preuves chiffrées et justifications vagues ❌ Discours théorique sans ancrage dans l&#x27;expérience ❌ Surestimation systématique sans reconnaissance des difficultés ❌ Isolement - absence de réseau ou refus de s&#x27;entourer</p><p id="27436d8d-ca88-8045-8d02-cee9bf89b862" class=""><strong>Signaux positifs à valoriser :</strong> ✅ Humilité et reconnaissance des limites ✅ Preuves tangibles avec chiffres et dates ✅ Cohérence projet-parcours-ambition ✅ Réalisme dans les projections ✅ Capacité d&#x27;apprentissage démontrée</p><h3 id="27436d8d-ca88-80fe-bf8f-d3f312bffeb0" class=""><strong>🎯 Tips</strong></h3><p id="27436d8d-ca88-80d8-b54b-e76eb6218755" class=""><strong>Avant l&#x27;entretien :</strong></p><ul id="27436d8d-ca88-8099-a3d4-d9e72a3ab4f3" class="bulleted-list"><li style="list-style-type:disc">Lire le dossier candidat complet</li></ul><ul id="27436d8d-ca88-80ef-bc29-c49f362f9dbb" class="bulleted-list"><li style="list-style-type:disc">Préparer 3-5 questions spécifiques basées sur le CV</li></ul><ul id="27436d8d-ca88-80bc-bfb9-e4f8738aae12" class="bulleted-list"><li style="list-style-type:disc">Prévoir 60-90 minutes sans interruption</li></ul><p id="27436d8d-ca88-807a-84e2-f99d8a18edc3" class=""><strong>Pendant l&#x27;entretien :</strong></p><ul id="27436d8d-ca88-807d-80c5-f45d0f850397" class="bulleted-list"><li style="list-style-type:disc">Créer un climat de confiance</li></ul><ul id="27436d8d-ca88-80e4-98dc-cacb57a0b5e8" class="bulleted-list"><li style="list-style-type:disc">Prendre des notes factuelles et détaillées + IA</li></ul><ul id="27436d8d-ca88-8038-af80-f96b4e3f507a" class="bulleted-list"><li style="list-style-type:disc">Challenger avec bienveillance</li></ul></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

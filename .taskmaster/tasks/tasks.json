@@ -2,71 +2,92 @@
   "master": {
     "tasks": [
       {
-        "id": "11",
+        "id": 11,
         "title": "Set up Next.js project with Supabase integration",
         "description": "Initialize Next.js with V0, configure Supabase",
         "status": "done",
         "priority": "high",
-        "dependencies": []
+        "dependencies": [],
+        "completedAt": "2025-12-29",
+        "relatedCommits": ["e92fb9b"],
+        "implementationNotes": "Initialized Next.js with V0, configured Supabase client, auth context, and Vercel deployment."
       },
       {
-        "id": "12",
+        "id": 12,
         "title": "Implement email/password authentication system",
         "description": "Auth flow with Supabase for 3 team members",
         "status": "done",
         "priority": "high",
-        "dependencies": ["11"]
+        "dependencies": ["11"],
+        "completedAt": "2025-12-29",
+        "implementationNotes": "Created login page, auth flow, protected routes, session persistence. V0 auth bypass for development."
       },
       {
-        "id": "13",
+        "id": 13,
         "title": "Create database schema and models",
         "description": "Repreneur, Offer, Note, Activity tables",
         "status": "done",
         "priority": "high",
-        "dependencies": ["11"]
+        "dependencies": ["11"],
+        "completedAt": "2025-12-29",
+        "implementationNotes": "Created Repreneur, Offer, Repreneur_Offer, Note, Activity tables with relationships and RLS. Multiple migrations added over time for scoring, avatars, questionnaire fields, LinkedIn, GDPR consent."
       },
       {
-        "id": "14",
+        "id": 14,
         "title": "Implement Repreneur List and Detail Views",
         "description": "List with sorting/filtering, detail with inline edit",
         "status": "done",
         "priority": "medium",
-        "dependencies": ["12", "13"]
+        "dependencies": ["12", "13"],
+        "completedAt": "2025-12-29",
+        "relatedCommits": ["4181098", "4262484"],
+        "implementationNotes": "List view with sorting/filtering, detail page with inline editing. Fixed Next.js 16 params Promise issue. Made entire table row clickable. Added editable text, select, and multi-select field components."
       },
       {
-        "id": "15",
+        "id": 15,
         "title": "Build Kanban Pipeline View",
         "description": "Static pipeline (action-driven, no drag-drop)",
         "status": "done",
         "priority": "medium",
-        "dependencies": ["13", "14"]
+        "dependencies": ["13", "14"],
+        "completedAt": "2025-12-29",
+        "relatedCommits": ["d61fe78", "37d91b1"],
+        "implementationNotes": "Static pipeline view (converted from drag-drop Kanban to action-driven status). Added search by name, source dropdown, date range filters. Show more button for 15+ items."
       },
       {
-        "id": "16",
+        "id": 16,
         "title": "Implement Notes System",
         "description": "Notes with add/delete, author tracking",
         "status": "done",
         "priority": "medium",
-        "dependencies": ["12", "13", "14"]
+        "dependencies": ["12", "13", "14"],
+        "completedAt": "2025-12-30",
+        "relatedCommits": ["2fe632a", "08e44fa", "f069d7d"],
+        "implementationNotes": "Notes component with add/delete, chronological display, author tracking. Added optimistic updates with useOptimistic hook. Fixed notes disappearing bug by saving content before clearing."
       },
       {
-        "id": "17",
+        "id": 17,
         "title": "Develop Offer Management System",
         "description": "Offer CRUD and repreneur association",
         "status": "done",
         "priority": "medium",
-        "dependencies": ["13", "14"]
+        "dependencies": ["13", "14"],
+        "completedAt": "2025-12-29",
+        "relatedCommits": ["360ad4f"],
+        "implementationNotes": "Offer types and server actions, list page with search and table, create/edit forms with all PRD fields, assignment dialog, status transitions (offered → active → completed/expired), expiration calculation."
       },
       {
-        "id": "18",
+        "id": 18,
         "title": "Create Dashboard with Statistics",
         "description": "Stats cards and navigation",
         "status": "done",
         "priority": "low",
-        "dependencies": ["14", "15", "16", "17"]
+        "dependencies": ["14", "15", "16", "17"],
+        "completedAt": "2025-12-29",
+        "implementationNotes": "Initial dashboard with repreneur counts by status, navigation links. Later completely redesigned with Wave 1.0 (see task 37)."
       },
       {
-        "id": "19",
+        "id": 19,
         "title": "Implement Flatchr Data Import Script",
         "description": "One-time migration script to import repreneur profiles from Flatchr export (CSV or JSON)",
         "details": "BLOCKED: Waiting for Flatchr export format from Bertrand.\n\nWhen unblocked:\n1. Parse CSV/JSON from Flatchr\n2. Map fields to Re-New schema\n3. Validate required fields\n4. UI for upload and progress tracking\n5. Set default status to 'Lead'",
@@ -76,82 +97,304 @@
         "status": "blocked"
       },
       {
-        "id": "20",
+        "id": 20,
         "title": "Create New Repreneur Form and Add/Edit Functionality",
         "description": "Form with validation, create/edit modes",
         "status": "done",
         "priority": "high",
-        "dependencies": ["13", "14"]
+        "dependencies": ["13", "14"],
+        "completedAt": "2025-12-29",
+        "relatedCommits": ["dab274f", "e078650"],
+        "implementationNotes": "Form with validation, create/edit modes, success notifications. Later enhanced: Investment Capacity changed to dropdown, Sector Preferences to multi-select checkboxes, Target Acquisition Size and Target Location dropdowns added."
       },
       {
-        "id": "24",
+        "id": 24,
         "title": "Implement Tier 1 and Tier 2 scoring systems",
         "description": "Automated Tier 1 + manual Tier 2 stars + status transitions",
         "status": "done",
         "priority": "high",
-        "dependencies": ["14", "20"]
+        "dependencies": ["14", "20"],
+        "completedAt": "2025-12-30",
+        "relatedCommits": ["37d91b1", "3d2c5e9"],
+        "implementationNotes": "Tier 1 automated scoring from questionnaire (15 questions), Tier 2 star rating (1-5). Action-driven status transitions: Set Tier 2 stars → auto-qualifies, Assign offer → auto-sets client status, Reject with reversibility. Full questionnaire modal with score calculation and category breakdown."
       },
       {
-        "id": "25",
+        "id": 25,
         "title": "Redesign Repreneur list and pipeline views",
         "description": "Status grouping, dynamic columns, rejected functionality",
         "status": "done",
         "priority": "medium",
-        "dependencies": ["14", "15", "24"]
+        "dependencies": ["14", "15", "24"],
+        "completedAt": "2025-12-30",
+        "relatedCommits": ["37d91b1"],
+        "implementationNotes": "Redesigned list view with status grouping (collapsible sections). Status-specific columns: score for leads, stars for qualified, offers for clients. Converted Kanban to static pipeline. Added rejected status badge styling."
       },
       {
-        "id": "27",
+        "id": 27,
         "title": "Develop Activity tracking and Notes system",
         "description": "Activity types, forms, chronological display",
         "status": "done",
         "priority": "medium",
         "dependencies": ["14", "16"],
+        "completedAt": "2025-12-30",
+        "relatedCommits": ["37d91b1", "2fe632a"],
+        "implementationNotes": "Activity types (welcome_email, interview, offer_submitted, etc.), duration tracking for cost analytics, full CRUD server actions. Notes with optimistic updates. Dashboard activity feed completed in Wave 1.0.",
         "subtasks": [
-          {
-            "id": 1,
-            "title": "Implement Activity Model and Database Schema",
-            "status": "done"
-          },
-          {
-            "id": 2,
-            "title": "Create Activity Form Component and API Endpoint",
-            "status": "done"
-          },
-          {
-            "id": 3,
-            "title": "Implement Notes System and API",
-            "status": "done"
-          },
-          {
-            "id": 4,
-            "title": "Display Chronological Activity and Notes Lists",
-            "status": "done"
-          },
-          {
-            "id": 5,
-            "title": "Create Activity Feed Component for Dashboard",
-            "description": "Dashboard activity feed showing recent activities across all repreneurs",
-            "details": "Build React component for aggregated activity feed with pagination and filtering. Low priority - can be done in future iteration.",
-            "status": "pending",
-            "dependencies": [1, 2, 4]
-          }
+          {"id": 1, "title": "Implement Activity Model and Database Schema", "status": "done"},
+          {"id": 2, "title": "Create Activity Form Component and API Endpoint", "status": "done"},
+          {"id": 3, "title": "Implement Notes System and API", "status": "done"},
+          {"id": 4, "title": "Display Chronological Activity and Notes Lists", "status": "done"},
+          {"id": 5, "title": "Create Activity Feed Component for Dashboard", "status": "done", "completedAt": "2026-01-03", "implementationNotes": "GlobalActivityStream component added in Wave 1.0 dashboard redesign."}
         ]
       },
       {
-        "id": "28",
+        "id": 28,
         "title": "Pre-populate the 3 consulting offer packages",
         "description": "Starter Pack, Deal Flow, Sparring Partner + auto Client status",
         "status": "done",
         "priority": "high",
-        "dependencies": ["17", "24"]
+        "dependencies": ["17", "24"],
+        "completedAt": "2025-12-30",
+        "relatedCommits": ["37d91b1"],
+        "implementationNotes": "Seeded Starter Pack, Deal Flow, Sparring Partner via migration 005. Auto Client status on offer assignment implemented in action-driven status system."
+      },
+      {
+        "id": 29,
+        "title": "Set up Supabase Storage Bucket for Avatar Uploads",
+        "description": "Create a public 'avatars' storage bucket in Supabase and configure the necessary permissions to enable avatar photo uploads for users.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [11, 12],
+        "completedAt": "2025-12-30",
+        "relatedCommits": ["3d2c5e9"],
+        "implementationNotes": "RepreneurAvatar component with size variants (sm, md, lg, xl). 24 default avatars with deterministic assignment based on repreneur ID. Custom photo upload via Supabase Storage. Simple edit dialog with upload and reset-to-default. Integrated in profile page, repreneur table, and pipeline cards. Migration 008_add_avatar_column.sql included."
+      },
+      {
+        "id": 30,
+        "title": "Add skeleton loading screens for all pages",
+        "description": "Create shimmer placeholder components that display while pages load, eliminating the blank screen problem",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [14, 18],
+        "completedAt": "2026-01-02",
+        "relatedCommits": ["3538347"],
+        "implementationNotes": "Added skeleton loading screens for all dashboard pages (6 loading.tsx files). Created reusable skeleton UI component with shimmer animation. Loading states match actual page layouts for seamless transitions."
+      },
+      {
+        "id": 31,
+        "title": "Implement smooth page transition animations",
+        "description": "Add fade/slide animations when navigating between pages using Framer Motion",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [30],
+        "completedAt": "2026-01-02",
+        "relatedCommits": ["3538347"],
+        "implementationNotes": "Added Framer Motion page transition wrapper (components/page-transition.tsx). Subtle fade/slide animations between route changes. Applied via template.tsx for all dashboard routes. framer-motion package added to dependencies."
+      },
+      {
+        "id": 32,
+        "title": "Add toast notifications and micro-interactions",
+        "description": "Implement toast notification system and subtle feedback animations for user actions",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [30],
+        "completedAt": "2026-01-02",
+        "relatedCommits": ["3538347"],
+        "implementationNotes": "Integrated Sonner toast library. Success/error toasts for all CRUD operations. Positioned bottom-right with 3s auto-dismiss duration. Toaster component added to app/layout.tsx."
+      },
+      {
+        "id": 33,
+        "title": "Implement optimistic UI updates for inline editing",
+        "description": "Make field edits feel instant by updating UI immediately, then syncing with server",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [32],
+        "completedAt": "2026-01-02",
+        "relatedCommits": ["3538347", "2fe632a", "f069d7d"],
+        "implementationNotes": "Forms update UI immediately before server response using useOptimistic hook. Automatic rollback on errors with error toasts. Applied to: editable fields, notes, activities, ratings, journey stage, status updates. Fixed race condition where useEffect was overwriting optimistic state during router.refresh()."
+      },
+      {
+        "id": 34,
+        "title": "Add data prefetching on hover for faster navigation",
+        "description": "Prefetch repreneur detail data when hovering over table rows to eliminate load time",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [30, 31],
+        "completedAt": "2026-01-02",
+        "relatedCommits": ["3538347"],
+        "implementationNotes": "Added router.prefetch() on hover for repreneur cards. Applied to both list view (table rows) and kanban cards. Results in faster navigation to detail pages."
+      },
+      {
+        "id": 35,
+        "title": "Animate sidebar active indicator",
+        "description": "Add smooth sliding highlight animation to sidebar navigation",
+        "status": "done",
+        "priority": "low",
+        "dependencies": [31],
+        "completedAt": "2026-01-02",
+        "relatedCommits": ["3538347"],
+        "implementationNotes": "Animated active indicator using Framer Motion layoutId for shared element animation. Smooth sliding transition between nav items. Improved nested route detection for active state."
+      },
+      {
+        "id": 36,
+        "title": "Add radar chart for candidate profile visualization",
+        "description": "Create spider/radar chart showing Tier1 scoring dimensions visually on repreneur detail page",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [24],
+        "completedAt": "2026-01-02",
+        "relatedCommits": ["3538347", "94328d3"],
+        "implementationNotes": "New CandidateRadarChart component (components/repreneurs/candidate-radar-chart.tsx). 5 dimensions: Experience (years, employment, sectors), Leadership (team size, exec roles, board), M&A Knowledge (prior experience, involvement), Readiness (journey stage, identified targets), Financial (investment capacity, funding). Scoring algorithms based on questionnaire responses. Added to repreneur detail page in 2-column layout with Rating. Descriptive tooltips show score sources for each dimension."
+      },
+      {
+        "id": 37,
+        "title": "Wave 1.0 Dashboard Redesign",
+        "description": "Complete dashboard redesign with new 3-column layout, 12+ widgets, and Wave 1.0 branding",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [18, 30],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["2847130", "025424c", "7c2377c"],
+        "implementationNotes": "Created new dashboard with 3-column layout:\n- Row 1: Pipeline Stats (with vs last week comparison) | Top Tier 1 | Top Tier 2\n- Row 2: Conversion Funnel + Journey Stages | Activity Stream | Recently Added\n- Row 3: Pipeline & Activity Trends chart (full width)\n\nNew components: StatsColumn, TopTier1Candidates, TopTier2Candidates (with pagination), ConversionFunnel (Lead→Qualified→Client), JourneyStageDistribution pie chart, EnhancedChart (weekly navigation, dual Y-axis), GlobalActivityStream, RecentlyAddedRepreneurs.\n\nRebranded sidebar to 'Wave 1.0 - the repreneur CRM' with animated wave emoji. Dashboard consolidated from multiple variants into single main dashboard."
+      },
+      {
+        "id": 38,
+        "title": "Add LinkedIn URL and GDPR Consent Fields",
+        "description": "Add LinkedIn profile URL to repreneur profiles and GDPR consent tracking for European compliance",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [13, 20],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["2847130"],
+        "implementationNotes": "Added LinkedIn URL field for repreneur profiles (enables quick profile access for team). Added GDPR consent tracking: marketing_consent (boolean), consent_timestamp, consent_source. Migration: scripts/010_add_linkedin_and_consent_fields.sql. Fields added to repreneur form."
+      },
+      {
+        "id": 39,
+        "title": "Add Journey Page for Acquisition Readiness Tracking",
+        "description": "Visual journey stage progression page to track repreneur maturity",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [14],
+        "completedAt": "2025-12-29",
+        "relatedCommits": ["c899c95", "08ab5e6"],
+        "implementationNotes": "Journey page with visual stage progression: explorer → learner → ready → serial_acquirer. JourneyStageBadge component with tooltips and icons. Journey stage displayed on repreneur cards in Kanban and detail pages. Journey link added to sidebar navigation. Migration for journey_stage column included."
+      },
+      {
+        "id": 40,
+        "title": "Improve Repreneur Form with Dropdowns and Multi-select",
+        "description": "Replace free text inputs with constrained dropdowns/multi-select for data consistency",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [20],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["dab274f", "e078650"],
+        "implementationNotes": "Investment Capacity: Changed from free text to dropdown using INVESTMENT_CAPACITY_OPTIONS. Sector Preferences: Changed from comma-separated text to multi-select checkboxes using INDUSTRY_SECTOR_OPTIONS. Target Acquisition Size: New dropdown with 6 revenue ranges (<500K€ to >10M€). Target Location: New dropdown with 16 French regions + international. Server action updated to parse sector_preferences as JSON with backward compatibility."
+      },
+      {
+        "id": 41,
+        "title": "V1.0 Enhancements: Milestones, Persona, Notes Redesign",
+        "description": "Major feature additions including offer milestones tracking, persona field, and notes/activity view dialogs",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [17, 16, 36],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["9bafdfa"],
+        "implementationNotes": "Offer Milestones System: offer_milestones table for tracking deliverables/checkpoints, OfferMilestones component with add/complete/delete, grouped by type (Deliverables vs Checkpoints), view dialog with full details.\n\nPersona Field: 4 options (First-time buyer, Serial acquirer, Corporate spin-off, Family succession) added to repreneur form.\n\nNotes Redesign: note_type field (call, email, meeting, other) with icons, redesigned Add Note dialog with type selector, View dialog for full content.\n\nActivity History: View dialog for full activity details.\n\nRadar Chart Improvements: Fixed scale to show actual max (~98 pts), added raw score display in tooltip (e.g., '85% (17/20 pts)').\n\nMigrations: 011_add_persona_and_note_types.sql, 012_add_offer_milestones.sql"
+      },
+      {
+        "id": 42,
+        "title": "Fix Activity Stream and Add Owner Display",
+        "description": "Fix dashboard activity query and add activity owner visibility",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [27, 37],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["517ab11", "0f16d57"],
+        "implementationNotes": "Fixed dashboard activity query using correct column names (activity_type, notes instead of type, title, description). Added activity owner display showing who created each activity. Redesigned ActivityHistory component to match dashboard style. Added relative time display ('4 days ago'). Added icon circles and cleaner layout. Included e2e test framework scaffolding."
+      },
+      {
+        "id": 43,
+        "title": "Dashboard Streaming & Activity Heatmap",
+        "description": "Add GitHub-style activity heatmap and optimize dashboard with streaming server components",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [37],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["7baa694"],
+        "implementationNotes": "Activity Heatmap: GitHub-style heatmap showing 12 months of daily activity (new repreneurs + logged activities) with blue gradient matching brand. Full year on desktop, horizontal scroll on mobile.\n\nPerformance Optimization: Split dashboard into streaming server components (StatsAndTiersRow, MiddleRow, ChartsRow) with Suspense boundaries and skeleton loaders. Parallel fetches using Promise.all. Added 30-second revalidation cache.\n\nEnhanced Chart: Reduced height to 240px, improved mobile responsiveness with stacked header and compact date format."
+      },
+      {
+        "id": 44,
+        "title": "Avatar Redesign with Notion Face Style",
+        "description": "Replace gradient avatars with Notion-style face illustrations",
+        "status": "done",
+        "priority": "low",
+        "dependencies": [29],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["34c320e", "01485d4"],
+        "implementationNotes": "Replaced 24 gradient JPG avatars with 16 Notion face PNG avatars. Updated repreneur-avatar component to use .png extension. Added grey border around avatar circles for better definition. Old gradient avatars backed up in public/avatars/gradients-backup/. More cohesive, modern look matching platform visual language."
+      },
+      {
+        "id": 45,
+        "title": "Consolidate Questionnaire Forms (Intake + Internal)",
+        "description": "Refactor public intake form and internal questionnaire to share components, reducing code duplication",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [24],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["b7005ea", "0c94080"],
+        "implementationNotes": "Eliminated ~1800 lines of duplicated code between intake and internal questionnaire.\n\nNew shared components:\n- components/questionnaire/types.ts: Shared TypeScript types\n- components/questionnaire/question-config.ts: Centralized question definitions for INTAKE_STEPS (5 steps) and INTERNAL_STEPS (4 steps)\n- components/questionnaire/question-inputs.tsx: Reusable inputs (YesNoButtons, RadioOptionGrid, CheckboxGrid, TextInput, TextareaInput, ConsentCheckbox) with variant prop\n- components/questionnaire/step-renderer.tsx: Renderers for steps, sections, questions\n\nRefactored files:\n- app/intake/page.tsx: 1294 → 454 lines, moved outside (dashboard) route group for standalone page\n- components/repreneurs/questionnaire-form.tsx: 487 → 154 lines\n\nColor scheme unified to blue. Fixed intake header being cut off (removed -m-6 negative margin)."
+      },
+      {
+        "id": 46,
+        "title": "Fix Grouped Table Column Alignment",
+        "description": "Align columns across all status groups in Repreneurs table",
+        "status": "done",
+        "priority": "low",
+        "dependencies": [25],
+        "completedAt": "2026-01-03",
+        "relatedCommits": ["bf8f542"],
+        "implementationNotes": "Fixed column alignment across Leads, Qualified, Clients, Rejected groups. Added fixed column widths: Name 25%, Email 25%, Status-specific 30%, Created 20%. Right-aligned Created column. Updated Offers display to show first offer + count (e.g., 'Starter Pack +4') instead of multiple badges."
+      },
+      {
+        "id": 47,
+        "title": "Redesign Offers Page with Timeline View",
+        "description": "Transform offers page from package list to client offer timeline dashboard",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [17, 41],
+        "details": "Current state: Offers page shows a list of offer packages (Starter Pack, Deal Flow, etc.)\n\nNew design:\n1. Main view: Timeline dashboard showing all offers assigned to clients\n   - Each offer card shows: client name, package type, assignment date, status\n   - Timeline/history for each offer: created → assigned → checkpoints completed → closed\n   - Activity log showing all milestones and updates\n   - Visual progress indicator\n\n2. 'Create Package' button in corner opens secondary view:\n   - Current list of existing packages\n   - Edit existing package details\n   - Create new package form\n\nKey insight: Packages are created rarely (3 exist now). The daily use case is tracking offer progress with clients, not managing packages."
+      },
+      {
+        "id": 48,
+        "title": "User Profile Pictures & CV Upload System",
+        "description": "Enable custom avatar uploads and CV document storage for repreneurs",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [29, 45],
+        "details": "Build on existing Supabase Storage bucket (avatars).\n\nProfile Pictures:\n- Allow users to upload their own photos (not just select from defaults)\n- Support common formats (JPG, PNG)\n- Image cropping/resizing on upload\n- Replace current avatar in all views\n\nCV Upload System:\n- New 'cvs' storage bucket in Supabase\n- CV field in public intake form (Step 1) - optional upload\n- CV section in repreneur profile page:\n  - View current CV (PDF viewer or download link)\n  - Upload new CV (replaces existing)\n  - Delete CV\n- cv_url column in repreneurs table\n- File size limits and validation\n\nNote: CVs are foundational documents for repreneur evaluation."
+      },
+      {
+        "id": 49,
+        "title": "Email Automation Integration",
+        "description": "Connect platform to AI-powered email automation for client communications",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [47, 48],
+        "details": "Integrate smart email automation with the platform.\n\nPotential approaches:\n- Vercel AI SDK for email generation\n- Resend or SendGrid for delivery\n- Pre-built templates triggered by status changes\n- AI-assisted personalization based on repreneur profile\n\nUse cases:\n- Welcome emails on intake submission\n- Follow-up sequences based on journey stage\n- Offer notifications and reminders\n- Milestone completion updates\n\nNeeds research: Best tool/service for fast, effective email automation that integrates well with Next.js/Vercel stack."
       }
     ],
     "metadata": {
-      "version": "1.0.0",
-      "lastModified": "2025-12-30T18:00:00.000Z",
-      "taskCount": 14,
-      "completedCount": 13,
-      "note": "Verbose details for completed tasks archived in tasks-archive.json"
+      "version": "2.2.0",
+      "lastModified": "2026-01-04T01:00:00.000Z",
+      "taskCount": 34,
+      "completedCount": 29,
+      "blockedCount": 1,
+      "pendingCount": 3,
+      "note": "Added Phase 2 tasks (47-49): Offers timeline redesign, CV/avatar uploads, email automation.",
+      "created": "2025-12-30T17:17:42.698Z",
+      "description": "Tasks for master context",
+      "updated": "2026-01-04T00:30:00.000Z"
     }
   }
 }

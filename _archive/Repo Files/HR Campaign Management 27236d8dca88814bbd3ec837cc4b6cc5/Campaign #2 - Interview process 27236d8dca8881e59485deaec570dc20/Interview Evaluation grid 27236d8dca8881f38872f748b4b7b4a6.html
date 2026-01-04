@@ -1,0 +1,708 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>Interview Evaluation grid </title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="27236d8d-ca88-81f3-8872-f748b4b7b4a6" class="page sans"><header><h1 class="page-title">Interview Evaluation grid </h1><p class="page-description"></p></header><div class="page-body"><h3 id="27236d8d-ca88-818c-98b0-cab1ad701612" class=""><strong>Round 1.1 – Entretien RH/Leadership (définition persona côté humain)</strong></h3><table id="27236d8d-ca88-817b-ad1c-ffda0170fdcf" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-81f5-9243-fe7d96c34234"><th id="?WrX" class="simple-table-header-color simple-table-header">Dimension</th><th id="p`Ua" class="simple-table-header-color simple-table-header">What we assess</th><th id="KvV|" class="simple-table-header-color simple-table-header">Notes</th><th id="iiI:" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-8142-8866-c78cf58b535c"><td id="?WrX" class="">Parcours &amp; crédibilité</td><td id="p`Ua" class="">Cohérence du chemin pro, légitimité pour reprendre une PME</td><td id="KvV|" class=""></td><td id="iiI:" class=""></td></tr><tr id="27236d8d-ca88-81ca-999f-d456b6eb792d"><td id="?WrX" class="">Style de leadership</td><td id="p`Ua" class="">Directif, collaboratif, transformationnel, inspirant ?</td><td id="KvV|" class=""></td><td id="iiI:" class=""></td></tr><tr id="27236d8d-ca88-81a3-b823-f5ee2173c105"><td id="?WrX" class="">Management d’équipes</td><td id="p`Ua" class="">Expérience de gestion de managers, middle management, structuration d’équipes</td><td id="KvV|" class=""></td><td id="iiI:" class=""></td></tr><tr id="27236d8d-ca88-8118-9a9b-d21ee4dc7fe9"><td id="?WrX" class="">Relation aux autres</td><td id="p`Ua" class="">Capacité à créer confiance (cédants, salariés, investisseurs)</td><td id="KvV|" class=""></td><td id="iiI:" class=""></td></tr><tr id="27236d8d-ca88-81c2-ac3e-d6c745564e70"><td id="?WrX" class="">Personnalité &amp; authenticité</td><td id="p`Ua" class="">Alignement discours/actes, énergie, présence</td><td id="KvV|" class=""></td><td id="iiI:" class=""></td></tr><tr id="27236d8d-ca88-81c1-a664-dd9a951b8bec"><td id="?WrX" class="">Maturité face aux enjeux</td><td id="p`Ua" class="">Solitude du dirigeant, gouvernance, transition cédant</td><td id="KvV|" class=""></td><td id="iiI:" class=""></td></tr><tr id="27236d8d-ca88-81bb-813d-e0428372e5cc"><td id="?WrX" class="">Capacité à s’entourer</td><td id="p`Ua" class="">Réseau, mentors, board, partenaires</td><td id="KvV|" class=""></td><td id="iiI:" class=""></td></tr></tbody></table><p id="27236d8d-ca88-815c-90c5-c9cf8348ddaf" class=""><strong>Why :</strong> Explorer le profil humain et managérial du candidat, et repérer si son ADN colle plutôt à un persona (Operator, Visionary, Strategist…).</p><h2 id="27236d8d-ca88-81f5-8bb3-db287143e742" class=""><strong>Round 1.2 – Entretien Business/Finance</strong></h2><table id="27236d8d-ca88-812e-8ddf-e94edd28f912" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-81e5-a166-fa378d68c543"><th id="rNTk" class="simple-table-header-color simple-table-header">Dimension</th><th id="s@:I" class="simple-table-header-color simple-table-header">What we assess</th><th id="IZ&lt;l" class="simple-table-header-color simple-table-header">Notes</th><th id="}&lt;qV" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-8109-9f20-c7c61a154b45"><td id="rNTk" class="">Stratégie d’acquisition</td><td id="s@:I" class="">Pertinence du ciblage sectoriel, cohérence projet-secteur</td><td id="IZ&lt;l" class=""></td><td id="}&lt;qV" class=""></td></tr><tr id="27236d8d-ca88-8165-bc38-f89e16a97851"><td id="rNTk" class="">Structuration du deal</td><td id="s@:I" class="">Connaissance montage financier, dette, equity, partenaires</td><td id="IZ&lt;l" class=""></td><td id="}&lt;qV" class=""></td></tr><tr id="27236d8d-ca88-812b-93b9-f06ee844a215"><td id="rNTk" class="">Vision de croissance</td><td id="s@:I" class="">Identification des leviers post-reprise (croissance orga, digitale, internationale…)</td><td id="IZ&lt;l" class=""></td><td id="}&lt;qV" class=""></td></tr><tr id="27236d8d-ca88-81bc-90f4-ec66ac906a57"><td id="rNTk" class="">Croissance durable</td><td id="s@:I" class="">Intégration ESG, gouvernance responsable, innovation</td><td id="IZ&lt;l" class=""></td><td id="}&lt;qV" class=""></td></tr><tr id="27236d8d-ca88-813a-a09a-e453627e1870"><td id="rNTk" class="">Crédibilité face aux financeurs</td><td id="s@:I" class="">Capacité à pitcher et convaincre un banquier/investisseur</td><td id="IZ&lt;l" class=""></td><td id="}&lt;qV" class=""></td></tr></tbody></table><p id="27236d8d-ca88-81c1-b511-e61b8c43fc2e" class=""><strong>Why :</strong> Évaluer la crédibilité technique et stratégique du candidat, et voir si son approche correspond à un persona spécifique.</p><h2 id="27236d8d-ca88-8189-8d2d-e9fcf88af063" class=""><strong>Round 2 – Business Case Assessment</strong></h2><p id="27236d8d-ca88-8184-a9c4-ee8dd0de6975" class="">V1 </p><table id="27236d8d-ca88-81c7-b7f3-c54d029f188c" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-813b-a703-c9a584003fb5"><th id="oahn" class="simple-table-header-color simple-table-header">Dimension</th><th id="X{ys" class="simple-table-header-color simple-table-header">What we assess</th><th id="NP:T" class="simple-table-header-color simple-table-header">Évidences / Notes</th><th id="[sGX" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-815c-97ab-d8e915da306c"><td id="oahn" class="">Diagnostic stratégique</td><td id="X{ys" class="">Analyse claire d’une cible (marché, finances, organisation)</td><td id="NP:T" class=""></td><td id="[sGX" class=""></td></tr><tr id="27236d8d-ca88-81c0-8f08-f098a284cf25"><td id="oahn" class="">Structuration du financement</td><td id="X{ys" class="">Réalisme du montage financier, anticipation des objections des financeurs</td><td id="NP:T" class=""></td><td id="[sGX" class=""></td></tr><tr id="27236d8d-ca88-81ed-aee5-dd50cbfb5d5c"><td id="oahn" class="">Plan opérationnel</td><td id="X{ys" class="">Définition d’un plan 100 jours concret, priorisation réaliste</td><td id="NP:T" class=""></td><td id="[sGX" class=""></td></tr><tr id="27236d8d-ca88-8141-85cf-f806c272adb5"><td id="oahn" class="">Pitch &amp; communication</td><td id="X{ys" class="">Clarté, persuasion, capacité à inspirer confiance (investisseurs, cédants, board)</td><td id="NP:T" class=""></td><td id="[sGX" class=""></td></tr><tr id="27236d8d-ca88-8103-9017-e2829f0dd4a1"><td id="oahn" class="">Gestion du stress</td><td id="X{ys" class="">Réactions en situation de stress-test ou de Q&amp;A contradictoire</td><td id="NP:T" class=""></td><td id="[sGX" class=""></td></tr></tbody></table><p id="27236d8d-ca88-81a3-92db-e25e315f971b" class=""><strong>Why :</strong> Mettre le candidat dans les conditions réelles d’un deal. Vérifier sa capacité à convaincre et à sécuriser un projet de reprise complet.</p><hr id="27236d8d-ca88-81d0-a19e-f33c6a817b4d"/><table id="27236d8d-ca88-8151-ab3e-d0928b8e4790" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-8112-ae1a-e7d46595b500"><th id="Eb~t" class="simple-table-header-color simple-table-header">Dimension</th><th id="Kk=o" class="simple-table-header-color simple-table-header">What we assess</th><th id="\&lt;;C" class="simple-table-header-color simple-table-header">Notes</th><th id="qJHr" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-8119-a11a-c3f522491ca1"><td id="Eb~t" class="">Stratégie d’acquisition</td><td id="Kk=o" class="">Pertinence du ciblage sectoriel, cohérence projet-secteur</td><td id="\&lt;;C" class=""></td><td id="qJHr" class=""></td></tr><tr id="27236d8d-ca88-81ab-b102-cbc04a29cb31"><td id="Eb~t" class="">Structuration du deal</td><td id="Kk=o" class="">Connaissance montage financier, dette, equity, partenaires</td><td id="\&lt;;C" class=""></td><td id="qJHr" class=""></td></tr><tr id="27236d8d-ca88-8126-ab80-f7f57bcdd708"><td id="Eb~t" class="">Vision de croissance</td><td id="Kk=o" class="">Identification des leviers post-reprise (croissance orga, digitale, internationale…)</td><td id="\&lt;;C" class=""></td><td id="qJHr" class=""></td></tr><tr id="27236d8d-ca88-81b5-a115-cd62fe1d9e94"><td id="Eb~t" class="">Croissance durable</td><td id="Kk=o" class="">Intégration ESG, gouvernance responsable, innovation</td><td id="\&lt;;C" class=""></td><td id="qJHr" class=""></td></tr><tr id="27236d8d-ca88-8116-bb66-c6856745aea6"><td id="Eb~t" class="">Crédibilité face aux financeurs</td><td id="Kk=o" class="">Capacité à pitcher et convaincre un banquier/investisseur</td><td id="\&lt;;C" class=""></td><td id="qJHr" class=""></td></tr></tbody></table><p id="27236d8d-ca88-81ce-920d-ec6a3a39cfb6" class=""><strong>Why :</strong> Évaluer la crédibilité technique et stratégique du candidat, et voir si son approche correspond à un persona spécifique.</p><p id="27236d8d-ca88-81e9-9220-c1b25bb8e29c" class="">
+</p><p id="27236d8d-ca88-81b7-939d-dcc2154abcf7" class="">V2</p><h2 id="27236d8d-ca88-817a-a5f5-ead047782025" class="">Grille Business Case DistriMat – Évaluation Persona-oriented</h2><h3 id="27236d8d-ca88-81c2-a612-e7d02a1e5554" class="">1. Dimensions communes à tous (fondation)</h3><table id="27236d8d-ca88-81cf-bd31-e44f105d64cf" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-81a5-bbbf-eb28d2f4c194"><th id="e\bj" class="simple-table-header-color simple-table-header">Dimension</th><th id="rENg" class="simple-table-header-color simple-table-header">What we assess</th><th id="Wkut" class="simple-table-header-color simple-table-header">Notes</th><th id="bitr" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-81db-bcf7-c71b9afc2908"><td id="e\bj" class="">Diagnostic &amp; analyse stratégique</td><td id="rENg" class="">Pertinence du diagnostic (marché, finances, RH, organisation)</td><td id="Wkut" class=""></td><td id="bitr" class=""></td></tr><tr id="27236d8d-ca88-8189-b4e0-ea66571764c6"><td id="e\bj" class="">Priorisation des enjeux</td><td id="rENg" class="">Capacité à cibler les vrais sujets (CA concentré, digitalisation, dépendance grands comptes, culture interne)</td><td id="Wkut" class=""></td><td id="bitr" class=""></td></tr><tr id="27236d8d-ca88-8142-b1cd-ef41cce34edf"><td id="e\bj" class="">Réalisme opérationnel (100j / Année 1-2)</td><td id="rENg" class="">Plan d’action clair, pragmatique, faisable</td><td id="Wkut" class=""></td><td id="bitr" class=""></td></tr><tr id="27236d8d-ca88-813a-9ec9-f604b04579a0"><td id="e\bj" class="">Leadership &amp; mobilisation</td><td id="rENg" class="">Vision fédératrice, capacité à embarquer une équipe prudente, crédibilité face aux cédants/employés</td><td id="Wkut" class=""></td><td id="bitr" class=""></td></tr><tr id="27236d8d-ca88-8187-b84c-e589792feb06"><td id="e\bj" class="">Communication &amp; pitch</td><td id="rENg" class="">Clarté, persuasion, structure de la présentation, gestion du temps</td><td id="Wkut" class=""></td><td id="bitr" class=""></td></tr><tr id="27236d8d-ca88-8127-90f3-eba59b937b56"><td id="e\bj" class="">Gestion du stress &amp; Q&amp;A</td><td id="rENg" class="">Réactions dans la contradiction, résilience face aux objections</td><td id="Wkut" class=""></td><td id="bitr" class=""></td></tr></tbody></table><hr id="27236d8d-ca88-8158-a8f2-d781924256d3"/><h3 id="27236d8d-ca88-81cc-aa4d-d0a71cb4cbcb" class="">2. Dimensions modulées selon persona</h3><p id="27236d8d-ca88-81c3-8ef5-df5fcd51ac8d" class=""><strong>a) Experienced Operator</strong></p><table id="27236d8d-ca88-816a-bae9-f58378060980" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-81c5-8625-d434e8e70ad7"><th id="AAZs" class="simple-table-header-color simple-table-header">Dimension spécifique</th><th id="?fEO" class="simple-table-header-color simple-table-header">What we assess</th><th id="a:w`" class="simple-table-header-color simple-table-header">Notes</th><th id="T]``" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-8166-908c-d790e2faaf53"><td id="AAZs" class="">Exécution &amp; gouvernance</td><td id="?fEO" class="">Capacité à structurer une PME vieillissante, restaurer efficacité opérationnelle, moderniser management</td><td id="a:w`" class=""></td><td id="T]``" class=""></td></tr></tbody></table><p id="27236d8d-ca88-8169-9962-dea8af736e09" class=""><strong>b) Sustainability Visionary</strong></p><table id="27236d8d-ca88-816e-9b1a-cdba03669d1b" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-81a4-bee5-f90e17f729e8"><th id="gRTa" class="simple-table-header-color simple-table-header">Dimension spécifique</th><th id="}fGc" class="simple-table-header-color simple-table-header">What we assess</th><th id="kuN]" class="simple-table-header-color simple-table-header">Notes</th><th id="eotD" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-8138-8cdd-f16ddadbdd56"><td id="gRTa" class="">ESG &amp; durabilité</td><td id="}fGc" class="">Capacité à intégrer enjeux RSE (produits certifiés, logistique bas carbone, labels) dans une stratégie compétitive</td><td id="kuN]" class=""></td><td id="eotD" class=""></td></tr></tbody></table><p id="27236d8d-ca88-8109-9c66-e3065a4e7e19" class=""><strong>c) Financial Strategist</strong></p><table id="27236d8d-ca88-81c9-8311-de55e7cc9d60" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-8185-b7f6-da23eee2e8eb"><th id="E{NY" class="simple-table-header-color simple-table-header">Dimension spécifique</th><th id="CtlB" class="simple-table-header-color simple-table-header">What we assess</th><th id="g^Ht" class="simple-table-header-color simple-table-header">Notes</th><th id="}PQO" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-81cd-919a-d7f13f0a8ee0"><td id="E{NY" class="">Structuration deal &amp; performance financière</td><td id="CtlB" class="">Maîtrise des leviers financiers : BFR, rentabilité, plan de financement, crédibilité devant un banquier</td><td id="g^Ht" class=""></td><td id="}PQO" class=""></td></tr></tbody></table><p id="27236d8d-ca88-8109-91dc-f1b6cab023ee" class=""><strong>d) Commercial Strategist</strong></p><table id="27236d8d-ca88-81f2-8aa1-d262c0fede4e" class="simple-table"><thead class="simple-table-header"><tr id="27236d8d-ca88-813a-87da-db171052f7d3"><th id="sbPt" class="simple-table-header-color simple-table-header">Dimension spécifique</th><th id="GSL[" class="simple-table-header-color simple-table-header">What we assess</th><th id="dYmE" class="simple-table-header-color simple-table-header">Notes</th><th id="EmJd" class="simple-table-header-color simple-table-header">Score (1–4)</th></tr></thead><tbody><tr id="27236d8d-ca88-813b-8e3a-c9b8158212af"><td id="sbPt" class="">Développement commercial</td><td id="GSL[" class="">Capacité à diversifier portefeuille, structurer équipe commerciale, attaquer marchés (Belgique, Suisse, appels d’offres publics)</td><td id="dYmE" class=""></td><td id="EmJd" class=""></td></tr></tbody></table><hr id="27236d8d-ca88-81ad-af77-e435d8d0597e"/><h3 id="27236d8d-ca88-81c0-93d5-e6c8734678bc" class="">3. Synthèse persona &amp; recommandation</h3><ul id="27236d8d-ca88-81d7-9d76-f48bef9fea0c" class="bulleted-list"><li style="list-style-type:disc"><strong>Persona confirmé ou révélé</strong> : …</li></ul><ul id="27236d8d-ca88-8107-b77c-e43fcbcf27c8" class="bulleted-list"><li style="list-style-type:disc"><strong>Forces observées (liées au persona)</strong> : …</li></ul><ul id="27236d8d-ca88-8108-935a-f3f5b8f54235" class="bulleted-list"><li style="list-style-type:disc"><strong>Points de vigilance (gaps persona ou global)</strong> : …</li></ul><ul id="27236d8d-ca88-81dc-b8ac-fd892c80b6f6" class="bulleted-list"><li style="list-style-type:disc"><strong>Recommandation finale</strong> : Strongly Positive / Positive with Reservations / Neutral / Negative</li></ul><p id="27236d8d-ca88-8133-be4f-fa38feeaaa26" class="">
+</p></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

@@ -1,0 +1,708 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>Campaign #2 - Interview process</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="27236d8d-ca88-81e5-9485-deaec570dc20" class="page sans"><header><div class="page-header-icon undefined"><span class="icon">👔</span></div><h1 class="page-title">Campaign #2 - Interview process</h1><p class="page-description"></p></header><div class="page-body"><h1 id="27236d8d-ca88-81c4-aa16-e4f1db94a526" class=""><mark class="highlight-teal">Process - Eng.</mark></h1><h2 id="27236d8d-ca88-81c4-8008-e6233e99e150" class=""><mark class="highlight-blue"><strong>Process Summary Table</strong></mark></h2><table id="27236d8d-ca88-81fe-a3b3-cae676c02d1a" class="simple-table"><tbody><tr id="27236d8d-ca88-811b-a5a9-cab47ca30793"><td id="i_P}" class=""><strong>Step</strong></td><td id="l^Fa" class=""><strong>Core Objective</strong></td><td id="Oe?P" class=""><strong>Responsible(s)</strong></td><td id=";JPm" class=""><strong>Tools/Outputs</strong></td></tr><tr id="27236d8d-ca88-811c-a39e-d9ae80dad95c"><td id="i_P}" class=""><strong>Pre-selection</strong></td><td id="l^Fa" class=""><strong>Screening by business potential &amp; motivation</strong></td><td id="Oe?P" class=""><strong>HR/Operations</strong></td><td id=";JPm" class=""><strong>Scoring grid, cover note, application scoring</strong></td></tr><tr id="27236d8d-ca88-8160-892f-e3b2c32e8594"><td id="i_P}" class=""><strong>In-depth HR/Leadership Interview</strong></td><td id="l^Fa" class=""><strong>Assess posture, leadership vision, operational fit</strong></td><td id="Oe?P" class=""><strong>HR/coach/acquirer</strong></td><td id=";JPm" class=""><strong>Scenario-based interview, Q&amp;A, structured feedback</strong></td></tr><tr id="27236d8d-ca88-8161-9144-da0725666af2"><td id="i_P}" class=""><strong>Business/Finance Interview</strong></td><td id="l^Fa" class=""><strong>Evaluate deal structuring and business credibility</strong></td><td id="Oe?P" class=""><strong>Finance expert/acquirer</strong></td><td id=";JPm" class=""><strong>Case study, oral presentation, finance partner mock interview</strong></td></tr><tr id="27236d8d-ca88-812e-99fd-e089e578e519"><td id="i_P}" class=""><strong>Targeted Business Cases &amp; Matching</strong></td><td id="l^Fa" class=""><strong>Stress-test acquisition dossier and match with partners</strong></td><td id="Oe?P" class=""><strong>Multi-stakeholder panel</strong></td><td id=";JPm" class=""><strong>Oral pitch, written synthesis, profile scoring</strong></td></tr><tr id="27236d8d-ca88-819b-ad9c-f0f45b0c3d98"><td id="i_P}" class=""><strong>Formalities</strong></td><td id="l^Fa" class=""><strong>Secure candidate credibility and references</strong></td><td id="Oe?P" class=""><strong>HR/Operations</strong></td><td id=";JPm" class=""><strong>Reference check file, partner feedback</strong></td></tr><tr id="27236d8d-ca88-8179-96c2-e3bf3b926906"><td id="i_P}" class=""><strong>Post-selection Go to Market Support</strong></td><td id="l^Fa" class=""><strong>Prepare for partner meetings and market entry</strong></td><td id="Oe?P" class=""><strong>Re-New/coach</strong></td><td id=";JPm" class=""><strong>&quot;Deal room&quot; workshop, hands-on support</strong></td></tr></tbody></table><h2 id="27236d8d-ca88-8140-8509-c2f8681d7aaa" class=""><mark class="highlight-blue"><strong>Objectives and Guiding Principles</strong></mark></h2><ul id="27236d8d-ca88-81d8-98da-cdfe6b0c141e" class="bulleted-list"><li style="list-style-type:disc">Prioritize selecting and supporting acquirers with the skills, commitment, and business credibility to ensure successful and sustainable SME takeovers.</li></ul><ul id="27236d8d-ca88-812b-bcf1-f17f15cb9643" class="bulleted-list"><li style="list-style-type:disc">Create optimal matches between qualified profiles and key partners (investors, sellers, M&amp;A boutiques).</li></ul><ul id="27236d8d-ca88-8180-a187-cc6c47770110" class="bulleted-list"><li style="list-style-type:disc">Establish Re-New as an accelerator for deal-ready, operational acquisition talent.</li></ul><h2 id="27236d8d-ca88-81bf-b367-e0b0a0bc5b82" class=""><mark class="highlight-blue"><strong>Structure of the Re-New Process</strong></mark></h2><h3 id="27236d8d-ca88-811d-ad26-e207f42977a5" class="">Preparation &amp; Needs Calibration</h3><ul id="27236d8d-ca88-814a-82bf-de6f237fc261" class="bulleted-list"><li style="list-style-type:disc">Define upstream personas based on experience, background, ambition, sector, and ability to create a solid acquisition case.</li></ul><ul id="27236d8d-ca88-81be-ab76-e4ac5fe9d0d6" class="bulleted-list"><li style="list-style-type:disc">Incorporate partner feedback (investors, M&amp;A boutiques) to refine selection criteria and evaluation scenarios.</li></ul><ul id="27236d8d-ca88-81bf-8459-ee52633982d2" class="bulleted-list"><li style="list-style-type:disc">Provide brief training for interviewers on acquisition entrepreneurship specifics with selection focused on &quot;business and partner fit.&quot;</li></ul><h3 id="27236d8d-ca88-8180-bc80-c9beb51944ec" class="">Sourcing and Pre-selection (Round 0)</h3><ul id="27236d8d-ca88-819b-a6e6-e1efe907f3a8" class="bulleted-list"><li style="list-style-type:disc">Responsible: Re-New Team (Amélie &amp; Bertrand)</li></ul><ul id="27236d8d-ca88-812d-9188-dd7f72f01de5" class="bulleted-list"><li style="list-style-type:disc">Main criteria: experience, education, business credibility, acquisition process understanding, proven leadership, motivation, and project-sector alignment.</li></ul><ul id="27236d8d-ca88-8161-b615-ebe235876f9a" class="bulleted-list"><li style="list-style-type:disc">Tools: Cover letter + CV + scoring (via application form responses)</li></ul><ul id="27236d8d-ca88-813f-9531-d7221ce20d7a" class="bulleted-list"><li style="list-style-type:disc">Output: Shortlist and integration into Re-New pools (main campaign or alternative pools)</li></ul><h3 id="27236d8d-ca88-8125-98ff-de3937006cfa" class="">In-depth Qualification Interviews (Round 1)</h3><ul id="27236d8d-ca88-81ce-8bfe-e3aa4b1f9b20" class="bulleted-list"><li style="list-style-type:disc">HR/Leadership (1h): Amélie + ?Assessment of career path, persuasion abilities with sellers/suppliers/colleagues, and operational vision.Scenarios: crisis management, team experience, responses to failure.</li></ul><ul id="27236d8d-ca88-8188-8849-cbacb4a0c79a" class="bulleted-list"><li style="list-style-type:disc">Business/Finance (Bertrand &amp; Antoine?)Evaluation of acquisition strategy, deal structuring, financial acumen, and post-acquisition growth levers.Mini-case or mock interview with a banker/financial partner.</li></ul><h3 id="27236d8d-ca88-8177-9f9f-e818d1d25ba3" class="">&quot;Business Case&quot; Assessment (Round 2)</h3><ul id="27236d8d-ca88-8177-b775-c89de8bfef3f" class="bulleted-list"><li style="list-style-type:disc">Targeted business case approach covering acquisition, financing structure, and commercial strategy.</li></ul><ul id="27236d8d-ca88-81ec-8991-ee33a2f2462f" class="bulleted-list"><li style="list-style-type:disc">Oral and written scenarios: building a convincing acquisition file, addressing partner objections, and deal stress-testing.</li></ul><ul id="27236d8d-ca88-8103-9755-d3ef64dd4bc3" class="bulleted-list"><li style="list-style-type:disc">Immediately actionable structured feedback to improve the acquisition &quot;pitch.&quot;</li></ul><ul id="27236d8d-ca88-8144-ad91-d7193523380b" class="bulleted-list"><li style="list-style-type:disc">→ Ask the candidate to share 2-3 names for references and background check.  </li></ul><h3 id="27236d8d-ca88-8120-a7fd-e4d4e2b41390" class="">Feedback and wrap up  (Round 3)</h3><ul id="27236d8d-ca88-81d4-b2d0-e5907c3a2798" class="bulleted-list"><li style="list-style-type:disc">Debriefing of BC with strengths and weaknesses</li></ul><ul id="27236d8d-ca88-8156-8101-f66ca3a6116c" class="bulleted-list"><li style="list-style-type:disc">Acquisition project review and match expectations with Re-New’s partners</li></ul><ul id="27236d8d-ca88-818d-b4cf-e25279b7a92f" class="bulleted-list"><li style="list-style-type:disc">Output: Campaign winner, partner-matching mapping, and profile scoring (for target company matching and M&amp;A boutique relevance).</li></ul><h3 id="27236d8d-ca88-8159-a0be-e860ebceaa47" class="">Formalities (Round 4)</h3><ul id="27236d8d-ca88-81bb-8716-f822732f3fed" class="bulleted-list"><li style="list-style-type:disc">Reference and background checks, assessment of profile &quot;rigor&quot; (resilience, reliability)—how?</li></ul><ul id="27236d8d-ca88-81a9-8a0d-fd68cf6e5e63" class="bulleted-list"><li style="list-style-type:disc">Preparation of a partner-ready presentation file.</li></ul><h3 id="27236d8d-ca88-8178-9afa-db2cb635bd9b" class="">Post-selection &quot;Go to Market&quot; Support</h3><ul id="27236d8d-ca88-8106-ac0a-f8791983de29" class="bulleted-list"><li style="list-style-type:disc">Preparation for investor/M&amp;A boutique meetings: investor pack coaching, &quot;deal pitch&quot; workshops, seller Q&amp;A, and negotiation preparation as needed.</li></ul><ul id="27236d8d-ca88-8126-bf60-fdcd85ba0dd5" class="bulleted-list"><li style="list-style-type:disc">Active networking via Re-New.</li></ul><p id="27236d8d-ca88-81f6-b70e-ef5e0f4ae58e" class="">
+</p><p id="27236d8d-ca88-81cf-a373-e37b61fd0c9a" class="">
+</p><h1 id="27236d8d-ca88-8161-8eb9-db7e31f7af6f" class=""><mark class="highlight-teal">Process - Fr.</mark></h1><h2 id="27236d8d-ca88-8121-970c-f655f3467965" class=""><mark class="highlight-blue">Tableau synthétique du process</mark></h2><table id="27236d8d-ca88-811a-9787-d139423c07c9" class="simple-table"><tbody><tr id="27236d8d-ca88-8187-b195-f102f7a05292"><td id="UEkG" class=""><strong>Étape</strong></td><td id="JQqs" class=""><strong>Objectif clé</strong></td><td id="VbJ[" class=""><strong>Responsable(s)</strong></td><td id="zHoo" class=""><strong>Outils/Sorties</strong></td></tr><tr id="27236d8d-ca88-8181-9076-cf0afa051ec1"><td id="UEkG" class="">Pré-sélection</td><td id="JQqs" class="">Tri par potentiel business &amp; motivation</td><td id="VbJ[" class="">RH/Opérations</td><td id="zHoo" class="">Grille de scoring, note de cadrage, scoring dossier</td></tr><tr id="27236d8d-ca88-81f9-9b73-fa5a710a58b8"><td id="UEkG" class="">Entretien RH/Leadership approfondi</td><td id="JQqs" class="">Vérifier posture, vision, adéquation opérationnelle</td><td id="VbJ[" class="">RH/coach/repreneur</td><td id="zHoo" class="">Entretien scénarisé, Q&amp;A, feedback structuré</td></tr><tr id="27236d8d-ca88-813b-a524-d0c9ecf4cd4e"><td id="UEkG" class="">Entretien Business/Finance</td><td id="JQqs" class="">Tester structuration du deal et crédibilité business</td><td id="VbJ[" class="">Expert financier/repreneur</td><td id="zHoo" class="">Étude de cas, présentation orale, simulation d&#x27;entretien banquier</td></tr><tr id="27236d8d-ca88-814c-871b-ef01ff6c61e8"><td id="UEkG" class="">Business Cases &amp; Matching ciblés</td><td id="JQqs" class="">Stress-test du dossier de reprise et matching partenaires</td><td id="VbJ[" class="">Panel multi-acteurs</td><td id="zHoo" class="">Pitch oral, note de synthèse, scoring de profil</td></tr><tr id="27236d8d-ca88-8143-8ed2-c0df8a4072dc"><td id="UEkG" class="">Références et formalités</td><td id="JQqs" class="">Sécuriser la crédibilité et références du candidat</td><td id="VbJ[" class="">RH/Opérations</td><td id="zHoo" class="">Dossier de vérification, feedback partenaires</td></tr><tr id="27236d8d-ca88-8147-8d5a-fba1eb315d82"><td id="UEkG" class="">Accompagnement Go to Market post-sélection</td><td id="JQqs" class="">Préparer la mise en relation effective avec le marché</td><td id="VbJ[" class="">Re-New/coach</td><td id="zHoo" class="">Atelier « deal room », support opérationnel</td></tr></tbody></table><h2 id="27236d8d-ca88-8147-ac09-de748a89e559" class=""><mark class="highlight-blue">Objectifs et principes directeurs</mark></h2><ul id="27236d8d-ca88-816b-a3e6-e30c5278e5c1" class="bulleted-list"><li style="list-style-type:disc">Sélectionner et préparer en priorité des repreneurs capables d&#x27;assurer une reprise réussie et durable de PME (compétences, engagement, crédibilité business).</li></ul><ul id="27236d8d-ca88-81f6-82f1-c078aa69c3c1" class="bulleted-list"><li style="list-style-type:disc">Assurer le meilleur appariement entre profils qualifiés et partenaires-clés (financeurs, cédants, M&amp;A boutiques).</li></ul><ul id="27236d8d-ca88-81c2-af1c-cb854d84207e" class="bulleted-list"><li style="list-style-type:disc">Positionner Re-New comme un accélérateur de talents-repreneurs prêts pour le deal et opérationnels.</li></ul><h2 id="27236d8d-ca88-81c0-831e-cbccf409b268" class=""><mark class="highlight-blue">Structure du Processus Re-New</mark></h2><h3 id="27236d8d-ca88-8150-afcc-e21a6a07176d" class="">1. Préparation &amp; calibration des besoins</h3><ul id="27236d8d-ca88-81ea-8018-ff38eb31c6ee" class="bulleted-list"><li style="list-style-type:disc">Définition des personas amont : expérience, parcours, ambition, secteur, capacité à constituer un dossier de reprise solide.</li></ul><ul id="27236d8d-ca88-81ae-b215-d94bf2737873" class="bulleted-list"><li style="list-style-type:disc">Intégration des feedbacks des partenaires (investisseurs, boutiques M&amp;A) pour ajuster les critères et scénarios d&#x27;évaluation.</li></ul><ul id="27236d8d-ca88-817f-ac74-dbc5e5909202" class="bulleted-list"><li style="list-style-type:disc">Formation brève des interviewers aux spécificités du repreneuriat et de la sélection axée « business &amp; fit partenaire ».</li></ul><h3 id="27236d8d-ca88-8101-a110-c3a497e40f08" class="">2. Sourcing et présélection (Round 0)</h3><ul id="27236d8d-ca88-8123-9cb4-e33ec17cfd56" class="bulleted-list"><li style="list-style-type:disc">Responsables : Équipe Re-New (Amélie &amp; Bertrand)</li></ul><ul id="27236d8d-ca88-8162-802f-eacfe42c2edd" class="bulleted-list"><li style="list-style-type:disc">Critères principaux : expérience, formation, crédibilité business, compréhension du processus de reprise, leadership éprouvé, motivation, cohérence projet-secteur.</li></ul><ul id="27236d8d-ca88-81d7-b89f-c024a90da823" class="bulleted-list"><li style="list-style-type:disc">Outils : Scoring avec validation CV et note de cadrage.</li></ul><ul id="27236d8d-ca88-81c6-bc70-e28331d02802" class="bulleted-list"><li style="list-style-type:disc">Résultat : Mise à jour Flatchr, shortlist resserrée, intégration aux pools Re-New (campagne ou autres pools à définir).</li></ul><p id="27236d8d-ca88-81e7-aac8-fc802345a071" class="">Email : Accusé de réception de candidature (campagne/spontanée).</p><h3 id="27236d8d-ca88-8181-ab9b-e94e4225582c" class="">3. Entretiens de qualification approfondis (Round 1)</h3><p id="27236d8d-ca88-81e1-b675-cdeb694c5d27" class="">Participants : Candidats shortlistés</p><p id="27236d8d-ca88-816c-ba56-dc96e5d21214" class=""><strong>RH/Leadership (1h) — Amélie + Bertrand</strong></p><ul id="27236d8d-ca88-81ab-9f3b-f1193af8e4a4" class="bulleted-list"><li style="list-style-type:disc">Évaluation du parcours, capacité à convaincre un cédant/fournisseur/collaborateur, vision opérationnelle.</li></ul><ul id="27236d8d-ca88-81a0-ba20-e24dba2253ee" class="bulleted-list"><li style="list-style-type:disc">Scénarios : gestion de crise, expérience d&#x27;équipe, réactions en cas d&#x27;échec.</li></ul><p id="27236d8d-ca88-81a3-b39a-f16c33bb27ad" class=""><strong>Business/Finance — Antoine + Bertrand + Tomas?</strong></p><ul id="27236d8d-ca88-814d-aa80-e59e03c926cc" class="bulleted-list"><li style="list-style-type:disc">Évaluation de la stratégie d&#x27;acquisition, structuration du deal, compréhension financière, leviers de croissance post-reprise.</li></ul><ul id="27236d8d-ca88-81c0-961f-ee1163c36747" class="bulleted-list"><li style="list-style-type:disc">Mini-case ou simulation d&#x27;entretien avec un banquier/partenaire financier.</li></ul><h3 id="27236d8d-ca88-811d-ac25-cfe9aa23da46" class="">4. Évaluation Business Case (Round 2)</h3><p id="27236d8d-ca88-81c9-9a20-d1573a088d7d" class=""><strong>Jury : Amélie + Bertrand + Toma + Fabio + Antoine + Martin + ?</strong></p><ul id="27236d8d-ca88-81a0-b6e4-fd16b9781108" class="bulleted-list"><li style="list-style-type:disc">Approche par cas business ciblés (acquisition, structuration de financement, stratégie commerciale).</li></ul><ul id="27236d8d-ca88-8105-a6fc-e0f075165b90" class="bulleted-list"><li style="list-style-type:disc">Mises en situation orales et écrites : construction d&#x27;un dossier de reprise convaincant, réponses aux objections des partenaires, stress-test du deal.</li></ul><ul id="27236d8d-ca88-81d7-8f14-ee7804808f05" class="bulleted-list"><li style="list-style-type:disc">Feedback structuré immédiatement exploitable pour améliorer le « pitch repreneur ».</li></ul><ul id="27236d8d-ca88-81ec-a3db-d7e674c8e6c8" class="bulleted-list"><li style="list-style-type:disc">Références / Background check</li></ul><h3 id="27236d8d-ca88-814a-a295-c741f17b16a0" class="">5. Feedback &amp; wrap-up (Round 3) — Amélie + Antoine + Bertrand</h3><ul id="27236d8d-ca88-8143-9e82-fd5f3ed695f0" class="bulleted-list"><li style="list-style-type:disc">Débriefing du Business Case avec forces et faiblesses</li></ul><ul id="27236d8d-ca88-819d-96c5-e399ec809b93" class="bulleted-list"><li style="list-style-type:disc">Revue du projet d&#x27;acquisition et adéquation avec les attentes des partenaires de Re-New</li></ul><ul id="27236d8d-ca88-8168-b7b4-eaaa39a85767" class="bulleted-list"><li style="list-style-type:disc">Résultat : Lauréat de la campagne, cartographie de matching avec les partenaires, et scoring du profil (pour la correspondance avec les entreprises cibles et la pertinence des cabinets M&amp;A).</li></ul><h3 id="27236d8d-ca88-8199-a94b-cb39067b6e8f" class="">6. Formalités (Round 4)</h3><ul id="27236d8d-ca88-8109-b650-c1b463d3c848" class="bulleted-list"><li style="list-style-type:disc">Vérification des références, antécédents, évaluation de la résilience et fiabilité du profil.</li></ul><ul id="27236d8d-ca88-8163-8b9b-efff716d58e8" class="bulleted-list"><li style="list-style-type:disc">Préparation d&#x27;un dossier de présentation pour les partenaires.</li></ul><h3 id="27236d8d-ca88-8179-81a4-e6e63113893e" class="">7. Accompagnement « Go to Market » post-sélection</h3><ul id="27236d8d-ca88-81b7-aae6-d9ab4660bbf9" class="bulleted-list"><li style="list-style-type:disc">Préparation aux rendez-vous avec financeurs/M&amp;A boutiques : coaching « dossier investisseur », atelier « pitch deal », Q&amp;A avec cédant, préparation à la négociation si nécessaire.</li></ul><ul id="27236d8d-ca88-8174-9eb4-c8682ab7af6d" class="bulleted-list"><li style="list-style-type:disc">Mise en réseau active via Re-New.</li></ul><p id="27236d8d-ca88-8138-939a-eb69716b9b03" class="">Élément manquant : Template de dossier lauréat ou finaliste.</p><h3 id="27236d8d-ca88-810f-8519-f8705575f90f" class="">Tampon Écurie Re-New.</h3><figure id="27236d8d-ca88-81f3-8872-f748b4b7b4a6" class="link-to-page"><a href="Campaign%20#2%20-%20Interview%20process%2027236d8dca8881e59485deaec570dc20/Interview%20Evaluation%20grid%2027236d8dca8881f38872f748b4b7b4a6.html">Interview Evaluation grid </a></figure></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

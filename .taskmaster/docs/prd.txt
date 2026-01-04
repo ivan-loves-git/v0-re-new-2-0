@@ -1,0 +1,253 @@
+# Re-New Platform - Product Requirements Document (V1)
+
+## 1. Overview
+
+Re-New is a consulting company helping "repreneurs" (entrepreneurs acquiring businesses) find and acquire companies. This platform replaces their current ATS (Flatchr) with a purpose-built internal CRM for managing repreneur relationships and consulting services.
+
+**Timeline:** 8-10 FTE working days
+**Target Users:** 3 internal Re-New team members (1 full-time, 2 part-time)
+
+## 2. Tech Stack
+
+- **Frontend:** Next.js + Tailwind + shadcn/ui
+- **Backend/Database:** Supabase (PostgreSQL + Auth + API)
+- **Hosting:** Vercel
+
+### Build Approach
+1. **Phase 1 (V0):** Core app — auth, schema, repreneurs CRUD, dashboard
+2. **Phase 2 (Export):** Push to GitHub, clone locally
+3. **Phase 3 (Claude Code):** Scoring, activity tracking, offer management, Flatchr import, fixes, polish, deploy
+
+## 3. Authentication
+
+- Email/password authentication via Supabase Auth
+- 3 users, all with equal access (no role-based permissions in V1)
+- User identity tracked for audit purposes (who added notes, etc.)
+- Users created manually in Supabase dashboard (no self-registration)
+
+## 4. Data Model
+
+### 4.1 Repreneur (Core Entity)
+A repreneur is a candidate/client managed over their entire lifecycle.
+
+**Fields:**
+- id (UUID, primary key)
+- email (unique, required)
+- first_name (required)
+- last_name (required)
+- phone
+- company_background (text)
+- investment_capacity (text or number range)
+- sector_preferences (array of strings)
+- target_location (text)
+- target_acquisition_size (text)
+- lifecycle_status (enum: lead, qualified, client, rejected) - DERIVED FROM ACTIONS
+- source (how they found Re-New)
+- tier1_score (number, calculated from form data)
+- tier2_stars (number 1-5, manual rating)
+- created_at
+- updated_at
+- created_by (user reference)
+
+**Additional form fields (Q1-Q17 from Flatchr):**
+- To be added based on Bertrand's question list
+- Fields include: years of experience, M&A experience, funding status, sector preferences, etc.
+- Each field may have associated scoring weight for Tier 1 calculation
+
+### 4.2 Lifecycle Status (Action-Driven)
+Status is **automatically derived from actions**, not manually set:
+
+- **Lead:** Default state when form submitted but candidate not yet assessed
+- **Qualified:** Automatically triggered when Tier 2 star rating (1-5) is set by Re-New team
+- **Client:** Automatically triggered when one or more offers are assigned to the candidate
+- **Rejected:** Triggered when rejected button is pressed (reversible)
+
+**Note:** No manual drag-and-drop status changes. Status changes based on actions taken.
+
+### 4.3 Scoring System (Two-Tier)
+
+**Tier 1 - Pre-Interview (Automated):**
+- Calculated from form data based on Bertrand's Excel scoring model
+- Each question/field has assigned point values
+- Total score displayed on repreneur profile
+- Detail view shows breakdown per field
+- Used to prioritize which leads to interview first
+
+**Tier 2 - Post-Interview (Manual):**
+- Star rating system (1-5 stars)
+- Set manually by Re-New team via dropdown
+- Setting a star rating triggers "Qualified" status
+- Reflects behavioral assessment, soft skills, leadership potential
+- Qualitative feedback stored in Notes section
+
+### 4.4 Offer (Consulting Package)
+Consulting services sold to qualified repreneurs.
+
+**Pre-defined Offers (V1):**
+- **Starter Pack:** ~2,500 EUR, 6 weeks, for less mature candidates
+- **Deal Flow:** Variable pricing by target EV, 12 months, curation and introductions
+- **Sparring Partner:** 600 EUR/month, 6 months (3,600 EUR total), subscription support
+
+**Fields:**
+- id (UUID, primary key)
+- name (e.g., "Starter Pack", "Deal Flow", "Sparring Partner")
+- description (text)
+- price (number)
+- duration_days (number, from acceptance)
+- includes_hours (number, coaching hours)
+- is_active (boolean)
+- created_at
+
+### 4.5 Repreneur_Offer (Junction/Subscription)
+Links repreneurs to offers they've purchased or been offered.
+**Assigning an offer automatically triggers "Client" status.**
+
+**Fields:**
+- id (UUID, primary key)
+- repreneur_id (foreign key)
+- offer_id (foreign key)
+- status (enum: offered, accepted, active, completed, expired)
+- offered_at (timestamp)
+- accepted_at (timestamp)
+- expires_at (timestamp, calculated from acceptance + duration)
+- created_by (user reference)
+
+### 4.6 Activity (Communication Log)
+Tracks all interactions with a repreneur.
+
+**Fields:**
+- id (UUID, primary key)
+- repreneur_id (foreign key)
+- activity_type (enum: welcome_email, interview, offer_submitted, offer_rejected, offer_approved, meeting)
+- notes (text, optional)
+- duration_minutes (number, optional, for future analytics)
+- created_at
+- created_by (user reference)
+
+### 4.7 Note
+Free-text notes attached to a repreneur.
+
+**Fields:**
+- id (UUID, primary key)
+- repreneur_id (foreign key)
+- content (text)
+- created_at
+- created_by (user reference)
+
+### 4.8 User (Team Member)
+Internal Re-New team members.
+
+**Fields:**
+- id (UUID, from Supabase Auth)
+- email
+- display_name
+- created_at
+
+## 5. Features (V1 Scope)
+
+### 5.1 Repreneur List View (Enhanced)
+- Table view of all repreneurs
+- **Grouping by status:** Lead | Qualified | Client | Rejected
+- **Dynamic columns by status:**
+  - Leads: Name, Email, Tier 1 Score, Created Date
+  - Qualified: Name, Email, Tier 2 Stars, Created Date
+  - Clients: Name, Email, Assigned Offer(s), Created Date
+- Sort by any column
+- Search/filter by name, email, status
+- Click row to open detail view
+
+### 5.2 Pipeline View (Static/Action-Driven)
+**Note:** Kanban drag-and-drop dismantled. Status is derived from actions.
+- Visual display of repreneurs by status columns: Lead | Qualified | Client | Rejected
+- Cards show repreneur name + key info (score for leads, stars for qualified, offer for clients)
+- Click card to open detail view
+- **No drag-and-drop** - status changes via actions only
+- Alternative UI/UX to be explored (static pipeline, dashboard stats, etc.)
+
+### 5.3 Repreneur Detail Page
+- View all profile fields
+- Edit fields inline or via edit mode
+- **Tier 1 Scoring Card:**
+  - Display overall score
+  - Button to expand detailed breakdown (score per field)
+- **Tier 2 Rating Card:**
+  - Display current star rating (1-5)
+  - Dropdown to change rating (triggers Qualified status)
+- View/add notes (with author + timestamp)
+- **Activity History:** Log of all interactions
+- View associated offers
+- Add new offer to repreneur (triggers Client status)
+- **Rejected Button:** Mark candidate as rejected (reversible)
+
+### 5.4 Add New Repreneur
+- Form with required fields (email, first_name, last_name)
+- Optional fields for rest (from Q1-Q17 question list)
+- Default status: Lead
+- Tier 1 score calculated automatically on save
+- Redirect to detail page after creation
+
+### 5.5 Offer Management
+- List of available offers (admin view)
+- Pre-populated with 3 defined packages
+- Create/edit offers (name, price, duration, etc.)
+- View which repreneurs have each offer
+
+### 5.6 Activity Tracking
+- Add activities to any repreneur
+- Activity types: Welcome Email, Interview, Offer Submitted, Offer Rejected, Offer Approved, Meeting
+- Activities show author and timestamp
+- Chronological list on repreneur detail page
+- Optional: Duration field for future cost analytics
+
+### 5.7 Notes System
+- Add notes to any repreneur
+- Notes show author and timestamp
+- Chronological list on repreneur detail page
+- Simple text (no rich formatting in V1)
+
+### 5.8 Flatchr Data Import
+- One-time batch import script
+- Import ~3,000 repreneur profiles from Flatchr CSV
+- Map Q1-Q17 fields to database schema
+- Calculate Tier 1 scores on import
+- All imported repreneurs start as "Lead"
+
+## 6. UI/UX Requirements
+
+- Clean, professional design (Supabase/Vercel aesthetic)
+- Responsive but desktop-first (internal tool)
+- Navigation: Sidebar with links to Dashboard, Repreneurs, Pipeline, Offers
+- Dashboard: Quick stats (counts per status), recent activity
+- **No Kanban drag-and-drop** - status is action-driven
+
+## 7. Out of Scope (V2+)
+
+- Repreneur self-service portal / login
+- Candidate Journey tracking (on hold - concept not mature)
+- Advanced analytics and reporting
+- Email integration
+- Partner/intermediary access
+- Deal matching interfaces
+- Role-based access control
+- Rich text notes / file attachments
+- Cost estimation per candidate (future use of activity duration data)
+
+## 8. Success Criteria
+
+- All 3 team members can log in via email/password
+- Can view, add, and edit repreneurs
+- Tier 1 scoring calculates automatically from form data
+- Tier 2 star rating triggers Qualified status
+- Assigning offer triggers Client status
+- Can add activities and notes to repreneurs
+- Can manage offers and assign to repreneurs
+- Flatchr data (~3,000 records) successfully imported
+- System deployed and accessible via Vercel URL
+
+## 9. Dependencies (Waiting on Bertrand)
+
+- Complete list of questions (Q1-Q17) with rationale
+- Drop-down values (especially Sectors/Industries)
+- Single-choice vs. multiple-choice indication per question
+- Detailed scoring system logic (points per answer) and Excel file
+- List of standard activities/routines performed with candidates

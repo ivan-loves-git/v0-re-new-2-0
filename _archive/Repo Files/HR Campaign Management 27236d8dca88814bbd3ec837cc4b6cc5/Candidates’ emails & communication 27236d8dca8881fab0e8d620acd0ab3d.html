@@ -1,0 +1,709 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>Candidates’ emails &amp; communication</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="27236d8d-ca88-81fa-b0e8-d620acd0ab3d" class="page sans"><header><div class="page-header-icon undefined"><span class="icon">📨</span></div><h1 class="page-title">Candidates’ emails &amp; communication</h1><p class="page-description"></p></header><div class="page-body"><p id="27236d8d-ca88-814a-bf78-e23dbfdae8a3" class="">Communication with candidates need to be flawless and timely, as it is our opportunity to make a first good impression with the candidate and ensure a smooth selection process. </p><p id="27236d8d-ca88-817b-85ea-f389cb09a9c6" class="">This is a key element of Re-New’s brand positioning - to help us establish as the most relevant, serious and sought-after support for SME acquisition.</p><p id="27236d8d-ca88-8194-9ec7-f9786f09c882" class="">
+</p><h1 id="27236d8d-ca88-818c-8a5b-f441c37da7ac" class=""><mark class="highlight-teal"><strong>Mail – Accusé de réception</strong></mark></h1><p id="27236d8d-ca88-8120-986d-f0b1e2320a05" class="">Automated email sent by Flatchr upon receipt of the candidate’s application</p><p id="27236d8d-ca88-81bc-a906-fa4f2a4e848b" class=""><strong>Objet : Bienvenue dans la communauté Re-New !</strong></p><p id="27236d8d-ca88-8166-9d5f-d36442608ac1" class="">Bonjour [Prénom],</p><p id="27236d8d-ca88-81a4-9ef7-c4862da1146b" class="">Merci d&#x27;avoir embarqué avec nous dans l&#x27;aventure Re-New.</p><p id="27236d8d-ca88-81d1-abb0-e9c8eb73dc3d" class="">Votre candidature vient tout juste de rejoindre le pool des entrepreneurs-repreneurs qui souhaitent réinventer la PME, alliant impact, efficacité et ambition humaine.</p><p id="27236d8d-ca88-8197-97db-df23e2241e46" class="">Notre équipe va étudier attentivement votre dossier. Si vous ne recevez pas de nouvelles de notre part sous trois semaines, rassurez-vous : cela ne signifie pas que votre histoire avec Re-New s&#x27;arrête ici. Nos promotions évoluent tout au long de l&#x27;année et nous avons à cœur de garder le lien.</p><p id="27236d8d-ca88-819f-9d3a-cfecd27602ec" class="">Si vous avez la moindre question, ou si vous souhaitez déjà explorer notre « labo d&#x27;idées » (événements, podcasts, informations sur la transmission), toutes les infos sur notre site: re-new.team/fr</p><p id="27236d8d-ca88-812a-bb3d-f249d44412fa" class="">Au plaisir d&#x27;écrire, peut-être ensemble, le prochain chapitre de votre trajectoire d&#x27;impact !</p><p id="27236d8d-ca88-81eb-a1a8-cd8c79c16b29" class="">Chaleureusement,</p><p id="27236d8d-ca88-8115-81d3-c3c7ec00ca1c" class="">L&#x27;équipe Re-New</p><h1 id="27236d8d-ca88-81f0-8925-d6cb4ef86723" class=""><mark class="highlight-teal"><strong>Mail – Invitation à l&#x27;entretien RH</strong></mark></h1><p id="27236d8d-ca88-8194-b156-e71661f5e611" class=""><mark class="highlight-yellow_background">Automated: when moved to “A recevoir” (selected for 1st interview round)</mark></p><p id="27236d8d-ca88-812e-b394-cc40bbd85808" class=""><strong>Objet : Re-New – Votre parcours de sélection démarre</strong></p><p id="27236d8d-ca88-81f1-87fd-d59d43c44d6f" class="">Bonjour [Prénom],</p><p id="27236d8d-ca88-810f-81d8-fadb1008a02d" class="">Nous avons bien reçu votre dossier et tenons à vous remercier pour la clarté et l’engagement dont vous avez fait preuve dans votre candidature.</p><p id="27236d8d-ca88-8172-9f39-fc8ad1879146" class="">Nous sommes ravis de vous inviter à la première étape de notre parcours de sélection Re-New, dédiée à la rencontre entre vos aspirations et la vision que nous portons pour la relève des PME à impact.</p><p id="27236d8d-ca88-81ab-9b4f-c6c9297009a7" class="">Cet entretien RH et Leadership sera conduit par Amélie Lyon (Co-fondatrice, DRH Groupe Theodo) et Bertrand Galas (Co-fondateur, CEO Re-New). Il sera l’occasion d’approfondir ensemble votre parcours, vos motivations et votre projet de reprise, et d’évaluer :</p><ul id="27236d8d-ca88-8170-a664-f27e01f8f782" class="bulleted-list"><li style="list-style-type:disc">votre vision du rôle de CEO-repreneur et la manière dont vous envisagez de l’incarner,</li></ul><ul id="27236d8d-ca88-813e-a713-fd086e89d514" class="bulleted-list"><li style="list-style-type:disc">les valeurs qui guideront votre leadership auprès de vos équipes et partenaires,</li></ul><ul id="27236d8d-ca88-81e4-9902-d7606b522737" class="bulleted-list"><li style="list-style-type:disc">votre potentiel à rejoindre une cohorte sélective de futurs dirigeants.</li></ul><p id="27236d8d-ca88-8117-9410-e613d7f2d348" class="">Nous revenons vers vous séparément avec<mark class="highlight-yellow_background"> un lien Calendly</mark> afin que vous puissiez choisir vous même le créneau qui vous convient le mieux. (Vérifiez vos spams et dossiers “Autres courriers” au cas où)</p><p id="27236d8d-ca88-8124-9f5f-c7a1d6e21496" class="">L’ensemble de notre équipe se réjouit d’avance d’échanger avec vous autour de votre ambition et de votre potentiel.</p><p id="27236d8d-ca88-814d-aed4-e83dafd27ebc" class="">À très bientôt,</p><p id="27236d8d-ca88-8152-bd1c-f103c26eb794" class="">Amélie Lyon</p><p id="27236d8d-ca88-8135-8477-ce4d4b7f1867" class="">HR Lead, Re-New</p><h1 id="27236d8d-ca88-8175-96c9-e65c56c88659" class=""><mark class="highlight-teal"><strong>Mail – Invitation à l&#x27;entretien Business/Finance</strong></mark></h1><p id="27236d8d-ca88-81be-a86e-f3966132ad0b" class=""><mark class="highlight-yellow_background">Automated: when moved to “Business &amp; Finance interview ”  (2nd interview round)</mark></p><p id="27236d8d-ca88-819e-9aad-f513fa02ec62" class=""><strong>Objet : Cap sur votre vision stratégique – Prochaine étape de votre parcours Re-New</strong></p><p id="27236d8d-ca88-815d-9851-d3eb184d255a" class="">Bonjour [Prénom],</p><p id="27236d8d-ca88-81d2-95d8-ca7d5e7cf884" class="">Merci encore pour la qualité de notre premier échange. Nous avons particulièrement apprécié la clarté de votre approche et la solidité de votre parcours.</p><p id="27236d8d-ca88-81f1-a803-cda0df45112c" class="">Vous entrez à présent dans la deuxième étape de notre processus de sélection, avec un entretien dédié aux aspects financiers et stratégiques de votre projet de reprise.</p><p id="27236d8d-ca88-8135-abc8-e6d84ff75ab6" class="">Lors de cet échange, nous évaluerons notamment :</p><ul id="27236d8d-ca88-81dd-b217-f7e66a6f0eef" class="bulleted-list"><li style="list-style-type:disc">votre capacité à structurer un projet de reprise crédible et cohérent,</li></ul><ul id="27236d8d-ca88-8173-8082-fc7ce1855b35" class="bulleted-list"><li style="list-style-type:disc">votre compréhension des fondamentaux financiers liés à une opération de rachat (valorisation, levée de dette, construction d’un business plan),</li></ul><ul id="27236d8d-ca88-8176-87eb-c80e5a819303" class="bulleted-list"><li style="list-style-type:disc">la manière dont vous projetez vos critères de ciblage sur des typologies d’entreprises réelles,</li></ul><ul id="27236d8d-ca88-81af-97c5-e01ce30a1397" class="bulleted-list"><li style="list-style-type:disc">votre niveau de préparation et de réalisme quant aux différentes étapes à venir (deal sourcing, financement, closing, prise de poste).</li></ul><p id="27236d8d-ca88-81d2-8aba-e479fec1cc1c" class="">Nous revenons vers vous très rapidement avec des propositions de créneaux. </p><p id="27236d8d-ca88-810e-aec7-d6766b81b97e" class="">Nous nous réjouissons d&#x27;entrer avec vous au cœur de l&#x27;opérationnel de la reprise.</p><p id="27236d8d-ca88-81f5-b14c-c8654733ab1a" class="">Cordialement,</p><p id="27236d8d-ca88-815f-a9e6-ec2067566fac" class="">L&#x27;équipe Re-New</p><h1 id="27236d8d-ca88-81f5-b174-e4dacad66b05" class=""><mark class="highlight-teal"><strong>Mail – Invitation Business Case</strong></mark></h1><p id="27236d8d-ca88-8176-b533-fbb5bd4aab4e" class=""><mark class="highlight-yellow_background">Automated: when moved to “Business Case panel interview” (3rd round interview)</mark></p><p id="27236d8d-ca88-811a-9e88-c9160b8bef44" class="">
+</p><p id="27236d8d-ca88-81c2-a17c-fb1582bfd95f" class=""><strong>Objet : Votre posture de dirigeant – Prochaine étape de votre parcours Re-New</strong></p><p id="27236d8d-ca88-81ca-9d5e-ef3b590c7385" class="">Bonjour [Prénom],</p><p id="27236d8d-ca88-818e-b09a-d1b60504e0e9" class="">Félicitations ! 🎉 Vous faites partie des candidat·e·s retenu·e·s pour accéder à la dernière étape de notre processus de sélection. C’est une avancée majeure : seuls quelques profils ont franchi avec succès toutes les étapes préalables, et vous êtes désormais parmi eux.</p><p id="27236d8d-ca88-81a3-8ce4-cb84cde6d2ad" class="">Vous vous apprêtez à relever un défi exigeant : une étude de cas immersive, conçue pour vous plonger dans la réalité d’un·e CEO-Repreneur confronté·e aux enjeux stratégiques d’une PME.</p><p id="27236d8d-ca88-81b5-aba3-e247e190a4f8" class="">À travers cette simulation, nous évaluerons :</p><ul id="27236d8d-ca88-8185-8d3d-d36c7886eeef" class="bulleted-list"><li style="list-style-type:disc">la rigueur de votre analyse,</li></ul><ul id="27236d8d-ca88-8132-9f6a-f75fa11453c7" class="bulleted-list"><li style="list-style-type:disc">votre capacité à prioriser et à faire preuve de créativité,</li></ul><ul id="27236d8d-ca88-8186-9f0b-f6e671e8f504" class="bulleted-list"><li style="list-style-type:disc">la clarté de votre vision,</li></ul><ul id="27236d8d-ca88-8178-82c9-fef8f132c4e7" class="bulleted-list"><li style="list-style-type:disc">ainsi que vos arbitrages sous contrainte de temps.</li></ul><p id="27236d8d-ca88-8165-a3cf-d69b564bb5cf" class="">Vous trouverez en pièce jointe l’ensemble des consignes nécessaires à la préparation de cet exercice. L’équipe Re-New reste bien entendu à votre disposition pour toute question ou clarification utile.</p><p id="27236d8d-ca88-8170-89fd-e876e957e10a" class="">Il ne s’agit pas de viser la perfection, mais d’oser, d’argumenter et de partager votre vision du leadership en action.</p><p id="27236d8d-ca88-81f3-8862-ef57d1507434" class="">Nous vous souhaitons beaucoup de réussite dans cette dernière étape,</p><p id="27236d8d-ca88-81c5-a0aa-e4c3332b88d4" class="">et avons hâte de découvrir votre travail.</p><p id="27236d8d-ca88-819c-81a3-f57c954adc25" class="">Bien cordialement,</p><h1 id="27236d8d-ca88-81b1-949c-e197677ec0f1" class=""><mark class="highlight-teal"><strong>Mail – Invitation à Feedback &amp; wrap up</strong></mark></h1><p id="27236d8d-ca88-81e9-bf01-cac4bf5d64a9" class="">
+</p><p id="27236d8d-ca88-81ce-a597-f877f729112a" class="">Cher(e) [Prénom],</p><p id="27236d8d-ca88-812d-8ba0-d50f6adaf271" class="">Félicitations, vous faites partie des finalistes de notre parcours Re-New !</p><p id="27236d8d-ca88-8149-8da7-e7fc84e0ef55" class="">Nous sommes impatients de découvrir votre vision globale ainsi que votre plan de transformation pour une PME à fort enjeu. Ce sera l&#x27;occasion de démontrer vos atouts non seulement en stratégie et finance, mais également sur la dimension humaine, l&#x27;engagement durable et le sens que vous souhaitez insuffler au projet.</p><p id="27236d8d-ca88-81f3-8256-c114ca898de5" class="">Nous vous remercions de bien vouloir confirmer votre présence à cette session finale, exigeante mais fondamentalement bienveillante. Chaque perspective y est valorisée, et c&#x27;est la richesse des parcours qui fait la force de notre communauté.</p><p id="27236d8d-ca88-8163-b919-c3d364e61765" class="">Nous avons hâte de vous retrouver devant le jury croisé Re-New et les alumni des promotions précédentes.</p><p id="27236d8d-ca88-81ab-a03f-cd292e01509c" class="">Bien cordialement,</p><p id="27236d8d-ca88-812c-a053-e06c454aad53" class="">Toute l&#x27;équipe Re-New</p><h1 id="27236d8d-ca88-810a-9284-f57609512a3c" class=""><mark class="highlight-teal"><strong>Mail – Annonce finale Accepté·e</strong></mark></h1><p id="27236d8d-ca88-81f1-a293-eecd10c2973f" class="">Objet : Félicitations et bienvenue dans la tribu Re-New !</p><h1 id="27236d8d-ca88-812f-9b72-cc71f6faed98" class=""><mark class="highlight-teal"><strong>Réponses négatives :</strong></mark></h1><p id="27236d8d-ca88-81be-ab17-e871e4401199" class=""><mark class="highlight-yellow_background">Automated: when moved to “Archived” </mark></p><p id="27236d8d-ca88-814c-83e8-e88fe87db796" class="">Objet : Suite à votre candidature – Re-New</p><p id="27236d8d-ca88-81b7-9de0-caab985ab789" class="">Cher(e) [Prénom],</p><p id="27236d8d-ca88-81c9-b911-f22747faa6c5" class="">Nous tenons à vous remercier chaleureusement pour le temps, l&#x27;énergie et la motivation que vous avez investis au sein de notre processus de sélection Re-New.</p><p id="27236d8d-ca88-8194-a488-f0631190355b" class="">Après une analyse attentive de votre dossier, nous avons décidé de ne pas retenir votre candidature pour la prochaine étape de cette campagne. Cette décision a été difficile à prendre tant la qualité de votre parcours et la richesse de votre projet ont retenu notre attention.</p><p id="27236d8d-ca88-8174-b331-f10dd7f2cc87" class="">Néanmoins, nous sommes persuadés que votre potentiel et votre ambition résonnent pleinement avec l&#x27;esprit de Re-New. Aussi, nous serions ravis de continuer à vous compter parmi nos « poulains » et d&#x27;explorer ensemble, en dehors du concours principal, d&#x27;autres possibilités d&#x27;accompagnement ou de collaboration adaptées à votre profil et à vos aspirations. Nous prendrons prochainement contact avec vous pour vous proposer un échange sur mesure et faire le point sur les pistes possibles.</p><p id="27236d8d-ca88-8103-9647-c565665f63ae" class="">Encore merci pour votre engagement et votre confiance. N&#x27;hésitez pas à revenir vers nous si vous souhaitez un retour plus détaillé sur votre candidature.</p><p id="27236d8d-ca88-81a4-9b67-e6ae236fc8df" class="">Restant à votre écoute et au plaisir d&#x27;échanger prochainement,</p><p id="27236d8d-ca88-81d2-a5a8-efcefe1bba3a" class="">Cordialement,</p><p id="27236d8d-ca88-81df-ade5-cd4a73960556" class="">L&#x27;équipe Re-New</p><h1 id="27236d8d-ca88-81af-8bae-df404e74a0c2" class=""><mark class="highlight-teal"><strong>Mail – Annonce finale Non-Retenue</strong></mark></h1><p id="27236d8d-ca88-810e-ae2f-f74e99ebf4a3" class="">Objet : Un grand merci pour ta démarche et rendez-vous sur la suite !</p><p id="27236d8d-ca88-818b-8807-ec18ab3e4d6c" class="">Bonjour [Prénom],</p><p id="27236d8d-ca88-81d6-99e4-c98067dc3bb8" class="">Nous avons pris beaucoup de plaisir à découvrir ton parcours et tes idées.</p><p id="27236d8d-ca88-8153-86d9-f67e9a2d5b6b" class="">Notre mission n&#x27;est pas seulement de sélectionner une promotion, mais aussi de créer et d&#x27;animer une communauté de porteurs de projets engagés, même au-delà du processus.</p><p id="27236d8d-ca88-81de-af12-d0d9389ce01d" class="">Cette fois, nous avons dû faire des choix difficiles – ils ne remettent aucunement en cause ta valeur ou ton potentiel.</p><p id="27236d8d-ca88-818c-8e31-f4dd2a315ea9" class="">Tu es sur notre radar et, si tu le désires, nous t&#x27;intégrons à notre cercle élargi (ateliers, rencontres, contenus et re-candidature directe à la prochaine vague).</p><p id="27236d8d-ca88-81a0-8e25-f2db98c144c4" class="">Merci pour ta confiance ; on espère croiser à nouveau ton chemin.</p><p id="27236d8d-ca88-81d4-a820-ceda3cc0a140" class="">Toute la communauté Re-New reste ouverte !</p><p id="27236d8d-ca88-81b8-82c5-de7ddb5cbb82" class="">Avec respect et énergie,</p><p id="27236d8d-ca88-817c-a50b-fd7c4a125011" class="">Amélie et l&#x27;équipe</p></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>
