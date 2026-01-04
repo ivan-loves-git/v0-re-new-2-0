@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, GitBranch, FileText, Compass, UserPlus, ExternalLink } from "lucide-react"
+import { LayoutDashboard, Users, GitBranch, FileText, Compass, UserPlus, ExternalLink, GraduationCap, BookOpen, Mail } from "lucide-react"
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -15,10 +15,13 @@ const navigation = [
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Journey", href: "/journey", icon: Compass },
   { name: "Offers", href: "/offers", icon: FileText },
+  { name: "Emails", href: "/emails", icon: Mail },
+  { name: "Wave Guide", href: "/guide", icon: BookOpen },
 ]
 
-const secondaryNavigation = [
-  { name: "Public Intake", href: "/intake", icon: UserPlus, isHighlighted: true, opensNewTab: true },
+const externalUsersNavigation = [
+  { name: "Learnings", href: "/learnings-test", icon: GraduationCap },
+  { name: "Public Intake", href: "/intake", icon: UserPlus, opensNewTab: true },
 ]
 
 export function Sidebar() {
@@ -64,6 +67,10 @@ export function Sidebar() {
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">
+        {/* Re-New Users Section */}
+        <div className="px-3 mb-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Re-New Users</p>
+        </div>
         {navigation.map((item) => {
           const isActive = getIsActive(item.href)
           return (
@@ -98,11 +105,11 @@ export function Sidebar() {
         {/* Divider */}
         <div className="my-4 border-t border-gray-800" />
 
-        {/* Secondary Navigation - Public Forms */}
+        {/* External Users Navigation */}
         <div className="px-3 mb-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Public Forms</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">External Users (test)</p>
         </div>
-        {secondaryNavigation.map((item) => {
+        {externalUsersNavigation.map((item) => {
           // For items that open in new tab, use <a> tag
           if (item.opensNewTab) {
             return (
@@ -111,12 +118,7 @@ export function Sidebar() {
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(
-                  "relative flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  item.isHighlighted
-                    ? "text-blue-400 hover:bg-blue-900/30 hover:text-blue-300"
-                    : "text-gray-400 hover:bg-gray-800 hover:text-white",
-                )}
+                className="relative flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors text-gray-400 hover:bg-gray-800 hover:text-white"
               >
                 <span className="flex items-center gap-3">
                   <item.icon className="h-5 w-5" />
@@ -134,11 +136,7 @@ export function Sidebar() {
               href={item.href}
               className={cn(
                 "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "text-white"
-                  : item.isHighlighted
-                    ? "text-blue-400 hover:bg-blue-900/30 hover:text-blue-300"
-                    : "text-gray-400 hover:bg-gray-800 hover:text-white",
+                isActive ? "text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white",
               )}
             >
               {isActive && (

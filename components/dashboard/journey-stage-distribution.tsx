@@ -21,6 +21,14 @@ const COLORS = {
   no_stage: "#9ca3af",      // gray-400
 }
 
+const kpiInfo = {
+  journeyStages: {
+    title: "Journey Stage Distribution",
+    description: "Breakdown of repreneurs by their acquisition journey stage: Explorer (curious), Learner (building skills), Ready (prepared to buy), Serial Acquirer (experienced buyer).",
+    why: "Tailor your approach based on journey stage. Explorers need education, Learners need guidance, Ready candidates need opportunities, Serial Acquirers need deal flow.",
+  },
+}
+
 export function JourneyStageDistribution({
   explorerCount,
   learnerCount,
@@ -44,7 +52,7 @@ export function JourneyStageDistribution({
         <CardTitle className="flex items-center gap-2 text-base">
           <Map className="h-5 w-5 text-gray-900" />
           Journey Stages
-          <CardInfoButton info="Distribution of repreneurs across the acquisition journey: Explorer (curious), Learner (building skills), Ready (prepared to buy), Serial Acquirer (experienced)." />
+          <CardInfoButton info={kpiInfo.journeyStages} />
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 overflow-hidden">

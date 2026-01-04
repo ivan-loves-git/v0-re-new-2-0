@@ -24,6 +24,14 @@ interface TopTier1CandidatesProps {
 const ITEMS_PER_PAGE = 5
 const ITEM_HEIGHT = 44 // height of each candidate row in pixels
 
+const kpiInfo = {
+  topTier1: {
+    title: "Tier 1 Score Ranking",
+    description: "Candidates ranked by their Tier 1 readiness score (0-100). Score is calculated from questionnaire responses including experience, leadership, M&A knowledge, and financial capacity.",
+    why: "Quickly identify your most qualified leads. Higher scores indicate better preparation for business acquisition, helping you prioritize outreach and meetings.",
+  },
+}
+
 export function TopTier1Candidates({ candidates, itemsPerPage = ITEMS_PER_PAGE }: TopTier1CandidatesProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const totalPages = Math.ceil(candidates.length / itemsPerPage)
@@ -61,7 +69,7 @@ export function TopTier1Candidates({ candidates, itemsPerPage = ITEMS_PER_PAGE }
         <CardTitle className="flex items-center gap-2 text-base">
           <Trophy className="h-5 w-5 text-gray-900" />
           Top Tier 1
-          <CardInfoButton info="Tier 1 score is calculated from questionnaire responses: experience, leadership, M&A knowledge, readiness, and financial capacity." />
+          <CardInfoButton info={kpiInfo.topTier1} />
         </CardTitle>
         <CardLinkButton href="/pipeline" tooltip="View Pipeline" />
       </CardHeader>

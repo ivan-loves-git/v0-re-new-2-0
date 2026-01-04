@@ -38,6 +38,14 @@ interface EnhancedChartProps {
   activitiesData: Array<{ created_at: string }>
 }
 
+const kpiInfo = {
+  pipelineTrends: {
+    title: "Pipeline & Activity Trends",
+    description: "Weekly view combining cumulative repreneur growth (blue area) with activity volume (orange line). Navigate with arrows or select custom date range.",
+    why: "Correlate activity with growth. Weeks with high activity should drive future growth. If activity is high but growth is flat, investigate lead quality or conversion issues.",
+  },
+}
+
 export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartProps) {
   // Default to last 8 weeks
   const [endDate, setEndDate] = useState<Date>(endOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -109,7 +117,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
             <TrendingUp className="h-5 w-5 text-gray-900" />
             <span className="hidden sm:inline">Pipeline & Activity Trends</span>
             <span className="sm:hidden">Trends</span>
-            <CardInfoButton info="Weekly view showing cumulative repreneurs (blue area) and activity count (orange line). Use arrows to navigate or calendar to select date range." />
+            <CardInfoButton info={kpiInfo.pipelineTrends} />
           </CardTitle>
 
           <div className="flex items-center gap-1 sm:gap-2">

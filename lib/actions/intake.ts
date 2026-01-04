@@ -3,6 +3,13 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
+import { sendEmail, wasEmailSent } from "@/lib/email"
+import { WelcomeEmail } from "@/lib/email/templates/welcome"
+import { ThankYouEmail } from "@/lib/email/templates/thank-you"
+import { HighScoreAlertEmail } from "@/lib/email/templates/high-score-alert"
+
+// High score threshold for alert email
+const HIGH_SCORE_THRESHOLD = 70
 
 // Return type for all intake actions
 type IntakeResult<T = unknown> =
@@ -65,6 +72,37 @@ export async function createIntakeDraft(data: {
       return { success: false, error: "Failed to save your information. Please try again." }
     }
 
+    // Send welcome email (async, don't block the response)
+    sendEmail({
+      to: data.email.toLowerCase().trim(),
+      subject: "Bienvenue chez Re-New!",
+      repreneurId: repreneur.id,
+      templateKey: "welcome",
+      react: WelcomeEmail({
+        repreneur: {
+          id: repreneur.id,
+          firstName: data.first_name.trim(),
+          lastName: data.last_name.trim(),
+          email: data.email.toLowerCase().trim(),
+        },
+      }),
+    }).catch((err) => {
+      console.error("Failed to send welcome email:", err)
+    })
+
+    // Create abandonment tracking record
+    supabase
+      .from("intake_abandonment_tracking")
+      .insert({
+        repreneur_id: repreneur.id,
+        last_step_completed: 1,
+        last_activity_at: new Date().toISOString(),
+      })
+      .then(() => {})
+      .catch((err) => {
+        console.error("Failed to create abandonment tracking:", err)
+      })
+
     return { success: true, data: { id: repreneur.id, isExisting: false } }
   } catch (err) {
     console.error("Unexpected error in createIntakeDraft:", err)
@@ -104,6 +142,19 @@ export async function updateIntakeBackground(
       return { success: false, error: "Failed to save your background information." }
     }
 
+    // Update abandonment tracking
+    supabase
+      .from("intake_abandonment_tracking")
+      .update({
+        last_step_completed: 2,
+        last_activity_at: new Date().toISOString(),
+      })
+      .eq("repreneur_id", id)
+      .then(() => {})
+      .catch((err) => {
+        console.error("Failed to update abandonment tracking:", err)
+      })
+
     return { success: true, data: null }
   } catch (err) {
     console.error("Unexpected error in updateIntakeBackground:", err)
@@ -140,6 +191,19 @@ export async function updateIntakeMAExperience(
       console.error("Error updating intake M&A experience:", error)
       return { success: false, error: "Failed to save your M&A experience." }
     }
+
+    // Update abandonment tracking
+    supabase
+      .from("intake_abandonment_tracking")
+      .update({
+        last_step_completed: 3,
+        last_activity_at: new Date().toISOString(),
+      })
+      .eq("repreneur_id", id)
+      .then(() => {})
+      .catch((err) => {
+        console.error("Failed to update abandonment tracking:", err)
+      })
 
     return { success: true, data: null }
   } catch (err) {
@@ -182,6 +246,19 @@ export async function updateIntakeGoals(
       console.error("Error updating intake goals:", error)
       return { success: false, error: "Failed to save your acquisition goals." }
     }
+
+    // Update abandonment tracking
+    supabase
+      .from("intake_abandonment_tracking")
+      .update({
+        last_step_completed: 4,
+        last_activity_at: new Date().toISOString(),
+      })
+      .eq("repreneur_id", id)
+      .then(() => {})
+      .catch((err) => {
+        console.error("Failed to update abandonment tracking:", err)
+      })
 
     return { success: true, data: null }
   } catch (err) {
@@ -278,6 +355,66 @@ export async function completeIntake(
     revalidatePath("/repreneurs")
     revalidatePath("/pipeline")
     revalidatePath("/dashboard")
+
+    // Get repreneur info for emails
+    const { data: repreneurData } = await supabase
+      .from("repreneurs")
+      .select("first_name, last_name, email")
+      .eq("id", id)
+      .single()
+
+    if (repreneurData) {
+      const emailData = {
+        id,
+        firstName: repreneurData.first_name,
+        lastName: repreneurData.last_name,
+        email: repreneurData.email,
+      }
+
+      // Send thank you email
+      sendEmail({
+        to: repreneurData.email,
+        subject: "Merci pour votre inscription chez Re-New!",
+        repreneurId: id,
+        templateKey: "thank_you",
+        react: ThankYouEmail({
+          repreneur: emailData,
+          metadata: { tier1Score: scoreBreakdown.total },
+        }),
+      }).catch((err) => {
+        console.error("Failed to send thank you email:", err)
+      })
+
+      // Send high score alert if score >= 70
+      if (scoreBreakdown.total >= HIGH_SCORE_THRESHOLD) {
+        sendEmail({
+          to: repreneurData.email,
+          subject: "Votre profil Re-New se demarque!",
+          repreneurId: id,
+          templateKey: "high_score_alert",
+          react: HighScoreAlertEmail({
+            repreneur: emailData,
+            metadata: { tier1Score: scoreBreakdown.total },
+          }),
+        }).catch((err) => {
+          console.error("Failed to send high score alert email:", err)
+        })
+      }
+    }
+
+    // Mark abandonment tracking as completed
+    supabase
+      .from("intake_abandonment_tracking")
+      .update({
+        is_completed: true,
+        last_step_completed: 5,
+        last_activity_at: new Date().toISOString(),
+      })
+      .eq("repreneur_id", id)
+      .then(() => {})
+      .catch((err) => {
+        console.error("Failed to mark abandonment tracking as completed:", err)
+      })
 
     return { success: true, data: { score: scoreBreakdown.total } }
   } catch (err) {

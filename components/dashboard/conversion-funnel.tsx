@@ -11,6 +11,14 @@ interface ConversionFunnelProps {
   compact?: boolean
 }
 
+const kpiInfo = {
+  conversionFunnel: {
+    title: "Conversion Funnel",
+    description: "Visual representation of your pipeline stages. Width shows relative size at each stage. Conversion rates at the bottom show percentage moving between stages.",
+    why: "Identify pipeline bottlenecks. Low Lead to Qualified rate may indicate qualification criteria issues. Low Qualified to Client rate suggests offer or closing problems.",
+  },
+}
+
 export function ConversionFunnel({ leadCount, qualifiedCount, clientCount, compact = false }: ConversionFunnelProps) {
   const total = leadCount + qualifiedCount + clientCount
 
@@ -44,7 +52,7 @@ export function ConversionFunnel({ leadCount, qualifiedCount, clientCount, compa
         <CardTitle className="flex items-center gap-2 text-base">
           <Filter className="h-5 w-5 text-gray-900" />
           Conversion Funnel
-          <CardInfoButton info="Shows pipeline progression from Lead to Qualified to Client, with conversion rates between each stage." />
+          <CardInfoButton info={kpiInfo.conversionFunnel} />
         </CardTitle>
       </CardHeader>
       <CardContent className={compact ? "pt-0" : ""}>
@@ -62,8 +70,8 @@ export function ConversionFunnel({ leadCount, qualifiedCount, clientCount, compa
           ))}
         </div>
         <div className={`${compact ? "mt-2 pt-2" : "mt-4 pt-3"} border-t flex justify-between text-xs text-gray-500`}>
-          <span>Lead → Qualified: <strong className="text-gray-700">{qualifiedCount + clientCount > 0 ? Math.round(((qualifiedCount + clientCount) / total) * 100) : 0}%</strong></span>
-          <span>Qualified → Client: <strong className="text-gray-700">{qualifiedToClient}%</strong></span>
+          <span>Lead to Qualified: <strong className="text-gray-700">{qualifiedCount + clientCount > 0 ? Math.round(((qualifiedCount + clientCount) / total) * 100) : 0}%</strong></span>
+          <span>Qualified to Client: <strong className="text-gray-700">{qualifiedToClient}%</strong></span>
         </div>
       </CardContent>
     </Card>

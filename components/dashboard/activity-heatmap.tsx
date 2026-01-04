@@ -22,6 +22,14 @@ interface ActivityHeatmapProps {
   activityData: DayActivity[]
 }
 
+const kpiInfo = {
+  activityHeatmap: {
+    title: "Activity Heatmap",
+    description: "12-month calendar view of daily activity. Each square represents a day. Color intensity shows activity volume (new repreneurs + logged activities).",
+    why: "Spot patterns in your business rhythm. Identify slow periods, peak days, and seasonal trends. Helps with resource planning and performance monitoring.",
+  },
+}
+
 export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
   // Create a map for quick lookup
   const activityMap = new Map<string, DayActivity>()
@@ -108,7 +116,7 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
             <CalendarDays className="h-5 w-5" />
             <span className="hidden sm:inline">Activity Heatmap</span>
             <span className="sm:hidden">Heatmap</span>
-            <CardInfoButton info="Shows daily activity over the last 12 months. Darker squares = more activity (new repreneurs added + logged activities like calls, meetings, interviews)." />
+            <CardInfoButton info={kpiInfo.activityHeatmap} />
           </CardTitle>
           <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
             <span>{totalActivities} total</span>

@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import type { Repreneur_Insert, LifecycleStatus, PersonaType } from "@/lib/types/repreneur"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
+import { sendEmail } from "@/lib/email"
+import { RejectionEmail } from "@/lib/email/templates/rejection"
 
 export async function createRepreneur(formData: FormData) {
   const supabase = await createServerClient()
@@ -310,6 +312,32 @@ export async function rejectRepreneur(id: string) {
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  // Send rejection email
+  const { data: repreneurData } = await supabase
+    .from("repreneurs")
+    .select("first_name, last_name, email")
+    .eq("id", id)
+    .single()
+
+  if (repreneurData) {
+    sendEmail({
+      to: repreneurData.email,
+      subject: "Mise à jour concernant votre candidature Re-New",
+      repreneurId: id,
+      templateKey: "rejection",
+      react: RejectionEmail({
+        repreneur: {
+          id,
+          firstName: repreneurData.first_name,
+          lastName: repreneurData.last_name,
+          email: repreneurData.email,
+        },
+      }),
+    }).catch((err) => {
+      console.error("Failed to send rejection email:", err)
+    })
   }
 
   revalidatePath("/repreneurs")

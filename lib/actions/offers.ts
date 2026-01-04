@@ -4,6 +4,11 @@ import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import type { Offer_Insert, OfferStatus, MilestoneType } from "@/lib/types/offer"
+import { sendEmail } from "@/lib/email"
+import { OfferReceivedEmail } from "@/lib/email/templates/offer-received"
+import { OfferAcceptedEmail } from "@/lib/email/templates/offer-accepted"
+import { OfferActivatedEmail } from "@/lib/email/templates/offer-activated"
+import { MilestoneCompletedEmail } from "@/lib/email/templates/milestone-completed"
 
 export async function createOffer(formData: FormData) {
   const supabase = await createServerClient()
@@ -107,6 +112,41 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
     throw new Error(statusError.message)
   }
 
+  // Send offer received email
+  const { data: repreneurData } = await supabase
+    .from("repreneurs")
+    .select("first_name, last_name, email")
+    .eq("id", repreneurId)
+    .single()
+
+  const { data: offerData } = await supabase
+    .from("offers")
+    .select("name")
+    .eq("id", offerId)
+    .single()
+
+  if (repreneurData && offerData) {
+    sendEmail({
+      to: repreneurData.email,
+      subject: `Nouvelle offre Re-New: ${offerData.name}`,
+      repreneurId,
+      templateKey: "offer_received",
+      react: OfferReceivedEmail({
+        repreneur: {
+          id: repreneurId,
+          firstName: repreneurData.first_name,
+          lastName: repreneurData.last_name,
+          email: repreneurData.email,
+        },
+        metadata: {
+          offerName: offerData.name,
+        },
+      }),
+    }).catch((err) => {
+      console.error("Failed to send offer received email:", err)
+    })
+  }
+
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/offers")
   revalidatePath("/repreneurs")
@@ -143,6 +183,64 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  // Send email for accepted/activated status changes
+  if (newStatus === "accepted" || newStatus === "active") {
+    const { data: repreneurData } = await supabase
+      .from("repreneurs")
+      .select("first_name, last_name, email")
+      .eq("id", repreneurId)
+      .single()
+
+    const { data: offerInfo } = await supabase
+      .from("repreneur_offers")
+      .select("offer:offers(name)")
+      .eq("id", repreneurOfferId)
+      .single()
+
+    if (repreneurData && offerInfo?.offer) {
+      const offerName = (offerInfo.offer as { name: string }).name
+      const emailData = {
+        id: repreneurId,
+        firstName: repreneurData.first_name,
+        lastName: repreneurData.last_name,
+        email: repreneurData.email,
+      }
+
+      if (newStatus === "accepted") {
+        // User accepted the offer
+        sendEmail({
+          to: repreneurData.email,
+          subject: `Félicitations! Vous avez accepté l'offre ${offerName}`,
+          repreneurId,
+          templateKey: "offer_accepted",
+          react: OfferAcceptedEmail({
+            repreneur: emailData,
+            metadata: { offerName },
+          }),
+        }).catch((err) => {
+          console.error("Failed to send offer accepted email:", err)
+        })
+      } else {
+        // Offer was directly activated
+        sendEmail({
+          to: repreneurData.email,
+          subject: `Votre accompagnement ${offerName} est activé!`,
+          repreneurId,
+          templateKey: "offer_activated",
+          react: OfferActivatedEmail({
+            repreneur: emailData,
+            metadata: {
+              offerName,
+              startDate: new Date().toLocaleDateString("fr-FR"),
+            },
+          }),
+        }).catch((err) => {
+          console.error("Failed to send offer activated email:", err)
+        })
+      }
+    }
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
@@ -222,6 +320,46 @@ export async function toggleMilestoneComplete(
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  // Send milestone completed email only when marking as complete
+  if (isCompleted) {
+    const { data: milestoneData } = await supabase
+      .from("offer_milestones")
+      .select("title, repreneur_offer:repreneur_offers(offer:offers(name))")
+      .eq("id", milestoneId)
+      .single()
+
+    const { data: repreneurData } = await supabase
+      .from("repreneurs")
+      .select("first_name, last_name, email")
+      .eq("id", repreneurId)
+      .single()
+
+    if (repreneurData && milestoneData) {
+      const offerName = (milestoneData.repreneur_offer as { offer: { name: string } })?.offer?.name || "votre accompagnement"
+
+      sendEmail({
+        to: repreneurData.email,
+        subject: `Bravo! Jalon complété: ${milestoneData.title}`,
+        repreneurId,
+        templateKey: "milestone_completed",
+        react: MilestoneCompletedEmail({
+          repreneur: {
+            id: repreneurId,
+            firstName: repreneurData.first_name,
+            lastName: repreneurData.last_name,
+            email: repreneurData.email,
+          },
+          metadata: {
+            milestoneName: milestoneData.title,
+            offerName,
+          },
+        }),
+      }).catch((err) => {
+        console.error("Failed to send milestone completed email:", err)
+      })
+    }
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
