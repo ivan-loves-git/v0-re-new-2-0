@@ -75,7 +75,14 @@ export function ManualSend() {
           message: `[TEST] Email "${TEMPLATE_METADATA[selectedTemplate!].name}" sent to ${testEmail}`,
         })
       } else {
-        await sendManualEmail(selectedRepreneur!.id, selectedTemplate!)
+        const manualResult = await sendManualEmail(selectedRepreneur!.id, selectedTemplate!)
+        if (!manualResult.success) {
+          setResult({
+            success: false,
+            message: `Error: ${manualResult.message}`,
+          })
+          return
+        }
         setResult({
           success: true,
           message: `Email "${TEMPLATE_METADATA[selectedTemplate!].name}" sent to ${selectedRepreneur!.email}`,

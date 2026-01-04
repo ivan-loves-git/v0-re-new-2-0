@@ -309,7 +309,7 @@ export async function sendManualEmail(
       throw new Error(`Unknown template: ${templateKey}`)
   }
 
-  await sendEmail({
+  const result = await sendEmail({
     to: repreneur.email,
     subject,
     repreneurId: repreneur.id,
@@ -319,7 +319,11 @@ export async function sendManualEmail(
 
   revalidatePath("/emails")
 
-  return { success: true }
+  if (!result.success) {
+    return { success: false, message: result.error || "Failed to send email" }
+  }
+
+  return { success: true, message: `Email sent to ${repreneur.email}` }
 }
 
 /**
