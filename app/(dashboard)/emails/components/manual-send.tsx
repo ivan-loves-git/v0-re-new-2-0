@@ -62,7 +62,14 @@ export function ManualSend() {
 
     try {
       if (testMode) {
-        await sendTestEmail(testEmail, testFirstName || "Test", selectedTemplate!)
+        const testResult = await sendTestEmail(testEmail, testFirstName || "Test", selectedTemplate!)
+        if (!testResult.success) {
+          setResult({
+            success: false,
+            message: `Error: ${testResult.message}`,
+          })
+          return
+        }
         setResult({
           success: true,
           message: `[TEST] Email "${TEMPLATE_METADATA[selectedTemplate!].name}" sent to ${testEmail}`,

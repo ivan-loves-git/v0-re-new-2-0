@@ -325,16 +325,17 @@ export async function sendManualEmail(
 /**
  * Send a test email to any email address (for testing templates)
  * Does NOT log to database - for testing only
+ * Returns result object instead of throwing to avoid Next.js error sanitization
  */
 export async function sendTestEmail(
   email: string,
   firstName: string,
   templateKey: EmailTemplateKey
-) {
+): Promise<{ success: boolean; message: string }> {
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
-    throw new Error("Invalid email address")
+    return { success: false, message: "Invalid email address" }
   }
 
   const emailData = {
@@ -400,7 +401,7 @@ export async function sendTestEmail(
       subject = "[TEST] Update on Your Application"
       break
     default:
-      throw new Error(`Unknown template: ${templateKey}`)
+      return { success: false, message: `Unknown template: ${templateKey}` }
   }
 
   // Use sendEmailDirect to send without logging
@@ -412,7 +413,7 @@ export async function sendTestEmail(
   })
 
   if (!result.success) {
-    throw new Error(result.error || "Failed to send email")
+    return { success: false, message: result.error || "Failed to send email" }
   }
 
   return { success: true, message: `Test email sent to ${email}` }
