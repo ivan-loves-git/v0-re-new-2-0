@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
@@ -130,12 +131,16 @@ export function Sidebar() {
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
-        <div className="flex flex-col">
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <span className="w-6 text-center">{isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}</span>
-            Wave
-          </h1>
-          <p className="text-xs text-gray-400 pl-8">the repreneur CRM</p>
+        <div className="flex items-center gap-2">
+          <span className="w-6 text-center text-xl">{isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}</span>
+          <Image
+            src="/wave-logo.png"
+            alt="Wave - the repreneur CRM"
+            width={120}
+            height={40}
+            className="h-auto"
+            priority
+          />
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">
