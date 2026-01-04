@@ -4,11 +4,9 @@ import { Resend } from "resend"
 // API key must be set in environment variables
 const resendApiKey = process.env.RESEND_API_KEY
 
-if (!resendApiKey) {
-  console.warn("RESEND_API_KEY is not set. Email sending will fail.")
-}
-
-export const resend = new Resend(resendApiKey)
+// Use placeholder during build to prevent errors
+// Runtime checks in send-email.ts will catch missing key
+export const resend = new Resend(resendApiKey || "re_placeholder_for_build")
 
 // Default from email - must be verified in Resend dashboard
 export const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@re-new.com"
