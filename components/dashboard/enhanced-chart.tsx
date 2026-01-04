@@ -134,7 +134,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
             {/* Date picker */}
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1 sm:gap-2 px-2 sm:px-3">
+                <Button variant="outline" size="sm" className="h-8 gap-1 sm:gap-2 px-2 sm:px-3" suppressHydrationWarning>
                   <Calendar className="h-4 w-4" />
                   <span className="text-xs hidden sm:inline">
                     {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
