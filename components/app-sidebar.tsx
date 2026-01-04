@@ -17,7 +17,6 @@ import {
   Target,
   BookOpen,
   Map,
-  ClipboardList,
   ChevronsUpDown,
   LogOut,
   Settings,
@@ -64,7 +63,6 @@ const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
   { name: "Roadmap", href: "/guide/roadmap", icon: Map },
-  { name: "To Do", href: "/guide/todo", icon: ClipboardList },
 ]
 
 const externalUsersNavigation = [
