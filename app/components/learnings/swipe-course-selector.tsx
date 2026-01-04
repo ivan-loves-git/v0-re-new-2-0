@@ -3,13 +3,15 @@
 import { useState, useRef, useEffect } from "react"
 import { motion, useMotionValue, animate, PanInfo, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Check, Lock, Trophy, Target, ChevronLeft, ChevronRight } from "lucide-react"
+import { Check, Lock, Trophy, Target, ChevronLeft, ChevronRight, Clock, FileText } from "lucide-react"
 
 // Course data structure
 interface Lesson {
   id: string
   title: string
   status: "completed" | "current" | "locked"
+  durationMin: number
+  resources: number
 }
 
 interface Course {
@@ -29,10 +31,10 @@ const courses: Course[] = [
     color: "blue",
     recommended: true,
     lessons: [
-      { id: "capacity", title: "Assess Your Investment Capacity", status: "completed" },
-      { id: "funding", title: "Explore Funding Options", status: "completed" },
-      { id: "structure", title: "Deal Structure Basics", status: "current" },
-      { id: "projections", title: "Financial Projections", status: "locked" },
+      { id: "capacity", title: "Assess Your Investment Capacity", status: "completed", durationMin: 12, resources: 3 },
+      { id: "funding", title: "Explore Funding Options", status: "completed", durationMin: 18, resources: 5 },
+      { id: "structure", title: "Deal Structure Basics", status: "current", durationMin: 15, resources: 4 },
+      { id: "projections", title: "Financial Projections", status: "locked", durationMin: 20, resources: 6 },
     ],
   },
   {
@@ -41,10 +43,10 @@ const courses: Course[] = [
     level: "Module 2",
     color: "yellow",
     lessons: [
-      { id: "checklist", title: "Due Diligence Checklist", status: "completed" },
-      { id: "financials", title: "Analyzing Financial Statements", status: "current" },
-      { id: "legal", title: "Legal & Compliance Review", status: "locked" },
-      { id: "operations", title: "Operational Assessment", status: "locked" },
+      { id: "checklist", title: "Due Diligence Checklist", status: "completed", durationMin: 10, resources: 2 },
+      { id: "financials", title: "Analyzing Financial Statements", status: "current", durationMin: 25, resources: 7 },
+      { id: "legal", title: "Legal & Compliance Review", status: "locked", durationMin: 20, resources: 4 },
+      { id: "operations", title: "Operational Assessment", status: "locked", durationMin: 18, resources: 5 },
     ],
   },
   {
@@ -54,10 +56,10 @@ const courses: Course[] = [
     color: "purple",
     recommended: true,
     lessons: [
-      { id: "valuation", title: "Company Valuation Methods", status: "current" },
-      { id: "loi", title: "Letter of Intent (LOI)", status: "locked" },
-      { id: "terms", title: "Negotiating Deal Terms", status: "locked" },
-      { id: "closing", title: "Closing the Transaction", status: "locked" },
+      { id: "valuation", title: "Company Valuation Methods", status: "current", durationMin: 22, resources: 6 },
+      { id: "loi", title: "Letter of Intent (LOI)", status: "locked", durationMin: 15, resources: 3 },
+      { id: "terms", title: "Negotiating Deal Terms", status: "locked", durationMin: 20, resources: 5 },
+      { id: "closing", title: "Closing the Transaction", status: "locked", durationMin: 25, resources: 8 },
     ],
   },
   {
@@ -66,10 +68,10 @@ const courses: Course[] = [
     level: "Module 4",
     color: "green",
     lessons: [
-      { id: "day1", title: "First 100 Days Plan", status: "locked" },
-      { id: "team", title: "Managing the Existing Team", status: "locked" },
-      { id: "culture", title: "Culture Integration", status: "locked" },
-      { id: "growth", title: "Growth Strategy Execution", status: "locked" },
+      { id: "day1", title: "First 100 Days Plan", status: "locked", durationMin: 18, resources: 4 },
+      { id: "team", title: "Managing the Existing Team", status: "locked", durationMin: 15, resources: 3 },
+      { id: "culture", title: "Culture Integration", status: "locked", durationMin: 12, resources: 2 },
+      { id: "growth", title: "Growth Strategy Execution", status: "locked", durationMin: 20, resources: 5 },
     ],
   },
 ]
@@ -81,6 +83,8 @@ const colorConfig = {
     light: "#EFF6FF",
     dot: "#3B82F6",
     button: "bg-blue-500 hover:bg-blue-600",
+    arrow: "bg-blue-500/80 hover:bg-blue-600",
+    arrowDisabled: "bg-blue-500/30",
     levelText: "text-blue-600",
     illustration: "from-blue-400 to-blue-600",
   },
@@ -89,6 +93,8 @@ const colorConfig = {
     light: "#FFFBEB",
     dot: "#F59E0B",
     button: "bg-amber-400 hover:bg-amber-500",
+    arrow: "bg-amber-400/80 hover:bg-amber-500",
+    arrowDisabled: "bg-amber-400/30",
     levelText: "text-amber-600",
     illustration: "from-amber-300 to-amber-500",
   },
@@ -97,6 +103,8 @@ const colorConfig = {
     light: "#F5F3FF",
     dot: "#8B5CF6",
     button: "bg-purple-500 hover:bg-purple-600",
+    arrow: "bg-purple-500/80 hover:bg-purple-600",
+    arrowDisabled: "bg-purple-500/30",
     levelText: "text-purple-600",
     illustration: "from-purple-400 to-purple-600",
   },
@@ -105,6 +113,8 @@ const colorConfig = {
     light: "#ECFDF5",
     dot: "#10B981",
     button: "bg-emerald-500 hover:bg-emerald-600",
+    arrow: "bg-emerald-500/80 hover:bg-emerald-600",
+    arrowDisabled: "bg-emerald-500/30",
     levelText: "text-emerald-600",
     illustration: "from-emerald-400 to-emerald-600",
   },
@@ -207,7 +217,7 @@ function LessonItem({ lesson, color }: { lesson: Lesson; color: Course["color"] 
       <div className="flex items-center gap-3">
         {/* Icon circle */}
         <div className={cn(
-          "w-12 h-12 rounded-full flex items-center justify-center",
+          "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
           lesson.status === "completed" && "bg-gradient-to-br from-green-400 to-green-500",
           lesson.status === "current" && "bg-gradient-to-br from-gray-100 to-gray-200 ring-2 ring-green-500 ring-offset-2",
           lesson.status === "locked" && "bg-gray-100"
@@ -228,14 +238,19 @@ function LessonItem({ lesson, color }: { lesson: Lesson; color: Course["color"] 
         </span>
       </div>
 
-      {/* Status indicator */}
+      {/* Duration & Resources */}
       <div className={cn(
-        "w-5 h-5 rounded-full",
-        lesson.status === "completed" && "bg-blue-500 flex items-center justify-center",
-        lesson.status === "current" && "bg-gray-200",
-        lesson.status === "locked" && "bg-gray-200"
+        "flex items-center gap-3 text-xs flex-shrink-0",
+        lesson.status === "locked" ? "text-gray-400" : "text-gray-500"
       )}>
-        {lesson.status === "completed" && <Check className="w-3 h-3 text-white" />}
+        <span className="flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5" />
+          {lesson.durationMin}m
+        </span>
+        <span className="flex items-center gap-1">
+          <FileText className="w-3.5 h-3.5" />
+          {lesson.resources}
+        </span>
       </div>
     </div>
   )
@@ -408,32 +423,32 @@ export function SwipeCourseSelector() {
 
         {/* SWIPEABLE SECTION: Illustration with Navigation Arrows */}
         <div className="relative h-72 my-6">
-          {/* Left Arrow - aligned with illustration */}
+          {/* Left Arrow - aligned with illustration, dynamic color */}
           <button
             onClick={goPrev}
             disabled={currentIndex === 0}
             className={cn(
               "absolute -left-6 top-1/2 -translate-y-1/2 z-30",
               "w-10 h-32 rounded-3xl flex items-center justify-center",
-              "bg-blue-500/80 hover:bg-blue-600 text-white",
-              "transition-all duration-200 shadow-lg",
-              currentIndex === 0 && "opacity-30 cursor-not-allowed hover:bg-blue-500/80"
+              "text-white transition-all duration-200 shadow-lg",
+              currentIndex === 0 ? config.arrowDisabled : config.arrow,
+              currentIndex === 0 && "cursor-not-allowed"
             )}
             aria-label="Previous module"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
 
-          {/* Right Arrow - aligned with illustration */}
+          {/* Right Arrow - aligned with illustration, dynamic color */}
           <button
             onClick={goNext}
             disabled={currentIndex === courses.length - 1}
             className={cn(
               "absolute -right-6 top-1/2 -translate-y-1/2 z-30",
               "w-10 h-32 rounded-3xl flex items-center justify-center",
-              "bg-blue-500/80 hover:bg-blue-600 text-white",
-              "transition-all duration-200 shadow-lg",
-              currentIndex === courses.length - 1 && "opacity-30 cursor-not-allowed hover:bg-blue-500/80"
+              "text-white transition-all duration-200 shadow-lg",
+              currentIndex === courses.length - 1 ? config.arrowDisabled : config.arrow,
+              currentIndex === courses.length - 1 && "cursor-not-allowed"
             )}
             aria-label="Next module"
           >
