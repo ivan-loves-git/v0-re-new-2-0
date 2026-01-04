@@ -7,57 +7,56 @@ export function RejectionEmail({ repreneur }: RejectionEmailProps) {
   const { firstName } = repreneur
 
   return (
-    <BaseLayout previewText={`${firstName}, mise a jour concernant votre candidature Re-New`}>
-      <Text style={heading}>Mise a jour de votre dossier</Text>
+    <BaseLayout previewText={`${firstName}, update regarding your Re-New application`}>
+      <Text style={heading}>Update on Your Application</Text>
 
       <Text style={paragraph}>
-        Bonjour {firstName},
+        Dear {firstName},
       </Text>
 
       <Text style={paragraph}>
-        Apres examen attentif de votre profil, nous avons le regret de vous
-        informer que nous ne sommes pas en mesure de poursuivre votre
-        accompagnement pour le moment.
+        After careful review of your profile, we regret to inform you that
+        we are not able to continue your support at this time.
       </Text>
 
       <Text style={paragraph}>
-        Cette decision ne remet pas en cause la qualite de votre projet. Elle
-        peut etre liee a plusieurs facteurs:
+        This decision does not reflect the quality of your project. It may
+        be related to several factors:
       </Text>
 
       <Text style={paragraph}>
-        • Le timing de votre projet
+        • The timing of your project
         <br />
-        • L&apos;adequation avec nos offres actuelles
-        <br />• Des criteres specifiques a notre programme
+        • Alignment with our current offerings
+        <br />• Specific criteria of our program
       </Text>
 
       <Text style={paragraph}>
-        Nous vous encourageons a continuer votre parcours entrepreneurial.
-        Votre profil reste dans notre base de donnees et nous n&apos;hesiterons
-        pas a vous recontacter si une opportunite correspondant mieux a votre
-        situation se presente.
+        We encourage you to continue your entrepreneurial journey. Your
+        profile remains in our database, and we will not hesitate to
+        contact you if an opportunity better suited to your situation
+        arises.
       </Text>
 
       <Text style={paragraph}>
-        En attendant, n&apos;hesitez pas a explorer d&apos;autres ressources
-        pour avancer dans votre projet:
+        In the meantime, feel free to explore other resources to advance
+        your project:
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
         <Link href="https://re-new.com/resources" style={button}>
-          Ressources et conseils
+          Resources and Tips
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        Nous vous souhaitons plein succes dans vos projets.
+        We wish you great success in your endeavors.
       </Text>
 
       <Text style={paragraph}>
-        Cordialement,
+        Best regards,
         <br />
-        L&apos;equipe Re-New
+        The Re-New Team
       </Text>
     </BaseLayout>
   )

@@ -8,49 +8,48 @@ export function HighScoreAlertEmail({ repreneur, metadata }: HighScoreAlertEmail
   const tier1Score = metadata?.tier1Score || 0
 
   return (
-    <BaseLayout previewText={`${firstName}, votre profil se demarque!`}>
-      <Text style={heading}>Excellente nouvelle {firstName}!</Text>
+    <BaseLayout previewText={`${firstName}, your profile stands out!`}>
+      <Text style={heading}>Excellent news {firstName}!</Text>
 
       <Text style={paragraph}>
-        Votre profil a obtenu un score de maturite exceptionnellement eleve!
+        Your profile has achieved an exceptionally high readiness score!
       </Text>
 
       <Section style={highlight}>
         <Text style={{ textAlign: "center", color: "#6b7280", margin: "0 0 8px 0" }}>
-          Votre score
+          Your Score
         </Text>
         <Text style={highlightText}>{tier1Score}/100</Text>
         <Text style={{ textAlign: "center", color: "#16a34a", margin: "8px 0 0 0", fontWeight: "bold" }}>
-          ⭐ Profil Premium
+          Premium Profile
         </Text>
       </Section>
 
       <Text style={paragraph}>
-        Ce score exceptionnel indique que vous etes particulierement bien
-        prepare pour votre projet de reprise d&apos;entreprise. Notre equipe va
-        vous contacter en priorite pour vous presenter des opportunites
-        exclusives.
+        This exceptional score indicates that you are particularly well
+        prepared for your business acquisition project. Our team will
+        contact you as a priority to present exclusive opportunities.
       </Text>
 
-      <Text style={paragraph}>Ce que cela signifie pour vous:</Text>
+      <Text style={paragraph}>What this means for you:</Text>
 
       <Text style={paragraph}>
-        ✓ Acces prioritaire aux nouvelles opportunites
+        Priority access to new opportunities
         <br />
-        ✓ Accompagnement personnalise
-        <br />✓ Mise en relation avec notre reseau premium
+        Personalized support
+        <br />Connection to our premium network
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
         <Link href="https://re-new.com" style={button}>
-          Voir mon profil
+          View My Profile
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        A tres bientot,
+        See you very soon,
         <br />
-        L&apos;equipe Re-New
+        The Re-New Team
       </Text>
     </BaseLayout>
   )

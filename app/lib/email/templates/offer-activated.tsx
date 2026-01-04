@@ -5,16 +5,16 @@ import type { OfferActivatedEmailProps } from "@/lib/types/email"
 
 export function OfferActivatedEmail({ repreneur, metadata }: OfferActivatedEmailProps) {
   const { firstName } = repreneur
-  const offerName = metadata?.offerName || "votre accompagnement"
-  const startDate = metadata?.startDate || new Date().toLocaleDateString("fr-FR")
+  const offerName = metadata?.offerName || "your engagement"
+  const startDate = metadata?.startDate || new Date().toLocaleDateString("en-US")
 
   return (
-    <BaseLayout previewText={`${firstName}, votre accompagnement Re-New demarre!`}>
-      <Text style={heading}>C&apos;est parti {firstName}!</Text>
+    <BaseLayout previewText={`${firstName}, your Re-New engagement begins!`}>
+      <Text style={heading}>Let's go {firstName}!</Text>
 
       <Text style={paragraph}>
-        Votre accompagnement est maintenant actif. Votre aventure Re-New
-        commence officiellement!
+        Your engagement is now active. Your Re-New journey
+        officially begins!
       </Text>
 
       <Section style={highlight}>
@@ -22,41 +22,41 @@ export function OfferActivatedEmail({ repreneur, metadata }: OfferActivatedEmail
           {offerName}
         </Text>
         <Text style={{ textAlign: "center", color: "#2563eb", margin: "8px 0 0 0" }}>
-          Active depuis le {startDate}
+          Active since {startDate}
         </Text>
       </Section>
 
       <Text style={paragraph}>
-        Vous avez maintenant acces a l&apos;ensemble des ressources et services
-        inclus dans votre accompagnement.
+        You now have access to all the resources and services
+        included in your engagement.
       </Text>
 
-      <Text style={paragraph}>Ce que vous pouvez faire maintenant:</Text>
+      <Text style={paragraph}>What you can do now:</Text>
 
       <Text style={paragraph}>
-        ✓ Consulter votre tableau de bord personnalise
+        View your personalized dashboard
         <br />
-        ✓ Suivre vos etapes et jalons
+        Track your milestones and progress
         <br />
-        ✓ Acceder aux ressources exclusives
-        <br />✓ Contacter votre conseiller dedie
+        Access exclusive resources
+        <br />Contact your dedicated advisor
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
         <Link href="https://re-new.com/dashboard" style={button}>
-          Acceder a mon espace
+          Access My Dashboard
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        Notre equipe reste a votre disposition pour vous accompagner tout au
-        long de ce parcours.
+        Our team remains at your disposal to support you throughout
+        this journey.
       </Text>
 
       <Text style={paragraph}>
-        Bienvenue chez Re-New!
+        Welcome to Re-New!
         <br />
-        L&apos;equipe Re-New
+        The Re-New Team
       </Text>
     </BaseLayout>
   )

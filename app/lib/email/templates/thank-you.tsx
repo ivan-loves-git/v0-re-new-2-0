@@ -8,47 +8,45 @@ export function ThankYouEmail({ repreneur, metadata }: ThankYouEmailProps) {
   const tier1Score = metadata?.tier1Score || 0
 
   return (
-    <BaseLayout previewText={`Merci ${firstName}! Votre profil Re-New est complet.`}>
-      <Text style={heading}>Felicitations {firstName}!</Text>
+    <BaseLayout previewText={`Thank you ${firstName}! Your Re-New profile is complete.`}>
+      <Text style={heading}>Congratulations {firstName}!</Text>
 
       <Text style={paragraph}>
-        Votre inscription sur Re-New est maintenant complete. Merci pour votre
-        confiance!
+        Your Re-New registration is now complete. Thank you for your trust!
       </Text>
 
       <Section style={highlight}>
         <Text style={{ textAlign: "center", color: "#6b7280", margin: "0 0 8px 0" }}>
-          Votre score de maturite
+          Your Readiness Score
         </Text>
         <Text style={highlightText}>{tier1Score}/100</Text>
       </Section>
 
       <Text style={paragraph}>
-        Notre equipe va maintenant analyser votre profil. Nous vous contacterons
-        tres prochainement pour discuter de votre projet et vous presenter les
-        opportunites qui correspondent a vos criteres.
+        Our team will now review your profile. We will contact you very soon to
+        discuss your project and present opportunities that match your criteria.
       </Text>
 
-      <Text style={paragraph}>Prochaines etapes:</Text>
+      <Text style={paragraph}>Next steps:</Text>
 
       <Text style={paragraph}>
-        1. Analyse de votre profil par notre equipe
+        1. Profile review by our team
         <br />
-        2. Prise de contact pour un premier echange
+        2. Initial contact for a first discussion
         <br />
-        3. Presentation d&apos;opportunites personnalisees
+        3. Presentation of personalized opportunities
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
         <Link href="https://re-new.com" style={button}>
-          Decouvrir Re-New
+          Discover Re-New
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        A tres bientot,
+        See you soon,
         <br />
-        L&apos;equipe Re-New
+        The Re-New Team
       </Text>
     </BaseLayout>
   )

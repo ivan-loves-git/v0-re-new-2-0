@@ -5,18 +5,18 @@ import type { OfferAcceptedEmailProps } from "@/lib/types/email"
 
 export function OfferAcceptedEmail({ repreneur, metadata }: OfferAcceptedEmailProps) {
   const { firstName } = repreneur
-  const offerName = metadata?.offerName || "votre offre"
+  const offerName = metadata?.offerName || "your offer"
 
   return (
-    <BaseLayout previewText={`${firstName}, votre offre a ete acceptee!`}>
-      <Text style={heading}>Confirmation d&apos;acceptation</Text>
+    <BaseLayout previewText={`${firstName}, your offer has been accepted!`}>
+      <Text style={heading}>Acceptance Confirmation</Text>
 
       <Text style={paragraph}>
-        Bonjour {firstName},
+        Dear {firstName},
       </Text>
 
       <Text style={paragraph}>
-        Nous confirmons que vous avez accepte l&apos;offre suivante:
+        We confirm that you have accepted the following offer:
       </Text>
 
       <Section style={highlight}>
@@ -24,35 +24,35 @@ export function OfferAcceptedEmail({ repreneur, metadata }: OfferAcceptedEmailPr
           {offerName}
         </Text>
         <Text style={{ textAlign: "center", color: "#16a34a", margin: "8px 0 0 0", fontWeight: "bold" }}>
-          ✓ Acceptee
+          Accepted
         </Text>
       </Section>
 
-      <Text style={paragraph}>Prochaines etapes:</Text>
+      <Text style={paragraph}>Next steps:</Text>
 
       <Text style={paragraph}>
-        1. Notre equipe va preparer votre dossier
+        1. Our team will prepare your file
         <br />
-        2. Vous recevrez un email de confirmation d&apos;activation
+        2. You will receive an activation confirmation email
         <br />
-        3. Votre accompagnement pourra alors commencer
+        3. Your support can then begin
       </Text>
 
       <Text style={paragraph}>
-        Nous vous contacterons tres prochainement pour les formalites
-        administratives et le demarrage de votre accompagnement.
+        We will contact you very soon for the administrative
+        formalities and the start of your engagement.
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
         <Link href="https://re-new.com/dashboard" style={button}>
-          Acceder a mon espace
+          Access My Dashboard
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        Merci pour votre confiance!
+        Thank you for your trust!
         <br />
-        L&apos;equipe Re-New
+        The Re-New Team
       </Text>
     </BaseLayout>
   )

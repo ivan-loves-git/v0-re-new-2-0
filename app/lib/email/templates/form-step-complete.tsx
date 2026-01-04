@@ -8,36 +8,36 @@ export function FormStepCompleteEmail({ repreneur, metadata }: FormStepCompleteE
   const stepCompleted = metadata?.stepCompleted || 1
 
   return (
-    <BaseLayout previewText={`${firstName}, votre profil Re-New prend forme!`}>
-      <Text style={heading}>Bravo {firstName}!</Text>
+    <BaseLayout previewText={`${firstName}, your Re-New profile is taking shape!`}>
+      <Text style={heading}>Well done {firstName}!</Text>
 
       <Text style={paragraph}>
-        Vous avez complete l&apos;etape {stepCompleted} de votre inscription.
-        Votre profil commence a prendre forme!
+        You have completed step {stepCompleted} of your registration.
+        Your profile is starting to take shape!
       </Text>
 
       <Section style={highlight}>
         <Text style={highlightText}>{stepCompleted}/5</Text>
         <Text style={{ textAlign: "center", color: "#2563eb", margin: 0 }}>
-          etapes completees
+          steps completed
         </Text>
       </Section>
 
       <Text style={paragraph}>
-        Continuez pour debloquer l&apos;acces complet a notre plateforme et
-        recevoir des recommandations personnalisees.
+        Continue to unlock full access to our platform and
+        receive personalized recommendations.
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
         <Link href="https://re-new.com/intake" style={button}>
-          Continuer mon inscription
+          Continue My Registration
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        A bientot,
+        See you soon,
         <br />
-        L&apos;equipe Re-New
+        The Re-New Team
       </Text>
     </BaseLayout>
   )

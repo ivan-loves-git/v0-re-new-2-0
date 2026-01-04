@@ -8,41 +8,41 @@ export function AbandonedReminderEmail({ repreneur, metadata }: AbandonedReminde
   const lastStep = metadata?.lastStep || 1
 
   return (
-    <BaseLayout previewText={`${firstName}, votre profil Re-New vous attend`}>
-      <Text style={heading}>{firstName}, ou en etes-vous?</Text>
+    <BaseLayout previewText={`${firstName}, your Re-New profile is waiting`}>
+      <Text style={heading}>{firstName}, how are you doing?</Text>
 
       <Text style={paragraph}>
-        Nous avons remarque que vous n&apos;avez pas termine votre inscription
-        sur Re-New. Vous etiez a l&apos;etape {lastStep} sur 5.
+        We noticed that you have not completed your registration on Re-New.
+        You were at step {lastStep} of 5.
       </Text>
 
       <Text style={paragraph}>
-        Ne laissez pas votre projet de reprise d&apos;entreprise en suspens!
-        Completez votre profil en quelques minutes pour:
+        Do not leave your business acquisition project on hold!
+        Complete your profile in just a few minutes to:
       </Text>
 
       <Text style={paragraph}>
-        ✓ Recevoir des opportunites personnalisees
+        ✓ Receive personalized opportunities
         <br />
-        ✓ Acceder a notre reseau d&apos;experts
-        <br />✓ Beneficier de notre accompagnement
+        ✓ Access our network of experts
+        <br />✓ Benefit from our support
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
         <Link href="https://re-new.com/intake" style={button}>
-          Reprendre mon inscription
+          Resume My Registration
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        Si vous avez des questions ou rencontrez des difficultes, repondez
-        simplement a cet email.
+        If you have any questions or encounter difficulties, simply reply
+        to this email.
       </Text>
 
       <Text style={paragraph}>
-        A bientot,
+        See you soon,
         <br />
-        L&apos;equipe Re-New
+        The Re-New Team
       </Text>
     </BaseLayout>
   )
