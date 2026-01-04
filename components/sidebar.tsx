@@ -18,7 +18,8 @@ import {
   Mail,
   Target,
   BookOpen,
-  Map
+  Map,
+  ClipboardList
 } from "lucide-react"
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
@@ -36,6 +37,7 @@ const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
   { name: "Roadmap", href: "/guide/roadmap", icon: Map },
+  { name: "To Do", href: "/guide/todo", icon: ClipboardList },
 ]
 
 const externalUsersNavigation = [
@@ -132,12 +134,12 @@ export function Sidebar() {
         onMouseLeave={() => setIsHovering(false)}
       >
         <div className="flex items-center gap-2">
-          <span className="w-6 text-center text-xl">{isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}</span>
+          <span className="w-7 text-center text-2xl">{isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}</span>
           <Image
             src="/wave-logo.png"
             alt="Wave - the repreneur CRM"
-            width={120}
-            height={40}
+            width={96}
+            height={32}
             className="h-auto"
             priority
           />
