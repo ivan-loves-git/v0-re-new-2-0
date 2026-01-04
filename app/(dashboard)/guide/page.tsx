@@ -60,7 +60,7 @@ export default function GuidePage() {
               Answers to common questions about status changes, scoring, rejections, and time tracking.
             </p>
             <Link href="/guide/details#faq">
-              <Button variant="outline" className="gap-2">
+              <Button className="gap-2">
                 View FAQ
                 <ArrowRight className="h-4 w-4" />
               </Button>

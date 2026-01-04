@@ -58,6 +58,8 @@ export const ROUTES = {
   offers: "/offers",
   offersNew: "/offers/new",
   offersEdit: (id: string) => `/offers/${id}/edit`,
+  emails: "/emails",
+  guide: "/guide",
 }
 
 // CSS selectors and data-testid patterns for finding elements
@@ -119,6 +121,20 @@ export const SELECTORS = {
   newOfferButton: 'a[href="/offers/new"]',
   offerNameInput: 'input[name="name"]',
   offerPriceInput: 'input[name="price"]',
+
+  // Emails
+  emailTabs: '[data-slot="tabs"]',
+  emailTabTrigger: '[data-slot="tabs-trigger"]',
+  emailOverviewTab: 'button:has-text("Overview")',
+  emailHistoryTab: 'button:has-text("History")',
+  emailTemplatesTab: 'button:has-text("Templates")',
+  emailManualSendTab: 'button:has-text("Manual Send")',
+  emailStatsCard: '[data-testid="email-stats"]',
+  emailLogTable: 'table',
+  emailTemplateCard: '[data-testid="template-card"]',
+
+  // Guide
+  guideContent: '[data-testid="guide-content"]',
 }
 
 // Lifecycle status values

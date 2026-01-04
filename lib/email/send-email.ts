@@ -233,6 +233,43 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
 }
 
 /**
+ * Direct email send without logging (for testing purposes)
+ */
+export async function sendEmailDirect(params: {
+  to: string
+  subject: string
+  react: ReactElement
+}): Promise<{ success: boolean; error?: string }> {
+  const { to, subject, react } = params
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error("RESEND_API_KEY is not set. Email sending disabled.")
+    return { success: false, error: "Email service not configured" }
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      to: [to],
+      subject,
+      react,
+    })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (err) {
+    console.error("Error sending test email:", err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    }
+  }
+}
+
+/**
  * Check if an email was already sent to avoid duplicates
  * Useful for preventing re-sending welcome emails, etc.
  */

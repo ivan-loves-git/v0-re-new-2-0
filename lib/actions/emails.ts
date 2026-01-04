@@ -323,6 +323,98 @@ export async function sendManualEmail(
 }
 
 /**
+ * Send a test email to any email address (for testing templates)
+ * Does NOT log to database - for testing only
+ */
+export async function sendTestEmail(
+  email: string,
+  firstName: string,
+  templateKey: EmailTemplateKey
+) {
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    throw new Error("Invalid email address")
+  }
+
+  const emailData = {
+    id: "test-user",
+    firstName: firstName || "Test",
+    lastName: "User",
+    email: email,
+  }
+
+  // Sample metadata for templates that need it
+  const metadata = {
+    stepNumber: 2,
+    totalSteps: 4,
+    stepName: "Motivations",
+    tier1Score: 85,
+    offerName: "Starter Pack",
+    offerPrice: "€2,500",
+    milestoneName: "Profile Complete",
+  }
+
+  let template: React.ReactElement
+  let subject: string
+
+  switch (templateKey) {
+    case "welcome":
+      template = WelcomeEmail({ repreneur: emailData })
+      subject = "[TEST] Welcome to Re-New!"
+      break
+    case "form_step_complete":
+      template = FormStepCompleteEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] Your Re-New Progress"
+      break
+    case "abandoned_reminder":
+      template = AbandonedReminderEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] Complete Your Re-New Registration"
+      break
+    case "thank_you":
+      template = ThankYouEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] Thank You for Registering with Re-New!"
+      break
+    case "high_score_alert":
+      template = HighScoreAlertEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] Your Re-New Profile Stands Out!"
+      break
+    case "offer_received":
+      template = OfferReceivedEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] New Offer from Re-New"
+      break
+    case "milestone_completed":
+      template = MilestoneCompletedEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] Milestone Completed!"
+      break
+    case "offer_accepted":
+      template = OfferAcceptedEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] Offer Accepted"
+      break
+    case "offer_activated":
+      template = OfferActivatedEmail({ repreneur: emailData, metadata })
+      subject = "[TEST] Your Engagement is Now Active!"
+      break
+    case "rejection":
+      template = RejectionEmail({ repreneur: emailData })
+      subject = "[TEST] Update on Your Application"
+      break
+    default:
+      throw new Error(`Unknown template: ${templateKey}`)
+  }
+
+  // Use sendEmail but skip logging by passing skipLog flag
+  const { sendEmailDirect } = await import("@/lib/email/send-email")
+  await sendEmailDirect({
+    to: email,
+    subject,
+    react: template,
+  })
+
+  return { success: true, message: `Test email sent to ${email}` }
+}
+
+/**
  * Get daily email counts for chart
  */
 export async function getDailyEmailCounts(days: number = 14) {

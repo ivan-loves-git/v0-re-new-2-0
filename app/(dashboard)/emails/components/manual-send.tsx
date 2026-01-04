@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
 import { TEMPLATE_METADATA } from "@/lib/email/templates"
-import { getRepreneursForManualSend, sendManualEmail } from "@/lib/actions/emails"
+import { getRepreneursForManualSend, sendManualEmail, sendTestEmail } from "@/lib/actions/emails"
 import type { EmailTemplateKey } from "@/lib/types/email"
-import { Send, CheckCircle, AlertCircle, Search } from "lucide-react"
+import { Send, CheckCircle, AlertCircle, Search, FlaskConical } from "lucide-react"
 
 interface Repreneur {
   id: string
@@ -21,6 +22,9 @@ interface Repreneur {
 }
 
 export function ManualSend() {
+  const [testMode, setTestMode] = useState(false)
+  const [testEmail, setTestEmail] = useState("")
+  const [testFirstName, setTestFirstName] = useState("")
   const [search, setSearch] = useState("")
   const [repreneurs, setRepreneurs] = useState<Repreneur[]>([])
   const [selectedRepreneur, setSelectedRepreneur] = useState<Repreneur | null>(null)
@@ -47,18 +51,30 @@ export function ManualSend() {
   }, [search])
 
   const handleSend = async () => {
-    if (!selectedRepreneur || !selectedTemplate) return
+    if (testMode) {
+      if (!testEmail || !selectedTemplate) return
+    } else {
+      if (!selectedRepreneur || !selectedTemplate) return
+    }
 
     setLoading(true)
     setResult(null)
 
     try {
-      await sendManualEmail(selectedRepreneur.id, selectedTemplate)
-      setResult({
-        success: true,
-        message: `Email "${TEMPLATE_METADATA[selectedTemplate].name}" sent to ${selectedRepreneur.email}`,
-      })
-      setSelectedRepreneur(null)
+      if (testMode) {
+        await sendTestEmail(testEmail, testFirstName || "Test", selectedTemplate!)
+        setResult({
+          success: true,
+          message: `[TEST] Email "${TEMPLATE_METADATA[selectedTemplate!].name}" sent to ${testEmail}`,
+        })
+      } else {
+        await sendManualEmail(selectedRepreneur!.id, selectedTemplate!)
+        setResult({
+          success: true,
+          message: `Email "${TEMPLATE_METADATA[selectedTemplate!].name}" sent to ${selectedRepreneur!.email}`,
+        })
+        setSelectedRepreneur(null)
+      }
       setSelectedTemplate(null)
     } catch (error) {
       setResult({
@@ -70,13 +86,34 @@ export function ManualSend() {
     }
   }
 
+  const canSend = testMode
+    ? testEmail && selectedTemplate
+    : selectedRepreneur && selectedTemplate
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Manual Email Send</CardTitle>
-        <CardDescription>
-          Select a repreneur and template to send an email manually
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Manual Email Send</CardTitle>
+            <CardDescription>
+              {testMode
+                ? "Send test emails to any address (no logging)"
+                : "Select a repreneur and template to send an email"}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <FlaskConical className={`h-4 w-4 ${testMode ? "text-purple-600" : "text-muted-foreground"}`} />
+            <Switch
+              checked={testMode}
+              onCheckedChange={setTestMode}
+              aria-label="Toggle test mode"
+            />
+            <span className={`text-sm font-medium ${testMode ? "text-purple-600" : "text-muted-foreground"}`}>
+              Test Mode
+            </span>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Result Alert */}
@@ -91,61 +128,90 @@ export function ManualSend() {
           </Alert>
         )}
 
-        {/* Repreneur Search */}
-        <div className="space-y-2">
-          <Label>Search for a repreneur</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
+        {/* Test Mode: Custom Email Input */}
+        {testMode ? (
+          <div className="space-y-4 p-4 border-2 border-dashed border-purple-200 rounded-lg bg-purple-50/50">
+            <div className="flex items-center gap-2 text-purple-700 text-sm font-medium">
+              <FlaskConical className="h-4 w-4" />
+              Test Mode: Emails are sent directly without logging
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="test-email">Email Address</Label>
+              <Input
+                id="test-email"
+                type="email"
+                placeholder="your@email.com"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="test-name">First Name (for personalization)</Label>
+              <Input
+                id="test-name"
+                placeholder="Ivan"
+                value={testFirstName}
+                onChange={(e) => setTestFirstName(e.target.value)}
+              />
+            </div>
           </div>
+        ) : (
+          /* Repreneur Search */
+          <div className="space-y-2">
+            <Label>Search for a repreneur</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-          {/* Repreneur List */}
-          {repreneurs.length > 0 && !selectedRepreneur && (
-            <div className="border rounded-lg max-h-48 overflow-y-auto">
-              {repreneurs.map((r) => (
-                <button
-                  key={r.id}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b last:border-b-0 flex justify-between items-center"
-                  onClick={() => setSelectedRepreneur(r)}
-                >
-                  <div>
-                    <div className="font-medium">
-                      {r.first_name} {r.last_name}
+            {/* Repreneur List */}
+            {repreneurs.length > 0 && !selectedRepreneur && (
+              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {repreneurs.map((r) => (
+                  <button
+                    key={r.id}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b last:border-b-0 flex justify-between items-center"
+                    onClick={() => setSelectedRepreneur(r)}
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {r.first_name} {r.last_name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{r.email}</div>
                     </div>
-                    <div className="text-sm text-muted-foreground">{r.email}</div>
-                  </div>
-                  {!r.marketing_consent && (
-                    <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                      No consent
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Selected Repreneur */}
-          {selectedRepreneur && (
-            <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
-              <div>
-                <div className="font-medium">
-                  {selectedRepreneur.first_name} {selectedRepreneur.last_name}
-                </div>
-                <div className="text-sm text-muted-foreground">{selectedRepreneur.email}</div>
+                    {!r.marketing_consent && (
+                      <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                        No consent
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedRepreneur(null)}>
-                Change
-              </Button>
-            </div>
-          )}
+            )}
 
-          {searching && <p className="text-sm text-muted-foreground">Searching...</p>}
-        </div>
+            {/* Selected Repreneur */}
+            {selectedRepreneur && (
+              <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+                <div>
+                  <div className="font-medium">
+                    {selectedRepreneur.first_name} {selectedRepreneur.last_name}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{selectedRepreneur.email}</div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedRepreneur(null)}>
+                  Change
+                </Button>
+              </div>
+            )}
+
+            {searching && <p className="text-sm text-muted-foreground">Searching...</p>}
+          </div>
+        )}
 
         {/* Template Selection */}
         <div className="space-y-2">
@@ -179,11 +245,11 @@ export function ManualSend() {
         {/* Send Button */}
         <Button
           onClick={handleSend}
-          disabled={!selectedRepreneur || !selectedTemplate || loading}
-          className="w-full"
+          disabled={!canSend || loading}
+          className={`w-full ${testMode ? "bg-purple-600 hover:bg-purple-700" : ""}`}
         >
           <Send className="h-4 w-4 mr-2" />
-          {loading ? "Sending..." : "Send Email"}
+          {loading ? "Sending..." : testMode ? "Send Test Email" : "Send Email"}
         </Button>
       </CardContent>
     </Card>

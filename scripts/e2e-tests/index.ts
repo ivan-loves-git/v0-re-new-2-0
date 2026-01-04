@@ -28,6 +28,8 @@ import { questionnaireTests } from "./tests/questionnaire.test"
 import { pipelineTests } from "./tests/pipeline.test"
 import { journeyTests } from "./tests/journey.test"
 import { offersTests } from "./tests/offers.test"
+import { emailsTests } from "./tests/emails.test"
+import { guideTests } from "./tests/guide.test"
 import { dataValidationTests } from "./tests/data-validation.test"
 
 // Import utilities
@@ -48,6 +50,8 @@ export const ALL_TEST_SUITES: TestSuite[] = [
   pipelineTests,
   journeyTests,
   offersTests,
+  emailsTests,
+  guideTests,
   dataValidationTests,
 ]
 
