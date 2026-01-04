@@ -6,7 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ArrowRight, Star, Target, Milestone } from "lucide-react"
+import { ArrowRight, Star, Target, Milestone, Mail } from "lucide-react"
 
 const concepts = [
   {
@@ -136,6 +136,50 @@ Each active offer can track specific milestones:
 
 **Why milestones matter:**
 They help track what's been delivered vs. what's remaining, ensure nothing falls through the cracks, and provide visibility into the progress of each client engagement.`,
+  },
+  {
+    id: "emails",
+    icon: Mail,
+    title: "Email Automation System",
+    content: `Wave includes a built-in email automation system that sends emails at key moments in the repreneur journey.
+
+**Email Cockpit** (/emails)
+Access the email dashboard to:
+• View email analytics (opens, clicks, bounces)
+• Browse email history with filters
+• Enable/disable specific templates
+• Send manual emails to any repreneur
+
+**10 Automated Email Triggers:**
+
+*Intake Flow:*
+• Welcome — when step 1 is completed
+• Form Step Complete — after contact info captured
+• Abandoned Reminder — 48h after abandonment (cron job)
+• Thank You — when full form is completed
+• High Score Alert — when Tier 1 score is 70+
+
+*Offer Flow:*
+• Offer Received — when an offer is assigned
+• Offer Accepted — when client accepts
+• Offer Activated — when engagement begins
+• Milestone Completed — when any milestone is checked off
+
+*Other:*
+• Rejection — when marked as rejected
+
+**GDPR Compliance:**
+• Transactional emails (welcome, offers, rejection) always send
+• Marketing emails check \`marketing_consent\` field first
+• Abandoned reminders limited to 2 per repreneur
+
+**Sender Configuration:**
+Currently using \`onboarding@resend.dev\` (Resend's test sender). For production, verify your own domain in the Resend dashboard to send from \`noreply@re-new.com\` or similar.
+
+**Rate Limits (Free Tier):**
+• 100 emails/day
+• 3,000 emails/month
+• System tracks daily counts automatically`,
   },
 ]
 
