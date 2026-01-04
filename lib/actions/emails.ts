@@ -403,13 +403,17 @@ export async function sendTestEmail(
       throw new Error(`Unknown template: ${templateKey}`)
   }
 
-  // Use sendEmail but skip logging by passing skipLog flag
+  // Use sendEmailDirect to send without logging
   const { sendEmailDirect } = await import("@/lib/email/send-email")
-  await sendEmailDirect({
+  const result = await sendEmailDirect({
     to: email,
     subject,
     react: template,
   })
+
+  if (!result.success) {
+    throw new Error(result.error || "Failed to send email")
+  }
 
   return { success: true, message: `Test email sent to ${email}` }
 }
