@@ -15,7 +15,7 @@ export default function InstructionsPage() {
           Instructions
         </h1>
         <p className="text-gray-600 mt-2">
-          How to use the Wave 1.0 platform effectively
+          How to use the Wave platform effectively
         </p>
       </div>
 

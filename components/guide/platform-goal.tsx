@@ -11,12 +11,12 @@ export function PlatformGoal() {
           <div className="p-2 rounded-lg bg-blue-50">
             <Target className="h-4 w-4 text-blue-600" />
           </div>
-          What is Wave 1.0?
+          What is Wave?
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm text-gray-600">
         <p>
-          <strong className="text-gray-900">Wave 1.0 is Re-New's internal management platform</strong> — built to replace
+          <strong className="text-gray-900">Wave is Re-New's internal management platform</strong> — built to replace
           Flatchr and give the team a purpose-built tool for managing repreneurs as long-term
           clients, not one-time candidates.
         </p>

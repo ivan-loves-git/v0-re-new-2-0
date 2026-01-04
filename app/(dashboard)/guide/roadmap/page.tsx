@@ -12,7 +12,7 @@ export default function RoadmapPage() {
           Roadmap
         </h1>
         <p className="text-gray-600 mt-2">
-          The development journey of Wave 1.0
+          The development journey of Wave
         </p>
       </div>
 

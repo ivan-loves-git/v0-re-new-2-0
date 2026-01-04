@@ -13,23 +13,23 @@ export default function MissionPage() {
           Mission
         </h1>
         <p className="text-gray-600 mt-2">
-          The vision and principles behind Wave 1.0
+          The vision and principles behind Wave
         </p>
       </div>
 
-      {/* What is Wave 1.0? - Expanded */}
+      {/* What is Wave? - Expanded */}
       <Card className="hover:shadow-md transition-shadow">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="p-2 rounded-lg bg-blue-50">
               <Target className="h-4 w-4 text-blue-600" />
             </div>
-            What is Wave 1.0?
+            What is Wave?
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-gray-600">
           <p>
-            <strong className="text-gray-900">Wave 1.0 is Re-New's internal management platform</strong> — built to replace
+            <strong className="text-gray-900">Wave is Re-New's internal management platform</strong> — built to replace
             Flatchr and give the team a purpose-built tool for managing repreneurs as long-term
             clients, not one-time candidates.
           </p>
@@ -114,7 +114,7 @@ export default function MissionPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-gray-600">
           <p>
-            Wave 1.0 is the foundation. It solves the immediate operational needs: tracking repreneurs,
+            Wave is the foundation. It solves the immediate operational needs: tracking repreneurs,
             managing offers, and providing pipeline visibility.
           </p>
           <p>

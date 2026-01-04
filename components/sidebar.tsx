@@ -133,7 +133,7 @@ export function Sidebar() {
         <div className="flex flex-col">
           <h1 className="text-xl font-semibold flex items-center gap-2">
             <span className="w-6 text-center">{isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}</span>
-            Wave 1.0
+            Wave
           </h1>
           <p className="text-xs text-gray-400 pl-8">the repreneur CRM</p>
         </div>

@@ -5,7 +5,7 @@ import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw, Lightbulb, Ta
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-// Comprehensive roadmap capturing the full Wave 1.0 journey
+// Comprehensive roadmap capturing the full Wave journey
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
@@ -74,13 +74,13 @@ const roadmapEvents = [
   },
   {
     period: "Jan 3, 2026",
-    title: "Wave 1.0 Dashboard",
+    title: "Wave Dashboard",
     isCompleted: true,
     events: [
       {
         title: "Dashboard complete redesign",
         type: "feature",
-        description: "New 3-column layout with 12+ widgets. Wave 1.0 branding with animated emoji logo. Activity stream, rankings, and conversion funnel all visible at once.",
+        description: "New 3-column layout with 12+ widgets. Wave branding with animated emoji logo. Activity stream, rankings, and conversion funnel all visible at once.",
       },
       {
         title: "Activity heatmap",
@@ -413,7 +413,7 @@ export function DevelopmentRoadmap() {
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Development Roadmap</h2>
         <p className="text-sm text-gray-500 mt-1">
-          The complete journey of Wave 1.0 — from first idea to production
+          The complete journey of Wave — from first idea to production
         </p>
       </div>
 
