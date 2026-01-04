@@ -32,6 +32,14 @@ const activityIcons: Record<string, React.ElementType> = {
   default: Activity,
 }
 
+const kpiInfo = {
+  activityStream: {
+    title: "Activity Stream",
+    description: "Real-time feed of all logged activities across repreneurs: calls, meetings, emails, notes, and interviews. Shows who did what and when.",
+    why: "Monitor team activity and engagement. Ensures no repreneur falls through the cracks. Helps managers track team workload and follow-up consistency.",
+  },
+}
+
 export function GlobalActivityStream({ activities, maxHeight = "400px" }: GlobalActivityStreamProps) {
   return (
     <Card className="h-full gap-0">
@@ -39,7 +47,7 @@ export function GlobalActivityStream({ activities, maxHeight = "400px" }: Global
         <CardTitle className="flex items-center gap-2 text-base">
           <Activity className="h-5 w-5 text-gray-900" />
           Activity Stream
-          <CardInfoButton info="Recent activities across all repreneurs: calls, meetings, emails, notes, and interviews. Click a name to view the repreneur profile." />
+          <CardInfoButton info={kpiInfo.activityStream} />
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -23,6 +23,14 @@ interface RecentlyAddedRepreneursProps {
   maxHeight?: string
 }
 
+const kpiInfo = {
+  recentlyAdded: {
+    title: "Recently Added",
+    description: "Repreneurs added to the system in the last 7 days. Shows their current lifecycle status and journey stage at a glance.",
+    why: "New leads need fast follow-up. Studies show contacting within 24h dramatically increases conversion. This list helps prioritize fresh opportunities.",
+  },
+}
+
 export function RecentlyAddedRepreneurs({ repreneurs, maxHeight = "300px" }: RecentlyAddedRepreneursProps) {
   return (
     <Card className="h-full gap-0">
@@ -30,7 +38,7 @@ export function RecentlyAddedRepreneurs({ repreneurs, maxHeight = "300px" }: Rec
         <CardTitle className="flex items-center gap-2 text-base">
           <UserPlus className="h-5 w-5 text-gray-900" />
           Recently Added
-          <CardInfoButton info="Repreneurs added to the system in the last 7 days. Click to view their full profile and start tracking their journey." />
+          <CardInfoButton info={kpiInfo.recentlyAdded} />
         </CardTitle>
       </CardHeader>
       <CardContent>

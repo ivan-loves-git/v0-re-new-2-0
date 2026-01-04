@@ -24,6 +24,14 @@ interface TopTier2CandidatesProps {
 const ITEMS_PER_PAGE = 5
 const ITEM_HEIGHT = 44 // height of each candidate row in pixels
 
+const kpiInfo = {
+  topTier2: {
+    title: "Tier 2 Rating Ranking",
+    description: "Candidates ranked by their Tier 2 star rating (1-5 stars). This is a subjective assessment assigned by the Re-New team after meeting with the candidate.",
+    why: "Combines human judgment with data. High Tier 2 ratings indicate candidates who made a strong impression in interviews and have strong potential for success.",
+  },
+}
+
 export function TopTier2Candidates({ candidates, itemsPerPage = ITEMS_PER_PAGE }: TopTier2CandidatesProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const totalPages = Math.ceil(candidates.length / itemsPerPage)
@@ -71,7 +79,7 @@ export function TopTier2Candidates({ candidates, itemsPerPage = ITEMS_PER_PAGE }
         <CardTitle className="flex items-center gap-2 text-base">
           <Star className="h-5 w-5 text-gray-900" />
           Top Tier 2
-          <CardInfoButton info="Tier 2 is the post-interview Re-New rating assigned by the team after meeting with the candidate." />
+          <CardInfoButton info={kpiInfo.topTier2} />
         </CardTitle>
         <CardLinkButton href="/pipeline" tooltip="View Pipeline" />
       </CardHeader>

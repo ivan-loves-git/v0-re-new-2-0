@@ -44,6 +44,14 @@ function getChangeIndicator(current: number, lastWeek: number | undefined) {
   }
 }
 
+const kpiInfo = {
+  pipelineStats: {
+    title: "Pipeline Stats",
+    description: "Overview of your repreneur pipeline showing total count and breakdown by lifecycle status (Lead, Qualified, Client).",
+    why: "Track pipeline health at a glance. The 'vs LW' comparison shows week-over-week growth to identify trends early.",
+  },
+}
+
 export function StatsColumn({
   totalRepreneurs,
   leadCount,
@@ -95,7 +103,7 @@ export function StatsColumn({
         <CardTitle className="flex items-center gap-2 text-base">
           <Users className="h-5 w-5 text-gray-900" />
           Pipeline Stats
-          <CardInfoButton info="Overview of your repreneur pipeline. Shows total count and breakdown by lifecycle status, with comparison to last week." />
+          <CardInfoButton info={kpiInfo.pipelineStats} />
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
