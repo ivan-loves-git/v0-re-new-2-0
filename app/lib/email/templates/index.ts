@@ -24,53 +24,53 @@ export const TEMPLATE_METADATA: Record<
   }
 > = {
   welcome: {
-    name: "Bienvenue",
-    description: "Envoye apres la capture du premier contact",
+    name: "Welcome",
+    description: "Sent after first contact is captured",
     category: "intake",
   },
   form_step_complete: {
-    name: "Etape completee",
-    description: "Envoye apres chaque etape du formulaire",
+    name: "Step Complete",
+    description: "Sent after each form step is completed",
     category: "intake",
   },
   abandoned_reminder: {
-    name: "Rappel formulaire",
-    description: "Envoye 48h apres un abandon de formulaire",
+    name: "Form Reminder",
+    description: "Sent 48h after form abandonment",
     category: "intake",
   },
   thank_you: {
-    name: "Merci",
-    description: "Envoye a la fin du formulaire complet",
+    name: "Thank You",
+    description: "Sent when full form is completed",
     category: "intake",
   },
   high_score_alert: {
-    name: "Score eleve",
-    description: "Envoye quand le score depasse 70/100",
+    name: "High Score",
+    description: "Sent when score exceeds 70/100",
     category: "intake",
   },
   offer_received: {
-    name: "Offre recue",
-    description: "Envoye quand une offre est assignee",
+    name: "Offer Received",
+    description: "Sent when an offer is assigned",
     category: "offer",
   },
   milestone_completed: {
-    name: "Jalon complete",
-    description: "Envoye quand un jalon est complete",
+    name: "Milestone Complete",
+    description: "Sent when a milestone is completed",
     category: "offer",
   },
   offer_accepted: {
-    name: "Offre acceptee",
-    description: "Confirmation d acceptation d offre",
+    name: "Offer Accepted",
+    description: "Confirmation of offer acceptance",
     category: "offer",
   },
   offer_activated: {
-    name: "Offre activee",
-    description: "Envoye quand l accompagnement demarre",
+    name: "Offer Activated",
+    description: "Sent when engagement starts",
     category: "offer",
   },
   rejection: {
-    name: "Refus",
-    description: "Envoye lors du rejet d un candidat",
+    name: "Rejection",
+    description: "Sent when a candidate is rejected",
     category: "status",
   },
 }

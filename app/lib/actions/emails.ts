@@ -267,43 +267,43 @@ export async function sendManualEmail(
   switch (templateKey) {
     case "welcome":
       template = WelcomeEmail({ repreneur: emailData })
-      subject = "Bienvenue chez Re-New!"
+      subject = "Welcome to Re-New!"
       break
     case "form_step_complete":
       template = FormStepCompleteEmail({ repreneur: emailData, metadata })
-      subject = "Votre progression Re-New"
+      subject = "Your Re-New Progress"
       break
     case "abandoned_reminder":
       template = AbandonedReminderEmail({ repreneur: emailData, metadata })
-      subject = "Reprenez votre inscription Re-New"
+      subject = "Complete Your Re-New Registration"
       break
     case "thank_you":
       template = ThankYouEmail({ repreneur: emailData, metadata })
-      subject = "Merci pour votre inscription chez Re-New!"
+      subject = "Thank You for Registering with Re-New!"
       break
     case "high_score_alert":
       template = HighScoreAlertEmail({ repreneur: emailData, metadata })
-      subject = "Votre profil Re-New se démarque!"
+      subject = "Your Re-New Profile Stands Out!"
       break
     case "offer_received":
       template = OfferReceivedEmail({ repreneur: emailData, metadata })
-      subject = "Nouvelle offre Re-New"
+      subject = "New Offer from Re-New"
       break
     case "milestone_completed":
       template = MilestoneCompletedEmail({ repreneur: emailData, metadata })
-      subject = "Jalon complété!"
+      subject = "Milestone Completed!"
       break
     case "offer_accepted":
       template = OfferAcceptedEmail({ repreneur: emailData, metadata })
-      subject = "Offre acceptée"
+      subject = "Offer Accepted"
       break
     case "offer_activated":
       template = OfferActivatedEmail({ repreneur: emailData, metadata })
-      subject = "Votre accompagnement est activé!"
+      subject = "Your Engagement is Now Active!"
       break
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
-      subject = "Mise à jour concernant votre candidature"
+      subject = "Update on Your Application"
       break
     default:
       throw new Error(`Unknown template: ${templateKey}`)

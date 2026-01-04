@@ -31,12 +31,12 @@ const statusColors: Record<string, string> = {
 }
 
 const statusLabels: Record<string, string> = {
-  sent: "Envoyé",
-  delivered: "Livré",
-  opened: "Ouvert",
-  clicked: "Cliqué",
-  bounced: "Rebond",
-  complained: "Plainte",
+  sent: "Sent",
+  delivered: "Delivered",
+  opened: "Opened",
+  clicked: "Clicked",
+  bounced: "Bounced",
+  complained: "Complained",
 }
 
 export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
@@ -54,14 +54,14 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <CardTitle>Historique des emails ({initialTotal})</CardTitle>
+          <CardTitle>Email History ({initialTotal})</CardTitle>
           <div className="flex gap-2">
             <Select value={templateFilter} onValueChange={setTemplateFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Template" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les templates</SelectItem>
+                <SelectItem value="all">All templates</SelectItem>
                 {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
                   <SelectItem key={key} value={key}>
                     {meta.name}
@@ -72,10 +72,10 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Statut" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 {Object.entries(statusLabels).map(([key, label]) => (
                   <SelectItem key={key} value={key}>
                     {label}
@@ -90,19 +90,19 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Destinataire</TableHead>
+              <TableHead>Recipient</TableHead>
               <TableHead>Template</TableHead>
-              <TableHead>Sujet</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Envoyé</TableHead>
-              <TableHead>Ouvert</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Sent</TableHead>
+              <TableHead>Opened</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLogs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  Aucun email trouvé
+                  No emails found
                 </TableCell>
               </TableRow>
             ) : (
@@ -126,7 +126,7 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(log.sent_at).toLocaleDateString("fr-FR", {
+                    {new Date(log.sent_at).toLocaleDateString("en-US", {
                       day: "2-digit",
                       month: "2-digit",
                       hour: "2-digit",
@@ -135,7 +135,7 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {log.opened_at
-                      ? new Date(log.opened_at).toLocaleDateString("fr-FR", {
+                      ? new Date(log.opened_at).toLocaleDateString("en-US", {
                           day: "2-digit",
                           month: "2-digit",
                           hour: "2-digit",

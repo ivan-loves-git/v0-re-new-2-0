@@ -56,14 +56,14 @@ export function ManualSend() {
       await sendManualEmail(selectedRepreneur.id, selectedTemplate)
       setResult({
         success: true,
-        message: `Email "${TEMPLATE_METADATA[selectedTemplate].name}" envoyé à ${selectedRepreneur.email}`,
+        message: `Email "${TEMPLATE_METADATA[selectedTemplate].name}" sent to ${selectedRepreneur.email}`,
       })
       setSelectedRepreneur(null)
       setSelectedTemplate(null)
     } catch (error) {
       setResult({
         success: false,
-        message: `Erreur: ${error instanceof Error ? error.message : "Échec de l'envoi"}`,
+        message: `Error: ${error instanceof Error ? error.message : "Failed to send"}`,
       })
     } finally {
       setLoading(false)
@@ -73,9 +73,9 @@ export function ManualSend() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Envoi manuel d&apos;email</CardTitle>
+        <CardTitle>Manual Email Send</CardTitle>
         <CardDescription>
-          Sélectionnez un repreneur et un template pour envoyer un email manuellement
+          Select a repreneur and template to send an email manually
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -93,11 +93,11 @@ export function ManualSend() {
 
         {/* Repreneur Search */}
         <div className="space-y-2">
-          <Label>Rechercher un repreneur</Label>
+          <Label>Search for a repreneur</Label>
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Nom, prénom ou email..."
+              placeholder="Name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -121,7 +121,7 @@ export function ManualSend() {
                   </div>
                   {!r.marketing_consent && (
                     <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                      Sans consentement
+                      No consent
                     </span>
                   )}
                 </button>
@@ -139,12 +139,12 @@ export function ManualSend() {
                 <div className="text-sm text-muted-foreground">{selectedRepreneur.email}</div>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setSelectedRepreneur(null)}>
-                Changer
+                Change
               </Button>
             </div>
           )}
 
-          {searching && <p className="text-sm text-muted-foreground">Recherche...</p>}
+          {searching && <p className="text-sm text-muted-foreground">Searching...</p>}
         </div>
 
         {/* Template Selection */}
@@ -155,7 +155,7 @@ export function ManualSend() {
             onValueChange={(v) => setSelectedTemplate(v as EmailTemplateKey)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Sélectionner un template" />
+              <SelectValue placeholder="Select a template" />
             </SelectTrigger>
             <SelectContent>
               {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
@@ -183,7 +183,7 @@ export function ManualSend() {
           className="w-full"
         >
           <Send className="h-4 w-4 mr-2" />
-          {loading ? "Envoi en cours..." : "Envoyer l'email"}
+          {loading ? "Sending..." : "Send Email"}
         </Button>
       </CardContent>
     </Card>

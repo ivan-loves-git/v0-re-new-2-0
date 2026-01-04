@@ -1,12 +1,55 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, MailOpen, MousePointerClick, AlertCircle } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Mail, MailOpen, MousePointerClick, AlertCircle, Info } from "lucide-react"
 import type { EmailStats } from "@/lib/actions/emails"
 
 interface EmailOverviewProps {
   stats: EmailStats
   dailyCounts: { date: string; count: number }[]
+}
+
+const kpiInfo = {
+  sent: {
+    title: "Emails Sent",
+    description: "Total number of emails sent through the system in the last 30 days. Includes all template types (welcome, offers, reminders, etc.).",
+    why: "Track overall email volume to monitor system usage and stay within rate limits (100/day, 3,000/month on free tier).",
+  },
+  openRate: {
+    title: "Open Rate",
+    description: "Percentage of delivered emails that were opened by recipients. Calculated as: (Opened ÷ Delivered) × 100.",
+    why: "Measures email engagement. Industry average is 20-25%. Low rates may indicate subject lines need improvement or emails landing in spam.",
+  },
+  clickRate: {
+    title: "Click Rate",
+    description: "Percentage of opened emails where recipients clicked a link. Calculated as: (Clicked ÷ Opened) × 100.",
+    why: "Shows how compelling your email content is. Higher rates mean recipients are taking action. Industry average is 2-5%.",
+  },
+  bounced: {
+    title: "Bounces",
+    description: "Emails that failed to deliver due to invalid addresses, full inboxes, or server issues. Bounce rate = (Bounced ÷ Sent) × 100.",
+    why: "High bounce rates (>2%) can damage sender reputation. Clean your email list if bounces are high.",
+  },
+}
+
+function InfoTooltip({ info }: { info: { title: string; description: string; why: string } }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help ml-1" />
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-2">
+            <p className="font-medium">{info.title}</p>
+            <p className="text-xs">{info.description}</p>
+            <p className="text-xs text-muted-foreground"><strong>Why it matters:</strong> {info.why}</p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
 }
 
 export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
@@ -18,50 +61,62 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Emails envoyés</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              Emails Sent
+              <InfoTooltip info={kpiInfo.sent} />
+            </CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalSent}</div>
-            <p className="text-xs text-muted-foreground">30 derniers jours</p>
+            <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taux d&apos;ouverture</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              Open Rate
+              <InfoTooltip info={kpiInfo.openRate} />
+            </CardTitle>
             <MailOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.openRate.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
-              {stats.totalOpened} ouvert(s) / {stats.totalDelivered} livré(s)
+              {stats.totalOpened} opened / {stats.totalDelivered} delivered
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taux de clic</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              Click Rate
+              <InfoTooltip info={kpiInfo.clickRate} />
+            </CardTitle>
             <MousePointerClick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.clickRate.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
-              {stats.totalClicked} cliqué(s) / {stats.totalOpened} ouvert(s)
+              {stats.totalClicked} clicked / {stats.totalOpened} opened
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rebonds</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              Bounces
+              <InfoTooltip info={kpiInfo.bounced} />
+            </CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalBounced}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.bounceRate.toFixed(1)}% taux de rebond
+              {stats.bounceRate.toFixed(1)}% bounce rate
             </p>
           </CardContent>
         </Card>
@@ -70,7 +125,7 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
       {/* Simple Bar Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Emails envoyés par jour</CardTitle>
+          <CardTitle>Emails Sent Per Day</CardTitle>
         </CardHeader>
         <CardContent>
           {dailyCounts.length > 0 ? (
@@ -89,7 +144,7 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
                     title={`${day.count} email(s)`}
                   />
                   <span className="text-xs text-muted-foreground rotate-45 origin-left whitespace-nowrap">
-                    {new Date(day.date).toLocaleDateString("fr-FR", {
+                    {new Date(day.date).toLocaleDateString("en-US", {
                       day: "2-digit",
                       month: "2-digit",
                     })}
@@ -99,7 +154,7 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
             </div>
           ) : (
             <div className="h-48 flex items-center justify-center text-muted-foreground">
-              Aucune donnée disponible
+              No data available
             </div>
           )}
         </CardContent>

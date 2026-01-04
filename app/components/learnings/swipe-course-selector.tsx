@@ -350,36 +350,6 @@ export function SwipeCourseSelector() {
         </div>
       </div>
 
-      {/* Navigation Arrows for Desktop */}
-      <button
-        onClick={goPrev}
-        disabled={currentIndex === 0}
-        className={cn(
-          "absolute left-3 top-1/2 -translate-y-1/2 z-30",
-          "w-10 h-10 rounded-full flex items-center justify-center",
-          "bg-emerald-800/80 hover:bg-emerald-700 text-white",
-          "transition-all duration-200 shadow-lg",
-          currentIndex === 0 && "opacity-30 cursor-not-allowed hover:bg-emerald-800/80"
-        )}
-        aria-label="Previous module"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
-
-      <button
-        onClick={goNext}
-        disabled={currentIndex === courses.length - 1}
-        className={cn(
-          "absolute right-3 top-1/2 -translate-y-1/2 z-30",
-          "w-10 h-10 rounded-full flex items-center justify-center",
-          "bg-emerald-800/80 hover:bg-emerald-700 text-white",
-          "transition-all duration-200 shadow-lg",
-          currentIndex === courses.length - 1 && "opacity-30 cursor-not-allowed hover:bg-emerald-800/80"
-        )}
-        aria-label="Next module"
-      >
-        <ChevronRight className="w-6 h-6" />
-      </button>
 
       {/* Main Content Area */}
       <div ref={containerRef} className="relative overflow-hidden px-8 py-6">
@@ -436,8 +406,41 @@ export function SwipeCourseSelector() {
           </AnimatePresence>
         </div>
 
-        {/* SWIPEABLE SECTION: Illustration (slides left/right) */}
+        {/* SWIPEABLE SECTION: Illustration with Navigation Arrows */}
         <div className="relative h-72 my-6">
+          {/* Left Arrow - aligned with illustration */}
+          <button
+            onClick={goPrev}
+            disabled={currentIndex === 0}
+            className={cn(
+              "absolute -left-6 top-1/2 -translate-y-1/2 z-30",
+              "w-10 h-32 rounded-3xl flex items-center justify-center",
+              "bg-blue-500/80 hover:bg-blue-600 text-white",
+              "transition-all duration-200 shadow-lg",
+              currentIndex === 0 && "opacity-30 cursor-not-allowed hover:bg-blue-500/80"
+            )}
+            aria-label="Previous module"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          {/* Right Arrow - aligned with illustration */}
+          <button
+            onClick={goNext}
+            disabled={currentIndex === courses.length - 1}
+            className={cn(
+              "absolute -right-6 top-1/2 -translate-y-1/2 z-30",
+              "w-10 h-32 rounded-3xl flex items-center justify-center",
+              "bg-blue-500/80 hover:bg-blue-600 text-white",
+              "transition-all duration-200 shadow-lg",
+              currentIndex === courses.length - 1 && "opacity-30 cursor-not-allowed hover:bg-blue-500/80"
+            )}
+            aria-label="Next module"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          {/* Illustration */}
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={`illustration-${currentIndex}`}

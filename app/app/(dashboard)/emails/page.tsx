@@ -24,10 +24,10 @@ export default async function EmailsPage() {
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
-          <TabsTrigger value="overview">Aperçu</TabsTrigger>
-          <TabsTrigger value="logs">Historique</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="logs">History</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="send">Envoi manuel</TabsTrigger>
+          <TabsTrigger value="send">Manual Send</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
