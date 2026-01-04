@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlatformGoal, KeyPrinciples, PageInstructions, CoreConcepts, DevelopmentRoadmap } from "@/components/guide"
-import { BookOpen, ArrowRight, Workflow, HelpCircle } from "lucide-react"
+import { ArrowRight, Workflow, HelpCircle } from "lucide-react"
 
 export const revalidate = 3600 // Cache for 1 hour
 
@@ -11,8 +11,7 @@ export default function GuidePage() {
     <div className="space-y-8 max-w-5xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900 flex items-center gap-3">
-          <BookOpen className="h-8 w-8 text-blue-600" />
+        <h1 className="text-3xl font-semibold text-gray-900">
           Wave Guide
         </h1>
         <p className="text-gray-600 mt-2">
@@ -22,15 +21,6 @@ export default function GuidePage() {
 
       {/* Platform Goal */}
       <PlatformGoal />
-
-      {/* Key Principles */}
-      <KeyPrinciples />
-
-      {/* Page Instructions */}
-      <PageInstructions />
-
-      {/* Core Concepts */}
-      <CoreConcepts />
 
       {/* Detailed Guide CTAs */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -74,6 +64,15 @@ export default function GuidePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Page Instructions */}
+      <PageInstructions />
+
+      {/* Core Concepts */}
+      <CoreConcepts />
+
+      {/* Key Principles */}
+      <KeyPrinciples />
 
       {/* Development Roadmap */}
       <DevelopmentRoadmap />

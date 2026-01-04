@@ -245,7 +245,7 @@ export function DevelopmentRoadmap() {
             <div className="absolute left-0 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-sm" />
 
             {/* Period card */}
-            <Card className="overflow-hidden border-blue-100 hover:shadow-md transition-shadow">
+            <Card className="overflow-hidden border-blue-100 hover:shadow-md transition-shadow py-0 gap-0">
               <CardContent className="p-0">
                 <div
                   className="p-4 cursor-pointer flex justify-between items-center bg-gradient-to-r from-blue-50 to-white"
