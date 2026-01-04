@@ -23,29 +23,41 @@ Ivan is a business/product person, NOT a developer. Claude must:
 - **Ivan's role:** Product owner, non-technical
 
 ## Tech Stack
-- **Frontend:** Next.js + Tailwind + shadcn/ui
+- **Frontend:** Next.js 16 + Tailwind + shadcn/ui
 - **Backend/Database:** Supabase (PostgreSQL + Auth + API)
-- **Hosting:** Vercel
+- **Hosting:** Vercel (Hobby plan)
 - **Auth:** Email/password (users created manually in Supabase)
 
-## Build Approach
+## Project Structure (Cleaned Jan 2026)
+```
+emba--renew-platform/
+├── app/                 # Next.js App Router (routes only)
+│   ├── (dashboard)/     # Dashboard routes (repreneurs, pipeline, offers, emails, guide, etc.)
+│   ├── api/             # API routes
+│   ├── auth/            # Login/error pages
+│   ├── intake/          # Public intake form
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/          # React components (single source of truth)
+├── lib/                 # Utilities, actions, email templates
+├── public/              # Static assets
+├── scripts/             # SQL migrations
+├── supabase/            # Supabase config
+├── package.json
+├── tsconfig.json
+├── vercel.json          # Cron jobs config
+└── .env.local           # Secrets (not in git)
+```
 
-### Phase 1: V0 (Core App)
-Build the core application in V0 (v0.dev) using the prompts in `V0_PROMPTS.md`:
-1. Project setup + auth
-2. Database schema
-3. Repreneur list + detail views
-4. Kanban pipeline + dashboard
-
-### Phase 2: Export
-- Push V0 project to GitHub
-- Clone locally for further development
-
-### Phase 3: Claude Code (Finishing)
-- Offer management features
-- Flatchr data import script
-- Bug fixes and polish
-- Deployment
+## Deployment (Vercel)
+- **GitHub Repo:** `ivan-loves-git/v0-re-new-2-0`
+- **Production URL:** `v0-re-new-2-0.vercel.app`
+- **Deploy Hook (manual trigger):**
+  ```bash
+  curl -X POST "https://api.vercel.com/v1/integrations/deploy/prj_oCfBq06JCw4KKkPeMGrHX9M7Jt4c/bOKHVh8XZL"
+  ```
+- **Cron Jobs:** Daily at 9 AM (Hobby plan limits to once/day)
+- **Backup Branch:** `backup/pre-restructure-20260104`
 
 ## Key Documents
 - **PRD:** `.taskmaster/docs/prd.txt`
