@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { motion, useMotionValue, useTransform, animate, PanInfo } from "framer-motion"
+import { motion, useMotionValue, animate, PanInfo, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Check, Lock, Trophy, Target } from "lucide-react"
+import { Check, Lock, Trophy, Target, ChevronLeft, ChevronRight } from "lucide-react"
 
 // Course data structure
 interface Lesson {
@@ -243,12 +243,12 @@ function LessonItem({ lesson, color }: { lesson: Lesson; color: Course["color"] 
 
 export function SwipeCourseSelector() {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [direction, setDirection] = useState(0) // -1 = left, 1 = right, 0 = initial
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
 
-  // Motion values for drag-based navigation
+  // Motion values for drag-based navigation (only for swipeable elements)
   const x = useMotionValue(0)
-  const dragProgress = useTransform(x, [-containerWidth, 0, containerWidth], [1, 0, -1])
 
   // Update container width on mount and resize
   useEffect(() => {
@@ -271,17 +271,18 @@ export function SwipeCourseSelector() {
 
   // Handle drag end with snap physics
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = containerWidth * 0.2 // 20% threshold for easier swiping
+    const threshold = containerWidth * 0.2
     const velocity = info.velocity.x
     const offset = info.offset.x
 
     let newIndex = currentIndex
 
-    // Check if we should move to next/prev based on offset OR velocity
     if (offset < -threshold || velocity < -500) {
       newIndex = Math.min(currentIndex + 1, courses.length - 1)
+      if (newIndex !== currentIndex) setDirection(1)
     } else if (offset > threshold || velocity > 500) {
       newIndex = Math.max(currentIndex - 1, 0)
+      if (newIndex !== currentIndex) setDirection(-1)
     }
 
     setCurrentIndex(newIndex)
@@ -290,15 +291,54 @@ export function SwipeCourseSelector() {
 
   // Navigate to specific page
   const goToPage = (index: number) => {
+    setDirection(index > currentIndex ? 1 : -1)
     setCurrentIndex(index)
+  }
+
+  // Navigate with arrows
+  const goNext = () => {
+    if (currentIndex < courses.length - 1) {
+      setDirection(1)
+      setCurrentIndex(currentIndex + 1)
+    }
+  }
+
+  const goPrev = () => {
+    if (currentIndex > 0) {
+      setDirection(-1)
+      setCurrentIndex(currentIndex - 1)
+    }
   }
 
   const currentCourse = courses[currentIndex]
   const config = colorConfig[currentCourse.color]
 
+  // Slide variants for swipeable content
+  const slideVariants = {
+    enter: (dir: number) => ({
+      x: dir > 0 ? 300 : -300,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (dir: number) => ({
+      x: dir > 0 ? -300 : 300,
+      opacity: 0,
+    }),
+  }
+
+  // Fade variants for stable content
+  const fadeVariants = {
+    enter: { opacity: 0 },
+    center: { opacity: 1 },
+    exit: { opacity: 0 },
+  }
+
   return (
-    <div className="w-full max-w-2xl mx-auto bg-gray-50 rounded-3xl overflow-hidden shadow-2xl">
-      {/* Fixed Header - Progress counters */}
+    <div className="w-full max-w-2xl mx-auto bg-gray-50 rounded-3xl overflow-hidden shadow-2xl relative">
+      {/* Fixed Header - Progress counters (stable) */}
       <div className="sticky top-0 z-20 px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm">
           <Trophy className="w-4 h-4 text-amber-500" />
@@ -310,93 +350,150 @@ export function SwipeCourseSelector() {
         </div>
       </div>
 
-      {/* Swipeable Content Area */}
-      <div ref={containerRef} className="relative overflow-hidden">
-        <motion.div
-          className="cursor-grab active:cursor-grabbing"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.1}
-          onDragEnd={handleDragEnd}
-          style={{ x }}
-        >
-          {/* Course Page Content */}
-          <div className="px-8 py-6 flex flex-col items-center min-h-[520px]">
-            {/* Recommended Badge */}
-            {currentCourse.recommended && (
-              <motion.div
-                key={`badge-${currentIndex}`}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-2"
-              >
-                <span className="px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-600 bg-amber-50 rounded-full">
-                  Recommended
-                </span>
-              </motion.div>
-            )}
+      {/* Navigation Arrows for Desktop */}
+      <button
+        onClick={goPrev}
+        disabled={currentIndex === 0}
+        className={cn(
+          "absolute left-3 top-1/2 -translate-y-1/2 z-30",
+          "w-10 h-10 rounded-full flex items-center justify-center",
+          "bg-emerald-800/80 hover:bg-emerald-700 text-white",
+          "transition-all duration-200 shadow-lg",
+          currentIndex === 0 && "opacity-30 cursor-not-allowed hover:bg-emerald-800/80"
+        )}
+        aria-label="Previous module"
+      >
+        <ChevronLeft className="w-6 h-6" />
+      </button>
 
-            {/* Course Title */}
+      <button
+        onClick={goNext}
+        disabled={currentIndex === courses.length - 1}
+        className={cn(
+          "absolute right-3 top-1/2 -translate-y-1/2 z-30",
+          "w-10 h-10 rounded-full flex items-center justify-center",
+          "bg-emerald-800/80 hover:bg-emerald-700 text-white",
+          "transition-all duration-200 shadow-lg",
+          currentIndex === courses.length - 1 && "opacity-30 cursor-not-allowed hover:bg-emerald-800/80"
+        )}
+        aria-label="Next module"
+      >
+        <ChevronRight className="w-6 h-6" />
+      </button>
+
+      {/* Main Content Area */}
+      <div ref={containerRef} className="relative overflow-hidden px-8 py-6">
+        {/* STABLE SECTION: Title, Badge, Level, Dots (fade transition) */}
+        <div className="flex flex-col items-center">
+          {/* Recommended Badge - fade */}
+          <div className="h-8 mb-2">
+            <AnimatePresence mode="wait">
+              {currentCourse.recommended && (
+                <motion.div
+                  key={`badge-${currentIndex}`}
+                  variants={fadeVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.2 }}
+                >
+                  <span className="px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-600 bg-amber-50 rounded-full">
+                    Recommended
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Course Title - fade */}
+          <AnimatePresence mode="wait">
             <motion.h2
               key={`title-${currentIndex}`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3 }}
+              variants={fadeVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.25 }}
               className="text-2xl font-bold text-gray-900 text-center"
             >
               {currentCourse.title}
             </motion.h2>
+          </AnimatePresence>
 
-            {/* Level */}
+          {/* Level - fade */}
+          <AnimatePresence mode="wait">
             <motion.p
               key={`level-${currentIndex}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
+              variants={fadeVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.25, delay: 0.05 }}
               className={cn("text-sm font-semibold uppercase tracking-wide mt-1", config.levelText)}
             >
               {currentCourse.level}
             </motion.p>
+          </AnimatePresence>
+        </div>
 
-            {/* Hero Illustration */}
+        {/* SWIPEABLE SECTION: Illustration (slides left/right) */}
+        <div className="relative h-72 my-6">
+          <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={`illustration-${currentIndex}`}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="my-8"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.1}
+              onDragEnd={handleDragEnd}
+              className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing"
             >
               <CourseIllustration course={currentCourse} />
             </motion.div>
+          </AnimatePresence>
+        </div>
 
-            {/* Pagination Dots */}
-            <div className="flex gap-2 mb-6">
-              {courses.map((course, index) => (
-                <motion.button
-                  key={course.id}
-                  onClick={() => goToPage(index)}
-                  className={cn(
-                    "w-2.5 h-2.5 rounded-full transition-all duration-200",
-                    index === currentIndex
-                      ? "scale-110"
-                      : "opacity-30 hover:opacity-50"
-                  )}
-                  style={{
-                    backgroundColor: index === currentIndex ? config.dot : "#9CA3AF",
-                  }}
-                  whileTap={{ scale: 0.9 }}
-                />
-              ))}
-            </div>
+        {/* STABLE SECTION: Pagination Dots (no movement) */}
+        <div className="flex gap-2 justify-center mb-6">
+          {courses.map((course, index) => (
+            <motion.button
+              key={course.id}
+              onClick={() => goToPage(index)}
+              className={cn(
+                "w-2.5 h-2.5 rounded-full transition-all duration-200",
+                index === currentIndex
+                  ? "scale-110"
+                  : "opacity-30 hover:opacity-50"
+              )}
+              style={{
+                backgroundColor: index === currentIndex ? config.dot : "#9CA3AF",
+              }}
+              whileTap={{ scale: 0.9 }}
+            />
+          ))}
+        </div>
 
-            {/* Lesson Card */}
+        {/* SWIPEABLE SECTION: Lesson Card (slides left/right) */}
+        <div className="relative min-h-[280px]">
+          <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={`card-${currentIndex}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="w-full bg-white rounded-3xl shadow-lg p-5"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.05 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.1}
+              onDragEnd={handleDragEnd}
+              className="w-full bg-white rounded-3xl shadow-lg p-5 cursor-grab active:cursor-grabbing"
             >
               {/* Lessons List */}
               <div className="space-y-1 mb-4">
@@ -422,10 +519,9 @@ export function SwipeCourseSelector() {
                 Continue Module
               </motion.button>
             </motion.div>
-          </div>
-        </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-
     </div>
   )
 }
