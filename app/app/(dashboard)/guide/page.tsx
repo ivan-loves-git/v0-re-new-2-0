@@ -1,0 +1,67 @@
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PlatformGoal, KeyPrinciples, PageInstructions, CoreConcepts, DevelopmentRoadmap } from "@/components/guide"
+import { BookOpen, ArrowRight } from "lucide-react"
+
+export const revalidate = 3600 // Cache for 1 hour
+
+export default function GuidePage() {
+  return (
+    <div className="space-y-8 max-w-5xl mx-auto">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-semibold text-gray-900 flex items-center gap-3">
+          <BookOpen className="h-8 w-8 text-blue-600" />
+          Wave Guide
+        </h1>
+        <p className="text-gray-600 mt-2">
+          Everything you need to know about using the Wave 1.0 platform
+        </p>
+      </div>
+
+      {/* Platform Goal */}
+      <PlatformGoal />
+
+      {/* Key Principles */}
+      <KeyPrinciples />
+
+      {/* Page Instructions */}
+      <PageInstructions />
+
+      {/* Core Concepts */}
+      <CoreConcepts />
+
+      {/* Detailed Guide CTA */}
+      <Card className="border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+        <CardHeader>
+          <CardTitle className="text-lg">Need more details?</CardTitle>
+          <CardDescription>
+            The detailed guide includes step-by-step workflows, tips & tricks, and answers to common questions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/guide/details">
+            <Button className="gap-2">
+              View Detailed Guide
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* Development Roadmap */}
+      <DevelopmentRoadmap />
+
+      {/* Footer */}
+      <div className="text-center text-sm text-gray-500 py-8 border-t">
+        <p>
+          Built with care for the Re-New team.
+        </p>
+        <p className="mt-1">
+          Questions? Reach out to Ivan or check the roadmap for upcoming features.
+        </p>
+      </div>
+    </div>
+  )
+}
