@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlatformGoal, KeyPrinciples, PageInstructions, CoreConcepts, DevelopmentRoadmap } from "@/components/guide"
-import { BookOpen, ArrowRight } from "lucide-react"
+import { BookOpen, ArrowRight, Workflow, HelpCircle } from "lucide-react"
 
 export const revalidate = 3600 // Cache for 1 hour
 
@@ -32,23 +32,48 @@ export default function GuidePage() {
       {/* Core Concepts */}
       <CoreConcepts />
 
-      {/* Detailed Guide CTA */}
-      <Card className="border-gray-200 bg-gradient-to-br from-gray-50 to-white">
-        <CardHeader>
-          <CardTitle className="text-lg">Need more details?</CardTitle>
-          <CardDescription>
-            The detailed guide includes step-by-step workflows, tips & tricks, and answers to common questions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/guide/details">
-            <Button className="gap-2">
-              View Detailed Guide
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
+      {/* Detailed Guide CTAs */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Workflow className="h-5 w-5 text-blue-600" />
+              Common Workflows
+            </CardTitle>
+            <CardDescription>
+              Step-by-step guides for processing leads, managing clients, and running weekly pipeline reviews.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/guide/details#workflows">
+              <Button className="gap-2">
+                View Workflows
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-100 bg-gradient-to-br from-amber-50 to-white">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-amber-600" />
+              FAQ
+            </CardTitle>
+            <CardDescription>
+              Answers to common questions about status changes, scoring, rejections, and time tracking.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/guide/details#faq">
+              <Button variant="outline" className="gap-2">
+                View FAQ
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Development Roadmap */}
       <DevelopmentRoadmap />

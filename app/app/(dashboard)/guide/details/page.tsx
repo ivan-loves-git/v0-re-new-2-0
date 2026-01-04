@@ -128,7 +128,7 @@ export default function DetailedGuidePage() {
       </div>
 
       {/* Workflows */}
-      <section className="space-y-4">
+      <section id="workflows" className="space-y-4 scroll-mt-8">
         <h2 className="text-xl font-semibold text-gray-900">Common Workflows</h2>
         <div className="space-y-4">
           {workflows.map((workflow, index) => (
@@ -180,7 +180,7 @@ export default function DetailedGuidePage() {
       </section>
 
       {/* FAQ */}
-      <section className="space-y-4">
+      <section id="faq" className="space-y-4 scroll-mt-8">
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
           <AlertCircle className="h-5 w-5 text-blue-500" />
           Common Questions

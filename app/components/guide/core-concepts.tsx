@@ -183,6 +183,20 @@ Currently using \`onboarding@resend.dev\` (Resend's test sender). For production
   },
 ]
 
+// Helper to render text with **bold** and *italic* markdown syntax
+function renderFormattedText(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+    }
+    if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
+      return <em key={index} className="text-gray-700">{part.slice(1, -1)}</em>
+    }
+    return part
+  })
+}
+
 export function CoreConcepts() {
   return (
     <div className="space-y-4">
@@ -200,7 +214,7 @@ export function CoreConcepts() {
             </AccordionTrigger>
             <AccordionContent>
               <div className="pl-12 pr-4 pb-2 text-sm text-gray-600 whitespace-pre-line">
-                {concept.content}
+                {renderFormattedText(concept.content)}
               </div>
             </AccordionContent>
           </AccordionItem>
