@@ -128,7 +128,7 @@ export function AppSidebar({
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
             >
-              <span className="text-2xl">
+              <span className={`text-2xl transition-transform ${isHovering ? "animate-wiggle" : ""}`}>
                 {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
               </span>
               <Image
@@ -136,7 +136,7 @@ export function AppSidebar({
                 alt="Wave - the repreneur CRM"
                 width={96}
                 height={32}
-                className="h-auto"
+                className={`h-auto transition-transform ${isHovering ? "animate-wiggle" : ""}`}
                 priority
               />
             </SidebarMenuButton>
