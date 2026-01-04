@@ -18,7 +18,8 @@ import {
   Mail,
   Target,
   BookOpen,
-  Map
+  Map,
+  ClipboardList
 } from "lucide-react"
 import { pendingTodos } from "@/lib/data/todos"
 
@@ -36,7 +37,8 @@ const mainNavigation = [
 const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
-  { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
+  { name: "Roadmap", href: "/guide/roadmap", icon: Map },
+  { name: "To Do", href: "/guide/todo", icon: ClipboardList, showNotification: true },
 ]
 
 const externalUsersNavigation = [

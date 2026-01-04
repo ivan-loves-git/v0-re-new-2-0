@@ -128,13 +128,17 @@ export function AppSidebar({
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground text-xl">
+              <span className="text-2xl">
                 {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Wave 1.0</span>
-                <span className="truncate text-xs opacity-60">the repreneur CRM</span>
-              </div>
+              </span>
+              <Image
+                src="/wave-logo.png"
+                alt="Wave - the repreneur CRM"
+                width={96}
+                height={32}
+                className="h-auto"
+                priority
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
