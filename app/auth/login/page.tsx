@@ -297,8 +297,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left side - Dark with dots pattern and glow orbs (from v4) */}
-      <div className="relative w-full lg:w-1/2 bg-gray-950 flex flex-col justify-between p-8 lg:p-12 min-h-[40vh] lg:min-h-screen overflow-hidden">
+      {/* Dark header - MOBILE: slim centered logo only, DESKTOP: full side panel */}
+      <div className="relative w-full lg:w-1/2 bg-gray-950 flex flex-col justify-center lg:justify-between py-6 lg:p-12 lg:min-h-screen overflow-hidden">
         {/* Blue dots pattern */}
         <div
           className="absolute inset-0 opacity-[0.15]"
@@ -313,10 +313,10 @@ export default function LoginPage() {
         <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl" />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center flex-1">
-          {/* Logo - exact copy from sidebar, scaled up ~50% */}
+        <div className="relative z-10 flex flex-col justify-center lg:flex-1">
+          {/* Logo - centered on mobile, left-aligned on desktop */}
           <div
-            className="logo-button flex items-center gap-4 mb-8 cursor-pointer"
+            className="logo-button flex items-center justify-center lg:justify-start gap-4 lg:mb-8 cursor-pointer lg:px-0"
             onTouchStart={handleTouchStart}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -335,13 +335,14 @@ export default function LoginPage() {
             />
           </div>
 
-          <p className="text-gray-400 text-lg leading-relaxed max-w-md">
+          {/* Description - desktop only */}
+          <p className="text-gray-400 text-lg leading-relaxed max-w-md hidden lg:block">
             The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
           </p>
         </div>
 
-        {/* Status indicator */}
-        <div className="relative z-10 flex items-center gap-2 text-white/40 text-sm">
+        {/* Status indicator - desktop only (moved to bottom of form on mobile) */}
+        <div className="relative z-10 items-center gap-2 text-white/40 text-sm hidden lg:flex">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -460,6 +461,15 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          {/* Status indicator - mobile only (at bottom of form) */}
+          <div className="flex lg:hidden items-center justify-center gap-2 text-gray-400 text-sm mt-8">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            All systems operational
+          </div>
         </div>
       </div>
 
