@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 4, 2026 (PM)",
+    version: "0.8.50",
     title: "Email System Hardening",
     isCompleted: true,
     events: [
@@ -37,6 +38,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 4, 2026",
+    version: "0.8.40",
     title: "Production Ready",
     isCompleted: true,
     events: [
@@ -74,6 +76,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 4, 2026 (AM)",
+    version: "0.8.20",
     title: "Critical Infrastructure Fix",
     isCompleted: true,
     events: [
@@ -101,6 +104,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 3, 2026",
+    version: "0.8.0",
     title: "Wave Dashboard",
     isCompleted: true,
     events: [
@@ -133,6 +137,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 2, 2026",
+    version: "0.7.5",
     title: "V1.0 Enhancements",
     isCompleted: true,
     events: [
@@ -165,6 +170,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 1, 2026",
+    version: "0.7.0",
     title: "UX Polish Sprint",
     isCompleted: true,
     events: [
@@ -197,6 +203,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 31, 2025",
+    version: "0.6.1",
     title: "Bug Fixing Day",
     isCompleted: true,
     events: [
@@ -224,6 +231,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 30, 2025",
+    version: "0.6.0",
     title: "Core Feature Sprint",
     isCompleted: true,
     events: [
@@ -261,6 +269,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 29, 2025",
+    version: "0.5.0",
     title: "Platform Foundation",
     isCompleted: true,
     events: [
@@ -298,6 +307,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 27-28, 2025",
+    version: "0.4.0",
     title: "V0 Foundation",
     isCompleted: true,
     events: [
@@ -330,6 +340,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 22-26, 2025",
+    version: "0.3.0",
     title: "Architecture Planning",
     isCompleted: true,
     events: [
@@ -362,6 +373,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 18-21, 2025",
+    version: "0.2.0",
     title: "Requirements & Strategy",
     isCompleted: true,
     events: [
@@ -389,6 +401,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 15-17, 2025",
+    version: "0.1.0",
     title: "Project Inception",
     isCompleted: true,
     events: [
@@ -498,6 +511,9 @@ export function DevelopmentRoadmap() {
                     </h3>
                     <p className="text-sm text-gray-500">
                       {period.events.length} updates
+                      {period.version && (
+                        <span className="ml-2 text-[10px] font-mono text-gray-400">v{period.version}</span>
+                      )}
                     </p>
                   </div>
                 </div>
