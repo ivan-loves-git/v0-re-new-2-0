@@ -61,7 +61,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
     const p: Particle[] = []
     for (let i = 0; i < 10; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8
-      const velocity = 7 + Math.random() * 3.5 // 30% less amplitude
+      const velocity = 5.6 + Math.random() * 2.8 // 20% smaller magnitude
       p.push({
         id: i,
         x: (Math.random() - 0.5) * 20,
@@ -80,7 +80,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
     }
     for (let i = 0; i < 10; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6
-      const velocity = 6.3 + Math.random() * 2.8 // 30% less amplitude
+      const velocity = 5 + Math.random() * 2.24 // 20% smaller magnitude
       p.push({
         id: i + 10,
         x: (Math.random() - 0.5) * 20,
@@ -91,7 +91,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
         vy: Math.sin(angle) * velocity,
         rotation: Math.random() * 360,
         rotationSpeed: Math.random() * 8 - 4,
-        scale: 0.84 + Math.random() * 0.56, // 40% larger emojis
+        scale: 1.18 + Math.random() * 0.78, // 40% bigger emojis
         opacity: 1,
         delay: i * 25,
       })
@@ -114,7 +114,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
             y: p.y + p.vy,
             vy: p.vy + 0.3, // Gravity
             rotation: p.rotation + p.rotationSpeed,
-            opacity: Math.max(0, p.opacity - 0.013), // 50% slower fade
+            opacity: Math.max(0, p.opacity - 0.01), // 30% longer duration
           }
         })
       )
@@ -123,7 +123,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
     const timeout = setTimeout(() => {
       clearInterval(interval)
       onComplete()
-    }, 1800) // 50% longer duration
+    }, 2340) // 30% longer duration
 
     return () => {
       clearInterval(interval)
