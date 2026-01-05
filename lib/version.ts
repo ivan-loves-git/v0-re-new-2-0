@@ -1,9 +1,9 @@
-// Build version - update this with each significant release
-// Format: major.minor.patch
-export const APP_VERSION = "0.8.50"
+// Build info injected at build time from next.config.mjs
+// BUILD_NUMBER = git commit count (progressive: 847, 848, 849...)
+// BUILD_HASH = git short hash (unique: 2c617f1)
 
-// This will be replaced at build time with git commit hash
-export const BUILD_HASH = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "dev"
+export const BUILD_NUMBER = process.env.NEXT_PUBLIC_BUILD_NUMBER || "0"
+export const BUILD_HASH = process.env.NEXT_PUBLIC_BUILD_HASH || "dev"
 
-// Combined version string for display
-export const BUILD_VERSION = `v${APP_VERSION}.${BUILD_HASH}`
+// Combined version string for display: "build 849.2c617f1"
+export const BUILD_VERSION = `build ${BUILD_NUMBER}.${BUILD_HASH}`
