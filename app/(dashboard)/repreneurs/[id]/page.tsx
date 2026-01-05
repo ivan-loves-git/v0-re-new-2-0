@@ -154,8 +154,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             size="xl"
             editable
           />
-          <div className="space-y-2">
-            <div className="flex gap-6">
+          <div className="space-y-2 min-w-0 flex-1">
+            <div className="flex flex-col sm:flex-row sm:gap-6 gap-1">
               <div>
                 <Label className="text-xs text-gray-400 mb-1 block">Name</Label>
                 <EditableTextField
@@ -164,7 +164,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   value={repreneur.first_name}
                   label="First Name"
                   placeholder="First name"
-                  textClassName="text-2xl font-semibold text-gray-900"
+                  textClassName="text-xl sm:text-2xl font-semibold text-gray-900"
                 />
               </div>
               <div>
@@ -175,14 +175,14 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   value={repreneur.last_name}
                   label="Last Name"
                   placeholder="Last name"
-                  textClassName="text-2xl font-semibold text-gray-900"
+                  textClassName="text-xl sm:text-2xl font-semibold text-gray-900"
                 />
               </div>
             </div>
-            {/* Email and Phone inline */}
-            <div className="flex items-center gap-3 text-sm text-gray-600">
-              <div className="flex items-center gap-1.5">
-                <Mail className="h-4 w-4 text-gray-400" />
+            {/* Email and Phone - stacked on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-600">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Mail className="h-4 w-4 text-gray-400 shrink-0" />
                 <EditableTextField
                   repreneurId={id}
                   field="email"
@@ -192,8 +192,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   placeholder="email@example.com"
                 />
               </div>
-              <div className="flex items-center gap-1.5">
-                <Phone className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Phone className="h-4 w-4 text-gray-400 shrink-0" />
                 <EditableTextField
                   repreneurId={id}
                   field="phone"

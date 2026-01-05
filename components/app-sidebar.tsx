@@ -84,6 +84,7 @@ export function AppSidebar({
   const pathname = usePathname()
   const [isHovering, setIsHovering] = React.useState(false)
   const [emojiIndex, setEmojiIndex] = React.useState(0)
+  const isTouchDevice = React.useRef(false)
 
   const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -123,8 +124,19 @@ export function AppSidebar({
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
+              onMouseEnter={() => {
+                // Ignore synthesized mouse events on touch devices
+                if (!isTouchDevice.current) setIsHovering(true)
+              }}
+              onMouseLeave={() => {
+                if (!isTouchDevice.current) setIsHovering(false)
+              }}
+              onTouchStart={() => {
+                isTouchDevice.current = true
+                setIsHovering(true)
+              }}
+              onTouchEnd={() => setIsHovering(false)}
+              onTouchCancel={() => setIsHovering(false)}
             >
               <span className={`text-2xl transition-transform ${isHovering ? "animate-wiggle" : ""}`}>
                 {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
