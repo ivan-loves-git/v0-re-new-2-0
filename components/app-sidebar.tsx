@@ -127,12 +127,12 @@ export function AppSidebar({
     }, 3000)
   }
 
-  // Handle mouse hover (desktop only - for emoji cycling, CSS handles animation)
+  // Handle mouse hover (always respond - works on all platforms)
   const handleMouseEnter = () => {
-    if (supportsHover) setIsHovering(true)
+    setIsHovering(true)
   }
   const handleMouseLeave = () => {
-    if (supportsHover) setIsHovering(false)
+    setIsHovering(false)
   }
 
   // Check if current path is active
