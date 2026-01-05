@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { DevelopmentRoadmap, PendingTodos } from "@/components/guide"
+import { DevelopmentRoadmap } from "@/components/guide"
 
 export const revalidate = 3600 // Cache for 1 hour
 
@@ -15,9 +15,6 @@ export default function RoadmapPage() {
           The development journey of Wave
         </p>
       </div>
-
-      {/* Pending TODOs */}
-      <PendingTodos />
 
       {/* Development Roadmap */}
       <DevelopmentRoadmap />

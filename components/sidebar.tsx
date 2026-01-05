@@ -6,6 +6,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import {
   LayoutDashboard,
   Users,
@@ -20,7 +21,6 @@ import {
   BookOpen,
   Map
 } from "lucide-react"
-import { pendingTodos } from "@/lib/data/todos"
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -48,6 +48,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const [isHovering, setIsHovering] = useState(false)
   const [emojiIndex, setEmojiIndex] = useState(0)
+  const hasNewRoadmap = hasRecentRoadmapUpdates()
 
   // Cycle through emojis when hovering
   useEffect(() => {
@@ -75,8 +76,6 @@ export function Sidebar() {
     return pathname.startsWith(href)
   }
 
-  const hasPendingTodos = pendingTodos.length > 0
-
   const renderNavItem = (item: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; opensNewTab?: boolean; showNotification?: boolean }) => {
     // For items that open in new tab, use <a> tag
     if (item.opensNewTab) {
@@ -98,7 +97,7 @@ export function Sidebar() {
     }
 
     const isActive = getIsActive(item.href)
-    const showRedDot = item.showNotification && hasPendingTodos
+    const showRedDot = item.showNotification && hasNewRoadmap
 
     return (
       <Link

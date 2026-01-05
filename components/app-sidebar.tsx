@@ -23,6 +23,7 @@ import {
   User,
   Sparkles,
 } from "lucide-react"
+import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 
 import {
   Sidebar,
@@ -61,7 +62,7 @@ const mainNavigation = [
 const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
-  { name: "Roadmap", href: "/guide/roadmap", icon: Map },
+  { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
 const externalUsersNavigation = [
@@ -86,6 +87,7 @@ export function AppSidebar({
   const [emojiIndex, setEmojiIndex] = React.useState(0)
   const touchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const [supportsHover, setSupportsHover] = React.useState(false)
+  const hasNewRoadmap = hasRecentRoadmapUpdates()
 
   const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -216,20 +218,28 @@ export function AppSidebar({
           <SidebarGroupLabel>Guidelines</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {guidelinesNavigation.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={getIsActive(item.href)}
-                    tooltip={item.name}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {guidelinesNavigation.map((item) => {
+                const showRedDot = item.showNotification && hasNewRoadmap
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={getIsActive(item.href)}
+                      tooltip={item.name}
+                    >
+                      <Link href={item.href}>
+                        <span className="relative">
+                          <item.icon />
+                          {showRedDot && (
+                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                          )}
+                        </span>
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
