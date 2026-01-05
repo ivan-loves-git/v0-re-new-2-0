@@ -83,6 +83,7 @@ export function AppSidebar({
   const pathname = usePathname()
   const [isHovering, setIsHovering] = React.useState(false)
   const [emojiIndex, setEmojiIndex] = React.useState(0)
+  const touchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -97,6 +98,22 @@ export function AppSidebar({
     }, 150)
     return () => clearInterval(interval)
   }, [isHovering])
+
+  // Cleanup touch timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
+    }
+  }, [])
+
+  // Handle touch - wiggle for 3 seconds then stop
+  const handleTouchStart = () => {
+    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
+    setIsHovering(true)
+    touchTimeoutRef.current = setTimeout(() => {
+      setIsHovering(false)
+    }, 3000)
+  }
 
   // Check if current path is active
   const getIsActive = (href: string) => {
@@ -129,6 +146,7 @@ export function AppSidebar({
               onPointerLeave={(e) => {
                 if (e.pointerType === "mouse") setIsHovering(false)
               }}
+              onTouchStart={handleTouchStart}
             >
               <span className={`w-7 text-center text-2xl transition-transform ${isHovering ? "animate-wiggle" : ""}`}>
                 {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
