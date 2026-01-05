@@ -37,9 +37,12 @@ interface Particle {
 }
 
 // Fountain confetti - Desktop only (disabled on mobile for performance)
-function ConfettiFountain({ originX, originY, onComplete }: { originX: number; originY: number; onComplete: () => void }) {
+function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: number; originY: number; emojis?: string[]; onComplete: () => void }) {
   const [particles, setParticles] = useState<Particle[]>([])
   const [isMobile, setIsMobile] = useState(true) // Default to mobile (skip animation) until we detect
+
+  // Use custom emojis if provided, otherwise default
+  const emojiSet = emojis || CONFETTI_EMOJIS
 
   // Detect mobile on mount
   useEffect(() => {
@@ -83,7 +86,7 @@ function ConfettiFountain({ originX, originY, onComplete }: { originX: number; o
         x: (Math.random() - 0.5) * 20,
         y: 0,
         type: "emoji",
-        content: CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)],
+        content: emojiSet[Math.floor(Math.random() * emojiSet.length)],
         vx: Math.cos(angle) * velocity,
         vy: Math.sin(angle) * velocity,
         rotation: Math.random() * 360,
@@ -94,7 +97,7 @@ function ConfettiFountain({ originX, originY, onComplete }: { originX: number; o
       })
     }
     setParticles(p)
-  }, [isMobile])
+  }, [isMobile, emojiSet])
 
   // Animate particles (only on desktop)
   useEffect(() => {
@@ -173,7 +176,7 @@ export default function LoginPage() {
 
   // Confetti state
   const [confettiKey, setConfettiKey] = useState(0)
-  const [confetti, setConfetti] = useState<{ x: number; y: number } | null>(null)
+  const [confetti, setConfetti] = useState<{ x: number; y: number; emojis?: string[] } | null>(null)
 
   // Logo animation state (copied from sidebar)
   const [isTouchActive, setIsTouchActive] = useState(false)
@@ -259,9 +262,12 @@ export default function LoginPage() {
     const rect = (e.target as HTMLElement).closest("button")?.getBoundingClientRect()
     if (rect) {
       setConfettiKey((prev) => prev + 1)
+      // Amelie gets roses 🌹
+      const customEmojis = member.name === "Amelie" ? ["🌹"] : undefined
       setConfetti({
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
+        emojis: customEmojis,
       })
     }
     setSelectedUser(member.email)
@@ -443,6 +449,7 @@ export default function LoginPage() {
           key={confettiKey}
           originX={confetti.x}
           originY={confetti.y}
+          emojis={confetti.emojis}
           onComplete={() => setConfetti(null)}
         />
       )}
