@@ -81,15 +81,25 @@ export function AppSidebar({
   userAvatar,
 }: AppSidebarProps) {
   const pathname = usePathname()
+  const [isTouchActive, setIsTouchActive] = React.useState(false)
   const [isHovering, setIsHovering] = React.useState(false)
   const [emojiIndex, setEmojiIndex] = React.useState(0)
   const touchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const [supportsHover, setSupportsHover] = React.useState(false)
 
   const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
-  // Cycle through emojis when hovering
+  // Whether animation is active (touch on mobile, hover on desktop)
+  const isAnimating = isTouchActive || isHovering
+
+  // Detect hover capability on mount (client-side only)
   React.useEffect(() => {
-    if (!isHovering) {
+    setSupportsHover(window.matchMedia('(hover: hover)').matches)
+  }, [])
+
+  // Cycle through emojis when animating
+  React.useEffect(() => {
+    if (!isAnimating) {
       setEmojiIndex(0)
       return
     }
@@ -97,7 +107,7 @@ export function AppSidebar({
       setEmojiIndex((prev) => (prev + 1) % LOGO_EMOJIS.length)
     }, 150)
     return () => clearInterval(interval)
-  }, [isHovering])
+  }, [isAnimating])
 
   // Cleanup touch timeout on unmount
   React.useEffect(() => {
@@ -106,13 +116,22 @@ export function AppSidebar({
     }
   }, [])
 
-  // Handle touch - wiggle for 3 seconds then stop
+  // Handle touch - wiggle for 3 seconds then stop (mobile only)
   const handleTouchStart = () => {
+    if (supportsHover) return // Don't handle touch on desktop
     if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
-    setIsHovering(true)
+    setIsTouchActive(true)
     touchTimeoutRef.current = setTimeout(() => {
-      setIsHovering(false)
+      setIsTouchActive(false)
     }, 3000)
+  }
+
+  // Handle mouse hover (desktop only - for emoji cycling, CSS handles animation)
+  const handleMouseEnter = () => {
+    if (supportsHover) setIsHovering(true)
+  }
+  const handleMouseLeave = () => {
+    if (supportsHover) setIsHovering(false)
   }
 
   // Check if current path is active
@@ -138,25 +157,20 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent"
-              onPointerEnter={(e) => {
-                // Only trigger hover for mouse, not touch
-                if (e.pointerType === "mouse") setIsHovering(true)
-              }}
-              onPointerLeave={(e) => {
-                if (e.pointerType === "mouse") setIsHovering(false)
-              }}
+              className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent logo-button"
               onTouchStart={handleTouchStart}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
             >
-              <span className={`w-7 text-center text-2xl transition-transform ${isHovering ? "animate-wiggle" : ""}`}>
-                {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
+              <span className={`w-7 text-center text-2xl transition-transform ${isTouchActive ? "animate-wiggle" : ""}`}>
+                {isAnimating ? LOGO_EMOJIS[emojiIndex] : "🌊"}
               </span>
               <Image
                 src="/wave-logo.png"
                 alt="Wave - the repreneur CRM"
                 width={96}
                 height={32}
-                className={`h-auto transition-transform ${isHovering ? "animate-wiggle" : ""}`}
+                className={`h-auto transition-transform ${isTouchActive ? "animate-wiggle" : ""}`}
                 priority
               />
             </SidebarMenuButton>

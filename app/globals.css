@@ -161,7 +161,16 @@
   40%, 100% { transform: translate(0, 0) rotate(0deg); }
 }
 
+/* Mobile: Only animate when explicitly triggered via JS (animate-wiggle class) */
 .animate-wiggle {
   animation: wiggle 0.3s ease-in-out infinite;
+}
+
+/* Desktop: CSS-only hover animation for logo button children */
+@media (hover: hover) and (pointer: fine) {
+  .logo-button:hover > span,
+  .logo-button:hover > img {
+    animation: wiggle 0.3s ease-in-out infinite;
+  }
 }
 
