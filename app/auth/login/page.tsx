@@ -187,6 +187,18 @@ export default function LoginPage() {
 
   const isAnimating = isTouchActive || isHovering
 
+  // Check if already logged in on mount - redirect to dashboard
+  useEffect(() => {
+    const checkSession = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        window.location.href = "/dashboard"
+      }
+    }
+    checkSession()
+  }, [])
+
   // Detect hover capability on mount
   useEffect(() => {
     setSupportsHover(window.matchMedia("(hover: hover)").matches)
