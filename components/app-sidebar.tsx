@@ -35,7 +35,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
 import {
@@ -84,7 +83,6 @@ export function AppSidebar({
   const pathname = usePathname()
   const [isHovering, setIsHovering] = React.useState(false)
   const [emojiIndex, setEmojiIndex] = React.useState(0)
-  const touchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -99,23 +97,6 @@ export function AppSidebar({
     }, 150)
     return () => clearInterval(interval)
   }, [isHovering])
-
-  // Cleanup timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
-    }
-  }, [])
-
-  // Handle touch - animate briefly then stop
-  const handleTouch = (e: React.TouchEvent) => {
-    e.preventDefault() // Prevent synthesized mouse events
-    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
-    setIsHovering(true)
-    touchTimeoutRef.current = setTimeout(() => {
-      setIsHovering(false)
-    }, 1500) // Animate for 1.5 seconds on tap
-  }
 
   // Check if current path is active
   const getIsActive = (href: string) => {
@@ -133,7 +114,7 @@ export function AppSidebar({
   const displayName = userName || userEmail.split("@")[0]
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar collapsible="icon" className="border-r-0 overflow-hidden">
       {/* Header with Logo */}
       <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
@@ -141,11 +122,15 @@ export function AppSidebar({
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
-              onTouchStart={handleTouch}
+              onPointerEnter={(e) => {
+                // Only trigger hover for mouse, not touch
+                if (e.pointerType === "mouse") setIsHovering(true)
+              }}
+              onPointerLeave={(e) => {
+                if (e.pointerType === "mouse") setIsHovering(false)
+              }}
             >
-              <span className={`text-2xl transition-transform ${isHovering ? "animate-wiggle" : ""}`}>
+              <span className={`w-7 text-center text-2xl transition-transform ${isHovering ? "animate-wiggle" : ""}`}>
                 {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
               </span>
               <Image
@@ -329,9 +314,6 @@ export function AppSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-
-      {/* Rail for easy toggle on hover */}
-      <SidebarRail />
     </Sidebar>
   )
 }
