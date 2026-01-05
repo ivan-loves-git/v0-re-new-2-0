@@ -126,5 +126,10 @@ task-master set-status --id=<id> --status=done         # Complete task
 - **ALWAYS push immediately after committing** - Ivan prefers commit + push as one action
 - **ALWAYS report build number after push** - Tell Ivan the build number (from `lib/version.ts`) so he knows what version to look for in the deployed app to confirm it's live
 
+## Browser Testing Rules
+- **NEVER test animations** - The browser plugin is too slow to capture animations. Always ask Ivan to test animations on his device.
+- Push changes first, then Ivan tests on mobile/actual device
+- Only use browser automation for static content verification or form interactions
+
 ### Why This Matters
 Ivan is non-technical. Months from now, the git history should explain the entire development journey without needing to ask anyone. Each commit should be a self-contained story.
