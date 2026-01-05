@@ -152,15 +152,18 @@
   }
 }
 
-/* Wiggle animation for logo hover */
+/* Wiggle animation for logo hover - 80s CRT flicker effect */
 @keyframes wiggle {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  10% { transform: translate(-1px, 1px) rotate(-1deg); }
-  20% { transform: translate(1px, -1px) rotate(1deg); }
-  30% { transform: translate(-1px, -1px) rotate(-0.5deg); }
-  40%, 100% { transform: translate(0, 0) rotate(0deg); }
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  2% { transform: translate(-1px, 0.5px) rotate(-0.8deg); opacity: 0.92; }
+  4% { transform: translate(0.5px, -1px) rotate(0.5deg); opacity: 1; }
+  6% { transform: translate(1px, 0.5px) rotate(-0.3deg); opacity: 0.95; }
+  8% { transform: translate(-0.5px, -0.5px) rotate(0.8deg); opacity: 1; }
+  10% { transform: translate(0.5px, 1px) rotate(-0.5deg); opacity: 0.9; }
+  12% { transform: translate(-1px, -0.5px) rotate(0.3deg); opacity: 1; }
+  14%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
 }
 
 .animate-wiggle {
-  animation: wiggle 0.3s ease-in-out infinite;
+  animation: wiggle 0.9s ease-in-out infinite;
 }
