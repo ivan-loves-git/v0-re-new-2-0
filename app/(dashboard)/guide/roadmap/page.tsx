@@ -6,16 +6,6 @@ export const revalidate = 3600 // Cache for 1 hour
 export default function RoadmapPage() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">
-          Roadmap
-        </h1>
-        <p className="text-gray-600 mt-2">
-          The development journey of Wave
-        </p>
-      </div>
-
       {/* Development Roadmap */}
       <DevelopmentRoadmap />
 
