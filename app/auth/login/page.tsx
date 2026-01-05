@@ -36,95 +36,124 @@ interface Particle {
   delay: number
 }
 
-// Fountain confetti - particles shoot up then fall with gravity
+// Fountain confetti - CSS animation based for smooth mobile performance
 function ConfettiFountain({ originX, originY, onComplete }: { originX: number; originY: number; onComplete: () => void }) {
-  const [particles, setParticles] = useState<Particle[]>([])
-
-  useEffect(() => {
-    const p: Particle[] = []
+  const [particles] = useState<Array<{
+    id: number
+    type: "dot" | "emoji"
+    content: string
+    color?: string
+    angle: number
+    velocity: number
+    delay: number
+    rotationSpeed: number
+  }>>(() => {
+    const p = []
     for (let i = 0; i < 10; i++) {
-      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8
-      const velocity = 8 + Math.random() * 4
       p.push({
         id: i,
-        x: (Math.random() - 0.5) * 20,
-        y: 0,
-        type: "dot",
+        type: "dot" as const,
         content: "",
         color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        rotation: Math.random() * 360,
-        rotationSpeed: Math.random() * 15 - 7.5,
-        scale: 0.8 + Math.random() * 0.4,
-        opacity: 1,
-        delay: i * 20,
+        angle: -90 + (Math.random() - 0.5) * 50,
+        velocity: 180 + Math.random() * 100,
+        delay: i * 30,
+        rotationSpeed: Math.random() * 360,
       })
     }
     for (let i = 0; i < 10; i++) {
-      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6
-      const velocity = 7 + Math.random() * 3
       p.push({
         id: i + 10,
-        x: (Math.random() - 0.5) * 20,
-        y: 0,
-        type: "emoji",
+        type: "emoji" as const,
         content: CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)],
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        rotation: Math.random() * 360,
-        rotationSpeed: Math.random() * 8 - 4,
-        scale: 0.6 + Math.random() * 0.4,
-        opacity: 1,
-        delay: i * 25,
+        angle: -90 + (Math.random() - 0.5) * 40,
+        velocity: 150 + Math.random() * 80,
+        delay: i * 35 + 20,
+        rotationSpeed: Math.random() * 180,
       })
     }
-    setParticles(p)
-  }, [])
+    return p
+  })
 
   useEffect(() => {
-    if (particles.length === 0) return
-    let elapsed = 0
-    const interval = setInterval(() => {
-      elapsed += 16
-      setParticles((prev) =>
-        prev.map((p) => {
-          if (elapsed < p.delay) return p
-          return {
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.25,
-            rotation: p.rotation + p.rotationSpeed,
-            opacity: Math.max(0, p.opacity - 0.018),
-          }
-        })
-      )
-    }, 16)
+    const timeout = setTimeout(onComplete, 1400)
+    return () => clearTimeout(timeout)
+  }, [onComplete])
 
-    const timeout = setTimeout(() => {
-      clearInterval(interval)
-      onComplete()
-    }, 1200)
-
-    return () => {
-      clearInterval(interval)
-      clearTimeout(timeout)
+  // Pre-calculate positions to avoid random() during render
+  const particlePositions = particles.map((p) => {
+    const rad = (p.angle * Math.PI) / 180
+    return {
+      ...p,
+      tx: Math.cos(rad) * p.velocity,
+      ty: Math.sin(rad) * p.velocity + 200,
+      offsetX: (Math.random() - 0.5) * 20,
     }
-  }, [particles.length, onComplete])
+  })
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50">
-      {particles.map((p) => (
+    <div
+      className="pointer-events-none overflow-hidden"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        // Force hardware acceleration for iOS
+        transform: "translate3d(0,0,0)",
+        WebkitTransform: "translate3d(0,0,0)",
+      }}
+    >
+      <style>{`
+        @-webkit-keyframes confetti-fountain {
+          0% {
+            -webkit-transform: translate3d(0, 0, 0) rotate(0deg) scale(0.8);
+            transform: translate3d(0, 0, 0) rotate(0deg) scale(0.8);
+            opacity: 1;
+          }
+          20% {
+            opacity: 1;
+          }
+          100% {
+            -webkit-transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(0.4);
+            transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(0.4);
+            opacity: 0;
+          }
+        }
+        @keyframes confetti-fountain {
+          0% {
+            -webkit-transform: translate3d(0, 0, 0) rotate(0deg) scale(0.8);
+            transform: translate3d(0, 0, 0) rotate(0deg) scale(0.8);
+            opacity: 1;
+          }
+          20% {
+            opacity: 1;
+          }
+          100% {
+            -webkit-transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(0.4);
+            transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(0.4);
+            opacity: 0;
+          }
+        }
+      `}</style>
+      {particlePositions.map((p) => (
         <div
           key={p.id}
-          className="absolute"
           style={{
-            left: originX + p.x,
-            top: originY + p.y,
-            transform: `rotate(${p.rotation}deg) scale(${p.scale})`,
-            opacity: p.opacity,
-          }}
+            position: "absolute",
+            left: originX + p.offsetX,
+            top: originY,
+            willChange: "transform, opacity",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            "--tx": `${p.tx}px`,
+            "--ty": `${p.ty}px`,
+            "--rot": `${p.rotationSpeed}deg`,
+            animation: `confetti-fountain 1.2s ease-out forwards`,
+            WebkitAnimation: `confetti-fountain 1.2s ease-out forwards`,
+            animationDelay: `${p.delay}ms`,
+            WebkitAnimationDelay: `${p.delay}ms`,
+            opacity: 0,
+          } as React.CSSProperties}
         >
           {p.type === "dot" ? (
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
