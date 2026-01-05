@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Filter, Star, Calculator, Info } from "lucide-react"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import type { Repreneur } from "@/lib/types/repreneur"
@@ -23,21 +23,19 @@ export function Tier1ScoreCard({ repreneur }: Tier1ScoreCardProps) {
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
             Tier 1 Rating
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                    <Info className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <p className="text-sm">
-                    Tier 1 is an automated score (0-100 points) calculated from the intake questionnaire.
-                    It evaluates professional background, M&A experience, acquisition readiness, and financial capacity.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Info className="h-4 w-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" className="max-w-xs p-3">
+                <p className="text-sm">
+                  Tier 1 is an automated score (0-100 points) calculated from the intake questionnaire.
+                  It evaluates professional background, M&A experience, acquisition readiness, and financial capacity.
+                </p>
+              </PopoverContent>
+            </Popover>
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             Calculated from questionnaire

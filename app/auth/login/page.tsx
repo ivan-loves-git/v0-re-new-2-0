@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Info } from "lucide-react"
 import Image from "next/image"
 
@@ -58,7 +58,7 @@ function ConfettiFountain({ originX, originY, onComplete }: { originX: number; o
     const p: Particle[] = []
     for (let i = 0; i < 10; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8
-      const velocity = 10 + Math.random() * 5
+      const velocity = 7 + Math.random() * 3.5 // 30% less amplitude
       p.push({
         id: i,
         x: (Math.random() - 0.5) * 20,
@@ -77,7 +77,7 @@ function ConfettiFountain({ originX, originY, onComplete }: { originX: number; o
     }
     for (let i = 0; i < 10; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6
-      const velocity = 9 + Math.random() * 4
+      const velocity = 6.3 + Math.random() * 2.8 // 30% less amplitude
       p.push({
         id: i + 10,
         x: (Math.random() - 0.5) * 20,
@@ -111,7 +111,7 @@ function ConfettiFountain({ originX, originY, onComplete }: { originX: number; o
             y: p.y + p.vy,
             vy: p.vy + 0.3, // Gravity
             rotation: p.rotation + p.rotationSpeed,
-            opacity: Math.max(0, p.opacity - 0.02),
+            opacity: Math.max(0, p.opacity - 0.013), // 50% slower fade
           }
         })
       )
@@ -120,7 +120,7 @@ function ConfettiFountain({ originX, originY, onComplete }: { originX: number; o
     const timeout = setTimeout(() => {
       clearInterval(interval)
       onComplete()
-    }, 1200)
+    }, 1800) // 50% longer duration
 
     return () => {
       clearInterval(interval)
@@ -337,20 +337,18 @@ export default function LoginPage() {
           <div className="mb-6">
             <div className="flex items-center gap-1.5 mb-3">
               <p className="text-sm font-medium text-gray-700">Quick access</p>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors">
-                      <Info className="h-3.5 w-3.5 text-gray-400 cursor-help" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p className="text-sm">
-                      Temporary feature to speed up testing. Credentials will be provided to all users and this section will be removed once live.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors">
+                    <Info className="h-3.5 w-3.5 text-gray-400 cursor-help" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" className="max-w-xs p-3">
+                  <p className="text-sm">
+                    Temporary feature to speed up testing. Credentials will be provided to all users and this section will be removed once live.
+                  </p>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid grid-cols-4 gap-3">
               {teamMembers.map((member) => (
