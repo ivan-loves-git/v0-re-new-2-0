@@ -91,7 +91,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
         vy: Math.sin(angle) * velocity,
         rotation: Math.random() * 360,
         rotationSpeed: Math.random() * 8 - 4,
-        scale: 0.6 + Math.random() * 0.4,
+        scale: 0.84 + Math.random() * 0.56, // 40% larger emojis
         opacity: 1,
         delay: i * 25,
       })
@@ -162,7 +162,7 @@ const teamMembers = [
   { name: "Bertrand", role: "Founder", email: "bertrand.galas@edu.escp.eu", avatar: "/team/bertrand.png" },
   { name: "Amelie", role: "Founder", email: "amelie.lyon@edu.escp.eu", avatar: "/team/amelie.png" },
   { name: "Antoine", role: "Founder", email: "antoine.duchene@edu.escp.eu", avatar: "/team/antoine.png" },
-  { name: "ICP Team", role: "RN_2 Team", email: "renew_2_0@iswearIdoingmybest.com", avatar: "/team/icp-team.png" },
+  { name: "ICP Team", role: "Anyone", email: "I.Swear.Im.Doing.My.Best@gmail.com", avatar: "/team/icp-team.png" },
 ]
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
