@@ -84,7 +84,7 @@ export function AppSidebar({
   const pathname = usePathname()
   const [isHovering, setIsHovering] = React.useState(false)
   const [emojiIndex, setEmojiIndex] = React.useState(0)
-  const isTouchDevice = React.useRef(false)
+  const touchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
@@ -99,6 +99,23 @@ export function AppSidebar({
     }, 150)
     return () => clearInterval(interval)
   }, [isHovering])
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
+    }
+  }, [])
+
+  // Handle touch - animate briefly then stop
+  const handleTouch = (e: React.TouchEvent) => {
+    e.preventDefault() // Prevent synthesized mouse events
+    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
+    setIsHovering(true)
+    touchTimeoutRef.current = setTimeout(() => {
+      setIsHovering(false)
+    }, 1500) // Animate for 1.5 seconds on tap
+  }
 
   // Check if current path is active
   const getIsActive = (href: string) => {
@@ -124,19 +141,9 @@ export function AppSidebar({
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent"
-              onMouseEnter={() => {
-                // Ignore synthesized mouse events on touch devices
-                if (!isTouchDevice.current) setIsHovering(true)
-              }}
-              onMouseLeave={() => {
-                if (!isTouchDevice.current) setIsHovering(false)
-              }}
-              onTouchStart={() => {
-                isTouchDevice.current = true
-                setIsHovering(true)
-              }}
-              onTouchEnd={() => setIsHovering(false)}
-              onTouchCancel={() => setIsHovering(false)}
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              onTouchStart={handleTouch}
             >
               <span className={`text-2xl transition-transform ${isHovering ? "animate-wiggle" : ""}`}>
                 {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
