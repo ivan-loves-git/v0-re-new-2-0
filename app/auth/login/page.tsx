@@ -59,9 +59,9 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
   useEffect(() => {
     if (isMobile) return
     const p: Particle[] = []
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) { // 20% more dots
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8
-      const velocity = 5.6 + Math.random() * 2.8 // 20% smaller magnitude
+      const velocity = 7.3 + Math.random() * 3.6 // 30% bigger spread
       p.push({
         id: i,
         x: (Math.random() - 0.5) * 20,
@@ -80,7 +80,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
     }
     for (let i = 0; i < 10; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6
-      const velocity = 5 + Math.random() * 2.24 // 20% smaller magnitude
+      const velocity = 6.5 + Math.random() * 2.9 // 30% bigger spread
       p.push({
         id: i + 10,
         x: (Math.random() - 0.5) * 20,
@@ -91,7 +91,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
         vy: Math.sin(angle) * velocity,
         rotation: Math.random() * 360,
         rotationSpeed: Math.random() * 8 - 4,
-        scale: 1.18 + Math.random() * 0.78, // 40% bigger emojis
+        scale: 0.94 + Math.random() * 0.62, // 20% smaller emojis
         opacity: 1,
         delay: i * 25,
       })
@@ -114,7 +114,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
             y: p.y + p.vy,
             vy: p.vy + 0.3, // Gravity
             rotation: p.rotation + p.rotationSpeed,
-            opacity: Math.max(0, p.opacity - 0.01), // 30% longer duration
+            opacity: Math.max(0, p.opacity - 0.017), // 40% shorter duration
           }
         })
       )
@@ -123,7 +123,7 @@ function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: n
     const timeout = setTimeout(() => {
       clearInterval(interval)
       onComplete()
-    }, 2340) // 30% longer duration
+    }, 1404) // 40% shorter duration
 
     return () => {
       clearInterval(interval)
