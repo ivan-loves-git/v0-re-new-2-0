@@ -124,6 +124,7 @@ task-master set-status --id=<id> --status=done         # Complete task
 - NO "Generated with Claude Code" attribution
 - Use `/commit` command for guided process
 - **ALWAYS push immediately after committing** - Ivan prefers commit + push as one action
+- **ALWAYS report build number after push** - Tell Ivan the build number (from `lib/version.ts`) so he knows what version to look for in the deployed app to confirm it's live
 
 ### Why This Matters
 Ivan is non-technical. Months from now, the git history should explain the entire development journey without needing to ask anyone. Each commit should be a self-contained story.

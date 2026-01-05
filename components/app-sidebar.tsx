@@ -21,6 +21,7 @@ import {
   LogOut,
   Settings,
   User,
+  Code,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
@@ -57,6 +58,7 @@ const mainNavigation = [
   { name: "Emails", href: "/emails", icon: Mail },
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
+  { name: "Development", href: "/development", icon: Code, badge: "WIP" },
 ]
 
 const guidelinesNavigation = [

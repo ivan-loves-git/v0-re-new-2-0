@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,132 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Info } from "lucide-react"
 import Image from "next/image"
+
+// Platform colors for confetti
+const CONFETTI_COLORS = [
+  "#3b82f6", "#2563eb", "#1d4ed8", "#ef4444", "#10b981",
+  "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16",
+]
+
+// Fun emojis for confetti
+const CONFETTI_EMOJIS = ["🌊", "✨", "🎉", "💫", "⭐", "🌟", "💙", "🔥", "🚀", "💎", "🎊", "🌈"]
+
+interface Particle {
+  id: number
+  x: number
+  y: number
+  type: "dot" | "emoji"
+  content: string
+  color?: string
+  vx: number
+  vy: number
+  rotation: number
+  rotationSpeed: number
+  scale: number
+  opacity: number
+  delay: number
+}
+
+// Fountain confetti - particles shoot up then fall with gravity
+function ConfettiFountain({ originX, originY, onComplete }: { originX: number; originY: number; onComplete: () => void }) {
+  const [particles, setParticles] = useState<Particle[]>([])
+
+  useEffect(() => {
+    const p: Particle[] = []
+    for (let i = 0; i < 10; i++) {
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8
+      const velocity = 8 + Math.random() * 4
+      p.push({
+        id: i,
+        x: (Math.random() - 0.5) * 20,
+        y: 0,
+        type: "dot",
+        content: "",
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        vx: Math.cos(angle) * velocity,
+        vy: Math.sin(angle) * velocity,
+        rotation: Math.random() * 360,
+        rotationSpeed: Math.random() * 15 - 7.5,
+        scale: 0.8 + Math.random() * 0.4,
+        opacity: 1,
+        delay: i * 20,
+      })
+    }
+    for (let i = 0; i < 10; i++) {
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6
+      const velocity = 7 + Math.random() * 3
+      p.push({
+        id: i + 10,
+        x: (Math.random() - 0.5) * 20,
+        y: 0,
+        type: "emoji",
+        content: CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)],
+        vx: Math.cos(angle) * velocity,
+        vy: Math.sin(angle) * velocity,
+        rotation: Math.random() * 360,
+        rotationSpeed: Math.random() * 8 - 4,
+        scale: 0.6 + Math.random() * 0.4,
+        opacity: 1,
+        delay: i * 25,
+      })
+    }
+    setParticles(p)
+  }, [])
+
+  useEffect(() => {
+    if (particles.length === 0) return
+    let elapsed = 0
+    const interval = setInterval(() => {
+      elapsed += 16
+      setParticles((prev) =>
+        prev.map((p) => {
+          if (elapsed < p.delay) return p
+          return {
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            vy: p.vy + 0.25,
+            rotation: p.rotation + p.rotationSpeed,
+            opacity: Math.max(0, p.opacity - 0.018),
+          }
+        })
+      )
+    }, 16)
+
+    const timeout = setTimeout(() => {
+      clearInterval(interval)
+      onComplete()
+    }, 1200)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [particles.length, onComplete])
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute"
+          style={{
+            left: originX + p.x,
+            top: originY + p.y,
+            transform: `rotate(${p.rotation}deg) scale(${p.scale})`,
+            opacity: p.opacity,
+          }}
+        >
+          {p.type === "dot" ? (
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+          ) : (
+            <span className="text-lg">{p.content}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const teamMembers = [
   { name: "Bertrand", role: "Founder", email: "bertrand.galas@edu.escp.eu", avatar: "/team/bertrand.png" },
@@ -26,6 +152,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
+
+  // Confetti state
+  const [confettiKey, setConfettiKey] = useState(0)
+  const [confetti, setConfetti] = useState<{ x: number; y: number } | null>(null)
 
   // Logo animation state (copied from sidebar)
   const [isTouchActive, setIsTouchActive] = useState(false)
@@ -106,11 +236,20 @@ export default function LoginPage() {
     }
   }
 
-  const selectUser = (member: (typeof teamMembers)[0]) => {
+  const selectUser = useCallback((e: React.MouseEvent, member: (typeof teamMembers)[0]) => {
+    // Trigger confetti from button center
+    const rect = (e.target as HTMLElement).closest("button")?.getBoundingClientRect()
+    if (rect) {
+      setConfettiKey((prev) => prev + 1)
+      setConfetti({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      })
+    }
     setSelectedUser(member.email)
     setEmail(member.email)
     setPassword("Wave2025!")
-  }
+  }, [])
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -200,7 +339,7 @@ export default function LoginPage() {
                 <button
                   key={member.email}
                   type="button"
-                  onClick={() => selectUser(member)}
+                  onClick={(e) => selectUser(e, member)}
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105 ${
                     selectedUser === member.email
                       ? "bg-blue-50 ring-2 ring-blue-500"
@@ -281,6 +420,16 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+
+      {/* Confetti animation */}
+      {confetti && (
+        <ConfettiFountain
+          key={confettiKey}
+          originX={confetti.x}
+          originY={confetti.y}
+          onComplete={() => setConfetti(null)}
+        />
+      )}
     </div>
   )
 }
