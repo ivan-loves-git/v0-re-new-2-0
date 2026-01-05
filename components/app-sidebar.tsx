@@ -23,6 +23,7 @@ import {
   User,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
+import { BUILD_VERSION } from "@/lib/version"
 
 import {
   Sidebar,
@@ -285,6 +286,12 @@ export function AppSidebar({
 
       {/* Footer with User Account */}
       <SidebarFooter>
+        {/* Build Version */}
+        <div className="px-2 pb-1 text-center">
+          <span className="text-[10px] text-sidebar-foreground/40 font-mono">
+            {BUILD_VERSION}
+          </span>
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
