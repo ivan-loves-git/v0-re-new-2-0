@@ -233,8 +233,16 @@ export default function LoginPage() {
     }, 3000)
   }
 
-  const handleMouseEnter = () => setIsHovering(true)
-  const handleMouseLeave = () => setIsHovering(false)
+  // Handle mouse hover - ONLY on devices that support hover (desktop)
+  // On mobile, synthetic mouse events fire after touch, so we must guard
+  const handleMouseEnter = () => {
+    if (!supportsHover) return // Ignore synthetic mouse events on mobile
+    setIsHovering(true)
+  }
+  const handleMouseLeave = () => {
+    if (!supportsHover) return
+    setIsHovering(false)
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

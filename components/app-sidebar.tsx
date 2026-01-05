@@ -130,11 +130,14 @@ export function AppSidebar({
     }, 3000)
   }
 
-  // Handle mouse hover (always respond - works on all platforms)
+  // Handle mouse hover - ONLY on devices that support hover (desktop)
+  // On mobile, synthetic mouse events fire after touch, so we must guard
   const handleMouseEnter = () => {
+    if (!supportsHover) return // Ignore synthetic mouse events on mobile
     setIsHovering(true)
   }
   const handleMouseLeave = () => {
+    if (!supportsHover) return
     setIsHovering(false)
   }
 
