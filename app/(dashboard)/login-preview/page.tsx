@@ -1,14 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 
-// Team members data
+// Team members data - 3 Founders + 1 Team Member
 const teamMembers = [
   {
     name: "Bertrand",
@@ -18,36 +18,81 @@ const teamMembers = [
   },
   {
     name: "Amelie",
-    role: "Team Member",
+    role: "Founder",
     email: "amelie.lyon@edu.escp.eu",
     avatar: "/team/amelie.png",
   },
   {
     name: "Antoine",
-    role: "Team Member",
+    role: "Founder",
     email: "antoine.duchene@edu.escp.eu",
     avatar: "/team/antoine.png",
   },
   {
     name: "Team 2.0",
-    role: "Guest Access",
+    role: "Team Member",
     email: "renew_2_0@iswearIdoingmybest.com",
     avatar: "/team/team-2-0.png",
   },
 ]
 
+// Animated logo component (matching sidebar behavior)
+function AnimatedLogo({ className = "" }: { className?: string }) {
+  const [isHovering, setIsHovering] = useState(false)
+  const [emojiIndex, setEmojiIndex] = useState(0)
+  const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
+
+  useEffect(() => {
+    if (!isHovering) {
+      setEmojiIndex(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setEmojiIndex((prev) => (prev + 1) % LOGO_EMOJIS.length)
+    }, 150)
+    return () => clearInterval(interval)
+  }, [isHovering])
+
+  return (
+    <div
+      className={`flex items-center gap-3 cursor-pointer ${className}`}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <span className={`text-3xl w-9 text-center ${isHovering ? "animate-wiggle" : ""}`}>
+        {isHovering ? LOGO_EMOJIS[emojiIndex] : "🌊"}
+      </span>
+      <Image
+        src="/wave-logo.png"
+        alt="Wave"
+        width={120}
+        height={40}
+        className={`invert ${isHovering ? "animate-wiggle" : ""}`}
+      />
+    </div>
+  )
+}
+
 // Shared login form component
 function LoginForm({
   onSelectUser,
   selectedEmail,
-  variant = "default"
+  layout = "grid", // "grid" | "horizontal" | "vertical" | "compact"
 }: {
   onSelectUser: (email: string) => void
   selectedEmail: string
-  variant?: "default" | "dark" | "minimal"
+  layout?: "grid" | "horizontal" | "vertical" | "compact"
 }) {
   const [email, setEmail] = useState(selectedEmail)
   const [password, setPassword] = useState("")
+
+  // Update email when selectedEmail changes
+  useEffect(() => {
+    setEmail(selectedEmail)
+    if (selectedEmail) {
+      setPassword("Wave2025!")
+    }
+  }, [selectedEmail])
 
   const handleUserClick = (userEmail: string) => {
     setEmail(userEmail)
@@ -55,58 +100,145 @@ function LoginForm({
     onSelectUser(userEmail)
   }
 
-  const inputClass = variant === "dark"
-    ? "bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
-    : ""
-
-  return (
-    <div className="space-y-6">
-      {/* Quick login buttons */}
-      <div className="space-y-3">
-        <p className={`text-sm font-medium ${variant === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-          Quick access
-        </p>
-        <div className="grid grid-cols-2 gap-3">
+  const renderUserButtons = () => {
+    if (layout === "horizontal") {
+      return (
+        <div className="flex justify-center gap-4">
           {teamMembers.map((member) => (
             <button
               key={member.email}
               onClick={() => handleUserClick(member.email)}
-              className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all hover:scale-[1.02] ${
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105 ${
                 selectedEmail === member.email
-                  ? "border-blue-500 bg-blue-50/10"
-                  : variant === "dark"
-                  ? "border-gray-700 hover:border-gray-600 bg-gray-800/50"
-                  : "border-gray-200 hover:border-gray-300 bg-white"
+                  ? "bg-blue-500/20 ring-2 ring-blue-500"
+                  : "hover:bg-gray-800/50"
               }`}
             >
               <Image
                 src={member.avatar}
                 alt={member.name}
-                width={44}
-                height={44}
+                width={56}
+                height={56}
                 className="rounded-full bg-white"
               />
-              <div className="text-left min-w-0">
-                <p className={`font-medium truncate ${variant === "dark" ? "text-white" : "text-gray-900"}`}>
-                  {member.name}
-                </p>
-                <p className={`text-xs truncate ${variant === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                  {member.role}
-                </p>
+              <div className="text-center">
+                <p className="font-medium text-white text-sm">{member.name}</p>
+                <p className="text-xs text-gray-500">{member.role}</p>
               </div>
             </button>
           ))}
         </div>
+      )
+    }
+
+    if (layout === "vertical") {
+      return (
+        <div className="space-y-2">
+          {teamMembers.map((member) => (
+            <button
+              key={member.email}
+              onClick={() => handleUserClick(member.email)}
+              className={`w-full flex items-center gap-4 p-3 rounded-xl border transition-all hover:scale-[1.01] ${
+                selectedEmail === member.email
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-gray-800 hover:border-gray-700 bg-gray-900/50"
+              }`}
+            >
+              <Image
+                src={member.avatar}
+                alt={member.name}
+                width={48}
+                height={48}
+                className="rounded-full bg-white"
+              />
+              <div className="text-left flex-1">
+                <p className="font-medium text-white">{member.name}</p>
+                <p className="text-sm text-gray-500">{member.role}</p>
+              </div>
+              {selectedEmail === member.email && (
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+              )}
+            </button>
+          ))}
+        </div>
+      )
+    }
+
+    if (layout === "compact") {
+      return (
+        <div className="flex flex-wrap justify-center gap-2">
+          {teamMembers.map((member) => (
+            <button
+              key={member.email}
+              onClick={() => handleUserClick(member.email)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all ${
+                selectedEmail === member.email
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              <Image
+                src={member.avatar}
+                alt={member.name}
+                width={28}
+                height={28}
+                className="rounded-full bg-white"
+              />
+              <span className="text-sm font-medium">{member.name}</span>
+            </button>
+          ))}
+        </div>
+      )
+    }
+
+    // Default grid layout
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {teamMembers.map((member) => (
+          <button
+            key={member.email}
+            onClick={() => handleUserClick(member.email)}
+            className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all hover:scale-[1.02] ${
+              selectedEmail === member.email
+                ? "border-blue-500 bg-blue-500/10"
+                : "border-gray-800 hover:border-gray-700 bg-gray-900/50"
+            }`}
+          >
+            <Image
+              src={member.avatar}
+              alt={member.name}
+              width={44}
+              height={44}
+              className="rounded-full bg-white"
+            />
+            <div className="text-left min-w-0">
+              <p className="font-medium text-white truncate">{member.name}</p>
+              <p className="text-xs text-gray-500 truncate">{member.role}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Quick login buttons */}
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-gray-400 text-center">
+          Quick access
+        </p>
+        {renderUserButtons()}
       </div>
 
       {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className={`w-full border-t ${variant === "dark" ? "border-gray-700" : "border-gray-200"}`} />
+          <div className="w-full border-t border-gray-800" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className={`px-2 ${variant === "dark" ? "bg-gray-900 text-gray-400" : "bg-white text-gray-500"}`}>
-            or continue with email
+          <span className="px-2 bg-gray-900 text-gray-500">
+            or enter credentials
           </span>
         </div>
       </div>
@@ -114,24 +246,24 @@ function LoginForm({
       {/* Email/Password form */}
       <form className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email" className={variant === "dark" ? "text-gray-300" : ""}>Email</Label>
+          <Label htmlFor="email" className="text-gray-300">Email</Label>
           <Input
             id="email"
             type="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
+            className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className={variant === "dark" ? "text-gray-300" : ""}>Password</Label>
+          <Label htmlFor="password" className="text-gray-300">Password</Label>
           <Input
             id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
+            className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
           />
         </div>
         <Button type="button" className="w-full" size="lg">
@@ -142,155 +274,18 @@ function LoginForm({
   )
 }
 
-// Design 1: Dark Hero
-function DesignDarkHero() {
-  const [selectedEmail, setSelectedEmail] = useState("")
-
-  return (
-    <div className="min-h-[700px] flex flex-col lg:flex-row rounded-xl overflow-hidden border">
-      {/* Left: Dark branding panel */}
-      <div className="lg:w-1/2 bg-gray-900 p-8 lg:p-12 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-8">
-            <span className="text-3xl">🌊</span>
-            <Image src="/wave-logo.png" alt="Wave" width={120} height={40} className="invert" />
-          </div>
-          <h1 className="text-3xl lg:text-4xl font-semibold text-white mb-4">
-            Welcome back to Wave
-          </h1>
-          <p className="text-gray-400 text-lg">
-            The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
-          </p>
-        </div>
-        <div className="hidden lg:block">
-          <p className="text-gray-500 text-sm">
-            Re-New Platform v2.0
-          </p>
-        </div>
-      </div>
-
-      {/* Right: Login form */}
-      <div className="lg:w-1/2 bg-white p-8 lg:p-12 flex items-center">
-        <div className="w-full max-w-md mx-auto">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Sign in</h2>
-          <p className="text-gray-500 mb-8">Choose your account to continue</p>
-          <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Design 2: Blue Gradient
-function DesignBlueGradient() {
-  const [selectedEmail, setSelectedEmail] = useState("")
-
-  return (
-    <div className="min-h-[700px] flex flex-col lg:flex-row rounded-xl overflow-hidden border">
-      {/* Left: Blue gradient panel */}
-      <div className="lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
-        {/* Decorative waves */}
-        <div className="absolute inset-0 opacity-10">
-          <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1440 320">
-            <path fill="white" d="M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,138.7C672,128,768,160,864,181.3C960,203,1056,213,1152,197.3C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"/>
-          </svg>
-          <svg className="absolute bottom-0 left-0 w-full translate-y-8" viewBox="0 0 1440 320">
-            <path fill="white" d="M0,64L48,96C96,128,192,192,288,192C384,192,480,128,576,122.7C672,117,768,171,864,181.3C960,192,1056,160,1152,133.3C1248,107,1344,85,1392,74.7L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"/>
-          </svg>
-        </div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="text-3xl">🌊</span>
-            <span className="text-2xl font-bold text-white">Wave</span>
-          </div>
-          <h1 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-            Ride the wave of opportunity
-          </h1>
-          <p className="text-blue-100 text-lg">
-            Your repreneur journey starts here. Manage leads, track progress, and close deals.
-          </p>
-        </div>
-        <div className="hidden lg:flex items-center gap-4 relative z-10">
-          <div className="flex -space-x-2">
-            {teamMembers.slice(0, 3).map((member) => (
-              <Image
-                key={member.email}
-                src={member.avatar}
-                alt={member.name}
-                width={40}
-                height={40}
-                className="rounded-full border-2 border-blue-500 bg-white"
-              />
-            ))}
-          </div>
-          <p className="text-blue-100 text-sm">
-            Join the Re-New team
-          </p>
-        </div>
-      </div>
-
-      {/* Right: Login form */}
-      <div className="lg:w-1/2 bg-white p-8 lg:p-12 flex items-center">
-        <div className="w-full max-w-md mx-auto">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome back</h2>
-          <p className="text-gray-500 mb-8">Select your profile to sign in</p>
-          <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Design 3: Minimal Light
-function DesignMinimalLight() {
-  const [selectedEmail, setSelectedEmail] = useState("")
-
-  return (
-    <div className="min-h-[700px] flex flex-col lg:flex-row rounded-xl overflow-hidden border bg-gray-50">
-      {/* Left: Minimal branding */}
-      <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center items-center bg-white border-r">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <span className="text-5xl">🌊</span>
-          </div>
-          <Image src="/wave-logo.png" alt="Wave" width={160} height={53} className="mx-auto mb-6" />
-          <p className="text-gray-500 text-lg max-w-xs">
-            The repreneur CRM
-          </p>
-        </div>
-      </div>
-
-      {/* Right: Login form */}
-      <div className="lg:w-1/2 p-8 lg:p-12 flex items-center bg-gray-50">
-        <div className="w-full max-w-md mx-auto">
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle>Sign in</CardTitle>
-              <CardDescription>Choose your account to continue</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Design 4: Full Dark
-function DesignFullDark() {
+// Design Dark v1: Classic split with grid pattern
+function DesignDarkV1() {
   const [selectedEmail, setSelectedEmail] = useState("")
 
   return (
     <div className="min-h-[700px] flex flex-col lg:flex-row rounded-xl overflow-hidden border border-gray-800 bg-gray-950">
-      {/* Left: Dark branding with pattern */}
+      {/* Left: Dark branding */}
       <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
         {/* Grid pattern */}
-        <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 opacity-[0.03]">
           <div className="absolute inset-0" style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)`,
             backgroundSize: '40px 40px'
           }} />
         </div>
@@ -299,25 +294,21 @@ function DesignFullDark() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="text-4xl">🌊</span>
-            <span className="text-2xl font-bold text-white">Wave</span>
-          </div>
+          <AnimatedLogo />
         </div>
 
-        <div className="relative z-10 text-center lg:text-left">
-          <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-            Re-New
-            <span className="block text-blue-400">Platform</span>
+        <div className="relative z-10">
+          <h1 className="text-3xl lg:text-4xl font-semibold text-white mb-4">
+            Welcome back to Wave
           </h1>
-          <p className="text-gray-400 text-lg">
-            Enterprise acquisition management for the modern repreneur.
+          <p className="text-gray-400 text-lg leading-relaxed">
+            The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
           </p>
         </div>
 
-        <div className="hidden lg:block relative z-10">
+        <div className="relative z-10">
           <div className="flex items-center gap-2 text-gray-600">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span className="text-sm">All systems operational</span>
           </div>
         </div>
@@ -328,7 +319,157 @@ function DesignFullDark() {
         <div className="w-full max-w-md mx-auto">
           <h2 className="text-2xl font-semibold text-white mb-2">Sign in</h2>
           <p className="text-gray-400 mb-8">Select your profile to continue</p>
-          <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} variant="dark" />
+          <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} layout="grid" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Design Dark v2: Horizontal avatars with wave accent
+function DesignDarkV2() {
+  const [selectedEmail, setSelectedEmail] = useState("")
+
+  return (
+    <div className="min-h-[700px] flex flex-col lg:flex-row rounded-xl overflow-hidden border border-gray-800 bg-gray-950">
+      {/* Left: Dark branding with wave */}
+      <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
+        {/* Wave decoration */}
+        <div className="absolute bottom-0 left-0 right-0 opacity-10">
+          <svg viewBox="0 0 1440 320" className="w-full">
+            <path fill="#3b82f6" d="M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,138.7C672,128,768,160,864,181.3C960,203,1056,213,1152,197.3C1248,181,1344,139,1392,117.3L1440,96L1440,320L0,320Z"/>
+          </svg>
+        </div>
+
+        {/* Gradient orb */}
+        <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-br from-blue-500/30 to-purple-500/20 rounded-full blur-3xl" />
+
+        <div className="relative z-10">
+          <AnimatedLogo />
+        </div>
+
+        <div className="relative z-10">
+          <h1 className="text-3xl lg:text-4xl font-semibold text-white mb-4">
+            Welcome back to Wave
+          </h1>
+          <p className="text-gray-400 text-lg leading-relaxed">
+            The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
+          </p>
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-gray-600">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-sm">All systems operational</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Login with horizontal avatars */}
+      <div className="lg:w-1/2 p-8 lg:p-12 flex items-center bg-gray-900">
+        <div className="w-full max-w-lg mx-auto">
+          <h2 className="text-2xl font-semibold text-white mb-2 text-center">Sign in</h2>
+          <p className="text-gray-400 mb-8 text-center">Select your profile to continue</p>
+          <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} layout="horizontal" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Design Dark v3: Vertical list with minimal left
+function DesignDarkV3() {
+  const [selectedEmail, setSelectedEmail] = useState("")
+
+  return (
+    <div className="min-h-[700px] flex flex-col lg:flex-row rounded-xl overflow-hidden border border-gray-800 bg-gray-950">
+      {/* Left: Minimal dark branding */}
+      <div className="lg:w-2/5 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden bg-gray-900">
+        {/* Subtle gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-900 to-blue-900/20" />
+
+        <div className="relative z-10">
+          <AnimatedLogo />
+        </div>
+
+        <div className="relative z-10">
+          <h1 className="text-2xl lg:text-3xl font-semibold text-white mb-3">
+            Welcome back to Wave
+          </h1>
+          <p className="text-gray-500 text-base leading-relaxed">
+            The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
+          </p>
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-gray-600">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-sm">All systems operational</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Login with vertical list */}
+      <div className="lg:w-3/5 p-8 lg:p-12 flex items-center bg-gray-950">
+        <div className="w-full max-w-md mx-auto">
+          <h2 className="text-2xl font-semibold text-white mb-2">Sign in</h2>
+          <p className="text-gray-400 mb-6">Select your profile to continue</p>
+          <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} layout="vertical" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Design Dark v4: Compact pills with centered layout
+function DesignDarkV4() {
+  const [selectedEmail, setSelectedEmail] = useState("")
+
+  return (
+    <div className="min-h-[700px] flex flex-col lg:flex-row rounded-xl overflow-hidden border border-gray-800 bg-gray-950">
+      {/* Left: Dark with dots pattern */}
+      <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
+        {/* Dots pattern */}
+        <div className="absolute inset-0 opacity-[0.15]">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `radial-gradient(circle, #3b82f6 1px, transparent 1px)`,
+            backgroundSize: '24px 24px'
+          }} />
+        </div>
+
+        {/* Multiple glow orbs */}
+        <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl" />
+
+        <div className="relative z-10">
+          <AnimatedLogo />
+        </div>
+
+        <div className="relative z-10 text-center lg:text-left">
+          <h1 className="text-3xl lg:text-4xl font-semibold text-white mb-4">
+            Welcome back to Wave
+          </h1>
+          <p className="text-gray-400 text-lg leading-relaxed">
+            The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
+          </p>
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-gray-600">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-sm">All systems operational</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Compact login */}
+      <div className="lg:w-1/2 p-8 lg:p-12 flex items-center bg-gray-900/80 backdrop-blur">
+        <div className="w-full max-w-md mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-white mb-2">Sign in</h2>
+            <p className="text-gray-400">Select your profile to continue</p>
+          </div>
+          <LoginForm onSelectUser={setSelectedEmail} selectedEmail={selectedEmail} layout="compact" />
         </div>
       </div>
     </div>
@@ -342,40 +483,41 @@ export default function LoginPreviewPage() {
       <div>
         <h1 className="text-3xl font-semibold text-gray-900">Login Page Designs</h1>
         <p className="text-gray-500 mt-1">
-          Preview and compare 4 different design approaches. Click through to see how each looks.
+          4 dark variants based on your feedback. Hover over the logo to see the animation!
         </p>
       </div>
 
-      <Tabs defaultValue="dark-hero" className="w-full">
+      <Tabs defaultValue="dark-v1" className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6">
-          <TabsTrigger value="dark-hero">Dark Hero</TabsTrigger>
-          <TabsTrigger value="blue-gradient">Blue Gradient</TabsTrigger>
-          <TabsTrigger value="minimal-light">Minimal Light</TabsTrigger>
-          <TabsTrigger value="full-dark">Full Dark</TabsTrigger>
+          <TabsTrigger value="dark-v1">Grid Layout</TabsTrigger>
+          <TabsTrigger value="dark-v2">Horizontal</TabsTrigger>
+          <TabsTrigger value="dark-v3">Vertical List</TabsTrigger>
+          <TabsTrigger value="dark-v4">Compact Pills</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dark-hero">
-          <DesignDarkHero />
+        <TabsContent value="dark-v1">
+          <DesignDarkV1 />
         </TabsContent>
 
-        <TabsContent value="blue-gradient">
-          <DesignBlueGradient />
+        <TabsContent value="dark-v2">
+          <DesignDarkV2 />
         </TabsContent>
 
-        <TabsContent value="minimal-light">
-          <DesignMinimalLight />
+        <TabsContent value="dark-v3">
+          <DesignDarkV3 />
         </TabsContent>
 
-        <TabsContent value="full-dark">
-          <DesignFullDark />
+        <TabsContent value="dark-v4">
+          <DesignDarkV4 />
         </TabsContent>
       </Tabs>
 
       <Card className="bg-amber-50 border-amber-200">
         <CardContent className="pt-6">
           <p className="text-amber-800 text-sm">
-            <strong>Note:</strong> These are interactive previews. The buttons will pre-fill credentials but won&apos;t actually log you in.
-            Once you pick a design, I&apos;ll implement it as the real login page.
+            <strong>Team roles:</strong> Bertrand, Amelie, Antoine = Founders | Team 2.0 = Team Member
+            <br />
+            <strong>Note:</strong> Clicking a profile pre-fills credentials. Hover over the Wave logo to see the animation!
           </p>
         </CardContent>
       </Card>
