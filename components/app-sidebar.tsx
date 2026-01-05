@@ -157,10 +157,11 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent logo-button"
+              className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent logo-button focus-visible:ring-0 focus-visible:ring-offset-0 outline-none"
               onTouchStart={handleTouchStart}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
+              tabIndex={-1}
             >
               <span className={`w-7 text-center text-2xl transition-transform ${isTouchActive ? "animate-wiggle" : ""}`}>
                 {isAnimating ? LOGO_EMOJIS[emojiIndex] : "🌊"}

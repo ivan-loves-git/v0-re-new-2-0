@@ -174,3 +174,8 @@
   }
 }
 
+/* Remove sidebar right border */
+[data-slot="sidebar-container"] {
+  border-right: none !important;
+}
+
