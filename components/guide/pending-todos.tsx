@@ -16,7 +16,7 @@ function TodoCard({ todo, isExpanded, onToggle }: { todo: TodoItem; isExpanded: 
   })
 
   return (
-    <Card className="border-red-200 bg-red-50/50 hover:shadow-md transition-shadow">
+    <Card className="border-red-200 bg-red-50/50 hover:shadow-md transition-shadow py-0">
       <CardContent className="px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
