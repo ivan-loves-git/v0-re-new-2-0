@@ -163,7 +163,7 @@ export function AppSidebar({
               onMouseLeave={handleMouseLeave}
               tabIndex={-1}
             >
-              <span className={`w-7 text-center text-2xl transition-transform ${isTouchActive ? "animate-wiggle" : ""}`}>
+              <span className="w-7 text-center text-2xl">
                 {isAnimating ? LOGO_EMOJIS[emojiIndex] : "🌊"}
               </span>
               <Image
@@ -171,7 +171,7 @@ export function AppSidebar({
                 alt="Wave - the repreneur CRM"
                 width={96}
                 height={32}
-                className={`h-auto transition-transform ${isTouchActive ? "animate-wiggle" : ""}`}
+                className={`h-auto transition-transform logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
                 priority
               />
             </SidebarMenuButton>
