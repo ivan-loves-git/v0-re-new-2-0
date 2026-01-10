@@ -10,6 +10,34 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 10, 2026",
+    version: "0.9.6",
+    title: "Documents Management",
+    isCompleted: true,
+    events: [
+      {
+        title: "CV upload in intake form",
+        type: "feature",
+        description: "Repreneurs can now upload their CV (PDF only) during the intake questionnaire. Stored in Supabase Storage with 10MB limit.",
+      },
+      {
+        title: "Documents card on profile",
+        type: "feature",
+        description: "New Documents card managing CV and Lettre de Cadrage uploads. View, upload, replace, and delete functionality with consistent UI.",
+      },
+      {
+        title: "Lettre de Cadrage storage",
+        type: "feature",
+        description: "Added LDC document field for storing framing letters. Internal document, not included in public intake form.",
+      },
+      {
+        title: "Decision: PDF-only for intake",
+        type: "decision",
+        description: "Intake form restricted to PDF uploads only for consistency. Profile page accepts both PDF and Word for flexibility.",
+      },
+    ],
+  },
+  {
+    period: "Jan 10, 2026",
     version: "0.9.5",
     title: "Client Offers Timeline",
     isCompleted: true,
