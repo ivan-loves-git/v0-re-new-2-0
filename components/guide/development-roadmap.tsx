@@ -10,6 +10,39 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 10, 2026",
+    version: "0.9.5",
+    title: "Client Offers Timeline",
+    isCompleted: true,
+    events: [
+      {
+        title: "Offers page redesigned",
+        type: "feature",
+        description: "Transformed from package list to client offer timeline. Main view now shows all offers assigned to clients with visual progress tracking.",
+      },
+      {
+        title: "Timeline progress indicator",
+        type: "feature",
+        description: "Visual status flow: Offered → Active → Completed. Each card shows client avatar, package, key dates, and milestone completion counts.",
+      },
+      {
+        title: "Package management sheet",
+        type: "feature",
+        description: "Moved package CRUD to side panel ('Manage Packages' button). Packages are created rarely; daily use is tracking client progress.",
+      },
+      {
+        title: "Search and filter",
+        type: "feature",
+        description: "Search by client name, email, or package. Filter by status (Active, Pending, Completed, Expired). Grouped display by status.",
+      },
+      {
+        title: "Decision: Daily use case focus",
+        type: "decision",
+        description: "Recognized that packages are created rarely (3 exist). The daily use case is tracking offer progress with clients, not managing packages. UI reorganized accordingly.",
+      },
+    ],
+  },
+  {
+    period: "Jan 10, 2026",
     version: "0.9.0",
     title: "Evaluation Criteria Visibility",
     isCompleted: true,
