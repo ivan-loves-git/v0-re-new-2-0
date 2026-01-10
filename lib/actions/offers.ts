@@ -401,3 +401,26 @@ export async function deleteMilestone(milestoneId: string, repreneurId: string) 
 
   revalidatePath(`/repreneurs/${repreneurId}`)
 }
+
+// === Data Fetching ===
+
+export async function getAllClientOffers() {
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase
+    .from("repreneur_offers")
+    .select(`
+      *,
+      offer:offers(*),
+      repreneur:repreneurs(id, first_name, last_name, email, avatar_url),
+      milestones:offer_milestones(*)
+    `)
+    .order("offered_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching client offers:", error)
+    return []
+  }
+
+  return data || []
+}
