@@ -22,6 +22,7 @@ import {
   Settings,
   User,
   Code,
+  ClipboardList,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
@@ -64,6 +65,7 @@ const mainNavigation = [
 const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
+  { name: "Evaluation", href: "/guide/evaluation", icon: ClipboardList },
   { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
