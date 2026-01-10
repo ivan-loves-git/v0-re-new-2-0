@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Label } from "@/components/ui/label"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
+import { MissingFieldsBadge } from "@/components/repreneurs/missing-fields-badge"
 import { UpdateJourneyStageForm } from "@/components/repreneurs/update-journey-stage-form"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import { EditableTextField } from "@/components/repreneurs/editable-text-field"
@@ -205,7 +206,10 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 />
               </div>
             </div>
-            <StatusBadge status={repreneur.lifecycle_status} />
+            <div className="flex items-center gap-2">
+              <StatusBadge status={repreneur.lifecycle_status} />
+              <MissingFieldsBadge repreneur={repreneur} />
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -221,15 +225,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             />
           </div>
         </div>
-      </div>
-
-      {/* Documents Row */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <DocumentsCard
-          repreneurId={id}
-          cvUrl={repreneur.cv_url}
-          ldcUrl={repreneur.ldc_url}
-        />
       </div>
 
       {/* Profile Overview Row: Rating | Investment Profile | Radar Chart */}
@@ -415,7 +410,16 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         <CandidateRadarChart repreneur={repreneur as Repreneur} />
       </div>
 
-      {/* Second Row: Activity History | Notes | Offers */}
+      {/* Documents Row */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <DocumentsCard
+          repreneurId={id}
+          cvUrl={repreneur.cv_url}
+          ldcUrl={repreneur.ldc_url}
+        />
+      </div>
+
+      {/* Third Row: Activity History | Notes | Offers */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Col 1: Activity History */}
         <ActivityHistory repreneurId={id} activities={activitiesWithEmail as Activity[]} />

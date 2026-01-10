@@ -10,6 +10,7 @@ import { StatusBadge } from "./status-badge"
 import { Badge } from "@/components/ui/badge"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
+import { MissingFieldsBadge } from "./missing-fields-badge"
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
@@ -270,6 +271,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                         <span className="font-medium text-gray-900">
                           {repreneur.first_name} {repreneur.last_name}
                         </span>
+                        <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
                       </div>
                     </TableCell>
                     <TableCell className="text-gray-600">{repreneur.email}</TableCell>
@@ -385,6 +387,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                               <span className="font-medium text-gray-900">
                                 {repreneur.first_name} {repreneur.last_name}
                               </span>
+                              <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
                             </div>
                           </TableCell>
                           <TableCell className="w-[25%] text-gray-600">{repreneur.email}</TableCell>

@@ -621,21 +621,21 @@
         "description": "Modify the public intake form to fetch question options dynamically from the evaluation_criteria database table instead of using hard-coded options from tier1-scoring.ts, ensuring dashboard changes are immediately reflected in the form.",
         "details": "This task involves refactoring the public intake form to use dynamic data from the database instead of static data:\n\n1. Identify all instances where tier1-scoring.ts is used to populate question options in the intake form.\n\n2. Create a new data access layer or service that:\n   - Fetches evaluation criteria from the evaluation_criteria table\n   - Formats the data appropriately for the intake form components\n   - Implements caching to optimize performance (if needed)\n\n3. Modify the intake form components to:\n   - Replace imports from tier1-scoring.ts with the new data service\n   - Handle loading states while data is being fetched\n   - Gracefully handle potential errors if database connection fails\n\n4. Update the form submission logic to ensure it remains compatible with the new data structure.\n\n5. Consider implementing a lightweight client-side cache to prevent excessive database queries during form navigation.\n\n6. Ensure backward compatibility for any in-progress form submissions that might be using the old structure.\n\n7. Update any relevant documentation to reflect that question options are now dynamically loaded.\n\nTechnical considerations:\n- Use React Query or SWR for efficient data fetching and caching\n- Implement proper error handling for network failures\n- Consider adding a fallback to static data if the database query fails\n- Ensure the database queries are optimized and don't impact form loading performance",
         "testStrategy": "1. Unit Testing:\n   - Create unit tests for the new data service that fetches from evaluation_criteria\n   - Mock the database responses to test various scenarios (success, empty data, errors)\n   - Verify the data transformation logic correctly formats database records for the form\n\n2. Integration Testing:\n   - Test the integration between the form components and the new data service\n   - Verify all form fields correctly display options from the database\n   - Test form submission with the dynamically loaded options\n\n3. End-to-End Testing:\n   - Complete a full form submission using the new dynamic data source\n   - Verify the submitted data is correctly stored with the proper references\n\n4. Database Synchronization Testing:\n   - Make changes to evaluation criteria in the dashboard\n   - Verify those changes are immediately reflected in the public intake form\n   - Test with various types of criteria changes (adding, removing, modifying options)\n\n5. Performance Testing:\n   - Measure and compare form load times before and after the change\n   - Ensure the database queries don't introduce significant latency\n   - Test with a realistic volume of evaluation criteria\n\n6. Error Handling Testing:\n   - Simulate database connection failures\n   - Verify appropriate error messages are displayed\n   - Test any fallback mechanisms implemented",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "45",
           "13"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-01-10T20:14:09.877Z"
+        "updatedAt": "2026-01-10T20:24:58.501Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-01-10T20:21:48.835Z",
+      "lastModified": "2026-01-10T20:24:58.503Z",
       "taskCount": 36,
-      "completedCount": 32,
+      "completedCount": 33,
       "tags": [
         "master"
       ]

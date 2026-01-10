@@ -33,6 +33,7 @@ export interface Repreneur {
   avatar_url?: string // custom avatar URL, null = use default based on ID
   cv_url?: string // URL to CV document in Supabase Storage
   ldc_url?: string // URL to Lettre de Cadrage document in Supabase Storage
+  flatchr_id?: string // Original ID from Flatchr import for deduplication
   company_background?: string
   investment_capacity?: string
   sector_preferences?: string[]
@@ -131,6 +132,7 @@ export interface Repreneur_Insert {
   avatar_url?: string
   cv_url?: string
   ldc_url?: string
+  flatchr_id?: string
   company_background?: string
   investment_capacity?: string
   sector_preferences?: string[]
@@ -149,4 +151,33 @@ export interface Repreneur_Insert {
   rejected_at?: string
   previous_status?: LifecycleStatus
   created_by: string
+}
+
+// Required fields that Bertrand needs to fill in for imported repreneurs
+export const REQUIRED_FIELDS = ["email", "phone"] as const
+
+export type MissingField = typeof REQUIRED_FIELDS[number]
+
+/**
+ * Check which required fields are missing from a repreneur
+ * Used to show "needs attention" badge on imported records
+ */
+export function getMissingFields(repreneur: Partial<Repreneur>): MissingField[] {
+  const missing: MissingField[] = []
+
+  if (!repreneur.email || repreneur.email.trim() === "") {
+    missing.push("email")
+  }
+  if (!repreneur.phone || repreneur.phone.trim() === "") {
+    missing.push("phone")
+  }
+
+  return missing
+}
+
+/**
+ * Check if repreneur has any missing required fields
+ */
+export function hasMissingFields(repreneur: Partial<Repreneur>): boolean {
+  return getMissingFields(repreneur).length > 0
 }
