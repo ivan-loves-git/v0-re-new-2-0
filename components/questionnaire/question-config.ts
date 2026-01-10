@@ -1,9 +1,12 @@
 /**
  * Centralized question configuration for the questionnaire
  * Used by both public intake and internal questionnaire forms
+ *
+ * Supports both static options (for internal questionnaire) and
+ * dynamic options from database (for public intake form)
  */
 
-import type { QuestionConfig, StepConfig, QuestionnaireFormData } from "./types"
+import type { QuestionConfig, StepConfig, QuestionnaireFormData, QuestionOption } from "./types"
 import {
   EMPLOYMENT_STATUS_OPTIONS,
   YEARS_EXPERIENCE_OPTIONS,
@@ -18,6 +21,11 @@ import {
   TARGET_LOCATION_OPTIONS,
 } from "@/lib/utils/tier1-scoring"
 import { SOURCE_OPTIONS } from "@/lib/types/repreneur"
+
+// Type for dynamic criteria map (from database)
+export interface DynamicCriteriaMap {
+  [questionKey: string]: QuestionOption[]
+}
 
 // =====================
 // QUESTION DEFINITIONS
@@ -339,6 +347,26 @@ export const isValidLinkedIn = (url: string): boolean => {
 }
 
 /**
+ * Evaluate a serializable showIfCondition
+ * (duplicated from step-renderer for validation use)
+ */
+function evaluateShowIfCondition(
+  condition: { field: keyof QuestionnaireFormData; equals: boolean | string | string[]; operator?: "or"; orField?: keyof QuestionnaireFormData; orEquals?: boolean | string | string[] },
+  formData: QuestionnaireFormData
+): boolean {
+  const fieldValue = formData[condition.field]
+  const matches = fieldValue === condition.equals
+
+  if (condition.operator === "or" && condition.orField) {
+    const orFieldValue = formData[condition.orField]
+    const orMatches = orFieldValue === condition.orEquals
+    return matches || orMatches
+  }
+
+  return matches
+}
+
+/**
  * Validate a single step's required questions
  */
 export function validateStep(
@@ -348,8 +376,12 @@ export function validateStep(
   const errors: Record<string, string> = {}
 
   for (const question of step.questions) {
-    // Skip if conditional and condition not met
+    // Skip if conditional and condition not met (function-based)
     if (question.showIf && !question.showIf(formData)) {
+      continue
+    }
+    // Skip if conditional and condition not met (serializable)
+    if (question.showIfCondition && !evaluateShowIfCondition(question.showIfCondition, formData)) {
       continue
     }
 
@@ -441,4 +473,246 @@ export function getInitialFormData(): QuestionnaireFormData {
     marketing_consent: false,
     source: null,
   }
+}
+
+// =====================
+// DYNAMIC STEPS BUILDER
+// =====================
+
+/**
+ * Helper to get options from dynamic map or fall back to static
+ */
+function getOptions(
+  criteria: DynamicCriteriaMap | undefined,
+  key: string,
+  staticFallback: readonly { value: string; label: string; score?: number }[]
+): QuestionOption[] {
+  if (criteria && criteria[key] && criteria[key].length > 0) {
+    return criteria[key]
+  }
+  return staticFallback.map(opt => ({
+    value: opt.value,
+    label: opt.label,
+    score: opt.score,
+  }))
+}
+
+/**
+ * Build INTAKE_STEPS dynamically using database criteria
+ * Falls back to static options if criteria is not provided
+ */
+export function buildIntakeSteps(criteria?: DynamicCriteriaMap): StepConfig[] {
+  // Build questions with dynamic or static options
+  const backgroundQuestions: QuestionConfig[] = [
+    {
+      id: "q1_employment_status",
+      label: "Current Employment Status",
+      type: "radio",
+      options: getOptions(criteria, "q1_employment_status", EMPLOYMENT_STATUS_OPTIONS),
+      required: true,
+      icon: "Briefcase",
+    },
+    {
+      id: "q2_years_experience",
+      label: "Years of Professional Experience",
+      type: "radio",
+      options: getOptions(criteria, "q2_years_experience", YEARS_EXPERIENCE_OPTIONS),
+      required: true,
+      icon: "Award",
+    },
+    {
+      id: "q3_industry_sectors",
+      label: "Industry Experience (select all that apply)",
+      type: "checkbox",
+      options: getOptions(criteria, "q3_industry_sectors", INDUSTRY_SECTOR_OPTIONS),
+      required: true,
+      icon: "Building2",
+    },
+    {
+      id: "q5_team_size",
+      label: "Largest Team Size Managed",
+      type: "radio",
+      options: getOptions(criteria, "q5_team_size", TEAM_SIZE_OPTIONS),
+      required: true,
+      icon: "Users",
+    },
+    {
+      id: "q8_executive_roles",
+      label: "Executive Roles Held (select all that apply)",
+      type: "checkbox",
+      options: getOptions(criteria, "q8_executive_roles", EXECUTIVE_ROLE_OPTIONS),
+      required: true,
+      icon: "Award",
+    },
+  ]
+
+  const maExperienceQuestions: QuestionConfig[] = [
+    {
+      id: "q4_has_ma_experience",
+      label: "Do you have M&A experience?",
+      type: "yes-no",
+      required: true,
+      icon: "Scale",
+    },
+    {
+      id: "q6_involved_in_ma",
+      label: "Have you been directly involved in M&A transactions?",
+      type: "yes-no",
+      required: true,
+    },
+    {
+      id: "q7_ma_details",
+      label: "Please describe your M&A experience (optional)",
+      type: "textarea",
+      placeholder: "Describe your involvement in acquisitions, sales, or other M&A transactions...",
+      rows: 4,
+      // Serializable condition for server->client passing
+      showIfCondition: {
+        field: "q4_has_ma_experience",
+        equals: true,
+        operator: "or",
+        orField: "q6_involved_in_ma",
+        orEquals: true,
+      },
+    },
+    {
+      id: "q9_board_experience",
+      label: "Do you have board or advisory experience?",
+      type: "yes-no",
+      required: true,
+    },
+  ]
+
+  const goalsQuestions: QuestionConfig[] = [
+    {
+      id: "q10_journey_stages",
+      label: "Where are you in your acquisition journey? (select all that apply)",
+      type: "checkbox",
+      options: getOptions(criteria, "q10_journey_stages", JOURNEY_STAGE_OPTIONS),
+      required: true,
+      icon: "Target",
+    },
+    {
+      id: "q11_target_sectors",
+      label: "Target Acquisition Sectors (select all that apply)",
+      type: "checkbox",
+      options: getOptions(criteria, "q11_target_sectors", INDUSTRY_SECTOR_OPTIONS),
+      required: true,
+      icon: "Building2",
+    },
+    {
+      id: "target_location",
+      label: "Target Location",
+      type: "radio",
+      options: getOptions(criteria, "target_location", TARGET_LOCATION_OPTIONS),
+      icon: "MapPin",
+    },
+    {
+      id: "target_acquisition_size",
+      label: "Target Acquisition Size",
+      type: "radio",
+      options: getOptions(criteria, "target_acquisition_size", TARGET_ACQUISITION_SIZE_OPTIONS),
+      icon: "Euro",
+    },
+    {
+      id: "q12_has_identified_targets",
+      label: "Have you identified specific acquisition targets?",
+      type: "yes-no",
+    },
+    {
+      id: "q13_target_details",
+      label: "Describe your identified targets (optional)",
+      type: "textarea",
+      placeholder: "Revenue range, number of employees, sector, valuation...",
+      rows: 4,
+      // Serializable condition for server->client passing
+      showIfCondition: {
+        field: "q12_has_identified_targets",
+        equals: true,
+      },
+    },
+  ]
+
+  const financialQuestions: QuestionConfig[] = [
+    {
+      id: "q14_investment_capacity",
+      label: "Investment Capacity",
+      type: "radio",
+      options: getOptions(criteria, "q14_investment_capacity", INVESTMENT_CAPACITY_OPTIONS),
+      required: true,
+      icon: "Wallet",
+    },
+    {
+      id: "q15_funding_status",
+      label: "Funding Status",
+      type: "radio",
+      options: getOptions(criteria, "q15_funding_status", FUNDING_STATUS_OPTIONS),
+      required: true,
+      icon: "Euro",
+    },
+    {
+      id: "q16_network_training",
+      label: "Network or Training Affiliations (select all that apply)",
+      type: "checkbox",
+      options: getOptions(criteria, "q16_network_training", NETWORK_TRAINING_OPTIONS),
+      icon: "GraduationCap",
+    },
+    {
+      id: "q17_open_to_co_acquisition",
+      label: "Open to co-acquisition?",
+      type: "yes-no",
+      required: true,
+      icon: "Handshake",
+    },
+    {
+      id: "source",
+      label: "How did you hear about Re-New? (optional)",
+      type: "radio",
+      options: SOURCE_OPTIONS,
+    },
+    {
+      id: "marketing_consent",
+      label: "I agree to receive communications from Re-New",
+      type: "yes-no",
+      required: true,
+    },
+  ]
+
+  return [
+    {
+      id: 1,
+      title: "Welcome",
+      description: "Let's start with your contact information",
+      icon: "User",
+      questions: CONTACT_QUESTIONS,
+    },
+    {
+      id: 2,
+      title: "Background",
+      description: "Tell us about your professional experience",
+      icon: "Briefcase",
+      questions: backgroundQuestions,
+    },
+    {
+      id: 3,
+      title: "M&A Experience",
+      description: "Your mergers & acquisitions background",
+      icon: "Scale",
+      questions: maExperienceQuestions,
+    },
+    {
+      id: 4,
+      title: "Goals",
+      description: "What are you looking for?",
+      icon: "Target",
+      questions: goalsQuestions,
+    },
+    {
+      id: 5,
+      title: "Financial",
+      description: "Investment capacity & final details",
+      icon: "Wallet",
+      questions: financialQuestions,
+    },
+  ]
 }

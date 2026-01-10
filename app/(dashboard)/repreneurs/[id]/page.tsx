@@ -20,7 +20,7 @@ import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
 import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { CandidateRadarChart } from "@/components/repreneurs/candidate-radar-chart"
-import { CVSection } from "@/components/repreneurs/cv-section"
+import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
@@ -213,10 +213,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             <Label className="text-xs text-gray-500 mb-1 block">Journey Stage</Label>
             <UpdateJourneyStageForm repreneurId={repreneur.id} currentStage={repreneur.journey_stage} />
           </div>
-          <div>
-            <Label className="text-xs text-gray-500 mb-1 block">CV</Label>
-            <CVSection repreneurId={id} cvUrl={repreneur.cv_url} />
-          </div>
           <div className="pt-5">
             <RepreneurActionsMenu
               repreneurId={repreneur.id}
@@ -225,6 +221,15 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             />
           </div>
         </div>
+      </div>
+
+      {/* Documents Row */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <DocumentsCard
+          repreneurId={id}
+          cvUrl={repreneur.cv_url}
+          ldcUrl={repreneur.ldc_url}
+        />
       </div>
 
       {/* Profile Overview Row: Rating | Investment Profile | Radar Chart */}

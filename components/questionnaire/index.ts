@@ -18,6 +18,8 @@ export {
   validateStep,
   isStepComplete,
   getInitialFormData,
+  buildIntakeSteps,
+  type DynamicCriteriaMap,
 } from "./question-config"
 
 // Input components

@@ -7,7 +7,39 @@ import {
   Building2, Users, MapPin, Euro, GraduationCap, Handshake,
   Mail, Phone, Linkedin
 } from "lucide-react"
-import type { StepConfig, QuestionConfig, QuestionnaireFormData, FormHandlers, FieldErrors } from "./types"
+import type { StepConfig, QuestionConfig, QuestionnaireFormData, FormHandlers, FieldErrors, ShowIfCondition } from "./types"
+
+/**
+ * Evaluate a serializable showIfCondition
+ * Supports simple field equality and OR conditions
+ */
+function evaluateShowIfCondition(condition: ShowIfCondition, formData: QuestionnaireFormData): boolean {
+  const fieldValue = formData[condition.field]
+  const matches = fieldValue === condition.equals
+
+  if (condition.operator === "or" && condition.orField) {
+    const orFieldValue = formData[condition.orField]
+    const orMatches = orFieldValue === condition.orEquals
+    return matches || orMatches
+  }
+
+  return matches
+}
+
+/**
+ * Check if a question should be shown based on conditions
+ */
+function shouldShowQuestion(question: QuestionConfig, formData: QuestionnaireFormData): boolean {
+  // Check function-based condition (for static configs)
+  if (question.showIf && !question.showIf(formData)) {
+    return false
+  }
+  // Check serializable condition (for dynamic configs)
+  if (question.showIfCondition && !evaluateShowIfCondition(question.showIfCondition, formData)) {
+    return false
+  }
+  return true
+}
 import {
   YesNoButtons,
   RadioOptionGrid,
@@ -62,7 +94,7 @@ export function QuestionRenderer({
   const Icon = question.icon ? ICONS[question.icon] : null
 
   // Check conditional display
-  if (question.showIf && !question.showIf(formData)) {
+  if (!shouldShowQuestion(question, formData)) {
     return null
   }
 
@@ -238,7 +270,7 @@ export function StepRenderer({
     <div className={cn("space-y-6", className)}>
       {step.questions.map((question) => {
         // Skip if conditional and not shown
-        if (question.showIf && !question.showIf(formData)) {
+        if (!shouldShowQuestion(question, formData)) {
           return null
         }
 

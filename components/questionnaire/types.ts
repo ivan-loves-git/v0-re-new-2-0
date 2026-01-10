@@ -53,6 +53,16 @@ export interface QuestionOption {
   score?: number
 }
 
+// Serializable condition for showing a question
+// Used when passing config from server to client components
+export interface ShowIfCondition {
+  field: keyof QuestionnaireFormData
+  equals: boolean | string | string[]
+  operator?: "or" // For checking multiple fields with OR logic
+  orField?: keyof QuestionnaireFormData
+  orEquals?: boolean | string | string[]
+}
+
 // Question definition
 export interface QuestionConfig {
   id: string                              // Field name in formData
@@ -62,7 +72,8 @@ export interface QuestionConfig {
   required?: boolean
   placeholder?: string
   rows?: number                           // For textarea
-  showIf?: (data: QuestionnaireFormData) => boolean  // Conditional display
+  showIf?: (data: QuestionnaireFormData) => boolean  // Conditional display (for static configs)
+  showIfCondition?: ShowIfCondition       // Serializable condition (for dynamic configs)
   icon?: string                           // Icon name for styled display
 }
 
