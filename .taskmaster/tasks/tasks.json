@@ -603,7 +603,7 @@
         "relatedCommits": [
           "6d3cb48"
         ],
-        "implementationNotes": "Profile Pictures: Already working via RepreneurAvatar component with custom upload support.\n\nCV Upload System:\n- Created cvs storage bucket in Supabase (migration 017)\n- Added cv_url column (migration 016) and ldc_url column (migration 018)\n- API route /api/upload-cv with POST/DELETE for document management\n- PDF upload in public intake form (Step 1) - PDF only validation\n- Documents card on profile page managing both CV and Lettre de Cadrage\n- 10MB file size limit, PDF-only validation\n\nDocuments Card:\n- Row 2 of profile page (below Rating/Investment/Radar)\n- Manages CV and Lettre de Cadrage uploads\n- View, upload, replace, delete functionality\n- Consistent UI with upload/loading states",
+        "implementationNotes": "Profile Pictures:\n- RepreneurAvatar component with custom upload support\n- Deterministic defaults (1 of 16 Notion faces) based on repreneur ID\n- Upload replaces default, delete resets to default\n- Avatars storage bucket with RLS policies (migration 009)\n\nCV Upload System:\n- Created cvs storage bucket in Supabase (migration 017)\n- Added cv_url column (migration 016) and ldc_url column (migration 018)\n- API route /api/upload-cv with POST/DELETE for document management\n- PDF upload in public intake form (Step 1) - PDF only validation\n- Documents card on profile page managing both CV and Lettre de Cadrage\n- 10MB file size limit, PDF-only validation\n\nDocuments Card:\n- Row 2 of profile page (below Rating/Investment/Radar)\n- Manages CV and Lettre de Cadrage uploads\n- View, upload, replace, delete functionality\n- Consistent UI with upload/loading states",
         "subtasks": []
       },
       {

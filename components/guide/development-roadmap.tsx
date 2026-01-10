@@ -34,6 +34,11 @@ const roadmapEvents = [
         type: "decision",
         description: "Intake form restricted to PDF uploads only for consistency. Profile page accepts both PDF and Word for flexibility.",
       },
+      {
+        title: "Avatar storage bucket setup",
+        type: "fix",
+        description: "Created avatars storage bucket with RLS policies. Custom photo uploads now work. Deterministic defaults (1 of 16 faces) shown when no custom photo.",
+      },
     ],
   },
   {
