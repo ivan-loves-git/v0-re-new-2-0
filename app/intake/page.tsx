@@ -440,18 +440,22 @@ export default function IntakePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Upload your CV</h3>
-                    <p className="text-sm text-gray-500">Optional, PDF or Word document (max 10MB)</p>
+                    <p className="text-sm text-gray-500">Optional, PDF only (max 10MB)</p>
                   </div>
                 </div>
 
                 <input
                   ref={cvInputRef}
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,application/pdf"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
+                      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+                        toast.error("Please upload a PDF file")
+                        return
+                      }
                       if (file.size > 10 * 1024 * 1024) {
                         toast.error("File size must be less than 10MB")
                         return
