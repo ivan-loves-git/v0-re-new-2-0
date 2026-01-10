@@ -9,6 +9,34 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Jan 10, 2026",
+    version: "0.9.0",
+    title: "Evaluation Criteria Visibility",
+    isCompleted: true,
+    events: [
+      {
+        title: "Evaluation Criteria page",
+        type: "feature",
+        description: "New Guide page showing all Tier 1 scoring questions, answers, and point values. Makes previously hard-coded scoring logic visible to dashboard users.",
+      },
+      {
+        title: "Inline criteria editing",
+        type: "feature",
+        description: "Edit question labels, answer labels, and scores directly from the page. Changes only affect future candidates (existing scores frozen).",
+      },
+      {
+        title: "Database-driven criteria",
+        type: "refactor",
+        description: "Scoring criteria moved from hard-coded TypeScript to database table. Foundation for future Tier 2 and Tier 3 evaluation systems.",
+      },
+      {
+        title: "Decision: Frozen scores",
+        type: "decision",
+        description: "When criteria change, existing repreneur scores remain unchanged. Only new questionnaire completions use updated criteria. Preserves historical integrity.",
+      },
+    ],
+  },
+  {
     period: "Jan 4, 2026 (PM)",
     version: "0.8.50",
     title: "Email System Hardening",
