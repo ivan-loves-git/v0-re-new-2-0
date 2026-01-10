@@ -106,7 +106,7 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <input
         ref={fileInputRef}
         type="file"
@@ -122,54 +122,51 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
         <>
           <Button
             variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="h-10 gap-2 px-3"
             onClick={() => window.open(currentCvUrl, "_blank")}
           >
-            <FileText className="h-3.5 w-3.5" />
+            <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">View CV</span>
-            <ExternalLink className="h-3 w-3" />
+            <ExternalLink className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="outline"
-            size="sm"
-            className="h-8 gap-1.5"
+            size="icon"
+            className="h-10 w-10"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
           >
             {isUploading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Upload className="h-3.5 w-3.5" />
+              <Upload className="h-4 w-4" />
             )}
-            <span className="hidden sm:inline">Replace</span>
           </Button>
           <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-gray-400 hover:text-red-500"
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 text-gray-400 hover:text-red-500 hover:border-red-200"
             onClick={handleDelete}
             disabled={isDeleting}
           >
             {isDeleting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
             )}
           </Button>
         </>
       ) : (
         <Button
           variant="outline"
-          size="sm"
-          className="h-8 gap-1.5 text-gray-500 border-dashed"
+          className="h-10 gap-2 px-3"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
         >
           {isUploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Upload className="h-3.5 w-3.5" />
+            <Upload className="h-4 w-4" />
           )}
           <span>Upload CV</span>
         </Button>
