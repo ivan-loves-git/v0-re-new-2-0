@@ -205,16 +205,17 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 />
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <StatusBadge status={repreneur.lifecycle_status} />
-              <CVSection repreneurId={id} cvUrl={repreneur.cv_url} />
-            </div>
+            <StatusBadge status={repreneur.lifecycle_status} />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <Label className="text-xs text-gray-500 mb-1 block">Journey Stage</Label>
             <UpdateJourneyStageForm repreneurId={repreneur.id} currentStage={repreneur.journey_stage} />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-500 mb-1 block">CV</Label>
+            <CVSection repreneurId={id} cvUrl={repreneur.cv_url} />
           </div>
           <div className="pt-5">
             <RepreneurActionsMenu
