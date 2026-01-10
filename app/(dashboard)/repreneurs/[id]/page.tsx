@@ -20,6 +20,7 @@ import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
 import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { CandidateRadarChart } from "@/components/repreneurs/candidate-radar-chart"
+import { CVSection } from "@/components/repreneurs/cv-section"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
@@ -204,7 +205,10 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 />
               </div>
             </div>
-            <StatusBadge status={repreneur.lifecycle_status} />
+            <div className="flex items-center gap-3 flex-wrap">
+              <StatusBadge status={repreneur.lifecycle_status} />
+              <CVSection repreneurId={id} cvUrl={repreneur.cv_url} />
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">

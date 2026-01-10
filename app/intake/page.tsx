@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   User, Briefcase, Scale, Target, Wallet, Check,
   ArrowRight, ArrowLeft, Loader2, Sparkles, ExternalLink,
-  TrendingUp, AlertCircle
+  TrendingUp, AlertCircle, FileText, Upload, X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -17,6 +17,7 @@ import {
   updateIntakeGoals,
   completeIntake,
 } from "@/lib/actions/intake"
+import { updateRepreneurField } from "@/lib/actions/repreneurs"
 import {
   INTAKE_STEPS,
   validateStep,
@@ -45,6 +46,9 @@ export default function IntakePage() {
   const [finalScore, setFinalScore] = useState<number | null>(null)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
+  const [cvFile, setCvFile] = useState<File | null>(null)
+  const [isUploadingCv, setIsUploadingCv] = useState(false)
+  const cvInputRef = useRef<HTMLInputElement>(null)
 
   // Form state using shared initial data
   const [formData, setFormData] = useState<QuestionnaireFormData>(getInitialFormData())
@@ -108,6 +112,35 @@ export default function IntakePage() {
         }
 
         setRepreneurId(result.data.id)
+
+        // Upload CV if one was selected
+        if (cvFile) {
+          setIsUploadingCv(true)
+          try {
+            const cvFormData = new FormData()
+            cvFormData.append("file", cvFile)
+            cvFormData.append("repreneurId", result.data.id)
+
+            const cvResponse = await fetch("/api/upload-cv", {
+              method: "POST",
+              body: cvFormData,
+            })
+
+            if (cvResponse.ok) {
+              const { url } = await cvResponse.json()
+              await updateRepreneurField(result.data.id, "cv_url", url)
+            } else {
+              console.error("CV upload failed")
+              toast.error("CV upload failed, but you can add it later")
+            }
+          } catch (cvError) {
+            console.error("CV upload error:", cvError)
+            toast.error("CV upload failed, but you can add it later")
+          } finally {
+            setIsUploadingCv(false)
+          }
+        }
+
         if (result.data.isExisting) {
           toast.info("Welcome back! We found your existing profile.")
         } else {
@@ -392,6 +425,79 @@ export default function IntakePage() {
               errors={errors}
               variant="styled"
             />
+
+            {/* CV Upload section for Step 1 */}
+            {currentStep === 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-8 p-6 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Upload your CV</h3>
+                    <p className="text-sm text-gray-500">Optional, PDF or Word document (max 10MB)</p>
+                  </div>
+                </div>
+
+                <input
+                  ref={cvInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast.error("File size must be less than 10MB")
+                        return
+                      }
+                      setCvFile(file)
+                    }
+                  }}
+                />
+
+                {cvFile ? (
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{cvFile.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(cvFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCvFile(null)
+                        if (cvInputRef.current) cvInputRef.current.value = ""
+                      }}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                    onClick={() => cvInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Choose File
+                  </Button>
+                )}
+              </motion.div>
+            )}
           </motion.div>
         </AnimatePresence>
 
@@ -411,13 +517,13 @@ export default function IntakePage() {
           <Button
             size="lg"
             onClick={handleNext}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingCv}
             className="h-12 px-8 min-w-[160px] transition-all bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200"
           >
-            {isSubmitting ? (
+            {isSubmitting || isUploadingCv ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Saving...
+                {isUploadingCv ? "Uploading CV..." : "Saving..."}
               </>
             ) : currentStep === INTAKE_STEPS.length ? (
               <>

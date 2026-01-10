@@ -31,6 +31,7 @@ export interface Repreneur {
   phone?: string
   linkedin_url?: string // LinkedIn profile URL
   avatar_url?: string // custom avatar URL, null = use default based on ID
+  cv_url?: string // URL to CV document in Supabase Storage
   company_background?: string
   investment_capacity?: string
   sector_preferences?: string[]
@@ -127,6 +128,7 @@ export interface Repreneur_Insert {
   phone?: string
   linkedin_url?: string
   avatar_url?: string
+  cv_url?: string
   company_background?: string
   investment_capacity?: string
   sector_preferences?: string[]
