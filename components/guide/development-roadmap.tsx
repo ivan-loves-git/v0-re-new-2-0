@@ -10,6 +10,29 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 10, 2026",
+    version: "0.9.7",
+    title: "Email System Live",
+    isCompleted: true,
+    events: [
+      {
+        title: "Resend integration configured",
+        type: "feature",
+        description: "Connected Resend API with verified domain notifications@renew-wave.com. Production email sending now operational.",
+      },
+      {
+        title: "Founder notification emails",
+        type: "feature",
+        description: "Sent Welcome and High Score test emails to all 3 founders (Bertrand, Amelie, Antoine) to announce platform is live.",
+      },
+      {
+        title: "Sandbox warning removed",
+        type: "fix",
+        description: "Removed development sandbox warning from Email Cockpit UI now that production email is configured.",
+      },
+    ],
+  },
+  {
+    period: "Jan 10, 2026",
     version: "0.9.6",
     title: "Documents Management",
     isCompleted: true,
