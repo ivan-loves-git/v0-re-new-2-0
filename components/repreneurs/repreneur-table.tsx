@@ -31,8 +31,13 @@ interface RepreneurTableProps {
   viewMode?: "flat" | "grouped"
 }
 
-type SortField = "name" | "email" | "created_at" | "tier1_score" | "tier2_stars"
+type SortField = "name" | "email" | "created_at" | "status_column"
 type SortDirection = "asc" | "desc"
+
+interface GroupSortState {
+  field: SortField
+  direction: SortDirection
+}
 
 const STATUS_ORDER: LifecycleStatus[] = ["lead", "qualified", "client", "rejected"]
 
@@ -100,12 +105,22 @@ function OfferDisplay({ offers }: { offers: string[] | undefined }) {
   )
 }
 
+const DEFAULT_GROUP_SORT: GroupSortState = { field: "created_at", direction: "desc" }
+
 export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
+  // Global sort for flat view
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+  // Per-group sort for grouped view
+  const [groupSorts, setGroupSorts] = useState<Record<LifecycleStatus, GroupSortState>>({
+    lead: { ...DEFAULT_GROUP_SORT },
+    qualified: { ...DEFAULT_GROUP_SORT },
+    client: { ...DEFAULT_GROUP_SORT },
+    rejected: { ...DEFAULT_GROUP_SORT },
+  })
   const [collapsedGroups, setCollapsedGroups] = useState<Set<LifecycleStatus>>(new Set())
   const [groupPages, setGroupPages] = useState<Record<LifecycleStatus, number>>({
     lead: 1,
@@ -125,7 +140,46 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
     return matchesSearch && matchesStatus
   })
 
-  // Sort repreneurs
+  // Sort function for a group
+  const sortGroup = (items: RepreneurWithOffers[], status: LifecycleStatus) => {
+    const { field, direction } = groupSorts[status]
+    return [...items].sort((a, b) => {
+      let comparison = 0
+      switch (field) {
+        case "name":
+          comparison = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+          break
+        case "email":
+          comparison = a.email.localeCompare(b.email)
+          break
+        case "created_at":
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          break
+        case "status_column":
+          // Sort by the status-specific field
+          switch (status) {
+            case "lead":
+              comparison = (a.tier1_score || 0) - (b.tier1_score || 0)
+              break
+            case "qualified":
+              comparison = (a.tier2_stars || 0) - (b.tier2_stars || 0)
+              break
+            case "client":
+              comparison = (a.offer_names?.length || 0) - (b.offer_names?.length || 0)
+              break
+            case "rejected":
+              const aDate = a.rejected_at ? new Date(a.rejected_at).getTime() : 0
+              const bDate = b.rejected_at ? new Date(b.rejected_at).getTime() : 0
+              comparison = aDate - bDate
+              break
+          }
+          break
+      }
+      return direction === "asc" ? comparison : -comparison
+    })
+  }
+
+  // Sort for flat view (global sort)
   const sorted = [...filtered].sort((a, b) => {
     let comparison = 0
     switch (sortField) {
@@ -138,19 +192,13 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
       case "created_at":
         comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         break
-      case "tier1_score":
-        comparison = (a.tier1_score || 0) - (b.tier1_score || 0)
-        break
-      case "tier2_stars":
-        comparison = (a.tier2_stars || 0) - (b.tier2_stars || 0)
-        break
     }
     return sortDirection === "asc" ? comparison : -comparison
   })
 
-  // Group by status
+  // Group by status (unsorted - sorting applied per group later)
   const groupedByStatus = STATUS_ORDER.reduce((acc, status) => {
-    acc[status] = sorted.filter((r) => r.lifecycle_status === status)
+    acc[status] = filtered.filter((r) => r.lifecycle_status === status)
     return acc
   }, {} as Record<LifecycleStatus, RepreneurWithOffers[]>)
 
@@ -174,6 +222,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
     setGroupPages({ lead: 1, qualified: 1, client: 1, rejected: 1 })
   }
 
+  // Global sort for flat view
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -181,6 +230,35 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
       setSortField(field)
       setSortDirection("desc")
     }
+  }
+
+  // Per-group sort for grouped view
+  const handleGroupSort = (status: LifecycleStatus, field: SortField) => {
+    setGroupSorts((prev) => {
+      const current = prev[status]
+      if (current.field === field) {
+        // Toggle direction
+        return {
+          ...prev,
+          [status]: { ...current, direction: current.direction === "asc" ? "desc" : "asc" },
+        }
+      } else {
+        // New field, default to desc
+        return {
+          ...prev,
+          [status]: { field, direction: "desc" },
+        }
+      }
+    })
+    // Reset to page 1 when sorting changes
+    setGroupPages((prev) => ({ ...prev, [status]: 1 }))
+  }
+
+  // Get sort indicator for a column in a group
+  const getSortIndicator = (status: LifecycleStatus, field: SortField) => {
+    const { field: sortedField, direction } = groupSorts[status]
+    if (sortedField !== field) return null
+    return direction === "asc" ? " ↑" : " ↓"
   }
 
   // Render status-specific columns
@@ -356,11 +434,12 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           if (group.length === 0 && statusFilter !== "all") return null
 
           const isCollapsed = collapsedGroups.has(status)
+          const sortedGroup = sortGroup(group, status)
           const currentPage = groupPages[status]
-          const totalPages = Math.ceil(group.length / ITEMS_PER_PAGE)
+          const totalPages = Math.ceil(sortedGroup.length / ITEMS_PER_PAGE)
           const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
           const endIndex = startIndex + ITEMS_PER_PAGE
-          const paginatedGroup = group.slice(startIndex, endIndex)
+          const paginatedGroup = sortedGroup.slice(startIndex, endIndex)
 
           return (
             <div key={status} className={`rounded-lg border ${STATUS_COLORS[status]}`}>
@@ -386,15 +465,29 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[25%] cursor-pointer" onClick={() => handleSort("name")}>
-                          Name {sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <TableHead
+                          className="w-[25%] cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleGroupSort(status, "name")}
+                        >
+                          Name{getSortIndicator(status, "name")}
                         </TableHead>
-                        <TableHead className="w-[25%] cursor-pointer" onClick={() => handleSort("email")}>
-                          Email {sortField === "email" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <TableHead
+                          className="w-[25%] cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleGroupSort(status, "email")}
+                        >
+                          Email{getSortIndicator(status, "email")}
                         </TableHead>
-                        <TableHead className="w-[30%]">{getStatusColumnHeader(status)}</TableHead>
-                        <TableHead className="w-[20%] text-right cursor-pointer" onClick={() => handleSort("created_at")}>
-                          Created {sortField === "created_at" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <TableHead
+                          className="w-[30%] cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleGroupSort(status, "status_column")}
+                        >
+                          {getStatusColumnHeader(status)}{getSortIndicator(status, "status_column")}
+                        </TableHead>
+                        <TableHead
+                          className="w-[20%] text-right cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleGroupSort(status, "created_at")}
+                        >
+                          Created{getSortIndicator(status, "created_at")}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -435,7 +528,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                   {totalPages > 1 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t">
                       <span className="text-sm text-gray-500">
-                        Showing {startIndex + 1}-{Math.min(endIndex, group.length)} of {group.length}
+                        Showing {startIndex + 1}-{Math.min(endIndex, sortedGroup.length)} of {sortedGroup.length}
                       </span>
                       <Pagination>
                         <PaginationContent>
