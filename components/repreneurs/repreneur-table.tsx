@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Star, Target, Package, ChevronDown, ChevronRight } from "lucide-react"
+import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -17,7 +17,9 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
+import type { Repreneur, LifecycleStatus, JourneyStage } from "@/lib/types/repreneur"
+import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
+import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
 
 const ITEMS_PER_PAGE = 8
@@ -101,6 +103,27 @@ function OfferDisplay({ offers }: { offers: string[] | undefined }) {
       {additionalCount > 0 && (
         <span className="text-xs text-gray-500">+{additionalCount}</span>
       )}
+    </div>
+  )
+}
+
+function JourneyDisplay({ repreneur }: { repreneur: RepreneurWithOffers }) {
+  const milestones = extractMilestones(repreneur as any)
+  const milestoneCount = countMilestones(milestones)
+  const derivedStage = deriveJourneyStage(milestoneCount, repreneur.persona)
+  const stageConfig = getStageConfig(derivedStage)
+
+  const StageIcon = derivedStage === "explorer" ? Compass :
+                   derivedStage === "learner" ? Map :
+                   derivedStage === "ready" ? Flag : Trophy
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Badge className={`gap-1 text-xs ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
+        <StageIcon className="h-3 w-3" />
+        {stageConfig.label}
+      </Badge>
+      <span className="text-xs text-gray-500">({milestoneCount}/10)</span>
     </div>
   )
 }
@@ -343,12 +366,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                   Email {sortField === "email" && (sortDirection === "asc" ? "↑" : "↓")}
                 </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("tier1_score")}>
-                  Score {sortField === "tier1_score" && (sortDirection === "asc" ? "↑" : "↓")}
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("tier2_stars")}>
-                  Rating {sortField === "tier2_stars" && (sortDirection === "asc" ? "↑" : "↓")}
-                </TableHead>
+                <TableHead>Journey</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort("created_at")}>
                   Created {sortField === "created_at" && (sortDirection === "asc" ? "↑" : "↓")}
                 </TableHead>
@@ -357,7 +375,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={5} className="text-center text-gray-500 py-8">
                     No repreneurs found
                   </TableCell>
                 </TableRow>
@@ -389,10 +407,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                       <StatusBadge status={repreneur.lifecycle_status} />
                     </TableCell>
                     <TableCell>
-                      <ScoreDisplay score={repreneur.tier1_score} />
-                    </TableCell>
-                    <TableCell>
-                      <StarDisplay stars={repreneur.tier2_stars} />
+                      <JourneyDisplay repreneur={repreneur} />
                     </TableCell>
                     <TableCell className="text-gray-600">
                       {new Date(repreneur.created_at).toLocaleDateString()}
@@ -472,25 +487,28 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                     <TableHeader>
                       <TableRow>
                         <TableHead
-                          className="w-[25%] cursor-pointer hover:bg-gray-50"
+                          className="w-[22%] cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "name")}
                         >
                           Name{getSortIndicator(status, "name")}
                         </TableHead>
                         <TableHead
-                          className="w-[25%] cursor-pointer hover:bg-gray-50"
+                          className="w-[22%] cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "email")}
                         >
                           Email{getSortIndicator(status, "email")}
                         </TableHead>
                         <TableHead
-                          className="w-[30%] cursor-pointer hover:bg-gray-50"
+                          className="w-[20%] cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "status_column")}
                         >
                           {getStatusColumnHeader(status)}{getSortIndicator(status, "status_column")}
                         </TableHead>
+                        <TableHead className="w-[20%]">
+                          Journey
+                        </TableHead>
                         <TableHead
-                          className="w-[20%] text-right cursor-pointer hover:bg-gray-50"
+                          className="w-[16%] text-right cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "created_at")}
                         >
                           Created{getSortIndicator(status, "created_at")}
@@ -505,7 +523,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                           onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                           onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
                         >
-                          <TableCell className="w-[25%]">
+                          <TableCell className="w-[22%]">
                             <div className="flex items-center gap-3">
                               <RepreneurAvatar
                                 repreneurId={repreneur.id}
@@ -520,9 +538,12 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                               <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
                             </div>
                           </TableCell>
-                          <TableCell className="w-[25%] text-gray-600">{repreneur.email}</TableCell>
-                          <TableCell className="w-[30%]">{renderStatusColumn(repreneur)}</TableCell>
-                          <TableCell className="w-[20%] text-right text-gray-600">
+                          <TableCell className="w-[22%] text-gray-600">{repreneur.email}</TableCell>
+                          <TableCell className="w-[20%]">{renderStatusColumn(repreneur)}</TableCell>
+                          <TableCell className="w-[20%]">
+                            <JourneyDisplay repreneur={repreneur} />
+                          </TableCell>
+                          <TableCell className="w-[16%] text-right text-gray-600">
                             {new Date(repreneur.created_at).toLocaleDateString()}
                           </TableCell>
                         </TableRow>

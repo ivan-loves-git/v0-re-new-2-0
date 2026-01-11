@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { createServerClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
@@ -65,6 +66,11 @@ export async function POST(request: NextRequest) {
       console.error("Database update error:", updateError.message, updateError)
       return NextResponse.json({ error: `Failed to update avatar URL: ${updateError.message}` }, { status: 500 })
     }
+
+    // Revalidate all pages that display repreneur data
+    revalidatePath("/repreneurs")
+    revalidatePath(`/repreneurs/${repreneurId}`)
+    revalidatePath("/pipeline")
 
     return NextResponse.json({ url: publicUrl })
   } catch (error) {

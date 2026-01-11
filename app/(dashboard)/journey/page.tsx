@@ -1,11 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
 import { stageConfig } from "@/lib/journey-config"
-import { Compass, BookOpen, FileCheck, Trophy, ArrowRight } from "lucide-react"
+import { Compass, BookOpen, FileCheck, Trophy, ArrowRight, CheckCircle2, Target, Map as MapIcon } from "lucide-react"
 import Link from "next/link"
 import type { JourneyStage, Repreneur } from "@/lib/types/repreneur"
+import { extractMilestones, countMilestones, deriveJourneyStage } from "@/lib/utils/journey-derivation"
 
 // Cache for 30 seconds - prevents re-fetching on rapid navigation
 export const revalidate = 30
@@ -26,6 +28,18 @@ const stageDetails: Record<JourneyStage, string> = {
   serial_acquirer: "Has successfully completed at least one acquisition",
 }
 
+// Helper to calculate milestone count for a repreneur
+function getMilestoneCount(repreneur: Repreneur): number {
+  const milestones = extractMilestones(repreneur as any)
+  return countMilestones(milestones)
+}
+
+// Helper to derive journey stage from milestones
+function getDerivedStage(repreneur: Repreneur): JourneyStage {
+  const milestoneCount = getMilestoneCount(repreneur)
+  return deriveJourneyStage(milestoneCount, repreneur.persona)
+}
+
 export default async function JourneyPage() {
   const supabase = await createClient()
 
@@ -34,12 +48,12 @@ export default async function JourneyPage() {
     .select("*")
     .order("created_at", { ascending: false })
 
-  // Group repreneurs by journey stage (default to "explorer" if no stage set)
+  // Group repreneurs by derived journey stage (from milestones)
   const byStage = stages.reduce(
     (acc, stage) => {
       acc[stage] = repreneurs?.filter((r) => {
-        const repreneurStage = r.journey_stage || "explorer"
-        return repreneurStage === stage
+        const derivedStage = getDerivedStage(r as Repreneur)
+        return derivedStage === stage
       }) || []
       return acc
     },
@@ -47,6 +61,25 @@ export default async function JourneyPage() {
   )
 
   const totalRepreneurs = repreneurs?.length || 0
+
+  // Calculate milestone stats
+  const allMilestoneCounts = repreneurs?.map(r => getMilestoneCount(r as Repreneur)) || []
+  const totalMilestonesCompleted = allMilestoneCounts.reduce((sum, count) => sum + count, 0)
+  const avgMilestones = totalRepreneurs > 0 ? (totalMilestonesCompleted / totalRepreneurs).toFixed(1) : "0"
+
+  // Calculate average milestones per stage
+  const avgByStage = stages.reduce((acc, stage) => {
+    const stageRepreneurs = byStage[stage]
+    const stageMilestones = stageRepreneurs.map(r => getMilestoneCount(r as Repreneur))
+    const stageTotal = stageMilestones.reduce((sum, count) => sum + count, 0)
+    acc[stage] = stageRepreneurs.length > 0 ? (stageTotal / stageRepreneurs.length).toFixed(1) : "0"
+    return acc
+  }, {} as Record<JourneyStage, string>)
+
+  // Milestone completion distribution (how many repreneurs have X milestones)
+  const milestoneDistribution = Array.from({ length: 11 }, (_, i) =>
+    allMilestoneCounts.filter(count => count === i).length
+  )
 
   return (
     <div className="space-y-6">
@@ -111,6 +144,64 @@ export default async function JourneyPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Milestone Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-base">Total Milestones</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalMilestonesCompleted}</div>
+            <p className="text-sm text-muted-foreground">
+              completed across all repreneurs
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-base">Average Progress</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{avgMilestones}<span className="text-lg text-muted-foreground">/10</span></div>
+            <Progress value={parseFloat(avgMilestones) * 10} className="mt-2 h-2" />
+            <p className="text-sm text-muted-foreground mt-2">
+              milestones per repreneur
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <MapIcon className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-base">Stage Averages</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {stages.map((stage) => {
+                const config = stageConfig[stage]
+                return (
+                  <div key={stage} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{config.label}</span>
+                    <Badge variant="outline" className="font-mono">
+                      {avgByStage[stage]}/10
+                    </Badge>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Stage Columns */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

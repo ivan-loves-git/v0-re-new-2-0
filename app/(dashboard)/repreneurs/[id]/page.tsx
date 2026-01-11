@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone } from "lucide-react"
+import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Trophy } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,14 +10,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Label } from "@/components/ui/label"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
 import { MissingFieldsBadge } from "@/components/repreneurs/missing-fields-badge"
-import { UpdateJourneyStageForm } from "@/components/repreneurs/update-journey-stage-form"
+import { getStageConfig } from "@/lib/constants/tier-config"
+import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import { EditableTextField } from "@/components/repreneurs/editable-text-field"
 import { EditableSelectField } from "@/components/repreneurs/editable-select-field"
 import { EditableMultiSelect } from "@/components/repreneurs/editable-multi-select"
 import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
-import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
+import { Tier2DimensionRating } from "@/components/repreneurs/tier2-dimension-rating"
+import { Tier3MilestonesCard } from "@/components/repreneurs/tier3-milestones-card"
 import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
@@ -214,10 +216,26 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div>
-            <Label className="text-xs text-gray-500 mb-1 block">Journey Stage</Label>
-            <UpdateJourneyStageForm repreneurId={repreneur.id} currentStage={repreneur.journey_stage} />
-          </div>
+          {(() => {
+            // Derive journey stage from milestones
+            const milestones = extractMilestones(repreneur)
+            const milestoneCount = countMilestones(milestones)
+            const derivedStage = deriveJourneyStage(milestoneCount, repreneur.persona)
+            const stageConfig = getStageConfig(derivedStage)
+            const StageIcon = derivedStage === "explorer" ? Compass :
+                             derivedStage === "learner" ? Map :
+                             derivedStage === "ready" ? Flag : Trophy
+            return (
+              <div>
+                <Label className="text-xs text-gray-500 mb-1 block">Journey Stage</Label>
+                <Badge className={`gap-1.5 ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
+                  <StageIcon className="h-3.5 w-3.5" />
+                  {stageConfig.label}
+                  <span className="text-xs opacity-75">({milestoneCount}/10)</span>
+                </Badge>
+              </div>
+            )
+          })()}
           <div className="pt-5">
             <RepreneurActionsMenu
               repreneurId={repreneur.id}
@@ -310,17 +328,46 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
                       <p className="text-sm">
-                        Tier 2 is a manual star rating (1-5) assigned by the Re-New team after the interview.
-                        It reflects the overall candidate quality based on fit, motivation, and readiness.
+                        Tier 2 rates 6 competency dimensions after interview: Leadership, Financial Acumen,
+                        Communication, Clarity of Vision, Coachability, and Commitment. Pass threshold is 4.0.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Post-interview Re-New rating</p>
-              <Tier2StarRating
+              <p className="text-xs text-muted-foreground mb-3">Post-interview competency rating</p>
+              <Tier2DimensionRating
                 repreneurId={repreneur.id}
-                currentStars={repreneur.tier2_stars}
+                repreneur={repreneur}
+              />
+            </div>
+
+            <div className="border-t pt-4" />
+
+            {/* Tier 3 Milestones Subsection */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Tier 3</span>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <p className="text-sm">
+                        Tier 3 tracks 10 readiness milestones. Completing milestones advances the journey stage:
+                        Explorer (0-2), Learner (3-6), Ready (7-9), Serial Acquirer (10 + persona).
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Readiness milestones</p>
+              <Tier3MilestonesCard
+                repreneurId={repreneur.id}
+                repreneur={repreneur}
               />
             </div>
           </CardContent>

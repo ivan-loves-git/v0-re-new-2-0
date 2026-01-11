@@ -3,7 +3,9 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import type { Repreneur_Insert, LifecycleStatus, PersonaType } from "@/lib/types/repreneur"
+import type { Repreneur_Insert, LifecycleStatus, PersonaType, Tier2Dimensions, MilestoneKey } from "@/lib/types/repreneur"
+import { calculateTier2Overall, dimensionsToDbColumns } from "@/lib/utils/tier2-scoring"
+import { milestonesToDbColumns, countMilestones, extractMilestones, deriveJourneyStage } from "@/lib/utils/journey-derivation"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
 import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { sendEmail } from "@/lib/email"
@@ -583,4 +585,69 @@ export async function updateTier1Answer(
   revalidatePath("/pipeline")
 
   return scoreBreakdown
+}
+
+/**
+ * Set Tier 2 competency dimensions (6 dimensions with weighted average)
+ * This automatically sets lifecycle_status to "qualified" (action-driven status)
+ */
+export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Dimensions>) {
+  const supabase = await createServerClient()
+
+  // Get current user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Calculate weighted overall score
+  const overall = calculateTier2Overall(dimensions)
+
+  // Convert dimension keys to database column names
+  const dbColumns = dimensionsToDbColumns(dimensions)
+
+  // Setting Tier 2 dimensions automatically qualifies the repreneur
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      ...dbColumns,
+      tier2_overall: overall,
+      tier2_rated_at: new Date().toISOString(),
+      tier2_rated_by: user?.id || null,
+      // Also update legacy tier2_stars for backwards compatibility
+      tier2_stars: overall ? Math.round(overall) : null,
+      lifecycle_status: "qualified",
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+}
+
+/**
+ * Toggle a Tier 3 milestone checkbox
+ * The database trigger will auto-update tier3_milestone_count and journey_stage
+ */
+export async function toggleMilestone(id: string, milestoneKey: MilestoneKey, value: boolean) {
+  const supabase = await createServerClient()
+
+  // Convert milestone key to database column name (ms_xxx)
+  const columnName = `ms_${milestoneKey}`
+
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({ [columnName]: value })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/journey")
 }
