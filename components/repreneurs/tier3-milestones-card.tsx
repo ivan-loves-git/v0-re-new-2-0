@@ -107,7 +107,7 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
             {stageConfig.label}
           </Badge>
           <span className="text-sm text-gray-500">
-            {optimisticCount}/10 milestones
+            {optimisticCount}/11 milestones
           </span>
         </div>
         {progress.nextStage && (
@@ -118,15 +118,15 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
       </div>
 
       {/* Progress Bar */}
-      <Progress value={(optimisticCount / 10) * 100} className="h-2" />
+      <Progress value={(optimisticCount / 11) * 100} className="h-2" />
 
-      {/* Milestones Grouped by Stage */}
+      {/* Milestones in 2-column layout */}
       <TooltipProvider>
-        <div className="space-y-4">
-          {milestonesByGroup.map((group) => (
-            <div key={group.group} className="space-y-2">
-              {/* Stage Group Header */}
-              <div className="flex items-center justify-between">
+        <div className="grid grid-cols-2 gap-4">
+          {/* Left column: Groups 1 & 2 */}
+          <div className="space-y-3">
+            {milestonesByGroup.slice(0, 2).map((group) => (
+              <div key={group.group} className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                     {group.title}
@@ -135,50 +135,93 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
                     ({group.completedCount}/{group.milestones.length})
                   </span>
                 </div>
-              </div>
-
-              {/* Milestones in this group */}
-              <div className="grid grid-cols-1 gap-1 pl-2 border-l-2 border-gray-100">
-                {group.milestones.map((milestone) => {
-                  const isCompleted = optimisticMilestones[milestone.key]
-                  return (
-                    <Tooltip key={milestone.key}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => handleToggle(milestone.key)}
-                          disabled={isPending}
-                          className={cn(
-                            "flex items-center gap-2 p-2 rounded-lg text-left transition-all",
-                            "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500",
-                            isCompleted && "bg-green-50",
-                            isPending && "opacity-50 cursor-not-allowed"
-                          )}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          ) : (
-                            <Circle className="h-4 w-4 text-gray-300 flex-shrink-0" />
-                          )}
-                          <span
+                <div className="space-y-0.5 pl-2 border-l-2 border-gray-100">
+                  {group.milestones.map((milestone) => {
+                    const isCompleted = optimisticMilestones[milestone.key]
+                    return (
+                      <Tooltip key={milestone.key}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => handleToggle(milestone.key)}
+                            disabled={isPending}
                             className={cn(
-                              "text-sm",
-                              isCompleted ? "text-green-700" : "text-gray-600"
+                              "flex items-center gap-2 py-1 px-2 rounded text-left transition-all w-full",
+                              "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                              isCompleted && "bg-green-50",
+                              isPending && "opacity-50 cursor-not-allowed"
                             )}
                           >
-                            {milestone.label}
-                          </span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        <p>{milestone.tooltip}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <Circle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                            )}
+                            <span className={cn("text-sm", isCompleted ? "text-green-700" : "text-gray-600")}>
+                              {milestone.label}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>{milestone.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Right column: Group 3 */}
+          <div className="space-y-3">
+            {milestonesByGroup.slice(2).map((group) => (
+              <div key={group.group} className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    {group.title}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    ({group.completedCount}/{group.milestones.length})
+                  </span>
+                </div>
+                <div className="space-y-0.5 pl-2 border-l-2 border-gray-100">
+                  {group.milestones.map((milestone) => {
+                    const isCompleted = optimisticMilestones[milestone.key]
+                    return (
+                      <Tooltip key={milestone.key}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => handleToggle(milestone.key)}
+                            disabled={isPending}
+                            className={cn(
+                              "flex items-center gap-2 py-1 px-2 rounded text-left transition-all w-full",
+                              "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                              isCompleted && "bg-green-50",
+                              isPending && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <Circle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                            )}
+                            <span className={cn("text-sm", isCompleted ? "text-green-700" : "text-gray-600")}>
+                              {milestone.label}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>{milestone.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </TooltipProvider>
     </div>

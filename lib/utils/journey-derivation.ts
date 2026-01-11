@@ -15,6 +15,7 @@ export const MILESTONE_KEYS: MilestoneKey[] = [
   "search_plan",
   "first_target",
   "dd_checklist",
+  "first_acquisition",
 ]
 
 /**
@@ -38,6 +39,7 @@ export function extractMilestones(repreneur: {
   ms_search_plan?: boolean
   ms_first_target?: boolean
   ms_dd_checklist?: boolean
+  ms_first_acquisition?: boolean
 }): Tier3Milestones {
   return {
     investment_thesis: repreneur.ms_investment_thesis ?? false,
@@ -50,22 +52,23 @@ export function extractMilestones(repreneur: {
     search_plan: repreneur.ms_search_plan ?? false,
     first_target: repreneur.ms_first_target ?? false,
     dd_checklist: repreneur.ms_dd_checklist ?? false,
+    first_acquisition: repreneur.ms_first_acquisition ?? false,
   }
 }
 
 /**
- * Derive journey stage from milestone count and persona
- * Matches the database function compute_journey_stage
+ * Derive journey stage from milestone count
+ * Serial Acquirer requires all 11 milestones (including first acquisition)
  */
 export function deriveJourneyStage(
   milestoneCount: number,
-  persona: string | null | undefined
+  _persona?: string | null | undefined // Kept for backwards compat but no longer used
 ): JourneyStage {
-  // Serial Acquirer: All 10 milestones + serial acquirer persona
-  if (milestoneCount === 10 && persona === "serial_acquirer") {
+  // Serial Acquirer: All 11 milestones completed (including first acquisition)
+  if (milestoneCount >= 11) {
     return "serial_acquirer"
   }
-  // Ready: 7-9 milestones (or 10 without serial persona)
+  // Ready: 7-10 milestones
   if (milestoneCount >= 7) {
     return "ready"
   }
@@ -92,6 +95,7 @@ export function milestonesToDbColumns(milestones: Partial<Tier3Milestones>): Rec
     ms_search_plan: milestones.search_plan ?? false,
     ms_first_target: milestones.first_target ?? false,
     ms_dd_checklist: milestones.dd_checklist ?? false,
+    ms_first_acquisition: milestones.first_acquisition ?? false,
   }
 }
 
@@ -111,7 +115,7 @@ export function getStageProgress(milestoneCount: number): {
   milestonesForNext: number
   progress: number // 0-100
 } {
-  if (milestoneCount >= 10) {
+  if (milestoneCount >= 11) {
     return {
       currentStage: "serial_acquirer",
       nextStage: null,
@@ -123,8 +127,8 @@ export function getStageProgress(milestoneCount: number): {
     return {
       currentStage: "ready",
       nextStage: "serial_acquirer",
-      milestonesForNext: 10 - milestoneCount,
-      progress: ((milestoneCount - 7) / 3) * 100,
+      milestonesForNext: 11 - milestoneCount,
+      progress: ((milestoneCount - 7) / 4) * 100,
     }
   }
   if (milestoneCount >= 3) {

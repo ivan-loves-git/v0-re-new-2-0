@@ -5,6 +5,7 @@ import { Compass, Map, Flag, Trophy, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import type { JourneyStage, Repreneur } from "@/lib/types/repreneur"
 import { extractMilestones, countMilestones, deriveJourneyStage } from "@/lib/utils/journey-derivation"
+import { MILESTONES, STAGE_GROUPS } from "@/lib/constants/tier-config"
 import { cn } from "@/lib/utils"
 
 // Cache for 30 seconds
@@ -12,13 +13,28 @@ export const revalidate = 30
 
 const stages: JourneyStage[] = ["explorer", "learner", "ready", "serial_acquirer"]
 
+// Get milestones that unlock each stage
+function getMilestonesForStage(stage: JourneyStage): string[] {
+  switch (stage) {
+    case "explorer":
+      return [] // Starting point
+    case "learner":
+      return MILESTONES.filter(m => m.stageGroup === 1).map(m => m.label)
+    case "ready":
+      return MILESTONES.filter(m => m.stageGroup === 2).map(m => m.label)
+    case "serial_acquirer":
+      return MILESTONES.filter(m => m.stageGroup === 3).map(m => m.label)
+    default:
+      return []
+  }
+}
+
 const stageConfig: Record<JourneyStage, {
   label: string
   icon: typeof Compass
   color: string
   bgColor: string
   borderColor: string
-  description: string
 }> = {
   explorer: {
     label: "Explorer",
@@ -26,7 +42,6 @@ const stageConfig: Record<JourneyStage, {
     color: "text-gray-700",
     bgColor: "bg-gray-50",
     borderColor: "border-gray-200",
-    description: "0-2 milestones",
   },
   learner: {
     label: "Learner",
@@ -34,7 +49,6 @@ const stageConfig: Record<JourneyStage, {
     color: "text-blue-700",
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",
-    description: "3-6 milestones",
   },
   ready: {
     label: "Ready",
@@ -42,7 +56,6 @@ const stageConfig: Record<JourneyStage, {
     color: "text-green-700",
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
-    description: "7-9 milestones",
   },
   serial_acquirer: {
     label: "Serial Acquirer",
@@ -50,7 +63,6 @@ const stageConfig: Record<JourneyStage, {
     color: "text-amber-700",
     bgColor: "bg-amber-50",
     borderColor: "border-amber-200",
-    description: "10 milestones",
   },
 }
 
@@ -100,21 +112,31 @@ export default async function JourneyPage() {
           const config = stageConfig[stage]
           const Icon = config.icon
           const count = byStage[stage].length
-          const percentage = totalRepreneurs > 0 ? Math.round((count / totalRepreneurs) * 100) : 0
+          const milestones = getMilestonesForStage(stage)
 
           return (
             <div key={stage} className="flex items-center flex-1">
               <div
                 className={cn(
-                  "flex-1 rounded-lg border-2 p-4 text-center transition-all hover:shadow-md",
+                  "flex-1 rounded-lg border-2 p-4 transition-all hover:shadow-md",
                   config.bgColor,
                   config.borderColor
                 )}
               >
-                <Icon className={cn("h-8 w-8 mx-auto mb-2", config.color)} />
-                <p className={cn("text-2xl font-bold", config.color)}>{count}</p>
-                <p className={cn("font-medium", config.color)}>{config.label}</p>
-                <p className="text-xs text-gray-500 mt-1">{config.description}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <Icon className={cn("h-6 w-6", config.color)} />
+                  <span className={cn("text-2xl font-bold", config.color)}>{count}</span>
+                </div>
+                <p className={cn("font-medium text-sm mb-2", config.color)}>{config.label}</p>
+                {milestones.length > 0 ? (
+                  <ul className="text-xs text-gray-600 space-y-0.5">
+                    {milestones.map((m, i) => (
+                      <li key={i} className="truncate">• {m}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-gray-500 italic">Starting point</p>
+                )}
               </div>
               {index < stages.length - 1 && (
                 <ChevronRight className="h-6 w-6 mx-1 text-gray-300 flex-shrink-0" />
@@ -161,7 +183,7 @@ export default async function JourneyPage() {
                             </p>
                           </div>
                           <Badge variant="outline" className="text-xs ml-2 shrink-0">
-                            {milestoneCount}/10
+                            {milestoneCount}/11
                           </Badge>
                         </Link>
                       )

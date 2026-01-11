@@ -33,6 +33,7 @@ export type MilestoneKey =
   | "search_plan"
   | "first_target"
   | "dd_checklist"
+  | "first_acquisition"
 
 // Tier 3 Milestones interface
 export interface Tier3Milestones {
@@ -46,6 +47,7 @@ export interface Tier3Milestones {
   search_plan: boolean
   first_target: boolean
   dd_checklist: boolean
+  first_acquisition: boolean
 }
 
 // Persona options for the dropdown
@@ -117,7 +119,8 @@ export interface Repreneur {
   ms_search_plan?: boolean
   ms_first_target?: boolean
   ms_dd_checklist?: boolean
-  tier3_milestone_count?: number // Computed count of completed milestones (0-10)
+  ms_first_acquisition?: boolean
+  tier3_milestone_count?: number // Computed count of completed milestones (0-11)
   rejected_at?: string // timestamp when rejected, null if not rejected
   previous_status?: LifecycleStatus // status before rejection, for un-reject
   // Questionnaire fields (Q1-Q17)

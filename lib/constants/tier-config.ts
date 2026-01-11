@@ -136,7 +136,7 @@ export const MILESTONES: MilestoneConfig[] = [
     tooltip: "Lawyer, accountant, or M&A advisor contracted",
     stageGroup: 2,
   },
-  // Stage 3: Ready → Serial Acquirer (complete 10 total, 3 more + persona)
+  // Stage 3: Ready → Serial Acquirer (complete all 11)
   {
     key: "search_plan",
     label: "Active search plan",
@@ -155,6 +155,12 @@ export const MILESTONES: MilestoneConfig[] = [
     tooltip: "Due diligence preparation complete, knows what to evaluate",
     stageGroup: 3,
   },
+  {
+    key: "first_acquisition",
+    label: "First acquisition completed",
+    tooltip: "Successfully completed at least one company acquisition",
+    stageGroup: 3,
+  },
 ]
 
 // Journey Stage Configuration
@@ -166,6 +172,7 @@ export interface JourneyStageConfig {
   bgColor: string // Background color class
   minMilestones: number
   maxMilestones: number
+  stageGroup: 1 | 2 | 3 | null // Which milestone group unlocks this stage (null for Explorer)
 }
 
 export const JOURNEY_STAGES: JourneyStageConfig[] = [
@@ -177,6 +184,7 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     bgColor: "bg-gray-100",
     minMilestones: 0,
     maxMilestones: 2,
+    stageGroup: null, // Starting point
   },
   {
     key: "learner",
@@ -186,6 +194,7 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     bgColor: "bg-blue-100",
     minMilestones: 3,
     maxMilestones: 6,
+    stageGroup: 1, // Unlocked by completing Stage Group 1 milestones
   },
   {
     key: "ready",
@@ -194,7 +203,8 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     color: "text-green-600",
     bgColor: "bg-green-100",
     minMilestones: 7,
-    maxMilestones: 9,
+    maxMilestones: 10,
+    stageGroup: 2, // Unlocked by completing Stage Group 2 milestones
   },
   {
     key: "serial_acquirer",
@@ -202,8 +212,9 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     icon: "Trophy",
     color: "text-amber-600",
     bgColor: "bg-amber-100",
-    minMilestones: 10,
-    maxMilestones: 10,
+    minMilestones: 11,
+    maxMilestones: 11,
+    stageGroup: 3, // Unlocked by completing Stage Group 3 milestones (incl. first acquisition)
   },
 ]
 
