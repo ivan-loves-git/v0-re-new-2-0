@@ -1,9 +1,9 @@
 # Wave Platform Update - 48 Hours of Progress
-**41 commits | Jan 10-11, 2026 | Version 0.6.0 → 0.7.5**
+**51 commits | Jan 10-11, 2026 | Version 0.6.0 → 0.8.0**
 
 ---
 
-## Major New Feature: Structured Readiness Journey (v0.7.5)
+## Major New Feature: Structured Readiness Journey (v0.8.0)
 
 The repreneur journey system has been completely redesigned to make progress tracking clearer and more actionable.
 
@@ -38,6 +38,17 @@ The current milestone labels are **temporary placeholders** based on our initial
 
 ---
 
+## List View & Data Quality (v0.7.5)
+
+- **Repreneurs list UX overhaul** - Grouped view with per-group pagination (8 items/page), independent column sorting, empty groups auto-collapse
+- **Fixed table column widths** - Long emails no longer push columns; uses truncation with ellipsis
+- **Avatar upload bug fixes** - Fixed server action errors, added cache revalidation so changes appear immediately
+- **Journey progress badges** - X/11 badges on Journey page stage cards
+- **Flatchr data import** - SQL script for importing 93 historical repreneurs
+- **Terminology cleanup** - "Candidate" → "Repreneur" throughout codebase
+
+---
+
 ## Tier 1 Rating Improvements (v0.7.0)
 
 - **Compact inline editor** - Edit all 15 Tier 1 questions directly from profile (no wizard needed)
@@ -50,7 +61,7 @@ The current milestone labels are **temporary placeholders** based on our initial
 
 - **CV upload in intake form** - PDF only, 10MB limit
 - **Documents card on profile** - View/upload/replace/delete CV and LDC
-- **Avatar storage fixed** - Custom photos now upload and display correctly everywhere (including table views)
+- **Avatar storage bucket** - Custom photos now upload and display correctly everywhere
 
 ---
 
@@ -64,12 +75,6 @@ The current milestone labels are **temporary placeholders** based on our initial
 
 ## Other Improvements
 
-### Repreneurs List
-- Grouped view with per-group pagination
-- Per-group column sorting
-- Empty groups auto-collapse
-- 8 items per page
-
 ### Evaluation Criteria (v0.6.0)
 - New Guide page at /guide/evaluation
 - Inline editing of questions, answers, and point values
@@ -78,14 +83,6 @@ The current milestone labels are **temporary placeholders** based on our initial
 - Redesigned to show client offer timeline
 - Visual status flow (Offered → Active → Completed)
 - Package management moved to side panel
-
-### Data Import
-- Flatchr SQL import script
-- Score breakdown included for imported records
-
-### Technical
-- "Candidate" → "Repreneur" terminology standardized
-- Roadmap versioned (we're at ~75% to v1.0)
 
 ---
 
@@ -108,5 +105,5 @@ Remaining work:
 
 ---
 
-**Current build: 162.2e3734d**
-**View roadmap: /guide/roadmap**
+**Current build: 170.507eeae**
+**View roadmap in app: /guide/roadmap**
