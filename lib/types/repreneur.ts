@@ -2,6 +2,52 @@ export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected"
 export type JourneyStage = "explorer" | "learner" | "ready" | "serial_acquirer"
 export type PersonaType = "first_time_buyer" | "serial_acquirer" | "corporate_spinoff" | "family_succession"
 
+// Tier 2 Competency Dimension keys
+export type Tier2DimensionKey =
+  | "leadership"
+  | "financial_acumen"
+  | "communication"
+  | "clarity_of_vision"
+  | "coachability"
+  | "commitment"
+
+// Tier 2 Dimensions interface
+export interface Tier2Dimensions {
+  leadership: number | null
+  financial_acumen: number | null
+  communication: number | null
+  clarity_of_vision: number | null
+  coachability: number | null
+  commitment: number | null
+}
+
+// Tier 3 Milestone keys
+export type MilestoneKey =
+  | "investment_thesis"
+  | "target_profile"
+  | "first_intermediary"
+  | "starter_pack"
+  | "ldc_validated"
+  | "financing_proof"
+  | "advisory_team"
+  | "search_plan"
+  | "first_target"
+  | "dd_checklist"
+
+// Tier 3 Milestones interface
+export interface Tier3Milestones {
+  investment_thesis: boolean
+  target_profile: boolean
+  first_intermediary: boolean
+  starter_pack: boolean
+  ldc_validated: boolean
+  financing_proof: boolean
+  advisory_team: boolean
+  search_plan: boolean
+  first_target: boolean
+  dd_checklist: boolean
+}
+
 // Persona options for the dropdown
 export const PERSONA_OPTIONS = [
   { value: "first_time_buyer", label: "First-time buyer" },
@@ -49,7 +95,29 @@ export interface Repreneur {
   consent_source?: string
   tier1_score?: number
   tier1_score_breakdown?: Record<string, number>
-  tier2_stars?: number // 1-5 star rating, set manually after interview
+  tier2_stars?: number // 1-5 star rating, set manually after interview (legacy, kept for backwards compat)
+  // Tier 2 Competency Dimensions (6 dimensions, each 1-5 stars)
+  tier2_leadership?: number | null
+  tier2_financial_acumen?: number | null
+  tier2_communication?: number | null
+  tier2_clarity_of_vision?: number | null
+  tier2_coachability?: number | null
+  tier2_commitment?: number | null
+  tier2_overall?: number | null // Weighted average of all 6 dimensions
+  tier2_rated_at?: string
+  tier2_rated_by?: string
+  // Tier 3 Readiness Milestones (10 checkboxes)
+  ms_investment_thesis?: boolean
+  ms_target_profile?: boolean
+  ms_first_intermediary?: boolean
+  ms_starter_pack?: boolean
+  ms_ldc_validated?: boolean
+  ms_financing_proof?: boolean
+  ms_advisory_team?: boolean
+  ms_search_plan?: boolean
+  ms_first_target?: boolean
+  ms_dd_checklist?: boolean
+  tier3_milestone_count?: number // Computed count of completed milestones (0-10)
   rejected_at?: string // timestamp when rejected, null if not rejected
   previous_status?: LifecycleStatus // status before rejection, for un-reject
   // Questionnaire fields (Q1-Q17)
