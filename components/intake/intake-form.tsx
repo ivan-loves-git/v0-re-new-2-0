@@ -53,6 +53,9 @@ export function IntakeForm({ steps }: IntakeFormProps) {
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [isUploadingCv, setIsUploadingCv] = useState(false)
   const cvInputRef = useRef<HTMLInputElement>(null)
+  const [ldcFile, setLdcFile] = useState<File | null>(null)
+  const [isUploadingLdc, setIsUploadingLdc] = useState(false)
+  const ldcInputRef = useRef<HTMLInputElement>(null)
 
   // Form state using shared initial data
   const [formData, setFormData] = useState<QuestionnaireFormData>(getInitialFormData())
@@ -194,6 +197,36 @@ export function IntakeForm({ steps }: IntakeFormProps) {
           toast.error(result.error)
           return
         }
+
+        // Upload LDC if one was selected
+        if (ldcFile) {
+          setIsUploadingLdc(true)
+          try {
+            const ldcFormData = new FormData()
+            ldcFormData.append("file", ldcFile)
+            ldcFormData.append("repreneurId", repreneurId)
+            ldcFormData.append("documentType", "ldc")
+
+            const ldcResponse = await fetch("/api/upload-cv", {
+              method: "POST",
+              body: ldcFormData,
+            })
+
+            if (ldcResponse.ok) {
+              const { url } = await ldcResponse.json()
+              await updateRepreneurField(repreneurId, "ldc_url", url)
+            } else {
+              console.error("LDC upload failed")
+              toast.error("Document upload failed, but you can add it later")
+            }
+          } catch (ldcError) {
+            console.error("LDC upload error:", ldcError)
+            toast.error("Document upload failed, but you can add it later")
+          } finally {
+            setIsUploadingLdc(false)
+          }
+        }
+
         toast.success("Acquisition goals saved!")
       } else if (currentStep === 5 && repreneurId) {
         const result = await completeIntake(repreneurId, {
@@ -506,6 +539,85 @@ export function IntakeForm({ steps }: IntakeFormProps) {
                 )}
               </motion.div>
             )}
+
+            {/* Lettre de Cadrage Upload section for Step 4 (Goals) */}
+            {currentStep === 4 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-8 p-6 bg-amber-50 rounded-2xl border-2 border-dashed border-amber-200"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Lettre de Cadrage</h3>
+                    <p className="text-sm text-gray-500">
+                      Optional - Upload if you have a framing document outlining your acquisition criteria
+                    </p>
+                  </div>
+                </div>
+
+                <input
+                  ref={ldcInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+                        toast.error("Please upload a PDF file")
+                        return
+                      }
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast.error("File size must be less than 10MB")
+                        return
+                      }
+                      setLdcFile(file)
+                    }
+                  }}
+                />
+
+                {ldcFile ? (
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-amber-200">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-amber-600" />
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{ldcFile.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(ldcFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setLdcFile(null)
+                        if (ldcInputRef.current) ldcInputRef.current.value = ""
+                      }}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 border-amber-300 hover:border-amber-400 hover:bg-amber-100"
+                    onClick={() => ldcInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Choose File (or skip)
+                  </Button>
+                )}
+              </motion.div>
+            )}
           </motion.div>
         </AnimatePresence>
 
@@ -525,13 +637,13 @@ export function IntakeForm({ steps }: IntakeFormProps) {
           <Button
             size="lg"
             onClick={handleNext}
-            disabled={isSubmitting || isUploadingCv}
+            disabled={isSubmitting || isUploadingCv || isUploadingLdc}
             className="h-12 px-8 min-w-[160px] transition-all bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200"
           >
-            {isSubmitting || isUploadingCv ? (
+            {isSubmitting || isUploadingCv || isUploadingLdc ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                {isUploadingCv ? "Uploading CV..." : "Saving..."}
+                {isUploadingCv ? "Uploading CV..." : isUploadingLdc ? "Uploading document..." : "Saving..."}
               </>
             ) : currentStep === steps.length ? (
               <>

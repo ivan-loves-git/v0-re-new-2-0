@@ -5,8 +5,8 @@ import { RecentlyAddedRepreneurs } from "@/components/dashboard/recently-added-r
 import { EnhancedChart } from "@/components/dashboard/enhanced-chart"
 import { ConversionFunnel } from "@/components/dashboard/conversion-funnel"
 import { JourneyStageDistribution } from "@/components/dashboard/journey-stage-distribution"
-import { TopTier1Candidates } from "@/components/dashboard/top-tier1-candidates"
-import { TopTier2Candidates } from "@/components/dashboard/top-tier2-candidates"
+import { TopTier1Repreneurs } from "@/components/dashboard/top-tier1-repreneurs"
+import { TopTier2Repreneurs } from "@/components/dashboard/top-tier2-repreneurs"
 import { subDays, startOfWeek, subWeeks, isWithinInterval, endOfWeek } from "date-fns"
 import { calculateOverallScore } from "@/lib/scoring-utils"
 
@@ -71,8 +71,8 @@ export default async function DashboardFullPage() {
     (r) => new Date(r.created_at) >= sevenDaysAgo
   ) || []
 
-  // Calculate top Tier 1 candidates (based on questionnaire score) - get more for pagination
-  const topTier1Candidates = repreneurs?.map((r) => ({
+  // Calculate top Tier 1 repreneurs (based on questionnaire score) - get more for pagination
+  const topTier1Repreneurs = repreneurs?.map((r) => ({
     id: r.id,
     first_name: r.first_name,
     last_name: r.last_name,
@@ -83,8 +83,8 @@ export default async function DashboardFullPage() {
     .sort((a, b) => (b.tier1_score || 0) - (a.tier1_score || 0))
     .slice(0, 30) || []
 
-  // Calculate top Tier 2 candidates (based on post-interview stars) - get more for pagination
-  const topTier2Candidates = repreneurs?.map((r) => ({
+  // Calculate top Tier 2 repreneurs (based on post-interview stars) - get more for pagination
+  const topTier2Repreneurs = repreneurs?.map((r) => ({
     id: r.id,
     first_name: r.first_name,
     last_name: r.last_name,
@@ -131,8 +131,8 @@ export default async function DashboardFullPage() {
           lastWeekQualified={lastWeekQualified}
           lastWeekClients={lastWeekClients}
         />
-        <TopTier1Candidates candidates={topTier1Candidates} itemsPerPage={5} />
-        <TopTier2Candidates candidates={topTier2Candidates} itemsPerPage={5} />
+        <TopTier1Repreneurs repreneurs={topTier1Repreneurs} itemsPerPage={5} />
+        <TopTier2Repreneurs repreneurs={topTier2Repreneurs} itemsPerPage={5} />
       </div>
 
       {/* Row 2: Funnel + Journey | Activity Stream | Recently Added */}

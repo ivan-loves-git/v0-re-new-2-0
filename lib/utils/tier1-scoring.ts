@@ -4,8 +4,13 @@
  * This calculates a score based on Bertrand's questionnaire model (Q1-Q17).
  * Score is calculated ONCE at intake and stored as a static snapshot.
  *
+ * Scoring values are read from the database (evaluation_criteria table) when available,
+ * with fallback to hardcoded constants for backward compatibility.
+ *
  * Based on reverse-engineering the CSV scoring model provided by Bertrand.
  */
+
+import type { ScoringCriteriaMap } from "@/lib/data/evaluation-criteria"
 
 // Question option types
 export const EMPLOYMENT_STATUS_OPTIONS = [
@@ -183,10 +188,38 @@ export interface Tier1ScoreBreakdown {
 }
 
 /**
+ * Helper to look up score from database criteria, falling back to hardcoded options
+ */
+function lookupScore(
+  questionKey: string,
+  optionValue: string,
+  criteria: ScoringCriteriaMap | undefined,
+  fallbackOptions: readonly { value: string; score: number }[]
+): number {
+  // Try database criteria first
+  if (criteria && criteria.has(questionKey)) {
+    const questionCriteria = criteria.get(questionKey)!
+    if (questionCriteria.has(optionValue)) {
+      return questionCriteria.get(optionValue)!
+    }
+  }
+
+  // Fall back to hardcoded options
+  const option = fallbackOptions.find(o => o.value === optionValue)
+  return option?.score ?? 0
+}
+
+/**
  * Calculate Tier 1 score from questionnaire input
  * Returns both total score and breakdown by question
+ *
+ * @param input - The questionnaire answers
+ * @param criteria - Optional scoring criteria from database. If not provided, uses hardcoded fallback values.
  */
-export function calculateTier1Score(input: Tier1ScoringInput): Tier1ScoreBreakdown {
+export function calculateTier1Score(
+  input: Tier1ScoringInput,
+  criteria?: ScoringCriteriaMap
+): Tier1ScoreBreakdown {
   const breakdown: Tier1ScoreBreakdown = {
     q1_score: 0,
     q2_score: 0,
@@ -207,33 +240,53 @@ export function calculateTier1Score(input: Tier1ScoringInput): Tier1ScoreBreakdo
 
   // Q1: Employment Status (0-10)
   if (input.q1_employment_status) {
-    const option = EMPLOYMENT_STATUS_OPTIONS.find(o => o.value === input.q1_employment_status)
-    breakdown.q1_score = option?.score ?? 0
+    breakdown.q1_score = lookupScore(
+      "q1_employment_status",
+      input.q1_employment_status,
+      criteria,
+      EMPLOYMENT_STATUS_OPTIONS
+    )
   }
 
   // Q2: Years of Experience (0-10)
   if (input.q2_years_experience) {
-    const option = YEARS_EXPERIENCE_OPTIONS.find(o => o.value === input.q2_years_experience)
-    breakdown.q2_score = option?.score ?? 0
+    breakdown.q2_score = lookupScore(
+      "q2_years_experience",
+      input.q2_years_experience,
+      criteria,
+      YEARS_EXPERIENCE_OPTIONS
+    )
   }
 
   // Q3: Industry Experience (3-5 based on breadth)
+  // This is calculated based on count, not individual option scores
   if (input.q3_industry_sectors && input.q3_industry_sectors.length > 0) {
     breakdown.q3_score = input.q3_industry_sectors.length >= 3 ? 5 : 3
   }
 
   // Q5: Team Size Managed (0-10)
   if (input.q5_team_size) {
-    const option = TEAM_SIZE_OPTIONS.find(o => o.value === input.q5_team_size)
-    breakdown.q5_score = option?.score ?? 0
+    breakdown.q5_score = lookupScore(
+      "q5_team_size",
+      input.q5_team_size,
+      criteria,
+      TEAM_SIZE_OPTIONS
+    )
   }
 
-  // Q6: M&A Involvement (0 or 10)
+  // Q6: M&A Involvement (0 or 10) - boolean question
   if (input.q6_involved_in_ma === true) {
-    breakdown.q6_score = 10
+    // Try to get from database, fallback to 10
+    breakdown.q6_score = lookupScore(
+      "q6_involved_in_ma",
+      "true",
+      criteria,
+      [{ value: "true", score: 10 }]
+    )
   }
 
   // Q8: Executive Roles (2-8 based on seniority)
+  // Complex logic: C-level roles score higher, multiple roles add bonus
   if (input.q8_executive_roles && input.q8_executive_roles.length > 0) {
     const cLevelRoles = ["ceo", "coo", "cfo", "cco", "cto", "chro"]
     const hasCLevel = input.q8_executive_roles.some(r => cLevelRoles.includes(r))
@@ -248,47 +301,72 @@ export function calculateTier1Score(input: Tier1ScoringInput): Tier1ScoreBreakdo
     }
   }
 
-  // Q9: Board Experience (0 or 10)
+  // Q9: Board Experience (0 or 10) - boolean question
   if (input.q9_board_experience === true) {
-    breakdown.q9_score = 10
+    breakdown.q9_score = lookupScore(
+      "q9_board_experience",
+      "true",
+      criteria,
+      [{ value: "true", score: 10 }]
+    )
   }
 
   // Q10: Journey Stage (2-10 based on advancement)
+  // Take the highest scoring stage from multi-select
   if (input.q10_journey_stages && input.q10_journey_stages.length > 0) {
-    // Take the highest scoring stage
     let maxScore = 0
     for (const stage of input.q10_journey_stages) {
-      const option = JOURNEY_STAGE_OPTIONS.find(o => o.value === stage)
-      if (option && option.score > maxScore) {
-        maxScore = option.score
+      const score = lookupScore(
+        "q10_journey_stages",
+        stage,
+        criteria,
+        JOURNEY_STAGE_OPTIONS
+      )
+      if (score > maxScore) {
+        maxScore = score
       }
     }
     breakdown.q10_score = maxScore
   }
 
-  // Q11: Target Sectors (2-5)
+  // Q11: Target Sectors (2-5 based on breadth)
+  // This is calculated based on count, not individual option scores
   if (input.q11_target_sectors && input.q11_target_sectors.length > 0) {
     breakdown.q11_score = input.q11_target_sectors.length >= 3 ? 5 : 2
   }
 
-  // Q12: Has Identified Targets (0 or 10)
+  // Q12: Has Identified Targets (0 or 10) - boolean question
   if (input.q12_has_identified_targets === true) {
-    breakdown.q12_score = 10
+    breakdown.q12_score = lookupScore(
+      "q12_has_identified_targets",
+      "true",
+      criteria,
+      [{ value: "true", score: 10 }]
+    )
   }
 
   // Q14: Investment Capacity (0-10)
   if (input.q14_investment_capacity) {
-    const option = INVESTMENT_CAPACITY_OPTIONS.find(o => o.value === input.q14_investment_capacity)
-    breakdown.q14_score = option?.score ?? 0
+    breakdown.q14_score = lookupScore(
+      "q14_investment_capacity",
+      input.q14_investment_capacity,
+      criteria,
+      INVESTMENT_CAPACITY_OPTIONS
+    )
   }
 
   // Q15: Funding Status (1-3)
   if (input.q15_funding_status) {
-    const option = FUNDING_STATUS_OPTIONS.find(o => o.value === input.q15_funding_status)
-    breakdown.q15_score = option?.score ?? 0
+    breakdown.q15_score = lookupScore(
+      "q15_funding_status",
+      input.q15_funding_status,
+      criteria,
+      FUNDING_STATUS_OPTIONS
+    )
   }
 
   // Q16: Network/Training (0-4)
+  // Has special logic: any network = 2pts, CRA adds +2 bonus
   if (input.q16_network_training && input.q16_network_training.length > 0) {
     const hasAnyNetwork = input.q16_network_training.some(n => n !== "none")
     if (hasAnyNetwork) {
@@ -300,9 +378,14 @@ export function calculateTier1Score(input: Tier1ScoringInput): Tier1ScoreBreakdo
     }
   }
 
-  // Q17: Open to Co-acquisition (0 or 5)
+  // Q17: Open to Co-acquisition (0 or 5) - boolean question
   if (input.q17_open_to_co_acquisition === true) {
-    breakdown.q17_score = 5
+    breakdown.q17_score = lookupScore(
+      "q17_open_to_co_acquisition",
+      "true",
+      criteria,
+      [{ value: "true", score: 5 }]
+    )
   }
 
   // Calculate total (rounded to integer for database storage)

@@ -6,8 +6,8 @@ import { RecentlyAddedRepreneurs } from "@/components/dashboard/recently-added-r
 import { EnhancedChart } from "@/components/dashboard/enhanced-chart"
 import { ConversionFunnel } from "@/components/dashboard/conversion-funnel"
 import { JourneyStageDistribution } from "@/components/dashboard/journey-stage-distribution"
-import { TopTier1Candidates } from "@/components/dashboard/top-tier1-candidates"
-import { TopTier2Candidates } from "@/components/dashboard/top-tier2-candidates"
+import { TopTier1Repreneurs } from "@/components/dashboard/top-tier1-repreneurs"
+import { TopTier2Repreneurs } from "@/components/dashboard/top-tier2-repreneurs"
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,7 +39,7 @@ function StatsColumnSkeleton() {
   )
 }
 
-function TopCandidatesSkeleton() {
+function TopRepreneursSkeleton() {
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -123,8 +123,8 @@ async function StatsAndTiersRow() {
   const lastWeekQualified = repreneursLastWeek.filter((r) => r.lifecycle_status === "qualified").length
   const lastWeekClients = repreneursLastWeek.filter((r) => r.lifecycle_status === "client").length
 
-  // Top Tier 1 candidates
-  const topTier1Candidates = repreneurs
+  // Top Tier 1 repreneurs
+  const topTier1Repreneurs = repreneurs
     .map((r) => ({
       id: r.id,
       first_name: r.first_name,
@@ -136,8 +136,8 @@ async function StatsAndTiersRow() {
     .sort((a, b) => (b.tier1_score || 0) - (a.tier1_score || 0))
     .slice(0, 30)
 
-  // Top Tier 2 candidates
-  const topTier2Candidates = repreneurs
+  // Top Tier 2 repreneurs
+  const topTier2Repreneurs = repreneurs
     .map((r) => ({
       id: r.id,
       first_name: r.first_name,
@@ -161,8 +161,8 @@ async function StatsAndTiersRow() {
         lastWeekQualified={lastWeekQualified}
         lastWeekClients={lastWeekClients}
       />
-      <TopTier1Candidates candidates={topTier1Candidates} itemsPerPage={5} />
-      <TopTier2Candidates candidates={topTier2Candidates} itemsPerPage={5} />
+      <TopTier1Repreneurs repreneurs={topTier1Repreneurs} itemsPerPage={5} />
+      <TopTier2Repreneurs repreneurs={topTier2Repreneurs} itemsPerPage={5} />
     </div>
   )
 }
@@ -348,8 +348,8 @@ export default function DashboardPage() {
       <Suspense fallback={
         <div className="grid gap-6 lg:grid-cols-3">
           <StatsColumnSkeleton />
-          <TopCandidatesSkeleton />
-          <TopCandidatesSkeleton />
+          <TopRepreneursSkeleton />
+          <TopRepreneursSkeleton />
         </div>
       }>
         <StatsAndTiersRow />

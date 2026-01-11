@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
+import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { sendEmail, wasEmailSent } from "@/lib/email"
 import { WelcomeEmail } from "@/lib/email/templates/welcome"
 import { ThankYouEmail } from "@/lib/email/templates/thank-you"
@@ -308,7 +309,10 @@ export async function completeIntake(
       return { success: false, error: "Failed to retrieve your data. Please try again." }
     }
 
-    // Calculate Tier 1 score with all data
+    // Fetch scoring criteria from database (uses hardcoded fallback if DB fails)
+    const scoringCriteria = await getTier1ScoringCriteria()
+
+    // Calculate Tier 1 score with all data and database criteria
     const scoringInput: Tier1ScoringInput = {
       q1_employment_status: existing.q1_employment_status,
       q2_years_experience: existing.q2_years_experience,
@@ -327,7 +331,7 @@ export async function completeIntake(
       q17_open_to_co_acquisition: data.q17_open_to_co_acquisition,
     }
 
-    const scoreBreakdown = calculateTier1Score(scoringInput)
+    const scoreBreakdown = calculateTier1Score(scoringInput, scoringCriteria)
 
     // Update with final data and score
     const { error } = await supabase

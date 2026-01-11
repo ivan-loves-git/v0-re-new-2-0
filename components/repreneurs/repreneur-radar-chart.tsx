@@ -14,7 +14,7 @@ import {
   DIMENSION_MAX_SCORES,
 } from "@/lib/scoring-utils"
 
-interface CandidateRadarChartProps {
+interface RepreneurRadarChartProps {
   repreneur: Repreneur
 }
 
@@ -27,7 +27,7 @@ interface RadarDataPoint {
   description: string
 }
 
-export function CandidateRadarChart({ repreneur }: CandidateRadarChartProps) {
+export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
   const rawScores = getRawDimensionScores(repreneur)
 
   const data: RadarDataPoint[] = [

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { updateRepreneurField } from "@/lib/actions/repreneurs"
 
-// Allowed CV file types
+// Allowed document file types
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/msword",
@@ -11,22 +12,38 @@ const ALLOWED_TYPES = [
 
 const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"]
 
+// Document types we support
+type DocumentType = "cv" | "ldc"
+
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const formData = await request.formData()
     const file = formData.get("file") as File
     const repreneurId = formData.get("repreneurId") as string
+    const documentType = (formData.get("documentType") as DocumentType) || "cv"
 
     if (!file || !repreneurId) {
       return NextResponse.json({ error: "Missing file or repreneurId" }, { status: 400 })
+    }
+
+    // For authenticated users, use their client; for public intake, use admin
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // Use admin client for storage operations (needed for public intake form)
+    const adminClient = createAdminClient()
+
+    // Validate repreneurId exists (for public intake security)
+    if (!user) {
+      const { data: repreneur } = await adminClient
+        .from("repreneurs")
+        .select("id")
+        .eq("id", repreneurId)
+        .single()
+
+      if (!repreneur) {
+        return NextResponse.json({ error: "Invalid repreneur" }, { status: 400 })
+      }
     }
 
     // Validate file type
@@ -40,16 +57,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 })
     }
 
-    // Generate unique filename
-    const fileName = `${repreneurId}-${Date.now()}.${fileExt}`
+    // Generate unique filename with document type prefix
+    const typePrefix = documentType === "ldc" ? "ldc" : "cv"
+    const fileName = `${repreneurId}-${typePrefix}-${Date.now()}.${fileExt}`
     const filePath = `cvs/${fileName}`
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Upload to Supabase Storage
-    const { error } = await supabase.storage
+    // Upload to Supabase Storage using admin client
+    const { error } = await adminClient.storage
       .from("cvs")
       .upload(filePath, buffer, {
         contentType: file.type,
@@ -62,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = adminClient.storage
       .from("cvs")
       .getPublicUrl(filePath)
 

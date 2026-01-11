@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import type { Repreneur_Insert, LifecycleStatus, PersonaType } from "@/lib/types/repreneur"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
+import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 
@@ -413,12 +414,15 @@ export interface QuestionnaireInput {
 
 /**
  * Save questionnaire data and calculate Tier 1 score
- * Score is calculated ONCE and stored as a static snapshot
+ * Score is calculated using database criteria (with hardcoded fallback)
  */
 export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
   const supabase = await createServerClient()
 
-  // Calculate the Tier 1 score
+  // Fetch scoring criteria from database (uses hardcoded fallback if DB fails)
+  const scoringCriteria = await getTier1ScoringCriteria()
+
+  // Calculate the Tier 1 score using database criteria
   const scoringInput: Tier1ScoringInput = {
     q1_employment_status: data.q1_employment_status,
     q2_years_experience: data.q2_years_experience,
@@ -437,7 +441,7 @@ export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
     q17_open_to_co_acquisition: data.q17_open_to_co_acquisition,
   }
 
-  const scoreBreakdown = calculateTier1Score(scoringInput)
+  const scoreBreakdown = calculateTier1Score(scoringInput, scoringCriteria)
 
   // Update the repreneur with questionnaire data and score
   const { error } = await supabase
@@ -470,6 +474,97 @@ export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+
+  return scoreBreakdown
+}
+
+/**
+ * Update a single tier one questionnaire field and recalculate score
+ * Used by the inline editor on the profile page
+ */
+export async function updateTier1Answer(
+  id: string,
+  field: string,
+  value: string | string[] | boolean | null
+) {
+  const supabase = await createServerClient()
+
+  // First update the single field
+  const { error: updateError } = await supabase
+    .from("repreneurs")
+    .update({ [field]: value })
+    .eq("id", id)
+
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+
+  // Fetch all current questionnaire data to recalculate score
+  const { data: repreneur, error: fetchError } = await supabase
+    .from("repreneurs")
+    .select(`
+      q1_employment_status,
+      q2_years_experience,
+      q3_industry_sectors,
+      q4_has_ma_experience,
+      q5_team_size,
+      q6_involved_in_ma,
+      q8_executive_roles,
+      q9_board_experience,
+      q10_journey_stages,
+      q11_target_sectors,
+      q12_has_identified_targets,
+      q14_investment_capacity,
+      q15_funding_status,
+      q16_network_training,
+      q17_open_to_co_acquisition
+    `)
+    .eq("id", id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
+  // Fetch scoring criteria and recalculate
+  const scoringCriteria = await getTier1ScoringCriteria()
+
+  const scoringInput: Tier1ScoringInput = {
+    q1_employment_status: repreneur.q1_employment_status,
+    q2_years_experience: repreneur.q2_years_experience,
+    q3_industry_sectors: repreneur.q3_industry_sectors || [],
+    q4_has_ma_experience: repreneur.q4_has_ma_experience,
+    q5_team_size: repreneur.q5_team_size,
+    q6_involved_in_ma: repreneur.q6_involved_in_ma,
+    q8_executive_roles: repreneur.q8_executive_roles || [],
+    q9_board_experience: repreneur.q9_board_experience,
+    q10_journey_stages: repreneur.q10_journey_stages || [],
+    q11_target_sectors: repreneur.q11_target_sectors || [],
+    q12_has_identified_targets: repreneur.q12_has_identified_targets,
+    q14_investment_capacity: repreneur.q14_investment_capacity,
+    q15_funding_status: repreneur.q15_funding_status,
+    q16_network_training: repreneur.q16_network_training || [],
+    q17_open_to_co_acquisition: repreneur.q17_open_to_co_acquisition,
+  }
+
+  const scoreBreakdown = calculateTier1Score(scoringInput, scoringCriteria)
+
+  // Update the score
+  const { error: scoreError } = await supabase
+    .from("repreneurs")
+    .update({
+      tier1_score: scoreBreakdown.total,
+      tier1_score_breakdown: scoreBreakdown,
+    })
+    .eq("id", id)
+
+  if (scoreError) {
+    throw new Error(scoreError.message)
   }
 
   revalidatePath("/repreneurs")

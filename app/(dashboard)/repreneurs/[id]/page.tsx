@@ -20,8 +20,9 @@ import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
 import { Tier2StarRating } from "@/components/repreneurs/tier2-star-rating"
 import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
-import { CandidateRadarChart } from "@/components/repreneurs/candidate-radar-chart"
+import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
+import { Tier1InlineEditor } from "@/components/repreneurs/tier1-inline-editor"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
@@ -281,29 +282,15 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     <Badge variant="outline" className="text-xs">
                       {getScoreDescription(repreneur.tier1_score!)}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-gray-400 hover:text-gray-600 h-6 px-2"
-                      asChild
-                    >
-                      <Link href={`/repreneurs/${repreneur.id}/questionnaire`}>
-                        Edit data
-                      </Link>
-                    </Button>
                   </div>
+                  <Tier1InlineEditor repreneur={repreneur as Repreneur} />
                 </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
                     No score calculated yet.
                   </p>
-                  <Button size="sm" asChild>
-                    <Link href={`/repreneurs/${repreneur.id}/questionnaire`}>
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Calculate
-                    </Link>
-                  </Button>
+                  <Tier1InlineEditor repreneur={repreneur as Repreneur} />
                 </div>
               )}
             </div>
@@ -407,7 +394,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         </Card>
 
         {/* Col 3: Radar Chart */}
-        <CandidateRadarChart repreneur={repreneur as Repreneur} />
+        <RepreneurRadarChart repreneur={repreneur as Repreneur} />
       </div>
 
       {/* Documents Row */}

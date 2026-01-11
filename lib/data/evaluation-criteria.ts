@@ -1,9 +1,16 @@
 import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   EvaluationCriterion,
   EvaluationQuestion,
   EvaluationTier,
 } from "@/lib/types/evaluation-criteria"
+
+/**
+ * Scoring lookup map: question_key -> option_value -> score
+ * Used by the scoring algorithm to look up scores from database
+ */
+export type ScoringCriteriaMap = Map<string, Map<string, number>>
 
 /**
  * Fetch all evaluation criteria for a specific tier
@@ -79,4 +86,43 @@ export async function getGroupedEvaluationCriteria(
 ): Promise<EvaluationQuestion[]> {
   const criteria = await getEvaluationCriteria(tier)
   return groupCriteriaByQuestion(criteria)
+}
+
+/**
+ * Fetch tier1 scoring criteria from database and return as lookup map
+ * Used by calculateTier1Score() to use database values instead of hardcoded ones
+ *
+ * Uses admin client so it can be called from public intake form (no auth required)
+ */
+export async function getTier1ScoringCriteria(): Promise<ScoringCriteriaMap> {
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("evaluation_criteria")
+    .select("question_key, option_value, option_score")
+    .eq("tier", "tier1")
+    .eq("is_active", true)
+    .not("option_value", "is", null)
+    .not("option_value", "eq", "_info")
+
+  if (error) {
+    console.error("Error fetching tier1 scoring criteria:", error)
+    // Return empty map - scoring function will use fallback hardcoded values
+    return new Map()
+  }
+
+  // Build nested lookup map: question_key -> option_value -> score
+  const criteriaMap: ScoringCriteriaMap = new Map()
+
+  for (const row of data) {
+    if (!row.option_value || row.option_score === null) continue
+
+    if (!criteriaMap.has(row.question_key)) {
+      criteriaMap.set(row.question_key, new Map())
+    }
+
+    criteriaMap.get(row.question_key)!.set(row.option_value, row.option_score)
+  }
+
+  return criteriaMap
 }
