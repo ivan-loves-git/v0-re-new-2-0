@@ -287,32 +287,22 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   <div className="flex items-center gap-3">
                     <span className="text-3xl font-bold">{repreneur.tier1_score}</span>
                     <span className="text-sm text-gray-500">points</span>
-                    <div className="flex items-center gap-1 ml-2">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < scoreToStarRating(repreneur.tier1_score!)
-                              ? "text-amber-400 fill-amber-400"
-                              : "text-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
+                    <Tier1InlineEditor repreneur={repreneur as Repreneur} />
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">
                       {getScoreDescription(repreneur.tier1_score!)}
                     </Badge>
                   </div>
-                  <Tier1InlineEditor repreneur={repreneur as Repreneur} />
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    No score calculated yet.
-                  </p>
-                  <Tier1InlineEditor repreneur={repreneur as Repreneur} />
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      No score calculated yet.
+                    </p>
+                    <Tier1InlineEditor repreneur={repreneur as Repreneur} />
+                  </div>
                 </div>
               )}
             </div>

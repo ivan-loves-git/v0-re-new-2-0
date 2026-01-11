@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Check, ChevronDown, Loader2, Search, X } from "lucide-react"
+import { Check, ChevronDown, Loader2, Pencil, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -168,19 +170,21 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger asChild>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="text-xs text-gray-400 hover:text-gray-600 h-6 px-2"
+          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
         >
-          {isOpen ? "Fermer" : "Modifier les réponses"}
-          <ChevronDown className={cn("ml-1 h-3 w-3 transition-transform", isOpen && "rotate-180")} />
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="mt-4 space-y-0 border-t pt-4">
-        <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
+      </DialogTrigger>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Edit Tier 1 Answers</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
           {QUESTIONS.map((q) => (
             <div
               key={q.key}
@@ -218,8 +222,8 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
             </div>
           ))}
         </div>
-      </CollapsibleContent>
-    </Collapsible>
+      </DialogContent>
+    </Dialog>
   )
 }
 
