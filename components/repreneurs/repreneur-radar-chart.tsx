@@ -106,10 +106,9 @@ export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
           Profile Overview
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2">
         {/* Tier 1: Skills Chart */}
         <div>
-          <p className="text-xs font-medium text-gray-500 mb-1">Tier 1: Skills</p>
           {hasTier1Data ? (
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -171,8 +170,7 @@ export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
         </div>
 
         {/* Tier 2: Competencies Chart */}
-        <div className="pt-2 border-t">
-          <p className="text-xs font-medium text-gray-500 mb-1">Tier 2: Competencies</p>
+        <div className="pt-1 border-t">
           {hasTier2Data ? (
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">

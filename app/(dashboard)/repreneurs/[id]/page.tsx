@@ -328,7 +328,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Post-interview competency rating</p>
               <Tier2DimensionRating
                 repreneurId={repreneur.id}
                 repreneur={repreneur}
@@ -345,7 +344,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               Investment Profile
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             <div>
               <Label className="text-xs text-gray-500">Investment Capacity</Label>
               <EditableSelectField
