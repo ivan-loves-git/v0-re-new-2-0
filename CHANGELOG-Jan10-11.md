@@ -1,65 +1,103 @@
-# Wave Platform Update - Last 36 Hours
-**30 commits | Jan 10-11, 2026 | Version 0.6.0 → 0.7.0**
+# Wave Platform Update - 48 Hours of Progress
+**41 commits | Jan 10-11, 2026 | Version 0.6.0 → 0.7.5**
 
 ---
 
-## New Features
+## Major New Feature: Structured Readiness Journey (v0.7.5)
 
-### Tier 1 Rating Improvements (v0.7.0)
-- **Compact inline editor on profile page** - All 15 Tier 1 questions now editable directly from the repreneur profile. No need to open the full questionnaire wizard for quick corrections. Includes searchable dropdowns for long lists.
-- **Lettre de Cadrage upload in intake form** - Added LDC document upload to Step 4 (Goals) of the public intake form. Optional with skip button. Amber-styled to distinguish from CV upload.
-- **Scoring algorithm fix** - Critical fix: admin edits to scoring criteria in /guide/evaluation now actually affect new intake scores. Previously the algorithm ignored database values.
+The repreneur journey system has been completely redesigned to make progress tracking clearer and more actionable.
 
-### Documents Management (v0.6.6)
-- **CV upload in intake form** - Repreneurs can upload their CV during the questionnaire (PDF only, 10MB limit)
-- **Documents card on profile** - New card showing CV and Lettre de Cadrage with view/upload/replace/delete controls
-- **Avatar storage fixed** - Custom photo uploads now work properly
+### Journey Page Redesign
+- **Visual pipeline** - Clean 4-stage visualization (Explorer → Learner → Ready → Serial Acquirer)
+- **Milestone badges** - Each repreneur card shows progress (e.g., 6/11 milestones)
+- **Click-to-access** - Click any name to jump directly to their profile
 
-### Email System Live (v0.6.8)
-- **Resend integration complete** - Production email sending via notifications@renew-wave.com
-- **Founder notification emails sent** - Welcome and High Score test emails delivered to Bertrand, Amelie, Antoine
-- **Sandbox warning removed** - Email Cockpit UI cleaned up
+### Milestones Grouped by Stage Transition
+Instead of a flat list, milestones are now organized into 3 logical groups:
+1. **Explorer → Learner** (3 milestones): Define acquisition criteria, set investment capacity, identify target sectors
+2. **Learner → Ready** (4 milestones): Create letter of intent, funding secured, due diligence ready, advisory team in place
+3. **Ready → Serial Acquirer** (4 milestones): Active search, under LOI, completed first acquisition, seeking additional deals
+
+### 11th Milestone Added
+- New milestone: "First acquisition completed"
+- Serial Acquirer status now requires all 11 milestones complete (clear goal)
+
+### Profile Page Updates
+- Status and Journey badges moved to top-right header for quick visibility
+- Milestones displayed in 2-column layout (cleaner on desktop)
+- Journey stage shown alongside status (e.g., "Qualified | Learner 6/11")
+
+---
+
+## Tier 1 Rating Improvements (v0.7.0)
+
+- **Compact inline editor** - Edit all 15 Tier 1 questions directly from profile (no wizard needed)
+- **Lettre de Cadrage upload** - Added to Step 4 of intake form (amber-styled, optional)
+- **Scoring algorithm fix** - Admin edits to scoring criteria now actually affect new intake scores
+
+---
+
+## Documents Management (v0.6.6)
+
+- **CV upload in intake form** - PDF only, 10MB limit
+- **Documents card on profile** - View/upload/replace/delete CV and LDC
+- **Avatar storage fixed** - Custom photos now upload and display correctly everywhere (including table views)
+
+---
+
+## Email System Live (v0.6.8)
+
+- **Resend integration** - Production emails via notifications@renew-wave.com
+- **Founder notifications sent** - Welcome + High Score emails delivered to team
+- **Clean UI** - Sandbox warning removed from Email Cockpit
+
+---
+
+## Other Improvements
+
+### Repreneurs List
+- Grouped view with per-group pagination
+- Per-group column sorting
+- Empty groups auto-collapse
+- 8 items per page
 
 ### Evaluation Criteria (v0.6.0)
-- **New Guide page** - View all Tier 1 scoring questions, answers, and point values at /guide/evaluation
-- **Inline editing** - Edit question labels, answer text, and scores directly from the page
+- New Guide page at /guide/evaluation
+- Inline editing of questions, answers, and point values
 
 ### Client Offers Timeline (v0.6.5)
-- **Offers page redesigned** - Now shows client offer timeline instead of package list
-- **Visual progress tracking** - Status flow (Offered → Active → Completed) with milestone counts
-- **Package management moved to side panel** - Cleaner UI focusing on daily use case
+- Redesigned to show client offer timeline
+- Visual status flow (Offered → Active → Completed)
+- Package management moved to side panel
+
+### Data Import
+- Flatchr SQL import script
+- Score breakdown included for imported records
+
+### Technical
+- "Candidate" → "Repreneur" terminology standardized
+- Roadmap versioned (we're at ~75% to v1.0)
 
 ---
 
-## Repreneurs List Improvements
+## Database Migrations Required
 
-- **Grouped view with pagination** - Each status group (Lead, Qualified, Client, Rejected) has its own pagination
-- **Per-group column sorting** - Sort each group independently by name, email, status-specific column, or date
-- **Empty groups collapsed by default** - Groups with zero repreneurs auto-collapse on page load
-- **8 items per page** - Reduced from 10 for better visual balance
-
----
-
-## Data Import
-
-- **Flatchr import system** - SQL script for importing historical data from Flatchr export
-- **Score breakdown for imports** - Imported records now include tier1_score_breakdown field
-
----
-
-## Technical Improvements
-
-- **Terminology standardized** - "Candidate" → "Repreneur" throughout codebase
-- **Roadmap versioning** - Renumbered to 0.1→0.7 (we're at 70% to v1.0 launch)
-- **Documentation** - Roadmap update process documented for consistency
+If updating an existing deployment, run these SQL scripts in Supabase:
+1. `scripts/add-avatar-url-column.sql` (if avatar column missing)
+2. `scripts/add-first-acquisition-milestone.sql` (adds 11th milestone)
 
 ---
 
 ## What's Next
 
-Platform is approximately **70% complete** toward v1.0 launch. Remaining work includes final polish, team onboarding documentation, and Flatchr data migration.
+Platform is approximately **75% complete** toward v1.0 launch. The Structured Readiness Journey provides a clear framework for tracking repreneurs from first contact to serial acquirer status.
+
+Remaining work:
+- Review milestone/stage labels with team
+- Research intermediary portal requirements
+- Final polish and team onboarding docs
 
 ---
 
-**Current build: 150.b3a9056**
-**View roadmap in app: /guide/roadmap**
+**Current build: 162.2e3734d**
+**View roadmap: /guide/roadmap**
