@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": "11",
+        "id": 11,
         "title": "Set up Next.js project with Supabase integration",
         "description": "Initialize Next.js with V0, configure Supabase",
         "status": "done",
@@ -16,7 +16,7 @@
         "subtasks": []
       },
       {
-        "id": "12",
+        "id": 12,
         "title": "Implement email/password authentication system",
         "description": "Auth flow with Supabase for 3 team members",
         "status": "done",
@@ -29,7 +29,7 @@
         "subtasks": []
       },
       {
-        "id": "13",
+        "id": 13,
         "title": "Create database schema and models",
         "description": "Repreneur, Offer, Note, Activity tables",
         "status": "done",
@@ -42,7 +42,7 @@
         "subtasks": []
       },
       {
-        "id": "14",
+        "id": 14,
         "title": "Implement Repreneur List and Detail Views",
         "description": "List with sorting/filtering, detail with inline edit",
         "status": "done",
@@ -60,7 +60,7 @@
         "subtasks": []
       },
       {
-        "id": "15",
+        "id": 15,
         "title": "Build Kanban Pipeline View",
         "description": "Static pipeline (action-driven, no drag-drop)",
         "status": "done",
@@ -78,7 +78,7 @@
         "subtasks": []
       },
       {
-        "id": "16",
+        "id": 16,
         "title": "Implement Notes System",
         "description": "Notes with add/delete, author tracking",
         "status": "done",
@@ -98,7 +98,7 @@
         "subtasks": []
       },
       {
-        "id": "17",
+        "id": 17,
         "title": "Develop Offer Management System",
         "description": "Offer CRUD and repreneur association",
         "status": "done",
@@ -115,7 +115,7 @@
         "subtasks": []
       },
       {
-        "id": "18",
+        "id": 18,
         "title": "Create Dashboard with Statistics",
         "description": "Stats cards and navigation",
         "status": "done",
@@ -131,7 +131,7 @@
         "subtasks": []
       },
       {
-        "id": "19",
+        "id": 19,
         "title": "Implement Flatchr Data Import Script",
         "description": "One-time migration script to import repreneur profiles from Flatchr export (CSV or JSON)",
         "details": "BLOCKED: Waiting for Flatchr export format from Bertrand.\n\nWhen unblocked:\n1. Parse CSV/JSON from Flatchr\n2. Map fields to Re-New schema\n3. Validate required fields\n4. UI for upload and progress tracking\n5. Set default status to 'Lead'",
@@ -145,7 +145,7 @@
         "updatedAt": "2026-01-10T20:32:04.651Z"
       },
       {
-        "id": "20",
+        "id": 20,
         "title": "Create New Repreneur Form and Add/Edit Functionality",
         "description": "Form with validation, create/edit modes",
         "status": "done",
@@ -163,7 +163,7 @@
         "subtasks": []
       },
       {
-        "id": "24",
+        "id": 24,
         "title": "Implement Tier 1 and Tier 2 scoring systems",
         "description": "Automated Tier 1 + manual Tier 2 stars + status transitions",
         "status": "done",
@@ -181,7 +181,7 @@
         "subtasks": []
       },
       {
-        "id": "25",
+        "id": 25,
         "title": "Redesign Repreneur list and pipeline views",
         "description": "Status grouping, dynamic columns, rejected functionality",
         "status": "done",
@@ -199,7 +199,7 @@
         "subtasks": []
       },
       {
-        "id": "27",
+        "id": 27,
         "title": "Develop Activity tracking and Notes system",
         "description": "Activity types, forms, chronological display",
         "status": "done",
@@ -250,7 +250,7 @@
         ]
       },
       {
-        "id": "28",
+        "id": 28,
         "title": "Pre-populate the 3 consulting offer packages",
         "description": "Starter Pack, Deal Flow, Sparring Partner + auto Client status",
         "status": "done",
@@ -267,7 +267,7 @@
         "subtasks": []
       },
       {
-        "id": "29",
+        "id": 29,
         "title": "Set up Supabase Storage Bucket for Avatar Uploads",
         "description": "Create a public 'avatars' storage bucket in Supabase and configure the necessary permissions to enable avatar photo uploads for users.",
         "status": "done",
@@ -284,7 +284,7 @@
         "subtasks": []
       },
       {
-        "id": "30",
+        "id": 30,
         "title": "Add skeleton loading screens for all pages",
         "description": "Create shimmer placeholder components that display while pages load, eliminating the blank screen problem",
         "status": "done",
@@ -301,7 +301,7 @@
         "subtasks": []
       },
       {
-        "id": "31",
+        "id": 31,
         "title": "Implement smooth page transition animations",
         "description": "Add fade/slide animations when navigating between pages using Framer Motion",
         "status": "done",
@@ -317,7 +317,7 @@
         "subtasks": []
       },
       {
-        "id": "32",
+        "id": 32,
         "title": "Add toast notifications and micro-interactions",
         "description": "Implement toast notification system and subtle feedback animations for user actions",
         "status": "done",
@@ -333,7 +333,7 @@
         "subtasks": []
       },
       {
-        "id": "33",
+        "id": 33,
         "title": "Implement optimistic UI updates for inline editing",
         "description": "Make field edits feel instant by updating UI immediately, then syncing with server",
         "status": "done",
@@ -351,7 +351,7 @@
         "subtasks": []
       },
       {
-        "id": "34",
+        "id": 34,
         "title": "Add data prefetching on hover for faster navigation",
         "description": "Prefetch repreneur detail data when hovering over table rows to eliminate load time",
         "status": "done",
@@ -368,7 +368,7 @@
         "subtasks": []
       },
       {
-        "id": "35",
+        "id": 35,
         "title": "Animate sidebar active indicator",
         "description": "Add smooth sliding highlight animation to sidebar navigation",
         "status": "done",
@@ -384,7 +384,7 @@
         "subtasks": []
       },
       {
-        "id": "36",
+        "id": 36,
         "title": "Add radar chart for candidate profile visualization",
         "description": "Create spider/radar chart showing Tier1 scoring dimensions visually on repreneur detail page",
         "status": "done",
@@ -401,7 +401,7 @@
         "subtasks": []
       },
       {
-        "id": "37",
+        "id": 37,
         "title": "Wave 1.0 Dashboard Redesign",
         "description": "Complete dashboard redesign with new 3-column layout, 12+ widgets, and Wave 1.0 branding",
         "status": "done",
@@ -420,7 +420,7 @@
         "subtasks": []
       },
       {
-        "id": "38",
+        "id": 38,
         "title": "Add LinkedIn URL and GDPR Consent Fields",
         "description": "Add LinkedIn profile URL to repreneur profiles and GDPR consent tracking for European compliance",
         "status": "done",
@@ -437,7 +437,7 @@
         "subtasks": []
       },
       {
-        "id": "39",
+        "id": 39,
         "title": "Add Journey Page for Acquisition Readiness Tracking",
         "description": "Visual journey stage progression page to track repreneur maturity",
         "status": "done",
@@ -454,7 +454,7 @@
         "subtasks": []
       },
       {
-        "id": "40",
+        "id": 40,
         "title": "Improve Repreneur Form with Dropdowns and Multi-select",
         "description": "Replace free text inputs with constrained dropdowns/multi-select for data consistency",
         "status": "done",
@@ -471,7 +471,7 @@
         "subtasks": []
       },
       {
-        "id": "41",
+        "id": 41,
         "title": "V1.0 Enhancements: Milestones, Persona, Notes Redesign",
         "description": "Major feature additions including offer milestones tracking, persona field, and notes/activity view dialogs",
         "status": "done",
@@ -489,7 +489,7 @@
         "subtasks": []
       },
       {
-        "id": "42",
+        "id": 42,
         "title": "Fix Activity Stream and Add Owner Display",
         "description": "Fix dashboard activity query and add activity owner visibility",
         "status": "done",
@@ -507,7 +507,7 @@
         "subtasks": []
       },
       {
-        "id": "43",
+        "id": 43,
         "title": "Dashboard Streaming & Activity Heatmap",
         "description": "Add GitHub-style activity heatmap and optimize dashboard with streaming server components",
         "status": "done",
@@ -523,7 +523,7 @@
         "subtasks": []
       },
       {
-        "id": "44",
+        "id": 44,
         "title": "Avatar Redesign with Notion Face Style",
         "description": "Replace gradient avatars with Notion-style face illustrations",
         "status": "done",
@@ -540,7 +540,7 @@
         "subtasks": []
       },
       {
-        "id": "45",
+        "id": 45,
         "title": "Consolidate Questionnaire Forms (Intake + Internal)",
         "description": "Refactor public intake form and internal questionnaire to share components, reducing code duplication",
         "status": "done",
@@ -557,7 +557,7 @@
         "subtasks": []
       },
       {
-        "id": "46",
+        "id": 46,
         "title": "Fix Grouped Table Column Alignment",
         "description": "Align columns across all status groups in Repreneurs table",
         "status": "done",
@@ -573,7 +573,7 @@
         "subtasks": []
       },
       {
-        "id": "47",
+        "id": 47,
         "title": "Redesign Offers Page with Timeline View",
         "description": "Transform offers page from package list to client offer timeline dashboard",
         "status": "done",
@@ -590,7 +590,7 @@
         "subtasks": []
       },
       {
-        "id": "48",
+        "id": 48,
         "title": "User Profile Pictures & CV Upload System",
         "description": "Enable custom avatar uploads and CV document storage for repreneurs",
         "status": "done",
@@ -607,7 +607,7 @@
         "subtasks": []
       },
       {
-        "id": "49",
+        "id": 49,
         "title": "Email Automation Integration",
         "description": "Connect platform to AI-powered email automation for client communications",
         "status": "done",
@@ -621,7 +621,7 @@
         "updatedAt": "2026-01-11T17:14:16.454Z"
       },
       {
-        "id": "50",
+        "id": 50,
         "title": "Connect Public Intake Form to Evaluation Criteria Database",
         "description": "Modify the public intake form to fetch question options dynamically from the evaluation_criteria database table instead of using hard-coded options from tier1-scoring.ts, ensuring dashboard changes are immediately reflected in the form.",
         "details": "This task involves refactoring the public intake form to use dynamic data from the database instead of static data:\n\n1. Identify all instances where tier1-scoring.ts is used to populate question options in the intake form.\n\n2. Create a new data access layer or service that:\n   - Fetches evaluation criteria from the evaluation_criteria table\n   - Formats the data appropriately for the intake form components\n   - Implements caching to optimize performance (if needed)\n\n3. Modify the intake form components to:\n   - Replace imports from tier1-scoring.ts with the new data service\n   - Handle loading states while data is being fetched\n   - Gracefully handle potential errors if database connection fails\n\n4. Update the form submission logic to ensure it remains compatible with the new data structure.\n\n5. Consider implementing a lightweight client-side cache to prevent excessive database queries during form navigation.\n\n6. Ensure backward compatibility for any in-progress form submissions that might be using the old structure.\n\n7. Update any relevant documentation to reflect that question options are now dynamically loaded.\n\nTechnical considerations:\n- Use React Query or SWR for efficient data fetching and caching\n- Implement proper error handling for network failures\n- Consider adding a fallback to static data if the database query fails\n- Ensure the database queries are optimized and don't impact form loading performance",
@@ -636,7 +636,7 @@
         "updatedAt": "2026-01-10T20:24:58.501Z"
       },
       {
-        "id": "51",
+        "id": 51,
         "title": "Review and Improve Milestone and Stage Labels in Structured Readiness Journey",
         "description": "Evaluate and enhance the naming conventions for milestones and stage transitions in the Structured Readiness Journey system to improve user comprehension and business alignment.",
         "details": "This task involves a comprehensive review and improvement of the naming conventions in the Structured Readiness Journey system:\n\n1. Schedule a review meeting with Bertrand to understand business requirements and expectations for milestone naming.\n\n2. Audit the current naming system:\n   - Document all 11 milestone labels currently in use\n   - Document the 3 stage group titles (Explorer→Learner, Learner→Ready, Ready→Serial)\n   - Review how these labels display in the Journey page boxes\n   - Review how these labels appear in profile milestone cards\n\n3. Analyze naming issues:\n   - Identify unintuitive or confusing terminology\n   - Note any inconsistencies in naming patterns\n   - Evaluate if labels clearly communicate progress/status to users\n   - Check for business terminology alignment\n\n4. Develop improved naming proposals:\n   - Create alternative naming options for each milestone\n   - Propose revised stage transition labels that better reflect the journey\n   - Consider progressive disclosure principles in naming (earlier stages should use simpler terminology)\n\n5. Implementation steps:\n   - Update database schema if needed to accommodate new naming conventions\n   - Modify frontend components to display new labels:\n     - Journey page milestone boxes\n     - Profile milestone cards\n     - Any other UI elements referencing these labels\n   - Update any related documentation or help text\n\n6. Consider localization requirements if the platform supports multiple languages.\n\n7. Document the final approved naming conventions for future reference and onboarding.",
@@ -645,6 +645,39 @@
         "dependencies": [
           "41",
           "47"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 52,
+        "title": "Create Intermediary Portal with Anonymous Candidate View",
+        "description": "Develop a dedicated dashboard view for intermediaries (brokers, M&A advisors) that displays anonymized candidate profiles with investment capacity, sector preferences, journey stage, and tier scores.",
+        "details": "This task involves creating a specialized portal for intermediary users to view anonymized repreneur profiles. Implementation steps include:\n\n1. Create a new user role 'intermediary' in the authentication system\n2. Implement role-based access control (RBAC) to restrict access to appropriate views\n3. Develop anonymization logic to strip identifying information (names, emails, phones) from profiles\n4. Create a new database view or query function that returns only permitted fields\n5. Design and implement a dedicated dashboard page for intermediaries with:\n   - List view of all anonymized candidates\n   - Filtering capabilities by investment capacity, sector, journey stage\n   - Sorting options\n   - Pagination for performance\n6. Add a new route in the application router (e.g., `/intermediary/dashboard`)\n7. Create server components to fetch and process anonymized data\n8. Implement client components for the UI with appropriate loading states\n9. Add navigation links for intermediaries to access this view\n10. Schedule and conduct research interview with Bertrand to determine:\n    - Exact data fields intermediaries should see\n    - Specific anonymization requirements\n    - Authentication flow and onboarding process\n11. Document the anonymization rules and access controls for future reference\n\nThe implementation should leverage existing dashboard components where possible but create specialized versions that handle the anonymized data format.",
+        "testStrategy": "1. Unit Tests:\n   - Test anonymization functions to ensure they properly remove identifying information\n   - Verify role-based access control functions correctly restrict access\n   - Test data fetching components with mock data\n\n2. Integration Tests:\n   - Verify the intermediary dashboard loads correctly with anonymized data\n   - Test that filtering and sorting functions work as expected\n   - Ensure pagination works correctly with large datasets\n\n3. User Acceptance Testing:\n   - Create test intermediary accounts\n   - Verify intermediaries can only see anonymized data\n   - Confirm intermediaries cannot access other restricted areas\n   - Validate with Bertrand that the anonymization meets business requirements\n\n4. Security Testing:\n   - Attempt to access the intermediary dashboard with non-intermediary accounts\n   - Verify that direct API calls cannot bypass anonymization\n   - Test for any data leakage in responses\n\n5. Performance Testing:\n   - Test loading times with large datasets\n   - Verify that pagination and filtering optimize performance\n\n6. Cross-browser Testing:\n   - Verify the dashboard works correctly across Chrome, Firefox, Safari, and Edge",
+        "status": "pending",
+        "dependencies": [
+          13,
+          18,
+          37,
+          39
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 53,
+        "title": "Implement Deal Marketplace & Candidate Self-Service Portal",
+        "description": "Create a multi-role platform expansion allowing candidates to view anonymized deal listings and edit their profiles, while enabling sellers to manage their deal listings with full CRUD functionality.",
+        "details": "This task involves implementing a comprehensive deal marketplace with role-based access:\n\n1. User Role Expansion:\n   - Add two new user roles: \"candidate\" and \"seller\"\n   - Extend the auth system to support role-based permissions\n   - Update user profile schema to accommodate role-specific fields\n\n2. Deal/Listing Data Model:\n   - Create new database tables for deals/listings with fields for:\n     - Company information (anonymized for candidates)\n     - Asking price and financial details\n     - Industry sector and business metrics\n     - Geographic location\n     - Seller ID (hidden from candidates)\n   - Implement relationships between listings and sellers\n\n3. Deal Listing CRUD Operations:\n   - Build seller dashboard for creating new listings\n   - Implement edit/update functionality for sellers' own listings\n   - Add listing status toggles (active, pending, sold, draft)\n   - Create listing detail views with role-based information display\n\n4. Candidate Self-Service Portal:\n   - Develop candidate dashboard showing matching deals\n   - Create profile self-edit functionality with limited fields\n   - Implement saved/favorite deals feature\n   - Add interest indication mechanism\n\n5. Role-Based Routing:\n   - Update middleware to handle role-based access control\n   - Create role-specific navigation components\n   - Implement conditional rendering based on user role\n\n6. Matching Logic:\n   - Develop algorithm to match candidates with appropriate deals\n   - Create filtering system based on candidate preferences\n   - Implement search functionality with relevant parameters\n\n7. Research Requirements:\n   - Schedule interview with Bertrand to determine:\n     - Complete deal data structure requirements\n     - Which profile fields candidates can edit\n     - Specific matching criteria for deal recommendations\n     - Seller onboarding flow and verification process\n\n8. UI/UX Considerations:\n   - Design mobile-responsive interfaces for both portals\n   - Create intuitive listing creation forms with validation\n   - Implement clear visual indicators for deal status\n\n9. Security Measures:\n   - Ensure proper data anonymization for candidate view\n   - Implement appropriate access controls\n   - Add audit logging for sensitive operations",
+        "testStrategy": "1. Unit Testing:\n   - Test all CRUD operations for deal listings\n   - Verify role-based access control functions correctly\n   - Validate data model constraints and relationships\n   - Test matching algorithm with various candidate profiles\n\n2. Integration Testing:\n   - Verify proper integration between user profiles and deal listings\n   - Test end-to-end flows for creating and managing listings\n   - Validate that candidate profile edits persist correctly\n   - Ensure proper data anonymization in candidate views\n\n3. User Acceptance Testing:\n   - Create test accounts for both seller and candidate roles\n   - Perform complete user journeys for both roles:\n     - Seller: create, edit, and manage listings\n     - Candidate: view deals, edit profile, save favorites\n   - Verify that matching logic produces relevant results\n\n4. Security Testing:\n   - Attempt unauthorized access to verify role restrictions\n   - Test data isolation between different sellers\n   - Verify proper anonymization of sensitive deal data\n   - Check for any potential data leakage between roles\n\n5. Performance Testing:\n   - Test marketplace performance with large number of listings\n   - Verify search and filter operations remain responsive\n   - Test concurrent access by multiple users in different roles\n\n6. Cross-Browser/Device Testing:\n   - Verify functionality across major browsers\n   - Test responsive design on various device sizes\n   - Ensure all features work on both desktop and mobile\n\n7. Regression Testing:\n   - Verify existing platform functionality remains intact\n   - Test integration with email notification system\n   - Ensure profile picture and CV upload still function properly",
+        "status": "pending",
+        "dependencies": [
+          13,
+          20,
+          29,
+          38,
+          48
         ],
         "priority": "high",
         "subtasks": []
@@ -657,7 +690,10 @@
       "completedCount": 36,
       "tags": [
         "master"
-      ]
+      ],
+      "created": "2026-01-11T17:19:41.933Z",
+      "description": "Tasks for master context",
+      "updated": "2026-01-11T17:20:31.622Z"
     }
   }
 }

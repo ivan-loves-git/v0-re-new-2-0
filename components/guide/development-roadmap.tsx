@@ -10,6 +10,44 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 11, 2026",
+    version: "0.8.0",
+    title: "Structured Readiness Journey",
+    isCompleted: true,
+    events: [
+      {
+        title: "11 Readiness Milestones",
+        type: "feature",
+        description: "New Tier 3 milestone system with 11 checkboxes tracking acquisition readiness. Grouped by stage transitions: Explorer→Learner (3), Learner→Ready (4), Ready→Serial (4 incl. First Acquisition).",
+      },
+      {
+        title: "Journey stage auto-derivation",
+        type: "feature",
+        description: "Journey stage now computed from milestone count instead of manual selection. Explorer (0-2), Learner (3-6), Ready (7-10), Serial Acquirer (11 milestones).",
+      },
+      {
+        title: "Tier 2 competency dimensions",
+        type: "feature",
+        description: "6-dimension rating system replacing single star: Leadership, Financial Acumen, Communication, Clarity of Vision, Coachability, Commitment. Weighted average with 4.0 pass threshold.",
+      },
+      {
+        title: "Profile header redesign",
+        type: "style",
+        description: "Status and Journey badges moved to top-right with labels. Milestones in compact 2-column layout below radar chart. Responsive mobile layout.",
+      },
+      {
+        title: "Journey page milestone display",
+        type: "feature",
+        description: "Stage pipeline boxes now show milestone names instead of counts. Clear visibility into what's needed for each stage transition.",
+      },
+      {
+        title: "Decision: Milestone-based progression",
+        type: "decision",
+        description: "Removed persona requirement for Serial Acquirer. Stage progression now purely based on completing milestones. 'First acquisition completed' is the key milestone for Serial status.",
+      },
+    ],
+  },
+  {
+    period: "Jan 11, 2026",
     version: "0.7.0",
     title: "Tier 1 Rating Improvements",
     isCompleted: true,
