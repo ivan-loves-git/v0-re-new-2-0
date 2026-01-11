@@ -251,7 +251,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
       </div>
 
       {/* Profile Overview Row: Rating | Investment Profile | Radar Chart */}
-      <div className="grid gap-6 md:grid-cols-3 items-start">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Col 1: Rating Card */}
         <Card>
           <CardHeader className="pb-3">
