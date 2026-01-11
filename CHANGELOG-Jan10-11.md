@@ -22,6 +22,15 @@ Instead of a flat list, milestones are now organized into 3 logical groups:
 - New milestone: "First acquisition completed"
 - Serial Acquirer status now requires all 11 milestones complete (clear goal)
 
+### Important: Milestones Are Customizable
+The current milestone labels are **temporary placeholders** based on our initial discussions. The team can and should review these to match your actual client journey. Examples of what can be changed:
+- Milestone names and descriptions
+- Number of milestones per stage
+- Which milestones trigger stage transitions
+- The stage names themselves (Explorer, Learner, Ready, Serial Acquirer)
+
+**Action needed:** Schedule a quick review session to finalize the milestone labels before v1.0 launch.
+
 ### Profile Page Updates
 - Status and Journey badges moved to top-right header for quick visibility
 - Milestones displayed in 2-column layout (cleaner on desktop)
