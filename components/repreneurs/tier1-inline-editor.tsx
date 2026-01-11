@@ -161,13 +161,11 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
   }
 
   const [localAnswers, setLocalAnswers] = useState<LocalAnswers>(getInitialAnswers)
-  const [hasChanges, setHasChanges] = useState(false)
 
   // Reset local state when dialog opens
   const handleOpenChange = (open: boolean) => {
     if (open) {
       setLocalAnswers(getInitialAnswers())
-      setHasChanges(false)
     }
     setIsOpen(open)
   }
@@ -175,7 +173,6 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
   // Update local state only (no server call)
   const handleLocalChange = (key: string, value: string | string[] | boolean | null) => {
     setLocalAnswers(prev => ({ ...prev, [key]: value }))
-    setHasChanges(true)
   }
 
   // Save all changes and recalculate score
@@ -185,7 +182,6 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
         await updateTier1Answers(repreneur.id, localAnswers)
         toast.success("Score calculated and saved")
         setIsOpen(false)
-        setHasChanges(false)
       } catch (error) {
         toast.error("Failed to calculate score")
         console.error(error)

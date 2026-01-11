@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useOptimistic, useTransition } from "react"
+import { useState, useOptimistic, useTransition, useRef, useCallback } from "react"
 import { Star, ChevronDown, ChevronUp, Check } from "lucide-react"
 import { setTier2Dimensions } from "@/lib/actions/repreneurs"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -27,7 +26,7 @@ interface Tier2DimensionRatingProps {
     tier2_coachability?: number | null
     tier2_commitment?: number | null
     tier2_overall?: number | null
-    tier2_stars?: number | null // Legacy field for display
+    tier2_stars?: number | null
   }
 }
 
@@ -89,26 +88,44 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
     })
   )
 
+  // Debounce refs for batching rapid clicks
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingUpdates = useRef<Partial<Tier2Dimensions>>({})
+
   const optimisticOverall = calculateTier2Overall(optimisticDimensions)
   const hasPassed = optimisticOverall !== null && optimisticOverall >= TIER2_PASS_THRESHOLD
   const ratedCount = Object.values(optimisticDimensions).filter((v) => v !== null).length
 
-  async function handleDimensionChange(key: Tier2DimensionKey, value: number) {
-    const update = { [key]: value }
+  // Debounced save - batches multiple rapid clicks into single server call
+  const debouncedSave = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
 
-    startTransition(async () => {
-      setOptimisticDimensions(update)
+    debounceRef.current = setTimeout(async () => {
+      const updates = { ...optimisticDimensions, ...pendingUpdates.current }
+      pendingUpdates.current = {}
 
       try {
-        await setTier2Dimensions(repreneurId, {
-          ...optimisticDimensions,
-          ...update,
-        })
+        await setTier2Dimensions(repreneurId, updates)
       } catch (error) {
-        console.error("Failed to update dimension:", error)
+        console.error("Failed to save dimensions:", error)
         toast.error("Failed to save rating")
       }
+    }, 400) // 400ms debounce - wait for rapid clicks to finish
+  }, [repreneurId, optimisticDimensions])
+
+  function handleDimensionChange(key: Tier2DimensionKey, value: number) {
+    const update = { [key]: value }
+
+    // Immediate optimistic update (instant visual feedback)
+    startTransition(() => {
+      setOptimisticDimensions(update)
     })
+
+    // Accumulate updates and debounce the server call
+    pendingUpdates.current = { ...pendingUpdates.current, ...update }
+    debouncedSave()
   }
 
   // Display value (use legacy tier2_stars if no dimensions set yet)

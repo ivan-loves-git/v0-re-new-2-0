@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useOptimistic, useTransition } from "react"
-import { Compass, Map, Flag, Trophy, CheckCircle2, Circle } from "lucide-react"
+import { useState, useOptimistic, useTransition, useRef, useCallback } from "react"
+import { Compass, Map, Flag, Trophy, CheckCircle2, Circle, LucideIcon } from "lucide-react"
 import { toggleMilestone } from "@/lib/actions/repreneurs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { MilestoneKey, JourneyStage } from "@/lib/types/repreneur"
-import { MILESTONES, STAGE_GROUPS, getStageConfig } from "@/lib/constants/tier-config"
+import { MilestoneKey, JourneyStage, Tier3Milestones } from "@/lib/types/repreneur"
+import { MILESTONES, STAGE_GROUPS, getStageConfig, MilestoneConfig, StageGroupConfig } from "@/lib/constants/tier-config"
 import { extractMilestones, countMilestones, deriveJourneyStage, getStageProgress } from "@/lib/utils/journey-derivation"
 
 interface Tier3MilestonesCardProps {
@@ -30,26 +30,81 @@ interface Tier3MilestonesCardProps {
     ms_search_plan?: boolean
     ms_first_target?: boolean
     ms_dd_checklist?: boolean
+    ms_first_acquisition?: boolean
     tier3_milestone_count?: number
     journey_stage?: JourneyStage
     persona?: string
   }
 }
 
-// Icon component for journey stages
+// Stage icons lookup (simplified from switch statement)
+const STAGE_ICONS: Record<JourneyStage, LucideIcon> = {
+  explorer: Compass,
+  learner: Map,
+  ready: Flag,
+  serial_acquirer: Trophy,
+}
+
 function StageIcon({ stage, className }: { stage: JourneyStage; className?: string }) {
-  switch (stage) {
-    case "explorer":
-      return <Compass className={className} />
-    case "learner":
-      return <Map className={className} />
-    case "ready":
-      return <Flag className={className} />
-    case "serial_acquirer":
-      return <Trophy className={className} />
-    default:
-      return <Compass className={className} />
-  }
+  const Icon = STAGE_ICONS[stage] || Compass
+  return <Icon className={className} />
+}
+
+// Extracted MilestoneGroup component (eliminates duplication)
+interface MilestoneGroupProps {
+  group: StageGroupConfig & { milestones: MilestoneConfig[]; completedCount: number }
+  optimisticMilestones: Tier3Milestones
+  onToggle: (key: MilestoneKey) => void
+  isPending: boolean
+}
+
+function MilestoneGroup({ group, optimisticMilestones, onToggle, isPending }: MilestoneGroupProps) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+          {group.title}
+        </span>
+        <span className="text-xs text-gray-400">
+          ({group.completedCount}/{group.milestones.length})
+        </span>
+      </div>
+      <div className="space-y-0.5 pl-2 border-l-2 border-gray-100">
+        {group.milestones.map((milestone) => {
+          const isCompleted = optimisticMilestones[milestone.key]
+          return (
+            <Tooltip key={milestone.key}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => onToggle(milestone.key)}
+                  disabled={isPending}
+                  className={cn(
+                    "flex items-center gap-2 py-1 px-2 rounded text-left transition-all w-full",
+                    "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                    isCompleted && "bg-green-50",
+                    isPending && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  {isCompleted ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                  ) : (
+                    <Circle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                  )}
+                  <span className={cn("text-sm", isCompleted ? "text-green-700" : "text-gray-600")}>
+                    {milestone.label}
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p>{milestone.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesCardProps) {
@@ -57,7 +112,6 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
 
   // Extract current milestones
   const currentMilestones = extractMilestones(repreneur)
-  const currentCount = countMilestones(currentMilestones)
 
   // Optimistic state for milestones
   const [optimisticMilestones, setOptimisticMilestones] = useOptimistic(
@@ -68,24 +122,48 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
     })
   )
 
+  // Debounce refs for batching rapid toggles
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingToggles = useRef<Record<MilestoneKey, boolean>>({})
+
   const optimisticCount = countMilestones(optimisticMilestones)
   const derivedStage = deriveJourneyStage(optimisticCount, repreneur.persona)
   const stageConfig = getStageConfig(derivedStage)
   const progress = getStageProgress(optimisticCount)
 
-  async function handleToggle(key: MilestoneKey) {
+  // Debounced save for rapid toggles
+  const debouncedSave = useCallback(async () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      const toggles = { ...pendingToggles.current }
+      pendingToggles.current = {}
+
+      // Save each toggle (could be optimized to batch if needed)
+      for (const [key, value] of Object.entries(toggles)) {
+        try {
+          await toggleMilestone(repreneurId, key as MilestoneKey, value)
+        } catch (error) {
+          console.error("Failed to toggle milestone:", error)
+          toast.error("Failed to update milestone")
+        }
+      }
+    }, 400) // 400ms debounce
+  }, [repreneurId])
+
+  function handleToggle(key: MilestoneKey) {
     const newValue = !optimisticMilestones[key]
 
-    startTransition(async () => {
+    // Immediate optimistic update
+    startTransition(() => {
       setOptimisticMilestones({ key, value: newValue })
-
-      try {
-        await toggleMilestone(repreneurId, key, newValue)
-      } catch (error) {
-        console.error("Failed to toggle milestone:", error)
-        toast.error("Failed to update milestone")
-      }
     })
+
+    // Accumulate and debounce
+    pendingToggles.current[key] = newValue
+    debouncedSave()
   }
 
   // Group milestones by stage
@@ -126,100 +204,26 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
           {/* Left column: Groups 1 & 2 */}
           <div className="space-y-3">
             {milestonesByGroup.slice(0, 2).map((group) => (
-              <div key={group.group} className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {group.title}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    ({group.completedCount}/{group.milestones.length})
-                  </span>
-                </div>
-                <div className="space-y-0.5 pl-2 border-l-2 border-gray-100">
-                  {group.milestones.map((milestone) => {
-                    const isCompleted = optimisticMilestones[milestone.key]
-                    return (
-                      <Tooltip key={milestone.key}>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => handleToggle(milestone.key)}
-                            disabled={isPending}
-                            className={cn(
-                              "flex items-center gap-2 py-1 px-2 rounded text-left transition-all w-full",
-                              "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500",
-                              isCompleted && "bg-green-50",
-                              isPending && "opacity-50 cursor-not-allowed"
-                            )}
-                          >
-                            {isCompleted ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                            ) : (
-                              <Circle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
-                            )}
-                            <span className={cn("text-sm", isCompleted ? "text-green-700" : "text-gray-600")}>
-                              {milestone.label}
-                            </span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>{milestone.tooltip}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                </div>
-              </div>
+              <MilestoneGroup
+                key={group.group}
+                group={group}
+                optimisticMilestones={optimisticMilestones}
+                onToggle={handleToggle}
+                isPending={isPending}
+              />
             ))}
           </div>
 
           {/* Right column: Group 3 */}
           <div className="space-y-3">
             {milestonesByGroup.slice(2).map((group) => (
-              <div key={group.group} className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {group.title}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    ({group.completedCount}/{group.milestones.length})
-                  </span>
-                </div>
-                <div className="space-y-0.5 pl-2 border-l-2 border-gray-100">
-                  {group.milestones.map((milestone) => {
-                    const isCompleted = optimisticMilestones[milestone.key]
-                    return (
-                      <Tooltip key={milestone.key}>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => handleToggle(milestone.key)}
-                            disabled={isPending}
-                            className={cn(
-                              "flex items-center gap-2 py-1 px-2 rounded text-left transition-all w-full",
-                              "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500",
-                              isCompleted && "bg-green-50",
-                              isPending && "opacity-50 cursor-not-allowed"
-                            )}
-                          >
-                            {isCompleted ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                            ) : (
-                              <Circle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
-                            )}
-                            <span className={cn("text-sm", isCompleted ? "text-green-700" : "text-gray-600")}>
-                              {milestone.label}
-                            </span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>{milestone.tooltip}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                </div>
-              </div>
+              <MilestoneGroup
+                key={group.group}
+                group={group}
+                optimisticMilestones={optimisticMilestones}
+                onToggle={handleToggle}
+                isPending={isPending}
+              />
             ))}
           </div>
         </div>
