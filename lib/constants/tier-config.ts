@@ -50,6 +50,39 @@ export const TIER2_DIMENSIONS: Tier2DimensionConfig[] = [
 // Tier 2 pass threshold
 export const TIER2_PASS_THRESHOLD = 4.0
 
+// Stage Group Configuration (for grouping milestones in UI)
+export interface StageGroupConfig {
+  group: 1 | 2 | 3
+  title: string
+  description: string
+  fromStage: JourneyStage
+  toStage: JourneyStage
+}
+
+export const STAGE_GROUPS: StageGroupConfig[] = [
+  {
+    group: 1,
+    title: "Explorer → Learner",
+    description: "Define your acquisition criteria",
+    fromStage: "explorer",
+    toStage: "learner",
+  },
+  {
+    group: 2,
+    title: "Learner → Ready",
+    description: "Prepare your resources",
+    fromStage: "learner",
+    toStage: "ready",
+  },
+  {
+    group: 3,
+    title: "Ready → Serial",
+    description: "Execute your search",
+    fromStage: "ready",
+    toStage: "serial_acquirer",
+  },
+]
+
 // Tier 3 Milestone Configuration
 export interface MilestoneConfig {
   key: MilestoneKey
@@ -62,7 +95,7 @@ export const MILESTONES: MilestoneConfig[] = [
   // Stage 1: Explorer → Learner (complete 3)
   {
     key: "investment_thesis",
-    label: "Investment thesis validated",
+    label: "Investment thesis defined",
     tooltip: "Sector, size, geography, and deal criteria are clearly documented",
     stageGroup: 1,
   },
@@ -75,7 +108,7 @@ export const MILESTONES: MilestoneConfig[] = [
   {
     key: "first_intermediary",
     label: "First intermediary intro",
-    tooltip: "Candidate has been introduced to at least one deal source",
+    tooltip: "Connected to at least one deal source (broker, M&A advisor)",
     stageGroup: 1,
   },
   // Stage 2: Learner → Ready (complete 7 total, 4 more)
@@ -88,12 +121,12 @@ export const MILESTONES: MilestoneConfig[] = [
   {
     key: "ldc_validated",
     label: "LdC validated",
-    tooltip: "Lettre de Cadrage document completed and reviewed by Re-New",
+    tooltip: "Lettre de Cadrage reviewed and approved by Re-New",
     stageGroup: 2,
   },
   {
     key: "financing_proof",
-    label: "Financing proof",
+    label: "Financing secured",
     tooltip: "Bank letter, investor commitment, or proof of funds obtained",
     stageGroup: 2,
   },
@@ -106,20 +139,20 @@ export const MILESTONES: MilestoneConfig[] = [
   // Stage 3: Ready → Serial Acquirer (complete 10 total, 3 more + persona)
   {
     key: "search_plan",
-    label: "Search plan approved",
-    tooltip: "Active search plan with timeline reviewed by Re-New",
+    label: "Active search plan",
+    tooltip: "Search plan with timeline approved by Re-New",
     stageGroup: 3,
   },
   {
     key: "first_target",
-    label: "First target contact",
-    tooltip: "Candidate has engaged with a potential acquisition target",
+    label: "First target contacted",
+    tooltip: "Engaged with a potential acquisition target",
     stageGroup: 3,
   },
   {
     key: "dd_checklist",
     label: "DD checklist ready",
-    tooltip: "Due diligence preparation completed, knows what to evaluate",
+    tooltip: "Due diligence preparation complete, knows what to evaluate",
     stageGroup: 3,
   },
 ]
