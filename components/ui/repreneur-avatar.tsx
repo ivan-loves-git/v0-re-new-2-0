@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { updateRepreneurField } from "@/lib/actions/repreneurs"
 
 const TOTAL_DEFAULT_AVATARS = 16
 
@@ -95,8 +94,7 @@ export function RepreneurAvatar({
 
       const { url } = result
 
-      // Update repreneur record
-      await updateRepreneurField(repreneurId, "avatar_url", url)
+      // API already updated the database, just update local state
       setCurrentAvatarUrl(url)
       setIsDialogOpen(false)
     } catch (error) {
@@ -110,12 +108,23 @@ export function RepreneurAvatar({
   const handleResetToDefault = async () => {
     setIsUploading(true)
     try {
-      // Clear custom avatar to use default
-      await updateRepreneurField(repreneurId, "avatar_url", null)
+      // Clear custom avatar via API
+      const response = await fetch("/api/reset-avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repreneurId }),
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || "Reset failed")
+      }
+
       setCurrentAvatarUrl(null)
       setIsDialogOpen(false)
     } catch (error) {
       console.error("Failed to reset avatar:", error)
+      alert("Failed to reset avatar. Please try again.")
     } finally {
       setIsUploading(false)
     }

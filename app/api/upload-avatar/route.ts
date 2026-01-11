@@ -55,6 +55,17 @@ export async function POST(request: NextRequest) {
       .from("avatars")
       .getPublicUrl(fileName)
 
+    // Update the repreneur's avatar_url in the database
+    const { error: updateError } = await supabase
+      .from("repreneurs")
+      .update({ avatar_url: publicUrl })
+      .eq("id", repreneurId)
+
+    if (updateError) {
+      console.error("Database update error:", updateError.message, updateError)
+      return NextResponse.json({ error: `Failed to update avatar URL: ${updateError.message}` }, { status: 500 })
+    }
+
     return NextResponse.json({ url: publicUrl })
   } catch (error) {
     console.error("Upload error:", error)
