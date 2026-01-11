@@ -341,35 +341,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 repreneur={repreneur}
               />
             </div>
-
-            <div className="border-t pt-4" />
-
-            {/* Tier 3 Milestones Subsection */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Tier 3</span>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                        <Info className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs">
-                      <p className="text-sm">
-                        Tier 3 tracks 10 readiness milestones. Completing milestones advances the journey stage:
-                        Explorer (0-2), Learner (3-6), Ready (7-9), Serial Acquirer (10 + persona).
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <p className="text-xs text-muted-foreground mb-3">Readiness milestones</p>
-              <Tier3MilestonesCard
-                repreneurId={repreneur.id}
-                repreneur={repreneur}
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -444,8 +415,42 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         <RepreneurRadarChart repreneur={repreneur as Repreneur} />
       </div>
 
-      {/* Documents Row */}
+      {/* Milestones & Documents Row */}
       <div className="grid gap-6 md:grid-cols-3">
+        {/* Col 1-2: Milestones */}
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Flag className="h-5 w-5" />
+                Readiness Milestones
+              </CardTitle>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p className="text-sm">
+                      10 readiness milestones. Completing milestones advances the journey stage:
+                      Explorer (0-2), Learner (3-6), Ready (7-9), Serial Acquirer (10 + persona).
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tier3MilestonesCard
+              repreneurId={repreneur.id}
+              repreneur={repreneur}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Col 3: Documents */}
         <DocumentsCard
           repreneurId={id}
           cvUrl={repreneur.cv_url}
