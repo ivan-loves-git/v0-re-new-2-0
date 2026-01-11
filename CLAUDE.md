@@ -133,3 +133,43 @@ task-master set-status --id=<id> --status=done         # Complete task
 
 ### Why This Matters
 Ivan is non-technical. Months from now, the git history should explain the entire development journey without needing to ask anyone. Each commit should be a self-contained story.
+
+## Roadmap Updates
+
+**The in-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team.**
+
+### When to Update Roadmap
+Proactively add entries after completing:
+- New features (user-facing functionality)
+- Important bug fixes (especially "was broken, now works" fixes)
+- Architecture decisions (why we chose X over Y)
+- Key learnings (gotchas, surprises, things to remember)
+
+### When NOT to Update
+Skip roadmap for:
+- Small fixes, typos, config changes
+- Refactors with no user-visible impact
+- Chores (dependencies, build config)
+
+### How to Update
+1. Edit `components/guide/development-roadmap.tsx` - add new entry at TOP of `roadmapEvents` array
+2. Update `lib/data/roadmap-status.ts` - set `LAST_ROADMAP_UPDATE` to today's date (triggers red dot notification)
+3. Increment version number (e.g., 0.9.8 → 0.9.9)
+4. Commit with message: `📝 docs(roadmap): add [milestone name]`
+
+### Entry Format
+```typescript
+{
+  period: "Jan 11, 2026",
+  version: "0.9.9",
+  title: "Milestone Name",
+  isCompleted: true,
+  events: [
+    { title: "Feature name", type: "feature", description: "What it does" },
+    { title: "Bug fixed", type: "fix", description: "What was broken, now works" },
+    { title: "Decision made", type: "decision", description: "Why we chose this approach" },
+  ],
+}
+```
+
+Event types: `feature`, `fix`, `style`, `refactor`, `decision`, `learning`
