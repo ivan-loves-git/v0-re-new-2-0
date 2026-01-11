@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Check, ChevronDown, Loader2, Pencil, X } from "lucide-react"
+import { Calculator, Check, ChevronDown, Loader2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -31,10 +32,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { updateTier1Answer } from "@/lib/actions/repreneurs"
+import { updateTier1Answers } from "@/lib/actions/repreneurs"
 import type { Repreneur } from "@/lib/types/repreneur"
 import {
   EMPLOYMENT_STATUS_OPTIONS,
@@ -62,48 +62,48 @@ const QUESTIONS = [
   },
   {
     key: "q2_years_experience",
-    label: "Années d'expérience",
+    label: "Annees d'experience",
     type: "select" as const,
     options: YEARS_EXPERIENCE_OPTIONS,
   },
   {
     key: "q3_industry_sectors",
-    label: "Secteurs d'expérience",
+    label: "Secteurs d'experience",
     type: "multiselect" as const,
     options: INDUSTRY_SECTOR_OPTIONS,
     searchable: true,
   },
   {
     key: "q4_has_ma_experience",
-    label: "Expérience M&A",
+    label: "Experience M&A",
     type: "boolean" as const,
   },
   {
     key: "q5_team_size",
-    label: "Taille équipe gérée",
+    label: "Taille equipe geree",
     type: "select" as const,
     options: TEAM_SIZE_OPTIONS,
   },
   {
     key: "q6_involved_in_ma",
-    label: "Impliqué dans M&A",
+    label: "Implique dans M&A",
     type: "boolean" as const,
   },
   {
     key: "q8_executive_roles",
-    label: "Rôles exécutifs",
+    label: "Roles executifs",
     type: "multiselect" as const,
     options: EXECUTIVE_ROLE_OPTIONS,
     searchable: true,
   },
   {
     key: "q9_board_experience",
-    label: "Expérience conseil",
+    label: "Experience conseil",
     type: "boolean" as const,
   },
   {
     key: "q10_journey_stages",
-    label: "Étape du parcours",
+    label: "Etape du parcours",
     type: "multiselect" as const,
     options: JOURNEY_STAGE_OPTIONS,
     searchable: true,
@@ -117,24 +117,24 @@ const QUESTIONS = [
   },
   {
     key: "q12_has_identified_targets",
-    label: "Cibles identifiées",
+    label: "Cibles identifiees",
     type: "boolean" as const,
   },
   {
     key: "q14_investment_capacity",
-    label: "Capacité d'investissement",
+    label: "Capacite d'investissement",
     type: "select" as const,
     options: INVESTMENT_CAPACITY_OPTIONS,
   },
   {
     key: "q15_funding_status",
-    label: "État du financement",
+    label: "Etat du financement",
     type: "select" as const,
     options: FUNDING_STATUS_OPTIONS,
   },
   {
     key: "q16_network_training",
-    label: "Réseau / Formation",
+    label: "Reseau / Formation",
     type: "multiselect" as const,
     options: NETWORK_TRAINING_OPTIONS,
   },
@@ -145,32 +145,56 @@ const QUESTIONS = [
   },
 ]
 
+type LocalAnswers = Record<string, string | string[] | boolean | null>
+
 export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [updatingField, setUpdatingField] = useState<string | null>(null)
 
-  const handleUpdate = async (field: string, value: string | string[] | boolean | null) => {
-    setUpdatingField(field)
+  // Initialize local state with current repreneur values
+  const getInitialAnswers = (): LocalAnswers => {
+    const answers: LocalAnswers = {}
+    for (const q of QUESTIONS) {
+      answers[q.key] = repreneur[q.key as keyof Repreneur] as string | string[] | boolean | null
+    }
+    return answers
+  }
+
+  const [localAnswers, setLocalAnswers] = useState<LocalAnswers>(getInitialAnswers)
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Reset local state when dialog opens
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setLocalAnswers(getInitialAnswers())
+      setHasChanges(false)
+    }
+    setIsOpen(open)
+  }
+
+  // Update local state only (no server call)
+  const handleLocalChange = (key: string, value: string | string[] | boolean | null) => {
+    setLocalAnswers(prev => ({ ...prev, [key]: value }))
+    setHasChanges(true)
+  }
+
+  // Save all changes and recalculate score
+  const handleCalculate = async () => {
     startTransition(async () => {
       try {
-        await updateTier1Answer(repreneur.id, field, value)
-        toast.success("Score mis à jour")
+        await updateTier1Answers(repreneur.id, localAnswers)
+        toast.success("Score calculated and saved")
+        setIsOpen(false)
+        setHasChanges(false)
       } catch (error) {
-        toast.error("Erreur lors de la mise à jour")
+        toast.error("Failed to calculate score")
         console.error(error)
-      } finally {
-        setUpdatingField(null)
       }
     })
   }
 
-  const getValue = (key: string) => {
-    return repreneur[key as keyof Repreneur]
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"
@@ -194,34 +218,43 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
                 {q.label}
               </span>
               <div className="flex-1 flex justify-end">
-                {updatingField === q.key ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                ) : q.type === "select" ? (
+                {q.type === "select" ? (
                   <SelectField
-                    value={getValue(q.key) as string}
+                    value={localAnswers[q.key] as string}
                     options={q.options}
-                    onChange={(v) => handleUpdate(q.key, v)}
-                    disabled={isPending}
+                    onChange={(v) => handleLocalChange(q.key, v)}
                   />
                 ) : q.type === "multiselect" ? (
                   <MultiSelectField
-                    value={(getValue(q.key) as string[]) || []}
+                    value={(localAnswers[q.key] as string[]) || []}
                     options={q.options}
-                    onChange={(v) => handleUpdate(q.key, v)}
-                    disabled={isPending}
+                    onChange={(v) => handleLocalChange(q.key, v)}
                     searchable={q.searchable}
                   />
                 ) : q.type === "boolean" ? (
                   <BooleanField
-                    value={getValue(q.key) as boolean}
-                    onChange={(v) => handleUpdate(q.key, v)}
-                    disabled={isPending}
+                    value={localAnswers[q.key] as boolean}
+                    onChange={(v) => handleLocalChange(q.key, v)}
                   />
                 ) : null}
               </div>
             </div>
           ))}
         </div>
+        <DialogFooter className="pt-4 border-t">
+          <Button
+            onClick={handleCalculate}
+            disabled={isPending}
+            className="w-full"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Calculator className="h-4 w-4 mr-2" />
+            )}
+            {isPending ? "Calculating..." : "Calculate & Save"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -232,21 +265,18 @@ function SelectField({
   value,
   options,
   onChange,
-  disabled,
 }: {
   value: string | null | undefined
   options: readonly { value: string; label: string }[]
   onChange: (value: string | null) => void
-  disabled: boolean
 }) {
   return (
     <Select
       value={value || ""}
       onValueChange={(v) => onChange(v || null)}
-      disabled={disabled}
     >
       <SelectTrigger className="h-7 text-xs w-40">
-        <SelectValue placeholder="Sélectionner..." />
+        <SelectValue placeholder="Select..." />
       </SelectTrigger>
       <SelectContent>
         {options.map((opt) => (
@@ -264,13 +294,11 @@ function MultiSelectField({
   value,
   options,
   onChange,
-  disabled,
   searchable = false,
 }: {
   value: string[]
   options: readonly { value: string; label: string }[]
   onChange: (value: string[]) => void
-  disabled: boolean
   searchable?: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -294,15 +322,14 @@ function MultiSelectField({
           size="sm"
           role="combobox"
           aria-expanded={open}
-          disabled={disabled}
           className="h-7 text-xs w-40 justify-between font-normal"
         >
           <span className="truncate">
             {value.length === 0
-              ? "Sélectionner..."
+              ? "Select..."
               : value.length === 1
               ? selectedLabels[0]
-              : `${value.length} sélectionnés`}
+              : `${value.length} selected`}
           </span>
           <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
         </Button>
@@ -310,10 +337,10 @@ function MultiSelectField({
       <PopoverContent className="w-56 p-0" align="end">
         <Command>
           {searchable && options.length > 5 && (
-            <CommandInput placeholder="Rechercher..." className="h-8 text-xs" />
+            <CommandInput placeholder="Search..." className="h-8 text-xs" />
           )}
           <CommandList className="max-h-48">
-            <CommandEmpty className="text-xs py-2 text-center">Aucun résultat</CommandEmpty>
+            <CommandEmpty className="text-xs py-2 text-center">No results</CommandEmpty>
             <CommandGroup>
               {options.map((opt) => (
                 <CommandItem
@@ -347,22 +374,19 @@ function MultiSelectField({
 function BooleanField({
   value,
   onChange,
-  disabled,
 }: {
   value: boolean | null | undefined
   onChange: (value: boolean) => void
-  disabled: boolean
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-400">Non</span>
+      <span className="text-xs text-gray-400">No</span>
       <Switch
         checked={value === true}
         onCheckedChange={onChange}
-        disabled={disabled}
         className="h-4 w-7"
       />
-      <span className="text-xs text-gray-400">Oui</span>
+      <span className="text-xs text-gray-400">Yes</span>
     </div>
   )
 }

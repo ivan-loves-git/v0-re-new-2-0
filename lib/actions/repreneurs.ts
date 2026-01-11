@@ -588,6 +588,96 @@ export async function updateTier1Answer(
 }
 
 /**
+ * Update all Tier 1 questionnaire answers at once and recalculate score
+ * Used by the batch editor dialog
+ */
+export async function updateTier1Answers(
+  id: string,
+  answers: Record<string, string | string[] | boolean | null>
+) {
+  const supabase = await createServerClient()
+
+  // Update all fields at once
+  const { error: updateError } = await supabase
+    .from("repreneurs")
+    .update(answers)
+    .eq("id", id)
+
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+
+  // Fetch all current questionnaire data to recalculate score
+  const { data: repreneur, error: fetchError } = await supabase
+    .from("repreneurs")
+    .select(`
+      q1_employment_status,
+      q2_years_experience,
+      q3_industry_sectors,
+      q4_has_ma_experience,
+      q5_team_size,
+      q6_involved_in_ma,
+      q8_executive_roles,
+      q9_board_experience,
+      q10_journey_stages,
+      q11_target_sectors,
+      q12_has_identified_targets,
+      q14_investment_capacity,
+      q15_funding_status,
+      q16_network_training,
+      q17_open_to_co_acquisition
+    `)
+    .eq("id", id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
+  // Fetch scoring criteria and recalculate
+  const scoringCriteria = await getTier1ScoringCriteria()
+
+  const scoringInput: Tier1ScoringInput = {
+    q1_employment_status: repreneur.q1_employment_status,
+    q2_years_experience: repreneur.q2_years_experience,
+    q3_industry_sectors: repreneur.q3_industry_sectors || [],
+    q4_has_ma_experience: repreneur.q4_has_ma_experience,
+    q5_team_size: repreneur.q5_team_size,
+    q6_involved_in_ma: repreneur.q6_involved_in_ma,
+    q8_executive_roles: repreneur.q8_executive_roles || [],
+    q9_board_experience: repreneur.q9_board_experience,
+    q10_journey_stages: repreneur.q10_journey_stages || [],
+    q11_target_sectors: repreneur.q11_target_sectors || [],
+    q12_has_identified_targets: repreneur.q12_has_identified_targets,
+    q14_investment_capacity: repreneur.q14_investment_capacity,
+    q15_funding_status: repreneur.q15_funding_status,
+    q16_network_training: repreneur.q16_network_training || [],
+    q17_open_to_co_acquisition: repreneur.q17_open_to_co_acquisition,
+  }
+
+  const scoreBreakdown = calculateTier1Score(scoringInput, scoringCriteria)
+
+  // Update the score
+  const { error: scoreError } = await supabase
+    .from("repreneurs")
+    .update({
+      tier1_score: scoreBreakdown.total,
+      tier1_score_breakdown: scoreBreakdown,
+    })
+    .eq("id", id)
+
+  if (scoreError) {
+    throw new Error(scoreError.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+
+  return scoreBreakdown
+}
+
+/**
  * Set Tier 2 competency dimensions (6 dimensions with weighted average)
  * This automatically sets lifecycle_status to "qualified" (action-driven status)
  */
