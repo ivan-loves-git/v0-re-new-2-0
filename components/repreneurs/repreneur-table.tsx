@@ -20,7 +20,7 @@ import {
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
 import { MissingFieldsBadge } from "./missing-fields-badge"
 
-const ITEMS_PER_PAGE = 10
+const ITEMS_PER_PAGE = 8
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
@@ -121,7 +121,13 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
     client: { ...DEFAULT_GROUP_SORT },
     rejected: { ...DEFAULT_GROUP_SORT },
   })
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<LifecycleStatus>>(new Set())
+  // Initialize with empty groups collapsed
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<LifecycleStatus>>(() => {
+    const emptyStatuses = STATUS_ORDER.filter(
+      status => !repreneurs.some(r => r.lifecycle_status === status)
+    )
+    return new Set(emptyStatuses)
+  })
   const [groupPages, setGroupPages] = useState<Record<LifecycleStatus, number>>({
     lead: 1,
     qualified: 1,
