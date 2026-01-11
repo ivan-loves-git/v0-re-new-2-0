@@ -260,9 +260,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               Rating
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-3">
             {/* Tier 1 Subsection */}
-            <div className="space-y-1">
+            <div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">Tier 1</span>
                 <TooltipProvider delayDuration={0}>
@@ -281,7 +281,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Calculated from questionnaire</p>
               {repreneur.tier1_score !== null && repreneur.tier1_score !== undefined ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
@@ -307,10 +306,10 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               )}
             </div>
 
-            <div className="border-t pt-4" />
+            <div className="border-t pt-3" />
 
             {/* Tier 2 Subsection */}
-            <div className="space-y-1">
+            <div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">Tier 2</span>
                 <TooltipProvider delayDuration={0}>

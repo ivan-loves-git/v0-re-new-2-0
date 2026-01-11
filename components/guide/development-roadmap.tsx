@@ -48,6 +48,44 @@ const roadmapEvents = [
   },
   {
     period: "Jan 11, 2026",
+    version: "0.7.5",
+    title: "List View & Data Quality",
+    isCompleted: true,
+    events: [
+      {
+        title: "Repreneurs list UX overhaul",
+        type: "feature",
+        description: "Grouped view with per-group pagination (8 items/page). Independent column sorting per status group. Empty groups auto-collapse on load. Consistent visual layout.",
+      },
+      {
+        title: "Fixed table column widths",
+        type: "fix",
+        description: "Long emails no longer push columns causing inconsistent widths between groups. Table uses fixed layout with truncation and ellipsis for overflow text.",
+      },
+      {
+        title: "Avatar upload bug fixes",
+        type: "fix",
+        description: "Fixed server action rendering errors by moving to API routes. Added cache revalidation so avatar changes appear immediately in table views. Created migration for missing column.",
+      },
+      {
+        title: "Journey progress badges",
+        type: "feature",
+        description: "Milestone count badges (X/11) now shown next to repreneur names on Journey page stage cards. Quick visibility into who needs attention.",
+      },
+      {
+        title: "Flatchr data import",
+        type: "feature",
+        description: "SQL script for importing 93 historical repreneurs from Flatchr export. Includes tier1_score_breakdown field for imported records. One-time migration tool.",
+      },
+      {
+        title: "Terminology standardization",
+        type: "refactor",
+        description: "Replaced 'candidate' with 'repreneur' throughout codebase and tests. Consistent language matching Re-New's terminology for acquisition entrepreneurs.",
+      },
+    ],
+  },
+  {
+    period: "Jan 10-11, 2026",
     version: "0.7.0",
     title: "Tier 1 Rating Improvements",
     isCompleted: true,
