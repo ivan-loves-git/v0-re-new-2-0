@@ -156,6 +156,7 @@ Skip roadmap for:
 2. Update `lib/data/roadmap-status.ts` - set `LAST_ROADMAP_UPDATE` to today's date (triggers red dot notification)
 3. Increment version number (e.g., 0.9.8 → 0.9.9)
 4. Commit with message: `📝 docs(roadmap): add [milestone name]`
+5. **ALWAYS tell Ivan**: "Roadmap updated with [milestone name] (v0.9.x)" so he knows it was done
 
 ### Entry Format
 ```typescript
