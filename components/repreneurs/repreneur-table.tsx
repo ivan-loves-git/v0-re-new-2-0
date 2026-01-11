@@ -9,8 +9,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "./status-badge"
 import { Badge } from "@/components/ui/badge"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
 import { MissingFieldsBadge } from "./missing-fields-badge"
+
+const ITEMS_PER_PAGE = 10
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
@@ -97,6 +107,12 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [collapsedGroups, setCollapsedGroups] = useState<Set<LifecycleStatus>>(new Set())
+  const [groupPages, setGroupPages] = useState<Record<LifecycleStatus, number>>({
+    lead: 1,
+    qualified: 1,
+    client: 1,
+    rejected: 1,
+  })
 
   const filtered = repreneurs.filter((r) => {
     const matchesSearch =
@@ -146,6 +162,16 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
       newCollapsed.add(status)
     }
     setCollapsedGroups(newCollapsed)
+  }
+
+  const setGroupPage = (status: LifecycleStatus, page: number) => {
+    setGroupPages((prev) => ({ ...prev, [status]: page }))
+  }
+
+  // Reset pages when search changes
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setGroupPages({ lead: 1, qualified: 1, client: 1, rejected: 1 })
   }
 
   const handleSort = (field: SortField) => {
@@ -306,7 +332,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           <Input
             placeholder="Search by name or email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10"
           />
         </div>
@@ -330,6 +356,11 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           if (group.length === 0 && statusFilter !== "all") return null
 
           const isCollapsed = collapsedGroups.has(status)
+          const currentPage = groupPages[status]
+          const totalPages = Math.ceil(group.length / ITEMS_PER_PAGE)
+          const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+          const endIndex = startIndex + ITEMS_PER_PAGE
+          const paginatedGroup = group.slice(startIndex, endIndex)
 
           return (
             <div key={status} className={`rounded-lg border ${STATUS_COLORS[status]}`}>
@@ -368,7 +399,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {group.map((repreneur) => (
+                      {paginatedGroup.map((repreneur) => (
                         <TableRow
                           key={repreneur.id}
                           className="cursor-pointer hover:bg-gray-50"
@@ -399,6 +430,58 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                      <span className="text-sm text-gray-500">
+                        Showing {startIndex + 1}-{Math.min(endIndex, group.length)} of {group.length}
+                      </span>
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => currentPage > 1 && setGroupPage(status, currentPage - 1)}
+                              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter((page) => {
+                              // Show first, last, current, and neighbors
+                              if (page === 1 || page === totalPages) return true
+                              if (Math.abs(page - currentPage) <= 1) return true
+                              return false
+                            })
+                            .map((page, index, arr) => {
+                              // Add ellipsis if there's a gap
+                              const showEllipsisBefore = index > 0 && page - arr[index - 1] > 1
+                              return (
+                                <span key={page} className="flex items-center">
+                                  {showEllipsisBefore && (
+                                    <span className="px-2 text-gray-400">...</span>
+                                  )}
+                                  <PaginationItem>
+                                    <PaginationLink
+                                      onClick={() => setGroupPage(status, page)}
+                                      isActive={currentPage === page}
+                                      className="cursor-pointer"
+                                    >
+                                      {page}
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                </span>
+                              )
+                            })}
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => currentPage < totalPages && setGroupPage(status, currentPage + 1)}
+                              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </div>
               )}
 

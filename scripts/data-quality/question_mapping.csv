@@ -1,0 +1,19 @@
+File_Column,Database_Field,Data_Type,Question_Meaning_GUESS,Sample_Values_From_File,Needs_Clarification,Clarification_Question
+Q1,q1_employment_status,TEXT,Employment status,"Employé à temps plein, Travailleur indépendant, Sans emploi, En transition professionnelle, Autre, Employé à temps partiel",NO,Clear from values
+Q2,q2_years_experience,TEXT,Years of professional experience,"<10 ans, 11 à 15 ans, 16 à 20 ans, >20 ans",NO,Clear from values
+Q3,q3_industry_sectors,JSONB array,Industry sectors of experience,"Agriculture, Finance & Assurances, Gestion des entreprises, Commerce de détail, etc (multi-select)",NO,Clear from values
+Q4,q4_has_ma_experience,BOOLEAN,Has M&A experience?,"Oui, Non",YES,"What exactly does this question ask? 'Avez-vous de l'expérience en M&A?' or something else?"
+Q5,q5_team_size,TEXT,Largest team size managed,"<10 pers., 11 à 20 pers., 20 à 50 pers., >50 pers.",NO,Clear from values
+Q6,q6_involved_in_ma,BOOLEAN,Directly involved in M&A transactions?,"Oui, Non",YES,"What's the exact question wording? How is this different from Q4?"
+Q7,q7_ma_details,TEXT,Details of M&A experience (free text),"Various long descriptions of M&A experience",NO,Free text field
+Q8,q8_executive_roles,JSONB array,Executive roles held,"CEO/Directeur, CFO, COO, CCO, CTO, Division Director, CHRO, Autres, Aucun (multi-select)",NO,Clear from values
+Q9,q9_board_experience,BOOLEAN,Board/advisory experience?,"Oui, Non",YES,"Exact question wording? Board member or advisory experience?"
+Q10,q10_journey_stages,JSONB array,Current acquisition journey stages,"Recherche d'informations uniquement, Premiers contacts avec des acteurs de la reprise, Formation à la reprise effectuée, Lettre de cadrage, Recherche de cibles, Financement défini (multi-select)",NO,Clear from values
+Q11,q11_target_sectors,JSONB array,Target acquisition sectors,"Same industry list as Q3 (multi-select)",NO,Clear from values
+Q12,q12_has_identified_targets,BOOLEAN,Has identified specific acquisition targets?,"Oui, Non",NO,Clear from values
+Q13,q13_target_details,TEXT,Details of identified targets (free text),"Various descriptions of target companies",NO,Free text field
+Q14,q14_investment_capacity,TEXT,Personal investment capacity range,"<150 K€, 151 K€ - 250 K€, 251 K€ - 350 K€, 351 K€ - 450 K€, >450 K€, En cours d'évaluation / à définir",NO,Clear from values
+Q15,q15_funding_status,TEXT,Funding status,"Déjà bouclé, En cours de validation",NO,Clear from values
+Q16,q16_network_training,JSONB array,Network/training affiliations,"C.R.A., CCI, Autres, Non aucune (multi-select)",YES,"What networks/training programs are these? What does CRA and CCI stand for?"
+Q17,q17_open_to_co_acquisition,BOOLEAN,Open to co-acquisition partnership?,"Oui, Non",NO,Clear from context
+Q18,NOT_IMPORTED,UNKNOWN,UNKNOWN - NOT IN DATABASE,"(empty in most rows - appears rarely used)",CRITICAL,"What is Q18? It exists in the file but was NOT imported to the database!"
