@@ -154,18 +154,18 @@ Skip roadmap for:
 ### How to Update
 1. Edit `components/guide/development-roadmap.tsx` - add new entry at TOP of `roadmapEvents` array
 2. Update `lib/data/roadmap-status.ts` - set `LAST_ROADMAP_UPDATE` to today's date (triggers red dot notification)
-3. Increment version number following this scheme:
-   - **0.9.x** = Current dev phase (0.9.9 → 0.9.10 → 0.9.11 is valid)
+3. Increment version number:
+   - Current: **0.7.0** (~70% to 1.0)
+   - Increment by 0.0.1 for small updates, 0.1.0 for bigger milestones
    - **1.0.0** = Production launch with real users
-   - After 1.0: patch (1.0.1) for fixes, minor (1.1.0) for features
 4. Commit with message: `📝 docs(roadmap): add [milestone name]`
-5. **ALWAYS tell Ivan**: "Roadmap updated with [milestone name] (v0.9.x)" so he knows it was done
+5. **ALWAYS tell Ivan**: "Roadmap updated with [milestone name] (vX.X.X)" so he knows it was done
 
 ### Entry Format
 ```typescript
 {
-  period: "Jan 11, 2026",
-  version: "0.9.9",
+  period: "Jan 12, 2026",
+  version: "0.7.1",
   title: "Milestone Name",
   isCompleted: true,
   events: [

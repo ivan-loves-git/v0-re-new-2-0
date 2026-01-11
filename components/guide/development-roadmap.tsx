@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 11, 2026",
-    version: "0.9.8",
+    version: "0.7.0",
     title: "Tier 1 Rating Improvements",
     isCompleted: true,
     events: [
@@ -38,7 +38,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 10, 2026",
-    version: "0.9.7",
+    version: "0.6.8",
     title: "Email System Live",
     isCompleted: true,
     events: [
@@ -61,7 +61,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 10, 2026",
-    version: "0.9.6",
+    version: "0.6.6",
     title: "Documents Management",
     isCompleted: true,
     events: [
@@ -94,7 +94,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 10, 2026",
-    version: "0.9.5",
+    version: "0.6.5",
     title: "Client Offers Timeline",
     isCompleted: true,
     events: [
@@ -127,7 +127,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 10, 2026",
-    version: "0.9.0",
+    version: "0.6.0",
     title: "Evaluation Criteria Visibility",
     isCompleted: true,
     events: [
@@ -155,7 +155,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 4, 2026 (PM)",
-    version: "0.8.50",
+    version: "0.5.5",
     title: "Email System Hardening",
     isCompleted: true,
     events: [
@@ -183,7 +183,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 4, 2026",
-    version: "0.8.40",
+    version: "0.5.4",
     title: "Production Ready",
     isCompleted: true,
     events: [
@@ -221,7 +221,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 4, 2026 (AM)",
-    version: "0.8.20",
+    version: "0.5.2",
     title: "Critical Infrastructure Fix",
     isCompleted: true,
     events: [
@@ -249,7 +249,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 3, 2026",
-    version: "0.8.0",
+    version: "0.5.0",
     title: "Wave Dashboard",
     isCompleted: true,
     events: [
@@ -282,7 +282,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 2, 2026",
-    version: "0.7.5",
+    version: "0.4.5",
     title: "V1.0 Enhancements",
     isCompleted: true,
     events: [
@@ -315,7 +315,7 @@ const roadmapEvents = [
   },
   {
     period: "Jan 1, 2026",
-    version: "0.7.0",
+    version: "0.4.0",
     title: "UX Polish Sprint",
     isCompleted: true,
     events: [
@@ -348,7 +348,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 31, 2025",
-    version: "0.6.1",
+    version: "0.3.8",
     title: "Bug Fixing Day",
     isCompleted: true,
     events: [
@@ -376,7 +376,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 30, 2025",
-    version: "0.6.0",
+    version: "0.3.5",
     title: "Core Feature Sprint",
     isCompleted: true,
     events: [
@@ -414,7 +414,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 29, 2025",
-    version: "0.5.0",
+    version: "0.3.0",
     title: "Platform Foundation",
     isCompleted: true,
     events: [
@@ -452,7 +452,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 27-28, 2025",
-    version: "0.4.0",
+    version: "0.2.5",
     title: "V0 Foundation",
     isCompleted: true,
     events: [
@@ -485,7 +485,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 22-26, 2025",
-    version: "0.3.0",
+    version: "0.2.0",
     title: "Architecture Planning",
     isCompleted: true,
     events: [
@@ -518,7 +518,7 @@ const roadmapEvents = [
   },
   {
     period: "Dec 18-21, 2025",
-    version: "0.2.0",
+    version: "0.1.5",
     title: "Requirements & Strategy",
     isCompleted: true,
     events: [
