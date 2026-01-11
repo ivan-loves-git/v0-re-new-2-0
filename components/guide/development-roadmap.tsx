@@ -9,6 +9,34 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Jan 11, 2026",
+    version: "0.9.8",
+    title: "Tier 1 Rating Improvements",
+    isCompleted: true,
+    events: [
+      {
+        title: "Compact inline editor on profile",
+        type: "feature",
+        description: "All 15 Tier 1 questions now editable directly on profile page. Collapsible panel with dropdowns, multi-selects (with search), and toggles. Auto-recalculates score on change.",
+      },
+      {
+        title: "LDC upload in intake form",
+        type: "feature",
+        description: "Lettre de Cadrage upload added to Step 4 (Goals) of public intake form. Amber-styled section with optional skip. Stored alongside CV.",
+      },
+      {
+        title: "Scoring algorithm fix",
+        type: "fix",
+        description: "Fixed critical bug where scoring algorithm ignored database criteria. Admin edits in /guide/evaluation now properly affect new intake scores. Uses DB values with hardcoded fallback.",
+      },
+      {
+        title: "Decision: In-place editing over wizard",
+        type: "decision",
+        description: "Replaced full-page questionnaire wizard for profile edits with compact inline editor. Faster for quick corrections while preserving step-by-step wizard for public intake.",
+      },
+    ],
+  },
+  {
     period: "Jan 10, 2026",
     version: "0.9.7",
     title: "Email System Live",
