@@ -356,18 +356,18 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
         </div>
 
         <div className="rounded-lg border bg-white">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("name")}>
+                <TableHead className="w-[25%] cursor-pointer" onClick={() => handleSort("name")}>
                   Name {sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
                 </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("email")}>
+                <TableHead className="w-[25%] cursor-pointer" onClick={() => handleSort("email")}>
                   Email {sortField === "email" && (sortDirection === "asc" ? "↑" : "↓")}
                 </TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Journey</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("created_at")}>
+                <TableHead className="w-[15%]">Status</TableHead>
+                <TableHead className="w-[20%]">Journey</TableHead>
+                <TableHead className="w-[15%] cursor-pointer" onClick={() => handleSort("created_at")}>
                   Created {sortField === "created_at" && (sortDirection === "asc" ? "↑" : "↓")}
                 </TableHead>
               </TableRow>
@@ -387,8 +387,8 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                     onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                     onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
                   >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
+                    <TableCell className="w-[25%]">
+                      <div className="flex items-center gap-3 min-w-0">
                         <RepreneurAvatar
                           repreneurId={repreneur.id}
                           avatarUrl={repreneur.avatar_url}
@@ -396,20 +396,20 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                           lastName={repreneur.last_name}
                           size="sm"
                         />
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 truncate">
                           {repreneur.first_name} {repreneur.last_name}
                         </span>
                         <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-600">{repreneur.email}</TableCell>
-                    <TableCell>
+                    <TableCell className="w-[25%] text-gray-600 truncate">{repreneur.email}</TableCell>
+                    <TableCell className="w-[15%]">
                       <StatusBadge status={repreneur.lifecycle_status} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="w-[20%]">
                       <JourneyDisplay repreneur={repreneur} />
                     </TableCell>
-                    <TableCell className="text-gray-600">
+                    <TableCell className="w-[15%] text-gray-600">
                       {new Date(repreneur.created_at).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
@@ -483,32 +483,32 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
 
               {!isCollapsed && group.length > 0 && (
                 <div className="bg-white rounded-b-lg">
-                  <Table>
+                  <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
                         <TableHead
-                          className="w-[22%] cursor-pointer hover:bg-gray-50"
+                          className="w-[25%] cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "name")}
                         >
                           Name{getSortIndicator(status, "name")}
                         </TableHead>
                         <TableHead
-                          className="w-[22%] cursor-pointer hover:bg-gray-50"
+                          className="w-[25%] cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "email")}
                         >
                           Email{getSortIndicator(status, "email")}
                         </TableHead>
                         <TableHead
-                          className="w-[20%] cursor-pointer hover:bg-gray-50"
+                          className="w-[18%] cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "status_column")}
                         >
                           {getStatusColumnHeader(status)}{getSortIndicator(status, "status_column")}
                         </TableHead>
-                        <TableHead className="w-[20%]">
+                        <TableHead className="w-[18%]">
                           Journey
                         </TableHead>
                         <TableHead
-                          className="w-[16%] text-right cursor-pointer hover:bg-gray-50"
+                          className="w-[14%] text-right cursor-pointer hover:bg-gray-50"
                           onClick={() => handleGroupSort(status, "created_at")}
                         >
                           Created{getSortIndicator(status, "created_at")}
@@ -523,8 +523,8 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                           onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                           onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
                         >
-                          <TableCell className="w-[22%]">
-                            <div className="flex items-center gap-3">
+                          <TableCell className="w-[25%]">
+                            <div className="flex items-center gap-3 min-w-0">
                               <RepreneurAvatar
                                 repreneurId={repreneur.id}
                                 avatarUrl={repreneur.avatar_url}
@@ -532,18 +532,18 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                                 lastName={repreneur.last_name}
                                 size="sm"
                               />
-                              <span className="font-medium text-gray-900">
+                              <span className="font-medium text-gray-900 truncate">
                                 {repreneur.first_name} {repreneur.last_name}
                               </span>
                               <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
                             </div>
                           </TableCell>
-                          <TableCell className="w-[22%] text-gray-600">{repreneur.email}</TableCell>
-                          <TableCell className="w-[20%]">{renderStatusColumn(repreneur)}</TableCell>
-                          <TableCell className="w-[20%]">
+                          <TableCell className="w-[25%] text-gray-600 truncate">{repreneur.email}</TableCell>
+                          <TableCell className="w-[18%]">{renderStatusColumn(repreneur)}</TableCell>
+                          <TableCell className="w-[18%]">
                             <JourneyDisplay repreneur={repreneur} />
                           </TableCell>
-                          <TableCell className="w-[16%] text-right text-gray-600">
+                          <TableCell className="w-[14%] text-right text-gray-600">
                             {new Date(repreneur.created_at).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
