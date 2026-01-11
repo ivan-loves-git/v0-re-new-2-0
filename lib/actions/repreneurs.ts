@@ -160,16 +160,27 @@ export async function updateRepreneurJourneyStage(id: string, stage: string | nu
 export async function updateRepreneurField(id: string, field: string, value: string | string[] | null) {
   const supabase = await createServerClient()
 
+  console.log(`[updateRepreneurField] Updating ${field} for ${id}`)
+
   const { error } = await supabase.from("repreneurs").update({ [field]: value }).eq("id", id)
 
   if (error) {
+    console.error(`[updateRepreneurField] Database error:`, error)
     throw new Error(error.message)
   }
 
-  revalidatePath("/repreneurs")
-  revalidatePath(`/repreneurs/${id}`)
-  revalidatePath("/pipeline")
-  revalidatePath("/journey")
+  console.log(`[updateRepreneurField] Database update successful, revalidating paths...`)
+
+  try {
+    revalidatePath("/repreneurs")
+    revalidatePath(`/repreneurs/${id}`)
+    revalidatePath("/pipeline")
+    revalidatePath("/journey")
+    console.log(`[updateRepreneurField] Revalidation complete`)
+  } catch (revalidateError) {
+    console.error(`[updateRepreneurField] Revalidation error:`, revalidateError)
+    // Don't throw - the update succeeded, revalidation is secondary
+  }
 }
 
 export async function createNote(repreneurId: string, content: string, noteType: string = "other") {
