@@ -28,7 +28,7 @@ There are 4 old dashboard versions that are not used anywhere. They add maintena
 - `components/learnings/swipe-course-selector.tsx` (545 lines)
 - `components/sidebar.tsx` (182 lines) - replaced by app-sidebar
 - `components/header.tsx` (51 lines) - not imported anywhere
-- `components/dashboard/top-scored-candidates.tsx` (85 lines)
+- `components/dashboard/top-scored-repreneurs.tsx` (85 lines)
 - `components/dashboard/activity-comparison.tsx` (80 lines)
 - `components/dashboard/stale-repreneurs-alert.tsx` (76 lines)
 
@@ -69,7 +69,7 @@ rm -rf components/learnings
 ```bash
 rm components/sidebar.tsx
 rm components/header.tsx
-rm components/dashboard/top-scored-candidates.tsx
+rm components/dashboard/top-scored-repreneurs.tsx
 rm components/dashboard/activity-comparison.tsx
 rm components/dashboard/stale-repreneurs-alert.tsx
 ```

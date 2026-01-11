@@ -10,8 +10,8 @@ import { pass, fail } from "../utils/assertions"
 import {
   getCountsByStatus,
   getCountsByJourneyStage,
-  getTopTier1Candidates,
-  getTopTier2Candidates
+  getTopTier1Repreneurs,
+  getTopTier2Repreneurs
 } from "../utils/supabase"
 import { calculateTier1Score } from "../../../lib/utils/tier1-scoring"
 
@@ -111,32 +111,32 @@ export const dataValidationTests: TestSuite = {
     },
 
     {
-      name: "Top Tier 1 candidates are sorted",
-      description: "Top candidates list is sorted by score descending",
+      name: "Top Tier 1 repreneurs are sorted",
+      description: "Top repreneurs list is sorted by score descending",
       async run(ctx: TestContext): Promise<TestResult> {
         const start = Date.now()
         try {
-          const topCandidates = await getTopTier1Candidates(5)
+          const topRepreneurs = await getTopTier1Repreneurs(5)
 
-          if (topCandidates.length < 2) {
-            return pass(this.name, `Only ${topCandidates.length} candidates with Tier 1 scores`, Date.now() - start)
+          if (topRepreneurs.length < 2) {
+            return pass(this.name, `Only ${topRepreneurs.length} repreneurs with Tier 1 scores`, Date.now() - start)
           }
 
           // Verify sorted descending
           let isSorted = true
-          for (let i = 1; i < topCandidates.length; i++) {
-            if ((topCandidates[i].tier1_score || 0) > (topCandidates[i-1].tier1_score || 0)) {
+          for (let i = 1; i < topRepreneurs.length; i++) {
+            if ((topRepreneurs[i].tier1_score || 0) > (topRepreneurs[i-1].tier1_score || 0)) {
               isSorted = false
               break
             }
           }
 
           if (isSorted) {
-            const scores = topCandidates.map(c => c.tier1_score).join(", ")
-            return pass(this.name, `Top Tier 1 candidates sorted: [${scores}]`, Date.now() - start)
+            const scores = topRepreneurs.map(c => c.tier1_score).join(", ")
+            return pass(this.name, `Top Tier 1 repreneurs sorted: [${scores}]`, Date.now() - start)
           }
 
-          return fail(this.name, "Top Tier 1 candidates not sorted correctly", {
+          return fail(this.name, "Top Tier 1 repreneurs not sorted correctly", {
             type: "assertion"
           }, Date.now() - start)
         } catch (error: any) {
@@ -146,32 +146,32 @@ export const dataValidationTests: TestSuite = {
     },
 
     {
-      name: "Top Tier 2 candidates are sorted",
-      description: "Top candidates list is sorted by stars descending",
+      name: "Top Tier 2 repreneurs are sorted",
+      description: "Top repreneurs list is sorted by stars descending",
       async run(ctx: TestContext): Promise<TestResult> {
         const start = Date.now()
         try {
-          const topCandidates = await getTopTier2Candidates(5)
+          const topRepreneurs = await getTopTier2Repreneurs(5)
 
-          if (topCandidates.length < 2) {
-            return pass(this.name, `Only ${topCandidates.length} candidates with Tier 2 ratings`, Date.now() - start)
+          if (topRepreneurs.length < 2) {
+            return pass(this.name, `Only ${topRepreneurs.length} repreneurs with Tier 2 ratings`, Date.now() - start)
           }
 
           // Verify sorted descending
           let isSorted = true
-          for (let i = 1; i < topCandidates.length; i++) {
-            if ((topCandidates[i].tier2_stars || 0) > (topCandidates[i-1].tier2_stars || 0)) {
+          for (let i = 1; i < topRepreneurs.length; i++) {
+            if ((topRepreneurs[i].tier2_stars || 0) > (topRepreneurs[i-1].tier2_stars || 0)) {
               isSorted = false
               break
             }
           }
 
           if (isSorted) {
-            const stars = topCandidates.map(c => c.tier2_stars).join(", ")
-            return pass(this.name, `Top Tier 2 candidates sorted: [${stars}]`, Date.now() - start)
+            const stars = topRepreneurs.map(c => c.tier2_stars).join(", ")
+            return pass(this.name, `Top Tier 2 repreneurs sorted: [${stars}]`, Date.now() - start)
           }
 
-          return fail(this.name, "Top Tier 2 candidates not sorted correctly", {
+          return fail(this.name, "Top Tier 2 repreneurs not sorted correctly", {
             type: "assertion"
           }, Date.now() - start)
         } catch (error: any) {

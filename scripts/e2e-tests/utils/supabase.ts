@@ -211,7 +211,7 @@ export async function getCountsByJourneyStage(): Promise<Record<string, number>>
 /**
  * Get top Tier 1 scored repreneurs
  */
-export async function getTopTier1Candidates(limit: number = 5): Promise<Repreneur[]> {
+export async function getTopTier1Repreneurs(limit: number = 5): Promise<Repreneur[]> {
   const client = getClient()
 
   const { data, error } = await client
@@ -223,7 +223,7 @@ export async function getTopTier1Candidates(limit: number = 5): Promise<Repreneu
     .limit(limit)
 
   if (error) {
-    console.error("Error getting top Tier 1 candidates:", error)
+    console.error("Error getting top Tier 1 repreneurs:", error)
     return []
   }
 
@@ -233,7 +233,7 @@ export async function getTopTier1Candidates(limit: number = 5): Promise<Repreneu
 /**
  * Get top Tier 2 rated repreneurs
  */
-export async function getTopTier2Candidates(limit: number = 5): Promise<Repreneur[]> {
+export async function getTopTier2Repreneurs(limit: number = 5): Promise<Repreneur[]> {
   const client = getClient()
 
   const { data, error } = await client
@@ -245,7 +245,7 @@ export async function getTopTier2Candidates(limit: number = 5): Promise<Repreneu
     .limit(limit)
 
   if (error) {
-    console.error("Error getting top Tier 2 candidates:", error)
+    console.error("Error getting top Tier 2 repreneurs:", error)
     return []
   }
 
