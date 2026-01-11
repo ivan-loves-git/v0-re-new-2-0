@@ -230,18 +230,26 @@ export default async function JourneyPage() {
               <CardContent className="pt-4">
                 {stageRepreneurs.length > 0 ? (
                   <div className="space-y-2">
-                    {stageRepreneurs.slice(0, 5).map((repreneur) => (
-                      <Link
-                        key={repreneur.id}
-                        href={`/repreneurs/${repreneur.id}`}
-                        className="block p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <p className="font-medium text-sm">
-                          {repreneur.first_name} {repreneur.last_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{repreneur.email}</p>
-                      </Link>
-                    ))}
+                    {stageRepreneurs.slice(0, 5).map((repreneur) => {
+                      const milestoneCount = getMilestoneCount(repreneur as Repreneur)
+                      return (
+                        <Link
+                          key={repreneur.id}
+                          href={`/repreneurs/${repreneur.id}`}
+                          className="block p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">
+                              {repreneur.first_name} {repreneur.last_name}
+                            </p>
+                            <Badge variant="outline" className="text-xs font-mono">
+                              {milestoneCount}/10
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{repreneur.email}</p>
+                        </Link>
+                      )
+                    })}
                     {stageRepreneurs.length > 5 && (
                       <p className="text-xs text-muted-foreground text-center pt-2">
                         +{stageRepreneurs.length - 5} more
