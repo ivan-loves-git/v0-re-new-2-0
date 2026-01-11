@@ -29,10 +29,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File size must be less than 5MB" }, { status: 400 })
     }
 
-    // Generate unique filename
+    // Generate unique filename (no subdirectory - bucket is already "avatars")
     const fileExt = file.name.split(".").pop()
     const fileName = `${repreneurId}-${Date.now()}.${fileExt}`
-    const filePath = `avatars/${fileName}`
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer()
@@ -41,20 +40,20 @@ export async function POST(request: NextRequest) {
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from("avatars")
-      .upload(filePath, buffer, {
+      .upload(fileName, buffer, {
         contentType: file.type,
         upsert: true,
       })
 
     if (error) {
-      console.error("Storage upload error:", error)
-      return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
+      console.error("Storage upload error:", error.message, error)
+      return NextResponse.json({ error: `Failed to upload file: ${error.message}` }, { status: 500 })
     }
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from("avatars")
-      .getPublicUrl(filePath)
+      .getPublicUrl(fileName)
 
     return NextResponse.json({ url: publicUrl })
   } catch (error) {

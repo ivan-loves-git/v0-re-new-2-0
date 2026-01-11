@@ -87,11 +87,13 @@ export function RepreneurAvatar({
         body: formData,
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        throw new Error("Upload failed")
+        throw new Error(result.error || "Upload failed")
       }
 
-      const { url } = await response.json()
+      const { url } = result
 
       // Update repreneur record
       await updateRepreneurField(repreneurId, "avatar_url", url)
