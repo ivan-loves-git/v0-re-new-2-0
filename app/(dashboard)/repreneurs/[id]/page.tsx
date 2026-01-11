@@ -209,15 +209,18 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <StatusBadge status={repreneur.lifecycle_status} />
-              <MissingFieldsBadge repreneur={repreneur} />
-            </div>
+            <MissingFieldsBadge repreneur={repreneur} />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Right side: Status + Journey Stage + Actions */}
+        <div className="flex flex-wrap items-start gap-4 sm:gap-6">
+          {/* Status */}
+          <div>
+            <Label className="text-xs text-gray-500 mb-1 block">Status</Label>
+            <StatusBadge status={repreneur.lifecycle_status} />
+          </div>
+          {/* Journey Stage */}
           {(() => {
-            // Derive journey stage from milestones
             const milestones = extractMilestones(repreneur)
             const milestoneCount = countMilestones(milestones)
             const derivedStage = deriveJourneyStage(milestoneCount, repreneur.persona)
@@ -227,15 +230,16 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                              derivedStage === "ready" ? Flag : Trophy
             return (
               <div>
-                <Label className="text-xs text-gray-500 mb-1 block">Journey Stage</Label>
+                <Label className="text-xs text-gray-500 mb-1 block">Journey</Label>
                 <Badge className={`gap-1.5 ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
                   <StageIcon className="h-3.5 w-3.5" />
                   {stageConfig.label}
-                  <span className="text-xs opacity-75">({milestoneCount}/10)</span>
+                  <span className="text-xs opacity-75">({milestoneCount}/11)</span>
                 </Badge>
               </div>
             )
           })()}
+          {/* Actions menu */}
           <div className="pt-5">
             <RepreneurActionsMenu
               repreneurId={repreneur.id}

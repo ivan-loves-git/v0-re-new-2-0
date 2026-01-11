@@ -610,14 +610,15 @@
         "id": "49",
         "title": "Email Automation Integration",
         "description": "Connect platform to AI-powered email automation for client communications",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "47",
           "48"
         ],
         "details": "Integrate smart email automation with the platform.\n\nPotential approaches:\n- Vercel AI SDK for email generation\n- Resend or SendGrid for delivery\n- Pre-built templates triggered by status changes\n- AI-assisted personalization based on repreneur profile\n\nUse cases:\n- Welcome emails on intake submission\n- Follow-up sequences based on journey stage\n- Offer notifications and reminders\n- Milestone completion updates\n\nNeeds research: Best tool/service for fast, effective email automation that integrates well with Next.js/Vercel stack.",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-01-11T17:14:16.454Z"
       },
       {
         "id": "50",
@@ -633,13 +634,27 @@
         "priority": "medium",
         "subtasks": [],
         "updatedAt": "2026-01-10T20:24:58.501Z"
+      },
+      {
+        "id": "51",
+        "title": "Review and Improve Milestone and Stage Labels in Structured Readiness Journey",
+        "description": "Evaluate and enhance the naming conventions for milestones and stage transitions in the Structured Readiness Journey system to improve user comprehension and business alignment.",
+        "details": "This task involves a comprehensive review and improvement of the naming conventions in the Structured Readiness Journey system:\n\n1. Schedule a review meeting with Bertrand to understand business requirements and expectations for milestone naming.\n\n2. Audit the current naming system:\n   - Document all 11 milestone labels currently in use\n   - Document the 3 stage group titles (Explorer→Learner, Learner→Ready, Ready→Serial)\n   - Review how these labels display in the Journey page boxes\n   - Review how these labels appear in profile milestone cards\n\n3. Analyze naming issues:\n   - Identify unintuitive or confusing terminology\n   - Note any inconsistencies in naming patterns\n   - Evaluate if labels clearly communicate progress/status to users\n   - Check for business terminology alignment\n\n4. Develop improved naming proposals:\n   - Create alternative naming options for each milestone\n   - Propose revised stage transition labels that better reflect the journey\n   - Consider progressive disclosure principles in naming (earlier stages should use simpler terminology)\n\n5. Implementation steps:\n   - Update database schema if needed to accommodate new naming conventions\n   - Modify frontend components to display new labels:\n     - Journey page milestone boxes\n     - Profile milestone cards\n     - Any other UI elements referencing these labels\n   - Update any related documentation or help text\n\n6. Consider localization requirements if the platform supports multiple languages.\n\n7. Document the final approved naming conventions for future reference and onboarding.",
+        "testStrategy": "1. Verification Testing:\n   - Create a comprehensive test matrix listing all UI locations where milestone and stage labels appear\n   - Verify each location displays the updated labels correctly\n   - Check responsive behavior on different screen sizes\n\n2. User Acceptance Testing:\n   - Prepare a demonstration for Bertrand and key stakeholders\n   - Walk through the journey flow with new labels to confirm they meet business requirements\n   - Document any feedback for potential refinements\n\n3. Regression Testing:\n   - Ensure label changes don't break any existing functionality\n   - Verify that milestone tracking and progression still work correctly\n   - Check that any reports or analytics using these labels are updated\n\n4. Database Integrity:\n   - Verify that any database changes maintain data integrity\n   - Ensure historical data is properly migrated or handled\n\n5. Documentation Review:\n   - Update any user guides, help documentation, or training materials\n   - Ensure internal documentation reflects the new naming conventions\n\n6. A/B Testing (if applicable):\n   - Consider limited rollout to test user comprehension of new labels\n   - Gather metrics on user progression through the journey stages with new labels",
+        "status": "pending",
+        "dependencies": [
+          "41",
+          "47"
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-01-10T20:32:04.654Z",
-      "taskCount": 36,
-      "completedCount": 35,
+      "lastModified": "2026-01-11T17:14:16.455Z",
+      "taskCount": 37,
+      "completedCount": 36,
       "tags": [
         "master"
       ]
