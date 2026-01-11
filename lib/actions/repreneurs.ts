@@ -713,9 +713,8 @@ export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Di
     throw new Error(error.message)
   }
 
-  revalidatePath("/repreneurs")
+  // Only revalidate the specific profile page (optimistic UI handles immediate feedback)
   revalidatePath(`/repreneurs/${id}`)
-  revalidatePath("/pipeline")
 }
 
 /**
@@ -737,7 +736,6 @@ export async function toggleMilestone(id: string, milestoneKey: MilestoneKey, va
     throw new Error(error.message)
   }
 
-  revalidatePath("/repreneurs")
+  // Only revalidate the specific profile page (optimistic UI handles immediate feedback)
   revalidatePath(`/repreneurs/${id}`)
-  revalidatePath("/journey")
 }
