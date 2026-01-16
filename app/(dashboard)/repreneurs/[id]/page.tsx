@@ -30,7 +30,7 @@ import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
 import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/lib/constants/investment-ranges"
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
-import type { RepreneurOffer, Offer } from "@/lib/types/offer"
+import type { RepreneurOffer, Offer, OfferMilestone } from "@/lib/types/offer"
 
 // Cache for 30 seconds
 export const revalidate = 30
@@ -97,7 +97,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   const currentUser = userResult.data?.user
 
   // Try to fetch milestones separately (table may not exist yet)
-  let milestonesMap: Record<string, any[]> = {}
+  let milestonesMap: Record<string, OfferMilestone[]> = {}
   if (repreneurOffers.length > 0) {
     try {
       const { data: allMilestones } = await supabase
@@ -106,13 +106,16 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         .in("repreneur_offer_id", repreneurOffers.map(ro => ro.id))
 
       if (allMilestones) {
-        milestonesMap = allMilestones.reduce((acc: Record<string, any[]>, m: any) => {
-          if (!acc[m.repreneur_offer_id]) acc[m.repreneur_offer_id] = []
-          acc[m.repreneur_offer_id].push(m)
-          return acc
-        }, {})
+        milestonesMap = (allMilestones as OfferMilestone[]).reduce(
+          (acc: Record<string, OfferMilestone[]>, m) => {
+            if (!acc[m.repreneur_offer_id]) acc[m.repreneur_offer_id] = []
+            acc[m.repreneur_offer_id].push(m)
+            return acc
+          },
+          {}
+        )
       }
-    } catch (e) {
+    } catch {
       // offer_milestones table may not exist yet
       console.log("Milestones table not available yet")
     }
@@ -125,7 +128,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   }
 
   // Transform notes to include placeholder email
-  const notesWithEmail = notes.map((note: any) => ({
+  const notesWithEmail = notes.map((note) => ({
     ...note,
     created_by_email: "Team",
   }))
@@ -137,7 +140,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   }))
 
   // Transform activities to include creator email
-  const activitiesWithEmail = activities.map((activity: any) => ({
+  const activitiesWithEmail = activities.map((activity) => ({
     ...activity,
     created_by_email: userEmailMap[activity.created_by] || "Team",
   }))

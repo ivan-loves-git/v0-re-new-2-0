@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo } from "react"
 import { useRouter } from "next/navigation"
 import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -57,7 +57,7 @@ const STATUS_COLORS: Record<LifecycleStatus, string> = {
   rejected: "bg-red-50 border-red-200",
 }
 
-function StarDisplay({ stars }: { stars: number | null | undefined }) {
+const StarDisplay = memo(function StarDisplay({ stars }: { stars: number | null | undefined }) {
   if (!stars) return <span className="text-gray-400 text-sm">Not rated</span>
   return (
     <div className="flex items-center gap-1">
@@ -71,9 +71,9 @@ function StarDisplay({ stars }: { stars: number | null | undefined }) {
       ))}
     </div>
   )
-}
+})
 
-function ScoreDisplay({ score }: { score: number | null | undefined }) {
+const ScoreDisplay = memo(function ScoreDisplay({ score }: { score: number | null | undefined }) {
   if (score === null || score === undefined) {
     return <span className="text-gray-400 text-sm">N/A</span>
   }
@@ -83,9 +83,9 @@ function ScoreDisplay({ score }: { score: number | null | undefined }) {
       <span className="font-medium">{score}</span>
     </div>
   )
-}
+})
 
-function OfferDisplay({ offers }: { offers: string[] | undefined }) {
+const OfferDisplay = memo(function OfferDisplay({ offers }: { offers: string[] | undefined }) {
   if (!offers || offers.length === 0) {
     return <span className="text-gray-400 text-sm">No offers</span>
   }
@@ -105,10 +105,10 @@ function OfferDisplay({ offers }: { offers: string[] | undefined }) {
       )}
     </div>
   )
-}
+})
 
-function JourneyDisplay({ repreneur }: { repreneur: RepreneurWithOffers }) {
-  const milestones = extractMilestones(repreneur as any)
+const JourneyDisplay = memo(function JourneyDisplay({ repreneur }: { repreneur: RepreneurWithOffers }) {
+  const milestones = extractMilestones(repreneur)
   const milestoneCount = countMilestones(milestones)
   const derivedStage = deriveJourneyStage(milestoneCount, repreneur.persona)
   const stageConfig = getStageConfig(derivedStage)
@@ -126,7 +126,7 @@ function JourneyDisplay({ repreneur }: { repreneur: RepreneurWithOffers }) {
       <span className="text-xs text-gray-500">({milestoneCount}/10)</span>
     </div>
   )
-}
+})
 
 const DEFAULT_GROUP_SORT: GroupSortState = { field: "created_at", direction: "desc" }
 
