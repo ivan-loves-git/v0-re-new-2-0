@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { AlertTriangle, RefreshCw, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +13,8 @@ export default function DashboardError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const router = useRouter()
+
   useEffect(() => {
     // Log the error to console in development
     console.error("Dashboard error:", error)
@@ -50,7 +53,7 @@ export default function DashboardError({
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => window.location.href = "/repreneurs"}
+              onClick={() => router.push("/repreneurs")}
             >
               <Home className="mr-2 h-4 w-4" />
               Go to dashboard

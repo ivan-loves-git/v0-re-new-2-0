@@ -189,16 +189,8 @@ export default function LoginPage() {
 
   const isAnimating = isTouchActive || isHovering
 
-  // Check if already logged in on mount - redirect to dashboard
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: session } = await getSession()
-      if (session) {
-        window.location.href = "/dashboard"
-      }
-    }
-    checkSession()
-  }, [])
+  // Note: Middleware handles redirecting logged-in users to /dashboard
+  // No need for client-side session check here
 
   // Detect hover capability on mount
   useEffect(() => {
