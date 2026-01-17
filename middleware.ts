@@ -1,13 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 
 export async function middleware(request: NextRequest) {
-  // Get session from Better Auth
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  })
-
-  const isLoggedIn = !!session?.user
+  // Check for Better Auth session cookie (works in Edge runtime)
+  // The actual session validation happens in server components/actions
+  const sessionCookie = request.cookies.get("better-auth.session_token")
+  const isLoggedIn = !!sessionCookie?.value
   const { pathname } = request.nextUrl
 
   // Protected routes - require authentication

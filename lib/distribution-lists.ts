@@ -19,6 +19,7 @@ export const FOUNDERS_TEAM_2_0: DistributionList = {
   name: "Founders & Team 2.0",
   description: "ESCP EMBA founders group and team 2.0 members",
   contacts: [
+    { name: "Bertrand Galas", email: "bertrand.galas@edu.escp.eu" },
     { name: "Amelie Lyon", email: "amelie.lyon@edu.escp.eu" },
     { name: "Antoine Duchene", email: "antoine.duchene@edu.escp.eu" },
     { name: "Alexandre Devulder", email: "alexandre.devulder@sony.com" },
