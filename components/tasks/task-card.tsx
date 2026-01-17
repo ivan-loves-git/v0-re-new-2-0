@@ -23,7 +23,6 @@ import {
   canStart,
   getBlockingTasks,
   getStatusColor,
-  getPriorityColor,
 } from "@/lib/types/task"
 import { updateTaskStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
@@ -124,13 +123,6 @@ export function TaskCard({ task, allTasks, onEdit, onDelete }: TaskCardProps) {
       >
         {task.title}
       </span>
-
-      {/* Priority Badge */}
-      {task.priority && task.priority !== "medium" && (
-        <Badge className={cn("text-[10px] px-1.5 py-0 h-5", getPriorityColor(task.priority))}>
-          {task.priority}
-        </Badge>
-      )}
 
       {/* Owner */}
       {task.owner_name && (

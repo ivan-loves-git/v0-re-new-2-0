@@ -34,9 +34,11 @@ const STATUSES: TaskStatus[] = ["pending", "in_progress", "blocked", "completed"
 const OWNERS = ["Bertrand", "Amélie", "Antoine", "Ivan"]
 
 type ViewMode = "list" | "kanban" | "table"
+type GroupBy = "stream" | "owner" | "due_date"
 
 export function TaskList({ tasks }: TaskListProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("list")
+  const [groupBy, setGroupBy] = useState<GroupBy>("stream")
   const [filterStream, setFilterStream] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterOwner, setFilterOwner] = useState<string>("all")
@@ -67,27 +69,52 @@ export function TaskList({ tasks }: TaskListProps) {
     })
   }, [tasks, filterStream, filterStatus, filterOwner, searchQuery])
 
-  // Group tasks by stream
+  // Group tasks based on groupBy setting
   const groupedTasks = useMemo(() => {
     const groups: Record<string, Task[]> = {}
 
-    // Initialize all streams
-    STREAMS.forEach((stream) => {
-      groups[stream] = []
-    })
-    groups["unassigned"] = []
-
-    // Group filtered tasks
-    filteredTasks.forEach((task) => {
-      const stream = task.stream || "unassigned"
-      if (!groups[stream]) {
+    if (groupBy === "stream") {
+      // Initialize all streams
+      STREAMS.forEach((stream) => {
         groups[stream] = []
-      }
-      groups[stream].push(task)
-    })
+      })
+      groups["unassigned"] = []
+
+      // Group filtered tasks
+      filteredTasks.forEach((task) => {
+        const stream = task.stream || "unassigned"
+        if (!groups[stream]) {
+          groups[stream] = []
+        }
+        groups[stream].push(task)
+      })
+    } else if (groupBy === "owner") {
+      // Initialize all owners
+      OWNERS.forEach((owner) => {
+        groups[owner] = []
+      })
+      groups["Unassigned"] = []
+
+      // Group filtered tasks by owner
+      filteredTasks.forEach((task) => {
+        const owner = task.owner_name || "Unassigned"
+        if (!groups[owner]) {
+          groups[owner] = []
+        }
+        groups[owner].push(task)
+      })
+    } else if (groupBy === "due_date") {
+      // Single group sorted by due date
+      groups["all"] = [...filteredTasks].sort((a, b) => {
+        if (!a.expected_end_date && !b.expected_end_date) return 0
+        if (!a.expected_end_date) return 1
+        if (!b.expected_end_date) return -1
+        return new Date(a.expected_end_date).getTime() - new Date(b.expected_end_date).getTime()
+      })
+    }
 
     return groups
-  }, [filteredTasks])
+  }, [filteredTasks, groupBy])
 
   // Stats
   const stats = useMemo(() => {
@@ -208,6 +235,20 @@ export function TaskList({ tasks }: TaskListProps) {
 
         <div className="w-px h-6 bg-gray-300 hidden sm:block" />
 
+        {/* Group By */}
+        <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+          <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectValue placeholder="Group by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="stream">By Stream</SelectItem>
+            <SelectItem value="owner">By Owner</SelectItem>
+            <SelectItem value="due_date">By Due Date</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="w-px h-6 bg-gray-300 hidden sm:block" />
+
         {/* Filters */}
         <Select value={filterStream} onValueChange={setFilterStream}>
           <SelectTrigger className="w-[130px] h-8 text-xs">
@@ -294,75 +335,94 @@ export function TaskList({ tasks }: TaskListProps) {
         <>
           {/* Task Groups - List View */}
           <div className="space-y-3">
-            {STREAMS.map((stream) => {
-              const streamTasks = groupedTasks[stream]
-              if (filterStream !== "all" && filterStream !== stream) return null
-              if (streamTasks.length === 0 && filterStream !== stream) return null
+            {groupBy === "stream" && (
+              <>
+                {STREAMS.map((stream) => {
+                  const streamTasks = groupedTasks[stream] || []
+                  if (filterStream !== "all" && filterStream !== stream) return null
+                  if (streamTasks.length === 0 && filterStream !== stream) return null
 
-              const completedCount = streamTasks.filter((t) => t.status === "completed").length
-              const progress = streamTasks.length > 0 ? (completedCount / streamTasks.length) * 100 : 0
+                  const completedCount = streamTasks.filter((t) => t.status === "completed").length
+                  const progress = streamTasks.length > 0 ? (completedCount / streamTasks.length) * 100 : 0
 
-              return (
-                <div key={stream} className="space-y-1">
-                  {/* Stream Header */}
-                  <div className="flex items-center gap-2">
-                    <Badge className={cn("text-[10px]", getStreamColor(stream))}>{getStreamLabel(stream)}</Badge>
-                    <span className="text-[10px] text-gray-500">
-                      {completedCount}/{streamTasks.length}
-                    </span>
-                    {/* Progress bar */}
-                    <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden max-w-[100px]">
-                      <div
-                        className="h-full bg-green-500 transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      />
+                  return (
+                    <div key={stream} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge className={cn("text-[10px]", getStreamColor(stream))}>{getStreamLabel(stream)}</Badge>
+                        <span className="text-[10px] text-gray-500">
+                          {completedCount}/{streamTasks.length}
+                        </span>
+                        <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden max-w-[100px]">
+                          <div className="h-full bg-green-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                        </div>
+                      </div>
+                      {streamTasks.length > 0 ? (
+                        <div className="space-y-0.5 pl-2 border-l-2 border-gray-200">
+                          {streamTasks.map((task) => (
+                            <TaskCard key={task.id} task={task} allTasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="pl-2 border-l-2 border-gray-200">
+                          <p className="text-[10px] text-gray-400 italic py-1">No tasks</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Tasks */}
-                  {streamTasks.length > 0 ? (
+                  )
+                })}
+                {groupedTasks["unassigned"]?.length > 0 && filterStream === "all" && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-gray-100 text-gray-700 text-[10px]">Unassigned</Badge>
+                      <span className="text-[10px] text-gray-500">{groupedTasks["unassigned"].length}</span>
+                    </div>
                     <div className="space-y-0.5 pl-2 border-l-2 border-gray-200">
-                      {streamTasks.map((task) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          allTasks={tasks}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                        />
+                      {groupedTasks["unassigned"].map((task) => (
+                        <TaskCard key={task.id} task={task} allTasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
                       ))}
                     </div>
-                  ) : (
-                    <div className="pl-2 border-l-2 border-gray-200">
-                      <p className="text-[10px] text-gray-400 italic py-1">
-                        No tasks
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                  </div>
+                )}
+              </>
+            )}
 
-            {/* Unassigned tasks */}
-            {groupedTasks["unassigned"]?.length > 0 && filterStream === "all" && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-gray-100 text-gray-700 text-[10px]">Unassigned</Badge>
-                  <span className="text-[10px] text-gray-500">
-                    {groupedTasks["unassigned"].length}
-                  </span>
-                </div>
-                <div className="space-y-0.5 pl-2 border-l-2 border-gray-200">
-                  {groupedTasks["unassigned"].map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      allTasks={tasks}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
+            {groupBy === "owner" && (
+              <>
+                {[...OWNERS, "Unassigned"].map((owner) => {
+                  const ownerTasks = groupedTasks[owner] || []
+                  if (filterOwner !== "all" && filterOwner !== owner) return null
+                  if (ownerTasks.length === 0) return null
+
+                  const completedCount = ownerTasks.filter((t) => t.status === "completed").length
+                  const progress = ownerTasks.length > 0 ? (completedCount / ownerTasks.length) * 100 : 0
+
+                  return (
+                    <div key={owner} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-700 text-[10px]">@{owner}</Badge>
+                        <span className="text-[10px] text-gray-500">
+                          {completedCount}/{ownerTasks.length}
+                        </span>
+                        <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden max-w-[100px]">
+                          <div className="h-full bg-green-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                        </div>
+                      </div>
+                      <div className="space-y-0.5 pl-2 border-l-2 border-gray-200">
+                        {ownerTasks.map((task) => (
+                          <TaskCard key={task.id} task={task} allTasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {groupBy === "due_date" && (
+              <div className="space-y-0.5">
+                {(groupedTasks["all"] || []).map((task) => (
+                  <TaskCard key={task.id} task={task} allTasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
+                ))}
               </div>
             )}
           </div>

@@ -29,7 +29,6 @@ import {
   canStart,
   getBlockingTasks,
   getStatusColor,
-  getPriorityColor,
   getStreamLabel,
   getStreamColor,
 } from "@/lib/types/task"
@@ -146,11 +145,6 @@ export function TaskTable({ tasks, allTasks, onEdit, onDelete }: TaskTableProps)
                     >
                       {task.title}
                     </span>
-                    {task.priority && task.priority !== "medium" && (
-                      <Badge className={cn("text-[10px] px-1 py-0 h-4", getPriorityColor(task.priority))}>
-                        {task.priority}
-                      </Badge>
-                    )}
                     {blockingTasks.length > 0 && (
                       <span className="text-[10px] text-orange-600 flex items-center gap-0.5">
                         <Link2 className="h-3 w-3" />

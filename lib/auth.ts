@@ -68,6 +68,11 @@ export const auth = betterAuth({
     useSecureCookies: process.env.NODE_ENV === "production",
   },
 
+  // Rate limiting (disabled for initial setup, re-enable later)
+  rateLimit: {
+    enabled: false,
+  },
+
   // Trusted origins for CORS
   trustedOrigins: [
     process.env.BETTER_AUTH_URL || "http://localhost:3000",
