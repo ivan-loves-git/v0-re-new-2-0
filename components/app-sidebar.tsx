@@ -58,7 +58,6 @@ const mainNavigation = [
   { name: "Repreneurs", href: "/repreneurs", icon: Users },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Emails", href: "/emails", icon: Mail },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
   { name: "Development", href: "/development", icon: Code, badge: "WIP" },
@@ -68,6 +67,7 @@ const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
   { name: "Evaluation", href: "/guide/evaluation", icon: ClipboardList },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
