@@ -1,5 +1,4 @@
 export type TaskStatus = "pending" | "in_progress" | "blocked" | "completed"
-export type TaskPriority = "low" | "medium" | "high" | "critical"
 export type TaskStream = "questionnaire" | "emails" | "branding" | "testing" | "go_live"
 
 export interface Task {
@@ -13,7 +12,6 @@ export interface Task {
 
   // Status
   status: TaskStatus
-  priority: TaskPriority
 
   // Timeline
   expected_start_date?: string
@@ -42,7 +40,6 @@ export interface Task_Insert {
   owner_id?: string
   owner_name?: string
   status?: TaskStatus
-  priority?: TaskPriority
   expected_start_date?: string
   expected_end_date?: string
   depends_on?: string[]
@@ -57,7 +54,6 @@ export interface Task_Update {
   owner_id?: string
   owner_name?: string
   status?: TaskStatus
-  priority?: TaskPriority
   expected_start_date?: string
   expected_end_date?: string
   actual_start_date?: string
@@ -115,20 +111,6 @@ export function getStatusColor(status: TaskStatus): string {
     case "pending":
     default:
       return "bg-gray-100 text-gray-700 border-gray-200"
-  }
-}
-
-export function getPriorityColor(priority: TaskPriority): string {
-  switch (priority) {
-    case "critical":
-      return "bg-red-100 text-red-700"
-    case "high":
-      return "bg-orange-100 text-orange-700"
-    case "medium":
-      return "bg-yellow-100 text-yellow-700"
-    case "low":
-    default:
-      return "bg-gray-100 text-gray-600"
   }
 }
 

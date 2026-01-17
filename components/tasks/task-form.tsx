@@ -22,7 +22,6 @@ import {
 import {
   type Task,
   type TaskStatus,
-  type TaskPriority,
   type TaskStream,
   getStreamLabel,
 } from "@/lib/types/task"
@@ -37,7 +36,6 @@ const TEAM_MEMBERS = [
 ]
 
 const STREAMS: TaskStream[] = ["questionnaire", "emails", "branding", "testing", "go_live"]
-const PRIORITIES: TaskPriority[] = ["low", "medium", "high", "critical"]
 const STATUSES: TaskStatus[] = ["pending", "in_progress", "blocked", "completed"]
 
 interface TaskFormProps {
@@ -55,7 +53,6 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
   const [description, setDescription] = useState(task?.description || "")
   const [ownerName, setOwnerName] = useState(task?.owner_name || "")
   const [status, setStatus] = useState<TaskStatus>(task?.status || "pending")
-  const [priority, setPriority] = useState<TaskPriority>(task?.priority || "medium")
   const [stream, setStream] = useState<TaskStream | "">(task?.stream || "")
   const [expectedEndDate, setExpectedEndDate] = useState(task?.expected_end_date || "")
   const [dependsOn, setDependsOn] = useState<string[]>(task?.depends_on || [])
@@ -67,7 +64,6 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
     setDescription("")
     setOwnerName("")
     setStatus("pending")
-    setPriority("medium")
     setStream("")
     setExpectedEndDate("")
     setDependsOn([])
@@ -81,7 +77,6 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
       setDescription(task.description || "")
       setOwnerName(task.owner_name || "")
       setStatus(task.status)
-      setPriority(task.priority)
       setStream(task.stream || "")
       setExpectedEndDate(task.expected_end_date || "")
       setDependsOn(task.depends_on || [])
@@ -108,7 +103,6 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
           description: description.trim() || undefined,
           owner_name: ownerName || undefined,
           status,
-          priority,
           stream: stream || undefined,
           expected_end_date: expectedEndDate || undefined,
           depends_on: dependsOn,
@@ -121,7 +115,6 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
           description: description.trim() || undefined,
           owner_name: ownerName || undefined,
           status,
-          priority,
           stream: stream || undefined,
           expected_end_date: expectedEndDate || undefined,
           depends_on: dependsOn,
@@ -244,40 +237,22 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
               </div>
             </div>
 
-            {/* Status and Priority Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s.replace("_", " ").charAt(0).toUpperCase() +
-                          s.replace("_", " ").slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Priority</Label>
-                <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRIORITIES.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p.charAt(0).toUpperCase() + p.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Status */}
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s.replace("_", " ").charAt(0).toUpperCase() +
+                        s.replace("_", " ").slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Due Date */}

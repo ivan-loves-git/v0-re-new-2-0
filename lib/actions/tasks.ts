@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
-import type { Task, Task_Insert, Task_Update, TaskStatus, TaskStream, TaskPriority } from "@/lib/types/task"
+import type { Task, Task_Insert, Task_Update, TaskStatus, TaskStream } from "@/lib/types/task"
 
 export async function getTasks(): Promise<Task[]> {
   const supabase = createAdminClient()
@@ -59,7 +59,6 @@ export async function createTask(data: {
   description?: string
   owner_name?: string
   status?: TaskStatus
-  priority?: TaskPriority
   expected_start_date?: string
   expected_end_date?: string
   depends_on?: string[]
@@ -78,7 +77,6 @@ export async function createTask(data: {
     // Using owner_name instead for display
     owner_name: data.owner_name || undefined,
     status: data.status || "pending",
-    priority: data.priority || "medium",
     expected_start_date: data.expected_start_date || undefined,
     expected_end_date: data.expected_end_date || undefined,
     depends_on: data.depends_on || [],
