@@ -10,6 +10,34 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 18, 2026",
+    version: "0.8.5",
+    title: "Auth Signup & Production Fixes",
+    isCompleted: true,
+    events: [
+      {
+        title: "Signup functionality",
+        type: "feature",
+        description: "Added signup option to login page. Toggle between Sign In and Sign Up modes. New users can create accounts with name, email, and password.",
+      },
+      {
+        title: "Production cookie fix",
+        type: "fix",
+        description: "Fixed middleware to handle __Secure- cookie prefix in production. Login now works correctly on deployed Vercel instance.",
+      },
+      {
+        title: "ICP Team email corrected",
+        type: "fix",
+        description: "Fixed ICP Team quick access button to use correct email (renew@icpteam.eu) instead of placeholder.",
+      },
+      {
+        title: "Database schema for Better Auth",
+        type: "decision",
+        description: "Created camelCase tables (user, session, account, verification) matching Better Auth's expected schema. Deployed via Supabase SQL Editor.",
+      },
+    ],
+  },
+  {
+    period: "Jan 18, 2026",
     version: "0.8.4",
     title: "Task Management UI Improvements",
     isCompleted: true,
