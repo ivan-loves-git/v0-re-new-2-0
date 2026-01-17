@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { signIn, getSession } from "@/lib/auth-client"
+import { signIn, signUp, getSession } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -168,8 +168,10 @@ const teamMembers = [
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
 export default function LoginPage() {
+  const [mode, setMode] = useState<"signin" | "signup">("signin")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
@@ -280,6 +282,51 @@ export default function LoginPage() {
     }
   }
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    if (!name.trim()) {
+      setError("Please enter your name")
+      setLoading(false)
+      return
+    }
+
+    console.log("[Signup] Starting signup for:", email)
+
+    try {
+      const result = await signUp.email({
+        email,
+        password,
+        name: name.trim(),
+      })
+
+      console.log("[Signup] Result:", result)
+
+      if (result.error) {
+        console.log("[Signup] Error:", result.error)
+        setError(result.error.message || "Failed to create account")
+        setLoading(false)
+        return
+      }
+
+      if (result.data) {
+        console.log("[Signup] Success, redirecting to dashboard...")
+        window.location.href = "/dashboard"
+      } else {
+        console.log("[Signup] No data returned")
+        setError("Account created but sign in failed. Please try signing in.")
+        setMode("signin")
+        setLoading(false)
+      }
+    } catch (err: any) {
+      console.error("[Signup] Exception:", err)
+      setError(err?.message || "An unexpected error occurred")
+      setLoading(false)
+    }
+  }
+
   const selectUser = useCallback((e: React.MouseEvent, member: (typeof teamMembers)[0]) => {
     // Trigger confetti from button center
     const rect = (e.target as HTMLElement).closest("button")?.getBoundingClientRect()
@@ -359,67 +406,94 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign in</h1>
-            <p className="text-gray-500">Choose your account to continue</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {mode === "signin" ? "Sign in" : "Create account"}
+            </h1>
+            <p className="text-gray-500">
+              {mode === "signin" ? "Choose your account to continue" : "Enter your details to get started"}
+            </p>
           </div>
 
-          {/* Quick access - Horizontal layout from v2 (avatar on top, name/role below) */}
-          <div className="mb-6">
-            <div className="flex items-center gap-1.5 mb-3">
-              <p className="text-sm font-medium text-gray-700">Quick access</p>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors">
-                    <Info className="h-3.5 w-3.5 text-gray-400 cursor-help" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent side="top" className="max-w-xs p-3">
-                  <p className="text-sm">
-                    Temporary feature to speed up testing. Credentials will be provided to all users and this section will be removed once live.
-                  </p>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              {teamMembers.map((member) => (
-                <button
-                  key={member.email}
-                  type="button"
-                  onClick={(e) => selectUser(e, member)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105 ${
-                    selectedUser === member.email
-                      ? "bg-blue-50 ring-2 ring-blue-500"
-                      : "bg-gray-50 hover:bg-gray-100"
-                  }`}
-                >
-                  <Image
-                    src={member.avatar}
-                    alt={member.name}
-                    width={56}
-                    height={56}
-                    className="rounded-full object-cover"
-                  />
-                  <div className="text-center">
-                    <p className="font-medium text-gray-900 text-sm truncate w-full">{member.name}</p>
-                    <p className="text-xs text-gray-500 truncate w-full">{member.role}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Quick access - Only show in signin mode */}
+          {mode === "signin" && (
+            <>
+              <div className="mb-6">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <p className="text-sm font-medium text-gray-700">Quick access</p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors">
+                        <Info className="h-3.5 w-3.5 text-gray-400 cursor-help" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" className="max-w-xs p-3">
+                      <p className="text-sm">
+                        Temporary feature to speed up testing. Credentials will be provided to all users and this section will be removed once live.
+                      </p>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {teamMembers.map((member) => (
+                    <button
+                      key={member.email}
+                      type="button"
+                      onClick={(e) => selectUser(e, member)}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105 ${
+                        selectedUser === member.email
+                          ? "bg-blue-50 ring-2 ring-blue-500"
+                          : "bg-gray-50 hover:bg-gray-100"
+                      }`}
+                    >
+                      <Image
+                        src={member.avatar}
+                        alt={member.name}
+                        width={56}
+                        height={56}
+                        className="rounded-full object-cover"
+                      />
+                      <div className="text-center">
+                        <p className="font-medium text-gray-900 text-sm truncate w-full">{member.name}</p>
+                        <p className="text-xs text-gray-500 truncate w-full">{member.role}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-4 text-gray-400 tracking-wider">or continue with email</span>
-            </div>
-          </div>
+              {/* Divider */}
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-4 text-gray-400 tracking-wider">or continue with email</span>
+                </div>
+              </div>
+            </>
+          )}
 
-          {/* Login form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          {/* Auth form */}
+          <form onSubmit={mode === "signin" ? handleLogin : handleSignup} className="space-y-4">
+            {/* Name field - only for signup */}
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-gray-700">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-gray-700">
                 Email
@@ -442,6 +516,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                placeholder={mode === "signup" ? "Min 6 characters" : ""}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -461,9 +536,38 @@ export default function LoginPage() {
               className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
               disabled={loading}
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading
+                ? (mode === "signin" ? "Signing in..." : "Creating account...")
+                : (mode === "signin" ? "Sign In" : "Create Account")}
             </Button>
           </form>
+
+          {/* Toggle between signin and signup */}
+          <p className="text-center text-sm text-gray-500 mt-6">
+            {mode === "signin" ? (
+              <>
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signup"); setError(null); setSelectedUser(null) }}
+                  className="text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signin"); setError(null) }}
+                  className="text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
 
           {/* Status indicator - mobile only (at bottom of form) */}
           <div className="flex lg:hidden items-center justify-center gap-2 text-gray-400 text-sm mt-8">
