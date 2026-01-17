@@ -248,28 +248,34 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
 
+    console.log("[Login] Starting login for:", email)
+
     try {
-      const { data, error } = await signIn.email({
+      const result = await signIn.email({
         email,
         password,
       })
 
-      if (error) {
-        setError(error.message || "Invalid email or password")
+      console.log("[Login] Result:", result)
+
+      if (result.error) {
+        console.log("[Login] Error:", result.error)
+        setError(result.error.message || "Invalid email or password")
         setLoading(false)
         return
       }
 
-      if (data) {
-        setTimeout(() => {
-          window.location.href = "/dashboard"
-        }, 100)
+      if (result.data) {
+        console.log("[Login] Success, redirecting to dashboard...")
+        window.location.href = "/dashboard"
       } else {
+        console.log("[Login] No data returned")
         setError("Login succeeded but no session was created. Please try again.")
         setLoading(false)
       }
-    } catch (err) {
-      setError("An unexpected error occurred")
+    } catch (err: any) {
+      console.error("[Login] Exception:", err)
+      setError(err?.message || "An unexpected error occurred")
       setLoading(false)
     }
   }
