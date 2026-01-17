@@ -162,7 +162,7 @@ const teamMembers = [
   { name: "Bertrand", role: "Founder", email: "bertrand.galas@edu.escp.eu", avatar: "/team/bertrand.png" },
   { name: "Amelie", role: "Founder", email: "amelie.lyon@edu.escp.eu", avatar: "/team/amelie.png" },
   { name: "Antoine", role: "Founder", email: "antoine.duchene@edu.escp.eu", avatar: "/team/antoine.png" },
-  { name: "ICP Team", role: "Anyone", email: "I.Swear.Im.Doing.My.Best@gmail.com", avatar: "/team/icp-team.png" },
+  { name: "ICP Team", role: "Anyone", email: "renew@icpteam.eu", avatar: "/team/icp-team.png" },
 ]
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
