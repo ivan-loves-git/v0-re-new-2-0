@@ -34,6 +34,11 @@ const roadmapEvents = [
         type: "feature",
         description: "New /api/auth/create-users endpoint to seed initial users. Protected by admin secret in production.",
       },
+      {
+        title: "Tasks: Better Auth compatibility",
+        type: "fix",
+        description: "Updated task actions to use admin client (bypasses RLS). Auth verified at app layer via requireUser(). Removed FK-dependent fields.",
+      },
     ],
   },
   {
