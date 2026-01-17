@@ -9,6 +9,34 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Jan 17, 2026",
+    version: "0.8.1",
+    title: "Security Audit & Codebase Cleanup",
+    isCompleted: true,
+    events: [
+      {
+        title: "10 security issues fixed",
+        type: "fix",
+        description: "SQL injection protection, API auth checks, webhook signature enforcement, file upload validation (magic bytes), atomic DB operations, race condition fixes.",
+      },
+      {
+        title: "Dead code removed",
+        type: "refactor",
+        description: "Removed ~1,665 lines: 4 unused dashboard versions, development/test pages, unused components. Cleaner codebase, faster builds.",
+      },
+      {
+        title: "Database performance indexes",
+        type: "feature",
+        description: "Added 6 indexes for activities, notes, email_logs, and repreneurs tables. Queries will stay fast as data grows.",
+      },
+      {
+        title: "Type safety improvements",
+        type: "fix",
+        description: "Fixed email template types, function signatures, and metadata structures. Better TypeScript strictness.",
+      },
+    ],
+  },
+  {
     period: "Jan 11, 2026",
     version: "0.8.0",
     title: "Structured Readiness Journey",
