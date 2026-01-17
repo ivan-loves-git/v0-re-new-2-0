@@ -4,6 +4,25 @@ import { Pool } from "pg"
 import { resend, FROM_EMAIL, FROM_NAME } from "@/lib/email/resend-client"
 
 /**
+ * Database connection pool singleton
+ * Prevents creating new connections on every import in serverless environment
+ */
+let pool: Pool | null = null
+
+function getPool(): Pool {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false, // Required for Supabase
+      },
+      max: 5, // Limit connections for serverless
+    })
+  }
+  return pool
+}
+
+/**
  * Better Auth server configuration
  * Uses Supabase PostgreSQL for storage
  *
@@ -13,12 +32,7 @@ import { resend, FROM_EMAIL, FROM_NAME } from "@/lib/email/resend-client"
  * - BETTER_AUTH_URL: Base URL of the app (e.g., http://localhost:3000)
  */
 export const auth = betterAuth({
-  database: new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false, // Required for Supabase
-    },
-  }),
+  database: getPool(),
 
   // Email/password authentication
   emailAndPassword: {
