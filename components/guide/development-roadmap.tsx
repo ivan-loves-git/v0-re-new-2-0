@@ -9,6 +9,34 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Jan 18, 2026",
+    version: "0.8.4",
+    title: "Task Management UI Improvements",
+    isCompleted: true,
+    events: [
+      {
+        title: "Kanban board view",
+        type: "feature",
+        description: "New board view showing tasks in columns by status: To Do, In Progress, Blocked, Done. Quick status updates with click actions.",
+      },
+      {
+        title: "View switcher",
+        type: "feature",
+        description: "Toggle between List view (grouped by stream) and Board view (grouped by status). Remembers preference during session.",
+      },
+      {
+        title: "Compact task cards",
+        type: "style",
+        description: "Reduced vertical whitespace in task list. Smaller padding, tighter spacing, more tasks visible on screen.",
+      },
+      {
+        title: "Edit form sync fix",
+        type: "fix",
+        description: "Task edit form now properly populates when clicking edit. Title and status now match the selected task.",
+      },
+    ],
+  },
+  {
     period: "Jan 17, 2026",
     version: "0.8.3",
     title: "Better Auth Migration",

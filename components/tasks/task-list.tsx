@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { Plus, Filter, LayoutGrid, List } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { TaskCard } from "./task-card"
 import { TaskForm } from "./task-form"
+import { TaskKanban } from "./task-kanban"
 import {
   type Task,
   type TaskStatus,
@@ -29,7 +31,10 @@ const STREAMS: TaskStream[] = ["questionnaire", "emails", "branding", "testing",
 const STATUSES: TaskStatus[] = ["pending", "in_progress", "blocked", "completed"]
 const OWNERS = ["Bertrand", "Amélie", "Antoine", "Ivan"]
 
+type ViewMode = "list" | "kanban"
+
 export function TaskList({ tasks }: TaskListProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>("list")
   const [filterStream, setFilterStream] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterOwner, setFilterOwner] = useState<string>("all")
@@ -116,9 +121,9 @@ export function TaskList({ tasks }: TaskListProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {/* Stats Badges */}
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             <Badge className="bg-green-100 text-green-700">
               {stats.completed}/{stats.total} done
             </Badge>
@@ -132,9 +137,37 @@ export function TaskList({ tasks }: TaskListProps) {
             )}
           </div>
 
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
+          {/* View Switcher */}
+          <div className="flex items-center rounded-md border bg-gray-50 p-0.5">
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded transition-colors",
+                viewMode === "list"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              <List className="h-4 w-4" />
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded transition-colors",
+                viewMode === "kanban"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="hidden sm:inline">Board</span>
+            </button>
+          </div>
+
+          <Button onClick={() => setShowForm(true)} size="sm">
+            <Plus className="h-4 w-4 mr-1" />
+            Add
           </Button>
         </div>
       </div>
@@ -196,37 +229,77 @@ export function TaskList({ tasks }: TaskListProps) {
         </span>
       </div>
 
-      {/* Task Groups */}
-      <div className="space-y-8">
-        {STREAMS.map((stream) => {
-          const streamTasks = groupedTasks[stream]
-          if (filterStream !== "all" && filterStream !== stream) return null
-          if (streamTasks.length === 0 && filterStream !== stream) return null
+      {/* View Content */}
+      {viewMode === "kanban" ? (
+        <TaskKanban
+          tasks={filteredTasks}
+          allTasks={tasks}
+          onEdit={handleEdit}
+        />
+      ) : (
+        <>
+          {/* Task Groups - List View */}
+          <div className="space-y-4">
+            {STREAMS.map((stream) => {
+              const streamTasks = groupedTasks[stream]
+              if (filterStream !== "all" && filterStream !== stream) return null
+              if (streamTasks.length === 0 && filterStream !== stream) return null
 
-          const completedCount = streamTasks.filter((t) => t.status === "completed").length
-          const progress = streamTasks.length > 0 ? (completedCount / streamTasks.length) * 100 : 0
+              const completedCount = streamTasks.filter((t) => t.status === "completed").length
+              const progress = streamTasks.length > 0 ? (completedCount / streamTasks.length) * 100 : 0
 
-          return (
-            <div key={stream} className="space-y-3">
-              {/* Stream Header */}
-              <div className="flex items-center gap-3">
-                <Badge className={getStreamColor(stream)}>{getStreamLabel(stream)}</Badge>
-                <span className="text-sm text-gray-500">
-                  {completedCount}/{streamTasks.length} tasks
-                </span>
-                {/* Progress bar */}
-                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden max-w-xs">
-                  <div
-                    className="h-full bg-green-500 transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
+              return (
+                <div key={stream} className="space-y-1">
+                  {/* Stream Header */}
+                  <div className="flex items-center gap-2">
+                    <Badge className={cn("text-xs", getStreamColor(stream))}>{getStreamLabel(stream)}</Badge>
+                    <span className="text-xs text-gray-500">
+                      {completedCount}/{streamTasks.length}
+                    </span>
+                    {/* Progress bar */}
+                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden max-w-[120px]">
+                      <div
+                        className="h-full bg-green-500 transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tasks */}
+                  {streamTasks.length > 0 ? (
+                    <div className="space-y-1 pl-3 border-l-2 border-gray-200">
+                      {streamTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          allTasks={tasks}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="pl-3 border-l-2 border-gray-200">
+                      <p className="text-xs text-gray-400 italic py-2">
+                        No tasks in this stream
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )
+            })}
 
-              {/* Tasks */}
-              {streamTasks.length > 0 ? (
-                <div className="space-y-2 pl-4 border-l-2 border-gray-200">
-                  {streamTasks.map((task) => (
+            {/* Unassigned tasks */}
+            {groupedTasks["unassigned"]?.length > 0 && filterStream === "all" && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-gray-100 text-gray-700 text-xs">Unassigned</Badge>
+                  <span className="text-xs text-gray-500">
+                    {groupedTasks["unassigned"].length}
+                  </span>
+                </div>
+                <div className="space-y-1 pl-3 border-l-2 border-gray-200">
+                  {groupedTasks["unassigned"].map((task) => (
                     <TaskCard
                       key={task.id}
                       task={task}
@@ -236,43 +309,14 @@ export function TaskList({ tasks }: TaskListProps) {
                     />
                   ))}
                 </div>
-              ) : (
-                <div className="pl-4 border-l-2 border-gray-200">
-                  <p className="text-sm text-gray-400 italic py-4">
-                    No tasks in this stream
-                  </p>
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        {/* Unassigned tasks */}
-        {groupedTasks["unassigned"]?.length > 0 && filterStream === "all" && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Badge className="bg-gray-100 text-gray-700">Unassigned</Badge>
-              <span className="text-sm text-gray-500">
-                {groupedTasks["unassigned"].length} tasks
-              </span>
-            </div>
-            <div className="space-y-2 pl-4 border-l-2 border-gray-200">
-              {groupedTasks["unassigned"].map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  allTasks={tasks}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Empty State */}
-      {filteredTasks.length === 0 && (
+      {filteredTasks.length === 0 && viewMode === "list" && (
         <div className="text-center py-12">
           <p className="text-gray-500">No tasks found</p>
           {hasFilters && (

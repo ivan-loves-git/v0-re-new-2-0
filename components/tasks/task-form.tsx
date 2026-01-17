@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -61,6 +61,35 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
   const [dependsOn, setDependsOn] = useState<string[]>(task?.depends_on || [])
   const [notes, setNotes] = useState(task?.notes || "")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const resetForm = () => {
+    setTitle("")
+    setDescription("")
+    setOwnerName("")
+    setStatus("pending")
+    setPriority("medium")
+    setStream("")
+    setExpectedEndDate("")
+    setDependsOn([])
+    setNotes("")
+  }
+
+  // Sync form state when task prop changes
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title)
+      setDescription(task.description || "")
+      setOwnerName(task.owner_name || "")
+      setStatus(task.status)
+      setPriority(task.priority)
+      setStream(task.stream || "")
+      setExpectedEndDate(task.expected_end_date || "")
+      setDependsOn(task.depends_on || [])
+      setNotes(task.notes || "")
+    } else {
+      resetForm()
+    }
+  }, [task])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -132,31 +161,9 @@ export function TaskForm({ task, allTasks, open, onOpenChange, onSuccess }: Task
     }
   }
 
-  const resetForm = () => {
-    setTitle("")
-    setDescription("")
-    setOwnerName("")
-    setStatus("pending")
-    setPriority("medium")
-    setStream("")
-    setExpectedEndDate("")
-    setDependsOn([])
-    setNotes("")
-  }
-
-  // When dialog opens with a task to edit, populate the form
+  // Simplified since useEffect handles state sync
   const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen && task) {
-      setTitle(task.title)
-      setDescription(task.description || "")
-      setOwnerName(task.owner_name || "")
-      setStatus(task.status)
-      setPriority(task.priority)
-      setStream(task.stream || "")
-      setExpectedEndDate(task.expected_end_date || "")
-      setDependsOn(task.depends_on || [])
-      setNotes(task.notes || "")
-    } else if (!newOpen) {
+    if (!newOpen) {
       resetForm()
     }
     onOpenChange(newOpen)

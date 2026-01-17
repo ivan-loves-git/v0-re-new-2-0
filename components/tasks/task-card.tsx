@@ -91,14 +91,14 @@ export function TaskCard({ task, allTasks, onEdit, onDelete }: TaskCardProps) {
   return (
     <Card
       className={cn(
-        "transition-all duration-200",
+        "transition-all duration-200 shadow-none",
         task.status === "completed" && "opacity-60",
         !canBeStarted && task.status === "pending" && "border-dashed border-gray-300",
         delayDays > 0 && task.status !== "completed" && "border-red-300 bg-red-50/30"
       )}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+      <CardContent className="px-3 py-2">
+        <div className="flex items-center gap-2">
           {/* Status Toggle */}
           <button
             onClick={() =>
@@ -106,7 +106,7 @@ export function TaskCard({ task, allTasks, onEdit, onDelete }: TaskCardProps) {
             }
             disabled={isUpdating || (!canBeStarted && task.status !== "completed")}
             className={cn(
-              "mt-0.5 flex-shrink-0 transition-opacity",
+              "flex-shrink-0 transition-opacity",
               isUpdating && "opacity-50 cursor-wait",
               !canBeStarted && task.status !== "completed" && "cursor-not-allowed"
             )}
@@ -148,7 +148,7 @@ export function TaskCard({ task, allTasks, onEdit, onDelete }: TaskCardProps) {
             </div>
 
             {/* Meta Row */}
-            <div className="flex items-center gap-3 mt-1 text-sm text-gray-500 flex-wrap">
+            <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
               {task.owner_name && (
                 <span className="flex items-center gap-1">
                   <User className="h-3.5 w-3.5" />
