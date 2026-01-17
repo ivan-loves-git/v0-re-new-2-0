@@ -8,6 +8,7 @@ import {
   Text,
   Link,
   Hr,
+  Img,
 } from "@react-email/components"
 import * as React from "react"
 
@@ -16,14 +17,15 @@ interface BaseLayoutProps {
   children: React.ReactNode
 }
 
-// Re-New brand colors
+// Re-New brand colors (from re-new.team website)
 const colors = {
-  primary: "#2563eb", // Blue
-  primaryDark: "#1d4ed8",
+  primary: "#1a1a2e", // Dark navy (matches website header)
+  accent: "#4f46e5", // Indigo accent
   text: "#1f2937",
   textLight: "#6b7280",
   background: "#ffffff",
   border: "#e5e7eb",
+  headerBg: "#0f0f1a", // Dark header like website
 }
 
 const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif'
@@ -35,9 +37,15 @@ export function BaseLayout({ previewText, children }: BaseLayoutProps) {
       <Preview>{previewText}</Preview>
       <Body style={body}>
         <Container style={container}>
-          {/* Header */}
+          {/* Header with logo */}
           <Section style={header}>
-            <Text style={logo}>Re-New</Text>
+            <Img
+              src="https://cdn.prod.website-files.com/68a87ebceebd6aec9fa8d6b3/68b6fe35798e1c15b9e24ed3_Logo%20White.svg"
+              alt="Re-New"
+              width="120"
+              height="auto"
+              style={logoImg}
+            />
           </Section>
 
           {/* Main Content */}
@@ -50,8 +58,8 @@ export function BaseLayout({ previewText, children }: BaseLayoutProps) {
               Vous recevez cet email car vous vous etes inscrit sur Re-New.
             </Text>
             <Text style={footerText}>
-              <Link href="https://re-new.com" style={footerLink}>
-                re-new.com
+              <Link href="https://re-new.team" style={footerLink}>
+                re-new.team
               </Link>
             </Text>
             <Text style={footerTextSmall}>
@@ -82,17 +90,13 @@ const container: React.CSSProperties = {
 }
 
 const header: React.CSSProperties = {
-  backgroundColor: colors.primary,
-  padding: "24px",
+  backgroundColor: colors.headerBg,
+  padding: "28px 24px",
   textAlign: "center" as const,
 }
 
-const logo: React.CSSProperties = {
-  color: "#ffffff",
-  fontSize: "28px",
-  fontWeight: "bold",
-  margin: 0,
-  letterSpacing: "-0.5px",
+const logoImg: React.CSSProperties = {
+  margin: "0 auto",
 }
 
 const main: React.CSSProperties = {
@@ -122,7 +126,7 @@ const footerTextSmall: React.CSSProperties = {
 }
 
 const footerLink: React.CSSProperties = {
-  color: colors.primary,
+  color: colors.accent,
   textDecoration: "none",
 }
 
@@ -143,7 +147,7 @@ export const paragraph: React.CSSProperties = {
 }
 
 export const button: React.CSSProperties = {
-  backgroundColor: colors.primary,
+  backgroundColor: colors.accent,
   borderRadius: "6px",
   color: "#ffffff",
   display: "inline-block",
@@ -155,14 +159,14 @@ export const button: React.CSSProperties = {
 }
 
 export const highlight: React.CSSProperties = {
-  backgroundColor: "#f0f9ff",
+  backgroundColor: "#f5f3ff", // Light indigo to match accent
   borderRadius: "8px",
   padding: "16px",
   margin: "16px 0",
 }
 
 export const highlightText: React.CSSProperties = {
-  color: colors.primary,
+  color: colors.accent,
   fontSize: "32px",
   fontWeight: "bold",
   margin: "0",

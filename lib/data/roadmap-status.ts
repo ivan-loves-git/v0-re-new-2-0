@@ -2,7 +2,7 @@
 // Update this date whenever significant roadmap features are added
 // The red dot will show on the sidebar for 7 days after this date
 
-export const LAST_ROADMAP_UPDATE = new Date("2026-01-17")
+export const LAST_ROADMAP_UPDATE = new Date("2026-01-18")
 
 export function hasRecentRoadmapUpdates(): boolean {
   const now = new Date()

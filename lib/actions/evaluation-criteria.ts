@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import type { EvaluationTier } from "@/lib/types/evaluation-criteria"
 
@@ -16,13 +17,8 @@ export async function updateCriterion(
 ) {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   const { error } = await supabase
     .from("evaluation_criteria")
@@ -50,13 +46,8 @@ export async function updateQuestionLabel(
 ) {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   const { error } = await supabase
     .from("evaluation_criteria")
@@ -87,13 +78,8 @@ export async function updateMultipleCriteria(
 ) {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   // Update each criterion
   for (const update of updates) {

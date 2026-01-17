@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { calculateTier1Score } from "@/lib/utils/tier1-scoring"
+import { getCurrentUser } from "@/lib/auth-server"
 
 const TEST_REPRENEURS = [
   {
@@ -407,10 +408,8 @@ const ACTIVITY_TEMPLATES: { type: "welcome_email" | "interview" | "offer_submitt
 export async function POST() {
   const supabase = await createServerClient()
 
-  // Get current user for created_by field
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Get current user for created_by field using Better Auth
+  const user = await getCurrentUser()
 
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })

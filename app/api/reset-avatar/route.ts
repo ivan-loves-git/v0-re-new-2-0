@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { createServerClient } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth-server"
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser()
+    // Check authentication using Better Auth
+    const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import type { Offer_Insert, OfferStatus, MilestoneType } from "@/lib/types/offer"
@@ -80,13 +81,8 @@ export async function toggleOfferActive(id: string, isActive: boolean) {
 export async function assignOfferToRepreneur(repreneurId: string, offerId: string) {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   // Insert the offer assignment
   const { error: offerError } = await supabase.from("repreneur_offers").insert({
@@ -272,13 +268,8 @@ export async function createMilestone(
 ) {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   const { error } = await supabase.from("offer_milestones").insert({
     repreneur_offer_id: repreneurOfferId,

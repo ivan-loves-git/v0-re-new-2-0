@@ -1,5 +1,6 @@
 import { Suspense } from "react"
-import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth-server"
 import { StatsColumn } from "@/components/dashboard/stats-column"
 import { GlobalActivityStream } from "@/components/dashboard/global-activity-stream"
 import { RecentlyAddedRepreneurs } from "@/components/dashboard/recently-added-repreneurs"
@@ -94,16 +95,13 @@ function ChartSkeleton() {
 
 // Server component for Stats + Top Tiers row
 async function StatsAndTiersRow() {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
 
-  // Parallel fetch - both queries run simultaneously
-  const [repreneursResult, userResult] = await Promise.all([
-    supabase
-      .from("repreneurs")
-      .select("*")
-      .order("created_at", { ascending: false }),
-    supabase.auth.getUser()
-  ])
+  // Fetch repreneurs
+  const repreneursResult = await supabase
+    .from("repreneurs")
+    .select("*")
+    .order("created_at", { ascending: false })
 
   const repreneurs = repreneursResult.data || []
 
@@ -169,10 +167,13 @@ async function StatsAndTiersRow() {
 
 // Server component for Funnel + Journey + Activity + Recent row
 async function MiddleRow() {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
+
+  // Get current user from Better Auth
+  const user = await getCurrentUser()
 
   // Parallel fetch - all queries run simultaneously
-  const [repreneursResult, activitiesResult, userResult] = await Promise.all([
+  const [repreneursResult, activitiesResult] = await Promise.all([
     supabase
       .from("repreneurs")
       .select("*")
@@ -193,18 +194,16 @@ async function MiddleRow() {
         )
       `)
       .order("created_at", { ascending: false })
-      .limit(20),
-    supabase.auth.getUser()
+      .limit(20)
   ])
 
   const repreneurs = repreneursResult.data || []
   const allActivities = activitiesResult.data || []
-  const user = userResult.data?.user
 
   // Build user email map
   const userEmailMap: Record<string, string> = {}
   if (user) {
-    userEmailMap[user.id] = user.email?.split('@')[0] || 'Team'
+    userEmailMap[user.id] = user.email?.split('@')[0] || user.name || 'Team'
   }
 
   // Calculate counts
@@ -274,7 +273,7 @@ async function MiddleRow() {
 
 // Server component for Charts row
 async function ChartsRow() {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
 
   // Parallel fetch
   const [repreneursResult, activitiesResult] = await Promise.all([

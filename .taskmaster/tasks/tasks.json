@@ -681,12 +681,25 @@
         ],
         "priority": "high",
         "subtasks": []
+      },
+      {
+        "id": 54,
+        "title": "Migrate Authentication from Supabase Auth to Better Auth",
+        "description": "Replace Supabase Auth with Better Auth for self-hosted, TypeScript-first authentication. Improves long-term flexibility, removes vendor lock-in, and provides foundation for future features (2FA, OAuth, organizations).",
+        "details": "Migration involves:\n\n1. Install better-auth package\n2. Create lib/auth.ts with Better Auth configuration using existing Supabase PostgreSQL\n3. Create lib/auth-client.ts for React client\n4. Add API route handler at app/api/auth/[...all]/route.ts\n5. Run database migrations for Better Auth tables (user, session, account, verification)\n6. Update login page (preserve quick-access buttons, confetti, animated logo)\n7. Update logout route\n8. Replace all supabase.auth calls across 18+ files\n9. Create proper auth middleware (fixes issue #002)\n10. Re-create 4 users with password Wave2025!\n\nPreserved UX:\n- Quick access team buttons (Bertrand, Amelie, Antoine, ICP Team)\n- Confetti animation on selection\n- Animated Wave logo with emoji cycling\n- Same password (Wave2025!) for easy testing",
+        "testStrategy": "1. Login flow: Email/password works for all 4 users\n2. Session persistence: Refresh page stays logged in\n3. Logout: Clears session and redirects\n4. Protected routes: Unauthenticated users redirected to login\n5. Quick access: Pre-fill buttons still work\n6. All dashboard pages accessible when logged in",
+        "status": "in-progress",
+        "dependencies": [12],
+        "priority": "high",
+        "subtasks": [],
+        "createdAt": "2026-01-17",
+        "implementationNotes": "Strategic decision: Better Auth provides TypeScript-first auth, self-hosted control, and foundation for RBAC needed in tasks 52-53. Zero cost (MIT license). Supabase PostgreSQL remains the database."
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-01-11T17:14:16.455Z",
-      "taskCount": 37,
+      "lastModified": "2026-01-17T17:30:00.000Z",
+      "taskCount": 38,
       "completedCount": 36,
       "tags": [
         "master"

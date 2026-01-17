@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import type { Repreneur_Insert, LifecycleStatus, PersonaType, Tier2Dimensions, MilestoneKey } from "@/lib/types/repreneur"
@@ -14,14 +15,8 @@ import { RejectionEmail } from "@/lib/email/templates/rejection"
 export async function createRepreneur(formData: FormData) {
   const supabase = await createServerClient()
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   // Parse sector preferences (now sent as JSON array)
   const sectorPrefsRaw = formData.get("sector_preferences") as string
@@ -188,14 +183,8 @@ export async function updateRepreneurField(id: string, field: string, value: str
 export async function createNote(repreneurId: string, content: string, noteType: string = "other") {
   const supabase = await createServerClient()
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   const { error } = await supabase.from("notes").insert({
     repreneur_id: repreneurId,

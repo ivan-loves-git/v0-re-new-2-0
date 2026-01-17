@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { signIn, getSession } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -190,8 +190,7 @@ export default function LoginPage() {
   // Check if already logged in on mount - redirect to dashboard
   useEffect(() => {
     const checkSession = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: session } = await getSession()
       if (session) {
         window.location.href = "/dashboard"
       }
@@ -249,21 +248,19 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
 
-    const supabase = createClient()
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await signIn.email({
         email,
         password,
       })
 
       if (error) {
-        setError(error.message)
+        setError(error.message || "Invalid email or password")
         setLoading(false)
         return
       }
 
-      if (data.session) {
+      if (data) {
         setTimeout(() => {
           window.location.href = "/dashboard"
         }, 100)

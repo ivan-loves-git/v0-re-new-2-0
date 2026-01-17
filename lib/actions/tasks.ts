@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import type { Task, Task_Insert, Task_Update, TaskStatus, TaskStream, TaskPriority } from "@/lib/types/task"
 
@@ -68,13 +69,8 @@ export async function createTask(data: {
 }): Promise<Task> {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   const task: Task_Insert = {
     title: data.title,

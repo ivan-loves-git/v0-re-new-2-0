@@ -1,9 +1,9 @@
 import type React from "react"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { FloatingNav } from "@/components/floating-nav"
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/lib/auth"
 
 export default async function DashboardLayout({
   children,
@@ -21,13 +21,12 @@ export default async function DashboardLayout({
   let userName: string | undefined
 
   if (!isV0Preview) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    })
     // User is guaranteed to exist here because middleware redirects if not authenticated
-    userEmail = user?.email || "unknown@renew.com"
-    userName = user?.user_metadata?.full_name
+    userEmail = session?.user?.email || "unknown@renew.com"
+    userName = session?.user?.name
   }
 
   return (

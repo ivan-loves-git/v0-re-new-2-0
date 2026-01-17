@@ -10,6 +10,34 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 17, 2026",
+    version: "0.8.3",
+    title: "Better Auth Migration",
+    isCompleted: true,
+    events: [
+      {
+        title: "Switched to Better Auth",
+        type: "decision",
+        description: "Migrated from Supabase Auth to Better Auth, a TypeScript-first, self-hosted authentication library. Gives full control over auth without Supabase lock-in.",
+      },
+      {
+        title: "New auth middleware",
+        type: "feature",
+        description: "Created Next.js middleware for route protection. Automatically redirects unauthenticated users to login. Handles protected routes and session management.",
+      },
+      {
+        title: "Email/password auth preserved",
+        type: "feature",
+        description: "Same login flow: email + password. Quick access buttons still work with same team members. Password: Wave2025!",
+      },
+      {
+        title: "User creation API",
+        type: "feature",
+        description: "New /api/auth/create-users endpoint to seed initial users. Protected by admin secret in production.",
+      },
+    ],
+  },
+  {
+    period: "Jan 17, 2026",
     version: "0.8.2",
     title: "Task Management for V1.0 Launch",
     isCompleted: true,

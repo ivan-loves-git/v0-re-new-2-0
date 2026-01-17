@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { updateRepreneurField } from "@/lib/actions/repreneurs"
+import { getCurrentUser } from "@/lib/auth-server"
 
 // Allowed document file types
 const ALLOWED_TYPES = [
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // For authenticated users, use their client; for public intake, use admin
     const supabase = await createServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
 
     // Use admin client for storage operations (needed for public intake form)
     const adminClient = createAdminClient()
@@ -95,8 +96,8 @@ export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser()
+    // Check authentication using Better Auth
+    const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { getCurrentUser } from "@/lib/auth-server"
 
 // Distribution: explorer (4), learner (3), ready (2), serial_acquirer (2)
 const JOURNEY_STAGE_DISTRIBUTION: Record<string, string> = {
@@ -19,10 +20,8 @@ const JOURNEY_STAGE_DISTRIBUTION: Record<string, string> = {
 export async function POST() {
   const supabase = await createServerClient()
 
-  // Get current user for authentication check
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Get current user for authentication check using Better Auth
+  const user = await getCurrentUser()
 
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })

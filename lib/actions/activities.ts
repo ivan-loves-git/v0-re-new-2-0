@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import type { ActivityType, Activity_Insert } from "@/lib/types/repreneur"
 
@@ -12,13 +13,8 @@ export async function createActivity(
 ) {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  // Get current user from Better Auth
+  const user = await requireUser()
 
   const activity: Activity_Insert = {
     repreneur_id: repreneurId,

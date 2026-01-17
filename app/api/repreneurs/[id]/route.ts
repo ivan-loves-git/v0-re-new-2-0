@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { getCurrentUser } from "@/lib/auth-server"
 
 export async function GET(
   request: Request,
@@ -8,8 +9,8 @@ export async function GET(
   const { id } = await params
   const supabase = await createServerClient()
 
-  // Check authentication
-  const { data: { user } } = await supabase.auth.getUser()
+  // Check authentication using Better Auth
+  const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

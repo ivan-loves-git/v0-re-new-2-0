@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Trophy } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth-server"
 import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -54,13 +55,15 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     notFound()
   }
 
+  // Get current user from Better Auth
+  const currentUser = await getCurrentUser()
+
   // Parallel fetch all related data - runs simultaneously instead of sequentially
   const [
     notesResult,
     repreneurOffersResult,
     allOffersResult,
-    activitiesResult,
-    userResult
+    activitiesResult
   ] = await Promise.all([
     // Fetch notes
     supabase
@@ -85,16 +88,13 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
       .from("activities")
       .select("*")
       .eq("repreneur_id", id)
-      .order("created_at", { ascending: false }),
-    // Get current user
-    supabase.auth.getUser()
+      .order("created_at", { ascending: false })
   ])
 
   const notes = notesResult.data || []
   const repreneurOffers = repreneurOffersResult.data || []
   const allOffers = allOffersResult.data || []
   const activities = activitiesResult.data || []
-  const currentUser = userResult.data?.user
 
   // Try to fetch milestones separately (table may not exist yet)
   let milestonesMap: Record<string, OfferMilestone[]> = {}
@@ -124,7 +124,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   // Build user email map
   const userEmailMap: Record<string, string> = {}
   if (currentUser) {
-    userEmailMap[currentUser.id] = currentUser.email?.split('@')[0] || 'Team'
+    userEmailMap[currentUser.id] = currentUser.email?.split('@')[0] || currentUser.name || 'Team'
   }
 
   // Transform notes to include placeholder email

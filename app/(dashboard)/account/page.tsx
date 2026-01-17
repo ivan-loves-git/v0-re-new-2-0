@@ -1,16 +1,15 @@
-import { createClient } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth-server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Mail, Calendar } from "lucide-react"
 
 export default async function AccountPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
   // Get user info
   const userEmail = user?.email || "unknown@renew.com"
-  const userName = user?.user_metadata?.full_name || userEmail.split("@")[0]
-  const userCreatedAt = user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US", {
+  const userName = user?.name || userEmail.split("@")[0]
+  const userCreatedAt = user?.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric"
@@ -41,7 +40,7 @@ export default async function AccountPage() {
             {/* Avatar and Name */}
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20 rounded-xl">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt={userName} />
+                <AvatarImage src={user?.image || undefined} alt={userName} />
                 <AvatarFallback className="rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl">
                   {userInitials}
                 </AvatarFallback>
