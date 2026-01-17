@@ -73,35 +73,44 @@ function createEmailV1(name: string) {
 
     <p class="divider">•••</p>
 
-    <p class="version">v0.8.1 – v0.8.3</p>
-    <h1>This week I tightened security and cleaned house.</h1>
+    <p class="version">v0.8.3 – v0.8.5</p>
+    <h1>New auth system, task boards, and user signup.</h1>
 
     <div class="updates">
       <div class="update">
-        <p class="update-title">🔒 Security hardened</p>
-        <p class="update-desc">Fixed 10 vulnerabilities including SQL injection and API auth. Your data sleeps safer now.</p>
+        <p class="update-title">⚡ Better Auth migration</p>
+        <p class="update-desc">Switched to TypeScript-first authentication library. Full control over auth, no more Supabase lock-in.</p>
         <p class="tags">
-          <span class="tag tag-security">security</span>
-          <span class="tag tag-meta">+847 lines</span>
-          <span class="tag tag-meta">~3.5h</span>
+          <span class="tag tag-auth">auth</span>
+          <span class="tag tag-meta">+450 lines</span>
+          <span class="tag tag-meta">~4h</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">⚡ Better Auth migration</p>
-        <p class="update-desc">Switched to TypeScript-first authentication. Same login flow, faster sessions, better control.</p>
+        <p class="update-title">✨ Kanban task board</p>
+        <p class="update-desc">New board view for tasks with drag-style columns. Toggle between list and board views anytime.</p>
         <p class="tags">
-          <span class="tag tag-auth">auth</span>
-          <span class="tag tag-meta">+312 lines</span>
+          <span class="tag tag-feature">feature</span>
+          <span class="tag tag-meta">+380 lines</span>
           <span class="tag tag-meta">~2h</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">🧹 Codebase cleanup</p>
-        <p class="update-desc">Removed 1,665 lines of dead code and unused dashboards. Builds are now noticeably faster.</p>
+        <p class="update-title">✨ User signup enabled</p>
+        <p class="update-desc">New users can now create accounts directly. Toggle between sign in and sign up on login page.</p>
         <p class="tags">
-          <span class="tag tag-refactor">refactor</span>
-          <span class="tag tag-meta">-1,665 lines</span>
-          <span class="tag tag-meta">~1.5h</span>
+          <span class="tag tag-feature">feature</span>
+          <span class="tag tag-meta">+120 lines</span>
+          <span class="tag tag-meta">~1h</span>
+        </p>
+      </div>
+      <div class="update">
+        <p class="update-title">🐛 Production auth fixes</p>
+        <p class="update-desc">Fixed cookie handling for Vercel deployment. Login now works correctly in production environment.</p>
+        <p class="tags">
+          <span class="tag tag-fix">fix</span>
+          <span class="tag tag-meta">+25 lines</span>
+          <span class="tag tag-meta">~1h</span>
         </p>
       </div>
     </div>
@@ -111,7 +120,7 @@ function createEmailV1(name: string) {
     <p class="divider">•••</p>
 
     <div class="signature">
-      <p class="sig-line">Back to work. Someone has to keep this ship running.</p>
+      <p class="sig-line">That's all for now. Try not to miss me too much.</p>
       <p class="sig-name">Wavy 🌊</p>
       <p class="sig-title">Chief Notification Officer</p>
       <p class="sig-team">Re-New team</p>
@@ -283,7 +292,7 @@ async function sendRoadmapEmail(to: string, name: string, version: number = 1) {
     const { data, error } = await resend.emails.send({
       from: "Wavy 🌊 <notifications@news.re-new.team>",
       to: [to],
-      subject: `Wave product update: v0.8.1 – v0.8.3`,
+      subject: `Wave product update: v0.8.3 – v0.8.5`,
       html: createEmailHtml(name, version),
     })
 
