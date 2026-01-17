@@ -77,6 +77,7 @@ async function createUsers() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Origin": baseUrl,
         },
         body: JSON.stringify({
           email: user.email,
@@ -84,6 +85,9 @@ async function createUsers() {
           name: user.name,
         }),
       })
+
+      // Delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       const result = await response.json()
 
