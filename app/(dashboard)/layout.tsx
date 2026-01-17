@@ -1,9 +1,8 @@
 import type React from "react"
-import { cookies, headers } from "next/headers"
+import { cookies } from "next/headers"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { FloatingNav } from "@/components/floating-nav"
-import { auth } from "@/lib/auth"
 
 export default async function DashboardLayout({
   children,
@@ -14,19 +13,26 @@ export default async function DashboardLayout({
   const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false"
 
-  // Auth check is now handled by middleware - this just gets user info for display
-  // V0 preview fallback
-  const isV0Preview = process.env.VERCEL_ENV === undefined
+  // Get user info from Better Auth session cookie (faster than API call)
+  // The session_data cookie contains cached user info
+  const sessionDataCookie =
+    cookieStore.get("__Secure-better-auth.session_data") ||
+    cookieStore.get("better-auth.session_data")
+
   let userEmail = "preview@renew.com"
   let userName: string | undefined
 
-  if (!isV0Preview) {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
-    // User is guaranteed to exist here because middleware redirects if not authenticated
-    userEmail = session?.user?.email || "unknown@renew.com"
-    userName = session?.user?.name
+  if (sessionDataCookie?.value) {
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(sessionDataCookie.value, "base64").toString("utf-8")
+      )
+      userEmail = decoded?.session?.user?.email || "unknown@renew.com"
+      userName = decoded?.session?.user?.name
+    } catch {
+      // Fallback if cookie parsing fails
+      userEmail = "unknown@renew.com"
+    }
   }
 
   return (
