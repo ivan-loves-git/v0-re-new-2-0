@@ -8,9 +8,7 @@
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
 
-// Load environment variables
-import * as dotenv from "dotenv"
-dotenv.config({ path: ".env.local" })
+// Environment variables loaded via shell export
 
 const USERS = [
   {
@@ -27,6 +25,31 @@ const USERS = [
     email: "antoine.duchene@edu.escp.eu",
     password: "Wave2025!",
     name: "Antoine",
+  },
+  {
+    email: "alexandre.devulder@sony.com",
+    password: "Wave2025!",
+    name: "Alexandre",
+  },
+  {
+    email: "Gabriele.Betti@outlook.com",
+    password: "Wave2025!",
+    name: "Gabriele",
+  },
+  {
+    email: "ignacio.campos@edu.escp.eu",
+    password: "Wave2025!",
+    name: "Ignacio",
+  },
+  {
+    email: "ivanpaudice@icloud.com",
+    password: "Wave2025!",
+    name: "Ivan",
+  },
+  {
+    email: "piera.gallo@edu.escp.eu",
+    password: "Wave2025!",
+    name: "Piera",
   },
   {
     email: "renew@icpteam.eu",

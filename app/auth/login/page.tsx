@@ -510,13 +510,23 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-700">
-                Password
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-gray-700">
+                  Password
+                </Label>
+                {mode === "signin" && (
+                  <a
+                    href="/auth/forgot-password"
+                    className="text-sm text-blue-500 hover:text-blue-600"
+                  >
+                    Forgot password?
+                  </a>
+                )}
+              </div>
               <Input
                 id="password"
                 type="password"
-                placeholder={mode === "signup" ? "Min 6 characters" : ""}
+                placeholder={mode === "signup" ? "Min 8 characters" : ""}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
