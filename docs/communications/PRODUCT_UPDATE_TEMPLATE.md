@@ -139,14 +139,29 @@ Rotate for variety:
 
 **Script:** `scripts/send-roadmap-email.ts`
 
+**Category:** Ivan's triggered emails (NOT automated)
+
+**Workflow:**
+1. Claude always sends test email to ivanpaudice@me.com first
+2. Ivan reviews the test email
+3. Only after Ivan confirms, Claude sends to full team
+
 **Usage:**
 ```bash
+# Test email (single recipient)
 npx tsx scripts/send-roadmap-email.ts [email] [name] [version]
+
+# Full team (8 people from FOUNDERS_TEAM_2_0)
+npx tsx scripts/send-roadmap-email.ts --team [version]
 ```
 
-**Example:**
+**Examples:**
 ```bash
-npx tsx scripts/send-roadmap-email.ts bertrand@re-new.team Bertrand 1
+# Test to Ivan first
+npx tsx scripts/send-roadmap-email.ts ivanpaudice@me.com Ivan 1
+
+# After approval, send to full team
+npx tsx scripts/send-roadmap-email.ts --team 1
 ```
 
 ---

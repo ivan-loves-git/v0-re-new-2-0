@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail } from "@/lib/email"
 import { revalidatePath } from "next/cache"
 import type { EmailTemplateKey } from "@/lib/types/email"
@@ -45,7 +45,7 @@ export interface EmailLogEntry {
  * Get email analytics stats
  */
 export async function getEmailStats(days: number = 30): Promise<EmailStats> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
 
@@ -94,7 +94,7 @@ export async function getEmailLogs(options: {
   templateKey?: EmailTemplateKey
   status?: string
 }) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
   const { limit = 50, offset = 0, templateKey, status } = options
 
   let query = supabase
@@ -154,7 +154,7 @@ export async function getEmailLogs(options: {
  * Get template settings from database
  */
 export async function getTemplateSettings() {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from("email_templates")
@@ -172,7 +172,7 @@ export async function getTemplateSettings() {
  * Toggle template enabled/disabled
  */
 export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabled: boolean) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase
     .from("email_templates")
@@ -193,7 +193,7 @@ export async function updateTemplateSettings(
   templateKey: EmailTemplateKey,
   settings: { subject_override?: string; preview_text?: string }
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase
     .from("email_templates")
@@ -211,7 +211,7 @@ export async function updateTemplateSettings(
  * Get list of repreneurs for manual send
  */
 export async function getRepreneursForManualSend(search?: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from("repreneurs")
@@ -245,7 +245,7 @@ export async function sendManualEmail(
   templateKey: EmailTemplateKey,
   metadata?: Record<string, unknown>
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get repreneur data
   const { data: repreneur, error } = await supabase
@@ -432,7 +432,7 @@ export async function sendTestEmail(
  * Get daily email counts for chart
  */
 export async function getDailyEmailCounts(days: number = 14) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
 

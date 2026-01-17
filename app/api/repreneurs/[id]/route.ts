@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth-server"
 
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Check authentication using Better Auth
   const user = await getCurrentUser()

@@ -1,6 +1,19 @@
 /**
  * Product update email script
- * Run with: npx tsx scripts/send-roadmap-email.ts [email] [name] [version: 1|2|3]
+ *
+ * CATEGORY: Ivan's triggered emails
+ * These emails are NOT automated. Ivan must explicitly ask Claude to send them.
+ *
+ * WORKFLOW:
+ * 1. Claude always sends a test email to ivanpaudice@me.com first
+ * 2. Ivan reviews the test email
+ * 3. Only after Ivan confirms, Claude sends to the full team
+ *
+ * Usage:
+ *   Test (single):  npx tsx scripts/send-roadmap-email.ts [email] [name] [version]
+ *   Full team:      npx tsx scripts/send-roadmap-email.ts --team [version]
+ *
+ * Versions: 1 = Minimal (default), 2 = Centered, 3 = Timeline
  */
 
 import { Resend } from "resend"

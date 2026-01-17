@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import type { ActivityType, Activity_Insert } from "@/lib/types/repreneur"
@@ -11,7 +11,7 @@ export async function createActivity(
   notes?: string,
   durationMinutes?: number
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()
@@ -34,7 +34,7 @@ export async function createActivity(
 }
 
 export async function getActivities(repreneurId: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data: activities, error } = await supabase
     .from("activities")
@@ -57,7 +57,7 @@ export async function getActivities(repreneurId: string) {
 }
 
 export async function deleteActivity(activityId: string, repreneurId: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase.from("activities").delete().eq("id", activityId)
 

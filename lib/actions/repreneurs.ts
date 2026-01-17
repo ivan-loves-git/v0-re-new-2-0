@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
@@ -13,7 +13,7 @@ import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 
 export async function createRepreneur(formData: FormData) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()
@@ -65,7 +65,7 @@ export async function createRepreneur(formData: FormData) {
 }
 
 export async function updateRepreneur(id: string, formData: FormData) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Parse sector preferences (now sent as JSON array)
   const sectorPrefsRaw = formData.get("sector_preferences") as string
@@ -127,7 +127,7 @@ export async function updateRepreneur(id: string, formData: FormData) {
 }
 
 export async function updateRepreneurStatus(id: string, status: LifecycleStatus) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase.from("repreneurs").update({ lifecycle_status: status }).eq("id", id)
 
@@ -141,7 +141,7 @@ export async function updateRepreneurStatus(id: string, status: LifecycleStatus)
 }
 
 export async function updateRepreneurJourneyStage(id: string, stage: string | null) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase.from("repreneurs").update({ journey_stage: stage }).eq("id", id)
 
@@ -155,7 +155,7 @@ export async function updateRepreneurJourneyStage(id: string, stage: string | nu
 }
 
 export async function updateRepreneurField(id: string, field: string, value: string | string[] | null) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   console.log(`[updateRepreneurField] Updating ${field} for ${id}`)
 
@@ -181,7 +181,7 @@ export async function updateRepreneurField(id: string, field: string, value: str
 }
 
 export async function createNote(repreneurId: string, content: string, noteType: string = "other") {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()
@@ -201,7 +201,7 @@ export async function createNote(repreneurId: string, content: string, noteType:
 }
 
 export async function deleteNote(noteId: string, repreneurId: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase.from("notes").delete().eq("id", noteId)
 
@@ -213,7 +213,7 @@ export async function deleteNote(noteId: string, repreneurId: string) {
 }
 
 export async function deleteRepreneur(id: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Database cascades handle related data automatically (notes, activities, offers, etc.)
   // Foreign keys are set up with ON DELETE CASCADE
@@ -232,7 +232,7 @@ export async function deleteRepreneur(id: string) {
  * This automatically sets lifecycle_status to "qualified" (action-driven status)
  */
 export async function setTier2Stars(id: string, stars: number) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   if (stars < 1 || stars > 5) {
     throw new Error("Star rating must be between 1 and 5")
@@ -261,7 +261,7 @@ export async function setTier2Stars(id: string, stars: number) {
  * Does NOT change lifecycle_status - manual intervention required
  */
 export async function clearTier2Stars(id: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase
     .from("repreneurs")
@@ -282,7 +282,7 @@ export async function clearTier2Stars(id: string) {
  * Stores the previous status for potential un-reject, sets rejected_at timestamp
  */
 export async function rejectRepreneur(id: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // First, get the current status to store as previous_status
   const { data: repreneur, error: fetchError } = await supabase
@@ -348,7 +348,7 @@ export async function rejectRepreneur(id: string) {
  * Un-reject a repreneur (restore to previous status)
  */
 export async function unrejectRepreneur(id: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get the previous status
   const { data: repreneur, error: fetchError } = await supabase
@@ -415,7 +415,7 @@ export interface QuestionnaireInput {
  * Score is calculated using database criteria (with hardcoded fallback)
  */
 export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Fetch scoring criteria from database (uses hardcoded fallback if DB fails)
   const scoringCriteria = await getTier1ScoringCriteria()
@@ -490,7 +490,7 @@ export async function updateTier1Answer(
   field: string,
   value: string | string[] | boolean | null
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // First update the single field
   const { error: updateError } = await supabase
@@ -580,7 +580,7 @@ export async function updateTier1Answers(
   id: string,
   answers: Record<string, string | string[] | boolean | null>
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Update all fields at once
   const { error: updateError } = await supabase
@@ -667,7 +667,7 @@ export async function updateTier1Answers(
  * This automatically sets lifecycle_status to "qualified" (action-driven status)
  */
 export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Dimensions>) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Calculate weighted overall score
   const overall = calculateTier2Overall(dimensions)
@@ -702,7 +702,7 @@ export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Di
  * The database trigger will auto-update tier3_milestone_count and journey_stage
  */
 export async function toggleMilestone(id: string, milestoneKey: MilestoneKey, value: boolean) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Convert milestone key to database column name (ms_xxx)
   const columnName = `ms_${milestoneKey}`

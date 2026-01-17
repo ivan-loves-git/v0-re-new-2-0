@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import type { EvaluationTier } from "@/lib/types/evaluation-criteria"
@@ -15,7 +15,7 @@ export async function updateCriterion(
     option_score?: number | null
   }
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()
@@ -44,7 +44,7 @@ export async function updateQuestionLabel(
   tier: EvaluationTier,
   newLabel: string
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()
@@ -76,7 +76,7 @@ export async function updateMultipleCriteria(
     option_score?: number | null
   }>
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()

@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
@@ -12,7 +12,7 @@ import { OfferActivatedEmail } from "@/lib/email/templates/offer-activated"
 import { MilestoneCompletedEmail } from "@/lib/email/templates/milestone-completed"
 
 export async function createOffer(formData: FormData) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const offer: Offer_Insert = {
     name: formData.get("name") as string,
@@ -40,7 +40,7 @@ export async function createOffer(formData: FormData) {
 }
 
 export async function updateOffer(id: string, formData: FormData) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const updates = {
     name: formData.get("name") as string,
@@ -67,7 +67,7 @@ export async function updateOffer(id: string, formData: FormData) {
 }
 
 export async function toggleOfferActive(id: string, isActive: boolean) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase.from("offers").update({ is_active: isActive }).eq("id", id)
 
@@ -79,7 +79,7 @@ export async function toggleOfferActive(id: string, isActive: boolean) {
 }
 
 export async function assignOfferToRepreneur(repreneurId: string, offerId: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()
@@ -150,7 +150,7 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
 }
 
 export async function updateRepreneurOfferStatus(repreneurOfferId: string, newStatus: OfferStatus, repreneurId: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const updates: Record<string, unknown> = { status: newStatus }
 
@@ -244,7 +244,7 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
 }
 
 export async function deleteRepreneurOffer(repreneurOfferId: string, repreneurId: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase.from("repreneur_offers").delete().eq("id", repreneurOfferId)
 
@@ -266,7 +266,7 @@ export async function createMilestone(
   notes?: string,
   dueDate?: string
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   // Get current user from Better Auth
   const user = await requireUser()
@@ -292,7 +292,7 @@ export async function toggleMilestoneComplete(
   repreneurId: string,
   isCompleted: boolean
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const updates: Record<string, unknown> = {
     is_completed: isCompleted,
@@ -363,7 +363,7 @@ export async function updateMilestone(
   notes?: string,
   dueDate?: string
 ) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase
     .from("offer_milestones")
@@ -382,7 +382,7 @@ export async function updateMilestone(
 }
 
 export async function deleteMilestone(milestoneId: string, repreneurId: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase.from("offer_milestones").delete().eq("id", milestoneId)
 
@@ -396,7 +396,7 @@ export async function deleteMilestone(milestoneId: string, repreneurId: string) 
 // === Data Fetching ===
 
 export async function getAllClientOffers() {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from("repreneur_offers")
