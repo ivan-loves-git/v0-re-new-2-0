@@ -10,6 +10,39 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 17, 2026",
+    version: "0.8.2",
+    title: "Task Management for V1.0 Launch",
+    isCompleted: true,
+    events: [
+      {
+        title: "Tasks page with CRUD",
+        type: "feature",
+        description: "New /tasks page for tracking V1.0 launch activities. Create, edit, delete tasks with full form. Filter by stream, status, and owner.",
+      },
+      {
+        title: "Stream-based organization",
+        type: "feature",
+        description: "Tasks grouped by work stream: Questionnaire, Emails, Branding, Testing, Go-Live. Progress bars per stream. Stats badges for completion tracking.",
+      },
+      {
+        title: "Dependencies & blocking",
+        type: "feature",
+        description: "Tasks can depend on other tasks. Visual indicators show when a task is blocked by incomplete dependencies. Delay calculation from expected dates.",
+      },
+      {
+        title: "Owner assignment",
+        type: "feature",
+        description: "Assign tasks to team members (Bertrand, Amélie, Antoine, Ivan). Filter views by owner. Track who's responsible for what.",
+      },
+      {
+        title: "Dogfooding approach",
+        type: "decision",
+        description: "Using the platform itself to track V1.0 launch tasks. Tests authentication and email systems while managing the project.",
+      },
+    ],
+  },
+  {
+    period: "Jan 17, 2026",
     version: "0.8.1",
     title: "Security Audit & Codebase Cleanup",
     isCompleted: true,

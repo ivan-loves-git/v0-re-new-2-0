@@ -23,6 +23,7 @@ import {
   User,
   Code,
   ClipboardList,
+  CheckSquare,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
@@ -57,6 +58,7 @@ const mainNavigation = [
   { name: "Repreneurs", href: "/repreneurs", icon: Users },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Emails", href: "/emails", icon: Mail },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
   { name: "Development", href: "/development", icon: Code, badge: "WIP" },
