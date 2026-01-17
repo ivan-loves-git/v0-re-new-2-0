@@ -12,6 +12,7 @@ interface SendEmailParams {
   templateKey: EmailTemplateKey
   react: ReactElement
   metadata?: Record<string, unknown>
+  requiresConsent?: boolean // For explicit consent check (overrides template setting)
 }
 
 /**
@@ -272,23 +273,34 @@ export async function sendEmailDirect(params: {
 /**
  * Check if an email was already sent to avoid duplicates
  * Useful for preventing re-sending welcome emails, etc.
+ * @param repreneurId - The repreneur to check
+ * @param templateKey - The email template type
+ * @param withinMinutes - Optional: only check emails sent within this time window
  */
 export async function wasEmailSent(
   repreneurId: string,
-  templateKey: EmailTemplateKey
+  templateKey: EmailTemplateKey,
+  withinMinutes?: number
 ): Promise<boolean> {
   const supabase = createAdminClient()
 
-  const { data } = await supabase
+  let query = supabase
     .from("email_logs")
     .select("id")
     .eq("repreneur_id", repreneurId)
     .eq("template_key", templateKey)
     .in("status", ["sent", "delivered", "opened", "clicked"])
-    .limit(1)
-    .single()
 
-  return !!data
+  // Add time filter if specified
+  if (withinMinutes) {
+    const cutoffTime = new Date()
+    cutoffTime.setMinutes(cutoffTime.getMinutes() - withinMinutes)
+    query = query.gte("sent_at", cutoffTime.toISOString())
+  }
+
+  const { data } = await query.limit(1)
+
+  return (data?.length ?? 0) > 0
 }
 
 /**

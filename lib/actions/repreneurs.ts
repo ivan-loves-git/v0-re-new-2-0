@@ -226,12 +226,8 @@ export async function deleteNote(noteId: string, repreneurId: string) {
 export async function deleteRepreneur(id: string) {
   const supabase = await createServerClient()
 
-  // Delete related records first (notes, repreneur_offers, activities)
-  await supabase.from("notes").delete().eq("repreneur_id", id)
-  await supabase.from("repreneur_offers").delete().eq("repreneur_id", id)
-  await supabase.from("activities").delete().eq("repreneur_id", id)
-
-  // Delete the repreneur
+  // Database cascades handle related data automatically (notes, activities, offers, etc.)
+  // Foreign keys are set up with ON DELETE CASCADE
   const { error } = await supabase.from("repreneurs").delete().eq("id", id)
 
   if (error) {

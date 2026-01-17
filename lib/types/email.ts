@@ -27,7 +27,10 @@ export interface EmailTemplate {
   subject: string
   description?: string
   is_active: boolean
+  is_enabled?: boolean // Alias for is_active, used by UI
   requires_consent: boolean
+  subject_override?: string | null
+  preview_text?: string | null
   created_at: string
   updated_at: string
 }

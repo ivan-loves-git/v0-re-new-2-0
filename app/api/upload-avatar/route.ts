@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { createServerClient } from "@/lib/supabase/server"
 
+// Security: Whitelist of allowed image extensions
+const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"]
+
+// Magic bytes to verify actual file content matches claimed type
+const MAGIC_BYTES: Record<string, number[]> = {
+  jpg: [0xff, 0xd8, 0xff],
+  jpeg: [0xff, 0xd8, 0xff],
+  png: [0x89, 0x50, 0x4e, 0x47],
+  webp: [0x52, 0x49, 0x46, 0x46], // RIFF header
+  gif: [0x47, 0x49, 0x46], // GIF header
+}
+
+function verifyFileContent(bytes: Uint8Array, extension: string): boolean {
+  const expectedBytes = MAGIC_BYTES[extension]
+  if (!expectedBytes) return false
+  return expectedBytes.every((b, i) => bytes[i] === b)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient()
@@ -20,9 +38,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing file or repreneurId" }, { status: 400 })
     }
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "File must be an image" }, { status: 400 })
+    // Security: Whitelist extension (don't trust Content-Type header)
+    const fileExt = file.name.split(".").pop()?.toLowerCase()
+    if (!fileExt || !ALLOWED_EXTENSIONS.includes(fileExt)) {
+      return NextResponse.json(
+        { error: "Only JPG, PNG, WebP and GIF images are allowed" },
+        { status: 400 }
+      )
     }
 
     // Validate file size (max 5MB)
@@ -30,8 +52,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File size must be less than 5MB" }, { status: 400 })
     }
 
-    // Generate unique filename (no subdirectory - bucket is already "avatars")
-    const fileExt = file.name.split(".").pop()
+    // Security: Verify file content matches claimed extension
+    const headerBytes = new Uint8Array(await file.slice(0, 8).arrayBuffer())
+    if (!verifyFileContent(headerBytes, fileExt)) {
+      return NextResponse.json(
+        { error: "File content does not match extension" },
+        { status: 400 }
+      )
+    }
+
+    // Generate unique filename with sanitized extension
     const fileName = `${repreneurId}-${Date.now()}.${fileExt}`
 
     // Convert file to buffer

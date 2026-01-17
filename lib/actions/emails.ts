@@ -220,7 +220,12 @@ export async function getRepreneursForManualSend(search?: string) {
     .limit(50)
 
   if (search) {
-    query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`)
+    // Escape special SQL LIKE characters to prevent injection
+    const escapedSearch = search
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/_/g, "\\_")
+    query = query.or(`first_name.ilike.%${escapedSearch}%,last_name.ilike.%${escapedSearch}%,email.ilike.%${escapedSearch}%`)
   }
 
   const { data, error } = await query

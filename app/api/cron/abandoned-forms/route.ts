@@ -32,6 +32,7 @@ export async function GET(request: Request) {
         id,
         repreneur_id,
         last_step_completed,
+        last_activity_at,
         reminder_count,
         repreneurs!inner(
           id,
@@ -83,6 +84,10 @@ export async function GET(request: Request) {
       }
 
       try {
+        // Calculate days since abandonment
+        const lastActivity = new Date(form.last_activity_at || now)
+        const daysAgo = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
+
         await sendEmail({
           to: repreneur.email,
           subject: "Reprenez votre inscription Re-New",
@@ -97,7 +102,8 @@ export async function GET(request: Request) {
               email: repreneur.email,
             },
             metadata: {
-              lastStepCompleted: form.last_step_completed,
+              lastStep: form.last_step_completed || 1,
+              daysAgo: daysAgo,
             },
           }),
         })
