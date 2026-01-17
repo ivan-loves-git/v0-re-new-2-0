@@ -1,12 +1,12 @@
 "use server"
 
-import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import type { Task, Task_Insert, Task_Update, TaskStatus, TaskStream, TaskPriority } from "@/lib/types/task"
 
 export async function getTasks(): Promise<Task[]> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data: tasks, error } = await supabase
     .from("tasks")
@@ -22,7 +22,7 @@ export async function getTasks(): Promise<Task[]> {
 }
 
 export async function getTasksByStream(stream: TaskStream): Promise<Task[]> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data: tasks, error } = await supabase
     .from("tasks")
@@ -38,7 +38,7 @@ export async function getTasksByStream(stream: TaskStream): Promise<Task[]> {
 }
 
 export async function getTask(id: string): Promise<Task | null> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data: task, error } = await supabase
     .from("tasks")
@@ -57,7 +57,6 @@ export async function getTask(id: string): Promise<Task | null> {
 export async function createTask(data: {
   title: string
   description?: string
-  owner_id?: string
   owner_name?: string
   status?: TaskStatus
   priority?: TaskPriority
@@ -67,15 +66,16 @@ export async function createTask(data: {
   stream?: TaskStream
   notes?: string
 }): Promise<Task> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
-  // Get current user from Better Auth
-  const user = await requireUser()
+  // Verify user is authenticated (Better Auth)
+  await requireUser()
 
   const task: Task_Insert = {
     title: data.title,
     description: data.description || undefined,
-    owner_id: data.owner_id || undefined,
+    // Note: owner_id has FK to auth.users which doesn't work with Better Auth
+    // Using owner_name instead for display
     owner_name: data.owner_name || undefined,
     status: data.status || "pending",
     priority: data.priority || "medium",
@@ -83,7 +83,8 @@ export async function createTask(data: {
     expected_end_date: data.expected_end_date || undefined,
     depends_on: data.depends_on || [],
     stream: data.stream || undefined,
-    created_by: user.id,
+    // Note: created_by has FK to auth.users which doesn't work with Better Auth
+    // Auth is verified via requireUser() at app layer instead
     notes: data.notes || undefined,
   }
 
@@ -105,7 +106,10 @@ export async function updateTask(
   id: string,
   data: Task_Update
 ): Promise<Task> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
+
+  // Verify user is authenticated (Better Auth)
+  await requireUser()
 
   const { data: updated, error } = await supabase
     .from("tasks")
@@ -126,7 +130,10 @@ export async function updateTaskStatus(
   id: string,
   status: TaskStatus
 ): Promise<Task> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
+
+  // Verify user is authenticated (Better Auth)
+  await requireUser()
 
   const { data: updated, error } = await supabase
     .from("tasks")
@@ -144,7 +151,10 @@ export async function updateTaskStatus(
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
+
+  // Verify user is authenticated (Better Auth)
+  await requireUser()
 
   const { error } = await supabase.from("tasks").delete().eq("id", id)
 
@@ -164,7 +174,7 @@ export async function getTaskStats(): Promise<{
   pending: number
   overdue: number
 }> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data: tasks, error } = await supabase.from("tasks").select("status, expected_end_date")
 
