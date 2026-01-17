@@ -3,7 +3,10 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function middleware(request: NextRequest) {
   // Check for Better Auth session cookie (works in Edge runtime)
   // The actual session validation happens in server components/actions
-  const sessionCookie = request.cookies.get("better-auth.session_token")
+  // In production, cookies have __Secure- prefix
+  const sessionCookie =
+    request.cookies.get("__Secure-better-auth.session_token") ||
+    request.cookies.get("better-auth.session_token")
   const isLoggedIn = !!sessionCookie?.value
   const { pathname } = request.nextUrl
 
