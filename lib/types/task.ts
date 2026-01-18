@@ -1,5 +1,5 @@
 export type TaskStatus = "pending" | "in_progress" | "blocked" | "completed"
-export type TaskStream = "questionnaire" | "emails" | "branding" | "testing" | "go_live"
+export type TaskStream = "questionnaire" | "email" | "domain" | "implementation" | "testing" | "launch"
 
 export interface Task {
   id: string
@@ -118,14 +118,16 @@ export function getStreamLabel(stream: TaskStream): string {
   switch (stream) {
     case "questionnaire":
       return "Questionnaire"
-    case "emails":
-      return "Emails"
-    case "branding":
-      return "Branding"
+    case "email":
+      return "Email Templates"
+    case "domain":
+      return "Domain & Data"
+    case "implementation":
+      return "Implementation"
     case "testing":
       return "Testing"
-    case "go_live":
-      return "Go-Live"
+    case "launch":
+      return "Launch"
     default:
       return stream
   }
@@ -135,13 +137,15 @@ export function getStreamColor(stream: TaskStream): string {
   switch (stream) {
     case "questionnaire":
       return "bg-purple-100 text-purple-700"
-    case "emails":
+    case "email":
       return "bg-blue-100 text-blue-700"
-    case "branding":
-      return "bg-pink-100 text-pink-700"
+    case "domain":
+      return "bg-amber-100 text-amber-700"
+    case "implementation":
+      return "bg-indigo-100 text-indigo-700"
     case "testing":
       return "bg-orange-100 text-orange-700"
-    case "go_live":
+    case "launch":
       return "bg-green-100 text-green-700"
     default:
       return "bg-gray-100 text-gray-700"
