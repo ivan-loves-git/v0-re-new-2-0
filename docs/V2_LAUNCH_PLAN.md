@@ -123,51 +123,45 @@ The platform is technically ~95% ready. What's blocking go-live is NOT code, it'
 
 ---
 
-## WHAT'S WORKING vs. NEEDS REVIEW
+## BLOCKERS & NEXT MILESTONES
 
-### DONE (36 of 38 tasks complete)
+**Platform status:** 95% complete (36/38 tasks done). All core features working. Blockers are content decisions, not code.
 
-| Feature | Status |
-|---------|--------|
-| Dashboard with stats, charts, heatmap | DONE |
-| Repreneur list with grouping by status | DONE |
-| Kanban pipeline view | DONE |
-| Repreneur detail pages | DONE |
-| Tier 1 automated scoring (17 questions) | DONE |
-| Tier 2 manual star rating | DONE |
-| CV & Letter de Cadrage uploads | DONE |
-| Avatar system | DONE |
-| Email sending (manual trigger) | DONE |
-| Public intake form (questionnaire) | DONE |
-| Radar chart for candidate visualization | DONE |
-| Skeleton loading & animations | DONE |
+### MILESTONE 1: Finalize User Data Structure (Founders)
 
-### NEEDS FOUNDERS REVIEW & FINALIZATION
+This is THE critical path. Everything else depends on it:
 
-| Area | Issue | Recommendation |
-|------|-------|----------------|
-| **Journey Stages** | Steps and milestones need clarification | Keep milestone validation MANUAL (human presses check), not automated. Even for file uploads, manual review is safer. Manual effort is minimal (just one click). |
-| **Notes System** | Presented as draft, untested with real use | Test in real scenarios. Either remove if not useful or improve structure based on feedback. |
-| **Activity Tracking** | Same as notes | Same recommendation |
-| **Offers System** | Same as notes | Same recommendation |
+**Questionnaire** -> defines -> **Scoring weights** -> defines -> **Journey stages**
 
-### SUMMARY: WHAT'S MISSING FOR GO-LIVE
+| Decision Needed | Owner | Deadline |
+|-----------------|-------|----------|
+| Final question list (use Notion template below) | Bertrand + Amelie | Wed Jan 22 |
+| Scoring weights validation | Bertrand | Wed Jan 22 |
+| Journey stage names & milestones | Bertrand | Fri Jan 24 |
 
-1. **User Data Structure** - Finalize questionnaire = finalize scoring = finalize journey mapping
-2. **Questionnaire Review** - Founders deliver final spec
-3. **Scoring Review** - Validate weights and thresholds with Bertrand
-4. **Journey Mapping Review** - Confirm stages and milestones names
+**Key design choice:** Keep milestone validation MANUAL (human clicks checkbox). Even for file uploads like LDC, manual review is safer. Effort is minimal (one click) but prevents automation errors.
 
-Once the above is done, closing bits:
-- Import Flatchr missing users (Bertrand provides CSV)
-- Get intake form tested (usability)
-- Set up custom URL (Bertrand provides DNS access)
+### MILESTONE 2: Test & Polish (Joint)
 
-**Before go-live:** Test platform email automation internally to see if we want to leverage it for V1.0 (no AI intelligence yet, just automated sending based on triggers).
+After Milestone 1 is done:
+
+| Task | Owner | When |
+|------|-------|------|
+| Import Flatchr users | Bertrand (CSV) + Ivan (import) | Jan 27 |
+| Usability test intake form | Bertrand + Amelie | Jan 27-29 |
+| Test email automation internally | Ivan | Jan 27-28 |
+| Review notes/activity/offers usefulness | All | Jan 29 |
+
+### MILESTONE 3: Go-Live Setup (Technical)
+
+| Task | Owner | When |
+|------|-------|------|
+| Set up app.re-new.team domain | Bertrand (DNS) + Ivan (config) | Fri Jan 24 |
+| Welcome email automation | Ivan | Fri Jan 24 |
 
 ---
 
-## PENDING TASKS (After V1.0)
+## AFTER V1.0 (Future Roadmap)
 
 ### Task 52: Intermediary Portal
 **Priority:** High (V2.0)
