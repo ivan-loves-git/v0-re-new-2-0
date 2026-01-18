@@ -29,7 +29,7 @@ interface TaskListProps {
   tasks: Task[]
 }
 
-const STREAMS: TaskStream[] = ["questionnaire", "emails", "branding", "testing", "go_live"]
+const STREAMS: TaskStream[] = ["questionnaire", "email", "domain", "implementation", "testing", "launch"]
 const STATUSES: TaskStatus[] = ["pending", "in_progress", "blocked", "completed"]
 const OWNERS = ["Bertrand", "Amélie", "Antoine", "Ivan"]
 
