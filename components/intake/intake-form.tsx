@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
   User, Briefcase, Scale, Target, Wallet, Check,
   ArrowRight, ArrowLeft, Loader2, Sparkles, ExternalLink,
-  TrendingUp, AlertCircle, FileText, Upload, X
+  AlertCircle, FileText, Upload, X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -271,18 +271,34 @@ export function IntakeForm({ steps }: IntakeFormProps) {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="max-w-lg w-full text-center"
         >
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://cdn.prod.website-files.com/68a87ebceebd6aec9fa8d6b3/68b6fe358d32a837b0522d9a_Logo.svg"
+              alt="Re-New"
+              className="h-12 w-auto mx-auto"
+            />
+          </motion.div>
+
+          {/* Success icon */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-2xl shadow-emerald-200"
+            className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-2xl shadow-emerald-200"
           >
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              <Sparkles className="w-12 h-12 text-white" />
+              <Sparkles className="w-10 h-10 text-white" />
             </motion.div>
           </motion.div>
 
@@ -344,11 +360,13 @@ export function IntakeForm({ steps }: IntakeFormProps) {
         <div className="px-4 py-3 border-b border-gray-100">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://cdn.prod.website-files.com/68a87ebceebd6aec9fa8d6b3/68b6fe358d32a837b0522d9a_Logo.svg"
+                alt="Re-New"
+                className="h-10 w-auto"
+              />
               <div>
-                <h1 className="font-bold text-gray-900">Re-New</h1>
                 <p className="text-xs text-gray-500">Repreneur Intake</p>
               </div>
             </div>
