@@ -101,6 +101,8 @@ export function StepContact({ form, cvFile, onCvChange, isUploadingCv, fieldErro
               error={fieldErrors.phone}
               icon={<Phone className="w-5 h-5" />}
               placeholder="+33 6 12 34 56 78"
+              pattern="[\d\s\-+().]{7,20}"
+              minLength={7}
             />
           )}
         </form.Field>

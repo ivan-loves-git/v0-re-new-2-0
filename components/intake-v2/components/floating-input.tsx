@@ -15,6 +15,8 @@ interface FloatingInputProps {
   icon?: React.ReactNode
   className?: string
   placeholder?: string
+  pattern?: string
+  minLength?: number
 }
 
 /**
@@ -30,6 +32,8 @@ export function FloatingInput({
   icon,
   className,
   placeholder,
+  pattern,
+  minLength,
 }: FloatingInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const id = useId()
@@ -56,6 +60,9 @@ export function FloatingInput({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={isFloating ? placeholder : undefined}
+          required={required}
+          pattern={pattern}
+          minLength={minLength}
           className={cn(
             "w-full h-14 px-4 pt-5 pb-2 text-base rounded-xl border-2 transition-all duration-200",
             "bg-white/80 backdrop-blur-sm",
