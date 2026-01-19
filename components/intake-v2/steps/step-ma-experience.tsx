@@ -55,12 +55,16 @@ function QuestionWrapper({
  * Step 3: M&A Experience
  */
 export function StepMAExperience({ form, fieldErrors = {} }: StepMAExperienceProps) {
-  // Watch fields to show/hide conditional question
-  const hasMAExperience = form.useStore((state: any) => state.values.q4_has_ma_experience)
-  const involvedInMA = form.useStore((state: any) => state.values.q6_involved_in_ma)
-  const showMADetails = hasMAExperience === true || involvedInMA === true
-
   return (
+    <form.Subscribe
+      selector={(state: any) => ({
+        hasMAExperience: state.values.q4_has_ma_experience,
+        involvedInMA: state.values.q6_involved_in_ma,
+      })}
+    >
+      {({ hasMAExperience, involvedInMA }: any) => {
+        const showMADetails = hasMAExperience === true || involvedInMA === true
+        return (
     <div className="space-y-8">
       {/* Q4: Has M&A Experience */}
       <form.Field name="q4_has_ma_experience">
@@ -140,5 +144,8 @@ export function StepMAExperience({ form, fieldErrors = {} }: StepMAExperiencePro
         )}
       </form.Field>
     </div>
+        )
+      }}
+    </form.Subscribe>
   )
 }

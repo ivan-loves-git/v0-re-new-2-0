@@ -67,11 +67,13 @@ export function StepGoals({ form, stepConfig, ldcFile, onLdcChange, isUploadingL
   const targetLocationOptions = stepConfig.questions.find(q => q.id === "target_location")?.options ?? []
   const targetSizeOptions = stepConfig.questions.find(q => q.id === "target_acquisition_size")?.options ?? []
 
-  // Watch field for conditional
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const hasIdentifiedTargets = form.useStore((state: any) => state.values.q12_has_identified_targets)
-
   return (
+    <form.Subscribe
+      selector={(state: any) => ({
+        hasIdentifiedTargets: state.values.q12_has_identified_targets,
+      })}
+    >
+      {({ hasIdentifiedTargets }: any) => (
     <div className="space-y-8">
       {/* Q10: Journey Stages */}
       <form.Field name="q10_journey_stages">
@@ -206,5 +208,7 @@ export function StepGoals({ form, stepConfig, ldcFile, onLdcChange, isUploadingL
         />
       </motion.div>
     </div>
+      )}
+    </form.Subscribe>
   )
 }
