@@ -26,10 +26,10 @@ export function GlassProgress({ steps, currentStep, className }: GlassProgressPr
     <div className={cn("relative", className)}>
       {/* Glass container */}
       <div className="relative bg-white/70 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-xl shadow-black/5">
-        {/* Progress track */}
-        <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-gray-200/50 rounded-full overflow-hidden">
+        {/* Progress track - centered with boxes (top padding 16px + half of box 24px = 40px) */}
+        <div className="absolute left-8 right-8 top-[40px] h-1 bg-gray-200/50 rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
+            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
