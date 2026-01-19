@@ -404,16 +404,18 @@ export function IntakeFormV2({ steps }: IntakeFormV2Props) {
                 cvFile={cvFile}
                 onCvChange={setCvFile}
                 isUploadingCv={isUploadingCv}
+                fieldErrors={fieldErrors}
               />
             )}
             {currentStep === 2 && (
               <StepBackground
                 form={form}
                 stepConfig={currentStepConfig}
+                fieldErrors={fieldErrors}
               />
             )}
             {currentStep === 3 && (
-              <StepMAExperience form={form} />
+              <StepMAExperience form={form} fieldErrors={fieldErrors} />
             )}
             {currentStep === 4 && (
               <StepGoals
@@ -422,12 +424,14 @@ export function IntakeFormV2({ steps }: IntakeFormV2Props) {
                 ldcFile={ldcFile}
                 onLdcChange={setLdcFile}
                 isUploadingLdc={isUploadingLdc}
+                fieldErrors={fieldErrors}
               />
             )}
             {currentStep === 5 && (
               <StepFinancial
                 form={form}
                 stepConfig={currentStepConfig}
+                fieldErrors={fieldErrors}
               />
             )}
           </motion.div>

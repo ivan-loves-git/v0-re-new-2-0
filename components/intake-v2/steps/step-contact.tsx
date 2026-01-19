@@ -12,18 +12,13 @@ interface StepContactProps {
   cvFile: File | null
   onCvChange: (file: File | null) => void
   isUploadingCv: boolean
-}
-
-// Helper to extract error message from field state
-function getFieldError(field: { state: { meta: { errors?: unknown[] } } }): string | undefined {
-  const error = field.state.meta.errors?.[0]
-  return typeof error === 'string' ? error : undefined
+  fieldErrors?: Record<string, string> // External validation errors from Zod
 }
 
 /**
  * Step 1: Contact Information
  */
-export function StepContact({ form, cvFile, onCvChange, isUploadingCv }: StepContactProps) {
+export function StepContact({ form, cvFile, onCvChange, isUploadingCv, fieldErrors = {} }: StepContactProps) {
   return (
     <div className="space-y-6">
       {/* Name fields - side by side on larger screens */}
@@ -34,12 +29,12 @@ export function StepContact({ form, cvFile, onCvChange, isUploadingCv }: StepCon
           transition={{ delay: 0.1 }}
         >
           <form.Field name="first_name">
-            {(field: { state: { value: string; meta: { errors?: unknown[] } }; handleChange: (v: string) => void }) => (
+            {(field: { state: { value: string }; handleChange: (v: string) => void }) => (
               <FloatingInput
                 label="First Name"
                 value={field.state.value}
                 onChange={field.handleChange}
-                error={getFieldError(field)}
+                error={fieldErrors.first_name}
                 required
                 icon={<User className="w-5 h-5" />}
                 placeholder="John"
@@ -54,12 +49,12 @@ export function StepContact({ form, cvFile, onCvChange, isUploadingCv }: StepCon
           transition={{ delay: 0.15 }}
         >
           <form.Field name="last_name">
-            {(field: { state: { value: string; meta: { errors?: unknown[] } }; handleChange: (v: string) => void }) => (
+            {(field: { state: { value: string }; handleChange: (v: string) => void }) => (
               <FloatingInput
                 label="Last Name"
                 value={field.state.value}
                 onChange={field.handleChange}
-                error={getFieldError(field)}
+                error={fieldErrors.last_name}
                 required
                 placeholder="Doe"
               />
@@ -75,13 +70,13 @@ export function StepContact({ form, cvFile, onCvChange, isUploadingCv }: StepCon
         transition={{ delay: 0.2 }}
       >
         <form.Field name="email">
-          {(field: { state: { value: string; meta: { errors?: unknown[] } }; handleChange: (v: string) => void }) => (
+          {(field: { state: { value: string }; handleChange: (v: string) => void }) => (
             <FloatingInput
               label="Email Address"
               value={field.state.value}
               onChange={field.handleChange}
               type="email"
-              error={getFieldError(field)}
+              error={fieldErrors.email}
               required
               icon={<Mail className="w-5 h-5" />}
               placeholder="john@example.com"
@@ -97,13 +92,13 @@ export function StepContact({ form, cvFile, onCvChange, isUploadingCv }: StepCon
         transition={{ delay: 0.25 }}
       >
         <form.Field name="phone">
-          {(field: { state: { value: string; meta: { errors?: unknown[] } }; handleChange: (v: string) => void }) => (
+          {(field: { state: { value: string }; handleChange: (v: string) => void }) => (
             <FloatingInput
               label="Phone"
               value={field.state.value ?? ""}
               onChange={field.handleChange}
               type="tel"
-              error={getFieldError(field)}
+              error={fieldErrors.phone}
               icon={<Phone className="w-5 h-5" />}
               placeholder="+33 6 12 34 56 78"
             />
@@ -118,13 +113,13 @@ export function StepContact({ form, cvFile, onCvChange, isUploadingCv }: StepCon
         transition={{ delay: 0.3 }}
       >
         <form.Field name="linkedin_url">
-          {(field: { state: { value: string; meta: { errors?: unknown[] } }; handleChange: (v: string) => void }) => (
+          {(field: { state: { value: string }; handleChange: (v: string) => void }) => (
             <FloatingInput
               label="LinkedIn"
               value={field.state.value ?? ""}
               onChange={field.handleChange}
               type="url"
-              error={getFieldError(field)}
+              error={fieldErrors.linkedin_url}
               icon={<Linkedin className="w-5 h-5" />}
               placeholder="linkedin.com/in/johndoe"
             />

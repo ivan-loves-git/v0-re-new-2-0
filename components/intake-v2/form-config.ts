@@ -55,7 +55,10 @@ export const step5Schema = z.object({
   q16_network_training: z.array(z.string()).optional(),
   q17_open_to_co_acquisition: z.boolean({ required_error: "Please select Yes or No" }),
   source: z.string().nullable().optional(),
-  marketing_consent: z.boolean({ required_error: "Please confirm your consent" }),
+  marketing_consent: z.boolean({ required_error: "Please confirm your consent" }).refine(
+    (val) => val === true,
+    "You must agree to receive communications to continue"
+  ),
 })
 
 // Combined schema for all form data

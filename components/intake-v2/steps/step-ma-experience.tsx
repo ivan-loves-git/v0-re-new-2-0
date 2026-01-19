@@ -8,6 +8,7 @@ import { AlertCircle } from "lucide-react"
 interface StepMAExperienceProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: any // TanStack Form instance
+  fieldErrors?: Record<string, string> // External validation errors from Zod
 }
 
 // Styled question wrapper with label
@@ -53,7 +54,7 @@ function QuestionWrapper({
 /**
  * Step 3: M&A Experience
  */
-export function StepMAExperience({ form }: StepMAExperienceProps) {
+export function StepMAExperience({ form, fieldErrors = {} }: StepMAExperienceProps) {
   // Watch fields to show/hide conditional question
   const hasMAExperience = form.useStore((state: any) => state.values.q4_has_ma_experience)
   const involvedInMA = form.useStore((state: any) => state.values.q6_involved_in_ma)
@@ -63,44 +64,38 @@ export function StepMAExperience({ form }: StepMAExperienceProps) {
     <div className="space-y-8">
       {/* Q4: Has M&A Experience */}
       <form.Field name="q4_has_ma_experience">
-        {(field: any) => {
-          const error = field.state.meta.errors?.[0]
-          return (
-            <QuestionWrapper
-              label="Do you have M&A experience?"
-              required
-              error={typeof error === 'string' ? error : undefined}
-              delay={0.1}
-            >
-              <YesNoButtons
-                value={field.state.value ?? null}
-                onChange={(v) => field.handleChange(v)}
-                variant="styled"
-              />
-            </QuestionWrapper>
-          )
-        }}
+        {(field: any) => (
+          <QuestionWrapper
+            label="Do you have M&A experience?"
+            required
+            error={fieldErrors.q4_has_ma_experience}
+            delay={0.1}
+          >
+            <YesNoButtons
+              value={field.state.value ?? null}
+              onChange={(v) => field.handleChange(v)}
+              variant="styled"
+            />
+          </QuestionWrapper>
+        )}
       </form.Field>
 
       {/* Q6: Involved in M&A */}
       <form.Field name="q6_involved_in_ma">
-        {(field: any) => {
-          const error = field.state.meta.errors?.[0]
-          return (
-            <QuestionWrapper
-              label="Have you been directly involved in M&A transactions?"
-              required
-              error={typeof error === 'string' ? error : undefined}
-              delay={0.15}
-            >
-              <YesNoButtons
-                value={field.state.value ?? null}
-                onChange={(v) => field.handleChange(v)}
-                variant="styled"
-              />
-            </QuestionWrapper>
-          )
-        }}
+        {(field: any) => (
+          <QuestionWrapper
+            label="Have you been directly involved in M&A transactions?"
+            required
+            error={fieldErrors.q6_involved_in_ma}
+            delay={0.15}
+          >
+            <YesNoButtons
+              value={field.state.value ?? null}
+              onChange={(v) => field.handleChange(v)}
+              variant="styled"
+            />
+          </QuestionWrapper>
+        )}
       </form.Field>
 
       {/* Q7: M&A Details (conditional) */}
@@ -129,23 +124,20 @@ export function StepMAExperience({ form }: StepMAExperienceProps) {
 
       {/* Q9: Board Experience */}
       <form.Field name="q9_board_experience">
-        {(field: any) => {
-          const error = field.state.meta.errors?.[0]
-          return (
-            <QuestionWrapper
-              label="Do you have board or advisory experience?"
-              required
-              error={typeof error === 'string' ? error : undefined}
-              delay={0.2}
-            >
-              <YesNoButtons
-                value={field.state.value ?? null}
-                onChange={(v) => field.handleChange(v)}
-                variant="styled"
-              />
-            </QuestionWrapper>
-          )
-        }}
+        {(field: any) => (
+          <QuestionWrapper
+            label="Do you have board or advisory experience?"
+            required
+            error={fieldErrors.q9_board_experience}
+            delay={0.2}
+          >
+            <YesNoButtons
+              value={field.state.value ?? null}
+              onChange={(v) => field.handleChange(v)}
+              variant="styled"
+            />
+          </QuestionWrapper>
+        )}
       </form.Field>
     </div>
   )

@@ -14,6 +14,7 @@ interface StepGoalsProps {
   ldcFile: File | null
   onLdcChange: (file: File | null) => void
   isUploadingLdc: boolean
+  fieldErrors?: Record<string, string> // External validation errors from Zod
 }
 
 // Styled question wrapper with label
@@ -59,7 +60,7 @@ function QuestionWrapper({
 /**
  * Step 4: Acquisition Goals
  */
-export function StepGoals({ form, stepConfig, ldcFile, onLdcChange, isUploadingLdc }: StepGoalsProps) {
+export function StepGoals({ form, stepConfig, ldcFile, onLdcChange, isUploadingLdc, fieldErrors = {} }: StepGoalsProps) {
   // Get options from step config
   const q10Options = stepConfig.questions.find(q => q.id === "q10_journey_stages")?.options ?? []
   const q11Options = stepConfig.questions.find(q => q.id === "q11_target_sectors")?.options ?? []
@@ -74,49 +75,43 @@ export function StepGoals({ form, stepConfig, ldcFile, onLdcChange, isUploadingL
     <div className="space-y-8">
       {/* Q10: Journey Stages */}
       <form.Field name="q10_journey_stages">
-        {(field: any) => {
-          const error = field.state.meta.errors?.[0]
-          return (
-            <QuestionWrapper
-              label="Where are you in your acquisition journey? (select all that apply)"
-              required
-              error={typeof error === 'string' ? error : undefined}
-              delay={0.1}
-            >
-              <CheckboxGrid
-                value={field.state.value}
-                onChange={(v) => field.handleChange(v)}
-                options={q10Options}
-                variant="styled"
-                columns={2}
-              />
-            </QuestionWrapper>
-          )
-        }}
+        {(field: any) => (
+          <QuestionWrapper
+            label="Where are you in your acquisition journey? (select all that apply)"
+            required
+            error={fieldErrors.q10_journey_stages}
+            delay={0.1}
+          >
+            <CheckboxGrid
+              value={field.state.value}
+              onChange={(v) => field.handleChange(v)}
+              options={q10Options}
+              variant="styled"
+              columns={2}
+            />
+          </QuestionWrapper>
+        )}
       </form.Field>
 
       {/* Q11: Target Sectors */}
       <form.Field name="q11_target_sectors">
-        {(field: any) => {
-          const error = field.state.meta.errors?.[0]
-          return (
-            <QuestionWrapper
-              label="Target Acquisition Sectors (select all that apply)"
-              required
-              error={typeof error === 'string' ? error : undefined}
-              delay={0.15}
-            >
-              <CheckboxGrid
-                value={field.state.value}
-                onChange={(v) => field.handleChange(v)}
-                options={q11Options}
-                variant="styled"
-                columns={2}
-                maxHeight="320px"
-              />
-            </QuestionWrapper>
-          )
-        }}
+        {(field: any) => (
+          <QuestionWrapper
+            label="Target Acquisition Sectors (select all that apply)"
+            required
+            error={fieldErrors.q11_target_sectors}
+            delay={0.15}
+          >
+            <CheckboxGrid
+              value={field.state.value}
+              onChange={(v) => field.handleChange(v)}
+              options={q11Options}
+              variant="styled"
+              columns={2}
+              maxHeight="320px"
+            />
+          </QuestionWrapper>
+        )}
       </form.Field>
 
       {/* Target Location */}
