@@ -10,14 +10,14 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 20, 2026",
-    version: "0.8.6",
+    version: "0.8.7",
     title: "Antoine's Feedback Fixes",
     isCompleted: true,
     events: [
       {
         title: "Offer assignment bug fix",
         type: "fix",
-        description: "Fixed 'appear then disappear' bug when assigning offers. Added optimistic UI pattern with local state buffer and mutation guard, matching the Notes component pattern.",
+        description: "Fixed 'appear then disappear' bug. Root cause: FK constraint on created_by referenced auth.users (Supabase Auth) but we use Better Auth. Fixed by dropping constraint and changing column from UUID to TEXT.",
       },
       {
         title: "Target region multi-select",
@@ -25,9 +25,9 @@ const roadmapEvents = [
         description: "Repreneurs can now select multiple target regions instead of just one. Uses checkbox grid (same as sector preferences). Database column migrated from TEXT to JSONB array.",
       },
       {
-        title: "Optimistic UI for status changes",
+        title: "Optimistic UI pattern",
         type: "feature",
-        description: "Offer status updates and deletions now use optimistic updates. Changes appear immediately while server confirms in background.",
+        description: "Offer list now uses optimistic updates with local state buffer and mutation guard. Changes appear immediately while server confirms in background.",
       },
     ],
   },
