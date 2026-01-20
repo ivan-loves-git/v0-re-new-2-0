@@ -21,9 +21,18 @@ interface RepreneurFormProps {
 export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: RepreneurFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedSectors, setSelectedSectors] = useState<string[]>(repreneur?.sector_preferences || [])
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(repreneur?.target_location || [])
 
   const toggleSector = (value: string) => {
     setSelectedSectors(prev =>
+      prev.includes(value)
+        ? prev.filter(v => v !== value)
+        : [...prev, value]
+    )
+  }
+
+  const toggleLocation = (value: string) => {
+    setSelectedLocations(prev =>
       prev.includes(value)
         ? prev.filter(v => v !== value)
         : [...prev, value]
@@ -34,6 +43,10 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
     // Add selected sectors to form data
     formData.delete("sector_preferences")
     formData.append("sector_preferences", JSON.stringify(selectedSectors))
+
+    // Add selected locations to form data
+    formData.delete("target_location")
+    formData.append("target_location", JSON.stringify(selectedLocations))
 
     setIsSubmitting(true)
     try {
@@ -196,19 +209,21 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="target_location">Target Location</Label>
-            <Select name="target_location" defaultValue={repreneur?.target_location || ""}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select region..." />
-              </SelectTrigger>
-              <SelectContent>
-                {TARGET_LOCATION_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+            <Label>Target Location(s)</Label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
+              {TARGET_LOCATION_OPTIONS.map((option) => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`location-${option.value}`}
+                    checked={selectedLocations.includes(option.value)}
+                    onCheckedChange={() => toggleLocation(option.value)}
+                  />
+                  <label htmlFor={`location-${option.value}`} className="text-sm cursor-pointer">
                     {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* GDPR Consent Section */}

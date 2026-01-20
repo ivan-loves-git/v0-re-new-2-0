@@ -85,7 +85,7 @@ export interface Repreneur {
   company_background?: string
   investment_capacity?: string
   sector_preferences?: string[]
-  target_location?: string
+  target_location?: string[] // Multiple target regions (JSONB array)
   target_acquisition_size?: string
   lifecycle_status: LifecycleStatus
   journey_stage?: JourneyStage
@@ -207,7 +207,7 @@ export interface Repreneur_Insert {
   company_background?: string
   investment_capacity?: string
   sector_preferences?: string[]
-  target_location?: string
+  target_location?: string[] // Multiple target regions (JSONB array)
   target_acquisition_size?: string
   lifecycle_status?: LifecycleStatus
   journey_stage?: JourneyStage

@@ -19,15 +19,26 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { assignOfferToRepreneur } from "@/lib/actions/offers"
-import type { Offer } from "@/lib/types/offer"
+import { toast } from "sonner"
+import type { Offer, RepreneurOffer } from "@/lib/types/offer"
 
 interface AssignOfferFormProps {
   repreneurId: string
   offers: Offer[]
   existingOfferIds: string[]
+  onOfferAssigned?: (tempOffer: RepreneurOffer) => void
+  onAssignComplete?: () => void
+  onAssignError?: (tempId: string) => void
 }
 
-export function AssignOfferForm({ repreneurId, offers, existingOfferIds }: AssignOfferFormProps) {
+export function AssignOfferForm({
+  repreneurId,
+  offers,
+  existingOfferIds,
+  onOfferAssigned,
+  onAssignComplete,
+  onAssignError,
+}: AssignOfferFormProps) {
   const [open, setOpen] = useState(false)
   const [selectedOffer, setSelectedOffer] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -46,11 +57,40 @@ export function AssignOfferForm({ repreneurId, offers, existingOfferIds }: Assig
   const handleSubmit = async () => {
     if (!selectedOffer) return
 
+    const offer = offers.find(o => o.id === selectedOffer)
+    if (!offer) return
+
+    // Create optimistic offer
+    const tempId = `temp-${Date.now()}`
+    const tempOffer: RepreneurOffer = {
+      id: tempId,
+      repreneur_id: repreneurId,
+      offer_id: selectedOffer,
+      status: "offered",
+      offered_at: new Date().toISOString(),
+      created_by: "",
+      offer: offer,
+    }
+
+    // Optimistically add to parent state
+    onOfferAssigned?.(tempOffer)
+
+    // Close dialog and reset
+    setOpen(false)
+    setSelectedOffer("")
     setIsSubmitting(true)
+
     try {
       await assignOfferToRepreneur(repreneurId, selectedOffer)
-      setOpen(false)
-      setSelectedOffer("")
+      toast.success("Offer assigned")
+      // Small delay to allow server to process before refresh
+      await new Promise(resolve => setTimeout(resolve, 100))
+      onAssignComplete?.()
+    } catch (error) {
+      console.error("Failed to assign offer:", error)
+      toast.error("Failed to assign offer. Please try again.")
+      // Revert on error
+      onAssignError?.(tempId)
     } finally {
       setIsSubmitting(false)
     }

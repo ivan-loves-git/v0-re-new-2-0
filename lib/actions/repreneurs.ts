@@ -30,6 +30,18 @@ export async function createRepreneur(formData: FormData) {
     }
   }
 
+  // Parse target location (now sent as JSON array)
+  const targetLocationRaw = formData.get("target_location") as string
+  let target_location: string[] = []
+  if (targetLocationRaw) {
+    try {
+      target_location = JSON.parse(targetLocationRaw)
+    } catch {
+      // Fallback to single value for backwards compatibility
+      target_location = [targetLocationRaw]
+    }
+  }
+
   // Parse marketing consent checkbox
   const marketingConsent = formData.get("marketing_consent") === "on"
 
@@ -42,7 +54,7 @@ export async function createRepreneur(formData: FormData) {
     company_background: (formData.get("company_background") as string) || undefined,
     investment_capacity: (formData.get("investment_capacity") as string) || undefined,
     sector_preferences: sector_preferences.length > 0 ? sector_preferences : undefined,
-    target_location: (formData.get("target_location") as string) || undefined,
+    target_location: target_location.length > 0 ? target_location : undefined,
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || undefined,
     lifecycle_status: (formData.get("lifecycle_status") as LifecycleStatus) || "lead",
     persona: (formData.get("persona") as PersonaType) || undefined,
@@ -79,6 +91,18 @@ export async function updateRepreneur(id: string, formData: FormData) {
     }
   }
 
+  // Parse target location (now sent as JSON array)
+  const targetLocationRaw = formData.get("target_location") as string
+  let target_location: string[] = []
+  if (targetLocationRaw) {
+    try {
+      target_location = JSON.parse(targetLocationRaw)
+    } catch {
+      // Fallback to single value for backwards compatibility
+      target_location = [targetLocationRaw]
+    }
+  }
+
   // Parse marketing consent checkbox
   const marketingConsent = formData.get("marketing_consent") === "on"
 
@@ -101,7 +125,7 @@ export async function updateRepreneur(id: string, formData: FormData) {
     company_background: (formData.get("company_background") as string) || null,
     investment_capacity: (formData.get("investment_capacity") as string) || null,
     sector_preferences: sector_preferences.length > 0 ? sector_preferences : null,
-    target_location: (formData.get("target_location") as string) || null,
+    target_location: target_location.length > 0 ? target_location : null,
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || null,
     lifecycle_status: formData.get("lifecycle_status") as LifecycleStatus,
     persona: (formData.get("persona") as string) || null,

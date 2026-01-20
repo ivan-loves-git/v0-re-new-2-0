@@ -9,6 +9,29 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Jan 20, 2026",
+    version: "0.8.6",
+    title: "Antoine's Feedback Fixes",
+    isCompleted: true,
+    events: [
+      {
+        title: "Offer assignment bug fix",
+        type: "fix",
+        description: "Fixed 'appear then disappear' bug when assigning offers. Added optimistic UI pattern with local state buffer and mutation guard, matching the Notes component pattern.",
+      },
+      {
+        title: "Target region multi-select",
+        type: "feature",
+        description: "Repreneurs can now select multiple target regions instead of just one. Uses checkbox grid (same as sector preferences). Database column migrated from TEXT to JSONB array.",
+      },
+      {
+        title: "Optimistic UI for status changes",
+        type: "feature",
+        description: "Offer status updates and deletions now use optimistic updates. Changes appear immediately while server confirms in background.",
+      },
+    ],
+  },
+  {
     period: "Jan 18, 2026",
     version: "0.8.5",
     title: "Auth Signup & Production Fixes",

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { MoreHorizontal, Check, Clock, Trash2, Package, Eye } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,7 @@ import { OfferStatusBadge } from "./offer-status-badge"
 import { AssignOfferForm } from "./assign-offer-form"
 import { OfferMilestones } from "./offer-milestones"
 import { updateRepreneurOfferStatus, deleteRepreneurOffer } from "@/lib/actions/offers"
+import { toast } from "sonner"
 import type { Offer, RepreneurOffer, OfferStatus, OfferMilestone } from "@/lib/types/offer"
 
 interface RepreneurOffersListProps {
@@ -32,10 +34,22 @@ interface RepreneurOffersListProps {
 }
 
 export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }: RepreneurOffersListProps) {
+  const router = useRouter()
+  const [localOffers, setLocalOffers] = useState<RepreneurOffer[]>(repreneurOffers)
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [viewingOffer, setViewingOffer] = useState<RepreneurOffer | null>(null)
 
-  const existingOfferIds = repreneurOffers.map((ro) => ro.offer_id)
+  // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
+  const isMutatingRef = useRef(false)
+
+  // Sync local state when props change, but only if we're not mid-mutation
+  useEffect(() => {
+    if (!isMutatingRef.current) {
+      setLocalOffers(repreneurOffers)
+    }
+  }, [repreneurOffers])
+
+  const existingOfferIds = localOffers.map((ro) => ro.offer_id)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -53,21 +67,89 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
   }
 
   const handleStatusChange = async (repreneurOfferId: string, newStatus: OfferStatus) => {
+    // Store original for potential revert
+    const originalOffers = [...localOffers]
+
+    // Set mutation flag BEFORE state updates
+    isMutatingRef.current = true
     setIsLoading(repreneurOfferId)
+
+    // Optimistically update status
+    setLocalOffers(prev =>
+      prev.map(ro =>
+        ro.id === repreneurOfferId ? { ...ro, status: newStatus } : ro
+      )
+    )
+
     try {
       await updateRepreneurOfferStatus(repreneurOfferId, newStatus, repreneurId)
+      toast.success("Offer status updated")
+      await new Promise(resolve => setTimeout(resolve, 100))
+      router.refresh()
+      setTimeout(() => {
+        isMutatingRef.current = false
+      }, 500)
+    } catch (error) {
+      console.error("Failed to update offer status:", error)
+      toast.error("Failed to update offer status")
+      // Revert on error
+      setLocalOffers(originalOffers)
+      isMutatingRef.current = false
     } finally {
       setIsLoading(null)
     }
   }
 
   const handleDelete = async (repreneurOfferId: string) => {
+    // Store for potential revert
+    const offerToDelete = localOffers.find(ro => ro.id === repreneurOfferId)
+
+    // Set mutation flag BEFORE state updates
+    isMutatingRef.current = true
     setIsLoading(repreneurOfferId)
+
+    // Optimistically remove
+    setLocalOffers(prev => prev.filter(ro => ro.id !== repreneurOfferId))
+
     try {
       await deleteRepreneurOffer(repreneurOfferId, repreneurId)
+      toast.success("Offer removed")
+      await new Promise(resolve => setTimeout(resolve, 100))
+      router.refresh()
+      setTimeout(() => {
+        isMutatingRef.current = false
+      }, 500)
+    } catch (error) {
+      console.error("Failed to delete offer:", error)
+      toast.error("Failed to remove offer")
+      // Revert on error
+      if (offerToDelete) {
+        setLocalOffers(prev => [...prev, offerToDelete])
+      }
+      isMutatingRef.current = false
     } finally {
       setIsLoading(null)
     }
+  }
+
+  // Handle optimistic update when a new offer is assigned
+  const handleOfferAssigned = (tempOffer: RepreneurOffer) => {
+    isMutatingRef.current = true
+    setLocalOffers(prev => [...prev, tempOffer])
+  }
+
+  // Handle successful server response
+  const handleOfferAssignComplete = () => {
+    router.refresh()
+    setTimeout(() => {
+      isMutatingRef.current = false
+    }, 500)
+  }
+
+  // Handle error - remove the temp offer
+  const handleOfferAssignError = (tempId: string) => {
+    setLocalOffers(prev => prev.filter(ro => ro.id !== tempId))
+    isMutatingRef.current = false
   }
 
   return (
@@ -82,19 +164,24 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
           repreneurId={repreneurId}
           offers={allOffers}
           existingOfferIds={existingOfferIds}
+          onOfferAssigned={handleOfferAssigned}
+          onAssignComplete={handleOfferAssignComplete}
+          onAssignError={handleOfferAssignError}
         />
       </CardHeader>
       <CardContent>
-        {repreneurOffers.length === 0 ? (
+        {localOffers.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <p className="text-sm text-gray-500">No offers assigned yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {repreneurOffers.map((ro) => (
+            {localOffers.map((ro) => (
               <div
                 key={ro.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
+                className={`flex items-center justify-between p-4 border rounded-lg ${
+                  ro.id.startsWith("temp-") ? "opacity-70" : ""
+                }`}
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
