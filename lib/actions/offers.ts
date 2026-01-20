@@ -82,7 +82,13 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
   const supabase = createAdminClient()
 
   // Get current user from Better Auth
-  const user = await requireUser()
+  let user
+  try {
+    user = await requireUser()
+  } catch (authError) {
+    console.error("Auth error in assignOfferToRepreneur:", authError)
+    throw new Error(`Authentication failed: ${authError instanceof Error ? authError.message : "Unknown auth error"}`)
+  }
 
   // Insert the offer assignment
   const { error: offerError } = await supabase.from("repreneur_offers").insert({
@@ -94,7 +100,8 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
   })
 
   if (offerError) {
-    throw new Error(offerError.message)
+    console.error("Database error in assignOfferToRepreneur:", offerError)
+    throw new Error(`Database error: ${offerError.message}`)
   }
 
   // Auto-set lifecycle_status to "client" when an offer is assigned
