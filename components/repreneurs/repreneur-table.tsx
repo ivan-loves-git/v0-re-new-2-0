@@ -4,6 +4,7 @@ import { useState, memo } from "react"
 import { useRouter } from "next/navigation"
 import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "./status-badge"
@@ -73,15 +74,39 @@ const StarDisplay = memo(function StarDisplay({ stars }: { stars: number | null 
   )
 })
 
-const ScoreDisplay = memo(function ScoreDisplay({ score }: { score: number | null | undefined }) {
-  if (score === null || score === undefined) {
+// Display combined WHO+WHEN score with tooltip breakdown
+const ScoreDisplay = memo(function ScoreDisplay({ repreneur }: { repreneur: RepreneurWithOffers }) {
+  const whoScore = (repreneur as any).who_score ?? repreneur.tier1_score
+  const whenScore = (repreneur as any).when_score
+  const combined = (whoScore ?? 0) + (whenScore ?? 0)
+
+  if (whoScore === null && whenScore === null) {
     return <span className="text-gray-400 text-sm">N/A</span>
   }
+
   return (
-    <div className="flex items-center gap-1">
-      <Target className="h-4 w-4 text-gray-400" />
-      <span className="font-medium">{score}</span>
-    </div>
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1 cursor-help">
+            <Target className="h-4 w-4 text-gray-400" />
+            <span className="font-medium">{combined}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="text-xs">
+          <div className="space-y-1">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">WHO:</span>
+              <span className="font-medium">{whoScore ?? "—"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">WHEN:</span>
+              <span className="font-medium">{whenScore ?? "—"}</span>
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 })
 
@@ -188,7 +213,12 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           // Sort by the status-specific field
           switch (status) {
             case "lead":
-              comparison = (a.tier1_score || 0) - (b.tier1_score || 0)
+              // Sort by combined WHO + WHEN score
+              const aWho = (a as any).who_score ?? a.tier1_score ?? 0
+              const aWhen = (a as any).when_score ?? 0
+              const bWho = (b as any).who_score ?? b.tier1_score ?? 0
+              const bWhen = (b as any).when_score ?? 0
+              comparison = (aWho + aWhen) - (bWho + bWhen)
               break
             case "qualified":
               comparison = (a.tier2_stars || 0) - (b.tier2_stars || 0)
@@ -294,7 +324,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   const renderStatusColumn = (repreneur: RepreneurWithOffers) => {
     switch (repreneur.lifecycle_status) {
       case "lead":
-        return <ScoreDisplay score={repreneur.tier1_score} />
+        return <ScoreDisplay repreneur={repreneur} />
       case "qualified":
         return <StarDisplay stars={repreneur.tier2_stars} />
       case "client":
@@ -315,7 +345,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   const getStatusColumnHeader = (status: LifecycleStatus) => {
     switch (status) {
       case "lead":
-        return "Tier 1 Score"
+        return "Rating"
       case "qualified":
         return "Tier 2 Rating"
       case "client":
