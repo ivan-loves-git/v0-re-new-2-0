@@ -5,7 +5,8 @@
 
 import type { IntakeV2FormData } from '@/lib/types/intake-v2'
 
-export const SHOW_AUTOFILL = process.env.NEXT_PUBLIC_SHOW_TEST_AUTOFILL === 'true'
+// Show autofill by default for testing - set to false for production launch
+export const SHOW_AUTOFILL = process.env.NEXT_PUBLIC_SHOW_TEST_AUTOFILL !== 'false'
 
 // Step 1: Contact Info
 export const TEST_CONTACT_DATA: Partial<IntakeV2FormData> = {
