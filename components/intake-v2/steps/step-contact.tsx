@@ -1,13 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { TEST_CONTACT_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps, FileUploadState } from '@/lib/types/intake-v2'
-import { Upload, FileText, X, Loader2, Zap } from 'lucide-react'
+import { Upload, FileText, X, Loader2 } from 'lucide-react'
 
 /**
  * Step 1: Contact Information
@@ -22,6 +21,13 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
     url: data.cv_url || null,
     error: null
   })
+
+  // Sync local cvUpload state when data.cv_url changes externally (e.g., from autofill)
+  useEffect(() => {
+    if (data.cv_url && data.cv_url !== cvUpload.url) {
+      setCvUpload(prev => ({ ...prev, url: data.cv_url || null }))
+    }
+  }, [data.cv_url])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -78,37 +84,13 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
     )
   }
 
-  const handleAutofill = () => {
-    onChange({
-      ...TEST_CONTACT_DATA,
-      email: `test-${Date.now()}@example.com`, // Unique email each time
-    })
-    // Simulate CV upload for testing
-    setCvUpload(prev => ({ ...prev, url: 'https://example.com/test-cv.pdf' }))
-    onChange({ cv_url: 'https://example.com/test-cv.pdf' })
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">{t('step1Title')}</h2>
-          <p className="text-muted-foreground">
-            {t('step1Description')}
-          </p>
-        </div>
-        {SHOW_AUTOFILL && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAutofill}
-            className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
-          >
-            <Zap className="h-3 w-3 mr-1" />
-            {t('fillStep')}
-          </Button>
-        )}
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold">{t('step1Title')}</h2>
+        <p className="text-muted-foreground">
+          {t('step1Description')}
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

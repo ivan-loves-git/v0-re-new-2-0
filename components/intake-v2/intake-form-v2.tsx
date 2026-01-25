@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { INTAKE_STEPS } from '@/lib/config/questionnaire-v2'
-import { TEST_ALL_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
+import { SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import { useLanguage } from '@/lib/i18n/language-context'
 import {
   StepContact,
@@ -152,17 +152,48 @@ export function IntakeFormV2() {
     }
   }
 
-  // Fill all fields for quick testing
-  const handleFillAll = () => {
-    setState(prev => ({
-      ...prev,
-      data: {
-        ...TEST_ALL_DATA,
+  // Fill current step for quick testing
+  const handleFillCurrentStep = () => {
+    const stepDataMap: Record<number, Partial<IntakeV2FormData>> = {
+      1: {
+        first_name: 'Jean',
+        last_name: 'Dupont',
         email: `test-${Date.now()}@example.com`,
+        phone: '+33 6 12 34 56 78',
         cv_url: 'https://example.com/test-cv.pdf',
+        linkedin_url: 'https://linkedin.com/in/jeandupont',
       },
-      currentStep: 6 // Jump to review
-    }))
+      2: {
+        q05_status: 'entrepreneur',
+        q06_experience: 'more_than_20',
+        q07_leadership: 'general_management',
+        q08_crisis: 'multiple',
+        q09_investment: 'both',
+        q10_impact: 'financial',
+      },
+      3: {
+        q11_project_status: ['framed', 'searching'],
+      },
+      4: {
+        q12_geo_zones: ['idf', 'north'],
+        q13_target_sectors_v2: ['industry', 'services'],
+        q14_deal_size: ['1-3M', '3-5M'],
+        q15_structure: ['majority_without_fund'],
+        q16_equity: '251-350',
+      },
+      5: {
+        q17_current_needs: ['training', 'sourcing', 'financing'],
+        marketing_consent: true,
+      },
+    }
+
+    const stepData = stepDataMap[currentStep]
+    if (stepData) {
+      setState(prev => ({
+        ...prev,
+        data: { ...prev.data, ...stepData }
+      }))
+    }
   }
 
   const stepLabel = language === 'fr' ? 'Étape' : 'Step'
@@ -171,8 +202,8 @@ export function IntakeFormV2() {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Quick Fill All button for testing */}
-      {SHOW_AUTOFILL && (
+      {/* Quick Fill Step button for testing */}
+      {SHOW_AUTOFILL && currentStep < 6 && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
           <span className="text-sm text-yellow-800">
             {t('testModeLabel')}
@@ -180,11 +211,11 @@ export function IntakeFormV2() {
           <Button
             type="button"
             size="sm"
-            onClick={handleFillAll}
+            onClick={handleFillCurrentStep}
             className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950"
           >
             <Zap className="h-4 w-4 mr-1" />
-            {t('fillAll')}
+            {t('fillStep')}
           </Button>
         </div>
       )}

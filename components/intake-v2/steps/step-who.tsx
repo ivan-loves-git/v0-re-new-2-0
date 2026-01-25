@@ -4,10 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { WHO_QUESTIONS } from '@/lib/config/questionnaire-v2'
-import { TEST_WHO_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
-import { Zap } from 'lucide-react'
 
 // Translation keys for WHO questions and options
 const WHO_TRANSLATION_MAP: Record<string, { label: string; options: Record<string, string> }> = {
@@ -81,31 +79,13 @@ export function StepWho({ data, onChange, onNext, onBack, errors = {} }: IntakeV
     })
   }
 
-  const handleAutofill = () => {
-    onChange(TEST_WHO_DATA)
-  }
-
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">{t('step2Title')}</h2>
-          <p className="text-muted-foreground">
-            {t('step2Description')}
-          </p>
-        </div>
-        {SHOW_AUTOFILL && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAutofill}
-            className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
-          >
-            <Zap className="h-3 w-3 mr-1" />
-            {t('fillStep')}
-          </Button>
-        )}
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold">{t('step2Title')}</h2>
+        <p className="text-muted-foreground">
+          {t('step2Description')}
+        </p>
       </div>
 
       {questions.map(([questionId, question], index) => {

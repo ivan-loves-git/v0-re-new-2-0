@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PROJECT_STATUS_QUESTION } from '@/lib/config/questionnaire-v2'
-import { TEST_PROJECT_STATUS_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
-import { Info, Zap } from 'lucide-react'
+import { Info } from 'lucide-react'
 
 // Translation keys for Q11 options
 const Q11_TRANSLATION_MAP: Record<string, string> = {
@@ -59,31 +58,13 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
     return selectedValues.length > 0
   }
 
-  const handleAutofill = () => {
-    onChange(TEST_PROJECT_STATUS_DATA)
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">{t('step3Title')}</h2>
-          <p className="text-muted-foreground">
-            {t('step3Description')}
-          </p>
-        </div>
-        {SHOW_AUTOFILL && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAutofill}
-            className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
-          >
-            <Zap className="h-3 w-3 mr-1" />
-            {t('fillStep')}
-          </Button>
-        )}
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold">{t('step3Title')}</h2>
+        <p className="text-muted-foreground">
+          {t('step3Description')}
+        </p>
       </div>
 
       <div className="space-y-3">

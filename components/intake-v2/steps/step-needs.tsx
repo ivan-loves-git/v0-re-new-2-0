@@ -5,10 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { NEEDS_QUESTIONS } from '@/lib/config/questionnaire-v2'
-import { TEST_NEEDS_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps, FileUploadState } from '@/lib/types/intake-v2'
-import { Upload, FileText, X, Loader2, Info, Zap } from 'lucide-react'
+import { Upload, FileText, X, Loader2, Info } from 'lucide-react'
 
 // Translation keys for Q17 options
 const Q17_TRANSLATION_MAP: Record<string, string> = {
@@ -97,31 +96,13 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
     return selectedNeeds.length > 0 && data.marketing_consent === true
   }
 
-  const handleAutofill = () => {
-    onChange(TEST_NEEDS_DATA)
-  }
-
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">{t('step5Title')}</h2>
-          <p className="text-muted-foreground">
-            {t('step5Description')}
-          </p>
-        </div>
-        {SHOW_AUTOFILL && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAutofill}
-            className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
-          >
-            <Zap className="h-3 w-3 mr-1" />
-            {t('fillStep')}
-          </Button>
-        )}
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold">{t('step5Title')}</h2>
+        <p className="text-muted-foreground">
+          {t('step5Description')}
+        </p>
       </div>
 
       {/* Q17: Current Needs */}
