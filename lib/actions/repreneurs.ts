@@ -8,6 +8,8 @@ import type { Repreneur_Insert, LifecycleStatus, PersonaType, Tier2Dimensions, M
 import { calculateTier2Overall, dimensionsToDbColumns } from "@/lib/utils/tier2-scoring"
 import { milestonesToDbColumns, countMilestones, extractMilestones, deriveJourneyStage } from "@/lib/utils/journey-derivation"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
+import { calculateDualScore } from "@/lib/utils/scoring-v2"
+import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
@@ -742,4 +744,98 @@ export async function toggleMilestone(id: string, milestoneKey: MilestoneKey, va
 
   // Only revalidate the specific profile page (optimistic UI handles immediate feedback)
   revalidatePath(`/repreneurs/${id}`)
+}
+
+/**
+ * Questionnaire V2 data input type (dual scoring)
+ */
+export interface QuestionnaireV2Input {
+  // WHO (Q05-Q10)
+  q05_status: string | null
+  q06_experience: string | null
+  q07_leadership: string | null
+  q08_crisis: string | null
+  q09_investment: string | null
+  q10_impact: string | null
+  // WHEN (Q11-Q16)
+  q11_project_status: string[]
+  q12_geo_zones: string[]
+  q13_target_sectors_v2: string[]
+  q14_deal_size: string[]
+  q15_structure: string[]
+  q16_equity: string | null
+}
+
+/**
+ * Save questionnaire v2 data and calculate dual WHO/WHEN scores
+ * This is the new dual scoring system replacing the legacy Tier 1 score
+ */
+export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input) {
+  const supabase = createAdminClient()
+
+  // Build WHO answers for scoring
+  const whoAnswers: WhoAnswers = {
+    q05: data.q05_status as WhoAnswers['q05'],
+    q06: data.q06_experience as WhoAnswers['q06'],
+    q07: data.q07_leadership as WhoAnswers['q07'],
+    q08: data.q08_crisis as WhoAnswers['q08'],
+    q09: data.q09_investment as WhoAnswers['q09'],
+    q10: data.q10_impact as WhoAnswers['q10'],
+  }
+
+  // Build WHEN answers for scoring
+  const whenAnswers: WhenAnswers = {
+    q11: data.q11_project_status as WhenAnswers['q11'],
+    q12: data.q12_geo_zones,
+    q13: data.q13_target_sectors_v2,
+    q14: data.q14_deal_size as WhenAnswers['q14'],
+    q15: data.q15_structure as WhenAnswers['q15'],
+    q16: data.q16_equity as WhenAnswers['q16'],
+  }
+
+  // Calculate dual scores
+  const dualScore = calculateDualScore(whoAnswers, whenAnswers)
+
+  // Update the repreneur with v2 questionnaire data and scores
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      // WHO answers
+      q05_status: data.q05_status,
+      q06_experience: data.q06_experience,
+      q07_leadership: data.q07_leadership,
+      q08_crisis: data.q08_crisis,
+      q09_investment: data.q09_investment,
+      q10_impact: data.q10_impact,
+      // WHEN answers
+      q11_project_status: data.q11_project_status,
+      q12_geo_zones: data.q12_geo_zones,
+      q13_target_sectors_v2: data.q13_target_sectors_v2,
+      q14_deal_size: data.q14_deal_size,
+      q15_structure: data.q15_structure,
+      q16_equity: data.q16_equity,
+      // Dual scores
+      who_score: dualScore.who.score,
+      when_score: dualScore.when.score,
+      who_score_breakdown: dualScore.who.breakdown,
+      when_score_breakdown: dualScore.when.breakdown,
+      scoring_flags: dualScore.flags.flags,
+      recommendation: dualScore.recommendation,
+      // Also update sector_preferences for backward compatibility
+      sector_preferences: data.q13_target_sectors_v2,
+      // Mark questionnaire as completed
+      questionnaire_completed_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+  revalidatePath("/dashboard")
+
+  return dualScore
 }
