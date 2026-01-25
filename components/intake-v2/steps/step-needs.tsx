@@ -9,16 +9,13 @@ import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps, FileUploadState } from '@/lib/types/intake-v2'
 import { Upload, FileText, X, Loader2, Info } from 'lucide-react'
 
-// Translation keys for Q17 options
+// Translation keys for Q17 options - values must match NEEDS_QUESTIONS in questionnaire-v2.ts
 const Q17_TRANSLATION_MAP: Record<string, string> = {
-  training: 'q17_training',
-  sourcing: 'q17_sourcing',
+  project_launch: 'q17_project_launch',
+  deal_access: 'q17_deal_access',
+  partner_access: 'q17_partner_access',
   financing: 'q17_financing',
-  due_diligence: 'q17_due_diligence',
-  negotiation: 'q17_negotiation',
-  legal: 'q17_legal',
-  network: 'q17_network',
-  other: 'q17_other',
+  other_support: 'q17_other_support',
 }
 
 /**

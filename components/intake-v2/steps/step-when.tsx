@@ -9,31 +9,42 @@ import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
 import { Info } from 'lucide-react'
 
-// Translation keys for WHEN questions
+// Translation keys for WHEN questions - values must match WHEN_QUESTIONS in questionnaire-v2.ts
 const WHEN_TRANSLATION_MAP: Record<string, { label: string; helpText?: string; options: Record<string, string> }> = {
   q12: {
     label: 'q12Label',
     options: {
-      idf: 'q12_idf',
-      north: 'q12_north',
-      east: 'q12_east',
-      west: 'q12_west',
-      south: 'q12_south',
-      all: 'q12_all',
-      international: 'q12_international',
+      'all-france': 'q12_all_france',
+      'ile-de-france': 'q12_ile_de_france',
+      'auvergne-rhone-alpes': 'q12_auvergne_rhone_alpes',
+      'paca': 'q12_paca',
+      'occitanie': 'q12_occitanie',
+      'nouvelle-aquitaine': 'q12_nouvelle_aquitaine',
+      'hauts-de-france': 'q12_hauts_de_france',
+      'grand-est': 'q12_grand_est',
+      'pays-de-la-loire': 'q12_pays_de_la_loire',
+      'bretagne': 'q12_bretagne',
+      'normandie': 'q12_normandie',
+      'bourgogne-franche-comte': 'q12_bourgogne_franche_comte',
+      'centre-val-de-loire': 'q12_centre_val_de_loire',
+      'corse': 'q12_corse',
+      'dom-tom': 'q12_dom_tom',
     }
   },
   q13: {
     label: 'q13Label',
     options: {
-      industry: 'q13_industry',
-      services: 'q13_services',
-      tech: 'q13_tech',
-      retail: 'q13_retail',
-      health: 'q13_health',
-      construction: 'q13_construction',
-      agri: 'q13_agri',
-      other: 'q13_other',
+      'all': 'q13_all',
+      'retail': 'q13_retail',
+      'industry': 'q13_industry',
+      'services': 'q13_services',
+      'construction': 'q13_construction',
+      'healthcare': 'q13_health',
+      'tech': 'q13_tech',
+      'environment': 'q13_environment',
+      'hospitality': 'q13_hospitality',
+      'transport': 'q13_transport',
+      'other': 'q13_other',
     }
   },
   q14: {

@@ -276,44 +276,84 @@ export const translations = {
     en: 'This information helps us evaluate the financial coherence of your project.',
   },
 
-  // Q12: Geographic zones
+  // Q12: Geographic zones (French regions)
   q12Label: {
     fr: 'Dans quelles zones géographiques recherchez-vous ?',
     en: 'In which geographic areas are you searching?',
   },
-  q12_idf: {
-    fr: 'Île-de-France',
-    en: 'Paris region (Île-de-France)',
-  },
-  q12_north: {
-    fr: 'Nord de la France',
-    en: 'Northern France',
-  },
-  q12_east: {
-    fr: 'Est de la France',
-    en: 'Eastern France',
-  },
-  q12_west: {
-    fr: 'Ouest de la France',
-    en: 'Western France',
-  },
-  q12_south: {
-    fr: 'Sud de la France',
-    en: 'Southern France',
-  },
-  q12_all: {
+  q12_all_france: {
     fr: 'Toute la France',
     en: 'All of France',
   },
-  q12_international: {
-    fr: 'International',
-    en: 'International',
+  q12_ile_de_france: {
+    fr: 'Île-de-France',
+    en: 'Île-de-France (Paris region)',
+  },
+  q12_auvergne_rhone_alpes: {
+    fr: 'Auvergne-Rhône-Alpes',
+    en: 'Auvergne-Rhône-Alpes',
+  },
+  q12_paca: {
+    fr: "Provence-Alpes-Côte d'Azur",
+    en: "Provence-Alpes-Côte d'Azur",
+  },
+  q12_occitanie: {
+    fr: 'Occitanie',
+    en: 'Occitanie',
+  },
+  q12_nouvelle_aquitaine: {
+    fr: 'Nouvelle-Aquitaine',
+    en: 'Nouvelle-Aquitaine',
+  },
+  q12_hauts_de_france: {
+    fr: 'Hauts-de-France',
+    en: 'Hauts-de-France',
+  },
+  q12_grand_est: {
+    fr: 'Grand Est',
+    en: 'Grand Est',
+  },
+  q12_pays_de_la_loire: {
+    fr: 'Pays de la Loire',
+    en: 'Pays de la Loire',
+  },
+  q12_bretagne: {
+    fr: 'Bretagne',
+    en: 'Brittany',
+  },
+  q12_normandie: {
+    fr: 'Normandie',
+    en: 'Normandy',
+  },
+  q12_bourgogne_franche_comte: {
+    fr: 'Bourgogne-Franche-Comté',
+    en: 'Bourgogne-Franche-Comté',
+  },
+  q12_centre_val_de_loire: {
+    fr: 'Centre-Val de Loire',
+    en: 'Centre-Val de Loire',
+  },
+  q12_corse: {
+    fr: 'Corse',
+    en: 'Corsica',
+  },
+  q12_dom_tom: {
+    fr: 'DOM-TOM',
+    en: 'Overseas territories',
   },
 
   // Q13: Target sectors
   q13Label: {
     fr: 'Quels secteurs ciblez-vous ?',
     en: 'What sectors are you targeting?',
+  },
+  q13_all: {
+    fr: 'Tous secteurs',
+    en: 'All sectors',
+  },
+  q13_retail: {
+    fr: 'Commerce / Distribution',
+    en: 'Retail / Distribution',
   },
   q13_industry: {
     fr: 'Industrie',
@@ -323,25 +363,29 @@ export const translations = {
     fr: 'Services',
     en: 'Services',
   },
-  q13_tech: {
-    fr: 'Tech / Digital',
-    en: 'Tech / Digital',
-  },
-  q13_retail: {
-    fr: 'Commerce / Distribution',
-    en: 'Retail / Distribution',
-  },
-  q13_health: {
-    fr: 'Santé / Pharma',
-    en: 'Health / Pharma',
-  },
   q13_construction: {
     fr: 'BTP / Construction',
     en: 'Construction',
   },
-  q13_agri: {
-    fr: 'Agroalimentaire',
-    en: 'Food & Agriculture',
+  q13_health: {
+    fr: 'Santé',
+    en: 'Healthcare',
+  },
+  q13_tech: {
+    fr: 'Tech / Digital',
+    en: 'Tech / Digital',
+  },
+  q13_environment: {
+    fr: 'Environnement',
+    en: 'Environment',
+  },
+  q13_hospitality: {
+    fr: 'Hôtellerie / Restauration',
+    en: 'Hospitality / Food service',
+  },
+  q13_transport: {
+    fr: 'Transport / Logistique',
+    en: 'Transport / Logistics',
   },
   q13_other: {
     fr: 'Autre',
@@ -437,37 +481,25 @@ export const translations = {
     fr: 'Quels sont vos besoins actuels ?',
     en: 'What are your current needs?',
   },
-  q17_training: {
-    fr: 'Formation à la reprise',
-    en: 'Acquisition training',
+  q17_project_launch: {
+    fr: 'Lancement / cadrage de projet',
+    en: 'Project launch / framing',
   },
-  q17_sourcing: {
-    fr: 'Sourcing de cibles',
-    en: 'Target sourcing',
+  q17_deal_access: {
+    fr: 'Accès à des opportunités de reprise',
+    en: 'Access to acquisition opportunities',
+  },
+  q17_partner_access: {
+    fr: 'Accès à des partenaires (avocats, experts-comptables)',
+    en: 'Access to partners (lawyers, accountants)',
   },
   q17_financing: {
-    fr: 'Accompagnement financement',
-    en: 'Financing support',
+    fr: 'Recherche de financement',
+    en: 'Financing search',
   },
-  q17_due_diligence: {
-    fr: 'Due diligence',
-    en: 'Due diligence',
-  },
-  q17_negotiation: {
-    fr: 'Aide à la négociation',
-    en: 'Negotiation support',
-  },
-  q17_legal: {
-    fr: 'Support juridique',
-    en: 'Legal support',
-  },
-  q17_network: {
-    fr: 'Réseau de repreneurs',
-    en: 'Buyer network',
-  },
-  q17_other: {
-    fr: 'Autre',
-    en: 'Other',
+  q17_other_support: {
+    fr: 'Autre accompagnement',
+    en: 'Other support',
   },
 
   // Q18: Investment thesis

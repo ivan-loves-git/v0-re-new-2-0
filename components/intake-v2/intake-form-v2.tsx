@@ -175,14 +175,14 @@ export function IntakeFormV2() {
         q11_project_status: ['framed', 'searching'],
       },
       4: {
-        q12_geo_zones: ['idf', 'north'],
+        q12_geo_zones: ['ile-de-france', 'auvergne-rhone-alpes'],
         q13_target_sectors_v2: ['industry', 'services'],
         q14_deal_size: ['1-3M', '3-5M'],
         q15_structure: ['majority_without_fund'],
         q16_equity: '251-350',
       },
       5: {
-        q17_current_needs: ['training', 'sourcing', 'financing'],
+        q17_current_needs: ['project_launch', 'deal_access', 'financing'],
         marketing_consent: true,
       },
     }

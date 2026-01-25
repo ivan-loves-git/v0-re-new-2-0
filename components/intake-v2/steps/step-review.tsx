@@ -56,23 +56,34 @@ const Q11_OPTION_KEYS: Record<string, string> = {
 
 const WHEN_OPTION_KEYS: Record<string, Record<string, string>> = {
   q12: {
-    idf: 'q12_idf',
-    north: 'q12_north',
-    east: 'q12_east',
-    west: 'q12_west',
-    south: 'q12_south',
-    all: 'q12_all',
-    international: 'q12_international',
+    'all-france': 'q12_all_france',
+    'ile-de-france': 'q12_ile_de_france',
+    'auvergne-rhone-alpes': 'q12_auvergne_rhone_alpes',
+    'paca': 'q12_paca',
+    'occitanie': 'q12_occitanie',
+    'nouvelle-aquitaine': 'q12_nouvelle_aquitaine',
+    'hauts-de-france': 'q12_hauts_de_france',
+    'grand-est': 'q12_grand_est',
+    'pays-de-la-loire': 'q12_pays_de_la_loire',
+    'bretagne': 'q12_bretagne',
+    'normandie': 'q12_normandie',
+    'bourgogne-franche-comte': 'q12_bourgogne_franche_comte',
+    'centre-val-de-loire': 'q12_centre_val_de_loire',
+    'corse': 'q12_corse',
+    'dom-tom': 'q12_dom_tom',
   },
   q13: {
-    industry: 'q13_industry',
-    services: 'q13_services',
-    tech: 'q13_tech',
-    retail: 'q13_retail',
-    health: 'q13_health',
-    construction: 'q13_construction',
-    agri: 'q13_agri',
-    other: 'q13_other',
+    'all': 'q13_all',
+    'retail': 'q13_retail',
+    'industry': 'q13_industry',
+    'services': 'q13_services',
+    'construction': 'q13_construction',
+    'healthcare': 'q13_health',
+    'tech': 'q13_tech',
+    'environment': 'q13_environment',
+    'hospitality': 'q13_hospitality',
+    'transport': 'q13_transport',
+    'other': 'q13_other',
   },
   q14: {
     '1-3M': 'q14_1_3M',
@@ -95,14 +106,11 @@ const WHEN_OPTION_KEYS: Record<string, Record<string, string>> = {
 }
 
 const Q17_OPTION_KEYS: Record<string, string> = {
-  training: 'q17_training',
-  sourcing: 'q17_sourcing',
+  project_launch: 'q17_project_launch',
+  deal_access: 'q17_deal_access',
+  partner_access: 'q17_partner_access',
   financing: 'q17_financing',
-  due_diligence: 'q17_due_diligence',
-  negotiation: 'q17_negotiation',
-  legal: 'q17_legal',
-  network: 'q17_network',
-  other: 'q17_other',
+  other_support: 'q17_other_support',
 }
 
 /**
