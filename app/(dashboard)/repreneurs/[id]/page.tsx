@@ -27,6 +27,9 @@ import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-cha
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { Tier1InlineEditor } from "@/components/repreneurs/tier1-inline-editor"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
+import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
+import { FlagBadges } from "@/components/scoring-v2/flag-badges"
+import type { Flag } from "@/components/scoring-v2/types"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
 import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/lib/constants/investment-ranges"
@@ -53,11 +56,45 @@ function getWhoDescription(score: number | null | undefined): string {
   return "Early stage"
 }
 
-function getRecommendationLabel(score: number | null | undefined): string {
-  if (score === null || score === undefined) return "Pending"
-  if (score >= 80) return "Deal Flow"
-  if (score >= 60) return "Interview"
-  return "Starter Pack"
+function getWhenDescription(score: number | null | undefined): string {
+  if (score === null || score === undefined) return "Not calculated"
+  if (score >= 80) return "Project framed"
+  if (score >= 60) return "Good clarity"
+  if (score >= 40) return "Needs refinement"
+  return "Explorer"
+}
+
+function getRecommendationLabel(recommendation: string | null | undefined, whoScore?: number | null, whenScore?: number | null): string {
+  // If explicit recommendation exists, use it
+  if (recommendation) {
+    switch (recommendation) {
+      case "deal_flow": return "Deal Flow"
+      case "interview_validate_thesis": return "Interview (Thesis)"
+      case "interview_validate_execution": return "Interview (Execution)"
+      case "starter_pack": return "Starter Pack"
+      case "priority_interview": return "Priority Interview"
+      default: return recommendation
+    }
+  }
+  // Fallback: derive from scores
+  const total = (whoScore ?? 0) + (whenScore ?? 0)
+  if (total >= 160) return "Deal Flow"
+  if (total >= 120) return "Interview"
+  if (total > 0) return "Starter Pack"
+  return "Pending"
+}
+
+function getRecommendationColor(recommendation: string | null | undefined): string {
+  switch (recommendation) {
+    case "deal_flow":
+    case "priority_interview":
+      return "bg-green-100 text-green-800 border-green-200"
+    case "interview_validate_thesis":
+    case "interview_validate_execution":
+      return "bg-blue-100 text-blue-800 border-blue-200"
+    default:
+      return "bg-amber-100 text-amber-800 border-amber-200"
+  }
 }
 
 export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -298,9 +335,28 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </CardTitle>
               {/* Right side: Recommendation + Flags + Edit */}
               <div className="flex items-center gap-2">
-                <Badge className="bg-blue-100 text-blue-800 border-blue-200" variant="outline">
-                  {getRecommendationLabel(repreneur.tier1_score)}
+                <Badge className={getRecommendationColor((repreneur as any).recommendation)} variant="outline">
+                  {getRecommendationLabel((repreneur as any).recommendation, (repreneur as any).who_score, (repreneur as any).when_score)}
                 </Badge>
+                {/* Show flags if present */}
+                {(repreneur as any).scoring_flags?.length > 0 && (
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-md text-red-700">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span className="text-xs font-medium">{(repreneur as any).scoring_flags.length}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs">
+                        <p className="text-xs font-medium text-red-600 mb-1">Flags override recommendation</p>
+                        {(repreneur as any).scoring_flags.map((flag: string) => (
+                          <p key={flag} className="text-xs">{flag}</p>
+                        ))}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
                   <Link href={`/repreneurs/${id}/questionnaire`}>
                     <Pencil className="h-3 w-3" />
@@ -312,7 +368,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           <CardContent className="space-y-4">
             {/* WHO + WHEN side by side */}
             <div className="grid grid-cols-2 gap-4">
-              {/* WHO */}
+              {/* WHO - use who_score if v2, fallback to tier1_score for v1 */}
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHO</span>
@@ -330,15 +386,15 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   </TooltipProvider>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">{repreneur.tier1_score ?? "—"}</span>
+                  <span className="text-4xl font-bold">{(repreneur as any).who_score ?? repreneur.tier1_score ?? "—"}</span>
                   <span className="text-sm text-gray-500">pts</span>
                 </div>
                 <Badge variant="outline" className="text-xs">
-                  {getWhoDescription(repreneur.tier1_score)}
+                  {getWhoDescription((repreneur as any).who_score ?? repreneur.tier1_score)}
                 </Badge>
               </div>
 
-              {/* WHEN */}
+              {/* WHEN - use when_score if v2, show dash for v1 */}
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHEN</span>
@@ -356,11 +412,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   </TooltipProvider>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">—</span>
+                  <span className="text-4xl font-bold">{(repreneur as any).when_score ?? "—"}</span>
                   <span className="text-sm text-gray-500">pts</span>
                 </div>
                 <Badge variant="outline" className="text-xs">
-                  Not calculated
+                  {getWhenDescription((repreneur as any).when_score)}
                 </Badge>
               </div>
             </div>
