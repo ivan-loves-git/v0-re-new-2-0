@@ -11,33 +11,28 @@ const roadmapEvents = [
   {
     period: "Jan 25, 2026",
     version: "0.8.8",
-    title: "Questionnaire UX Complete (Sprint 8)",
+    title: "Simplified Profile Editing",
     isCompleted: true,
     events: [
       {
-        title: "Intake v2 link in sidebar",
+        title: "Create test repreneur in 1 click",
         type: "feature",
-        description: "Added 'Intake (v2)' link to External Users section for easy test candidate creation. No more navigating directly to /intake-v2.",
+        description: "New 'Intake (v2)' link in the sidebar. No more typing URLs manually.",
       },
       {
-        title: "V2 questionnaire on profile page",
+        title: "Edit answers directly on profile",
         type: "feature",
-        description: "QuestionnaireFormV2 now embedded directly in repreneur profile. Collapsible card shows WHO/WHEN scores with live preview. No separate edit page needed.",
+        description: "WHO/WHEN questions now editable right on the repreneur page. Scores update in real-time when you save.",
       },
       {
-        title: "needs_data_completion flag cleared on save",
+        title: "'Needs completion' badge clears automatically",
         type: "fix",
-        description: "Legacy repreneurs marked 'needs completion' now have flag cleared when v2 data is saved. Badge disappears after completing the new questionnaire.",
+        description: "Once you fill in the new questionnaire for a legacy repreneur, the orange alert disappears.",
       },
       {
-        title: "Legacy questionnaire read-only",
+        title: "Old questionnaire locked",
         type: "refactor",
-        description: "Old /questionnaire route now shows French read-only banner. All inputs disabled. Save button replaced with 'Retour au profil' link. Historical data preserved.",
-      },
-      {
-        title: "Removed edit pencil from Rating card",
-        type: "style",
-        description: "Pencil button linking to old questionnaire removed. V2 form card is now the single edit interface. Cleaner, non-confusing UX.",
+        description: "Historical answers preserved but not editable. All edits happen through the new unified form.",
       },
     ],
   },
