@@ -109,20 +109,42 @@ export interface FormStepCompleteEmailProps extends EmailTemplateProps {
 
 export interface AbandonedReminderEmailProps extends EmailTemplateProps {
   metadata: {
+    /** Last completed step (1-6) */
     lastStep: number
+    /** Total steps in form */
+    totalSteps: number
+    /** Days since last activity */
     daysAgo: number
+    /** Step names for context */
+    stepNames?: string[]
   }
 }
 
 export interface ThankYouEmailProps extends EmailTemplateProps {
   metadata: {
-    tier1Score: number
+    /** @deprecated Use whoScore + whenScore for v2 */
+    tier1Score?: number
+    /** WHO score (0-100) - profile quality */
+    whoScore?: number
+    /** WHEN score (0-100) - project maturity */
+    whenScore?: number
+    /** Recommended action */
+    recommendation?: string
   }
 }
 
 export interface HighScoreAlertEmailProps extends EmailTemplateProps {
   metadata: {
-    tier1Score: number
+    /** @deprecated Use whoScore + whenScore for v2 */
+    tier1Score?: number
+    /** WHO score (0-100) - profile quality */
+    whoScore: number
+    /** WHEN score (0-100) - project maturity */
+    whenScore: number
+    /** Recommended action: deal_flow | priority_interview | interview | starter_pack */
+    recommendation: string
+    /** Warning flags if any */
+    flags?: string[]
   }
 }
 
