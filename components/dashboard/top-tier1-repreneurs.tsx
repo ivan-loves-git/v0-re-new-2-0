@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Trophy, Medal, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { CardInfoButton } from "./card-info-button"
@@ -14,6 +15,7 @@ interface TopRepreneur {
   last_name: string
   lifecycle_status: string
   tier1_score: number | null
+  // Future: who_score and when_score will be added
 }
 
 interface TopTier1RepreneursProps {
@@ -26,9 +28,9 @@ const ITEM_HEIGHT = 44 // height of each repreneur row in pixels
 
 const kpiInfo = {
   topTier1: {
-    title: "Tier 1 Score Ranking",
-    description: "Repreneurs ranked by their Tier 1 readiness score (0-100). Score is calculated from questionnaire responses including experience, leadership, M&A knowledge, and financial capacity.",
-    why: "Quickly identify your most qualified leads. Higher scores indicate better preparation for business acquisition, helping you prioritize outreach and meetings.",
+    title: "Top Rated Repreneurs",
+    description: "Repreneurs ranked by combined WHO + WHEN score (0-200). WHO measures profile quality and execution capacity. WHEN measures project maturity and financial coherence.",
+    why: "Quickly identify your most qualified leads. Higher combined scores indicate better preparation for business acquisition, helping you prioritize outreach and meetings.",
   },
 }
 
@@ -53,11 +55,19 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
     }
   }
 
+  // Combined score (WHO + WHEN) ranges from 0-200
   const getScoreColor = (score: number) => {
-    if (score >= 70) return "text-green-600 bg-green-50"
-    if (score >= 50) return "text-yellow-600 bg-yellow-50"
-    if (score >= 30) return "text-orange-600 bg-orange-50"
+    if (score >= 140) return "text-green-600 bg-green-50"
+    if (score >= 100) return "text-blue-600 bg-blue-50"
+    if (score >= 60) return "text-yellow-600 bg-yellow-50"
     return "text-gray-600 bg-gray-50"
+  }
+
+  // Get WHO and WHEN scores (for now, use tier1_score as WHO, WHEN not yet calculated)
+  const getScores = (repreneur: TopRepreneur) => {
+    const who = repreneur.tier1_score ?? 0
+    const when = 0 // TODO: Add when_score field
+    return { who, when, total: who + when }
   }
 
   // Fixed height for consistent layout regardless of page content
@@ -68,7 +78,7 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-base">
           <Trophy className="h-5 w-5 text-gray-900" />
-          Top Tier 1
+          Top Rated
           <CardInfoButton info={kpiInfo.topTier1} />
         </CardTitle>
         <CardLinkButton href="/pipeline" tooltip="View Pipeline" />
@@ -76,32 +86,50 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
       <CardContent className="pt-0 flex-1 flex flex-col">
         <div className="space-y-2" style={{ minHeight: listHeight }}>
           {visibleRepreneurs.length > 0 ? (
-            visibleRepreneurs.map((repreneur, index) => {
-              const actualIndex = startIndex + index
-              return (
-                <Link
-                  key={repreneur.id}
-                  href={`/repreneurs/${repreneur.id}`}
-                  className="flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors h-10"
-                >
-                  <div className="flex items-center justify-center w-6">
-                    {actualIndex < 3 ? (
-                      <Medal className={`h-5 w-5 ${getMedalColor(index)}`} />
-                    ) : (
-                      <span className="text-sm text-gray-400 font-medium">{actualIndex + 1}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {repreneur.first_name} {repreneur.last_name}
-                    </p>
-                  </div>
-                  <div className={`px-2 py-1 rounded text-sm font-bold ${getScoreColor(repreneur.tier1_score || 0)}`}>
-                    {repreneur.tier1_score || 0}
-                  </div>
-                </Link>
-              )
-            })
+            <TooltipProvider delayDuration={0}>
+              {visibleRepreneurs.map((repreneur, index) => {
+                const actualIndex = startIndex + index
+                const scores = getScores(repreneur)
+                return (
+                  <Tooltip key={repreneur.id}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={`/repreneurs/${repreneur.id}`}
+                        className="flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors h-10"
+                      >
+                        <div className="flex items-center justify-center w-6">
+                          {actualIndex < 3 ? (
+                            <Medal className={`h-5 w-5 ${getMedalColor(index)}`} />
+                          ) : (
+                            <span className="text-sm text-gray-400 font-medium">{actualIndex + 1}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {repreneur.first_name} {repreneur.last_name}
+                          </p>
+                        </div>
+                        <div className={`px-2 py-1 rounded text-sm font-bold ${getScoreColor(scores.total)}`}>
+                          {scores.total}
+                        </div>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="text-xs">
+                      <div className="space-y-1">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">WHO:</span>
+                          <span className="font-medium">{scores.who}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">WHEN:</span>
+                          <span className="font-medium">{scores.when || "—"}</span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </TooltipProvider>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
               No scored repreneurs
