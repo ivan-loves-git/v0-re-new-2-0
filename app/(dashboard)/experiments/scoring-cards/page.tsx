@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
-import { Beaker } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Beaker, CheckCircle2 } from "lucide-react"
 
 // Sample data scenarios
 const SCENARIOS: Record<string, DualScoreData> = {
@@ -173,34 +174,58 @@ export default function ScoringCardsExperimentPage() {
         </CardContent>
       </Card>
 
-      {/* 4 Variants Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">
-            Variant A: Stacked (WHO on top, WHEN below)
-          </h3>
-          <CardVariantA data={activeData} repreneurId="demo" />
+      {/* APPROVED: Variant B with Tier 2 Preview */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <h2 className="text-lg font-semibold text-green-800">
+            Approved Design: Variant B + Tier 2 Combined
+          </h2>
+          <Badge className="bg-green-100 text-green-800 border-green-200">Ready to Implement</Badge>
         </div>
 
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">
-            Variant B: Side by Side (two columns)
-          </h3>
-          <CardVariantB data={activeData} repreneurId="demo" />
-        </div>
+        {/* Preview of combined card */}
+        <Card className="border-2 border-green-200 bg-green-50/30">
+          <CardContent className="p-6">
+            <div className="space-y-0">
+              {/* Variant B (WHO + WHEN scores) */}
+              <CardVariantB data={activeData} repreneurId="demo" />
 
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">
-            Variant C: With Progress Bars
-          </h3>
-          <CardVariantC data={activeData} repreneurId="demo" />
-        </div>
+              {/* Tier 2 Preview (placeholder) */}
+              <div className="mt-4 p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                <p className="text-sm text-gray-500 text-center">
+                  Tier 2 Details Section (criteria breakdown) will go here
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">
-            Variant D: Compact (for dense layouts)
-          </h3>
-          <CardVariantD data={activeData} repreneurId="demo" />
+      {/* Other Variants (for reference) */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-700">Other Variants (Reference Only)</h2>
+        <div className="grid md:grid-cols-3 gap-6 opacity-60">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-500">
+              Variant A: Stacked
+            </h3>
+            <CardVariantA data={activeData} repreneurId="demo" />
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-500">
+              Variant C: Progress Bars
+            </h3>
+            <CardVariantC data={activeData} repreneurId="demo" />
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-500">
+              Variant D: Compact
+            </h3>
+            <CardVariantD data={activeData} repreneurId="demo" />
+          </div>
         </div>
       </div>
 

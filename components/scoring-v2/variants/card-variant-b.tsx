@@ -17,7 +17,7 @@ interface CardVariantBProps {
   repreneurId?: string
 }
 
-// Variant B: Side by side horizontally (two columns)
+// Variant B: Side by side horizontally - designed to combine with Tier 2 below
 export function CardVariantB({ data, repreneurId }: CardVariantBProps) {
   return (
     <Card>
@@ -42,17 +42,24 @@ export function CardVariantB({ data, repreneurId }: CardVariantBProps) {
               </PopoverContent>
             </Popover>
           </CardTitle>
-          {repreneurId && (
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
-              <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
-                <Pencil className="h-3 w-3 mr-1" />
-                <span className="text-xs">Edit</span>
-              </Link>
-            </Button>
-          )}
+
+          {/* Right side: Recommendation + Flags + Edit */}
+          <div className="flex items-center gap-2">
+            <Badge className={getRecommendationBadgeClass(data.recommendation)} variant="outline">
+              {getRecommendationLabel(data.recommendation)}
+            </Badge>
+            {data.flags.length > 0 && <FlagBadges flags={data.flags} compact />}
+            {repreneurId && (
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
+                <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
+                  <Pencil className="h-3 w-3" />
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         {/* Two scores side by side */}
         <div className="grid grid-cols-2 gap-4">
           {/* WHO */}
@@ -104,25 +111,10 @@ export function CardVariantB({ data, repreneurId }: CardVariantBProps) {
           </div>
         </div>
 
-        {/* Flags */}
-        {data.flags.length > 0 && (
-          <>
-            <div className="border-t" />
-            <FlagBadges flags={data.flags} />
-          </>
-        )}
-
-        {/* Recommendation */}
-        <div className="border-t pt-3">
-          <Badge className={getRecommendationBadgeClass(data.recommendation)}>
-            {getRecommendationLabel(data.recommendation)}
-          </Badge>
-        </div>
-
-        {/* Incomplete warning */}
+        {/* Incomplete warning - subtle */}
         {data.needsDataCompletion && (
-          <p className="text-xs text-amber-600 bg-amber-50 rounded-md p-2">
-            Some data missing - complete questionnaire for full score
+          <p className="text-xs text-amber-600 mt-3">
+            Some data missing
           </p>
         )}
       </CardContent>
