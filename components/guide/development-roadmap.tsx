@@ -9,6 +9,39 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Jan 25, 2026",
+    version: "0.8.8",
+    title: "Questionnaire UX Complete (Sprint 8)",
+    isCompleted: true,
+    events: [
+      {
+        title: "Intake v2 link in sidebar",
+        type: "feature",
+        description: "Added 'Intake (v2)' link to External Users section for easy test candidate creation. No more navigating directly to /intake-v2.",
+      },
+      {
+        title: "V2 questionnaire on profile page",
+        type: "feature",
+        description: "QuestionnaireFormV2 now embedded directly in repreneur profile. Collapsible card shows WHO/WHEN scores with live preview. No separate edit page needed.",
+      },
+      {
+        title: "needs_data_completion flag cleared on save",
+        type: "fix",
+        description: "Legacy repreneurs marked 'needs completion' now have flag cleared when v2 data is saved. Badge disappears after completing the new questionnaire.",
+      },
+      {
+        title: "Legacy questionnaire read-only",
+        type: "refactor",
+        description: "Old /questionnaire route now shows French read-only banner. All inputs disabled. Save button replaced with 'Retour au profil' link. Historical data preserved.",
+      },
+      {
+        title: "Removed edit pencil from Rating card",
+        type: "style",
+        description: "Pencil button linking to old questionnaire removed. V2 form card is now the single edit interface. Cleaner, non-confusing UX.",
+      },
+    ],
+  },
+  {
     period: "Jan 20, 2026",
     version: "0.8.7",
     title: "Antoine's Feedback Fixes",
