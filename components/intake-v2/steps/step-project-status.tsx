@@ -95,12 +95,12 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
             return (
               <div
                 key={option.value}
-                className={`flex items-start space-x-3 p-3 rounded-md border transition-colors cursor-pointer ${
+                className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
                   isSelected
                     ? isHighest
-                      ? 'bg-primary/10 border-primary'
-                      : 'bg-muted/50 border-muted-foreground/30'
-                    : 'hover:bg-muted/50'
+                      ? 'bg-blue-100 border-blue-500 ring-1 ring-blue-300'
+                      : 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                    : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                 }`}
                 onClick={() => toggleOption(option.value)}
               >
@@ -113,13 +113,13 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
                 <div className="flex-1">
                   <Label
                     htmlFor={`q11-${option.value}`}
-                    className="cursor-pointer font-normal leading-relaxed"
+                    className={`cursor-pointer font-normal leading-relaxed ${isSelected ? 'text-blue-900' : ''}`}
                   >
                     {option.label}
                   </Label>
                   {isHighest && selectedValues.length > 1 && (
-                    <span className="ml-2 text-xs text-primary font-medium">
-                      (étape la plus avancée)
+                    <span className="ml-2 text-xs text-blue-700 font-medium bg-blue-200 px-2 py-0.5 rounded">
+                      étape la plus avancée
                     </span>
                   )}
                 </div>

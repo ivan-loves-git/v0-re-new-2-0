@@ -48,8 +48,10 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
           return (
             <div
               key={option.value}
-              className={`flex items-center space-x-3 p-3 rounded-md border transition-colors cursor-pointer ${
-                isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
+              className={`flex items-center space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                isSelected
+                  ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                  : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
               }`}
               onClick={() => toggleMultiSelect(question.field, option.value)}
             >
@@ -60,7 +62,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
               />
               <Label
                 htmlFor={`${question.id}-${option.value}`}
-                className="flex-1 cursor-pointer font-normal"
+                className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-blue-900' : ''}`}
               >
                 {option.label}
               </Label>
@@ -169,21 +171,28 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
           onValueChange={(value) => onChange({ q16_equity: value })}
           className="space-y-2"
         >
-          {WHEN_QUESTIONS.q16.options.map((option) => (
-            <div
-              key={option.value}
-              className="flex items-center space-x-3 p-3 rounded-md border hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => onChange({ q16_equity: option.value })}
-            >
-              <RadioGroupItem value={option.value} id={`q16-${option.value}`} />
-              <Label
-                htmlFor={`q16-${option.value}`}
-                className="flex-1 cursor-pointer font-normal"
+          {WHEN_QUESTIONS.q16.options.map((option) => {
+            const isSelected = data.q16_equity === option.value
+            return (
+              <div
+                key={option.value}
+                className={`flex items-center space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                    : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                }`}
+                onClick={() => onChange({ q16_equity: option.value })}
               >
-                {option.label}
-              </Label>
-            </div>
-          ))}
+                <RadioGroupItem value={option.value} id={`q16-${option.value}`} />
+                <Label
+                  htmlFor={`q16-${option.value}`}
+                  className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-blue-900' : ''}`}
+                >
+                  {option.label}
+                </Label>
+              </div>
+            )
+          })}
         </RadioGroup>
         {errors.q16_equity && (
           <p className="text-sm text-red-500">{errors.q16_equity}</p>

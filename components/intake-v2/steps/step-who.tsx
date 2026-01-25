@@ -60,21 +60,28 @@ export function StepWho({ data, onChange, onNext, onBack, errors = {} }: IntakeV
             onValueChange={(value) => onChange({ [question.field]: value })}
             className="space-y-2"
           >
-            {question.options.map((option) => (
-              <div
-                key={option.value}
-                className="flex items-start space-x-3 p-3 rounded-md border hover:bg-muted/50 transition-colors cursor-pointer"
-                onClick={() => onChange({ [question.field]: option.value })}
-              >
-                <RadioGroupItem value={option.value} id={`${question.id}-${option.value}`} className="mt-0.5" />
-                <Label
-                  htmlFor={`${question.id}-${option.value}`}
-                  className="flex-1 cursor-pointer font-normal leading-relaxed"
+            {question.options.map((option) => {
+              const isSelected = data[question.field as keyof typeof data] === option.value
+              return (
+                <div
+                  key={option.value}
+                  className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                      : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                  }`}
+                  onClick={() => onChange({ [question.field]: option.value })}
                 >
-                  {option.label}
-                </Label>
-              </div>
-            ))}
+                  <RadioGroupItem value={option.value} id={`${question.id}-${option.value}`} className="mt-0.5" />
+                  <Label
+                    htmlFor={`${question.id}-${option.value}`}
+                    className={`flex-1 cursor-pointer font-normal leading-relaxed ${isSelected ? 'text-blue-900' : ''}`}
+                  >
+                    {option.label}
+                  </Label>
+                </div>
+              )
+            })}
           </RadioGroup>
 
           {errors[question.field] && (

@@ -122,8 +122,10 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
             return (
               <div
                 key={option.value}
-                className={`flex items-center space-x-3 p-3 rounded-md border transition-colors cursor-pointer ${
-                  isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
+                className={`flex items-center space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                    : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                 }`}
                 onClick={() => toggleNeed(option.value)}
               >
@@ -134,7 +136,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
                 />
                 <Label
                   htmlFor={`q17-${option.value}`}
-                  className="flex-1 cursor-pointer font-normal"
+                  className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-blue-900' : ''}`}
                 >
                   {option.label}
                 </Label>
