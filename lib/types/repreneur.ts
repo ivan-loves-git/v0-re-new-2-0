@@ -142,6 +142,28 @@ export interface Repreneur {
   q16_network_training?: string[]
   q17_open_to_co_acquisition?: boolean
   questionnaire_completed_at?: string
+  // WHO/WHEN Dual Scoring (v2 questionnaire)
+  // WHO answers (Q05-Q10)
+  q05_status?: string // 'entrepreneur' | 'freelance' | 'employee' | 'transition' | 'other'
+  q06_experience?: string // 'more_than_20' | '10_to_20' | 'less_than_10'
+  q07_leadership?: string // 'general_management' | 'mgmt_over_10' | 'mgmt_under_10' | 'none'
+  q08_crisis?: string // 'multiple' | 'once' | 'none'
+  q09_investment?: string // 'both' | 'personal' | 'professional' | 'none'
+  q10_impact?: string // 'financial' | 'trajectory' | 'limited' | 'none'
+  // WHEN answers (Q11-Q16)
+  q11_project_status?: string[] // ['discovery' | 'exploratory' | 'framed' | 'searching' | 'loi']
+  q12_geo_zones?: string[] // geographic zones (no scoring)
+  q13_target_sectors_v2?: string[] // sectors (no scoring)
+  q14_deal_size?: string[] // ['1-3M' | '3-5M' | '>5M']
+  q15_structure?: string[] // ['majority_without_fund' | 'majority_with_minority' | 'manager_with_majority' | 'havent_thought']
+  q16_equity?: string // 'tbd' | '151-250' | '251-350' | '351-450' | '>450'
+  // Dual score results
+  who_score?: number // Profile quality (0-100)
+  when_score?: number // Project maturity (0-100)
+  who_score_breakdown?: Record<string, number> // { q05: 5, q06: 15, ... }
+  when_score_breakdown?: Record<string, number> // { fitFinancier: 40, clarity: 40, projectStatus: 20 }
+  scoring_flags?: string[] // ['F1', 'F3', ...]
+  recommendation?: string // 'deal_flow' | 'priority_interview' | 'interview' | 'starter_pack'
   created_at: string
   updated_at: string
   created_by: string
@@ -221,6 +243,25 @@ export interface Repreneur_Insert {
   tier2_stars?: number
   rejected_at?: string
   previous_status?: LifecycleStatus
+  // WHO/WHEN Dual Scoring (v2 questionnaire)
+  q05_status?: string
+  q06_experience?: string
+  q07_leadership?: string
+  q08_crisis?: string
+  q09_investment?: string
+  q10_impact?: string
+  q11_project_status?: string[]
+  q12_geo_zones?: string[]
+  q13_target_sectors_v2?: string[]
+  q14_deal_size?: string[]
+  q15_structure?: string[]
+  q16_equity?: string
+  who_score?: number
+  when_score?: number
+  who_score_breakdown?: Record<string, number>
+  when_score_breakdown?: Record<string, number>
+  scoring_flags?: string[]
+  recommendation?: string
   created_by: string
 }
 
