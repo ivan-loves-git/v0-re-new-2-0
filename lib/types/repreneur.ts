@@ -164,6 +164,8 @@ export interface Repreneur {
   when_score_breakdown?: Record<string, number> // { fitFinancier: 40, clarity: 40, projectStatus: 20 }
   scoring_flags?: string[] // ['F1', 'F3', ...]
   recommendation?: string // 'deal_flow' | 'priority_interview' | 'interview' | 'starter_pack'
+  // Legacy migration flag
+  needs_data_completion?: boolean // True if legacy repreneur needs manual data entry for dual scoring
   created_at: string
   updated_at: string
   created_by: string
@@ -262,6 +264,7 @@ export interface Repreneur_Insert {
   when_score_breakdown?: Record<string, number>
   scoring_flags?: string[]
   recommendation?: string
+  needs_data_completion?: boolean
   created_by: string
 }
 
