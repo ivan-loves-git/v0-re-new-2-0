@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { NEEDS_QUESTIONS } from '@/lib/config/questionnaire-v2'
+import { TEST_NEEDS_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import type { IntakeV2StepProps, FileUploadState } from '@/lib/types/intake-v2'
-import { Upload, FileText, X, Loader2, Info } from 'lucide-react'
+import { Upload, FileText, X, Loader2, Info, Zap } from 'lucide-react'
 
 /**
  * Step 5: Needs Assessment (Q17-Q18)
@@ -82,8 +83,26 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
     return selectedNeeds.length > 0 && data.marketing_consent === true
   }
 
+  const handleAutofill = () => {
+    onChange(TEST_NEEDS_DATA)
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Autofill button for testing */}
+      {SHOW_AUTOFILL && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAutofill}
+          className="absolute -top-2 right-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
+        >
+          <Zap className="h-3 w-3 mr-1" />
+          Autofill
+        </Button>
+      )}
+
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold">Vos besoins</h2>
         <p className="text-muted-foreground">

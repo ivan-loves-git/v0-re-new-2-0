@@ -3,7 +3,9 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import { INTAKE_STEPS } from '@/lib/config/questionnaire-v2'
+import { TEST_ALL_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import {
   StepContact,
   StepWho,
@@ -14,6 +16,7 @@ import {
 } from './steps'
 import type { IntakeV2FormData, IntakeV2FormState, INITIAL_FORM_STATE } from '@/lib/types/intake-v2'
 import { submitIntakeV2 } from '@/lib/actions/intake-v2'
+import { Zap } from 'lucide-react'
 
 /**
  * Multi-step intake form orchestrator
@@ -135,10 +138,41 @@ export function IntakeFormV2() {
     }
   }
 
+  // Fill all fields for quick testing
+  const handleFillAll = () => {
+    setState(prev => ({
+      ...prev,
+      data: {
+        ...TEST_ALL_DATA,
+        email: `test-${Date.now()}@example.com`,
+        cv_url: 'https://example.com/test-cv.pdf',
+      },
+      currentStep: 6 // Jump to review
+    }))
+  }
+
   const currentStepInfo = INTAKE_STEPS[currentStep - 1]
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {/* Quick Fill All button for testing */}
+      {SHOW_AUTOFILL && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+          <span className="text-sm text-yellow-800">
+            Mode test activé
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleFillAll}
+            className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950"
+          >
+            <Zap className="h-4 w-4 mr-1" />
+            Remplir tout & aller à la review
+          </Button>
+        </div>
+      )}
+
       {/* Header with progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">

@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { WHEN_QUESTIONS } from '@/lib/config/questionnaire-v2'
+import { TEST_WHEN_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
-import { Info } from 'lucide-react'
+import { Info, Zap } from 'lucide-react'
 
 /**
  * Step 4: WHEN Questions (Q12-Q16)
@@ -70,8 +71,26 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
     )
   }
 
+  const handleAutofill = () => {
+    onChange(TEST_WHEN_DATA)
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Autofill button for testing */}
+      {SHOW_AUTOFILL && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAutofill}
+          className="absolute -top-2 right-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
+        >
+          <Zap className="h-3 w-3 mr-1" />
+          Autofill WHEN
+        </Button>
+      )}
+
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold">Vos critères de recherche</h2>
         <p className="text-muted-foreground">

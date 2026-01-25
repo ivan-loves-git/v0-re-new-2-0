@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PROJECT_STATUS_QUESTION } from '@/lib/config/questionnaire-v2'
+import { TEST_PROJECT_STATUS_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
-import { Info } from 'lucide-react'
+import { Info, Zap } from 'lucide-react'
 
 /**
  * Step 3: Project Status (Q11)
@@ -47,8 +48,26 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
     return selectedValues.length > 0
   }
 
+  const handleAutofill = () => {
+    onChange(TEST_PROJECT_STATUS_DATA)
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Autofill button for testing */}
+      {SHOW_AUTOFILL && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAutofill}
+          className="absolute -top-2 right-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
+        >
+          <Zap className="h-3 w-3 mr-1" />
+          Autofill
+        </Button>
+      )}
+
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold">Votre projet</h2>
         <p className="text-muted-foreground">

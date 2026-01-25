@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CONTACT_FIELDS } from '@/lib/config/questionnaire-v2'
+import { TEST_CONTACT_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import type { IntakeV2StepProps, FileUploadState } from '@/lib/types/intake-v2'
-import { Upload, FileText, X, Loader2 } from 'lucide-react'
+import { Upload, FileText, X, Loader2, Zap } from 'lucide-react'
 
 /**
  * Step 1: Contact Information
@@ -76,8 +77,32 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
     )
   }
 
+  const handleAutofill = () => {
+    onChange({
+      ...TEST_CONTACT_DATA,
+      email: `test-${Date.now()}@example.com`, // Unique email each time
+    })
+    // Simulate CV upload for testing
+    setCvUpload(prev => ({ ...prev, url: 'https://example.com/test-cv.pdf' }))
+    onChange({ cv_url: 'https://example.com/test-cv.pdf' })
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Autofill button for testing */}
+      {SHOW_AUTOFILL && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAutofill}
+          className="absolute -top-2 right-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
+        >
+          <Zap className="h-3 w-3 mr-1" />
+          Autofill
+        </Button>
+      )}
+
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold">Vos coordonnées</h2>
         <p className="text-muted-foreground">

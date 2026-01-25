@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { WHO_QUESTIONS } from '@/lib/config/questionnaire-v2'
+import { TEST_WHO_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
+import { Zap } from 'lucide-react'
 
 /**
  * Step 2: WHO Questions (Q05-Q10)
@@ -20,8 +22,26 @@ export function StepWho({ data, onChange, onNext, onBack, errors = {} }: IntakeV
     })
   }
 
+  const handleAutofill = () => {
+    onChange(TEST_WHO_DATA)
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Autofill button for testing */}
+      {SHOW_AUTOFILL && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAutofill}
+          className="absolute -top-2 right-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
+        >
+          <Zap className="h-3 w-3 mr-1" />
+          Autofill WHO
+        </Button>
+      )}
+
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold">Votre profil</h2>
         <p className="text-muted-foreground">
