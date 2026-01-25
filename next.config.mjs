@@ -24,6 +24,16 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_NUMBER: gitCommitCount,
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
   },
+  // Redirect old intake form to v2
+  async redirects() {
+    return [
+      {
+        source: '/intake',
+        destination: '/intake-v2',
+        permanent: false, // Temporary until v2 is stable
+      },
+    ]
+  },
 }
 
 export default nextConfig
