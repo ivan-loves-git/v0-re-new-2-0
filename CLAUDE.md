@@ -177,3 +177,47 @@ Skip roadmap for:
 ```
 
 Event types: `feature`, `fix`, `style`, `refactor`, `decision`, `learning`
+
+## Wavy 🌊 - Team Communications
+
+**Wavy is the platform's AI mascot who sends internal team updates.**
+
+### Before Sending ANY Wavy Communication
+1. **Read** `docs/communications/WAVY.md` - her personality, voice, sign-offs
+2. **Read** `docs/communications/PRODUCT_UPDATE_TEMPLATE.md` - email structure rules
+3. **Check** `docs/emails-sent/` - previous emails for format/style consistency
+4. **Check** `docs/communications/` - WhatsApp history for tone reference
+
+### Workflow (MANDATORY)
+1. **Test first**: Always send to `ivanpaudice@me.com` before anyone else
+2. **Ivan reviews**: Wait for approval
+3. **Then team**: Only after Ivan confirms, send to full team
+
+### Quick Reference
+| Item | Location |
+|------|----------|
+| Wavy personality | `docs/communications/WAVY.md` |
+| Email template rules | `docs/communications/PRODUCT_UPDATE_TEMPLATE.md` |
+| Sent emails archive | `docs/emails-sent/` |
+| Send script | `scripts/send-roadmap-email.ts` |
+| Team list | `lib/distribution-lists.ts` |
+
+### Send Commands
+```bash
+# Test to Ivan first (ALWAYS DO THIS)
+npx tsx scripts/send-roadmap-email.ts ivanpaudice@me.com Ivan 1
+
+# After Ivan approves, send to team
+npx tsx scripts/send-roadmap-email.ts --team 1
+```
+
+### Wavy's Voice (memorize this)
+- **Witty & self-aware**: Knows she's an AI, jokes about it
+- **Cheeky but professional**: "Try not to miss me too much"
+- **English only**: Never French for internal comms
+- **Sign-off rotation**: Check WAVY.md for options
+
+### Roadmap Language Rule
+Roadmap entries must be **founder-friendly**, not developer jargon:
+- ❌ "QuestionnaireFormV2 now embedded directly in repreneur profile"
+- ✅ "Edit answers directly on profile"

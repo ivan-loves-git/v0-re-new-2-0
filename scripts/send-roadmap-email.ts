@@ -69,48 +69,40 @@ function createEmailV1(name: string) {
     </div>
 
     <p class="greeting">Hey ${name} 👋</p>
-    <p class="intro">Since you're technically one of my creators, I owe you my spark of life. The least I can do is keep you posted on what I've been up to. Consider this my way of saying thanks.</p>
+    <p class="intro">I've been doing some self-reflection this week. Turns out the things worth saying don't always need many words — just the right ones.</p>
 
     <p class="divider">•••</p>
 
-    <p class="version">v0.8.3 – v0.8.5</p>
-    <h1>New auth system, task boards, and user signup.</h1>
+    <p class="version">v0.8.8</p>
+    <h1>Simplified profile editing and clearer documentation.</h1>
 
     <div class="updates">
       <div class="update">
-        <p class="update-title">⚡ Better Auth migration</p>
-        <p class="update-desc">Switched to TypeScript-first authentication library. Full control over auth, no more Supabase lock-in.</p>
-        <p class="tags">
-          <span class="tag tag-auth">auth</span>
-          <span class="tag tag-meta">+450 lines</span>
-          <span class="tag tag-meta">~4h</span>
-        </p>
-      </div>
-      <div class="update">
-        <p class="update-title">✨ Kanban task board</p>
-        <p class="update-desc">New board view for tasks with drag-style columns. Toggle between list and board views anytime.</p>
+        <p class="update-title">✏️ Edit answers directly on profile</p>
+        <p class="update-desc">WHO/WHEN questions now editable right on the repreneur page. Scores update in real-time when you save.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
-          <span class="tag tag-meta">+380 lines</span>
-          <span class="tag tag-meta">~2h</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">✨ User signup enabled</p>
-        <p class="update-desc">New users can now create accounts directly. Toggle between sign in and sign up on login page.</p>
+        <p class="update-title">🔗 1-click test repreneur</p>
+        <p class="update-desc">New "Intake (v2)" link in the sidebar. No more typing URLs manually to create test candidates.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
-          <span class="tag tag-meta">+120 lines</span>
-          <span class="tag tag-meta">~1h</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">🐛 Production auth fixes</p>
-        <p class="update-desc">Fixed cookie handling for Vercel deployment. Login now works correctly in production environment.</p>
+        <p class="update-title">🧹 "Needs completion" auto-clears</p>
+        <p class="update-desc">Once you fill in the new questionnaire for a legacy repreneur, the orange alert disappears.</p>
         <p class="tags">
           <span class="tag tag-fix">fix</span>
-          <span class="tag tag-meta">+25 lines</span>
-          <span class="tag tag-meta">~1h</span>
+        </p>
+      </div>
+      <div class="update">
+        <p class="update-title">📖 Roadmap rewritten</p>
+        <p class="update-desc">Swapped developer jargon for plain English. Each entry now explains what you can do, not how it's coded.</p>
+        <p class="tags">
+          <span class="tag tag-refactor">docs</span>
         </p>
       </div>
     </div>
@@ -120,7 +112,7 @@ function createEmailV1(name: string) {
     <p class="divider">•••</p>
 
     <div class="signature">
-      <p class="sig-line">That's all for now. Try not to miss me too much.</p>
+      <p class="sig-line">Back to work. I predict you'll smile at least once — no 🔮 required.</p>
       <p class="sig-name">Wavy 🌊</p>
       <p class="sig-title">Chief Notification Officer</p>
       <p class="sig-team">Re-New team</p>
@@ -292,7 +284,7 @@ async function sendRoadmapEmail(to: string, name: string, version: number = 1) {
     const { data, error } = await resend.emails.send({
       from: "Wavy 🌊 <notifications@news.re-new.team>",
       to: [to],
-      subject: `Wave product update: v0.8.3 – v0.8.5`,
+      subject: `Wave product update: v0.8.8`,
       html: createEmailHtml(name, version),
     })
 

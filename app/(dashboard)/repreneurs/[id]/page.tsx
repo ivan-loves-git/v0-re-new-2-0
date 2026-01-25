@@ -337,6 +337,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                {/* Edit button for legacy Tier 1 questionnaire */}
+                <Tier1InlineEditor repreneur={repreneur as Repreneur} />
               </CardTitle>
               {/* Right side: Recommendation + Flags + Edit */}
               <div className="flex items-center gap-2">
