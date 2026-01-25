@@ -3,42 +3,50 @@ import * as React from "react"
 import { BaseLayout, heading, paragraph, button } from "./base-layout"
 import type { WelcomeEmailProps } from "@/lib/types/email"
 
+/**
+ * Welcome Email - French
+ * Sent after successful intake form submission
+ */
 export function WelcomeEmail({ repreneur }: WelcomeEmailProps) {
   const { firstName } = repreneur
 
   return (
-    <BaseLayout previewText={`Welcome ${firstName}! Your Re-New journey begins.`}>
-      <Text style={heading}>Welcome {firstName}!</Text>
+    <BaseLayout previewText={`Bienvenue ${firstName} ! Votre parcours Re-New commence.`}>
+      <Text style={heading}>Bienvenue {firstName} !</Text>
 
       <Text style={paragraph}>
-        We are delighted to welcome you to the Re-New community.
+        Nous sommes ravis de vous accueillir dans la communauté Re-New.
       </Text>
 
       <Text style={paragraph}>
-        You have just taken the first step towards your business acquisition
-        project. Our team is here to support you at every stage of this
-        exciting journey.
-      </Text>
-
-      <Text style={paragraph}>
-        Your next step: complete your profile so we can better understand
-        your project and aspirations.
+        Vous venez de franchir la première étape vers votre projet de reprise
+        d&apos;entreprise. Notre équipe est là pour vous accompagner à chaque
+        étape de ce parcours passionnant.
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
-        <Link href="https://re-new.com/intake" style={button}>
-          Complete My Profile
+        <Link href="https://re-new.team" style={button}>
+          Découvrir Re-New
         </Link>
       </Section>
 
+      <Text style={heading} as="h2">Prochaines étapes</Text>
+
       <Text style={paragraph}>
-        If you have any questions, please do not hesitate to contact us.
+        Un membre de notre équipe vous contactera sous 48 à 72h pour un premier
+        échange. En attendant, n&apos;hésitez pas à explorer notre site et nos
+        ressources.
       </Text>
 
       <Text style={paragraph}>
-        See you soon,
+        Si vous avez des questions, n&apos;hésitez pas à nous contacter à{" "}
+        <Link href="mailto:contact@re-new.team">contact@re-new.team</Link>.
+      </Text>
+
+      <Text style={paragraph}>
+        À très bientôt,
         <br />
-        The Re-New Team
+        L&apos;équipe Re-New
       </Text>
     </BaseLayout>
   )

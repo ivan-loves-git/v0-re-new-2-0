@@ -3,13 +3,17 @@ import * as React from "react"
 import { BaseLayout, heading, paragraph, button, highlight } from "./base-layout"
 import type { OfferReceivedEmailProps } from "@/lib/types/email"
 
+/**
+ * Offer Received Email - French
+ * Sent when a repreneur receives a new offer/package
+ */
 export function OfferReceivedEmail({ repreneur, metadata }: OfferReceivedEmailProps) {
   const { firstName } = repreneur
-  const offerName = metadata?.offerName || "Offer"
+  const offerName = metadata?.offerName || "Offre"
   const offerPrice = metadata?.offerPrice || 0
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "EUR",
       maximumFractionDigits: 0,
@@ -17,16 +21,16 @@ export function OfferReceivedEmail({ repreneur, metadata }: OfferReceivedEmailPr
   }
 
   return (
-    <BaseLayout previewText={`${firstName}, you have received an offer from Re-New!`}>
-      <Text style={heading}>New Offer for You!</Text>
+    <BaseLayout previewText={`${firstName}, vous avez reçu une offre de Re-New !`}>
+      <Text style={heading}>Une offre vous attend !</Text>
 
       <Text style={paragraph}>
-        Dear {firstName},
+        Cher(e) {firstName},
       </Text>
 
       <Text style={paragraph}>
-        Following the analysis of your profile, we are pleased to
-        offer you a personalized support package.
+        Suite à l&apos;analyse de votre profil, nous avons le plaisir de vous
+        proposer un accompagnement personnalisé.
       </Text>
 
       <Section style={highlight}>
@@ -39,29 +43,30 @@ export function OfferReceivedEmail({ repreneur, metadata }: OfferReceivedEmailPr
       </Section>
 
       <Text style={paragraph}>
-        This offer has been selected to meet your specific needs
-        and effectively support you in your acquisition project.
+        Cette offre a été sélectionnée pour répondre à vos besoins spécifiques
+        et vous accompagner efficacement dans votre projet de reprise.
       </Text>
 
       <Text style={paragraph}>
-        Log in to your dashboard to discover the details of this offer
-        and make your decision.
+        Connectez-vous à votre espace pour découvrir le détail de cette offre
+        et prendre votre décision.
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
-        <Link href="https://re-new.com/dashboard" style={button}>
-          View Offer
+        <Link href="https://app.re-new.team" style={button}>
+          Voir l&apos;offre
         </Link>
       </Section>
 
       <Text style={paragraph}>
-        Do not hesitate to contact us if you have any questions.
+        N&apos;hésitez pas à nous contacter si vous avez des questions à{" "}
+        <Link href="mailto:contact@re-new.team">contact@re-new.team</Link>.
       </Text>
 
       <Text style={paragraph}>
-        See you soon,
+        À bientôt,
         <br />
-        The Re-New Team
+        L&apos;équipe Re-New
       </Text>
     </BaseLayout>
   )
