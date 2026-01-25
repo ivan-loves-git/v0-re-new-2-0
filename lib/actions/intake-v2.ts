@@ -1,13 +1,16 @@
-'use server'
+"use server"
 
-import { createAdminClient } from '@/lib/supabase/admin'
-import { calculateDualScore } from '@/lib/utils/scoring-v2'
-import type { IntakeV2FormData, IntakeV2SubmissionResult } from '@/lib/types/intake-v2'
-import type { WhoAnswers, WhenAnswers } from '@/lib/types/scoring-v2'
+import { createAdminClient } from "@/lib/supabase/admin"
+import { revalidatePath } from "next/cache"
+import { calculateDualScore } from "@/lib/utils/scoring-v2"
+import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
+import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
 
 /**
- * Submit intake form v2
- * Calculates dual scores and creates repreneur record
+ * Submit complete intake form v2
+ *
+ * This is a single-submission action (not step-by-step like v1).
+ * It calculates WHO/WHEN scores and inserts the complete record.
  */
 export async function submitIntakeV2(
   formData: IntakeV2FormData
@@ -15,7 +18,23 @@ export async function submitIntakeV2(
   try {
     const supabase = createAdminClient()
 
-    // 1. Build WHO answers from form data
+    // Check if email already exists
+    const { data: existing, error: checkError } = await supabase
+      .from("repreneurs")
+      .select("id")
+      .eq("email", formData.email.toLowerCase().trim())
+      .maybeSingle()
+
+    if (checkError) {
+      console.error("Error checking existing email:", checkError)
+      return { success: false, error: "Erreur lors de la vérification. Veuillez réessayer." }
+    }
+
+    if (existing) {
+      return { success: false, error: "Cette adresse email est déjà enregistrée." }
+    }
+
+    // Calculate WHO score
     const whoAnswers: WhoAnswers = {
       q05: formData.q05_status as WhoAnswers['q05'],
       q06: formData.q06_experience as WhoAnswers['q06'],
@@ -25,7 +44,7 @@ export async function submitIntakeV2(
       q10: formData.q10_impact as WhoAnswers['q10']
     }
 
-    // 2. Build WHEN answers from form data
+    // Calculate WHEN score
     const whenAnswers: WhenAnswers = {
       q11: formData.q11_project_status as WhenAnswers['q11'],
       q12: formData.q12_geo_zones,
@@ -35,18 +54,19 @@ export async function submitIntakeV2(
       q16: formData.q16_equity as WhenAnswers['q16']
     }
 
-    // 3. Calculate dual scores
-    const scoreResult = calculateDualScore(whoAnswers, whenAnswers)
+    // Calculate dual score
+    const dualScore = calculateDualScore(whoAnswers, whenAnswers)
 
-    // 4. Prepare repreneur data
-    const repreneurData = {
+    // Prepare record for insertion
+    const now = new Date().toISOString()
+    const record = {
       // Contact info
-      email: formData.email.toLowerCase().trim(),
       first_name: formData.first_name.trim(),
       last_name: formData.last_name.trim(),
+      email: formData.email.toLowerCase().trim(),
       phone: formData.phone.trim(),
       cv_url: formData.cv_url,
-      linkedin_url: formData.linkedin_url || null,
+      linkedin_url: formData.linkedin_url?.trim() || null,
 
       // WHO answers (Q05-Q10)
       q05_status: formData.q05_status,
@@ -64,118 +84,58 @@ export async function submitIntakeV2(
       q15_structure: formData.q15_structure,
       q16_equity: formData.q16_equity,
 
-      // Needs (Q17-Q18)
-      q17_current_needs: formData.q17_current_needs,
-      q18_investment_thesis_url: formData.q18_investment_thesis_url,
-
       // Dual scores
-      who_score: scoreResult.who.score,
-      when_score: scoreResult.when.score,
-      who_score_breakdown: scoreResult.who.breakdown,
-      when_score_breakdown: scoreResult.when.breakdown,
-      scoring_flags: scoreResult.flags.flags,
-      recommendation: scoreResult.recommendation,
+      who_score: dualScore.who.score,
+      when_score: dualScore.when.score,
+      who_score_breakdown: dualScore.who.breakdown,
+      when_score_breakdown: dualScore.when.breakdown,
+      scoring_flags: dualScore.flags.flags,
+      recommendation: dualScore.recommendation,
 
-      // Metadata
-      lifecycle_status: 'lead' as const,
-      source: 'intake_v2',
-      marketing_consent: formData.marketing_consent,
-      consent_timestamp: new Date().toISOString(),
-      consent_source: 'intake_form_v2',
-
-      // Legacy fields - map what we can
-      target_location: formData.q12_geo_zones,
+      // Also set legacy sector_preferences for backward compatibility
       sector_preferences: formData.q13_target_sectors_v2,
-      investment_capacity: mapEquityToInvestmentCapacity(formData.q16_equity),
 
-      // Created by system
-      created_by: '00000000-0000-0000-0000-000000000000' // System user UUID
+      // Status & metadata
+      lifecycle_status: "lead" as const,
+      source: "intake_v2",
+      consent_source: "intake_form_v2",
+      marketing_consent: formData.marketing_consent,
+      consent_timestamp: formData.marketing_consent ? now : null,
+      questionnaire_completed_at: now,
     }
 
-    // 5. Check for existing email
-    const { data: existing } = await supabase
-      .from('repreneurs')
-      .select('id')
-      .eq('email', repreneurData.email)
+    // Insert the record
+    const { data: repreneur, error: insertError } = await supabase
+      .from("repreneurs")
+      .insert(record)
+      .select("id")
       .single()
 
-    if (existing) {
-      return {
-        success: false,
-        error: 'Cette adresse email est déjà enregistrée. Contactez-nous si vous souhaitez mettre à jour votre profil.'
+    if (insertError) {
+      console.error("Error inserting repreneur:", insertError)
+      if (insertError.code === "23505") {
+        return { success: false, error: "Cette adresse email est déjà enregistrée." }
       }
+      return { success: false, error: "Erreur lors de l'enregistrement. Veuillez réessayer." }
     }
 
-    // 6. Insert repreneur
-    const { data: repreneur, error } = await supabase
-      .from('repreneurs')
-      .insert(repreneurData)
-      .select('id')
-      .single()
+    // Revalidate relevant paths
+    revalidatePath("/repreneurs")
+    revalidatePath("/pipeline")
+    revalidatePath("/dashboard")
 
-    if (error) {
-      console.error('Error creating repreneur:', error)
-      return {
-        success: false,
-        error: 'Une erreur est survenue lors de l\'enregistrement. Veuillez réessayer.'
-      }
-    }
-
-    // 7. Send welcome email (async, don't block)
-    sendWelcomeEmail(repreneurData.email, repreneurData.first_name).catch(err => {
-      console.error('Failed to send welcome email:', err)
-    })
-
-    // 8. If high score, send internal alert
-    if (scoreResult.recommendation === 'deal_flow' || scoreResult.recommendation === 'priority_interview') {
-      sendHighScoreAlert(repreneur.id, scoreResult.who.score, scoreResult.when.score).catch(err => {
-        console.error('Failed to send high score alert:', err)
-      })
-    }
+    // TODO: Send welcome email (will be added in Sprint 5)
+    // TODO: Send high score alert if recommendation is deal_flow or priority_interview
 
     return {
       success: true,
       repreneurId: repreneur.id,
-      whoScore: scoreResult.who.score,
-      whenScore: scoreResult.when.score,
-      recommendation: scoreResult.recommendation
+      whoScore: dualScore.who.score,
+      whenScore: dualScore.when.score,
+      recommendation: dualScore.recommendation
     }
-
-  } catch (error) {
-    console.error('Intake submission error:', error)
-    return {
-      success: false,
-      error: 'Une erreur inattendue est survenue. Veuillez réessayer.'
-    }
+  } catch (err) {
+    console.error("Unexpected error in submitIntakeV2:", err)
+    return { success: false, error: "Une erreur inattendue s'est produite. Veuillez réessayer." }
   }
-}
-
-/**
- * Map equity contribution to legacy investment_capacity field
- */
-function mapEquityToInvestmentCapacity(equity: string): string {
-  const mapping: Record<string, string> = {
-    'tbd': 'À définir',
-    '151-250': '151-250 K€',
-    '251-350': '251-350 K€',
-    '351-450': '351-450 K€',
-    '>450': '> 450 K€'
-  }
-  return mapping[equity] || equity
-}
-
-/**
- * Send welcome email to new repreneur
- */
-async function sendWelcomeEmail(email: string, firstName: string) {
-  // TODO: Implement with Resend
-  console.log(`Would send welcome email to ${email} (${firstName})`)
-}
-
-/**
- * Send internal alert for high-scoring repreneurs
- */
-async function sendHighScoreAlert(repreneurId: string, whoScore: number, whenScore: number) {
-  // TODO: Implement with Resend to team
-  console.log(`Would send high score alert for ${repreneurId}: WHO=${whoScore}, WHEN=${whenScore}`)
 }
