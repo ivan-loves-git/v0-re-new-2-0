@@ -1,8 +1,11 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatDistanceToNow } from "date-fns"
 import { useRouter } from "next/navigation"
+import { Target } from "lucide-react"
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
 import type { Repreneur } from "@/lib/types/repreneur"
 
@@ -13,6 +16,12 @@ interface RepreneurCardProps {
 
 export function RepreneurCard({ repreneur, isDragging = false }: RepreneurCardProps) {
   const router = useRouter()
+
+  // Calculate combined score
+  const whoScore = (repreneur as any).who_score ?? repreneur.tier1_score
+  const whenScore = (repreneur as any).when_score
+  const combined = (whoScore ?? 0) + (whenScore ?? 0)
+  const hasScore = whoScore !== null || whenScore !== null
 
   return (
     <Card
@@ -25,10 +34,34 @@ export function RepreneurCard({ repreneur, isDragging = false }: RepreneurCardPr
           <h3 className="font-semibold text-sm">
             {repreneur.first_name} {repreneur.last_name}
           </h3>
-          {repreneur.journey_stage && (
-            <JourneyStageBadge stage={repreneur.journey_stage} showIcon={false} />
+          {hasScore && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs gap-1 cursor-help">
+                    <Target className="h-3 w-3" />
+                    {combined}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">
+                  <div className="space-y-1">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">WHO:</span>
+                      <span className="font-medium">{whoScore ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">WHEN:</span>
+                      <span className="font-medium">{whenScore ?? "—"}</span>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
+        {repreneur.journey_stage && (
+          <JourneyStageBadge stage={repreneur.journey_stage} showIcon={false} />
+        )}
         <p className="text-xs text-muted-foreground">{repreneur.email}</p>
         <p className="text-xs text-muted-foreground">
           Added {formatDistanceToNow(new Date(repreneur.created_at), { addSuffix: true })}
