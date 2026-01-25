@@ -1,51 +1,124 @@
 "use client"
 
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Star, Info, Pencil } from "lucide-react"
 import { FlagBadges } from "../flag-badges"
 import {
   DualScoreData,
-  getScoreColor,
   getRecommendationLabel,
-  getRecommendationColor,
 } from "../types"
 
 interface CardVariantAProps {
   data: DualScoreData
-  title?: string
+  repreneurId?: string
 }
 
-// Variant A: Two circular gauges side by side
-export function CardVariantA({ data, title = "Scoring" }: CardVariantAProps) {
+// Variant A: Stacked vertically (WHO on top, WHEN below) - closest to current design
+export function CardVariantA({ data, repreneurId }: CardVariantAProps) {
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{title}</CardTitle>
-          {data.flags.length > 0 && <FlagBadges flags={data.flags} compact />}
-        </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Star className="h-5 w-5" />
+          Rating
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Info className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="bottom" className="max-w-xs p-3">
+              <p className="text-sm">
+                <strong>WHO (0-100):</strong> Profile quality and execution capacity based on experience, leadership, and investment history.
+              </p>
+              <p className="text-sm mt-2">
+                <strong>WHEN (0-100):</strong> Project maturity and financial coherence based on deal size, structure, and equity fit.
+              </p>
+            </PopoverContent>
+          </Popover>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Two circular gauges */}
-        <div className="flex justify-center gap-8">
-          <CircularGauge label="WHO" score={data.who} />
-          <CircularGauge label="WHEN" score={data.when} />
+        {/* WHO Score */}
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHO</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Info className="h-3 w-3" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="right" className="max-w-xs p-3">
+                <p className="text-sm">Profile quality: experience, leadership, crisis management, investment decisions.</p>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl font-bold">{data.who ?? "—"}</span>
+            <span className="text-sm text-gray-500">points</span>
+            {repreneurId && (
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2 ml-auto" asChild>
+                <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
+                  <Pencil className="h-3 w-3" />
+                </Link>
+              </Button>
+            )}
+          </div>
+          <Badge variant="outline" className="text-xs mt-2">
+            {getWhoDescription(data.who)}
+          </Badge>
         </div>
 
-        {/* Recommendation badge */}
-        <div className="flex justify-center">
-          <span
-            className={`px-3 py-1.5 text-sm font-medium rounded-full border ${getRecommendationColor(
-              data.recommendation
-            )}`}
-          >
+        <div className="border-t" />
+
+        {/* WHEN Score */}
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHEN</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Info className="h-3 w-3" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="right" className="max-w-xs p-3">
+                <p className="text-sm">Project maturity: deal size, capital structure, equity contribution, project status.</p>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl font-bold">{data.when ?? "—"}</span>
+            <span className="text-sm text-gray-500">points</span>
+          </div>
+          <Badge variant="outline" className="text-xs mt-2">
+            {getWhenDescription(data.when)}
+          </Badge>
+        </div>
+
+        {/* Flags */}
+        {data.flags.length > 0 && (
+          <>
+            <div className="border-t" />
+            <FlagBadges flags={data.flags} />
+          </>
+        )}
+
+        {/* Recommendation */}
+        <div className="border-t pt-3">
+          <Badge className={getRecommendationBadgeClass(data.recommendation)}>
             {getRecommendationLabel(data.recommendation)}
-          </span>
+          </Badge>
         </div>
 
-        {/* Incomplete data warning */}
+        {/* Incomplete warning */}
         {data.needsDataCompletion && (
-          <p className="text-xs text-center text-amber-600 bg-amber-50 rounded-md py-1">
-            Some data missing - scores may be incomplete
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-md p-2">
+            Some data missing - complete questionnaire for full score
           </p>
         )}
       </CardContent>
@@ -53,61 +126,30 @@ export function CardVariantA({ data, title = "Scoring" }: CardVariantAProps) {
   )
 }
 
-function CircularGauge({
-  label,
-  score,
-}: {
-  label: string
-  score: number | null
-}) {
-  const radius = 40
-  const circumference = 2 * Math.PI * radius
-  const percentage = score !== null ? score / 100 : 0
-  const strokeDashoffset = circumference * (1 - percentage)
+function getWhoDescription(score: number | null): string {
+  if (score === null) return "Not calculated"
+  if (score >= 80) return "Excellent profile"
+  if (score >= 60) return "Strong candidate"
+  if (score >= 40) return "Moderate profile"
+  return "Early stage"
+}
 
-  const getStrokeColor = (s: number | null) => {
-    if (s === null) return "#d1d5db"
-    if (s >= 80) return "#22c55e"
-    if (s >= 60) return "#3b82f6"
-    if (s >= 40) return "#f59e0b"
-    return "#ef4444"
+function getWhenDescription(score: number | null): string {
+  if (score === null) return "Not calculated"
+  if (score >= 80) return "Project framed"
+  if (score >= 60) return "Good clarity"
+  if (score >= 40) return "Needs refinement"
+  return "Explorer"
+}
+
+function getRecommendationBadgeClass(rec: string): string {
+  switch (rec) {
+    case "deal_flow":
+      return "bg-green-100 text-green-800 border-green-200 hover:bg-green-100"
+    case "interview_validate_thesis":
+    case "interview_validate_execution":
+      return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100"
+    default:
+      return "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100"
   }
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative w-24 h-24">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-          {/* Background circle */}
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth="8"
-          />
-          {/* Progress circle */}
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke={getStrokeColor(score)}
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-500"
-          />
-        </svg>
-        {/* Score text */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-2xl font-bold ${getScoreColor(score)}`}>
-            {score !== null ? score : "—"}
-          </span>
-        </div>
-      </div>
-      <span className="text-sm font-medium text-gray-600">{label}</span>
-    </div>
-  )
 }

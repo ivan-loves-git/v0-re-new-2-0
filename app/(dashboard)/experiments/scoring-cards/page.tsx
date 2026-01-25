@@ -177,30 +177,30 @@ export default function ScoringCardsExperimentPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-gray-500">
-            Variant A: Circular Gauges
+            Variant A: Stacked (WHO on top, WHEN below)
           </h3>
-          <CardVariantA data={activeData} />
+          <CardVariantA data={activeData} repreneurId="demo" />
         </div>
 
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-gray-500">
-            Variant B: Horizontal Bars
+            Variant B: Side by Side (two columns)
           </h3>
-          <CardVariantB data={activeData} />
+          <CardVariantB data={activeData} repreneurId="demo" />
         </div>
 
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-gray-500">
-            Variant C: Vertical Bars
+            Variant C: With Progress Bars
           </h3>
-          <CardVariantC data={activeData} />
+          <CardVariantC data={activeData} repreneurId="demo" />
         </div>
 
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-gray-500">
-            Variant D: Simple Boxes
+            Variant D: Compact (for dense layouts)
           </h3>
-          <CardVariantD data={activeData} />
+          <CardVariantD data={activeData} repreneurId="demo" />
         </div>
       </div>
 
