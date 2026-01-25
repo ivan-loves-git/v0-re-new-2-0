@@ -88,26 +88,26 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
   }
 
   return (
-    <div className="space-y-6 relative">
-      {/* Autofill button for testing */}
-      {SHOW_AUTOFILL && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleAutofill}
-          className="absolute -top-2 right-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
-        >
-          <Zap className="h-3 w-3 mr-1" />
-          Autofill
-        </Button>
-      )}
-
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Vos coordonnées</h2>
-        <p className="text-muted-foreground">
-          Ces informations nous permettront de vous contacter.
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold">Vos coordonnées</h2>
+          <p className="text-muted-foreground">
+            Ces informations nous permettront de vous contacter.
+          </p>
+        </div>
+        {SHOW_AUTOFILL && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAutofill}
+            className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
+          >
+            <Zap className="h-3 w-3 mr-1" />
+            Remplir cette étape
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
