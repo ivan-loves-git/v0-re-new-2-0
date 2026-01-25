@@ -22,6 +22,7 @@ import type { Repreneur, LifecycleStatus, JourneyStage } from "@/lib/types/repre
 import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
 import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
+import { NeedsCompletionBadge } from "./needs-completion-badge"
 
 const ITEMS_PER_PAGE = 8
 
@@ -430,6 +431,9 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                           {repreneur.first_name} {repreneur.last_name}
                         </span>
                         <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
+                        {(repreneur as any).needs_data_completion && (
+                          <NeedsCompletionBadge repreneurId={repreneur.id} variant="icon-only" />
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="w-[25%] text-gray-600 truncate">{repreneur.email}</TableCell>
@@ -566,6 +570,9 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
                                 {repreneur.first_name} {repreneur.last_name}
                               </span>
                               <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
+                              {(repreneur as any).needs_data_completion && (
+                                <NeedsCompletionBadge repreneurId={repreneur.id} variant="icon-only" />
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="w-[25%] text-gray-600 truncate">{repreneur.email}</TableCell>

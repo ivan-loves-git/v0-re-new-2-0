@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Label } from "@/components/ui/label"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
 import { MissingFieldsBadge } from "@/components/repreneurs/missing-fields-badge"
+import { NeedsCompletionBadge } from "@/components/repreneurs/needs-completion-badge"
 import { getStageConfig } from "@/lib/constants/tier-config"
 import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
@@ -266,6 +267,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </div>
             </div>
             <MissingFieldsBadge repreneur={repreneur} />
+            {(repreneur as any).needs_data_completion && (
+              <NeedsCompletionBadge repreneurId={id} compact />
+            )}
           </div>
         </div>
         {/* Right side: Status + Journey Stage + Actions */}
@@ -366,6 +370,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Show needs completion banner if legacy data */}
+            {(repreneur as any).needs_data_completion && !(repreneur as any).who_score && (
+              <NeedsCompletionBadge repreneurId={id} />
+            )}
+
             {/* WHO + WHEN side by side */}
             <div className="grid grid-cols-2 gap-4">
               {/* WHO - use who_score if v2, fallback to tier1_score for v1 */}
