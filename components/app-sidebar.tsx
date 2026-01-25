@@ -71,7 +71,7 @@ const guidelinesNavigation = [
 
 const externalUsersNavigation = [
   { name: "Learnings", href: "/learnings-test", icon: GraduationCap },
-  { name: "Intake (v2)", href: "/intake-v2", icon: UserPlus },
+  { name: "Public Form", href: "/intake-v2", icon: UserPlus },
 ]
 
 interface AppSidebarProps {

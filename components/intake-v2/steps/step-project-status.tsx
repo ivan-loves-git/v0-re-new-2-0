@@ -5,14 +5,25 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PROJECT_STATUS_QUESTION } from '@/lib/config/questionnaire-v2'
 import { TEST_PROJECT_STATUS_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
+import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
 import { Info, Zap } from 'lucide-react'
+
+// Translation keys for Q11 options
+const Q11_TRANSLATION_MAP: Record<string, string> = {
+  discovery: 'q11_discovery',
+  exploratory: 'q11_exploratory',
+  framed: 'q11_framed',
+  searching: 'q11_searching',
+  loi: 'q11_loi',
+}
 
 /**
  * Step 3: Project Status (Q11)
  * Multi-select checkbox group - highest selected option counts for WHEN score
  */
 export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} }: IntakeV2StepProps) {
+  const { t } = useLanguage()
   const question = PROJECT_STATUS_QUESTION.q11
   const selectedValues = data.q11_project_status || []
 
@@ -56,9 +67,9 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">Votre projet</h2>
+          <h2 className="text-2xl font-semibold">{t('step3Title')}</h2>
           <p className="text-muted-foreground">
-            Où en êtes-vous dans votre projet de reprise d'entreprise ?
+            {t('step3Description')}
           </p>
         </div>
         {SHOW_AUTOFILL && (
@@ -70,20 +81,20 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
             className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
           >
             <Zap className="h-3 w-3 mr-1" />
-            Remplir cette étape
+            {t('fillStep')}
           </Button>
         )}
       </div>
 
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          {question.label} *
+          {t('q11Label')} *
         </Label>
 
         <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm">
           <Info className="h-4 w-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-blue-700 dark:text-blue-300">
-            {question.helpText}
+            {t('q11HelpText')}
           </p>
         </div>
 
@@ -91,6 +102,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
           {question.options.map((option) => {
             const isSelected = selectedValues.includes(option.value)
             const isHighest = highestSelected?.value === option.value
+            const optionTranslationKey = Q11_TRANSLATION_MAP[option.value]
 
             return (
               <div
@@ -115,11 +127,11 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
                     htmlFor={`q11-${option.value}`}
                     className={`cursor-pointer font-normal leading-relaxed ${isSelected ? 'text-blue-900' : ''}`}
                   >
-                    {option.label}
+                    {t(optionTranslationKey as any)}
                   </Label>
                   {isHighest && selectedValues.length > 1 && (
                     <span className="ml-2 text-xs text-blue-700 font-medium bg-blue-200 px-2 py-0.5 rounded">
-                      étape la plus avancée
+                      {t('mostAdvancedStep')}
                     </span>
                   )}
                 </div>
@@ -136,10 +148,10 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
       {/* Navigation */}
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={onBack}>
-          Retour
+          {t('back')}
         </Button>
         <Button onClick={onNext} disabled={!isValid()}>
-          Continuer
+          {t('continue')}
         </Button>
       </div>
     </div>

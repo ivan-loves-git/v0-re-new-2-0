@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { CONTACT_FIELDS } from '@/lib/config/questionnaire-v2'
 import { TEST_CONTACT_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
+import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps, FileUploadState } from '@/lib/types/intake-v2'
 import { Upload, FileText, X, Loader2, Zap } from 'lucide-react'
 
@@ -14,6 +14,7 @@ import { Upload, FileText, X, Loader2, Zap } from 'lucide-react'
  * Collects: first name, last name, email, phone, CV upload, LinkedIn (optional)
  */
 export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2StepProps) {
+  const { t } = useLanguage()
   const [cvUpload, setCvUpload] = useState<FileUploadState>({
     file: null,
     uploading: false,
@@ -29,13 +30,13 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
     // Validate file type
     const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     if (!validTypes.includes(file.type)) {
-      setCvUpload(prev => ({ ...prev, error: 'Format non accepté. Utilisez PDF, DOC ou DOCX.' }))
+      setCvUpload(prev => ({ ...prev, error: t('errorFileType') }))
       return
     }
 
     // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setCvUpload(prev => ({ ...prev, error: 'Fichier trop volumineux. Maximum 10MB.' }))
+      setCvUpload(prev => ({ ...prev, error: t('errorFileSize') }))
       return
     }
 
@@ -58,7 +59,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
       setCvUpload(prev => ({ ...prev, uploading: false, url }))
       onChange({ cv_url: url })
     } catch {
-      setCvUpload(prev => ({ ...prev, uploading: false, error: 'Erreur lors du téléchargement' }))
+      setCvUpload(prev => ({ ...prev, uploading: false, error: t('errorUpload') }))
     }
   }
 
@@ -91,9 +92,9 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">Vos coordonnées</h2>
+          <h2 className="text-2xl font-semibold">{t('step1Title')}</h2>
           <p className="text-muted-foreground">
-            Ces informations nous permettront de vous contacter.
+            {t('step1Description')}
           </p>
         </div>
         {SHOW_AUTOFILL && (
@@ -105,7 +106,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
             className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
           >
             <Zap className="h-3 w-3 mr-1" />
-            Remplir cette étape
+            {t('fillStep')}
           </Button>
         )}
       </div>
@@ -113,7 +114,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
       <div className="grid gap-4 sm:grid-cols-2">
         {/* First Name */}
         <div className="space-y-2">
-          <Label htmlFor="first_name">{CONTACT_FIELDS.firstName.label} *</Label>
+          <Label htmlFor="first_name">{t('firstName')} *</Label>
           <Input
             id="first_name"
             value={data.first_name || ''}
@@ -128,7 +129,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
 
         {/* Last Name */}
         <div className="space-y-2">
-          <Label htmlFor="last_name">{CONTACT_FIELDS.lastName.label} *</Label>
+          <Label htmlFor="last_name">{t('lastName')} *</Label>
           <Input
             id="last_name"
             value={data.last_name || ''}
@@ -144,7 +145,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
 
       {/* Email */}
       <div className="space-y-2">
-        <Label htmlFor="email">{CONTACT_FIELDS.email.label} *</Label>
+        <Label htmlFor="email">{t('email')} *</Label>
         <Input
           id="email"
           type="email"
@@ -160,7 +161,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
 
       {/* Phone */}
       <div className="space-y-2">
-        <Label htmlFor="phone">{CONTACT_FIELDS.phone.label} *</Label>
+        <Label htmlFor="phone">{t('phone')} *</Label>
         <Input
           id="phone"
           type="tel"
@@ -176,13 +177,13 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
 
       {/* CV Upload */}
       <div className="space-y-2">
-        <Label>{CONTACT_FIELDS.cv.label} *</Label>
-        <p className="text-sm text-muted-foreground">{CONTACT_FIELDS.cv.helpText}</p>
+        <Label>{t('cv')} *</Label>
+        <p className="text-sm text-muted-foreground">{t('cvHelpText')}</p>
 
         {cvUpload.url ? (
           <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
             <FileText className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1 text-sm truncate">CV téléchargé</span>
+            <span className="flex-1 text-sm truncate">{t('cvUploaded')}</span>
             <Button variant="ghost" size="sm" onClick={removeFile}>
               <X className="h-4 w-4" />
             </Button>
@@ -203,7 +204,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
                 <Upload className="h-5 w-5 text-muted-foreground" />
               )}
               <span className="text-sm text-muted-foreground">
-                {cvUpload.uploading ? 'Téléchargement...' : 'Cliquez ou déposez votre CV ici'}
+                {cvUpload.uploading ? t('uploading') : t('cvUploadText')}
               </span>
             </div>
           </div>
@@ -218,20 +219,20 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
 
       {/* LinkedIn (Optional) */}
       <div className="space-y-2">
-        <Label htmlFor="linkedin_url">{CONTACT_FIELDS.linkedin.label}</Label>
+        <Label htmlFor="linkedin_url">{t('linkedin')}</Label>
         <Input
           id="linkedin_url"
           type="url"
           value={data.linkedin_url || ''}
           onChange={(e) => onChange({ linkedin_url: e.target.value })}
-          placeholder={CONTACT_FIELDS.linkedin.placeholder}
+          placeholder="https://linkedin.com/in/jeandupont"
         />
       </div>
 
       {/* Navigation */}
       <div className="flex justify-end pt-4">
         <Button onClick={onNext} disabled={!isValid()}>
-          Continuer
+          {t('continue')}
         </Button>
       </div>
     </div>

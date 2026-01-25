@@ -6,14 +6,28 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { NEEDS_QUESTIONS } from '@/lib/config/questionnaire-v2'
 import { TEST_NEEDS_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
+import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps, FileUploadState } from '@/lib/types/intake-v2'
 import { Upload, FileText, X, Loader2, Info, Zap } from 'lucide-react'
+
+// Translation keys for Q17 options
+const Q17_TRANSLATION_MAP: Record<string, string> = {
+  training: 'q17_training',
+  sourcing: 'q17_sourcing',
+  financing: 'q17_financing',
+  due_diligence: 'q17_due_diligence',
+  negotiation: 'q17_negotiation',
+  legal: 'q17_legal',
+  network: 'q17_network',
+  other: 'q17_other',
+}
 
 /**
  * Step 5: Needs Assessment (Q17-Q18)
  * Current needs multi-select + optional thesis upload + consent
  */
 export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: IntakeV2StepProps) {
+  const { t } = useLanguage()
   const [thesisUpload, setThesisUpload] = useState<FileUploadState>({
     file: null,
     uploading: false,
@@ -43,12 +57,12 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
 
     const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     if (!validTypes.includes(file.type)) {
-      setThesisUpload(prev => ({ ...prev, error: 'Format non accepté. Utilisez PDF, DOC ou DOCX.' }))
+      setThesisUpload(prev => ({ ...prev, error: t('errorFileType') }))
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setThesisUpload(prev => ({ ...prev, error: 'Fichier trop volumineux. Maximum 10MB.' }))
+      setThesisUpload(prev => ({ ...prev, error: t('errorFileSize') }))
       return
     }
 
@@ -70,7 +84,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       setThesisUpload(prev => ({ ...prev, uploading: false, url }))
       onChange({ q18_investment_thesis_url: url })
     } catch {
-      setThesisUpload(prev => ({ ...prev, uploading: false, error: 'Erreur lors du téléchargement' }))
+      setThesisUpload(prev => ({ ...prev, uploading: false, error: t('errorUpload') }))
     }
   }
 
@@ -91,9 +105,9 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">Vos besoins</h2>
+          <h2 className="text-2xl font-semibold">{t('step5Title')}</h2>
           <p className="text-muted-foreground">
-            Dites-nous comment nous pouvons vous accompagner.
+            {t('step5Description')}
           </p>
         </div>
         {SHOW_AUTOFILL && (
@@ -105,7 +119,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
             className="shrink-0 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
           >
             <Zap className="h-3 w-3 mr-1" />
-            Remplir cette étape
+            {t('fillStep')}
           </Button>
         )}
       </div>
@@ -113,12 +127,13 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       {/* Q17: Current Needs */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          {NEEDS_QUESTIONS.q17.label} *
+          {t('q17Label')} *
         </Label>
 
         <div className="space-y-2">
           {NEEDS_QUESTIONS.q17.options.map((option) => {
             const isSelected = selectedNeeds.includes(option.value)
+            const optionTranslationKey = Q17_TRANSLATION_MAP[option.value]
             return (
               <div
                 key={option.value}
@@ -138,7 +153,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
                   htmlFor={`q17-${option.value}`}
                   className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-blue-900' : ''}`}
                 >
-                  {option.label}
+                  {t(optionTranslationKey as any)}
                 </Label>
               </div>
             )
@@ -152,14 +167,14 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       {/* Q18: Investment Thesis Upload (Optional) */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          {NEEDS_QUESTIONS.q18.label}
+          {t('q18Label')}
         </Label>
-        <p className="text-sm text-muted-foreground">{NEEDS_QUESTIONS.q18.helpText}</p>
+        <p className="text-sm text-muted-foreground">{t('q18HelpText')}</p>
 
         {thesisUpload.url ? (
           <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
             <FileText className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1 text-sm truncate">Document téléchargé</span>
+            <span className="flex-1 text-sm truncate">{t('documentUploaded')}</span>
             <Button variant="ghost" size="sm" onClick={removeFile}>
               <X className="h-4 w-4" />
             </Button>
@@ -180,7 +195,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
                 <Upload className="h-5 w-5 text-muted-foreground" />
               )}
               <span className="text-sm text-muted-foreground">
-                {thesisUpload.uploading ? 'Téléchargement...' : 'Cliquez ou déposez votre document ici (optionnel)'}
+                {thesisUpload.uploading ? t('uploading') : t('thesisUploadText')}
               </span>
             </div>
           </div>
@@ -204,11 +219,10 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
           />
           <div className="space-y-1">
             <Label htmlFor="marketing_consent" className="cursor-pointer font-medium">
-              J'accepte de recevoir des communications de Re-New *
+              {t('marketingConsent')} *
             </Label>
             <p className="text-sm text-muted-foreground">
-              En cochant cette case, vous acceptez que Re-New vous contacte par email concernant
-              votre projet de reprise et les services proposés. Vous pouvez vous désinscrire à tout moment.
+              {t('marketingConsentDescription')}
             </p>
           </div>
         </div>
@@ -220,17 +234,17 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-md text-sm">
         <Info className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
         <p className="text-amber-700 dark:text-amber-300">
-          Vos données sont protégées conformément au RGPD. Consultez notre politique de confidentialité pour plus d'informations.
+          {t('gdprNotice')}
         </p>
       </div>
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={onBack}>
-          Retour
+          {t('back')}
         </Button>
         <Button onClick={onNext} disabled={!isValid()}>
-          Vérifier mes réponses
+          {t('review')}
         </Button>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { INTAKE_STEPS } from '@/lib/config/questionnaire-v2'
 import { TEST_ALL_DATA, SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
+import { useLanguage } from '@/lib/i18n/language-context'
 import {
   StepContact,
   StepWho,
@@ -14,9 +15,19 @@ import {
   StepNeeds,
   StepReview
 } from './steps'
-import type { IntakeV2FormData, IntakeV2FormState, INITIAL_FORM_STATE } from '@/lib/types/intake-v2'
+import type { IntakeV2FormData, IntakeV2FormState } from '@/lib/types/intake-v2'
 import { submitIntakeV2 } from '@/lib/actions/intake-v2'
 import { Zap } from 'lucide-react'
+
+// Step title translation keys
+const STEP_TITLES: Record<number, { fr: string; en: string }> = {
+  1: { fr: 'Coordonnées', en: 'Contact' },
+  2: { fr: 'Profil', en: 'Profile' },
+  3: { fr: 'Projet', en: 'Project' },
+  4: { fr: 'Critères', en: 'Criteria' },
+  5: { fr: 'Besoins', en: 'Needs' },
+  6: { fr: 'Vérification', en: 'Review' },
+}
 
 /**
  * Multi-step intake form orchestrator
@@ -24,6 +35,7 @@ import { Zap } from 'lucide-react'
  */
 export function IntakeFormV2() {
   const router = useRouter()
+  const { language, t } = useLanguage()
 
   const [state, setState] = useState<IntakeV2FormState>({
     currentStep: 1,
@@ -94,11 +106,13 @@ export function IntakeFormV2() {
         isSubmitting: false,
         submitResult: {
           success: false,
-          error: 'Une erreur est survenue. Veuillez réessayer.'
+          error: language === 'fr'
+            ? 'Une erreur est survenue. Veuillez réessayer.'
+            : 'An error occurred. Please try again.'
         }
       }))
     }
-  }, [data, router])
+  }, [data, router, language])
 
   // Calculate progress percentage
   const progressPercent = (currentStep / INTAKE_STEPS.length) * 100
@@ -151,7 +165,9 @@ export function IntakeFormV2() {
     }))
   }
 
-  const currentStepInfo = INTAKE_STEPS[currentStep - 1]
+  const stepLabel = language === 'fr' ? 'Étape' : 'Step'
+  const ofLabel = language === 'fr' ? 'sur' : 'of'
+  const contactLabel = language === 'fr' ? 'Des questions ? Contactez-nous à' : 'Questions? Contact us at'
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -159,7 +175,7 @@ export function IntakeFormV2() {
       {SHOW_AUTOFILL && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
           <span className="text-sm text-yellow-800">
-            Mode test activé
+            {t('testModeLabel')}
           </span>
           <Button
             type="button"
@@ -168,7 +184,7 @@ export function IntakeFormV2() {
             className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950"
           >
             <Zap className="h-4 w-4 mr-1" />
-            Remplir tout & aller à la review
+            {t('fillAll')}
           </Button>
         </div>
       )}
@@ -177,10 +193,10 @@ export function IntakeFormV2() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-muted-foreground">
-            Étape {currentStep} sur {INTAKE_STEPS.length}
+            {stepLabel} {currentStep} {ofLabel} {INTAKE_STEPS.length}
           </span>
           <span className="text-sm font-medium">
-            {currentStepInfo.title}
+            {STEP_TITLES[currentStep][language]}
           </span>
         </div>
         <Progress value={progressPercent} className="h-2" />
@@ -211,7 +227,7 @@ export function IntakeFormV2() {
                   {isCompleted ? '✓' : stepNum}
                 </div>
                 <span className="text-xs mt-1 text-muted-foreground hidden sm:block">
-                  {step.title}
+                  {STEP_TITLES[stepNum][language]}
                 </span>
               </div>
             )
@@ -236,7 +252,7 @@ export function IntakeFormV2() {
       {/* Footer */}
       <div className="mt-6 text-center text-sm text-muted-foreground">
         <p>
-          Des questions ? Contactez-nous à{' '}
+          {contactLabel}{' '}
           <a href="mailto:contact@re-new.team" className="text-primary hover:underline">
             contact@re-new.team
           </a>
