@@ -10,7 +10,6 @@ import {
   GitBranch,
   FileText,
   Compass,
-  UserPlus,
   ExternalLink,
   GraduationCap,
   Mail,
@@ -22,7 +21,6 @@ import {
   Settings,
   User,
   Code,
-  ClipboardList,
   CheckSquare,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
@@ -66,14 +64,13 @@ const mainNavigation = [
 const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
-  { name: "Evaluation", href: "/guide/evaluation", icon: ClipboardList },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
 const externalUsersNavigation = [
   { name: "Learnings", href: "/learnings-test", icon: GraduationCap },
-  { name: "Public Intake", href: "/intake", icon: UserPlus, external: true },
+  // Public Intake temporarily removed - rebuilding with new spec
 ]
 
 interface AppSidebarProps {
