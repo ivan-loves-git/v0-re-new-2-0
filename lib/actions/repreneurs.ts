@@ -825,6 +825,8 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
       sector_preferences: data.q13_target_sectors_v2,
       // Mark questionnaire as completed
       questionnaire_completed_at: new Date().toISOString(),
+      // Clear needs_data_completion flag now that v2 data is saved
+      needs_data_completion: false,
     })
     .eq("id", id)
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Trophy, Pencil, AlertTriangle } from "lucide-react"
+import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Trophy, AlertTriangle } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/auth-server"
 import { BackButton } from "@/components/ui/back-button"
@@ -27,6 +27,7 @@ import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { Tier1InlineEditor } from "@/components/repreneurs/tier1-inline-editor"
+import { QuestionnaireFormV2 } from "@/components/repreneurs/questionnaire-form-v2"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
 import { FlagBadges } from "@/components/scoring-v2/flag-badges"
@@ -361,11 +362,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
-                  <Link href={`/repreneurs/${id}/questionnaire`}>
-                    <Pencil className="h-3 w-3" />
-                  </Link>
-                </Button>
               </div>
             </div>
           </CardHeader>
@@ -530,6 +526,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         {/* Col 3: Radar Chart */}
         <RepreneurRadarChart repreneur={repreneur as Repreneur} />
       </div>
+
+      {/* Questionnaire V2 (Dual Scoring) */}
+      <QuestionnaireFormV2 repreneur={repreneur as Repreneur} />
 
       {/* Milestones & Documents Row */}
       <div className="grid gap-6 md:grid-cols-3">

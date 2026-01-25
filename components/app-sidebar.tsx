@@ -22,6 +22,7 @@ import {
   User,
   Code,
   CheckSquare,
+  UserPlus,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
@@ -70,7 +71,7 @@ const guidelinesNavigation = [
 
 const externalUsersNavigation = [
   { name: "Learnings", href: "/learnings-test", icon: GraduationCap },
-  // Public Intake temporarily removed - rebuilding with new spec
+  { name: "Intake (v2)", href: "/intake-v2", icon: UserPlus },
 ]
 
 interface AppSidebarProps {

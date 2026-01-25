@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, ArrowRight, Calculator, Loader2, Check, X } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ArrowLeft, ArrowRight, Calculator, Loader2, Check, X, Info, ExternalLink } from "lucide-react"
 import { saveQuestionnaire, type QuestionnaireInput } from "@/lib/actions/repreneurs"
 import {
   EMPLOYMENT_STATUS_OPTIONS,
@@ -229,6 +231,7 @@ export default function QuestionnairePage() {
           variant={value === true ? "default" : "outline"}
           className={`flex-1 min-w-[100px] ${value === true ? "bg-primary" : ""}`}
           onClick={() => onChange(true)}
+          disabled
         >
           <Check className="h-4 w-4 mr-2" />
           Yes
@@ -238,6 +241,7 @@ export default function QuestionnairePage() {
           variant={value === false ? "default" : "outline"}
           className={`flex-1 min-w-[100px] ${value === false ? "bg-primary" : ""}`}
           onClick={() => onChange(false)}
+          disabled
         >
           <X className="h-4 w-4 mr-2" />
           No
@@ -247,6 +251,7 @@ export default function QuestionnairePage() {
           variant={value === null ? "secondary" : "ghost"}
           className="flex-1 min-w-[100px] text-muted-foreground"
           onClick={() => onChange(null)}
+          disabled
         >
           Skip
         </Button>
@@ -338,7 +343,23 @@ export default function QuestionnairePage() {
       {/* Main Content - Scrollable */}
       <div className="flex-1 overflow-y-auto bg-gray-50 min-h-0">
         <div className="max-w-3xl mx-auto px-4 py-6">
-          <Card>
+          {/* Read-only Banner */}
+          <Alert className="mb-6 bg-amber-50 border-amber-200">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Questionnaire v1 (Lecture seule)</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Ce questionnaire est en lecture seule. Pour modifier les scores, utilisez le nouveau questionnaire v2 sur la page profil.
+              <Link
+                href={`/repreneurs/${repreneurId}`}
+                className="ml-2 inline-flex items-center gap-1 text-amber-800 font-medium hover:underline"
+              >
+                Retour au profil
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </AlertDescription>
+          </Alert>
+
+          <Card className="opacity-75">
             <CardHeader>
               <CardTitle className="text-xl">{STEPS[currentStep - 1].title}</CardTitle>
               <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
@@ -354,6 +375,7 @@ export default function QuestionnairePage() {
                       value={formData.q1_employment_status ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q1_employment_status: v })}
                       className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                      disabled
                     >
                       {EMPLOYMENT_STATUS_WITH_SKIP.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q1_employment_status === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -373,6 +395,7 @@ export default function QuestionnairePage() {
                       value={formData.q2_years_experience ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q2_years_experience: v })}
                       className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                      disabled
                     >
                       {YEARS_EXPERIENCE_OPTIONS.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q2_years_experience === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -395,6 +418,7 @@ export default function QuestionnairePage() {
                             id={`q3-${opt.value}`}
                             checked={formData.q3_industry_sectors.includes(opt.value)}
                             onCheckedChange={() => toggleMultiSelect("q3_industry_sectors", opt.value)}
+                            disabled
                           />
                           <Label htmlFor={`q3-${opt.value}`} className="flex-1 cursor-pointer text-sm">
                             {opt.label}
@@ -411,6 +435,7 @@ export default function QuestionnairePage() {
                       value={formData.q5_team_size ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q5_team_size: v })}
                       className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                      disabled
                     >
                       {TEAM_SIZE_WITH_SKIP.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q5_team_size === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -433,6 +458,7 @@ export default function QuestionnairePage() {
                             id={`q5-${opt.value}`}
                             checked={formData.q8_executive_roles.includes(opt.value)}
                             onCheckedChange={() => toggleMultiSelect("q8_executive_roles", opt.value)}
+                            disabled
                           />
                           <Label htmlFor={`q5-${opt.value}`} className="flex-1 cursor-pointer text-sm">
                             {opt.label}
@@ -468,6 +494,7 @@ export default function QuestionnairePage() {
                         placeholder="Describe your experience with acquisitions, sales, or other M&A transactions..."
                         rows={4}
                         className="resize-none"
+                        disabled
                       />
                     </div>
                   )}
@@ -493,6 +520,7 @@ export default function QuestionnairePage() {
                             id={`q10-${opt.value}`}
                             checked={formData.q10_journey_stages.includes(opt.value)}
                             onCheckedChange={() => toggleMultiSelect("q10_journey_stages", opt.value)}
+                            disabled
                           />
                           <Label htmlFor={`q10-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -512,6 +540,7 @@ export default function QuestionnairePage() {
                             id={`q11-${opt.value}`}
                             checked={formData.q11_target_sectors.includes(opt.value)}
                             onCheckedChange={() => toggleMultiSelect("q11_target_sectors", opt.value)}
+                            disabled
                           />
                           <Label htmlFor={`q11-${opt.value}`} className="flex-1 cursor-pointer text-sm">
                             {opt.label}
@@ -536,6 +565,7 @@ export default function QuestionnairePage() {
                         placeholder="CA, number of employees, valuation range, sector..."
                         rows={4}
                         className="resize-none"
+                        disabled
                       />
                     </div>
                   )}
@@ -552,6 +582,7 @@ export default function QuestionnairePage() {
                       value={formData.q14_investment_capacity ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q14_investment_capacity: v })}
                       className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                      disabled
                     >
                       {INVESTMENT_CAPACITY_OPTIONS.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q14_investment_capacity === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -571,6 +602,7 @@ export default function QuestionnairePage() {
                       value={formData.q15_funding_status ?? ""}
                       onValueChange={(v) => setFormData({ ...formData, q15_funding_status: v })}
                       className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                      disabled
                     >
                       {FUNDING_STATUS_WITH_SKIP.map((opt) => (
                         <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q15_funding_status === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
@@ -593,6 +625,7 @@ export default function QuestionnairePage() {
                             id={`q16-${opt.value}`}
                             checked={formData.q16_network_training.includes(opt.value)}
                             onCheckedChange={() => toggleMultiSelect("q16_network_training", opt.value)}
+                            disabled
                           />
                           <Label htmlFor={`q16-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -612,7 +645,7 @@ export default function QuestionnairePage() {
             </CardContent>
           </Card>
 
-          {/* Navigation Footer */}
+          {/* Navigation Footer - Read-only mode */}
           <div className="flex items-center justify-between mt-6 pb-8">
             <Button
               variant="outline"
@@ -630,42 +663,15 @@ export default function QuestionnairePage() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!isAllComplete || isSaving}
-                  className="min-w-[180px]"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Calculating...
-                    </>
-                  ) : (
-                    <>
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Calculate Score
-                    </>
-                  )}
+                <Button asChild>
+                  <Link href={`/repreneurs/${repreneurId}`}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Retour au profil
+                  </Link>
                 </Button>
               )}
             </div>
           </div>
-
-          {/* Incomplete warning */}
-          {currentStep === STEPS.length && !isAllComplete && (
-            <div className="text-center text-sm text-amber-600 bg-amber-50 rounded-lg p-4 mb-8">
-              Please complete all sections before calculating the score.
-              {STEPS.filter((step) => !isStepComplete(step.id)).map((step) => (
-                <button
-                  key={step.id}
-                  onClick={() => setCurrentStep(step.id)}
-                  className="block mx-auto mt-2 underline hover:no-underline"
-                >
-                  → Complete {step.title}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>
