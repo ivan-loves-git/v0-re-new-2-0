@@ -22,7 +22,6 @@ import {
   User,
   Code,
   CheckSquare,
-  Beaker,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
@@ -71,7 +70,6 @@ const guidelinesNavigation = [
 
 const externalUsersNavigation = [
   { name: "Learnings", href: "/learnings-test", icon: GraduationCap },
-  { name: "Scoring Cards", href: "/experiments/scoring-cards", icon: Beaker },
   // Public Intake temporarily removed - rebuilding with new spec
 ]
 

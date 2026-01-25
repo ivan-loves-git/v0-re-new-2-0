@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Trophy } from "lucide-react"
+import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Trophy, Pencil, AlertTriangle } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/auth-server"
 import { BackButton } from "@/components/ui/back-button"
@@ -43,6 +43,22 @@ const SOURCE_OPTIONS = [
   { value: "social", label: "Social" },
   { value: "other", label: "Other" },
 ]
+
+// Helper functions for WHO/WHEN scoring display
+function getWhoDescription(score: number | null | undefined): string {
+  if (score === null || score === undefined) return "Not calculated"
+  if (score >= 80) return "Excellent profile"
+  if (score >= 60) return "Strong candidate"
+  if (score >= 40) return "Moderate profile"
+  return "Early stage"
+}
+
+function getRecommendationLabel(score: number | null | undefined): string {
+  if (score === null || score === undefined) return "Pending"
+  if (score >= 80) return "Deal Flow"
+  if (score >= 60) return "Interview"
+  return "Starter Pack"
+}
 
 export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -255,19 +271,13 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
 
       {/* Profile Overview Row: Rating | Investment Profile | Radar Chart */}
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Col 1: Rating Card */}
+        {/* Col 1: Rating Card - WHO + WHEN + Tier 2 */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Rating
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Tier 1 Subsection */}
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Tier 1</span>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                Rating
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -277,36 +287,82 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
                       <p className="text-sm">
-                        Tier 1 is an automated score (0-100 points) calculated from the intake questionnaire.
-                        It evaluates professional background, M&A experience, acquisition readiness, and financial capacity.
+                        <strong>WHO (0-100):</strong> Profile quality and execution capacity.
+                      </p>
+                      <p className="text-sm mt-2">
+                        <strong>WHEN (0-100):</strong> Project maturity and financial coherence.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </CardTitle>
+              {/* Right side: Recommendation + Flags + Edit */}
+              <div className="flex items-center gap-2">
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200" variant="outline">
+                  {getRecommendationLabel(repreneur.tier1_score)}
+                </Badge>
+                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
+                  <Link href={`/repreneurs/${id}/questionnaire`}>
+                    <Pencil className="h-3 w-3" />
+                  </Link>
+                </Button>
               </div>
-              {repreneur.tier1_score !== null && repreneur.tier1_score !== undefined ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl font-bold">{repreneur.tier1_score}</span>
-                    <span className="text-sm text-gray-500">points</span>
-                    <Tier1InlineEditor repreneur={repreneur as Repreneur} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {getScoreDescription(repreneur.tier1_score!)}
-                    </Badge>
-                  </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* WHO + WHEN side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* WHO */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHO</span>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                          <Info className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-sm">Profile quality: experience, leadership, crisis management.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      No score calculated yet.
-                    </p>
-                    <Tier1InlineEditor repreneur={repreneur as Repreneur} />
-                  </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">{repreneur.tier1_score ?? "—"}</span>
+                  <span className="text-sm text-gray-500">pts</span>
                 </div>
-              )}
+                <Badge variant="outline" className="text-xs">
+                  {getWhoDescription(repreneur.tier1_score)}
+                </Badge>
+              </div>
+
+              {/* WHEN */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHEN</span>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                          <Info className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-sm">Project maturity: deal size, structure, equity fit.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">—</span>
+                  <span className="text-sm text-gray-500">pts</span>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  Not calculated
+                </Badge>
+              </div>
             </div>
 
             <div className="border-t pt-3" />
