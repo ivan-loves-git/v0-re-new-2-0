@@ -30,7 +30,7 @@ import { QuestionnaireFormV2 } from "@/components/repreneurs/questionnaire-form-
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
 import { FlagBadges } from "@/components/scoring-v2/flag-badges"
-import type { Flag } from "@/components/scoring-v2/types"
+import type { Flag as ScoringFlag } from "@/components/scoring-v2/types"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
 import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/lib/constants/investment-ranges"
@@ -586,137 +586,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           repreneurOffers={repreneurOffersWithMilestones as RepreneurOffer[]}
           allOffers={(allOffers || []) as Offer[]}
         />
-      </div>
-
-      {/* ROW 3: Questionnaire Details (no cards, blank bg, 3-col list) */}
-      <div className="pt-6 border-t">
-        <h3 className="text-sm font-medium text-gray-500 mb-4">Questionnaire Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-3">
-          <div>
-            <Label className="text-xs text-gray-500">Employment Status</Label>
-            <p className="text-sm">
-              {repreneur.q1_employment_status || <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Prior M&A Experience</Label>
-            <p className="text-sm">
-              {repreneur.q4_has_ma_experience !== undefined
-                ? (repreneur.q4_has_ma_experience ? "Yes" : "No")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Years of Experience</Label>
-            <p className="text-sm">
-              {repreneur.q2_years_experience || <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Involved in M&A</Label>
-            <p className="text-sm">
-              {repreneur.q6_involved_in_ma !== undefined
-                ? (repreneur.q6_involved_in_ma ? "Yes" : "No")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Team Management</Label>
-            <p className="text-sm">
-              {repreneur.q5_team_size || <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">M&A Details</Label>
-            <p className="text-sm">
-              {repreneur.q7_ma_details || <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Executive Roles</Label>
-            <p className="text-sm">
-              {repreneur.q8_executive_roles?.length
-                ? repreneur.q8_executive_roles.join(", ")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Industry Sectors</Label>
-            <p className="text-sm">
-              {repreneur.q3_industry_sectors?.length
-                ? repreneur.q3_industry_sectors.join(", ")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Board Experience</Label>
-            <p className="text-sm">
-              {repreneur.q9_board_experience !== undefined
-                ? (repreneur.q9_board_experience ? "Yes" : "No")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Journey Stages</Label>
-            <p className="text-sm">
-              {repreneur.q10_journey_stages?.length
-                ? repreneur.q10_journey_stages.join(", ")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Identified Targets</Label>
-            <p className="text-sm">
-              {repreneur.q12_has_identified_targets !== undefined
-                ? (repreneur.q12_has_identified_targets ? "Yes" : "No")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Target Details</Label>
-            <p className="text-sm">
-              {repreneur.q13_target_details || <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Funding Status</Label>
-            <p className="text-sm">
-              {repreneur.q15_funding_status || <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Network & Training</Label>
-            <p className="text-sm">
-              {repreneur.q16_network_training?.length
-                ? repreneur.q16_network_training.join(", ")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Open to Co-acquisition</Label>
-            <p className="text-sm">
-              {repreneur.q17_open_to_co_acquisition !== undefined
-                ? (repreneur.q17_open_to_co_acquisition ? "Yes" : "No")
-                : <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Background Notes</Label>
-            <p className="text-sm">
-              {repreneur.company_background || <span className="text-gray-400">Not specified</span>}
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">Source</Label>
-            <EditableSelectField
-              repreneurId={id}
-              field="source"
-              value={repreneur.source}
-              options={SOURCE_OPTIONS}
-              placeholder="Select source..."
-            />
-          </div>
-        </div>
       </div>
     </div>
   )
