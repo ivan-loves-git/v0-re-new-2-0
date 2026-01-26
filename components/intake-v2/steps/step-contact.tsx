@@ -54,7 +54,7 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
       formData.append('file', file)
       formData.append('type', 'cv')
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/api/upload-cv', {
         method: 'POST',
         body: formData
       })
