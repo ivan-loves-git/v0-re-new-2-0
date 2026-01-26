@@ -797,24 +797,24 @@ export interface QuestionnaireV2Input {
 export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input) {
   const supabase = createAdminClient()
 
-  // Build WHO answers for scoring
+  // Build WHO answers for scoring (use defaults for null values to prevent scoring errors)
   const whoAnswers: WhoAnswers = {
-    q05: data.q05_status as WhoAnswers['q05'],
-    q06: data.q06_experience as WhoAnswers['q06'],
-    q07: data.q07_leadership as WhoAnswers['q07'],
-    q08: data.q08_crisis as WhoAnswers['q08'],
-    q09: data.q09_investment as WhoAnswers['q09'],
-    q10: data.q10_impact as WhoAnswers['q10'],
+    q05: (data.q05_status || 'employee') as WhoAnswers['q05'],
+    q06: (data.q06_experience || 'less_than_10') as WhoAnswers['q06'],
+    q07: (data.q07_leadership || 'none') as WhoAnswers['q07'],
+    q08: (data.q08_crisis || 'none') as WhoAnswers['q08'],
+    q09: (data.q09_investment || 'none') as WhoAnswers['q09'],
+    q10: (data.q10_impact || 'none') as WhoAnswers['q10'],
   }
 
-  // Build WHEN answers for scoring
+  // Build WHEN answers for scoring (use defaults for null values)
   const whenAnswers: WhenAnswers = {
-    q11: data.q11_project_status as WhenAnswers['q11'],
-    q12: data.q12_geo_zones,
-    q13: data.q13_target_sectors_v2,
-    q14: data.q14_deal_size as WhenAnswers['q14'],
-    q15: data.q15_structure as WhenAnswers['q15'],
-    q16: data.q16_equity as WhenAnswers['q16'],
+    q11: (data.q11_project_status || []) as WhenAnswers['q11'],
+    q12: data.q12_geo_zones || [],
+    q13: data.q13_target_sectors_v2 || [],
+    q14: (data.q14_deal_size || []) as WhenAnswers['q14'],
+    q15: (data.q15_structure || []) as WhenAnswers['q15'],
+    q16: (data.q16_equity || 'tbd') as WhenAnswers['q16'],
   }
 
   // Calculate dual scores
