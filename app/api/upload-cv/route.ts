@@ -23,9 +23,12 @@ export async function POST(request: NextRequest) {
     const repreneurId = formData.get("repreneurId") as string
     const documentType = (formData.get("documentType") as DocumentType) || "cv"
 
-    if (!file || !repreneurId) {
-      return NextResponse.json({ error: "Missing file or repreneurId" }, { status: 400 })
+    if (!file) {
+      return NextResponse.json({ error: "Missing file" }, { status: 400 })
     }
+
+    // Generate temp ID for public intake (when repreneurId not provided)
+    const actualRepreneurId = repreneurId || `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
     // For authenticated users, use their client; for public intake, use admin
     const supabase = await createServerClient()
@@ -34,8 +37,8 @@ export async function POST(request: NextRequest) {
     // Use admin client for storage operations (needed for public intake form)
     const adminClient = createAdminClient()
 
-    // Validate repreneurId exists (for public intake security)
-    if (!user) {
+    // Validate repreneurId exists only when explicitly provided (for authenticated uploads)
+    if (repreneurId && !user) {
       const { data: repreneur } = await adminClient
         .from("repreneurs")
         .select("id")
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename with document type prefix
     const typePrefix = documentType === "ldc" ? "ldc" : "cv"
-    const fileName = `${repreneurId}-${typePrefix}-${Date.now()}.${fileExt}`
+    const fileName = `${actualRepreneurId}-${typePrefix}-${Date.now()}.${fileExt}`
     const filePath = `cvs/${fileName}`
 
     // Convert file to buffer
