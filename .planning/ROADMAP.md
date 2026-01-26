@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Critical Bug Fixes** - Fix file uploads, scoring persistence, and scoring page visibility
 - [x] **Phase 2: Data Export** - Create pre-cleanup database snapshot for audit trail
-- [ ] **Phase 3: Scoring UI Cleanup** - Remove legacy scoring interface elements
+- [x] **Phase 3: Scoring UI Cleanup** - Remove legacy scoring interface elements
 - [ ] **Phase 4: WHO/WHEN Editors** - Add popup editors for parameter correction with recalculation
 - [ ] **Phase 5: Pipeline Improvements** - Add score sorting and Declined status
 - [ ] **Phase 6: Launch Infrastructure** - Configure acknowledgment emails, domain, and duplicate prevention
@@ -63,7 +63,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Remove Tier1InlineEditor and legacy Questionnaire Details section
+- [x] 03-01-PLAN.md — Remove Tier1InlineEditor and legacy Questionnaire Details section
 
 ### Phase 4: WHO/WHEN Editors
 **Goal**: Enable admin correction of questionnaire answers with automatic score recalculation
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 |-------|----------------|--------|-----------|
 | 1. Critical Bug Fixes | 2/2 | Complete | 2026-01-26 |
 | 2. Data Export | 1/1 | Complete | 2026-01-26 |
-| 3. Scoring UI Cleanup | 0/1 | Planned | - |
+| 3. Scoring UI Cleanup | 1/1 | Complete | 2026-01-26 |
 | 4. WHO/WHEN Editors | 0/? | Not started | - |
 | 5. Pipeline Improvements | 0/? | Not started | - |
 | 6. Launch Infrastructure | 0/? | Not started | - |

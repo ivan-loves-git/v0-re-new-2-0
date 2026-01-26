@@ -5,13 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Get the v2 questionnaire live and usable for mass relaunch
-**Current focus:** Phase 2 - Questionnaire Completion (Phase 1 complete)
+**Current focus:** Phase 4 - WHO/WHEN Editors
 
 ## Current Position
 
-Phase: 3 of 10 (Scoring UI Cleanup) - IN PROGRESS
+Phase: 3 of 10 (Scoring UI Cleanup) - COMPLETE
 Plan: 1 of 1 in current phase - COMPLETE
-Status: Phase 3 Plan 1 complete, ready for Phase 4
+Status: Phase 3 complete, ready for Phase 4
 Last activity: 2026-01-26 — Completed 03-01 (Remove legacy scoring UI)
 
 Progress: [███░░░░░░░] 30%
@@ -55,7 +55,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Two-column questionnaire layout (UX improvement, medium priority)
+None (two-column questionnaire layout completed earlier in session).
 
 ### Blockers/Concerns
 

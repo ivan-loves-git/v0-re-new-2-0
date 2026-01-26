@@ -16,8 +16,8 @@ Requirements for launch readiness. Each maps to roadmap phases.
 
 ### Scoring Edit Redesign
 
-- [ ] **SCORE-01**: Remove old pencil icon that opens legacy questionnaire parameters
-- [ ] **SCORE-02**: Remove big questionnaire copy section from profile page
+- [x] **SCORE-01**: Remove old pencil icon that opens legacy questionnaire parameters
+- [x] **SCORE-02**: Remove big questionnaire copy section from profile page
 - [ ] **SCORE-03**: Add WHO pencil icon → opens popup with all WHO parameters
 - [ ] **SCORE-04**: Add WHEN pencil icon → opens popup with all WHEN parameters
 - [ ] **SCORE-05**: Add "Calculate & Save" button in each popup that recalculates and persists score
@@ -83,8 +83,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-02 | Phase 1: Critical Bug Fixes | Pending |
 | BUG-03 | Phase 1: Critical Bug Fixes | Pending |
 | BUG-04 | Phase 1: Critical Bug Fixes | Pending |
-| SCORE-01 | Phase 3: Scoring UI Cleanup | Pending |
-| SCORE-02 | Phase 3: Scoring UI Cleanup | Pending |
+| SCORE-01 | Phase 3: Scoring UI Cleanup | Complete |
+| SCORE-02 | Phase 3: Scoring UI Cleanup | Complete |
 | SCORE-03 | Phase 4: WHO/WHEN Editors | Pending |
 | SCORE-04 | Phase 4: WHO/WHEN Editors | Pending |
 | SCORE-05 | Phase 4: WHO/WHEN Editors | Pending |
