@@ -26,7 +26,6 @@ import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
-import { Tier1InlineEditor } from "@/components/repreneurs/tier1-inline-editor"
 import { QuestionnaireFormV2 } from "@/components/repreneurs/questionnaire-form-v2"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
@@ -337,8 +336,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {/* Edit button for legacy Tier 1 questionnaire */}
-                <Tier1InlineEditor repreneur={repreneur as Repreneur} />
               </CardTitle>
               {/* Right side: Recommendation + Flags + Edit */}
               <div className="flex items-center gap-2">
