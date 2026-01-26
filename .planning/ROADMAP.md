@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Critical Bug Fixes** - Fix file uploads, scoring persistence, and scoring page visibility
 - [x] **Phase 2: Data Export** - Create pre-cleanup database snapshot for audit trail
 - [x] **Phase 3: Scoring UI Cleanup** - Remove legacy scoring interface elements
-- [ ] **Phase 4: WHO/WHEN Editors** - Add popup editors for parameter correction with recalculation
+- [x] **Phase 4: WHO/WHEN Editors** - Add popup editors for parameter correction with recalculation
 - [ ] **Phase 5: Pipeline Improvements** - Add score sorting and Declined status
 - [ ] **Phase 6: Launch Infrastructure** - Configure acknowledgment emails, domain, and duplicate prevention
 - [ ] **Phase 7: Team Decisions** - Resolve pending content and configuration decisions
@@ -74,10 +74,10 @@ Plans:
   2. Admin can click WHEN pencil icon and see popup with all WHEN parameters editable
   3. Clicking "Calculate & Save" in either popup updates answers and recalculates score atomically
   4. Score breakdown on profile reflects recalculated values after saving
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: TBD
+- [x] 04-01-PLAN.md — WHO/WHEN inline score editors with live preview and recalculation
 
 ### Phase 5: Pipeline Improvements
 **Goal**: Improve lead management with score sorting and manual decline capability
@@ -172,7 +172,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. Critical Bug Fixes | 2/2 | Complete | 2026-01-26 |
 | 2. Data Export | 1/1 | Complete | 2026-01-26 |
 | 3. Scoring UI Cleanup | 1/1 | Complete | 2026-01-26 |
-| 4. WHO/WHEN Editors | 0/? | Not started | - |
+| 4. WHO/WHEN Editors | 1/1 | Complete | 2026-01-26 |
 | 5. Pipeline Improvements | 0/? | Not started | - |
 | 6. Launch Infrastructure | 0/? | Not started | - |
 | 7. Team Decisions | 0/? | Not started | - |

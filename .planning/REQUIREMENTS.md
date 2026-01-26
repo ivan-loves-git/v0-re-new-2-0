@@ -18,9 +18,9 @@ Requirements for launch readiness. Each maps to roadmap phases.
 
 - [x] **SCORE-01**: Remove old pencil icon that opens legacy questionnaire parameters
 - [x] **SCORE-02**: Remove big questionnaire copy section from profile page
-- [ ] **SCORE-03**: Add WHO pencil icon → opens popup with all WHO parameters
-- [ ] **SCORE-04**: Add WHEN pencil icon → opens popup with all WHEN parameters
-- [ ] **SCORE-05**: Add "Calculate & Save" button in each popup that recalculates and persists score
+- [x] **SCORE-03**: Add WHO pencil icon → opens popup with all WHO parameters
+- [x] **SCORE-04**: Add WHEN pencil icon → opens popup with all WHEN parameters
+- [x] **SCORE-05**: Add "Calculate & Save" button in each popup that recalculates and persists score
 
 ### Pipeline Improvements
 
@@ -85,9 +85,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-04 | Phase 1: Critical Bug Fixes | Pending |
 | SCORE-01 | Phase 3: Scoring UI Cleanup | Complete |
 | SCORE-02 | Phase 3: Scoring UI Cleanup | Complete |
-| SCORE-03 | Phase 4: WHO/WHEN Editors | Pending |
-| SCORE-04 | Phase 4: WHO/WHEN Editors | Pending |
-| SCORE-05 | Phase 4: WHO/WHEN Editors | Pending |
+| SCORE-03 | Phase 4: WHO/WHEN Editors | Complete |
+| SCORE-04 | Phase 4: WHO/WHEN Editors | Complete |
+| SCORE-05 | Phase 4: WHO/WHEN Editors | Complete |
 | PIPE-01 | Phase 5: Pipeline Improvements | Pending |
 | PIPE-02 | Phase 5: Pipeline Improvements | Pending |
 | INFRA-01 | Phase 6: Launch Infrastructure | Pending |

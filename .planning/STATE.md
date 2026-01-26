@@ -5,13 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Get the v2 questionnaire live and usable for mass relaunch
-**Current focus:** Phase 4 - WHO/WHEN Editors
+**Current focus:** Phase 5 - Pipeline Improvements
 
 ## Current Position
 
-Phase: 4 of 10 (WHO/WHEN Editors) - IN PROGRESS
+Phase: 4 of 10 (WHO/WHEN Editors) - COMPLETE
 Plan: 1 of 1 in current phase - COMPLETE
-Status: Phase 4 Plan 1 complete
+Status: Phase 4 complete, ready for Phase 5
 Last activity: 2026-01-26 — Completed 04-01 (WHO/WHEN inline score editors)
 
 Progress: [████░░░░░░] 40%
@@ -62,7 +62,7 @@ None (two-column questionnaire layout completed earlier in session).
 
 ### Blockers/Concerns
 
-None - Phase 4 Plan 1 complete. Ready for Phase 5 (Fit & Recommendation Editor).
+None - Phase 4 complete. Ready for Phase 5 (Pipeline Improvements).
 
 ## Session Continuity
 
