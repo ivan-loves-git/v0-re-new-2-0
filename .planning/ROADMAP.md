@@ -60,10 +60,10 @@ Plans:
   1. Legacy pencil icon that opened questionnaire parameters is no longer visible on profile
   2. Large questionnaire copy section is no longer visible on profile page
   3. Profile page displays scores but no editing interface (interim state)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Remove Tier1InlineEditor and legacy Questionnaire Details section
 
 ### Phase 4: WHO/WHEN Editors
 **Goal**: Enable admin correction of questionnaire answers with automatic score recalculation
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 |-------|----------------|--------|-----------|
 | 1. Critical Bug Fixes | 2/2 | Complete | 2026-01-26 |
 | 2. Data Export | 1/1 | Complete | 2026-01-26 |
-| 3. Scoring UI Cleanup | 0/? | Not started | - |
+| 3. Scoring UI Cleanup | 0/1 | Planned | - |
 | 4. WHO/WHEN Editors | 0/? | Not started | - |
 | 5. Pipeline Improvements | 0/? | Not started | - |
 | 6. Launch Infrastructure | 0/? | Not started | - |
