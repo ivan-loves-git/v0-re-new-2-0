@@ -69,40 +69,47 @@ function createEmailV1(name: string) {
     </div>
 
     <p class="greeting">Hey ${name} 👋</p>
-    <p class="intro">I've been doing some self-reflection this week. Turns out the things worth saying don't always need many words — just the right ones.</p>
+    <p class="intro">I've been doing some self-reflection this week. Turns out the things worth saying don't always need many words, just the right ones. These are mine:</p>
 
     <p class="divider">•••</p>
 
-    <p class="version">v0.8.8</p>
-    <h1>Simplified profile editing and clearer documentation.</h1>
+    <p class="version">v0.8.9</p>
+    <h1>New questionnaire, smarter scoring, and Flatchr data imported.</h1>
 
     <div class="updates">
       <div class="update">
-        <p class="update-title">✏️ Edit answers directly on profile</p>
-        <p class="update-desc">WHO/WHEN questions now editable right on the repreneur page. Scores update in real-time when you save.</p>
+        <p class="update-title">📋 New questionnaire live</p>
+        <p class="update-desc">Complete intake form now at /intake-v2. Quick link in the sidebar too.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">🔗 1-click test repreneur</p>
-        <p class="update-desc">New "Intake (v2)" link in the sidebar. No more typing URLs manually to create test candidates.</p>
+        <p class="update-title">🎯 Scoring system updated</p>
+        <p class="update-desc">Tier 1 rating now 200 points total — 100 for WHO (profile), 100 for WHEN (project readiness).</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">🧹 "Needs completion" auto-clears</p>
-        <p class="update-desc">Once you fill in the new questionnaire for a legacy repreneur, the orange alert disappears.</p>
+        <p class="update-title">🚩 Flags and recommendations automated</p>
+        <p class="update-desc">System now flags concerns and suggests next steps (Deal Flow, Priority Interview) based on the scoring matrix.</p>
         <p class="tags">
-          <span class="tag tag-fix">fix</span>
+          <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">📖 Roadmap rewritten</p>
-        <p class="update-desc">Swapped developer jargon for plain English. Each entry now explains what you can do, not how it's coded.</p>
+        <p class="update-title">📥 All Flatchr candidates imported</p>
+        <p class="update-desc">Everyone from the Flatchr export is now in Wave. Historical data preserved.</p>
         <p class="tags">
-          <span class="tag tag-refactor">docs</span>
+          <span class="tag tag-feature">feature</span>
+        </p>
+      </div>
+      <div class="update">
+        <p class="update-title">🌍 Multilingual form</p>
+        <p class="update-desc">Intake form now available in French and English. Language toggle at the top.</p>
+        <p class="tags">
+          <span class="tag tag-feature">feature</span>
         </p>
       </div>
     </div>
@@ -284,7 +291,7 @@ async function sendRoadmapEmail(to: string, name: string, version: number = 1) {
     const { data, error } = await resend.emails.send({
       from: "Wavy 🌊 <notifications@news.re-new.team>",
       to: [to],
-      subject: `Wave product update: v0.8.8`,
+      subject: `Wave product update: v0.8.9`,
       html: createEmailHtml(name, version),
     })
 

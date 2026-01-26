@@ -10,6 +10,39 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jan 25, 2026",
+    version: "0.8.9",
+    title: "Questionnaire V2 & Flatchr Import",
+    isCompleted: true,
+    events: [
+      {
+        title: "New questionnaire live",
+        type: "feature",
+        description: "Complete intake form now at /intake-v2. Quick link in the sidebar for easy access.",
+      },
+      {
+        title: "Scoring system updated",
+        type: "feature",
+        description: "Tier 1 rating now 200 points total — 100 for WHO (profile), 100 for WHEN (project readiness).",
+      },
+      {
+        title: "Flags and recommendations automated",
+        type: "feature",
+        description: "System now flags concerns and suggests next steps (Deal Flow, Priority Interview) based on the scoring matrix.",
+      },
+      {
+        title: "All Flatchr candidates imported",
+        type: "feature",
+        description: "Everyone from the Flatchr export is now in Wave. Historical data preserved.",
+      },
+      {
+        title: "Multilingual form",
+        type: "feature",
+        description: "Intake form now available in French and English. Language toggle at the top.",
+      },
+    ],
+  },
+  {
+    period: "Jan 25, 2026",
     version: "0.8.8",
     title: "Simplified Profile Editing",
     isCompleted: true,
