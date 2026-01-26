@@ -609,10 +609,16 @@ export async function updateTier1Answers(
   const supabase = createAdminClient()
 
   // Update all fields at once
-  const { error: updateError } = await supabase
+  const { data: updateResult, error: updateError } = await supabase
     .from("repreneurs")
     .update(answers)
     .eq("id", id)
+    .select()
+    .single()
+
+  if (!updateResult && !updateError) {
+    throw new Error("Update failed: RLS policy may have blocked the operation")
+  }
 
   if (updateError) {
     throw new Error(updateError.message)
@@ -669,13 +675,19 @@ export async function updateTier1Answers(
   const scoreBreakdown = calculateTier1Score(scoringInput, scoringCriteria)
 
   // Update the score
-  const { error: scoreError } = await supabase
+  const { data: scoreResult, error: scoreError } = await supabase
     .from("repreneurs")
     .update({
       tier1_score: scoreBreakdown.total,
       tier1_score_breakdown: scoreBreakdown,
     })
     .eq("id", id)
+    .select()
+    .single()
+
+  if (!scoreResult && !scoreError) {
+    throw new Error("Score update failed: RLS policy may have blocked the operation")
+  }
 
   if (scoreError) {
     throw new Error(scoreError.message)
