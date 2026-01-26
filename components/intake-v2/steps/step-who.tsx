@@ -99,7 +99,7 @@ export function StepWho({ data, onChange, onNext, onBack, errors = {} }: IntakeV
             <RadioGroup
               value={data[question.field as keyof typeof data] as string || ''}
               onValueChange={(value) => onChange({ [question.field]: value })}
-              className="space-y-2"
+              className="grid grid-cols-1 md:grid-cols-2 gap-2"
             >
               {question.options.map((option) => {
                 const isSelected = data[question.field as keyof typeof data] === option.value

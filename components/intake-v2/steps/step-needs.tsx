@@ -108,7 +108,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
           {t('q17Label')} *
         </Label>
 
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {NEEDS_QUESTIONS.q17.options.map((option) => {
             const isSelected = selectedNeeds.includes(option.value)
             const optionTranslationKey = Q17_TRANSLATION_MAP[option.value]

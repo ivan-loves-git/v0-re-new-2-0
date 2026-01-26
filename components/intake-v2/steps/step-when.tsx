@@ -114,7 +114,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
     const translationMap = WHEN_TRANSLATION_MAP[questionId]
 
     return (
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {question.options.map((option) => {
           const isSelected = selectedValues.includes(option.value)
           const optionTranslationKey = translationMap.options[option.value]
@@ -220,7 +220,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
         <RadioGroup
           value={data.q16_equity || ''}
           onValueChange={(value) => onChange({ q16_equity: value })}
-          className="space-y-2"
+          className="grid grid-cols-1 md:grid-cols-2 gap-2"
         >
           {WHEN_QUESTIONS.q16.options.map((option) => {
             const isSelected = data.q16_equity === option.value

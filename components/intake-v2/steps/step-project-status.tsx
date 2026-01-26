@@ -79,7 +79,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {question.options.map((option) => {
             const isSelected = selectedValues.includes(option.value)
             const isHighest = highestSelected?.value === option.value
