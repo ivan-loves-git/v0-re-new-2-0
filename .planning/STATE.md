@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 
 ## Current Position
 
-Phase: 3 of 10 (Scoring UI Cleanup) - COMPLETE
+Phase: 4 of 10 (WHO/WHEN Editors) - IN PROGRESS
 Plan: 1 of 1 in current phase - COMPLETE
-Status: Phase 3 complete, ready for Phase 4
-Last activity: 2026-01-26 — Completed 03-01 (Remove legacy scoring UI)
+Status: Phase 4 Plan 1 complete
+Last activity: 2026-01-26 — Completed 04-01 (WHO/WHEN inline score editors)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 7 min
+- Total plans completed: 5
+- Average duration: 6 min
 - Total execution time: 0.5 hours
 
 **By Phase:**
@@ -30,10 +30,11 @@ Progress: [███░░░░░░░] 30%
 | 01-critical-bug-fixes | 2 | 20 min | 10 min |
 | 02-data-export | 1 | 5 min | 5 min |
 | 03-scoring-ui-cleanup | 1 | 3 min | 3 min |
+| 04-who-when-editors | 1 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (12 min), 01-02 (8 min), 02-01 (5 min), 03-01 (3 min)
-- Trend: Strong velocity improvement
+- Last 5 plans: 01-02 (8 min), 02-01 (5 min), 03-01 (3 min), 04-01 (4 min)
+- Trend: Consistently fast velocity
 
 *Updated after each plan completion*
 
@@ -52,6 +53,8 @@ Recent decisions affecting current work:
 - **02-01:** Paginate Supabase fetches to avoid 1000-row silent limit
 - **03-01:** Remove legacy UI elements to create clean slate for Phase 4 WHO/WHEN inline editors
 - **03-01:** Keep QuestionnaireFormV2 as primary interface for questionnaire data
+- **04-01:** Local state with live preview pattern for inline editors (instant feedback, save on confirm)
+- **04-01:** Preserve sibling data when updating WHO or WHEN independently (prevents data loss)
 
 ### Pending Todos
 
@@ -59,10 +62,10 @@ None (two-column questionnaire layout completed earlier in session).
 
 ### Blockers/Concerns
 
-None - Phase 3 complete, ready to proceed with Phase 4 (WHO/WHEN inline editors).
+None - Phase 4 Plan 1 complete. Ready for Phase 5 (Fit & Recommendation Editor).
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 03-01 (Phase 3 Plan 1 complete)
+Stopped at: Completed 04-01 (Phase 4 Plan 1 complete)
 Resume file: None
