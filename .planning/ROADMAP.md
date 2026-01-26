@@ -12,8 +12,8 @@ This roadmap delivers the v2 questionnaire relaunch to Re-New's candidate pool. 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Critical Bug Fixes** - Fix file uploads, scoring persistence, and scoring page visibility
-- [ ] **Phase 2: Data Export** - Create pre-cleanup database snapshot for audit trail
+- [x] **Phase 1: Critical Bug Fixes** - Fix file uploads, scoring persistence, and scoring page visibility
+- [x] **Phase 2: Data Export** - Create pre-cleanup database snapshot for audit trail
 - [ ] **Phase 3: Scoring UI Cleanup** - Remove legacy scoring interface elements
 - [ ] **Phase 4: WHO/WHEN Editors** - Add popup editors for parameter correction with recalculation
 - [ ] **Phase 5: Pipeline Improvements** - Add score sorting and Declined status
@@ -47,10 +47,10 @@ Plans:
   1. Timestamped JSON export exists in repository with record count verification
   2. Export includes all current repreneurs with their scores, offers, and notes
   3. Export file can be parsed and record count matches database query
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [x] 02-01-PLAN.md — Database export script with pagination and verification metadata
 
 ### Phase 3: Scoring UI Cleanup
 **Goal**: Remove legacy scoring interface to prepare for new WHO/WHEN editors
@@ -169,8 +169,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Bug Fixes | 0/2 | Planned | - |
-| 2. Data Export | 0/? | Not started | - |
+| 1. Critical Bug Fixes | 2/2 | Complete | 2026-01-26 |
+| 2. Data Export | 1/1 | Complete | 2026-01-26 |
 | 3. Scoring UI Cleanup | 0/? | Not started | - |
 | 4. WHO/WHEN Editors | 0/? | Not started | - |
 | 5. Pipeline Improvements | 0/? | Not started | - |
