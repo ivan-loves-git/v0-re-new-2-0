@@ -24,6 +24,12 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_NUMBER: gitCommitCount,
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
   },
+  // Allow file uploads up to 10MB (default is 1MB)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   // Redirect old intake form to v2
   async redirects() {
     return [
