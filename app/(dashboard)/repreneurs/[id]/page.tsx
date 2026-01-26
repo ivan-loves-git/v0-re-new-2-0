@@ -27,6 +27,8 @@ import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { QuestionnaireFormV2 } from "@/components/repreneurs/questionnaire-form-v2"
+import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
+import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
 import { FlagBadges } from "@/components/scoring-v2/flag-badges"
@@ -388,6 +390,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  <WhoScoreEditor repreneur={repreneur} />
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold">{(repreneur as any).who_score ?? repreneur.tier1_score ?? "—"}</span>
@@ -414,6 +417,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  <WhenScoreEditor repreneur={repreneur} />
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold">{(repreneur as any).when_score ?? "—"}</span>
