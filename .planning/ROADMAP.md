@@ -33,10 +33,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can upload a 5MB PDF via the questionnaire and download it successfully from admin profile
   2. Admin can edit Tier 1 scores on a profile, close the dialog, reopen it, and see the saved values
   3. Candidate completing the questionnaire sees a thank-you screen, not a scoring summary
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Fix file upload bugs (wrong API endpoint + body size limit)
+- [ ] 01-02-PLAN.md — Fix admin scoring persistence (RLS failure detection) + verify no score leakage
 
 ### Phase 2: Data Export
 **Goal**: Create verified database snapshot before any cleanup operations
@@ -168,7 +169,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Bug Fixes | 0/? | Not started | - |
+| 1. Critical Bug Fixes | 0/2 | Planned | - |
 | 2. Data Export | 0/? | Not started | - |
 | 3. Scoring UI Cleanup | 0/? | Not started | - |
 | 4. WHO/WHEN Editors | 0/? | Not started | - |
