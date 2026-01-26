@@ -79,36 +79,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | TBD | Pending |
-| BUG-02 | TBD | Pending |
-| BUG-03 | TBD | Pending |
-| BUG-04 | TBD | Pending |
-| SCORE-01 | TBD | Pending |
-| SCORE-02 | TBD | Pending |
-| SCORE-03 | TBD | Pending |
-| SCORE-04 | TBD | Pending |
-| SCORE-05 | TBD | Pending |
-| PIPE-01 | TBD | Pending |
-| PIPE-02 | TBD | Pending |
-| INFRA-01 | TBD | Pending |
-| INFRA-02 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
-| LAUNCH-01 | TBD | Pending |
-| LAUNCH-02 | TBD | Pending |
-| LAUNCH-03 | TBD | Pending |
-| LAUNCH-04 | TBD | Pending |
-| LAUNCH-05 | TBD | Pending |
-| LAUNCH-06 | TBD | Pending |
-| LAUNCH-07 | TBD | Pending |
-| LAUNCH-08 | TBD | Pending |
+| BUG-01 | Phase 1: Critical Bug Fixes | Pending |
+| BUG-02 | Phase 1: Critical Bug Fixes | Pending |
+| BUG-03 | Phase 1: Critical Bug Fixes | Pending |
+| BUG-04 | Phase 1: Critical Bug Fixes | Pending |
+| SCORE-01 | Phase 3: Scoring UI Cleanup | Pending |
+| SCORE-02 | Phase 3: Scoring UI Cleanup | Pending |
+| SCORE-03 | Phase 4: WHO/WHEN Editors | Pending |
+| SCORE-04 | Phase 4: WHO/WHEN Editors | Pending |
+| SCORE-05 | Phase 4: WHO/WHEN Editors | Pending |
+| PIPE-01 | Phase 5: Pipeline Improvements | Pending |
+| PIPE-02 | Phase 5: Pipeline Improvements | Pending |
+| INFRA-01 | Phase 6: Launch Infrastructure | Pending |
+| INFRA-02 | Phase 6: Launch Infrastructure | Pending |
+| INFRA-03 | Phase 6: Launch Infrastructure | Pending |
+| DATA-01 | Phase 2: Data Export | Pending |
+| DATA-02 | Phase 9: Data Cleanup | Pending |
+| LAUNCH-01 | Phase 7: Team Decisions | Pending |
+| LAUNCH-02 | Phase 7: Team Decisions | Pending |
+| LAUNCH-03 | Phase 7: Team Decisions | Pending |
+| LAUNCH-04 | Phase 7: Team Decisions | Pending |
+| LAUNCH-05 | Phase 8: Testing & Validation | Pending |
+| LAUNCH-06 | Phase 8: Testing & Validation | Pending |
+| LAUNCH-07 | Phase 8: Testing & Validation | Pending |
+| LAUNCH-08 | Phase 10: Launch | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 24
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-26*
-*Last updated: 2026-01-26 after initial definition*
+*Last updated: 2026-01-26 after roadmap creation*
