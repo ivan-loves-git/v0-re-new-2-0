@@ -26,7 +26,6 @@ import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
-import { QuestionnaireFormV2 } from "@/components/repreneurs/questionnaire-form-v2"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
@@ -529,9 +528,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         {/* Col 3: Radar Chart */}
         <RepreneurRadarChart repreneur={repreneur as Repreneur} />
       </div>
-
-      {/* Questionnaire V2 (Dual Scoring) */}
-      <QuestionnaireFormV2 repreneur={repreneur as Repreneur} />
 
       {/* Milestones & Documents Row */}
       <div className="grid gap-6 md:grid-cols-3">
