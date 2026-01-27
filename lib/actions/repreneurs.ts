@@ -14,6 +14,18 @@ import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 
+/**
+ * Create a new repreneur from the admin form.
+ *
+ * Field categories:
+ * - Basic fields (admin form): name, email, phone, linkedin, status, source, persona, company_background, consent
+ * - Questionnaire fields (v2 intake): q05-q16, who_score, when_score, recommendation, scoring_flags
+ * - Legacy fields (preserved for existing data): investment_capacity, sector_preferences, target_location, target_acquisition_size
+ *
+ * Note: The admin form no longer collects legacy Tier 1 scoring fields.
+ * These fields are now populated via the v2 questionnaire (q05-q16) intake form.
+ * The action still accepts these fields for backwards compatibility with imports.
+ */
 export async function createRepreneur(formData: FormData) {
   const supabase = createAdminClient()
 
@@ -78,6 +90,18 @@ export async function createRepreneur(formData: FormData) {
   redirect(`/repreneurs/${data.id}`)
 }
 
+/**
+ * Update a repreneur from the admin form.
+ *
+ * Field categories:
+ * - Basic fields (admin form): name, email, phone, linkedin, status, source, persona, company_background, consent
+ * - Questionnaire fields (v2 intake): q05-q16, who_score, when_score, recommendation, scoring_flags
+ * - Legacy fields (preserved for existing data): investment_capacity, sector_preferences, target_location, target_acquisition_size
+ *
+ * Note: Legacy Tier 1 fields (investment_capacity, sector_preferences, target_location, target_acquisition_size)
+ * are still handled by this action for backwards compatibility with existing data. However, the admin form
+ * no longer collects these fields - they come from the v2 questionnaire or historical imports.
+ */
 export async function updateRepreneur(id: string, formData: FormData) {
   const supabase = createAdminClient()
 
