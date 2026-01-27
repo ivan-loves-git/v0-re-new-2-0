@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 Phase: 4 of 10 (WHO/WHEN Editors) - COMPLETE
 Plan: 1 of 1 in current phase - COMPLETE
 Status: Phase 4 complete, ready for Phase 5
-Last activity: 2026-01-26 — Completed 04-01 (WHO/WHEN inline score editors)
+Last activity: 2026-01-27 — Completed quick-001 (Audit Add Repreneur Form)
 
 Progress: [████░░░░░░] 40%
 
@@ -55,6 +55,8 @@ Recent decisions affecting current work:
 - **03-01:** Keep QuestionnaireFormV2 as primary interface for questionnaire data
 - **04-01:** Local state with live preview pattern for inline editors (instant feedback, save on confirm)
 - **04-01:** Preserve sibling data when updating WHO or WHEN independently (prevents data loss)
+- **quick-001:** Admin form collects only basic contact info, not scoring data
+- **quick-001:** v2 questionnaire (q05-q16) is source of truth for scoring data
 
 ### Pending Todos
 
@@ -66,6 +68,6 @@ None - Phase 4 complete. Ready for Phase 5 (Pipeline Improvements).
 
 ## Session Continuity
 
-Last session: 2026-01-26
-Stopped at: Completed 04-01 (Phase 4 Plan 1 complete)
+Last session: 2026-01-27
+Stopped at: Completed quick-001 (Audit Add Repreneur Form)
 Resume file: None
