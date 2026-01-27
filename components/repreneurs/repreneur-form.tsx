@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS, PERSONA_OPTIONS } from "@/lib/types/repreneur"
-import { INVESTMENT_CAPACITY_OPTIONS, INDUSTRY_SECTOR_OPTIONS, TARGET_ACQUISITION_SIZE_OPTIONS, TARGET_LOCATION_OPTIONS } from "@/lib/utils/tier1-scoring"
 
 interface RepreneurFormProps {
   repreneur?: Repreneur
@@ -18,36 +17,21 @@ interface RepreneurFormProps {
   submitLabel?: string
 }
 
+/**
+ * Simplified admin form for creating/editing repreneurs.
+ *
+ * Field categories:
+ * - Basic fields (this form): name, email, phone, linkedin, status, source, persona, company_background, consent
+ * - Questionnaire fields (v2 intake form): q05-q16, who_score, when_score, etc.
+ * - Legacy fields (preserved for existing data): investment_capacity, sector_preferences, target_location, target_acquisition_size
+ *
+ * The v2 questionnaire (q05-q16) is the source of truth for scoring data.
+ * Admin should create minimal records here and send repreneurs the questionnaire link.
+ */
 export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: RepreneurFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedSectors, setSelectedSectors] = useState<string[]>(repreneur?.sector_preferences || [])
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(repreneur?.target_location || [])
-
-  const toggleSector = (value: string) => {
-    setSelectedSectors(prev =>
-      prev.includes(value)
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    )
-  }
-
-  const toggleLocation = (value: string) => {
-    setSelectedLocations(prev =>
-      prev.includes(value)
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    )
-  }
 
   async function handleSubmit(formData: FormData) {
-    // Add selected sectors to form data
-    formData.delete("sector_preferences")
-    formData.append("sector_preferences", JSON.stringify(selectedSectors))
-
-    // Add selected locations to form data
-    formData.delete("target_location")
-    formData.append("target_location", JSON.stringify(selectedLocations))
-
     setIsSubmitting(true)
     try {
       await action(formData)
@@ -63,7 +47,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
         <CardHeader>
           <CardTitle>{repreneur ? "Edit Repreneur" : "Add New Repreneur"}</CardTitle>
           <CardDescription>
-            {repreneur ? "Update repreneur information" : "Enter details for the new repreneur"}
+            {repreneur ? "Update repreneur information" : "Enter basic contact details. Send the questionnaire link to collect scoring data."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -154,76 +138,6 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
               rows={3}
               defaultValue={repreneur?.company_background}
             />
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="investment_capacity">Investment Capacity</Label>
-              <Select name="investment_capacity" defaultValue={repreneur?.investment_capacity || ""}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select range..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {INVESTMENT_CAPACITY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="target_acquisition_size">Target Acquisition Size</Label>
-              <Select name="target_acquisition_size" defaultValue={repreneur?.target_acquisition_size || ""}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select size..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {TARGET_ACQUISITION_SIZE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Sector Preferences</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
-              {INDUSTRY_SECTOR_OPTIONS.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`sector-${option.value}`}
-                    checked={selectedSectors.includes(option.value)}
-                    onCheckedChange={() => toggleSector(option.value)}
-                  />
-                  <label htmlFor={`sector-${option.value}`} className="text-sm cursor-pointer">
-                    {option.label}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Target Location(s)</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
-              {TARGET_LOCATION_OPTIONS.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`location-${option.value}`}
-                    checked={selectedLocations.includes(option.value)}
-                    onCheckedChange={() => toggleLocation(option.value)}
-                  />
-                  <label htmlFor={`location-${option.value}`} className="text-sm cursor-pointer">
-                    {option.label}
-                  </label>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* GDPR Consent Section */}
