@@ -66,6 +66,21 @@ None (two-column questionnaire layout completed earlier in session).
 
 None - Phase 4 complete. Ready for Phase 5 (Pipeline Improvements).
 
+### Key Learnings (2026-01-27)
+
+**RLS + Better Auth Architecture:**
+- App uses Better Auth (not Supabase Auth) for login
+- Supabase sees all requests as `anon` role (no Supabase session)
+- RLS policies blocked `anon` → empty dashboard despite 118 records
+- Fix: `lib/supabase/server.ts` uses `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS
+- This is secure because Better Auth + middleware already protect routes
+
+**Debugging Production 500 Errors:**
+- Production hides error details for security
+- Check Vercel logs: https://vercel.com/ivan-loves-git/v0-re-new-2-0/logs
+- Actual error was missing `needs_data_completion` column (not RLS)
+- Fix: `ALTER TABLE repreneurs ADD COLUMN IF NOT EXISTS needs_data_completion boolean DEFAULT false;`
+
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
