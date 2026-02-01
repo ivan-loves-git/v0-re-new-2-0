@@ -24,7 +24,7 @@ import { ChannelSelector } from "./channel-selector"
 import { TemplateSelector, type Template } from "./template-selector"
 
 interface WavyToolProps {
-  repreneurs: RepreneurOption[]
+  repreneurs?: RepreneurOption[] // Now optional - will fetch client-side if empty
   customTemplates: Template[]
   onAddTemplate: (template: { name: string; description: string; channel: "email" | "whatsapp" }) => Promise<void>
   onDeleteTemplate: (templateId: string) => Promise<void>
@@ -32,12 +32,16 @@ interface WavyToolProps {
 }
 
 export function WavyTool({
-  repreneurs,
+  repreneurs: initialRepreneurs = [],
   customTemplates,
   onAddTemplate,
   onDeleteTemplate,
   preselectedRepreneurId,
 }: WavyToolProps) {
+  // Repreneurs state - fetch client-side if not provided
+  const [repreneurs, setRepreneurs] = React.useState<RepreneurOption[]>(initialRepreneurs)
+  const [isLoadingRepreneurs, setIsLoadingRepreneurs] = React.useState(initialRepreneurs.length === 0)
+
   // Form state
   const [channel, setChannel] = React.useState<"email" | "whatsapp">("email")
   const [selectedRepreneur, setSelectedRepreneur] = React.useState<RepreneurOption | null>(null)
@@ -54,9 +58,35 @@ export function WavyTool({
   const [isSending, setIsSending] = React.useState(false)
   const [showSendConfirm, setShowSendConfirm] = React.useState(false)
 
+  // Fetch repreneurs client-side if not provided
+  React.useEffect(() => {
+    if (initialRepreneurs.length === 0) {
+      fetch("/api/wavy/test")
+        .then(res => res.json())
+        .then(data => {
+          if (data.repreneurs) {
+            const mapped = data.repreneurs.map((r: { id: string; name: string; email: string }) => ({
+              id: r.id,
+              firstName: r.name.split(" ")[0] || "",
+              lastName: r.name.split(" ").slice(1).join(" ") || "",
+              email: r.email,
+              phone: null,
+              t1Score: null,
+              whenScore: null,
+              willScore: null,
+              journeyStage: null,
+            }))
+            setRepreneurs(mapped)
+          }
+        })
+        .catch(err => console.error("Failed to fetch repreneurs:", err))
+        .finally(() => setIsLoadingRepreneurs(false))
+    }
+  }, [initialRepreneurs.length])
+
   // Preselect repreneur if ID provided
   React.useEffect(() => {
-    if (preselectedRepreneurId) {
+    if (preselectedRepreneurId && repreneurs.length > 0) {
       const repreneur = repreneurs.find(r => r.id === preselectedRepreneurId)
       if (repreneur) {
         setSelectedRepreneur(repreneur)
