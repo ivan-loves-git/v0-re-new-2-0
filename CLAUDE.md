@@ -24,9 +24,9 @@ Ivan is a business/product person, NOT a developer. Claude must:
 
 ## Tech Stack
 - **Frontend:** Next.js 16 + Tailwind + shadcn/ui
-- **Backend/Database:** Supabase (PostgreSQL + Auth + API)
+- **Backend/Database:** Supabase (PostgreSQL + API) - uses service role key (bypasses RLS)
 - **Hosting:** Vercel (Hobby plan)
-- **Auth:** Email/password (users created manually in Supabase)
+- **Auth:** Better Auth (email/password) - NOT Supabase Auth
 
 ## Project Structure (Cleaned Jan 2026)
 ```
@@ -59,19 +59,45 @@ emba--renew-platform/
 - **Cron Jobs:** Daily at 9 AM (Hobby plan limits to once/day)
 - **Backup Branch:** `backup/pre-restructure-20260104`
 
-## Key Documents
-- **PRD:** `.taskmaster/docs/prd.txt`
-- **Tasks:** `.taskmaster/tasks/tasks.json`
-- **V0 Prompts:** `V0_PROMPTS.md`
+## Task Management
 
-## Task Master Commands
-```bash
-task-master list              # View all tasks
-task-master show <id>         # Task details
-task-master next              # See recommended next task
-task-master set-status --id=<id> --status=in-progress  # Start task
-task-master set-status --id=<id> --status=done         # Complete task
+**Two systems work together:**
+
+| System | Purpose | Ivan's Command |
+|--------|---------|----------------|
+| **GSD Planning** | Multi-week roadmap, phases | `/gsd:resume` or `/gsd:progress` |
+| **Claude Code Tasks** | Blocking items, quick fixes | `ctrl+t` or ask Claude |
+
+### GSD Planning (`.planning/`)
+Strategic roadmap for the project. 10 phases toward v1.0 launch.
+
+**Key files (Claude reads these, Ivan doesn't need to):**
+- `ROADMAP.md` - 10-phase plan with success criteria
+- `STATE.md` - Current position and accumulated context
+- `PROJECT.md` - Project charter and requirements
+
+**Ivan's commands:**
 ```
+/gsd:resume      → Start session, see what's next
+/gsd:progress    → Check status, route to next action
+/gsd:plan-phase  → Plan a specific phase
+```
+
+### Claude Code Tasks
+Tactical work items that survive context resets. Used for:
+- Blocking items (waiting on people)
+- Quick fixes outside the roadmap
+- Security issues
+
+**Ivan's commands:**
+```
+ctrl+t           → Toggle task panel
+```
+Or just ask: "what tasks are pending?" / "create a task for X"
+
+### Historical (Archived)
+- `.taskmaster-archive/` - Old task system (54 tasks, deprecated Jan 2026)
+- `todos/` - Security audit findings (being migrated to tasks)
 
 ## Open Questions (Waiting on Bertrand)
 - Notes structure: free text vs structured (call/email/meeting + outcome)
@@ -90,20 +116,19 @@ task-master set-status --id=<id> --status=done         # Complete task
 **CRITICAL:** GitHub is the project's memory. Every commit must tell a complete story.
 
 ### When to Commit
-- After completing a Task Master task
+- After completing a phase or plan
 - After any meaningful change (even mid-task if significant)
 - Before switching to a different task
 
 ### Commit Format
 ```
-<type>(task-<id>): <short description>
+<type>: <short description>
 
 ## What Changed
 - Detailed bullet points of actual changes
 
 ## Why
 - The reasoning/context behind these changes
-- Reference Task Master task: task-<id>
 
 ## Files Modified
 - List of files with brief notes
@@ -119,7 +144,6 @@ task-master set-status --id=<id> --status=done         # Complete task
 
 ### Rules
 - First line under 72 characters
-- Include Task Master task ID when applicable
 - Include enough context that someone reading later understands WHY, not just WHAT
 - NO "Generated with Claude Code" attribution
 - Use `/commit` command for guided process
