@@ -58,7 +58,7 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
   }
 
   // Update checkbox arrays
-  const handleCheckboxChange = (field: 'q11' | 'q14' | 'q15', value: string, checked: boolean) => {
+  const handleCheckboxChange = (field: 'q11' | 'q12' | 'q13' | 'q14' | 'q15', value: string, checked: boolean) => {
     setLocalAnswers(prev => {
       const currentArray = prev[field] as string[]
       const newArray = checked
@@ -138,6 +138,50 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
                   />
                   <Label htmlFor={`q11-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label} ({opt.points} pts)
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Q12 - Geographic Zones (multi-select, no scoring) */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              {WHEN_QUESTIONS.q12.labelEn}
+              <span className="ml-2 text-xs text-gray-400 font-normal">(info only)</span>
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {WHEN_QUESTIONS.q12.options.map((opt) => (
+                <div key={opt.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`q12-${opt.value}`}
+                    checked={localAnswers.q12.includes(opt.value)}
+                    onCheckedChange={(checked) => handleCheckboxChange('q12', opt.value, checked as boolean)}
+                  />
+                  <Label htmlFor={`q12-${opt.value}`} className="text-xs font-normal cursor-pointer">
+                    {opt.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Q13 - Target Sectors (multi-select, no scoring) */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              {WHEN_QUESTIONS.q13.labelEn}
+              <span className="ml-2 text-xs text-gray-400 font-normal">(info only)</span>
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {WHEN_QUESTIONS.q13.options.map((opt) => (
+                <div key={opt.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`q13-${opt.value}`}
+                    checked={localAnswers.q13.includes(opt.value)}
+                    onCheckedChange={(checked) => handleCheckboxChange('q13', opt.value, checked as boolean)}
+                  />
+                  <Label htmlFor={`q13-${opt.value}`} className="text-xs font-normal cursor-pointer">
+                    {opt.label}
                   </Label>
                 </div>
               ))}
