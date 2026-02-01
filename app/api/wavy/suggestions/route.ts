@@ -34,7 +34,7 @@ export async function GET() {
         will_score_v2,
         updated_at
       `)
-      .is("reject_reason", null)
+      .is("rejected_at", null)
       .not("journey_stage", "in", '("archived","rejected")')
       .order("updated_at", { ascending: true })
 

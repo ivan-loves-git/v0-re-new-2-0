@@ -111,7 +111,7 @@ export async function getRepreneursForWavy(): Promise<
     .select(
       "id, first_name, last_name, email, phone, t1_score_v2, when_score_v2, will_score_v2, journey_stage"
     )
-    .is("reject_reason", null)
+    .is("rejected_at", null)
     .order("first_name")
 
   if (error) {
@@ -157,7 +157,7 @@ export async function getWavySuggestions(): Promise<{
   const { data: repreneurs, error } = await supabase
     .from("repreneurs")
     .select("id, first_name, last_name, email, journey_stage, updated_at")
-    .is("reject_reason", null)
+    .is("rejected_at", null)
     .not("journey_stage", "in", '("archived","rejected")')
     .order("updated_at", { ascending: true })
 
