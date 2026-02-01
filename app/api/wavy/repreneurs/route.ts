@@ -7,13 +7,16 @@ import { getCurrentUser } from "@/lib/auth-server"
  * Returns list of non-rejected repreneurs for the Wavy tool
  */
 export async function GET() {
-  // Check authentication
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    // Check authentication
+    const user = await getCurrentUser()
+    if (!user) {
+      console.log("[wavy/repreneurs] No authenticated user")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    console.log("[wavy/repreneurs] Authenticated user:", user.email)
+
     const supabase = createAdminClient()
 
     const { data, error } = await supabase
@@ -23,9 +26,11 @@ export async function GET() {
       .order("first_name")
 
     if (error) {
-      console.error("Error fetching repreneurs:", error)
+      console.error("[wavy/repreneurs] Supabase error:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    console.log("[wavy/repreneurs] Found", data?.length || 0, "repreneurs")
 
     return NextResponse.json({
       repreneurs: (data || []).map(r => ({
@@ -41,7 +46,7 @@ export async function GET() {
       }))
     })
   } catch (err) {
-    console.error("Error in wavy repreneurs API:", err)
+    console.error("[wavy/repreneurs] Unexpected error:", err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to fetch repreneurs" },
       { status: 500 }

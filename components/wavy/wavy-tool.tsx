@@ -61,14 +61,25 @@ export function WavyTool({
   // Fetch repreneurs client-side if not provided by server
   React.useEffect(() => {
     if (initialRepreneurs.length === 0) {
-      fetch("/api/wavy/repreneurs")
-        .then(res => res.json())
+      fetch("/api/wavy/repreneurs", {
+        credentials: "include", // Include auth cookies
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP ${res.status}`)
+          }
+          return res.json()
+        })
         .then(data => {
           if (data.repreneurs) {
             setRepreneurs(data.repreneurs)
           }
         })
-        .catch(err => console.error("Failed to fetch repreneurs:", err))
+        .catch(err => {
+          console.error("Failed to fetch repreneurs:", err)
+          toast.error(`Failed to load repreneurs: ${err.message}`)
+        })
         .finally(() => setIsLoadingRepreneurs(false))
     }
   }, [initialRepreneurs.length])
