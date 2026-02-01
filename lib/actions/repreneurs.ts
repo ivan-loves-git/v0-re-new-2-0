@@ -438,6 +438,95 @@ export async function unrejectRepreneur(id: string) {
 }
 
 /**
+ * Decline a repreneur (internal decision, no email sent)
+ * Different from reject: decline is a manual admin choice, reject sends rejection email
+ */
+export async function declineRepreneur(id: string) {
+  const supabase = createAdminClient()
+
+  // First, get the current status to store as previous_status
+  const { data: repreneur, error: fetchError } = await supabase
+    .from("repreneurs")
+    .select("lifecycle_status")
+    .eq("id", id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
+  // Don't decline if already declined or rejected
+  if (repreneur.lifecycle_status === "declined") {
+    throw new Error("Repreneur is already declined")
+  }
+  if (repreneur.lifecycle_status === "rejected") {
+    throw new Error("Repreneur is already rejected")
+  }
+
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      lifecycle_status: "declined",
+      previous_status: repreneur.lifecycle_status,
+      declined_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  // No email sent for decline (internal decision)
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+}
+
+/**
+ * Restore a declined repreneur to their previous status
+ */
+export async function undeclineRepreneur(id: string) {
+  const supabase = createAdminClient()
+
+  // Get the previous status
+  const { data: repreneur, error: fetchError } = await supabase
+    .from("repreneurs")
+    .select("lifecycle_status, previous_status")
+    .eq("id", id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
+  // Can only un-decline if currently declined
+  if (repreneur.lifecycle_status !== "declined") {
+    throw new Error("Repreneur is not declined")
+  }
+
+  // Restore to previous status, or default to "lead" if no previous status
+  const restoredStatus = repreneur.previous_status || "lead"
+
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      lifecycle_status: restoredStatus,
+      previous_status: null,
+      declined_at: null,
+    })
+    .eq("id", id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+}
+
+/**
  * Questionnaire data input type
  */
 export interface QuestionnaireInput {

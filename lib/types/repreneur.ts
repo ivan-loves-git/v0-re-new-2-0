@@ -1,4 +1,4 @@
-export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected"
+export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected" | "declined"
 export type JourneyStage = "explorer" | "learner" | "ready" | "serial_acquirer"
 export type PersonaType = "first_time_buyer" | "serial_acquirer" | "corporate_spinoff" | "family_succession"
 
@@ -122,7 +122,8 @@ export interface Repreneur {
   ms_first_acquisition?: boolean
   tier3_milestone_count?: number // Computed count of completed milestones (0-11)
   rejected_at?: string // timestamp when rejected, null if not rejected
-  previous_status?: LifecycleStatus // status before rejection, for un-reject
+  declined_at?: string // timestamp when declined (internal decision, no email)
+  previous_status?: LifecycleStatus // status before rejection/decline, for restore
   // Questionnaire fields (Q1-Q17)
   q1_employment_status?: string
   q2_years_experience?: string
@@ -244,6 +245,7 @@ export interface Repreneur_Insert {
   tier1_score?: number
   tier2_stars?: number
   rejected_at?: string
+  declined_at?: string
   previous_status?: LifecycleStatus
   // WHO/WHEN Dual Scoring (v2 questionnaire)
   q05_status?: string

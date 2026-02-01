@@ -27,6 +27,7 @@ const COLUMNS: { status: LifecycleStatus; title: string; color: string; bgColor:
   { status: "lead", title: "Leads", color: "bg-blue-100", bgColor: "bg-blue-50/50" },
   { status: "qualified", title: "Qualified", color: "bg-yellow-100", bgColor: "bg-yellow-50/50" },
   { status: "client", title: "Clients", color: "bg-green-100", bgColor: "bg-green-50/50" },
+  { status: "declined", title: "Declined", color: "bg-gray-100", bgColor: "bg-gray-50/50" },
   { status: "rejected", title: "Rejected", color: "bg-red-100", bgColor: "bg-red-50/50" },
 ]
 
@@ -79,6 +80,15 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
                 </Badge>
               )}
             </div>
+          )
+        }
+        return null
+      case "declined":
+        if (repreneur.declined_at) {
+          return (
+            <span className="text-xs text-gray-500">
+              {formatDistanceToNow(new Date(repreneur.declined_at), { addSuffix: true })}
+            </span>
           )
         }
         return null
@@ -229,10 +239,21 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
     })
   }, [repreneurs, filters])
 
-  // Group by status
+  // Group by status and sort leads by T1 score (highest first)
   const groupedByStatus = useMemo(() => {
     return COLUMNS.reduce((acc, col) => {
-      acc[col.status] = filteredRepreneurs.filter((r) => r.lifecycle_status === col.status)
+      const filtered = filteredRepreneurs.filter((r) => r.lifecycle_status === col.status)
+
+      // Sort leads by tier1_score DESC (highest score first), nulls at bottom
+      if (col.status === "lead") {
+        filtered.sort((a, b) => {
+          const scoreA = a.tier1_score ?? -1
+          const scoreB = b.tier1_score ?? -1
+          return scoreB - scoreA
+        })
+      }
+
+      acc[col.status] = filtered
       return acc
     }, {} as Record<LifecycleStatus, RepreneurWithOffers[]>)
   }, [filteredRepreneurs])
@@ -257,8 +278,9 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
           <p className="text-sm text-amber-800">
             Status changes are action-driven. To move a repreneur:{" "}
             <span className="font-medium">set Tier 2 rating</span> (→ Qualified),{" "}
-            <span className="font-medium">assign an offer</span> (→ Client), or{" "}
-            <span className="font-medium">use the Reject button</span> (→ Rejected).
+            <span className="font-medium">assign an offer</span> (→ Client),{" "}
+            <span className="font-medium">Decline</span> (internal, no email), or{" "}
+            <span className="font-medium">Reject</span> (sends email).
           </p>
         </div>
       </TooltipProvider>
