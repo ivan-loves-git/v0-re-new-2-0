@@ -115,3 +115,58 @@ export function getRawDimensionScores(repreneur: Repreneur) {
     },
   }
 }
+
+// V2 questionnaire max scores for T1 dimension mapping
+const V2_MAX_SCORES = {
+  experience: 20,    // q05 (max 5) + q06 (max 15)
+  leadership: 30,    // q07 (max 30)
+  maKnowledge: 35,   // q08 (max 20) + q09 (max 15)
+  readiness: 20,     // projectStatus (max 20)
+  financial: 80,     // fitFinancier (max 40) + clarity (max 40)
+}
+
+/**
+ * Calculate T1 radar dimensions from V2 questionnaire data.
+ * Maps WHO/WHEN breakdown scores to the 5 T1 dimensions.
+ *
+ * Mapping:
+ * - Experience: WHO q05 + q06
+ * - Leadership: WHO q07
+ * - M&A Knowledge: WHO q08 + q09
+ * - Readiness: WHEN projectStatus
+ * - Financial: WHEN fitFinancier + clarity
+ */
+export function calculateT1FromV2(
+  whoBreakdown: Record<string, number> | null | undefined,
+  whenBreakdown: Record<string, number> | null | undefined
+): { hasTier1Data: boolean; scores: Record<string, number>; rawScores: Record<string, { score: number; max: number }> } {
+  if (!whoBreakdown) {
+    return { hasTier1Data: false, scores: {}, rawScores: {} }
+  }
+
+  // Raw scores from V2 breakdown
+  const experienceRaw = (whoBreakdown.q05 || 0) + (whoBreakdown.q06 || 0)
+  const leadershipRaw = whoBreakdown.q07 || 0
+  const maKnowledgeRaw = (whoBreakdown.q08 || 0) + (whoBreakdown.q09 || 0)
+  const readinessRaw = whenBreakdown?.projectStatus || 0
+  const financialRaw = (whenBreakdown?.fitFinancier || 0) + (whenBreakdown?.clarity || 0)
+
+  // Normalized to percentages (0-100)
+  const experience = Math.round((experienceRaw / V2_MAX_SCORES.experience) * 100)
+  const leadership = Math.round((leadershipRaw / V2_MAX_SCORES.leadership) * 100)
+  const maKnowledge = Math.round((maKnowledgeRaw / V2_MAX_SCORES.maKnowledge) * 100)
+  const readiness = Math.round((readinessRaw / V2_MAX_SCORES.readiness) * 100)
+  const financial = Math.round((financialRaw / V2_MAX_SCORES.financial) * 100)
+
+  return {
+    hasTier1Data: true,
+    scores: { experience, leadership, maKnowledge, readiness, financial },
+    rawScores: {
+      experience: { score: experienceRaw, max: V2_MAX_SCORES.experience },
+      leadership: { score: leadershipRaw, max: V2_MAX_SCORES.leadership },
+      maKnowledge: { score: maKnowledgeRaw, max: V2_MAX_SCORES.maKnowledge },
+      readiness: { score: readinessRaw, max: V2_MAX_SCORES.readiness },
+      financial: { score: financialRaw, max: V2_MAX_SCORES.financial },
+    },
+  }
+}

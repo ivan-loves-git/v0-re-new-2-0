@@ -11,6 +11,7 @@ import {
   calculateReadinessScore,
   calculateFinancialScore,
   getRawDimensionScores,
+  calculateT1FromV2,
   DIMENSION_MAX_SCORES,
 } from "@/lib/scoring-utils"
 import { TIER2_DIMENSIONS } from "@/lib/constants/tier-config"
@@ -45,8 +46,70 @@ export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
   const rawScores = getRawDimensionScores(repreneur)
   const tier2Dimensions = extractTier2Dimensions(repreneur)
 
+  // Check for V2 questionnaire data (WHO/WHEN scores)
+  const hasV2Data = repreneur.who_score_breakdown !== null && repreneur.who_score_breakdown !== undefined
+  const v2Scores = hasV2Data && !rawScores
+    ? calculateT1FromV2(repreneur.who_score_breakdown, repreneur.when_score_breakdown)
+    : null
+
+  // Use V2 data if available and no old tier1 breakdown exists
+  const useV2 = v2Scores?.hasTier1Data && !rawScores
+
   // Tier 1 data with detailed question mapping
-  const tier1Data: Tier1DataPoint[] = [
+  const tier1Data: Tier1DataPoint[] = useV2 ? [
+    // V2 data mapping
+    {
+      dimension: "Experience",
+      shortLabel: "Exp.",
+      score: v2Scores!.scores.experience,
+      rawScore: v2Scores!.rawScores.experience.score,
+      maxScore: v2Scores!.rawScores.experience.max,
+      fullMark: 100,
+      questions: ["Q05: Professional status", "Q06: Years experience"],
+      questionDetails: "Professional background (WHO score)",
+    },
+    {
+      dimension: "Leadership",
+      shortLabel: "Lead.",
+      score: v2Scores!.scores.leadership,
+      rawScore: v2Scores!.rawScores.leadership.score,
+      maxScore: v2Scores!.rawScores.leadership.max,
+      fullMark: 100,
+      questions: ["Q07: Management level"],
+      questionDetails: "Leadership experience (WHO score)",
+    },
+    {
+      dimension: "M&A",
+      shortLabel: "M&A",
+      score: v2Scores!.scores.maKnowledge,
+      rawScore: v2Scores!.rawScores.maKnowledge.score,
+      maxScore: v2Scores!.rawScores.maKnowledge.max,
+      fullMark: 100,
+      questions: ["Q08: Crisis management", "Q09: Investment experience"],
+      questionDetails: "M&A readiness indicators (WHO score)",
+    },
+    {
+      dimension: "Readiness",
+      shortLabel: "Ready",
+      score: v2Scores!.scores.readiness,
+      rawScore: v2Scores!.rawScores.readiness.score,
+      maxScore: v2Scores!.rawScores.readiness.max,
+      fullMark: 100,
+      questions: ["Q11: Project status"],
+      questionDetails: "Project maturity (WHEN score)",
+    },
+    {
+      dimension: "Financial",
+      shortLabel: "Fin.",
+      score: v2Scores!.scores.financial,
+      rawScore: v2Scores!.rawScores.financial.score,
+      maxScore: v2Scores!.rawScores.financial.max,
+      fullMark: 100,
+      questions: ["Financial fit", "Project clarity"],
+      questionDetails: "Financial readiness (WHEN score)",
+    },
+  ] : [
+    // Original tier1 breakdown data
     {
       dimension: "Experience",
       shortLabel: "Exp.",
@@ -118,7 +181,7 @@ export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
     }
   })
 
-  const hasTier1Data = repreneur.tier1_score_breakdown !== null && repreneur.tier1_score_breakdown !== undefined
+  const hasTier1Data = (repreneur.tier1_score_breakdown !== null && repreneur.tier1_score_breakdown !== undefined) || useV2
   const hasTier2Data = Object.values(tier2Dimensions).some(v => v !== null)
 
   return (
