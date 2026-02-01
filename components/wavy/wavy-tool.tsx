@@ -58,25 +58,14 @@ export function WavyTool({
   const [isSending, setIsSending] = React.useState(false)
   const [showSendConfirm, setShowSendConfirm] = React.useState(false)
 
-  // Fetch repreneurs client-side if not provided
+  // Fetch repreneurs client-side if not provided by server
   React.useEffect(() => {
     if (initialRepreneurs.length === 0) {
-      fetch("/api/wavy/test")
+      fetch("/api/wavy/repreneurs")
         .then(res => res.json())
         .then(data => {
           if (data.repreneurs) {
-            const mapped = data.repreneurs.map((r: { id: string; name: string; email: string }) => ({
-              id: r.id,
-              firstName: r.name.split(" ")[0] || "",
-              lastName: r.name.split(" ").slice(1).join(" ") || "",
-              email: r.email,
-              phone: null,
-              t1Score: null,
-              whenScore: null,
-              willScore: null,
-              journeyStage: null,
-            }))
-            setRepreneurs(mapped)
+            setRepreneurs(data.repreneurs)
           }
         })
         .catch(err => console.error("Failed to fetch repreneurs:", err))

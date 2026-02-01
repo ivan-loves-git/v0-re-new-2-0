@@ -47,45 +47,8 @@ async function WavyToolLoader({
 }: {
   preselectedRepreneurId?: string
 }) {
-  // Fetch repreneurs via internal API to work around RSC issues
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-
-  let repreneurs: Array<{
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-    phone: string | null
-    t1Score: number | null
-    whenScore: number | null
-    willScore: number | null
-    journeyStage: string | null
-  }> = []
-
-  try {
-    const response = await fetch(`${baseUrl}/api/wavy/test`, {
-      cache: "no-store",
-    })
-    if (response.ok) {
-      const data = await response.json()
-      repreneurs = (data.repreneurs || []).map((r: { id: string; name: string; email: string }) => ({
-        id: r.id,
-        firstName: r.name.split(" ")[0] || "",
-        lastName: r.name.split(" ").slice(1).join(" ") || "",
-        email: r.email,
-        phone: null,
-        t1Score: null,
-        whenScore: null,
-        willScore: null,
-        journeyStage: null,
-      }))
-    }
-  } catch (error) {
-    console.error("[Wavy Page] Failed to fetch repreneurs:", error)
-  }
-
+  // Note: repreneurs are fetched client-side in WavyTool component
+  // to work around Vercel RSC issues with Supabase
   const templates = await getWavyTemplates()
 
   // Server actions for template management
@@ -105,7 +68,6 @@ async function WavyToolLoader({
 
   return (
     <WavyTool
-      repreneurs={repreneurs}
       customTemplates={templates.map((t) => ({
         id: t.id,
         name: t.name,

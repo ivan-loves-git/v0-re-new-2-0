@@ -3,7 +3,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
-import { unstable_noStore as noStore } from "next/cache"
 
 export interface WavyTemplate {
   id: string
@@ -104,45 +103,33 @@ export async function getRepreneursForWavy(): Promise<
     journeyStage: string | null
   }>
 > {
-  noStore() // Disable caching
-  console.log("[Wavy] getRepreneursForWavy called - START")
+  await requireUser()
+  const supabase = createAdminClient()
 
-  try {
-    // Temporarily skip auth check for debugging
-    // await requireUser()
-    const supabase = createAdminClient()
-    console.log("[Wavy] Supabase client created")
+  const { data, error } = await supabase
+    .from("repreneurs")
+    .select(
+      "id, first_name, last_name, email, phone, t1_score_v2, when_score_v2, will_score_v2, journey_stage"
+    )
+    .is("rejected_at", null)
+    .order("first_name")
 
-    const { data, error } = await supabase
-      .from("repreneurs")
-      .select(
-        "id, first_name, last_name, email, phone, t1_score_v2, when_score_v2, will_score_v2, journey_stage"
-      )
-      .is("rejected_at", null)
-      .order("first_name")
-
-    console.log("[Wavy] Query result - data count:", data?.length, "error:", error?.message)
-
-    if (error) {
-      console.error("Failed to fetch repreneurs for wavy:", error)
-      return []
-    }
-
-    return (data || []).map((r) => ({
-      id: r.id,
-      firstName: r.first_name,
-      lastName: r.last_name,
-      email: r.email,
-      phone: r.phone,
-      t1Score: r.t1_score_v2,
-      whenScore: r.when_score_v2,
-      willScore: r.will_score_v2,
-      journeyStage: r.journey_stage,
-    }))
-  } catch (err) {
-    console.error("[Wavy] getRepreneursForWavy ERROR:", err)
+  if (error) {
+    console.error("Failed to fetch repreneurs for wavy:", error)
     return []
   }
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    firstName: r.first_name,
+    lastName: r.last_name,
+    email: r.email,
+    phone: r.phone,
+    t1Score: r.t1_score_v2,
+    whenScore: r.when_score_v2,
+    willScore: r.will_score_v2,
+    journeyStage: r.journey_stage,
+  }))
 }
 
 /**
