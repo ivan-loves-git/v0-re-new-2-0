@@ -21,7 +21,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("repreneurs")
-      .select("id, first_name, last_name, email, phone, t1_score_v2, when_score_v2, will_score_v2, journey_stage")
+      .select("id, first_name, last_name, email, phone, tier1_score, who_score, when_score, journey_stage")
       .is("rejected_at", null)
       .order("first_name")
 
@@ -39,9 +39,8 @@ export async function GET() {
         lastName: r.last_name,
         email: r.email,
         phone: r.phone,
-        t1Score: r.t1_score_v2,
-        whenScore: r.when_score_v2,
-        willScore: r.will_score_v2,
+        t1Score: r.tier1_score ?? r.who_score, // Use WHO score if T1 not available
+        whenScore: r.when_score,
         journeyStage: r.journey_stage,
       }))
     })

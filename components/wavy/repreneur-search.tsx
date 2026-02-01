@@ -26,7 +26,6 @@ export interface RepreneurOption {
   phone?: string | null
   t1Score?: number | null
   whenScore?: number | null
-  willScore?: number | null
   journeyStage?: string | null
 }
 

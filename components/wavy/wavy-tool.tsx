@@ -244,11 +244,6 @@ export function WavyTool({
                       WHEN: {selectedRepreneur.whenScore}
                     </span>
                   )}
-                  {selectedRepreneur.willScore && (
-                    <span className="rounded bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      WILL: {selectedRepreneur.willScore}
-                    </span>
-                  )}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {selectedRepreneur.email}
