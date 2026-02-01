@@ -10,8 +10,6 @@ import {
   GitBranch,
   FileText,
   Compass,
-  ExternalLink,
-  GraduationCap,
   Mail,
   Target,
   BookOpen,
@@ -20,9 +18,7 @@ import {
   LogOut,
   Settings,
   User,
-  Code,
   CheckSquare,
-  UserPlus,
   Waves,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
@@ -60,7 +56,6 @@ const mainNavigation = [
   { name: "Emails", href: "/emails", icon: Mail },
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
-  { name: "Development", href: "/development", icon: Code, badge: "WIP" },
 ]
 
 const toolsNavigation = [
@@ -74,10 +69,7 @@ const guidelinesNavigation = [
   { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
-const externalUsersNavigation = [
-  { name: "Learnings", href: "/learnings-test", icon: GraduationCap },
-  { name: "Public Form", href: "/intake-v2", icon: UserPlus },
-]
+// External users section removed - dead routes cleaned up
 
 interface AppSidebarProps {
   userEmail?: string
@@ -281,44 +273,6 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
-
-        {/* External Users Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel>External Users (test)</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {externalUsersNavigation.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  {item.external ? (
-                    <SidebarMenuButton asChild tooltip={item.name}>
-                      <a
-                        href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <item.icon />
-                        <span>{item.name}</span>
-                        <ExternalLink className="ml-auto h-3 w-3 opacity-50" />
-                      </a>
-                    </SidebarMenuButton>
-                  ) : (
-                    <SidebarMenuButton
-                      asChild
-                      isActive={getIsActive(item.href)}
-                      tooltip={item.name}
-                    >
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  )}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       {/* Footer with User Account */}
