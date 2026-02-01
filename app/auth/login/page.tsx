@@ -334,7 +334,7 @@ export default function LoginPage() {
     }
     setSelectedUser(member.email)
     setEmail(member.email)
-    // Password NOT pre-filled for security (was visible in client-side code)
+    setPassword("Wave2025!")
   }, [])
 
   return (
