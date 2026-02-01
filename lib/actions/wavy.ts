@@ -103,6 +103,7 @@ export async function getRepreneursForWavy(): Promise<
     journeyStage: string | null
   }>
 > {
+  console.log("[Wavy] getRepreneursForWavy called")
   await requireUser()
   const supabase = createAdminClient()
 
@@ -113,6 +114,8 @@ export async function getRepreneursForWavy(): Promise<
     )
     .is("rejected_at", null)
     .order("first_name")
+
+  console.log("[Wavy] Query result - data count:", data?.length, "error:", error?.message)
 
   if (error) {
     console.error("Failed to fetch repreneurs for wavy:", error)
