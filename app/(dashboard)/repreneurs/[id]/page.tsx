@@ -35,6 +35,7 @@ import type { Flag as ScoringFlag } from "@/components/scoring-v2/types"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
 import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/lib/constants/investment-ranges"
+import { WHO_QUESTIONS, WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
 import type { RepreneurOffer, Offer, OfferMilestone } from "@/lib/types/offer"
 
@@ -97,6 +98,32 @@ function getRecommendationColor(recommendation: string | null | undefined): stri
     default:
       return "bg-amber-100 text-amber-800 border-amber-200"
   }
+}
+
+// Helper functions to get V2 questionnaire labels
+function getV2Label(
+  questions: Record<string, { options: ReadonlyArray<{ value: string; label: string }> }>,
+  questionId: string,
+  value: string | null | undefined
+): string | null {
+  if (!value) return null
+  const question = questions[questionId]
+  if (!question) return null
+  const option = question.options.find((o) => o.value === value)
+  return option?.label || value
+}
+
+function formatV2Array(
+  questions: Record<string, { options: ReadonlyArray<{ value: string; label: string }> }>,
+  questionId: string,
+  values: string[] | null | undefined
+): string | null {
+  if (!values || values.length === 0) return null
+  const question = questions[questionId]
+  if (!question) return null
+  return values
+    .map((v) => question.options.find((o) => o.value === v)?.label || v)
+    .join(", ")
 }
 
 export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -469,34 +496,24 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           <CardContent className="space-y-2">
             <div>
               <Label className="text-xs text-gray-500">Investment Capacity</Label>
-              <EditableSelectField
-                repreneurId={id}
-                field="investment_capacity"
-                value={repreneur.investment_capacity}
-                options={INVESTMENT_CAPACITY_RANGES}
-                placeholder="Select range..."
-              />
+              <p className="text-sm">
+                {getV2Label(WHEN_QUESTIONS as any, 'q16', (repreneur as any).q16_equity)
+                  || <span className="text-gray-400">Not set</span>}
+              </p>
             </div>
             <div>
               <Label className="text-xs text-gray-500">Target Acquisition Size</Label>
-              <EditableSelectField
-                repreneurId={id}
-                field="target_acquisition_size"
-                value={repreneur.target_acquisition_size}
-                options={TARGET_ACQUISITION_SIZE_RANGES}
-                placeholder="Select range..."
-              />
+              <p className="text-sm">
+                {formatV2Array(WHEN_QUESTIONS as any, 'q14', (repreneur as any).q14_deal_size)
+                  || <span className="text-gray-400">Not set</span>}
+              </p>
             </div>
             <div>
               <Label className="text-xs text-gray-500">Target Region</Label>
-              <EditableSelectField
-                repreneurId={id}
-                field="target_location"
-                value={repreneur.target_location}
-                options={FRENCH_REGIONS}
-                placeholder="Select region..."
-                searchable
-              />
+              <p className="text-sm">
+                {formatV2Array(WHEN_QUESTIONS as any, 'q12', (repreneur as any).q12_geo_zones)
+                  || <span className="text-gray-400">Not set</span>}
+              </p>
             </div>
             <div>
               <Label className="text-xs text-gray-500">Sector Preferences</Label>
@@ -511,7 +528,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             <div>
               <Label className="text-xs text-gray-500">Years of Experience</Label>
               <p className="text-sm">
-                {repreneur.q2_years_experience || <span className="text-gray-400">Not specified</span>}
+                {getV2Label(WHO_QUESTIONS as any, 'q06', (repreneur as any).q06_experience)
+                  || <span className="text-gray-400">Not specified</span>}
               </p>
             </div>
             <div>
