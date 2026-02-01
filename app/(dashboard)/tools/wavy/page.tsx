@@ -5,7 +5,6 @@ import { getCurrentUser } from "@/lib/auth-server"
 import { getWavyTemplates, createWavyTemplate, deleteWavyTemplate } from "@/lib/actions/wavy"
 import { WavyTool } from "@/components/wavy/wavy-tool"
 import { Skeleton } from "@/components/ui/skeleton"
-import { createAdminClient } from "@/lib/supabase/admin"
 
 interface PageProps {
   searchParams: Promise<{ repreneur?: string }>
@@ -48,25 +47,44 @@ async function WavyToolLoader({
 }: {
   preselectedRepreneurId?: string
 }) {
-  // Fetch repreneurs directly instead of via server action
-  const supabase = createAdminClient()
-  const { data: repreneursData } = await supabase
-    .from("repreneurs")
-    .select("id, first_name, last_name, email, phone, t1_score_v2, when_score_v2, will_score_v2, journey_stage")
-    .is("rejected_at", null)
-    .order("first_name")
+  // Fetch repreneurs via internal API to work around RSC issues
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
-  const repreneurs = (repreneursData || []).map((r) => ({
-    id: r.id,
-    firstName: r.first_name,
-    lastName: r.last_name,
-    email: r.email,
-    phone: r.phone,
-    t1Score: r.t1_score_v2,
-    whenScore: r.when_score_v2,
-    willScore: r.will_score_v2,
-    journeyStage: r.journey_stage,
-  }))
+  let repreneurs: Array<{
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+    phone: string | null
+    t1Score: number | null
+    whenScore: number | null
+    willScore: number | null
+    journeyStage: string | null
+  }> = []
+
+  try {
+    const response = await fetch(`${baseUrl}/api/wavy/test`, {
+      cache: "no-store",
+    })
+    if (response.ok) {
+      const data = await response.json()
+      repreneurs = (data.repreneurs || []).map((r: { id: string; name: string; email: string }) => ({
+        id: r.id,
+        firstName: r.name.split(" ")[0] || "",
+        lastName: r.name.split(" ").slice(1).join(" ") || "",
+        email: r.email,
+        phone: null,
+        t1Score: null,
+        whenScore: null,
+        willScore: null,
+        journeyStage: null,
+      }))
+    }
+  } catch (error) {
+    console.error("[Wavy Page] Failed to fetch repreneurs:", error)
+  }
 
   const templates = await getWavyTemplates()
 
