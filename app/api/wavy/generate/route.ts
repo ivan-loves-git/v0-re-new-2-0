@@ -17,9 +17,8 @@ interface GenerateRequest {
     lastName: string
     email: string
     phone?: string
-    t1Score?: number
+    whoScore?: number
     whenScore?: number
-    willScore?: number
     journeyStage?: string
     lastActivityDate?: string
   }
@@ -87,9 +86,8 @@ Adjust your tone and content to fit this template's purpose.`
 - Name: ${repreneurData.firstName} ${repreneurData.lastName}
 - Email: ${repreneurData.email}
 ${repreneurData.phone ? `- Phone: ${repreneurData.phone}` : ""}
-${repreneurData.t1Score ? `- T1 Score (Skills Match): ${repreneurData.t1Score}/100` : ""}
+${repreneurData.whoScore ? `- WHO Score (Profile): ${repreneurData.whoScore}/100` : ""}
 ${repreneurData.whenScore ? `- WHEN Score (Readiness): ${repreneurData.whenScore}/100` : ""}
-${repreneurData.willScore ? `- WILL Score (Motivation): ${repreneurData.willScore}/100` : ""}
 ${repreneurData.journeyStage ? `- Current Stage: ${repreneurData.journeyStage}` : ""}
 ${repreneurData.lastActivityDate ? `- Last Activity: ${repreneurData.lastActivityDate}` : ""}`
     } else if (repreneurId) {
@@ -97,20 +95,21 @@ ${repreneurData.lastActivityDate ? `- Last Activity: ${repreneurData.lastActivit
       const supabase = createAdminClient()
       const { data: repreneur } = await supabase
         .from("repreneurs")
-        .select("first_name, last_name, email, phone, t1_score_v2, when_score_v2, will_score_v2, journey_stage")
+        .select("first_name, last_name, email, phone, tier1_score, who_score, when_score, journey_stage")
         .eq("id", repreneurId)
         .single()
 
       if (repreneur) {
+        // Use who_score if available, fallback to tier1_score for legacy data
+        const whoScore = repreneur.who_score ?? repreneur.tier1_score
         repreneurContext = `
 
 ## Repreneur Information
 - Name: ${repreneur.first_name} ${repreneur.last_name}
 - Email: ${repreneur.email}
 ${repreneur.phone ? `- Phone: ${repreneur.phone}` : ""}
-${repreneur.t1_score_v2 ? `- T1 Score (Skills Match): ${repreneur.t1_score_v2}/100` : ""}
-${repreneur.when_score_v2 ? `- WHEN Score (Readiness): ${repreneur.when_score_v2}/100` : ""}
-${repreneur.will_score_v2 ? `- WILL Score (Motivation): ${repreneur.will_score_v2}/100` : ""}
+${whoScore ? `- WHO Score (Profile): ${whoScore}/100` : ""}
+${repreneur.when_score ? `- WHEN Score (Readiness): ${repreneur.when_score}/100` : ""}
 ${repreneur.journey_stage ? `- Current Stage: ${repreneur.journey_stage}` : ""}`
       }
     }
