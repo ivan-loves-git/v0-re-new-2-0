@@ -61,33 +61,12 @@ emba--renew-platform/
 
 ## Task Management
 
-**Two systems work together:**
+**Claude Code Tasks** is the single source of truth for all work tracking.
 
-| System | Purpose | Ivan's Command |
-|--------|---------|----------------|
-| **GSD Planning** | Multi-week roadmap, phases | `/gsd:resume` or `/gsd:progress` |
-| **Claude Code Tasks** | Blocking items, quick fixes | `ctrl+t` or ask Claude |
-
-### GSD Planning (`.planning/`)
-Strategic roadmap for the project. 10 phases toward v1.0 launch.
-
-**Key files (Claude reads these, Ivan doesn't need to):**
-- `ROADMAP.md` - 10-phase plan with success criteria
-- `STATE.md` - Current position and accumulated context
-- `PROJECT.md` - Project charter and requirements
-
-**Ivan's commands:**
-```
-/gsd:resume      → Start session, see what's next
-/gsd:progress    → Check status, route to next action
-/gsd:plan-phase  → Plan a specific phase
-```
-
-### Claude Code Tasks
-Tactical work items that survive context resets. Used for:
+Tasks persist across sessions and contain:
+- All 10 phases toward v1.0 launch (phases 1-4 completed, 5-10 pending)
 - Blocking items (waiting on people)
-- Quick fixes outside the roadmap
-- Security issues
+- Quick fixes and improvements
 
 **Ivan's commands:**
 ```
@@ -95,9 +74,7 @@ ctrl+t           → Toggle task panel
 ```
 Or just ask: "what tasks are pending?" / "create a task for X"
 
-### Historical (Archived)
-- `.taskmaster-archive/` - Old task system (54 tasks, deprecated Jan 2026)
-- `todos/` - Security audit findings (being migrated to tasks)
+**Current Progress:** 4/10 phases complete (40%)
 
 ## Open Questions (Waiting on Bertrand)
 - Notes structure: free text vs structured (call/email/meeting + outcome)

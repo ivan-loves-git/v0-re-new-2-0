@@ -23,6 +23,7 @@ import {
   Code,
   CheckSquare,
   UserPlus,
+  Waves,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
@@ -60,6 +61,10 @@ const mainNavigation = [
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
   { name: "Development", href: "/development", icon: Code, badge: "WIP" },
+]
+
+const toolsNavigation = [
+  { name: "Wavy", href: "/tools/wavy", icon: Waves },
 ]
 
 const guidelinesNavigation = [
@@ -210,6 +215,31 @@ export function AppSidebar({
                           {item.badge}
                         </span>
                       )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Tools Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Tools</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {toolsNavigation.map((item) => (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={getIsActive(item.href)}
+                    tooltip={item.name}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.name}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

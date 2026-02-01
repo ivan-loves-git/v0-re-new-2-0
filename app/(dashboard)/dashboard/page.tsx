@@ -17,6 +17,8 @@ import Link from "next/link"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
 import { calculateOverallScore } from "@/lib/scoring-utils"
 import { ArrowRight, Users, TrendingUp, Compass } from "lucide-react"
+import { getWavySuggestions } from "@/lib/actions/wavy"
+import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
 
 // Cache page data for 30 seconds - prevents re-fetching on rapid navigation
 export const revalidate = 30
@@ -334,6 +336,21 @@ async function ChartsRow() {
   )
 }
 
+// Server component for Wavy suggestions
+async function WavySuggestsRow() {
+  try {
+    const data = await getWavySuggestions()
+    if (data.totalCount === 0) {
+      return null
+    }
+    return <WavySuggestsWidget suggestions={data.suggestions} totalCount={data.totalCount} />
+  } catch (error) {
+    // Silently fail if wavy_templates table doesn't exist yet
+    console.error("Failed to fetch Wavy suggestions:", error)
+    return null
+  }
+}
+
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
@@ -376,6 +393,11 @@ export default function DashboardPage() {
         </div>
       }>
         <ChartsRow />
+      </Suspense>
+
+      {/* Wavy Suggestions - follow-up recommendations */}
+      <Suspense fallback={<ChartSkeleton />}>
+        <WavySuggestsRow />
       </Suspense>
 
       {/* Quick Navigation - renders immediately (no data) */}
