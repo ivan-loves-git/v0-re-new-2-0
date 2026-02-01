@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
+import { unstable_noStore as noStore } from "next/cache"
 
 export interface WavyTemplate {
   id: string
@@ -103,6 +104,7 @@ export async function getRepreneursForWavy(): Promise<
     journeyStage: string | null
   }>
 > {
+  noStore() // Disable caching
   console.log("[Wavy] getRepreneursForWavy called - START")
 
   try {
