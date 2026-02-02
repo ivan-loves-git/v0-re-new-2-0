@@ -114,11 +114,17 @@ Re-New team
 
 ---
 
-## Future: External Communications
+## External Communications
 
-A separate AI personality will handle repreneur and seller communications. Document TBD in `EXTERNAL_COMMS.md`.
+External communications (to repreneurs) are handled by the **Re-New Assistant** - a separate, professional voice with no AI persona.
 
-Considerations:
-- Different tone (more professional, supportive)
-- French language support
-- Templates for: welcome, reminders, offers, milestones
+See: `RENEW_ASSISTANT.md`
+
+## Two-System Architecture
+
+| System | File | Audience | Tone |
+|--------|------|----------|------|
+| Wavy 🌊 | `lib/prompts/wavy-internal.ts` | Internal team | Witty, self-aware |
+| Re-New Assistant | `lib/prompts/renew-assistant.ts` | Repreneurs | Professional, warm |
+
+The API automatically routes to the correct system based on the template being used.

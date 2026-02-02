@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 import { getCurrentUser } from "@/lib/auth-server"
-import { getWavySystemPrompt, getTemplateContext, BUILT_IN_TEMPLATES } from "@/lib/prompts/wavy-system"
+import { getWavySystemPrompt, getTemplateContext, BUILT_IN_TEMPLATES, getTemplateAudience } from "@/lib/prompts/wavy-system"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 const anthropic = new Anthropic({
@@ -114,8 +114,11 @@ ${repreneur.journey_stage ? `- Current Stage: ${repreneur.journey_stage}` : ""}`
       }
     }
 
-    // Build the full system prompt
-    const systemPrompt = getWavySystemPrompt(channel) + templateContext + repreneurContext
+    // Determine audience for logging/debugging
+    const audience = getTemplateAudience(templateId)
+
+    // Build the full system prompt (routes to Wavy or Re-New Assistant based on template)
+    const systemPrompt = getWavySystemPrompt(channel, templateId) + templateContext + repreneurContext
 
     // Build the user prompt with explicit format instructions
     let userPrompt = channel === "email"
@@ -229,6 +232,7 @@ IMPORTANT:
       body: messageBody,
       channel,
       templateId,
+      audience, // 'internal' (Wavy) or 'external' (Re-New Assistant)
       warnings: warnings.length > 0 ? warnings : undefined,
       usage: {
         inputTokens: message.usage.input_tokens,
