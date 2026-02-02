@@ -117,13 +117,33 @@ ${repreneur.journey_stage ? `- Current Stage: ${repreneur.journey_stage}` : ""}`
     // Build the full system prompt
     const systemPrompt = getWavySystemPrompt(channel) + templateContext + repreneurContext
 
-    // Build the user prompt
+    // Build the user prompt with explicit format instructions
     let userPrompt = channel === "email"
-      ? "Write an email for this repreneur."
-      : "Write a WhatsApp message for this repreneur."
+      ? `Write an email for this repreneur.
+
+OUTPUT FORMAT (follow exactly):
+Subject: [Write a clear, professional subject line - no emoji in subject]
+
+[Email body starts here - greeting first, then content, then sign-off]
+
+IMPORTANT:
+- Start the body with a greeting (e.g., "Hi [FirstName],")
+- Do NOT include "Subject:" anywhere in the email body
+- Use plain text only - no markdown, no asterisks for emphasis
+- End with your signature block`
+      : `Write a WhatsApp message for this repreneur.
+
+IMPORTANT:
+- Keep it to 2-4 sentences max
+- Conversational tone, like texting a colleague
+- One emoji maximum (usually 🌊)
+- No formal greeting or signature
+- Direct and actionable`
 
     if (customInstructions) {
-      userPrompt += `\n\nAdditional instructions: ${customInstructions}`
+      userPrompt += `\n\nSPECIFIC GOAL: ${customInstructions}`
+    } else if (templateContext) {
+      userPrompt += `\n\nWrite the message based on the template context provided in the system prompt.`
     }
 
     // Call Claude Sonnet
@@ -157,7 +177,50 @@ ${repreneur.journey_stage ? `- Current Stage: ${repreneur.journey_stage}` : ""}`
       } else {
         // Generate a default subject based on template
         const templateName = builtInTemplate?.name || "Update"
-        subject = `Re-New: ${templateName} 🌊`
+        subject = `Re-New: ${templateName}`
+      }
+    }
+
+    // Validate output quality - collect warnings for UI
+    const warnings: string[] = []
+
+    // Get first name for personalization check
+    const firstName = repreneurData?.firstName || ""
+
+    if (channel === "email") {
+      // Check subject quality
+      if (!subject || subject.length < 5) {
+        warnings.push("Subject line is missing or too short")
+      }
+
+      // Check for markdown formatting (forbidden)
+      if (messageBody.includes("**") || messageBody.includes("*") && messageBody.match(/\*[^*]+\*/)) {
+        warnings.push("Message contains markdown formatting (asterisks)")
+      }
+
+      // Check body length
+      if (messageBody.length < 100) {
+        warnings.push("Email body seems too short")
+      }
+
+      // Check personalization (only if we have a name)
+      if (firstName && !messageBody.toLowerCase().includes(firstName.toLowerCase())) {
+        warnings.push("Message doesn't include the repreneur's first name")
+      }
+
+      // Check if subject accidentally ended up in body
+      if (messageBody.toLowerCase().startsWith("subject:")) {
+        warnings.push("Subject line appears in email body")
+      }
+    } else {
+      // WhatsApp validations
+      if (messageBody.length > 500) {
+        warnings.push("WhatsApp message is too long (should be 2-4 sentences)")
+      }
+
+      // Check for markdown
+      if (messageBody.includes("**") || (messageBody.includes("*") && messageBody.match(/\*[^*]+\*/))) {
+        warnings.push("Message contains markdown formatting")
       }
     }
 
@@ -166,6 +229,7 @@ ${repreneur.journey_stage ? `- Current Stage: ${repreneur.journey_stage}` : ""}`
       body: messageBody,
       channel,
       templateId,
+      warnings: warnings.length > 0 ? warnings : undefined,
       usage: {
         inputTokens: message.usage.input_tokens,
         outputTokens: message.usage.output_tokens,
