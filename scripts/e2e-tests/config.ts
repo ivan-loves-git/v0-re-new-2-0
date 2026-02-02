@@ -6,7 +6,7 @@
 
 export const TEST_CONFIG = {
   // Target environment
-  baseUrl: "https://v0-re-new-2-0.vercel.app",
+  baseUrl: "https://app.re-new.team",
 
   // Test credentials (from project docs)
   credentials: {

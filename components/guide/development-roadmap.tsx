@@ -17,7 +17,7 @@ const roadmapEvents = [
       {
         title: "AI-powered email generator",
         type: "feature",
-        description: "Wavy can draft personalized emails for any repreneur — select candidate, pick template, generate.",
+        description: "Wavy can now draft personalized emails for any repreneur. Select candidate, pick template, generate. Try it from /emails.",
       },
       {
         title: "Leads auto-sort by potential",
@@ -30,14 +30,14 @@ const roadmapEvents = [
         description: "New 'Declined' status for internal decisions, separate from rejection emails sent to candidates.",
       },
       {
-        title: "Declined column added",
+        title: "Declined column on pipeline",
         type: "feature",
         description: "New gray column on pipeline board between Client and Rejected.",
       },
       {
-        title: "V2 questionnaire integration complete",
+        title: "Profile data display fixes",
         type: "fix",
-        description: "Investment Profile, T1 Skills radar, and WHEN editor now read from V2 fields.",
+        description: "Investment Profile, T1 Skills radar, and WHEN editor now correctly show data from the new questionnaire.",
       },
       {
         title: "Navigation cleanup",

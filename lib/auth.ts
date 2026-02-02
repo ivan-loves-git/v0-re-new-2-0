@@ -90,7 +90,7 @@ export const auth = betterAuth({
   // Trusted origins for CORS
   trustedOrigins: [
     process.env.BETTER_AUTH_URL || "http://localhost:3000",
-    "https://v0-re-new-2-0.vercel.app",
+    "https://app.re-new.team",
   ],
 })
 

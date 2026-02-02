@@ -19,7 +19,7 @@ import { FOUNDERS_TEAM_2_0 } from "../lib/distribution-lists"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const PLATFORM_URL = "https://v0-re-new-2-0.vercel.app"
+const PLATFORM_URL = "https://app.re-new.team"
 const PASSWORD = "Wave2025!"
 
 function createWelcomeEmail(name: string, email: string) {

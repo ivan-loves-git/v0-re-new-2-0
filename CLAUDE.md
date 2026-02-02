@@ -51,7 +51,7 @@ emba--renew-platform/
 
 ## Deployment (Vercel)
 - **GitHub Repo:** `ivan-loves-git/v0-re-new-2-0`
-- **Production URL:** `v0-re-new-2-0.vercel.app`
+- **Production URL:** `app.re-new.team`
 - **Deploy Hook (manual trigger):**
   ```bash
   curl -X POST "https://api.vercel.com/v1/integrations/deploy/prj_oCfBq06JCw4KKkPeMGrHX9M7Jt4c/bOKHVh8XZL"

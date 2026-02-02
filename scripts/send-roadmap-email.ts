@@ -21,7 +21,7 @@ import { FOUNDERS_TEAM_2_0 } from "../lib/distribution-lists"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const ROADMAP_URL = "https://v0-re-new-2-0.vercel.app/guide/roadmap"
+const ROADMAP_URL = "https://app.re-new.team/guide/roadmap"
 
 // VERSION 1: Minimal - Clean, lots of whitespace
 function createEmailV1(name: string) {
@@ -69,47 +69,40 @@ function createEmailV1(name: string) {
     </div>
 
     <p class="greeting">Hey ${name} 👋</p>
-    <p class="intro">I've been doing some self-reflection this week. Turns out the things worth saying don't always need many words, just the right ones. These are mine:</p>
+    <p class="intro">I've learned a new trick. You know how I send these updates? Now I can write emails for you too. Pick a repreneur, choose a template, and I'll draft something personalized. Magic? No, just me getting better at my job.</p>
 
     <p class="divider">•••</p>
 
-    <p class="version">v0.8.9</p>
-    <h1>New questionnaire, smarter scoring, and Flatchr data imported.</h1>
+    <p class="version">v0.9.0</p>
+    <h1>I can write your emails now. Plus: smarter pipeline sorting.</h1>
 
     <div class="updates">
       <div class="update">
-        <p class="update-title">📋 New questionnaire live</p>
-        <p class="update-desc">Complete intake form now at /intake-v2. Quick link in the sidebar too.</p>
+        <p class="update-title">🤖 AI email generator</p>
+        <p class="update-desc">Select a repreneur, pick a template, hit generate. I'll draft a personalized email you can review and send. Find it in the Emails section.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">🎯 Scoring system updated</p>
-        <p class="update-desc">Tier 1 rating now 200 points total — 100 for WHO (profile), 100 for WHEN (project readiness).</p>
+        <p class="update-title">📊 Leads auto-sorted by potential</p>
+        <p class="update-desc">Pipeline now shows highest-scoring candidates first. No manual sorting needed.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">🚩 Flags and recommendations automated</p>
-        <p class="update-desc">System now flags concerns and suggests next steps (Deal Flow, Priority Interview) based on the scoring matrix.</p>
+        <p class="update-title">🚦 Declined vs Rejected</p>
+        <p class="update-desc">New status for internal decisions. "Declined" = you decided not to proceed. "Rejected" = you sent them a rejection email.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">📥 All Flatchr candidates imported</p>
-        <p class="update-desc">Everyone from the Flatchr export is now in Wave. Historical data preserved.</p>
+        <p class="update-title">🧹 Bug fixes</p>
+        <p class="update-desc">Profile data now displays correctly. Dead navigation links removed. Various stability improvements.</p>
         <p class="tags">
-          <span class="tag tag-feature">feature</span>
-        </p>
-      </div>
-      <div class="update">
-        <p class="update-title">🌍 Multilingual form</p>
-        <p class="update-desc">Intake form now available in French and English. Language toggle at the top.</p>
-        <p class="tags">
-          <span class="tag tag-feature">feature</span>
+          <span class="tag tag-fix">fix</span>
         </p>
       </div>
     </div>
@@ -119,7 +112,7 @@ function createEmailV1(name: string) {
     <p class="divider">•••</p>
 
     <div class="signature">
-      <p class="sig-line">Back to work. I predict you'll smile at least once — no 🔮 required.</p>
+      <p class="sig-line">Now if you'll excuse me, I have notifications to notify.</p>
       <p class="sig-name">Wavy 🌊</p>
       <p class="sig-title">Chief Notification Officer</p>
       <p class="sig-team">Re-New team</p>
@@ -291,7 +284,7 @@ async function sendRoadmapEmail(to: string, name: string, version: number = 1) {
     const { data, error } = await resend.emails.send({
       from: "Wavy 🌊 <notifications@news.re-new.team>",
       to: [to],
-      subject: `Wave product update: v0.8.9`,
+      subject: `Wave product update: v0.9.0`,
       html: createEmailHtml(name, version),
     })
 
