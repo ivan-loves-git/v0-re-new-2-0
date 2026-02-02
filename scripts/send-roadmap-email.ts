@@ -85,6 +85,13 @@ function createEmailV1(name: string) {
         </p>
       </div>
       <div class="update">
+        <p class="update-title">🌐 New domain live</p>
+        <p class="update-desc">Wave now lives at app.re-new.team. Update your bookmarks!</p>
+        <p class="tags">
+          <span class="tag tag-feature">feature</span>
+        </p>
+      </div>
+      <div class="update">
         <p class="update-title">📊 Leads auto-sorted by potential</p>
         <p class="update-desc">Pipeline now shows highest-scoring candidates first. No manual sorting needed.</p>
         <p class="tags">
