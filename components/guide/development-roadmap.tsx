@@ -9,6 +9,44 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Feb 2, 2026",
+    version: "0.9.0",
+    title: "AI Email Generator & Pipeline Improvements",
+    isCompleted: true,
+    events: [
+      {
+        title: "AI-powered email generator",
+        type: "feature",
+        description: "Wavy can draft personalized emails for any repreneur — select candidate, pick template, generate.",
+      },
+      {
+        title: "Leads auto-sort by potential",
+        type: "feature",
+        description: "Pipeline Leads column now ranks by Tier 1 score — best candidates always on top.",
+      },
+      {
+        title: "Declined vs Rejected distinction",
+        type: "feature",
+        description: "New 'Declined' status for internal decisions, separate from rejection emails sent to candidates.",
+      },
+      {
+        title: "Declined column added",
+        type: "feature",
+        description: "New gray column on pipeline board between Client and Rejected.",
+      },
+      {
+        title: "V2 questionnaire integration complete",
+        type: "fix",
+        description: "Investment Profile, T1 Skills radar, and WHEN editor now read from V2 fields.",
+      },
+      {
+        title: "Navigation cleanup",
+        type: "fix",
+        description: "Dead routes removed, no more 404 errors in menu.",
+      },
+    ],
+  },
+  {
     period: "Jan 25, 2026",
     version: "0.8.9",
     title: "Questionnaire V2 & Flatchr Import",
