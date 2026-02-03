@@ -35,7 +35,7 @@ export function AbandonedReminderEmail({ repreneur, metadata }: AbandonedReminde
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
-        <Link href="https://app.re-new.team/intake-v2" style={button}>
+        <Link href="https://app.re-new.team/welcome" style={button}>
           Reprendre mon inscription
         </Link>
       </Section>

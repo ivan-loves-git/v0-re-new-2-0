@@ -61,7 +61,7 @@ LEGEND:  ▓▓▓▓ = Critical path    ░░░░ = Parallel work    ◆ = R
 
 **Target: February 10th - Public launch of the intake questionnaire**
 
-A candidate visits `app.re-new.team/intake`, completes the questionnaire, and enters the Re-New pipeline. The team sees them in the dashboard, reviews their score, and begins the relationship.
+A candidate visits `app.re-new.team/welcome`, completes the questionnaire, and enters the Re-New pipeline. The team sees them in the dashboard, reviews their score, and begins the relationship.
 
 This is V1.0: a professional, branded entry point that replaces ad-hoc candidate collection and establishes Re-New's digital presence.
 
@@ -350,7 +350,7 @@ GO-LIVE: FEBRUARY 10                                                            
 
 GO-LIVE CHECKLIST                                                                      STATUS
 ──────────────────────────────────────────────────────────────────────────────────────────────────
-Questionnaire live and tested on app.re-new.team/intake                                □
+Questionnaire live and tested on app.re-new.team/welcome                               □
 Domain app.re-new.team working with SSL certificate                                    □
 Welcome email sends correctly after form submission                                    □
 Flatchr historical candidates imported into platform                                   □
