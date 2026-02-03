@@ -29,7 +29,7 @@ const kpiInfo = {
   },
 }
 
-export function JourneyStageDistributionInner({
+export default function JourneyStageDistributionInner({
   explorerCount,
   learnerCount,
   readyCount,

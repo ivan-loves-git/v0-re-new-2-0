@@ -38,7 +38,7 @@ function ChartSkeleton() {
 
 // Dynamically import the chart component (Recharts is ~350KB)
 const EnhancedChartInner = dynamic(
-  () => import("./enhanced-chart-inner").then(mod => ({ default: mod.EnhancedChartInner })),
+  () => import("./enhanced-chart-inner"),
   {
     ssr: false,
     loading: () => <ChartSkeleton />,

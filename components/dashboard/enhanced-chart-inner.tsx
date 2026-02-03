@@ -46,7 +46,7 @@ const kpiInfo = {
   },
 }
 
-export function EnhancedChartInner({ repreneursData, activitiesData }: EnhancedChartInnerProps) {
+export default function EnhancedChartInner({ repreneursData, activitiesData }: EnhancedChartInnerProps) {
   // Default to last 8 weeks
   const [endDate, setEndDate] = useState<Date>(endOfWeek(new Date(), { weekStartsOn: 1 }))
   const [startDate, setStartDate] = useState<Date>(startOfWeek(subWeeks(new Date(), 7), { weekStartsOn: 1 }))

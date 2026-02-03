@@ -42,7 +42,7 @@ interface Tier2DataPoint {
   description: string
 }
 
-export function RepreneurRadarChartInner({ repreneur }: RepreneurRadarChartInnerProps) {
+export default function RepreneurRadarChartInner({ repreneur }: RepreneurRadarChartInnerProps) {
   const rawScores = getRawDimensionScores(repreneur)
   const tier2Dimensions = extractTier2Dimensions(repreneur)
 

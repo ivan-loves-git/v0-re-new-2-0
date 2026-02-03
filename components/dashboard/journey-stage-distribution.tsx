@@ -38,7 +38,7 @@ function JourneyStageSkeleton() {
 
 // Dynamically import the chart component
 const JourneyStageDistributionInner = dynamic(
-  () => import("./journey-stage-distribution-inner").then(mod => ({ default: mod.JourneyStageDistributionInner })),
+  () => import("./journey-stage-distribution-inner"),
   {
     ssr: false,
     loading: () => <JourneyStageSkeleton />,

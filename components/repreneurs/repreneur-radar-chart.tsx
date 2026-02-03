@@ -41,7 +41,7 @@ function RadarChartSkeleton() {
 
 // Dynamically import the chart component
 const RepreneurRadarChartInner = dynamic(
-  () => import("./repreneur-radar-chart-inner").then(mod => ({ default: mod.RepreneurRadarChartInner })),
+  () => import("./repreneur-radar-chart-inner"),
   {
     ssr: false,
     loading: () => <RadarChartSkeleton />,
