@@ -96,8 +96,8 @@ export const translations = {
 
   // Q05: Current status
   q05Label: {
-    fr: 'Quel est votre statut professionnel actuel ?',
-    en: 'What is your current professional status?',
+    fr: 'Quel est votre statut actuel ?',
+    en: 'What is your current status?',
   },
   q05_entrepreneur: {
     fr: "Entrepreneur / Chef d'entreprise",
@@ -140,8 +140,8 @@ export const translations = {
 
   // Q07: Leadership
   q07Label: {
-    fr: 'Quel est votre niveau de responsabilité managériale le plus élevé ?',
-    en: 'What is your highest level of managerial responsibility?',
+    fr: 'Avez-vous déjà exercé des fonctions de direction ou de responsabilité élargie ?',
+    en: 'Have you held leadership or expanded responsibility positions?',
   },
   q07_general_management: {
     fr: "Direction générale (CEO, DG, Gérant)",
@@ -162,8 +162,8 @@ export const translations = {
 
   // Q08: Crisis management
   q08Label: {
-    fr: "Avez-vous géré des situations de crise ou de retournement d'entreprise ?",
-    en: 'Have you managed crisis or business turnaround situations?',
+    fr: 'Avez-vous déjà géré une situation de forte complexité ou de crise ?',
+    en: 'Have you managed a situation of high complexity or crisis?',
   },
   q08_multiple: {
     fr: 'Oui, plusieurs fois',
@@ -180,8 +180,8 @@ export const translations = {
 
   // Q09: Investment decisions
   q09Label: {
-    fr: "Avez-vous été impliqué dans des décisions d'investissement significatives ?",
-    en: 'Have you been involved in significant investment decisions?',
+    fr: "Avez-vous déjà été impliqué dans une décision d'investissement significative ? (ex. M&A, acquisition)",
+    en: 'Have you been involved in a significant investment decision? (e.g. M&A, acquisition)',
   },
   q09_both: {
     fr: 'Oui, personnelles et professionnelles',
@@ -202,24 +202,24 @@ export const translations = {
 
   // Q10: Personal impact
   q10Label: {
-    fr: "Quel a été l'impact de vos décisions sur votre situation personnelle ?",
-    en: 'What has been the impact of your decisions on your personal situation?',
+    fr: 'Avez-vous déjà pris une décision professionnelle avec un impact personnel direct et durable ?',
+    en: 'Have you made a professional decision with direct and lasting personal impact?',
   },
   q10_financial: {
-    fr: 'Impact financier significatif positif',
-    en: 'Significant positive financial impact',
+    fr: 'Oui – avec un impact financier personnel significatif (ex. : baisse durable de revenus, investissement, garanties)',
+    en: 'Yes – with significant personal financial impact (e.g. sustained income drop, investment, guarantees)',
   },
   q10_trajectory: {
-    fr: 'Changement de trajectoire professionnelle',
-    en: 'Career trajectory change',
+    fr: 'Oui – avec un impact durable sur ma trajectoire pro (ex. : quitter un poste stable, changement majeur de secteur, rôle, ou expatriation)',
+    en: 'Yes – with lasting impact on my career path (e.g. leaving a stable job, major sector/role change, expatriation)',
   },
   q10_limited: {
-    fr: 'Impact limité',
-    en: 'Limited impact',
+    fr: 'Oui – avec un impact personnel limité (ex. : évolution de poste ou de périmètre sans exposition forte)',
+    en: 'Yes – with limited personal impact (e.g. role evolution without high exposure)',
   },
   q10_none: {
-    fr: 'Aucun impact notable',
-    en: 'No notable impact',
+    fr: 'Non',
+    en: 'No',
   },
 
   // Step 3: Project status
@@ -278,8 +278,8 @@ export const translations = {
 
   // Q12: Geographic zones (French regions)
   q12Label: {
-    fr: 'Dans quelles zones géographiques recherchez-vous ?',
-    en: 'In which geographic areas are you searching?',
+    fr: 'Zone(s) géographique(s) de recherche prioritaire',
+    en: 'Priority geographic search zone(s)',
   },
   q12_all_france: {
     fr: 'Toute la France',
@@ -344,8 +344,8 @@ export const translations = {
 
   // Q13: Target sectors
   q13Label: {
-    fr: 'Quels secteurs ciblez-vous ?',
-    en: 'What sectors are you targeting?',
+    fr: "Quel(s) secteur(s) d'activité ciblez-vous pour votre projet de reprise ?",
+    en: 'Which sector(s) are you targeting for your acquisition project?',
   },
   q13_all: {
     fr: 'Tous secteurs',
@@ -394,30 +394,30 @@ export const translations = {
 
   // Q14: Deal size
   q14Label: {
-    fr: "Quelle taille d'entreprise recherchez-vous (valeur d'entreprise) ?",
-    en: 'What company size are you looking for (enterprise value)?',
+    fr: "Taille d'opération visée : (valeur des titres)",
+    en: 'Target deal size (equity value)',
   },
   q14HelpText: {
-    fr: "La valeur d'entreprise inclut la dette nette. Sélectionnez toutes les tailles qui vous intéressent.",
-    en: 'Enterprise value includes net debt. Select all sizes that interest you.',
+    fr: 'Vous pouvez sélectionner plusieurs fourchettes si vous êtes flexible.',
+    en: 'You can select multiple ranges if you are flexible.',
   },
   q14_1_3M: {
-    fr: '1 à 3 M€',
+    fr: '1-3 M€',
     en: '€1-3M',
   },
   q14_3_5M: {
-    fr: '3 à 5 M€',
+    fr: '3-5 M€',
     en: '€3-5M',
   },
   q14_5M_plus: {
-    fr: 'Plus de 5 M€',
-    en: 'More than €5M',
+    fr: '>5 M€',
+    en: '>€5M',
   },
 
   // Q15: Capital structure
   q15Label: {
-    fr: 'Quelle structure de capital envisagez-vous ?',
-    en: 'What capital structure do you envision?',
+    fr: 'Dans votre projet de reprise comment envisagez-vous la structuration du capital et votre rôle ?',
+    en: 'In your acquisition project, how do you envision the capital structure and your role?',
   },
   q15HelpText: {
     fr: 'Cette question nous aide à comprendre votre positionnement dans la reprise.',
