@@ -6,10 +6,12 @@
  *   npx tsx scripts/send-team-update.ts "Subject" "Message body"
  *   npx tsx scripts/send-team-update.ts "Subject" --file path/to/message.md
  *   npx tsx scripts/send-team-update.ts "Subject" "Message" --test   # Sends only to Ivan
+ *   npx tsx scripts/send-team-update.ts "Subject" "Message" --attach /path/to/file.pdf
  *
  * Example:
  *   npx tsx scripts/send-team-update.ts "New Features!" "We shipped X." --test
  *   npx tsx scripts/send-team-update.ts "New Features!" "We shipped X."  # Sends to all
+ *   npx tsx scripts/send-team-update.ts "Status Update" "See attached." --attach ~/Downloads/report.pdf --test
  *
  * Note: Requires RESEND_API_KEY in .env.local
  */
@@ -47,6 +49,15 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@re-new.com"
 const FROM_NAME = "Re-New"
 
+// Convert simple markdown to HTML
+function parseMarkdown(text: string): string {
+  return text
+    // Convert *text* to <em>text</em>
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    // Convert **text** to <strong>text</strong>
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+}
+
 // Simple email template for team updates
 function TeamUpdateEmail({
   subject,
@@ -55,6 +66,90 @@ function TeamUpdateEmail({
   subject: string
   message: string
 }) {
+  // Split message into body and signature (separated by ---)
+  const parts = message.split(/\n---\n/)
+  const bodyText = parts[0]
+  const signatureText = parts.length > 1 ? parts[1] : null
+
+  // Parse body paragraphs
+  const bodyParagraphs = bodyText.split("\n\n").map((para, i) =>
+    React.createElement("p", {
+      key: i,
+      style: {
+        color: "#1f2937",
+        fontSize: "16px",
+        lineHeight: "1.6",
+        margin: "0 0 16px 0",
+      },
+      dangerouslySetInnerHTML: { __html: parseMarkdown(para) },
+    })
+  )
+
+  // Parse signature if present
+  const signatureElement = signatureText
+    ? React.createElement(
+        "div",
+        {
+          style: {
+            borderTop: "1px solid #e5e7eb",
+            marginTop: "24px",
+            paddingTop: "20px",
+          },
+        },
+        React.createElement("p", {
+          style: {
+            color: "#6b7280",
+            fontSize: "14px",
+            lineHeight: "1.5",
+            margin: 0,
+            fontStyle: "italic",
+          },
+          dangerouslySetInnerHTML: {
+            __html: parseMarkdown(signatureText.split("\n\n")[0]),
+          },
+        }),
+        signatureText.includes("Wavy") &&
+          React.createElement(
+            "div",
+            { style: { marginTop: "16px" } },
+            React.createElement(
+              "p",
+              {
+                style: {
+                  color: "#1f2937",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  margin: "0 0 2px 0",
+                },
+              },
+              "Wavy 🌊"
+            ),
+            React.createElement(
+              "p",
+              {
+                style: {
+                  color: "#6b7280",
+                  fontSize: "13px",
+                  margin: "0 0 2px 0",
+                },
+              },
+              "Chief Notification Officer"
+            ),
+            React.createElement(
+              "p",
+              {
+                style: {
+                  color: "#6b7280",
+                  fontSize: "13px",
+                  margin: 0,
+                },
+              },
+              "Re-New team"
+            )
+          )
+      )
+    : null
+
   return React.createElement(
     "html",
     null,
@@ -113,30 +208,15 @@ function TeamUpdateEmail({
             {
               style: {
                 color: "#1f2937",
-                fontSize: "24px",
-                fontWeight: "bold",
-                margin: "0 0 16px 0",
+                fontSize: "22px",
+                fontWeight: "600",
+                margin: "0 0 20px 0",
               },
             },
             subject
           ),
-          // Split message by newlines and create paragraphs
-          ...message.split("\n\n").map((para, i) =>
-            React.createElement(
-              "p",
-              {
-                key: i,
-                style: {
-                  color: "#1f2937",
-                  fontSize: "16px",
-                  lineHeight: "1.6",
-                  margin: "0 0 16px 0",
-                  whiteSpace: "pre-wrap" as const,
-                },
-              },
-              para
-            )
-          )
+          ...bodyParagraphs,
+          signatureElement
         ),
         // Footer
         React.createElement("hr", {
@@ -144,11 +224,11 @@ function TeamUpdateEmail({
         }),
         React.createElement(
           "div",
-          { style: { padding: "24px", textAlign: "center" as const } },
+          { style: { padding: "16px 24px", textAlign: "center" as const } },
           React.createElement(
             "p",
-            { style: { color: "#6b7280", fontSize: "14px", margin: 0 } },
-            "Product update from the Re-New team"
+            { style: { color: "#9ca3af", fontSize: "12px", margin: 0 } },
+            "Internal update from the Re-New platform"
           )
         )
       )
@@ -166,11 +246,13 @@ Usage:
   npx tsx scripts/send-team-update.ts "Subject" --file path/to/message.md
 
 Options:
-  --test    Send only to ivanpaudice@me.com (recommended first)
+  --test              Send only to ivanpaudice@me.com (recommended first)
+  --attach <path>     Attach a file (PDF, etc.)
 
 Example:
   npx tsx scripts/send-team-update.ts "New Features!" "We shipped X." --test
   npx tsx scripts/send-team-update.ts "New Features!" "We shipped X."
+  npx tsx scripts/send-team-update.ts "Status" "See attached." --attach ~/file.pdf --test
 `)
     process.exit(1)
   }
@@ -189,6 +271,21 @@ Example:
     message = args[1]
   }
 
+  // Parse --attach flag
+  const attachIndex = args.indexOf("--attach")
+  let attachmentPath: string | null = null
+  if (attachIndex !== -1 && args[attachIndex + 1]) {
+    attachmentPath = args[attachIndex + 1]
+    // Expand ~ to home directory
+    if (attachmentPath.startsWith("~")) {
+      attachmentPath = attachmentPath.replace("~", process.env.HOME || "")
+    }
+    if (!fs.existsSync(attachmentPath)) {
+      console.error(`Error: Attachment file not found: ${attachmentPath}`)
+      process.exit(1)
+    }
+  }
+
   // Check API key
   if (!process.env.RESEND_API_KEY) {
     console.error("Error: RESEND_API_KEY not found in .env.local")
@@ -202,6 +299,9 @@ Example:
   console.log(`From: ${FROM_NAME} <${FROM_EMAIL}>`)
   console.log(`To: ${recipients.length} recipients`)
   console.log(`Subject: ${subject}`)
+  if (attachmentPath) {
+    console.log(`Attachment: ${path.basename(attachmentPath)}`)
+  }
   console.log("─".repeat(50))
   console.log("\nRecipients:")
   FOUNDERS_TEAM_2_0.contacts.forEach((c) => {
@@ -234,12 +334,32 @@ Example:
   console.log("\n📤 Sending...")
 
   try {
-    const { data, error } = await resend.emails.send({
+    // Build email payload
+    const emailPayload: {
+      from: string
+      to: string[]
+      subject: string
+      html: string
+      attachments?: { filename: string; content: Buffer }[]
+    } = {
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to: finalRecipients,
       subject: subjectPrefix + subject,
       html: emailHtml,
-    })
+    }
+
+    // Add attachment if provided
+    if (attachmentPath) {
+      const fileContent = fs.readFileSync(attachmentPath)
+      emailPayload.attachments = [
+        {
+          filename: path.basename(attachmentPath),
+          content: fileContent,
+        },
+      ]
+    }
+
+    const { data, error } = await resend.emails.send(emailPayload)
 
     if (error) {
       console.error("❌ Error:", error)

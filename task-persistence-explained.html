@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Task Persistence - How It Works</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #f0f6fc;
+    }
+
+    .subtitle {
+      color: #8b949e;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #c9d1d9;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+
+    .btn:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+
+    .btn.active {
+      background: #238636;
+      border-color: #238636;
+      color: #fff;
+    }
+
+    .diagram-area {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+      min-height: 500px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Flowchart styles */
+    .flow-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .flow-row {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .flow-box {
+      padding: 16px 24px;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 180px;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .flow-box.session {
+      background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+      border: 2px solid #58a6ff;
+      color: #fff;
+    }
+
+    .flow-box.config {
+      background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+      border: 2px solid #3fb950;
+      color: #fff;
+    }
+
+    .flow-box.hook {
+      background: linear-gradient(135deg, #9e6a03 0%, #bb8009 100%);
+      border: 2px solid #d29922;
+      color: #fff;
+    }
+
+    .flow-box.storage {
+      background: linear-gradient(135deg, #8957e5 0%, #a371f7 100%);
+      border: 2px solid #a371f7;
+      color: #fff;
+    }
+
+    .flow-box.action {
+      background: #21262d;
+      border: 2px solid #30363d;
+      color: #c9d1d9;
+    }
+
+    .flow-box.bad {
+      background: linear-gradient(135deg, #da3633 0%, #f85149 100%);
+      border: 2px solid #f85149;
+      color: #fff;
+    }
+
+    .flow-box.good {
+      background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+      border: 2px solid #3fb950;
+      color: #fff;
+    }
+
+    .flow-box .title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .flow-box .detail {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+
+    .flow-box code {
+      font-family: 'SF Mono', Monaco, monospace;
+      background: rgba(0,0,0,0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .arrow {
+      color: #8b949e;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arrow.down {
+      transform: rotate(90deg);
+    }
+
+    .arrow-label {
+      font-size: 11px;
+      color: #8b949e;
+      text-align: center;
+      margin: -8px 0;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      padding: 20px;
+    }
+
+    .comparison-side {
+      padding: 24px;
+      border-radius: 12px;
+      border: 2px dashed;
+    }
+
+    .comparison-side.before {
+      border-color: #f85149;
+      background: rgba(248, 81, 73, 0.1);
+    }
+
+    .comparison-side.after {
+      border-color: #3fb950;
+      background: rgba(63, 185, 80, 0.1);
+    }
+
+    .comparison-side h3 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .comparison-side.before h3 { color: #f85149; }
+    .comparison-side.after h3 { color: #3fb950; }
+
+    .file-tree {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: #8b949e;
+    }
+
+    .file-tree .folder { color: #58a6ff; }
+    .file-tree .file { color: #c9d1d9; }
+    .file-tree .highlight { color: #3fb950; background: rgba(63,185,80,0.2); padding: 0 4px; border-radius: 3px; }
+    .file-tree .bad { color: #f85149; }
+
+    .legend {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .legend-color.session { background: #1f6feb; }
+    .legend-color.config { background: #238636; }
+    .legend-color.hook { background: #9e6a03; }
+    .legend-color.storage { background: #8957e5; }
+    .legend-color.action { background: #21262d; border: 1px solid #30363d; }
+
+    .info-panel {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 24px;
+    }
+
+    .info-panel h3 {
+      font-size: 14px;
+      color: #f0f6fc;
+      margin-bottom: 12px;
+    }
+
+    .info-panel p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #8b949e;
+    }
+
+    .info-panel code {
+      font-family: 'SF Mono', Monaco, monospace;
+      background: #21262d;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #79c0ff;
+    }
+
+    .step-indicator {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      width: 24px;
+      height: 24px;
+      background: #f0f6fc;
+      color: #0d1117;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .highlight-pulse {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(56, 139, 253, 0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(56, 139, 253, 0); }
+    }
+
+    .hidden { display: none !important; }
+
+    /* Summary section */
+    .summary {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .summary h2 {
+      font-size: 16px;
+      color: #f0f6fc;
+      margin-bottom: 16px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .summary-card {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .summary-card h4 {
+      font-size: 13px;
+      color: #58a6ff;
+      margin-bottom: 8px;
+    }
+
+    .summary-card p {
+      font-size: 12px;
+      color: #8b949e;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Claude Code Task Persistence</h1>
+    <p class="subtitle">How tasks survive across sessions in your projects</p>
+
+    <div class="controls">
+      <button class="btn active" data-view="overview">Overview Flow</button>
+      <button class="btn" data-view="comparison">Before vs After</button>
+      <button class="btn" data-view="filestructure">File Structure</button>
+      <button class="btn" data-view="sessionflow">Session Lifecycle</button>
+    </div>
+
+    <div class="diagram-area">
+      <!-- Overview Flow -->
+      <div id="view-overview" class="view">
+        <div class="flow-container">
+          <div class="flow-row">
+            <div class="flow-box session highlight-pulse">
+              <div class="title">New Claude Session</div>
+              <div class="detail">You run <code>claude</code> in terminal</div>
+            </div>
+          </div>
+
+          <div class="arrow down">→</div>
+          <div class="arrow-label">reads project settings</div>
+
+          <div class="flow-row">
+            <div class="flow-box config">
+              <div class="title">settings.local.json</div>
+              <div class="detail">Project configuration</div>
+              <code>CLAUDE_CODE_TASK_LIST_ID</code>
+            </div>
+          </div>
+
+          <div class="arrow down">→</div>
+          <div class="arrow-label">environment variable set?</div>
+
+          <div class="flow-row">
+            <div class="flow-box bad">
+              <div class="title">❌ Not Set</div>
+              <div class="detail">Random UUID directory</div>
+              <code>~/.claude/tasks/a817899b-...</code>
+            </div>
+            <div class="flow-box good">
+              <div class="title">✓ Set to "renew-tasks"</div>
+              <div class="detail">Named directory</div>
+              <code>~/.claude/tasks/renew-tasks/</code>
+            </div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <div class="flow-row">
+            <div class="flow-box storage">
+              <div class="title">Task Storage</div>
+              <div class="detail">JSON files on disk</div>
+              <code>1.json, 2.json, 3.json...</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color session"></div> Session</div>
+          <div class="legend-item"><div class="legend-color config"></div> Configuration</div>
+          <div class="legend-item"><div class="legend-color storage"></div> Storage</div>
+        </div>
+
+        <div class="info-panel">
+          <h3>The Key Insight</h3>
+          <p>Without <code>CLAUDE_CODE_TASK_LIST_ID</code>, each session creates a random UUID directory. Your tasks exist but are orphaned. With it set to <code>"renew-tasks"</code>, ALL sessions connect to the same 50 tasks.</p>
+        </div>
+      </div>
+
+      <!-- Comparison View -->
+      <div id="view-comparison" class="view hidden">
+        <div class="comparison">
+          <div class="comparison-side before">
+            <h3>❌ Before (Broken)</h3>
+            <div class="file-tree">
+              <div><span class="folder">~/.claude/tasks/</span></div>
+              <div>  ├── <span class="bad">a817899b-4ff0-...</span> ← Session 1</div>
+              <div>  ├── <span class="bad">718cff6e-bb32-...</span> ← Session 2</div>
+              <div>  ├── <span class="bad">f210ee19-a7cd-...</span> ← Session 3</div>
+              <div>  └── <span class="file">renew-tasks/</span> ← <span class="bad">Orphaned!</span></div>
+              <div style="margin-top: 16px; color: #f85149;">
+                Each session creates new random directory.<br>
+                50 tasks exist but nothing points to them.
+              </div>
+            </div>
+          </div>
+
+          <div class="comparison-side after">
+            <h3>✓ After (Fixed)</h3>
+            <div class="file-tree">
+              <div><span class="folder">~/.claude/tasks/</span></div>
+              <div>  └── <span class="highlight">renew-tasks/</span> ← ALL sessions</div>
+              <div>      ├── 1.json</div>
+              <div>      ├── 2.json</div>
+              <div>      ├── ...</div>
+              <div>      └── 50.json</div>
+              <div style="margin-top: 16px; color: #3fb950;">
+                Every session connects to same directory.<br>
+                Tasks persist across sessions forever.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-panel">
+          <h3>The Fix</h3>
+          <p>Added <code>"env": { "CLAUDE_CODE_TASK_LIST_ID": "renew-tasks" }</code> to <code>.claude/settings.local.json</code>. This tells Claude Code to use the named directory instead of generating random UUIDs.</p>
+        </div>
+      </div>
+
+      <!-- File Structure View -->
+      <div id="view-filestructure" class="view hidden">
+        <div class="flow-container">
+          <div class="flow-row" style="gap: 60px;">
+            <div style="text-align: left;">
+              <h3 style="color: #58a6ff; margin-bottom: 16px;">Project Config</h3>
+              <div class="file-tree">
+                <div><span class="folder">mba--renew-platform/</span></div>
+                <div>  └── <span class="folder">.claude/</span></div>
+                <div>      └── <span class="highlight">settings.local.json</span></div>
+                <div style="margin-top: 8px; padding: 12px; background: #21262d; border-radius: 6px;">
+                  <code style="color: #7ee787;">{</code><br>
+                  <code style="color: #7ee787;">  "env": {</code><br>
+                  <code style="color: #ffa657;">    "CLAUDE_CODE_TASK_LIST_ID"</code><code style="color: #7ee787;">:</code><br>
+                  <code style="color: #a5d6ff;">      "renew-tasks"</code><br>
+                  <code style="color: #7ee787;">  }</code><br>
+                  <code style="color: #7ee787;">}</code>
+                </div>
+              </div>
+            </div>
+
+            <div class="arrow">→</div>
+
+            <div style="text-align: left;">
+              <h3 style="color: #a371f7; margin-bottom: 16px;">Task Storage</h3>
+              <div class="file-tree">
+                <div><span class="folder">~/.claude/tasks/</span></div>
+                <div>  └── <span class="highlight">renew-tasks/</span></div>
+                <div>      ├── <span class="file">1.json</span> <span style="color: #8b949e;">← Phase 3.1</span></div>
+                <div>      ├── <span class="file">2.json</span> <span style="color: #8b949e;">← Phase 3.2</span></div>
+                <div>      ├── <span class="file">3.json</span></div>
+                <div>      ├── <span class="file">...</span></div>
+                <div>      └── <span class="file">50.json</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-row" style="margin-top: 40px; gap: 60px;">
+            <div style="text-align: left;">
+              <h3 style="color: #d29922; margin-bottom: 16px;">Global Hooks</h3>
+              <div class="file-tree">
+                <div><span class="folder">~/.claude/</span></div>
+                <div>  ├── <span class="file">settings.json</span></div>
+                <div>  └── <span class="folder">hooks/</span></div>
+                <div>      └── <span class="highlight">session-task-check.js</span></div>
+                <div style="margin-top: 8px; color: #8b949e; font-size: 11px;">
+                  Runs at session start, shows:<br>
+                  "📋 Task list: renew-tasks"
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Lifecycle View -->
+      <div id="view-sessionflow" class="view hidden">
+        <div class="flow-container">
+          <div class="flow-row">
+            <div class="flow-box session">
+              <span class="step-indicator">1</span>
+              <div class="title">Start Session</div>
+              <div class="detail">Run <code>claude</code></div>
+            </div>
+            <div class="arrow">→</div>
+            <div class="flow-box hook">
+              <span class="step-indicator">2</span>
+              <div class="title">SessionStart Hook</div>
+              <div class="detail">Shows task list ID</div>
+              <code>📋 renew-tasks</code>
+            </div>
+          </div>
+
+          <div class="arrow down" style="margin: 20px 0;">→</div>
+
+          <div class="flow-row">
+            <div class="flow-box action">
+              <span class="step-indicator">3</span>
+              <div class="title">Run TaskList</div>
+              <div class="detail">See pending work</div>
+            </div>
+            <div class="arrow">→</div>
+            <div class="flow-box storage">
+              <span class="step-indicator">4</span>
+              <div class="title">Load Tasks</div>
+              <div class="detail">Read from disk</div>
+              <code>renew-tasks/*.json</code>
+            </div>
+          </div>
+
+          <div class="arrow down" style="margin: 20px 0;">→</div>
+
+          <div class="flow-row">
+            <div class="flow-box action">
+              <span class="step-indicator">5</span>
+              <div class="title">Work on Task</div>
+              <div class="detail">TaskUpdate → in_progress</div>
+            </div>
+            <div class="arrow">→</div>
+            <div class="flow-box action">
+              <span class="step-indicator">6</span>
+              <div class="title">Complete Task</div>
+              <div class="detail">TaskUpdate → completed</div>
+            </div>
+          </div>
+
+          <div class="arrow down" style="margin: 20px 0;">→</div>
+
+          <div class="flow-row">
+            <div class="flow-box storage">
+              <span class="step-indicator">7</span>
+              <div class="title">Persist to Disk</div>
+              <div class="detail">JSON file updated</div>
+              <code>status: "completed"</code>
+            </div>
+            <div class="arrow">→</div>
+            <div class="flow-box good">
+              <span class="step-indicator">8</span>
+              <div class="title">Survives Forever</div>
+              <div class="detail">Next session sees it</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color session"></div> Session</div>
+          <div class="legend-item"><div class="legend-color hook"></div> Hook</div>
+          <div class="legend-item"><div class="legend-color action"></div> Action</div>
+          <div class="legend-item"><div class="legend-color storage"></div> Storage</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <h2>Quick Reference</h2>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <h4>Re-New Project</h4>
+          <p>Task List ID: <code>renew-tasks</code><br>
+          Tasks: 50 (40 completed, 7 pending)<br>
+          Config: <code>.claude/settings.local.json</code></p>
+        </div>
+        <div class="summary-card">
+          <h4>GE Project</h4>
+          <p>Task List ID: <code>ge-tasks</code><br>
+          Status: Archived<br>
+          Config: <code>.claude/settings.local.json</code></p>
+        </div>
+        <div class="summary-card">
+          <h4>Session Start Hook</h4>
+          <p>Location: <code>~/.claude/hooks/session-task-check.js</code><br>
+          Shows: Task list name + reminder to run TaskList</p>
+        </div>
+        <div class="summary-card">
+          <h4>To Verify It Works</h4>
+          <p>1. Close terminal completely<br>
+          2. Open new terminal, cd to project<br>
+          3. Run <code>claude</code><br>
+          4. Run <code>TaskList</code> → see 50 tasks</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // View switching
+    const buttons = document.querySelectorAll('.btn[data-view]');
+    const views = document.querySelectorAll('.view');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const viewId = btn.dataset.view;
+
+        // Update buttons
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update views
+        views.forEach(v => v.classList.add('hidden'));
+        document.getElementById(`view-${viewId}`).classList.remove('hidden');
+      });
+    });
+  </script>
+</body>
+</html>

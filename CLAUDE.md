@@ -59,14 +59,26 @@ emba--renew-platform/
 - **Cron Jobs:** Daily at 9 AM (Hobby plan limits to once/day)
 - **Backup Branch:** `backup/pre-restructure-20260104`
 
-## Task Management
+## Task Management (MANDATORY - Tasks Persist Across Sessions)
 
-**Claude Code Tasks** is the single source of truth for all work tracking.
+**This project uses `CLAUDE_CODE_TASK_LIST_ID=renew-tasks` for persistent task storage.**
 
-Tasks persist across sessions and contain:
-- All 10 phases toward v1.0 launch (phases 1-4 completed, 5-10 pending)
-- Blocking items (waiting on people)
-- Quick fixes and improvements
+**50 existing tasks** from Jan 25 are available and WILL be visible when you run TaskList.
+
+### SESSION START RULES
+1. **Run TaskList FIRST** to see pending work
+2. Read task descriptions for context
+3. Update status to `in_progress` when starting work
+
+### SESSION END RULES
+1. Mark completed tasks with TaskUpdate (status: completed)
+2. Create new tasks for discovered work
+3. Commit changes to preserve git history
+
+### Configuration
+- Environment variable: `CLAUDE_CODE_TASK_LIST_ID=renew-tasks`
+- Configured in: `.claude/settings.local.json`
+- Tasks stored in: `~/.claude/tasks/renew-tasks/`
 
 **Ivan's commands:**
 ```
