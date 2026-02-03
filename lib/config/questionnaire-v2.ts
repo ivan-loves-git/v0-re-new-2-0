@@ -13,7 +13,7 @@ export const WHO_QUESTIONS = {
   q05: {
     id: 'q05',
     field: 'q05_status',
-    label: 'Quel est votre statut professionnel actuel ?',
+    label: 'Quel est votre statut actuel ?',
     labelEn: 'What is your current professional status?',
     required: true,
     type: 'radio' as const,
@@ -41,7 +41,7 @@ export const WHO_QUESTIONS = {
   q07: {
     id: 'q07',
     field: 'q07_leadership',
-    label: 'Avez-vous occupé des postes de direction ou de management ?',
+    label: 'Avez-vous déjà exercé des fonctions de direction ou de responsabilité élargie ?',
     labelEn: 'Have you held leadership or management positions?',
     required: true,
     type: 'radio' as const,
@@ -55,7 +55,7 @@ export const WHO_QUESTIONS = {
   q08: {
     id: 'q08',
     field: 'q08_crisis',
-    label: 'Avez-vous géré une situation de haute complexité ou de crise ?',
+    label: 'Avez-vous déjà géré une situation de forte complexité ou de crise ?',
     labelEn: 'Have you managed a situation of high complexity or crisis?',
     required: true,
     type: 'radio' as const,
@@ -68,7 +68,7 @@ export const WHO_QUESTIONS = {
   q09: {
     id: 'q09',
     field: 'q09_investment',
-    label: 'Avez-vous participé à une décision d\'investissement significative ? (M&A, acquisition)',
+    label: 'Avez-vous déjà été impliqué dans une décision d\'investissement significative ? (ex. M&A, acquisition)',
     labelEn: 'Have you been involved in a significant investment decision? (M&A, acquisition)',
     required: true,
     type: 'radio' as const,
@@ -82,14 +82,14 @@ export const WHO_QUESTIONS = {
   q10: {
     id: 'q10',
     field: 'q10_impact',
-    label: 'Avez-vous pris une décision professionnelle avec un impact personnel direct et durable ?',
+    label: 'Avez-vous déjà pris une décision professionnelle avec un impact personnel direct et durable ?',
     labelEn: 'Have you made a professional decision with direct and lasting personal impact?',
     required: true,
     type: 'radio' as const,
     options: [
-      { value: 'financial', label: 'Oui, avec impact financier personnel significatif (baisse de revenus, investissement, garanties)', points: 15 },
-      { value: 'trajectory', label: 'Oui, avec impact durable sur ma trajectoire professionnelle (quitter un poste stable, changement de secteur, expatriation)', points: 12 },
-      { value: 'limited', label: 'Oui, avec impact personnel limité (évolution de poste sans exposition élevée)', points: 6 },
+      { value: 'financial', label: 'Oui – avec un impact financier personnel significatif (ex. : baisse durable de revenus, investissement, garanties)', points: 15 },
+      { value: 'trajectory', label: 'Oui – avec un impact durable sur ma trajectoire pro (ex. : quitter un poste stable, changement majeur de secteur, rôle, ou expatriation)', points: 12 },
+      { value: 'limited', label: 'Oui – avec un impact personnel limité (ex. : évolution de poste ou de périmètre sans exposition forte)', points: 6 },
       { value: 'none', label: 'Non', points: 0 }
     ]
   }
@@ -105,7 +105,7 @@ export const PROJECT_STATUS_QUESTION = {
     field: 'q11_project_status',
     label: 'À ce stade, où en est votre projet de reprise ?',
     labelEn: 'At this stage, where is your acquisition project?',
-    helpText: 'Sélectionnez toutes les étapes qui s\'appliquent. Le score sera basé sur l\'option la plus avancée.',
+    helpText: '(sélectionnez ce qui convient) Sélectionnez toutes les étapes qui s\'appliquent. Le score sera basé sur l\'option la plus avancée.',
     helpTextEn: 'Select all stages that apply. The score will be based on the most advanced option.',
     required: true,
     type: 'checkbox' as const, // Multi-select
@@ -127,32 +127,32 @@ export const WHEN_QUESTIONS = {
   q12: {
     id: 'q12',
     field: 'q12_geo_zones',
-    label: 'Quelles sont vos zones géographiques de recherche prioritaires ?',
+    label: 'Zone(s) géographique(s) de recherche prioritaire',
     labelEn: 'What are your priority geographic search zones?',
     required: true,
     type: 'checkbox' as const, // Multi-select
     options: [
       { value: 'all-france', label: 'Toute la France' },
-      { value: 'ile-de-france', label: 'Île-de-France' },
       { value: 'auvergne-rhone-alpes', label: 'Auvergne-Rhône-Alpes' },
-      { value: 'paca', label: 'Provence-Alpes-Côte d\'Azur' },
-      { value: 'occitanie', label: 'Occitanie' },
-      { value: 'nouvelle-aquitaine', label: 'Nouvelle-Aquitaine' },
-      { value: 'hauts-de-france', label: 'Hauts-de-France' },
-      { value: 'grand-est', label: 'Grand Est' },
-      { value: 'pays-de-la-loire', label: 'Pays de la Loire' },
-      { value: 'bretagne', label: 'Bretagne' },
-      { value: 'normandie', label: 'Normandie' },
       { value: 'bourgogne-franche-comte', label: 'Bourgogne-Franche-Comté' },
+      { value: 'bretagne', label: 'Bretagne' },
       { value: 'centre-val-de-loire', label: 'Centre-Val de Loire' },
       { value: 'corse', label: 'Corse' },
-      { value: 'dom-tom', label: 'DOM-TOM' }
+      { value: 'dom-tom', label: 'DOM-TOM' },
+      { value: 'grand-est', label: 'Grand Est' },
+      { value: 'hauts-de-france', label: 'Hauts-de-France' },
+      { value: 'ile-de-france', label: 'Île-de-France' },
+      { value: 'normandie', label: 'Normandie' },
+      { value: 'nouvelle-aquitaine', label: 'Nouvelle-Aquitaine' },
+      { value: 'occitanie', label: 'Occitanie' },
+      { value: 'pays-de-la-loire', label: 'Pays de la Loire' },
+      { value: 'paca', label: 'Provence-Alpes-Côte d\'Azur' }
     ]
   },
   q13: {
     id: 'q13',
     field: 'q13_target_sectors_v2',
-    label: 'Quel(s) secteur(s) ciblez-vous pour votre projet de reprise ?',
+    label: 'Quel(s) secteur(s) d\'activité ciblez-vous pour votre projet de reprise ?',
     labelEn: 'Which sector(s) are you targeting for your acquisition project?',
     required: true,
     type: 'checkbox' as const, // Multi-select
@@ -173,8 +173,8 @@ export const WHEN_QUESTIONS = {
   q14: {
     id: 'q14',
     field: 'q14_deal_size',
-    label: 'Quelle taille de transaction visez-vous (valeur d\'entreprise) ?',
-    labelEn: 'What deal size are you targeting (enterprise value)?',
+    label: 'Taille d\'opération visée : (valeur des titres)',
+    labelEn: 'Target deal size (equity value)',
     helpText: 'Vous pouvez sélectionner plusieurs fourchettes si vous êtes flexible.',
     helpTextEn: 'You can select multiple ranges if you are flexible.',
     required: true,
@@ -182,13 +182,13 @@ export const WHEN_QUESTIONS = {
     options: [
       { value: '1-3M', label: '1-3 M€' },
       { value: '3-5M', label: '3-5 M€' },
-      { value: '>5M', label: 'Plus de 5 M€' }
+      { value: '>5M', label: '>5 M€' }
     ]
   },
   q15: {
     id: 'q15',
     field: 'q15_structure',
-    label: 'Comment envisagez-vous la structure capitalistique et votre rôle ?',
+    label: 'Dans votre projet de reprise comment envisagez-vous la structuration du capital et votre rôle ?',
     labelEn: 'How do you envision the capital structure and your role?',
     helpText: 'Cette question aide à évaluer la cohérence financière de votre projet.',
     helpTextEn: 'This question helps evaluate the financial coherence of your project.',
