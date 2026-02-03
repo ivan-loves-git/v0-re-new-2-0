@@ -18,7 +18,13 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Enable automatic WebP conversion and resizing
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
   },
   env: {
     NEXT_PUBLIC_BUILD_NUMBER: gitCommitCount,
