@@ -1,6 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
 import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw, Lightbulb, Target, AlertTriangle, Zap, GitBranch, Rocket } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -975,12 +974,10 @@ export function DevelopmentRoadmap() {
         <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-blue-200" />
 
         {roadmapEvents.map((period, index) => (
-          <motion.div
+          <div
             key={index}
-            className="relative pl-10 pb-8 last:pb-0"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.05 }}
+            className="relative pl-10 pb-8 last:pb-0 animate-fade-in"
+            style={{ animationDelay: `${index * 50}ms` }}
           >
             {/* Timeline dot */}
             <div className="absolute left-0 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-sm" />
@@ -1016,12 +1013,10 @@ export function DevelopmentRoadmap() {
                     const config = typeConfig[event.type as keyof typeof typeConfig]
                     const Icon = config.icon
                     return (
-                      <motion.div
+                      <div
                         key={i}
-                        className="flex gap-2.5 py-2 px-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: i * 0.03 }}
+                        className="flex gap-2.5 py-2 px-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors animate-slide-in"
+                        style={{ animationDelay: `${i * 30}ms` }}
                       >
                         <div className={`p-1.5 rounded-md ${config.bgColor} h-fit`}>
                           <Icon className={`w-3.5 h-3.5 ${config.color}`} />
@@ -1039,13 +1034,13 @@ export function DevelopmentRoadmap() {
                             {event.description}
                           </p>
                         </div>
-                      </motion.div>
+                      </div>
                     )
                   })}
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
 

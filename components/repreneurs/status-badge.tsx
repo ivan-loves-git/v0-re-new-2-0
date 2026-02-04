@@ -11,6 +11,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     qualified: { label: "Qualified", className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" },
     client: { label: "Client", className: "bg-green-100 text-green-800 hover:bg-green-100" },
     rejected: { label: "Rejected", className: "bg-red-100 text-red-800 hover:bg-red-100" },
+    declined: { label: "Declined", className: "bg-gray-100 text-gray-800 hover:bg-gray-100" },
   }
 
   const variant = variants[status]
