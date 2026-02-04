@@ -8,6 +8,29 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Feb 4, 2026",
+    version: "0.9.1",
+    title: "Dashboard Fix & Performance Optimization",
+    isCompleted: true,
+    events: [
+      {
+        title: "Dashboard crash fixed",
+        type: "fix",
+        description: "Dashboard no longer crashes when a repreneur has 'Declined' status. The page now loads reliably for all profiles.",
+      },
+      {
+        title: "App loads faster (~250KB lighter)",
+        type: "feature",
+        description: "Removed unused libraries and enabled automatic image compression. Pages load faster, especially on mobile.",
+      },
+      {
+        title: "Public form ready for real users",
+        type: "feature",
+        description: "Test/autofill buttons removed from the intake form. The form is now clean and ready for external repreneurs.",
+      },
+    ],
+  },
+  {
     period: "Feb 2, 2026",
     version: "0.9.0",
     title: "AI Email Generator & Pipeline Improvements",
