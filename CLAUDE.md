@@ -59,6 +59,13 @@ emba--renew-platform/
 - **Cron Jobs:** Daily at 9 AM (Hobby plan limits to once/day)
 - **Backup Branch:** `backup/pre-restructure-20260104`
 
+## Environment Variables (Quick Reference)
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `NEXT_PUBLIC_SHOW_TEST_AUTOFILL` | Show autofill/test buttons on public intake form (`/intake-v2`) | `false` (off) |
+
+To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` to `.env.local` and restart dev server. This shows yellow "Autofill" buttons on each form step for quick testing with dummy data. **Must be off in production** (it is off by default since build 335).
+
 ## Task Management (MANDATORY - Tasks Persist Across Sessions)
 
 **This project uses `CLAUDE_CODE_TASK_LIST_ID=renew-tasks` for persistent task storage.**
