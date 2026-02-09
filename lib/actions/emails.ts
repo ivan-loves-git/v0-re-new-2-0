@@ -176,7 +176,7 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
 
   const { error } = await supabase
     .from("email_templates")
-    .update({ is_enabled: enabled })
+    .update({ is_active: enabled })
     .eq("template_key", templateKey)
 
   if (error) {

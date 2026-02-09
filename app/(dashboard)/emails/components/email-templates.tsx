@@ -49,7 +49,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       const item = {
         key,
         ...meta,
-        isEnabled: template?.is_enabled ?? true,
+        isEnabled: template?.is_active ?? true,
         subjectOverride: template?.subject_override,
       }
       if (!acc[meta.category]) {

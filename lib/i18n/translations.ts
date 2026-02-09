@@ -8,7 +8,7 @@ export type Language = 'fr' | 'en'
 export const translations = {
   // Form header
   formTitle: {
-    fr: 'Candidature Repreneur',
+    fr: 'Profil Repreneur',
     en: 'Buyer Application',
   },
 
