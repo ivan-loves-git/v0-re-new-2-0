@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Mail, Phone, FileText, CheckCircle, XCircle, Calendar, Trash2, MoreHorizontal, Eye, Activity } from "lucide-react"
 import { createActivity, deleteActivity } from "@/lib/actions/activities"
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -54,100 +55,48 @@ function getActivityConfig(type: ActivityType) {
 
 export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProps) {
   const router = useRouter()
-  const [localActivities, setLocalActivities] = useState<ActivityType_DB[]>(activities)
   const [isOpen, setIsOpen] = useState(false)
   const [activityType, setActivityType] = useState<ActivityType>("welcome_email")
   const [notes, setNotes] = useState("")
   const [durationMinutes, setDurationMinutes] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [viewingActivity, setViewingActivity] = useState<Activity | null>(null)
-
-  // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
-  const isMutatingRef = useRef(false)
-
-  // Sync local state when props change, but only if we're not mid-mutation
-  useEffect(() => {
-    if (!isMutatingRef.current) {
-      setLocalActivities(activities)
-    }
-  }, [activities])
+  const [viewingActivity, setViewingActivity] = useState<ActivityType_DB | null>(null)
 
   async function handleSubmit() {
-    const savedNotes = notes
-    const savedDuration = durationMinutes
-    const savedType = activityType
-
-    // Create optimistic activity
-    const tempActivity: ActivityType_DB = {
-      id: `temp-${Date.now()}`,
-      repreneur_id: repreneurId,
-      activity_type: savedType,
-      notes: savedNotes || undefined,
-      duration_minutes: savedDuration ? parseInt(savedDuration) : undefined,
-      created_at: new Date().toISOString(),
-      created_by: "",
-      created_by_email: "You",
-    }
-
-    // Set mutation flag BEFORE state updates
-    isMutatingRef.current = true
-
-    // Optimistically update UI
-    setLocalActivities(prev => [tempActivity, ...prev])
-    setNotes("")
-    setDurationMinutes("")
-    setActivityType("welcome_email")
-    setIsOpen(false)
     setIsSubmitting(true)
 
     try {
       await createActivity(
         repreneurId,
-        savedType,
-        savedNotes || undefined,
-        savedDuration ? parseInt(savedDuration) : undefined
+        activityType,
+        notes || undefined,
+        durationMinutes ? parseInt(durationMinutes) : undefined
       )
-      await new Promise(resolve => setTimeout(resolve, 100))
+      toast.success("Activity logged")
+      setNotes("")
+      setDurationMinutes("")
+      setActivityType("welcome_email")
+      setIsOpen(false)
       router.refresh()
-      setTimeout(() => {
-        isMutatingRef.current = false
-      }, 500)
     } catch (error) {
       console.error("Failed to create activity:", error)
-      // Revert on error
-      setLocalActivities(prev => prev.filter(a => a.id !== tempActivity.id))
-      isMutatingRef.current = false
+      toast.error("Failed to log activity. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   async function handleDelete(activityId: string) {
-    // Store for potential revert
-    const activityToDelete = localActivities.find(a => a.id === activityId)
-
-    // Set mutation flag BEFORE state updates
-    isMutatingRef.current = true
-
-    // Optimistically remove
-    setLocalActivities(prev => prev.filter(a => a.id !== activityId))
     setDeletingId(activityId)
 
     try {
       await deleteActivity(activityId, repreneurId)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      toast.success("Activity deleted")
       router.refresh()
-      setTimeout(() => {
-        isMutatingRef.current = false
-      }, 500)
     } catch (error) {
       console.error("Failed to delete activity:", error)
-      // Revert on error
-      if (activityToDelete) {
-        setLocalActivities(prev => [activityToDelete, ...prev])
-      }
-      isMutatingRef.current = false
+      toast.error("Failed to delete activity. Please try again.")
     } finally {
       setDeletingId(null)
     }
@@ -218,7 +167,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button onClick={handleSubmit} disabled={isSubmitting}>
@@ -230,20 +179,18 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
       </CardHeader>
       <CardContent>
         <div className="space-y-3 overflow-y-auto pr-2" style={{ maxHeight: "380px" }}>
-          {localActivities.length === 0 ? (
+          {activities.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No activities logged yet. Click "Log Activity" to add one.
             </p>
           ) : (
-            localActivities.map((activity) => {
+            activities.map((activity) => {
               const config = getActivityConfig(activity.activity_type)
               const IconComponent = config.icon
               return (
                 <div
                   key={activity.id}
-                  className={`flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0 ${
-                    activity.id.startsWith("temp-") ? "opacity-70" : ""
-                  }`}
+                  className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
                 >
                   <div className="p-2 rounded-full bg-blue-50 text-blue-600 shrink-0">
                     <IconComponent className="h-4 w-4" />
@@ -269,7 +216,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 flex-shrink-0"
-                        disabled={deletingId === activity.id || activity.id.startsWith("temp-")}
+                        disabled={deletingId === activity.id}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>

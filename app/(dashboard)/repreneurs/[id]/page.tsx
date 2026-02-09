@@ -209,10 +209,10 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     userEmailMap[currentUser.id] = currentUser.email?.split('@')[0] || currentUser.name || 'Team'
   }
 
-  // Transform notes to include placeholder email
+  // Transform notes to include creator email (use userEmailMap like activities)
   const notesWithEmail = notes.map((note) => ({
     ...note,
-    created_by_email: "Team",
+    created_by_email: userEmailMap[note.created_by] || "Team",
   }))
 
   // Merge milestones into offers

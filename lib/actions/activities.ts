@@ -24,10 +24,14 @@ export async function createActivity(
     created_by: user.id,
   }
 
-  const { error } = await supabase.from("activities").insert(activity)
+  const { data, error } = await supabase.from("activities").insert(activity).select().single()
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(`Failed to create activity: ${error.message}`)
+  }
+
+  if (!data) {
+    throw new Error("Activity was not created — no data returned")
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
@@ -59,10 +63,14 @@ export async function getActivities(repreneurId: string) {
 export async function deleteActivity(activityId: string, repreneurId: string) {
   const supabase = createAdminClient()
 
-  const { error } = await supabase.from("activities").delete().eq("id", activityId)
+  const { data, error } = await supabase.from("activities").delete().eq("id", activityId).select()
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(`Failed to delete activity: ${error.message}`)
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error("Activity not found or already deleted")
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, StickyNote, MoreHorizontal, Trash2, Phone, Mail, Users, FileText, Eye } from "lucide-react"
 import { createNote, deleteNote } from "@/lib/actions/repreneurs"
@@ -75,7 +75,6 @@ function getNoteTypeColor(noteType: NoteType) {
 
 export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
   const router = useRouter()
-  const [localNotes, setLocalNotes] = useState<Note[]>(notes)
   const [content, setContent] = useState("")
   const [noteType, setNoteType] = useState<NoteType>("other")
   const [isOpen, setIsOpen] = useState(false)
@@ -83,91 +82,36 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewingNote, setViewingNote] = useState<Note | null>(null)
 
-  // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
-  const isMutatingRef = useRef(false)
-
-  // Sync local state when props change, but only if we're not mid-mutation
-  useEffect(() => {
-    if (!isMutatingRef.current) {
-      setLocalNotes(notes)
-    }
-  }, [notes])
-
   async function handleSubmit() {
     if (!content.trim()) return
 
-    const savedContent = content.trim()
-    const savedType = noteType
-
-    // Create optimistic note
-    const tempNote: Note = {
-      id: `temp-${Date.now()}`,
-      repreneur_id: repreneurId,
-      content: savedContent,
-      note_type: savedType,
-      created_at: new Date().toISOString(),
-      created_by: "",
-      created_by_email: "You",
-    }
-
-    // Set mutation flag BEFORE state updates
-    isMutatingRef.current = true
-
-    // Optimistically update UI
-    setLocalNotes(prev => [tempNote, ...prev])
-    setContent("")
-    setNoteType("other")
-    setIsOpen(false)
     setIsSubmitting(true)
 
     try {
-      await createNote(repreneurId, savedContent, savedType)
+      await createNote(repreneurId, content.trim(), noteType)
       toast.success("Note added")
-      // Small delay to allow server to process before refresh
-      await new Promise(resolve => setTimeout(resolve, 100))
+      setContent("")
+      setNoteType("other")
+      setIsOpen(false)
       router.refresh()
-      // Keep mutation flag on a bit longer to let the refresh complete
-      setTimeout(() => {
-        isMutatingRef.current = false
-      }, 500)
     } catch (error) {
       console.error("Failed to create note:", error)
       toast.error("Failed to add note. Please try again.")
-      // Revert on error
-      setLocalNotes(prev => prev.filter(n => n.id !== tempNote.id))
-      isMutatingRef.current = false
     } finally {
       setIsSubmitting(false)
     }
   }
 
   async function handleDelete(noteId: string) {
-    // Store for potential revert
-    const noteToDelete = localNotes.find(n => n.id === noteId)
-
-    // Set mutation flag BEFORE state updates
-    isMutatingRef.current = true
-
-    // Optimistically remove
-    setLocalNotes(prev => prev.filter(n => n.id !== noteId))
     setDeletingId(noteId)
 
     try {
       await deleteNote(noteId, repreneurId)
       toast.success("Note deleted")
-      await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
-      setTimeout(() => {
-        isMutatingRef.current = false
-      }, 500)
     } catch (error) {
       console.error("Failed to delete note:", error)
       toast.error("Failed to delete note. Please try again.")
-      // Revert on error
-      if (noteToDelete) {
-        setLocalNotes(prev => [noteToDelete, ...prev])
-      }
-      isMutatingRef.current = false
     } finally {
       setDeletingId(null)
     }
@@ -227,7 +171,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsOpen(false)}>
+                <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
                 <Button onClick={handleSubmit} disabled={isSubmitting || !content.trim()}>
@@ -238,18 +182,16 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
           </Dialog>
         </CardHeader>
         <CardContent>
-          {localNotes.length === 0 ? (
+          {notes.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <p className="text-sm text-gray-500">No notes yet</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {localNotes.map((note) => (
+              {notes.map((note) => (
                 <div
                   key={note.id}
-                  className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
-                    note.id.startsWith("temp-") ? "opacity-70" : ""
-                  }`}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className={`p-2 rounded-full ${getNoteTypeColor(note.note_type || "other")}`}>
@@ -272,7 +214,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 ml-2 flex-shrink-0"
-                        disabled={deletingId === note.id || note.id.startsWith("temp-")}
+                        disabled={deletingId === note.id}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
