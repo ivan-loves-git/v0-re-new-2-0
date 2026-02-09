@@ -236,19 +236,15 @@ export async function createNote(repreneurId: string, content: string, noteType:
   // Get current user from Better Auth
   const user = await requireUser()
 
-  const { data, error } = await supabase.from("notes").insert({
+  const { error } = await supabase.from("notes").insert({
     repreneur_id: repreneurId,
     content,
     note_type: noteType,
     created_by: user.id,
-  }).select().single()
+  })
 
   if (error) {
     throw new Error(`Failed to create note: ${error.message}`)
-  }
-
-  if (!data) {
-    throw new Error("Note was not created — no data returned")
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
@@ -257,14 +253,10 @@ export async function createNote(repreneurId: string, content: string, noteType:
 export async function deleteNote(noteId: string, repreneurId: string) {
   const supabase = createAdminClient()
 
-  const { data, error } = await supabase.from("notes").delete().eq("id", noteId).select()
+  const { error } = await supabase.from("notes").delete().eq("id", noteId)
 
   if (error) {
     throw new Error(`Failed to delete note: ${error.message}`)
-  }
-
-  if (!data || data.length === 0) {
-    throw new Error("Note not found or already deleted")
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
