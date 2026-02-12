@@ -1,186 +1,28 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
-import { signIn, signUp } from "@/lib/auth-client"
+import { useState, useEffect, useRef } from "react"
+import { signIn } from "@/lib/auth-client"
+import { submitWaitlistRequest } from "@/lib/actions/waitlist"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Info } from "lucide-react"
 import Image from "next/image"
-
-// Platform colors for confetti
-const CONFETTI_COLORS = [
-  "#3b82f6", "#2563eb", "#1d4ed8", "#ef4444", "#10b981",
-  "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16",
-]
-
-// Fun emojis for confetti
-const CONFETTI_EMOJIS = ["🌊", "✨", "🎉", "💫", "⭐", "🌟", "💙", "🔥", "🚀", "💎", "🎊", "🌈"]
-
-interface Particle {
-  id: number
-  x: number
-  y: number
-  type: "dot" | "emoji"
-  content: string
-  color?: string
-  vx: number
-  vy: number
-  rotation: number
-  rotationSpeed: number
-  scale: number
-  opacity: number
-  delay: number
-}
-
-// Fountain confetti - Desktop only (disabled on mobile for performance)
-function ConfettiFountain({ originX, originY, emojis, onComplete }: { originX: number; originY: number; emojis?: string[]; onComplete: () => void }) {
-  const [particles, setParticles] = useState<Particle[]>([])
-  const [isMobile, setIsMobile] = useState(true) // Default to mobile (skip animation) until we detect
-
-  // Use custom emojis if provided, otherwise default
-  const emojiSet = emojis || CONFETTI_EMOJIS
-
-  // Detect mobile on mount
-  useEffect(() => {
-    const checkMobile = window.matchMedia("(max-width: 768px)").matches ||
-                        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-    setIsMobile(checkMobile)
-    if (checkMobile) {
-      // Skip animation on mobile
-      onComplete()
-    }
-  }, [onComplete])
-
-  // Initialize particles (only on desktop)
-  useEffect(() => {
-    if (isMobile) return
-    const p: Particle[] = []
-    for (let i = 0; i < 12; i++) { // 20% more dots
-      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8
-      const velocity = 7.3 + Math.random() * 3.6 // 30% bigger spread
-      p.push({
-        id: i,
-        x: (Math.random() - 0.5) * 20,
-        y: 0,
-        type: "dot",
-        content: "",
-        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        rotation: Math.random() * 360,
-        rotationSpeed: Math.random() * 15 - 7.5,
-        scale: 0.8 + Math.random() * 0.4,
-        opacity: 1,
-        delay: i * 20,
-      })
-    }
-    for (let i = 0; i < 10; i++) {
-      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6
-      const velocity = 6.5 + Math.random() * 2.9 // 30% bigger spread
-      p.push({
-        id: i + 10,
-        x: (Math.random() - 0.5) * 20,
-        y: 0,
-        type: "emoji",
-        content: emojiSet[Math.floor(Math.random() * emojiSet.length)],
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        rotation: Math.random() * 360,
-        rotationSpeed: Math.random() * 8 - 4,
-        scale: 0.94 + Math.random() * 0.62, // 20% smaller emojis
-        opacity: 1,
-        delay: i * 25,
-      })
-    }
-    setParticles(p)
-  }, [isMobile, emojiSet])
-
-  // Animate particles (only on desktop)
-  useEffect(() => {
-    if (isMobile || particles.length === 0) return
-    let elapsed = 0
-    const interval = setInterval(() => {
-      elapsed += 16
-      setParticles((prev) =>
-        prev.map((p) => {
-          if (elapsed < p.delay) return p
-          return {
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.3, // Gravity
-            rotation: p.rotation + p.rotationSpeed,
-            opacity: Math.max(0, p.opacity - 0.017), // 40% shorter duration
-          }
-        })
-      )
-    }, 16)
-
-    const timeout = setTimeout(() => {
-      clearInterval(interval)
-      onComplete()
-    }, 1404) // 40% shorter duration
-
-    return () => {
-      clearInterval(interval)
-      clearTimeout(timeout)
-    }
-  }, [isMobile, particles.length, onComplete])
-
-  // Don't render anything on mobile
-  if (isMobile) return null
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50">
-      {particles.map((p) => (
-        <div
-          key={p.id}
-          className="absolute"
-          style={{
-            left: originX + p.x,
-            top: originY + p.y,
-            transform: `rotate(${p.rotation}deg) scale(${p.scale})`,
-            opacity: p.opacity,
-          }}
-        >
-          {p.type === "dot" ? (
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
-          ) : (
-            <span className="text-lg">{p.content}</span>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-const teamMembers = [
-  { name: "Bertrand", role: "Founder", email: "bertrand.galas@edu.escp.eu", avatar: "/team/bertrand.png" },
-  { name: "Amelie", role: "Founder", email: "amelie.lyon@edu.escp.eu", avatar: "/team/amelie.png" },
-  { name: "Antoine", role: "Founder", email: "antoine.duchene@edu.escp.eu", avatar: "/team/antoine.png" },
-  { name: "ICP Team", role: "Anyone", email: "renew@icpteam.eu", avatar: "/team/icp-team.png" },
-]
 
 const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin")
+  const [mode, setMode] = useState<"signin" | "request">("signin")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
+  const [role, setRole] = useState<"repreneur" | "seller" | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<string | null>(null)
+  const [requestSubmitted, setRequestSubmitted] = useState(false)
 
-  // Confetti state
-  const [confettiKey, setConfettiKey] = useState(0)
-  const [confetti, setConfetti] = useState<{ x: number; y: number; emojis?: string[] } | null>(null)
-
-  // Logo animation state (copied from sidebar)
+  // Logo animation state
   const [isTouchActive, setIsTouchActive] = useState(false)
   const [isHovering, setIsHovering] = useState(false)
   const [emojiIndex, setEmojiIndex] = useState(0)
@@ -188,9 +30,6 @@ export default function LoginPage() {
   const [supportsHover, setSupportsHover] = useState(false)
 
   const isAnimating = isTouchActive || isHovering
-
-  // Note: Middleware handles redirecting logged-in users to /dashboard
-  // No need for client-side session check here
 
   // Detect hover capability on mount
   useEffect(() => {
@@ -227,9 +66,8 @@ export default function LoginPage() {
   }
 
   // Handle mouse hover - ONLY on devices that support hover (desktop)
-  // On mobile, synthetic mouse events fire after touch, so we must guard
   const handleMouseEnter = () => {
-    if (!supportsHover) return // Ignore synthetic mouse events on mobile
+    if (!supportsHover) return
     setIsHovering(true)
   }
   const handleMouseLeave = () => {
@@ -242,28 +80,21 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
 
-    console.log("[Login] Starting login for:", email)
-
     try {
       const result = await signIn.email({
         email,
         password,
       })
 
-      console.log("[Login] Result:", result)
-
       if (result.error) {
-        console.log("[Login] Error:", result.error)
         setError(result.error.message || "Invalid email or password")
         setLoading(false)
         return
       }
 
       if (result.data) {
-        console.log("[Login] Success, redirecting to dashboard...")
         window.location.href = "/dashboard"
       } else {
-        console.log("[Login] No data returned")
         setError("Login succeeded but no session was created. Please try again.")
         setLoading(false)
       }
@@ -274,68 +105,46 @@ export default function LoginPage() {
     }
   }
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setLoading(true)
 
     if (!name.trim()) {
-      setError("Please enter your name")
-      setLoading(false)
+      setError("Please enter your name.")
+      return
+    }
+    if (!email.trim()) {
+      setError("Please enter your email.")
+      return
+    }
+    if (!role) {
+      setError("Please select your role.")
       return
     }
 
-    console.log("[Signup] Starting signup for:", email)
+    setLoading(true)
 
     try {
-      const result = await signUp.email({
-        email,
-        password,
-        name: name.trim(),
-      })
+      const result = await submitWaitlistRequest(name.trim(), email.trim(), role)
 
-      console.log("[Signup] Result:", result)
-
-      if (result.error) {
-        console.log("[Signup] Error:", result.error)
-        setError(result.error.message || "Failed to create account")
-        setLoading(false)
-        return
-      }
-
-      if (result.data) {
-        console.log("[Signup] Success, redirecting to dashboard...")
-        window.location.href = "/dashboard"
+      if (result.success) {
+        setRequestSubmitted(true)
       } else {
-        console.log("[Signup] No data returned")
-        setError("Account created but sign in failed. Please try signing in.")
-        setMode("signin")
-        setLoading(false)
+        setError(result.error)
       }
     } catch (err: any) {
-      console.error("[Signup] Exception:", err)
-      setError(err?.message || "An unexpected error occurred")
+      console.error("[RequestAccess] Exception:", err)
+      setError("Something went wrong. Please try again.")
+    } finally {
       setLoading(false)
     }
   }
 
-  const selectUser = useCallback((e: React.MouseEvent, member: (typeof teamMembers)[0]) => {
-    // Trigger confetti from button center
-    const rect = (e.target as HTMLElement).closest("button")?.getBoundingClientRect()
-    if (rect) {
-      setConfettiKey((prev) => prev + 1)
-      // Amelie gets roses 🌹
-      const customEmojis = member.name === "Amelie" ? ["🌹"] : undefined
-      setConfetti({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-        emojis: customEmojis,
-      })
-    }
-    setSelectedUser(member.email)
-    setEmail(member.email)
-    setPassword("Wave2025!")
-  }, [])
+  const switchMode = (newMode: "signin" | "request") => {
+    setMode(newMode)
+    setError(null)
+    setRequestSubmitted(false)
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -383,7 +192,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Status indicator - desktop only (moved to bottom of form on mobile) */}
+        {/* Status indicator - desktop only */}
         <div className="relative z-10 items-center gap-2 text-white/40 text-sm hidden lg:flex">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -396,180 +205,221 @@ export default function LoginPage() {
       {/* Right side - Light */}
       <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-8 lg:p-12">
         <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {mode === "signin" ? "Sign in" : "Create account"}
-            </h1>
-            <p className="text-gray-500">
-              {mode === "signin" ? "Choose your account to continue" : "Enter your details to get started"}
-            </p>
-          </div>
-
-          {/* Quick access - Only show in signin mode */}
-          {mode === "signin" && (
+          {mode === "signin" ? (
             <>
-              <div className="mb-6">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <p className="text-sm font-medium text-gray-700">Quick access</p>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors">
-                        <Info className="h-3.5 w-3.5 text-gray-400 cursor-help" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" className="max-w-xs p-3">
-                      <p className="text-sm">
-                        Temporary feature to speed up testing. Credentials will be provided to all users and this section will be removed once live.
-                      </p>
-                    </PopoverContent>
-                  </Popover>
+              {/* Sign In Header */}
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign in</h1>
+                <p className="text-gray-500">Enter your credentials to continue</p>
+              </div>
+
+              {/* Sign In Form */}
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-gray-700">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
-                <div className="grid grid-cols-4 gap-3">
-                  {teamMembers.map((member) => (
-                    <button
-                      key={member.email}
-                      type="button"
-                      onClick={(e) => selectUser(e, member)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105 ${
-                        selectedUser === member.email
-                          ? "bg-blue-50 ring-2 ring-blue-500"
-                          : "bg-gray-50 hover:bg-gray-100"
-                      }`}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-gray-700">
+                      Password
+                    </Label>
+                    <a
+                      href="/auth/forgot-password"
+                      className="text-sm text-blue-500 hover:text-blue-600"
                     >
-                      <Image
-                        src={member.avatar}
-                        alt={member.name}
-                        width={56}
-                        height={56}
-                        className="rounded-full object-cover"
-                      />
-                      <div className="text-center">
-                        <p className="font-medium text-gray-900 text-sm truncate w-full">{member.name}</p>
-                        <p className="text-xs text-gray-500 truncate w-full">{member.role}</p>
-                      </div>
-                    </button>
-                  ))}
+                      Forgot password?
+                    </a>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
-              </div>
 
-              {/* Divider */}
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-4 text-gray-400 tracking-wider">or continue with email</span>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Auth form */}
-          <form onSubmit={mode === "signin" ? handleLogin : handleSignup} className="space-y-4">
-            {/* Name field - only for signup */}
-            {mode === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-700">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-gray-700">
-                  Password
-                </Label>
-                {mode === "signin" && (
-                  <a
-                    href="/auth/forgot-password"
-                    className="text-sm text-blue-500 hover:text-blue-600"
-                  >
-                    Forgot password?
-                  </a>
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder={mode === "signup" ? "Min 8 characters" : ""}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
+                  disabled={loading}
+                >
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
+              </form>
 
-            <Button
-              type="submit"
-              className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
-              disabled={loading}
-            >
-              {loading
-                ? (mode === "signin" ? "Signing in..." : "Creating account...")
-                : (mode === "signin" ? "Sign In" : "Create Account")}
-            </Button>
-          </form>
-
-          {/* Toggle between signin and signup */}
-          <p className="text-center text-sm text-gray-500 mt-6">
-            {mode === "signin" ? (
-              <>
-                Don't have an account?{" "}
+              {/* Toggle to Request Access */}
+              <p className="text-center text-sm text-gray-500 mt-6">
+                Don&apos;t have access?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signup"); setError(null); setSelectedUser(null) }}
+                  onClick={() => switchMode("request")}
                   className="text-blue-500 hover:text-blue-600 font-medium"
                 >
-                  Sign up
+                  Request it
                 </button>
-              </>
-            ) : (
-              <>
+              </p>
+            </>
+          ) : requestSubmitted ? (
+            /* Confirmation Screen */
+            <div className="text-center py-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg
+                  className="w-8 h-8 text-emerald-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-3">You&apos;re on the list!</h1>
+              <p className="text-gray-500 leading-relaxed mb-8">
+                We&apos;ve saved your request and will notify you by email as soon as the platform
+                is officially open. Stay tuned!
+              </p>
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                className="text-blue-500 hover:text-blue-600 font-medium text-sm"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Request Access Header */}
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Request access</h1>
+                <p className="text-gray-500">Tell us a bit about yourself and we&apos;ll be in touch</p>
+              </div>
+
+              {/* Request Access Form */}
+              <form onSubmit={handleRequestAccess} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="req-name" className="text-gray-700">
+                    Name
+                  </Label>
+                  <Input
+                    id="req-name"
+                    type="text"
+                    placeholder="Your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="req-email" className="text-gray-700">
+                    Email
+                  </Label>
+                  <Input
+                    id="req-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Role Selector */}
+                <div className="space-y-2">
+                  <Label className="text-gray-700">I am a...</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setRole("repreneur")}
+                      disabled={loading}
+                      className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                        role === "repreneur"
+                          ? "border-blue-500 bg-blue-50 shadow-sm"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="text-2xl">🔑</span>
+                      <span className={`text-sm font-medium ${role === "repreneur" ? "text-blue-700" : "text-gray-700"}`}>
+                        Repreneur
+                      </span>
+                      <span className={`text-xs ${role === "repreneur" ? "text-blue-500" : "text-gray-400"}`}>
+                        Acquiring a business
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole("seller")}
+                      disabled={loading}
+                      className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                        role === "seller"
+                          ? "border-blue-500 bg-blue-50 shadow-sm"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="text-2xl">🏪</span>
+                      <span className={`text-sm font-medium ${role === "seller" ? "text-blue-700" : "text-gray-700"}`}>
+                        Seller
+                      </span>
+                      <span className={`text-xs ${role === "seller" ? "text-blue-500" : "text-gray-400"}`}>
+                        Selling a business
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
+                  disabled={loading}
+                >
+                  {loading ? "Submitting..." : "Request Access"}
+                </Button>
+              </form>
+
+              {/* Toggle to Sign In */}
+              <p className="text-center text-sm text-gray-500 mt-6">
                 Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signin"); setError(null) }}
+                  onClick={() => switchMode("signin")}
                   className="text-blue-500 hover:text-blue-600 font-medium"
                 >
                   Sign in
                 </button>
-              </>
-            )}
-          </p>
+              </p>
+            </>
+          )}
 
           {/* Status indicator - mobile only (at bottom of form) */}
           <div className="flex lg:hidden items-center justify-center gap-2 text-gray-400 text-sm mt-8">
@@ -581,17 +431,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Confetti animation */}
-      {confetti && (
-        <ConfettiFountain
-          key={confettiKey}
-          originX={confetti.x}
-          originY={confetti.y}
-          emojis={confetti.emojis}
-          onComplete={() => setConfetti(null)}
-        />
-      )}
     </div>
   )
 }
