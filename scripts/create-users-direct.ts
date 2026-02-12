@@ -1,10 +1,10 @@
 /**
  * Create users directly in the database (bypasses rate limiting)
- * Run with: npx tsx scripts/create-users-direct.ts
+ * Run with: PASSWORD=YourPassword npx tsx scripts/create-users-direct.ts
  */
 
-import { Pool } from "pg"
 import { createHash, randomBytes } from "crypto"
+import { Pool } from "pg"
 
 const USERS = [
   { email: "alexandre.devulder@sony.com", name: "Alexandre" },
@@ -14,17 +14,23 @@ const USERS = [
   { email: "piera.gallo@edu.escp.eu", name: "Piera" },
 ]
 
-const PASSWORD = "Wave2025!"
-
 // Simple bcrypt-like hash for Better Auth (uses scrypt internally)
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex")
   const hash = createHash("sha256").update(password + salt).digest("hex")
-  // Better Auth format: algorithm:hash:salt
   return `sha256:${hash}:${salt}`
 }
 
 async function createUsers() {
+  const password = process.env.PASSWORD || process.argv[2]
+
+  if (!password) {
+    console.error("Error: No password provided.")
+    console.error("Usage: PASSWORD=YourPassword npx tsx scripts/create-users-direct.ts")
+    console.error("   or: npx tsx scripts/create-users-direct.ts YourPassword")
+    process.exit(1)
+  }
+
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -47,7 +53,7 @@ async function createUsers() {
 
       // Create user
       const id = randomBytes(16).toString("hex")
-      const hashedPassword = await hashPassword(PASSWORD)
+      const hashedPassword = await hashPassword(password)
 
       await pool.query(
         `INSERT INTO "user" (id, email, name, "emailVerified", "createdAt", "updatedAt")
@@ -69,7 +75,7 @@ async function createUsers() {
   }
 
   await pool.end()
-  console.log("\nDone! New users can log in with: Wave2025!")
+  console.log("\nDone!")
 }
 
 createUsers().catch(console.error)

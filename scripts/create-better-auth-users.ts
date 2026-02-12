@@ -2,70 +2,32 @@
  * Script to create users in Better Auth
  * Run with: npx tsx scripts/create-better-auth-users.ts
  *
- * This creates the same users that existed in Supabase Auth
+ * Usage: Set PASSWORD env var or pass as argument
+ *   PASSWORD=MySecurePass123 npx tsx scripts/create-better-auth-users.ts
  */
 
-import { Pool } from "pg"
-import { randomUUID } from "crypto"
-
-// Environment variables loaded via shell export
-
 const USERS = [
-  {
-    email: "bertrand.galas@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Bertrand",
-  },
-  {
-    email: "amelie.lyon@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Amélie",
-  },
-  {
-    email: "antoine.duchene@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Antoine",
-  },
-  {
-    email: "alexandre.devulder@sony.com",
-    password: "Wave2025!",
-    name: "Alexandre",
-  },
-  {
-    email: "Gabriele.Betti@outlook.com",
-    password: "Wave2025!",
-    name: "Gabriele",
-  },
-  {
-    email: "ignacio.campos@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Ignacio",
-  },
-  {
-    email: "ivanpaudice@icloud.com",
-    password: "Wave2025!",
-    name: "Ivan",
-  },
-  {
-    email: "piera.gallo@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Piera",
-  },
-  {
-    email: "renew@icpteam.eu",
-    password: "Wave2025!",
-    name: "ICP Team",
-  },
+  { email: "bertrand.galas@edu.escp.eu", name: "Bertrand" },
+  { email: "amelie.lyon@edu.escp.eu", name: "Amélie" },
+  { email: "antoine.duchene@edu.escp.eu", name: "Antoine" },
+  { email: "alexandre.devulder@sony.com", name: "Alexandre" },
+  { email: "Gabriele.Betti@outlook.com", name: "Gabriele" },
+  { email: "ignacio.campos@edu.escp.eu", name: "Ignacio" },
+  { email: "ivanpaudice@icloud.com", name: "Ivan" },
+  { email: "piera.gallo@edu.escp.eu", name: "Piera" },
+  { email: "renew@icpteam.eu", name: "ICP Team" },
 ]
 
-// Simple password hashing (Better Auth uses bcrypt-compatible hashing)
-async function hashPassword(password: string): Promise<string> {
-  // Better Auth expects bcrypt format, we'll use the built-in API endpoint instead
-  // For now, let's create users via the API
-  return password
-}
-
 async function createUsers() {
+  const password = process.env.PASSWORD || process.argv[2]
+
+  if (!password) {
+    console.error("Error: No password provided.")
+    console.error("Usage: PASSWORD=YourPassword npx tsx scripts/create-better-auth-users.ts")
+    console.error("   or: npx tsx scripts/create-better-auth-users.ts YourPassword")
+    process.exit(1)
+  }
+
   console.log("Creating users in Better Auth via API...\n")
   console.log("Note: Make sure the app is running locally (npm run dev)\n")
 
@@ -81,7 +43,7 @@ async function createUsers() {
         },
         body: JSON.stringify({
           email: user.email,
-          password: user.password,
+          password,
           name: user.name,
         }),
       })
@@ -103,11 +65,7 @@ async function createUsers() {
     }
   }
 
-  console.log("\nDone! Users can now log in with password: Wave2025!")
-  console.log("\nQuick access buttons on login page:")
-  USERS.forEach((u) => {
-    console.log(`  - ${u.name}: ${u.email}`)
-  })
+  console.log("\nDone!")
 }
 
 createUsers().catch(console.error)

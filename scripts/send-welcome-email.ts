@@ -20,7 +20,7 @@ import { FOUNDERS_TEAM_2_0 } from "../lib/distribution-lists"
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const PLATFORM_URL = "https://app.re-new.team"
-const PASSWORD = "Wave2025!"
+const PASSWORD = process.env.WELCOME_EMAIL_PASSWORD || "SET_PASSWORD_VIA_ENV"
 
 function createWelcomeEmail(name: string, email: string) {
   return `

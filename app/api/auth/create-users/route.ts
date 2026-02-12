@@ -5,32 +5,9 @@ import { auth } from "@/lib/auth"
  * API route to create initial users in Better Auth
  * Call this once after deployment: POST /api/auth/create-users
  *
- * This is protected - only works if no users exist yet OR
- * requires a secret header in production
+ * Requires passwords to be passed in the request body.
+ * Protected by admin secret header in production.
  */
-
-const INITIAL_USERS = [
-  {
-    email: "bertrand.galas@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Bertrand",
-  },
-  {
-    email: "amelie.lyon@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Amélie",
-  },
-  {
-    email: "antoine.duchene@edu.escp.eu",
-    password: "Wave2025!",
-    name: "Antoine",
-  },
-  {
-    email: "renew@icpteam.eu",
-    password: "Wave2025!",
-    name: "ICP Team",
-  },
-]
 
 export async function POST(request: Request) {
   try {
@@ -45,9 +22,24 @@ export async function POST(request: Request) {
       )
     }
 
+    const body = await request.json()
+    const users = body.users as Array<{ email: string; password: string; name: string }>
+
+    if (!users || !Array.isArray(users) || users.length === 0) {
+      return NextResponse.json(
+        { error: "Request body must include a 'users' array with email, password, and name fields." },
+        { status: 400 }
+      )
+    }
+
     const results: Array<{ email: string; status: string; error?: string }> = []
 
-    for (const user of INITIAL_USERS) {
+    for (const user of users) {
+      if (!user.email || !user.password || !user.name) {
+        results.push({ email: user.email || "unknown", status: "error", error: "Missing required fields" })
+        continue
+      }
+
       try {
         const result = await auth.api.signUpEmail({
           body: {
@@ -86,7 +78,7 @@ export async function POST(request: Request) {
         created,
         already_exists: existing,
         errors,
-        total: INITIAL_USERS.length,
+        total: users.length,
       },
       results,
     })
