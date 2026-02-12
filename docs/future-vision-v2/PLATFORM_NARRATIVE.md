@@ -297,7 +297,7 @@ Five streams, phased over time. I won't suggest specific pricing because that's 
 
 ---
 
-## Brand Pyramid
+# Brand Pyramid
 
 As an exercise, I tried mapping where Re-New sits as a brand if this vision were realized. This is my reading of it. You'll know better than me whether it rings true.
 
