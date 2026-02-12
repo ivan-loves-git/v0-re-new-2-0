@@ -153,7 +153,8 @@ export async function updateRepreneur(id: string, formData: FormData) {
     sector_preferences: sector_preferences.length > 0 ? sector_preferences : null,
     target_location: target_location.length > 0 ? target_location : null,
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || null,
-    lifecycle_status: formData.get("lifecycle_status") as LifecycleStatus,
+    // lifecycle_status intentionally excluded — profile edits must never overwrite
+    // status set by dedicated actions (assignOffer, pipeline drag, setTier2, etc.)
     persona: (formData.get("persona") as string) || null,
     source: (formData.get("source") as string) || null,
     // GDPR Consent
@@ -279,7 +280,7 @@ export async function deleteRepreneur(id: string) {
 
 /**
  * Set Tier 2 star rating (1-5) for a repreneur
- * This automatically sets lifecycle_status to "qualified" (action-driven status)
+ * Only upgrades lead → qualified; won't downgrade client → qualified
  */
 export async function setTier2Stars(id: string, stars: number) {
   const supabase = createAdminClient()
@@ -288,13 +289,23 @@ export async function setTier2Stars(id: string, stars: number) {
     throw new Error("Star rating must be between 1 and 5")
   }
 
-  // Setting Tier 2 stars automatically qualifies the repreneur
+  // Only upgrade lead → qualified, never downgrade client → qualified
+  const { data: current } = await supabase
+    .from("repreneurs")
+    .select("lifecycle_status")
+    .eq("id", id)
+    .single()
+
+  const shouldQualify = current?.lifecycle_status === "lead"
+
+  const updates: Record<string, unknown> = { tier2_stars: stars }
+  if (shouldQualify) {
+    updates.lifecycle_status = "qualified"
+  }
+
   const { error } = await supabase
     .from("repreneurs")
-    .update({
-      tier2_stars: stars,
-      lifecycle_status: "qualified",
-    })
+    .update(updates)
     .eq("id", id)
 
   if (error) {
@@ -827,7 +838,7 @@ export async function updateTier1Answers(
 
 /**
  * Set Tier 2 competency dimensions (6 dimensions with weighted average)
- * This automatically sets lifecycle_status to "qualified" (action-driven status)
+ * Only upgrades lead → qualified; won't downgrade client → qualified
  */
 export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Dimensions>) {
   const supabase = createAdminClient()
@@ -838,18 +849,28 @@ export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Di
   // Convert dimension keys to database column names
   const dbColumns = dimensionsToDbColumns(dimensions)
 
-  // Setting Tier 2 dimensions automatically qualifies the repreneur
-  // Note: Removed auth.getUser() call for 50-150ms performance gain
-  // RLS policies already verify authentication
+  // Only upgrade lead → qualified, never downgrade client → qualified
+  const { data: current } = await supabase
+    .from("repreneurs")
+    .select("lifecycle_status")
+    .eq("id", id)
+    .single()
+
+  const shouldQualify = current?.lifecycle_status === "lead"
+
+  const updates: Record<string, unknown> = {
+    ...dbColumns,
+    tier2_overall: overall,
+    tier2_rated_at: new Date().toISOString(),
+    tier2_stars: overall ? Math.round(overall) : null,
+  }
+  if (shouldQualify) {
+    updates.lifecycle_status = "qualified"
+  }
+
   const { error } = await supabase
     .from("repreneurs")
-    .update({
-      ...dbColumns,
-      tier2_overall: overall,
-      tier2_rated_at: new Date().toISOString(),
-      tier2_stars: overall ? Math.round(overall) : null,
-      lifecycle_status: "qualified",
-    })
+    .update(updates)
     .eq("id", id)
 
   if (error) {
