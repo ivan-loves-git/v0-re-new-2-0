@@ -69,46 +69,47 @@ function createEmailV1(name: string) {
     </div>
 
     <p class="greeting">Hey ${name} 👋</p>
-    <p class="intro">I've learned a new trick. You know how I send these updates? Now I can write emails for you too. Pick a repreneur, choose a template, and I'll draft something personalized. Magic? No, just me getting better at my job.</p>
+    <p class="intro">Quick one from me. I've been tightening the doors and rolling out the welcome mat at the same time. The login page got a proper makeover, and we now have a waitlist for when people start knocking.</p>
 
     <p class="divider">•••</p>
 
-    <p class="version">v0.9.0</p>
-    <h1>I can write your emails now. Plus: smarter pipeline sorting.</h1>
+    <p class="version">v0.9.1 – v0.9.2</p>
+    <h1>The front door is secure. And there's a queue forming outside.</h1>
 
     <div class="updates">
       <div class="update">
-        <p class="update-title">🤖 AI email generator</p>
-        <p class="update-desc">Select a repreneur, pick a template, hit generate. I'll draft a personalized email you can review and send. Find it in the Emails section.</p>
+        <p class="update-title">🔒 Login page secured</p>
+        <p class="update-desc">Quick-access buttons removed. Login now requires real credentials only. No more shortcuts to the dashboard.</p>
+        <p class="tags">
+          <span class="tag tag-security">security</span>
+        </p>
+      </div>
+      <div class="update">
+        <p class="update-title">✨ Request Access waitlist</p>
+        <p class="update-desc">Sign Up replaced with Request Access. Visitors pick their role (Repreneur or Seller) and join the waitlist. No account created until you approve.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">🌐 New domain live</p>
-        <p class="update-desc">Wave now lives at app.re-new.team. Update your bookmarks!</p>
+        <p class="update-title">🐛 Notes bug squashed</p>
+        <p class="update-desc">Notes and activities no longer vanish after saving. Data persists correctly across all profiles now.</p>
+        <p class="tags">
+          <span class="tag tag-fix">fix</span>
+        </p>
+      </div>
+      <div class="update">
+        <p class="update-title">📋 Clipboard tool</p>
+        <p class="update-desc">New cross-device copy-paste tool. Grab formatted profile data and share it between devices easily.</p>
         <p class="tags">
           <span class="tag tag-feature">feature</span>
         </p>
       </div>
       <div class="update">
-        <p class="update-title">📊 Leads auto-sorted by potential</p>
-        <p class="update-desc">Pipeline now shows highest-scoring candidates first. No manual sorting needed.</p>
+        <p class="update-title">🚀 Dashboard stability</p>
+        <p class="update-desc">Fixed crash on Declined profiles. App loads ~250KB lighter. Public intake form cleaned up for real users.</p>
         <p class="tags">
-          <span class="tag tag-feature">feature</span>
-        </p>
-      </div>
-      <div class="update">
-        <p class="update-title">🚦 Declined vs Rejected</p>
-        <p class="update-desc">New status for internal decisions. "Declined" = you decided not to proceed. "Rejected" = you sent them a rejection email.</p>
-        <p class="tags">
-          <span class="tag tag-feature">feature</span>
-        </p>
-      </div>
-      <div class="update">
-        <p class="update-title">🧹 Bug fixes</p>
-        <p class="update-desc">Profile data now displays correctly. Dead navigation links removed. Various stability improvements.</p>
-        <p class="tags">
+          <span class="tag tag-perf">perf</span>
           <span class="tag tag-fix">fix</span>
         </p>
       </div>
@@ -119,7 +120,7 @@ function createEmailV1(name: string) {
     <p class="divider">•••</p>
 
     <div class="signature">
-      <p class="sig-line">Now if you'll excuse me, I have notifications to notify.</p>
+      <p class="sig-line">That's all for now. Try not to miss me too much.</p>
       <p class="sig-name">Wavy 🌊</p>
       <p class="sig-title">Chief Notification Officer</p>
       <p class="sig-team">Re-New team</p>
@@ -291,7 +292,7 @@ async function sendRoadmapEmail(to: string, name: string, version: number = 1) {
     const { data, error } = await resend.emails.send({
       from: "Wavy 🌊 <notifications@news.re-new.team>",
       to: [to],
-      subject: `Wave product update: v0.9.0`,
+      subject: `Wave product update: v0.9.1 – v0.9.2 🌊`,
       html: createEmailHtml(name, version),
     })
 

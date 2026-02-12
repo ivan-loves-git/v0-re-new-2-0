@@ -8,6 +8,39 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Feb 12, 2026",
+    version: "0.9.2",
+    title: "Login Security & Waitlist System",
+    isCompleted: true,
+    events: [
+      {
+        title: "Secure login page",
+        type: "feature",
+        description: "Removed quick-access buttons. Login now requires real credentials only.",
+      },
+      {
+        title: "Request Access waitlist",
+        type: "feature",
+        description: "New form for repreneurs and sellers to request platform access. Entries stored for review.",
+      },
+      {
+        title: "Role selection at signup",
+        type: "feature",
+        description: "Users choose Repreneur or Seller when requesting access, so we know who's knocking.",
+      },
+      {
+        title: "Notes and activities bug fixed",
+        type: "fix",
+        description: "Notes no longer disappear after saving. Data persists correctly on all profiles.",
+      },
+      {
+        title: "Clipboard tool for cross-device sharing",
+        type: "feature",
+        description: "New tool to copy formatted content between devices. Useful for sharing profile data.",
+      },
+    ],
+  },
+  {
     period: "Feb 4, 2026",
     version: "0.9.1",
     title: "Dashboard Fix & Performance Optimization",
@@ -227,7 +260,7 @@ const roadmapEvents = [
       {
         title: "Email/password auth preserved",
         type: "feature",
-        description: "Same login flow: email + password. Quick access buttons still work with same team members. Password: Wave2025!",
+        description: "Same login flow: email + password. Users sign in with their individual credentials.",
       },
       {
         title: "User creation API",
