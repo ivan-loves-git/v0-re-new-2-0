@@ -33,11 +33,6 @@ const roadmapEvents = [
         type: "fix",
         description: "Notes no longer disappear after saving. Data persists correctly on all profiles.",
       },
-      {
-        title: "Clipboard tool for cross-device sharing",
-        type: "feature",
-        description: "New tool to copy formatted content between devices. Useful for sharing profile data.",
-      },
     ],
   },
   {

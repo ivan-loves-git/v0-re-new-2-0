@@ -69,12 +69,15 @@ function createEmailV1(name: string) {
     </div>
 
     <p class="greeting">Hey ${name} 👋</p>
-    <p class="intro">Quick one from me. I've been tightening the doors and rolling out the welcome mat at the same time. The login page got a proper makeover, and we now have a waitlist for when people start knocking.</p>
+    <p class="intro"><strong>TLDR: hope you've got your credentials written down somewhere.</strong></p>
+    <p class="intro">Remember those login buttons with the confetti and, oh yes, your credentials displayed right on the screen? They were one deploy away from going live. With real users on the platform.</p>
+    <p class="intro">I'll let you pause on that.</p>
+    <p class="intro">All fixed. Login now works the way a front door should — closed. And to redeem myself, I crafted a Request Access page where repreneurs and sellers can start requesting access and join a waitlist you control. I'm just adorable, aren't I?</p>
 
     <p class="divider">•••</p>
 
     <p class="version">v0.9.1 – v0.9.2</p>
-    <h1>The front door is secure. And there's a queue forming outside.</h1>
+    <h1>I almost left the keys under the doormat. Let's not speak of it again.</h1>
 
     <div class="updates">
       <div class="update">
@@ -95,21 +98,6 @@ function createEmailV1(name: string) {
         <p class="update-title">🐛 Notes bug squashed</p>
         <p class="update-desc">Notes and activities no longer vanish after saving. Data persists correctly across all profiles now.</p>
         <p class="tags">
-          <span class="tag tag-fix">fix</span>
-        </p>
-      </div>
-      <div class="update">
-        <p class="update-title">📋 Clipboard tool</p>
-        <p class="update-desc">New cross-device copy-paste tool. Grab formatted profile data and share it between devices easily.</p>
-        <p class="tags">
-          <span class="tag tag-feature">feature</span>
-        </p>
-      </div>
-      <div class="update">
-        <p class="update-title">🚀 Dashboard stability</p>
-        <p class="update-desc">Fixed crash on Declined profiles. App loads ~250KB lighter. Public intake form cleaned up for real users.</p>
-        <p class="tags">
-          <span class="tag tag-perf">perf</span>
           <span class="tag tag-fix">fix</span>
         </p>
       </div>
