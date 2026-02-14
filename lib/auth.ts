@@ -88,10 +88,18 @@ export const auth = betterAuth({
   },
 
   // Trusted origins for CORS
-  trustedOrigins: [
-    process.env.BETTER_AUTH_URL || "http://localhost:3000",
-    "https://app.re-new.team",
-  ],
+  trustedOrigins: (origin) => {
+    const trusted = [
+      process.env.BETTER_AUTH_URL || "http://localhost:3000",
+      "https://app.re-new.team",
+    ]
+    if (trusted.includes(origin)) return true
+    // Allow Vercel preview deployments and V0 app builder
+    if (origin.endsWith(".vercel.app")) return true
+    if (origin.endsWith(".v0.dev") || origin === "https://v0.dev") return true
+    if (origin.endsWith(".v0.app") || origin === "https://v0.app") return true
+    return false
+  },
 })
 
 // Export types for client-side usage
