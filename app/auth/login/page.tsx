@@ -180,7 +180,7 @@ export default function LoginPage() {
               alt="Wave - the repreneur CRM"
               width={216}
               height={72}
-              className={`h-auto logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
+              className={`h-auto w-auto logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
               style={{ filter: "brightness(0) invert(1)" }}
               priority
             />

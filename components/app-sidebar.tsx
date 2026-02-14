@@ -177,7 +177,7 @@ export function AppSidebar({
                 alt="Wave - the repreneur CRM"
                 width={96}
                 height={32}
-                className={`h-auto transition-transform logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
+                className={`h-auto w-auto transition-transform logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
                 priority
               />
             </SidebarMenuButton>
