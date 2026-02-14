@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { MoreVertical, Ban, Undo, XCircle, Trash2 } from "lucide-react"
 import { rejectRepreneur, unrejectRepreneur, declineRepreneur, undeclineRepreneur, deleteRepreneur } from "@/lib/actions/repreneurs"
 import { Button } from "@/components/ui/button"
@@ -88,9 +89,13 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
     try {
       await deleteRepreneur(repreneurId)
     } catch (error) {
-      console.error("Failed to delete repreneur:", error)
-    } finally {
-      setIsLoading(false)
+      // deleteRepreneur calls redirect() which throws NEXT_REDIRECT - that's expected
+      const message = error instanceof Error ? error.message : ""
+      if (!message.includes("NEXT_REDIRECT")) {
+        console.error("Failed to delete repreneur:", error)
+        toast.error("Failed to delete repreneur. Please try again.")
+        setIsLoading(false)
+      }
     }
   }
 

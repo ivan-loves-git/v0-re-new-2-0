@@ -17,6 +17,8 @@ interface TopRepreneur {
   last_name: string
   lifecycle_status: string
   tier1_score: number | null
+  who_score?: number | null
+  when_score?: number | null
   created_at: string
 }
 
@@ -74,10 +76,9 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
     return "text-gray-600 bg-gray-50"
   }
 
-  // Get WHO and WHEN scores (for now, use tier1_score as WHO, WHEN not yet calculated)
   const getScores = (repreneur: TopRepreneur) => {
-    const who = repreneur.tier1_score ?? 0
-    const when = 0 // TODO: Add when_score field
+    const who = repreneur.who_score ?? repreneur.tier1_score ?? 0
+    const when = repreneur.when_score ?? 0
     return { who, when, total: who + when }
   }
 

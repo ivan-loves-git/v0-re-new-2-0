@@ -131,6 +131,8 @@ async function StatsAndTiersRow() {
       last_name: r.last_name,
       lifecycle_status: r.lifecycle_status,
       tier1_score: calculateOverallScore(r),
+      who_score: r.who_score ?? null,
+      when_score: r.when_score ?? null,
       created_at: r.created_at,
     }))
     .filter(c => c.tier1_score > 0)
