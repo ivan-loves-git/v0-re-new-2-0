@@ -1,15 +1,18 @@
 import { execSync } from 'child_process'
+import { existsSync } from 'fs'
 
 // Get git info at build time
 let gitCommitCount = '0'
 let gitCommitHash = 'dev'
 
 try {
-  gitCommitCount = execSync('git rev-list --count HEAD').toString().trim()
-  gitCommitHash = execSync('git rev-parse --short=7 HEAD').toString().trim()
+  // Only attempt git commands if we're in a git repository
+  if (existsSync('.git')) {
+    gitCommitCount = execSync('git rev-list --count HEAD').toString().trim()
+    gitCommitHash = execSync('git rev-parse --short=7 HEAD').toString().trim()
+  }
 } catch (e) {
   // Fallback for environments without git
-  console.warn('Could not get git info:', e.message)
 }
 
 /** @type {import('next').NextConfig} */
