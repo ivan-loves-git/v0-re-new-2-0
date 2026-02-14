@@ -40,7 +40,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        from: "Re-New <notifications@news.re-new.team>",
         to: user.email,
         subject: "Reset your password",
         html: `
