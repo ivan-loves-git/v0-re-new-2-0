@@ -101,6 +101,7 @@ export const auth = betterAuth({
 
   // Trusted origins for CORS
   trustedOrigins: (origin) => {
+    if (!origin) return true
     const trusted = [
       process.env.BETTER_AUTH_URL || "http://localhost:3000",
       "https://app.re-new.team",
