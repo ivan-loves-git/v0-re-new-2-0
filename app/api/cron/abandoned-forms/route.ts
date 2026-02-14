@@ -6,7 +6,7 @@ import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder
 // Vercel Cron: runs every hour
 // cron: 0 * * * *
 
-const ABANDONMENT_HOURS = 48 // Send reminder after 48 hours
+const ABANDONMENT_HOURS = 24 // Send reminder after 24 hours
 const MAX_REMINDERS_PER_REPRENEUR = 2
 
 export async function GET(request: Request) {
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     // Find abandoned forms:
     // - Not completed
-    // - Last activity more than 48 hours ago
+    // - Last activity more than 24 hours ago
     // - Have marketing consent (GDPR compliant)
     // - Haven't received max reminders
     const { data: abandonedForms, error } = await supabase

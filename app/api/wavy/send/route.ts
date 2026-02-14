@@ -8,6 +8,7 @@ interface SendRequest {
   subject: string
   body: string
   repreneurId?: string
+  testRecipient?: string
 }
 
 export async function POST(request: Request) {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
 
   try {
     const body: SendRequest = await request.json()
-    const { to, subject, body: emailBody, repreneurId } = body
+    const { to, subject, body: emailBody, repreneurId, testRecipient } = body
 
     // Validate required fields
     if (!to || !subject || !emailBody) {
@@ -37,9 +38,12 @@ export async function POST(request: Request) {
       )
     }
 
+    // Determine actual recipient (test mode overrides)
+    const actualRecipient = testRecipient || to
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(to)) {
+    if (!emailRegex.test(actualRecipient)) {
       return NextResponse.json(
         { error: "Invalid email address" },
         { status: 400 }
@@ -73,11 +77,16 @@ export async function POST(request: Request) {
 </html>
 `
 
+    // Prefix subject in test mode so recipient knows who it's for
+    const actualSubject = testRecipient
+      ? `[TEST pour ${to}] ${subject}`
+      : subject
+
     // Send email via Resend
     const { data, error } = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: [to],
-      subject,
+      to: [actualRecipient],
+      subject: actualSubject,
       html: htmlBody,
     })
 
@@ -89,8 +98,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Log the activity if we have a repreneur ID
-    if (repreneurId) {
+    // Log the activity if we have a repreneur ID (skip logging in test mode)
+    if (repreneurId && !testRecipient) {
       const supabase = createAdminClient()
 
       // Add an activity record

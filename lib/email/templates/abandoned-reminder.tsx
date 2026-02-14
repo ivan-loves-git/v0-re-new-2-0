@@ -13,25 +13,26 @@ export function AbandonedReminderEmail({ repreneur, metadata }: AbandonedReminde
   const totalSteps = metadata?.totalSteps || 6
 
   return (
-    <BaseLayout previewText={`${firstName}, finalisez votre inscription Re-New`}>
-      <Text style={heading}>{firstName}, votre projet vous attend</Text>
+    <BaseLayout previewText={`${firstName}, finalisez votre profil repreneur`}>
+      <Text style={heading}>Finalisez votre profil repreneur</Text>
 
       <Text style={paragraph}>
-        Nous avons remarqué que vous n&apos;avez pas terminé votre inscription
-        sur Re-New. Vous étiez à l&apos;étape {lastStep} sur {totalSteps}.
+        {firstName}, votre profil repreneur vous attend
       </Text>
 
       <Text style={paragraph}>
-        Ne laissez pas votre projet de reprise d&apos;entreprise en suspens !
+        Vous &ecirc;tes &agrave; l&apos;&eacute;tape {lastStep} sur {totalSteps}.
         Finalisez votre profil en quelques minutes pour :
       </Text>
 
       <Text style={paragraph}>
-        • Recevoir des opportunités personnalisées
+        &bull; &Eacute;valuer la solidit&eacute; de votre projet
         <br />
-        • Accéder à notre réseau d&apos;experts
+        &bull; Rejoindre un &eacute;cosyst&egrave;me de repreneurs
         <br />
-        • Bénéficier de notre accompagnement
+        &bull; Recevoir des opportunit&eacute;s personnalis&eacute;es
+        <br />
+        &bull; B&eacute;n&eacute;ficier d&apos;un accompagnement personnalis&eacute;
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
@@ -41,14 +42,14 @@ export function AbandonedReminderEmail({ repreneur, metadata }: AbandonedReminde
       </Section>
 
       <Text style={paragraph}>
-        Si vous avez des questions ou rencontrez des difficultés, répondez
-        simplement à cet email.
+        Si vous avez des questions, contactez-nous &agrave;{" "}
+        <Link href="mailto:contact@re-new.team">contact@re-new.team</Link>.
       </Text>
 
       <Text style={paragraph}>
-        À bientôt,
+        &Agrave; bient&ocirc;t,
         <br />
-        L&apos;équipe Re-New
+        L&apos;&eacute;quipe Re-New
       </Text>
     </BaseLayout>
   )

@@ -272,43 +272,43 @@ export async function sendManualEmail(
   switch (templateKey) {
     case "welcome":
       template = WelcomeEmail({ repreneur: emailData })
-      subject = "Welcome to Re-New!"
+      subject = "Bienvenue chez Re-New"
       break
     case "form_step_complete":
       template = FormStepCompleteEmail({ repreneur: emailData, metadata })
-      subject = "Your Re-New Progress"
+      subject = "Votre progression Re-New"
       break
     case "abandoned_reminder":
       template = AbandonedReminderEmail({ repreneur: emailData, metadata })
-      subject = "Complete Your Re-New Registration"
+      subject = "Finalisez votre profil repreneur"
       break
     case "thank_you":
       template = ThankYouEmail({ repreneur: emailData, metadata })
-      subject = "Thank You for Registering with Re-New!"
+      subject = "Merci pour votre inscription Re-New"
       break
     case "high_score_alert":
       template = HighScoreAlertEmail({ repreneur: emailData, metadata })
-      subject = "Your Re-New Profile Stands Out!"
+      subject = "Votre profil Re-New se distingue"
       break
     case "offer_received":
       template = OfferReceivedEmail({ repreneur: emailData, metadata })
-      subject = "New Offer from Re-New"
+      subject = "L'offre de Re-New adaptée à votre projet"
       break
     case "milestone_completed":
       template = MilestoneCompletedEmail({ repreneur: emailData, metadata })
-      subject = "Milestone Completed!"
+      subject = "Étape franchie !"
       break
     case "offer_accepted":
       template = OfferAcceptedEmail({ repreneur: emailData, metadata })
-      subject = "Offer Accepted"
+      subject = "Offre acceptée"
       break
     case "offer_activated":
       template = OfferActivatedEmail({ repreneur: emailData, metadata })
-      subject = "Your Engagement is Now Active!"
+      subject = "Votre accompagnement est actif"
       break
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
-      subject = "Update on Your Application"
+      subject = "Suite à la revue de votre dossier repreneur"
       break
     default:
       throw new Error(`Unknown template: ${templateKey}`)
@@ -371,43 +371,43 @@ export async function sendTestEmail(
   switch (templateKey) {
     case "welcome":
       template = WelcomeEmail({ repreneur: emailData })
-      subject = "[TEST] Welcome to Re-New!"
+      subject = "[TEST] Bienvenue chez Re-New"
       break
     case "form_step_complete":
       template = FormStepCompleteEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Your Re-New Progress"
+      subject = "[TEST] Votre progression Re-New"
       break
     case "abandoned_reminder":
       template = AbandonedReminderEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Complete Your Re-New Registration"
+      subject = "[TEST] Finalisez votre profil repreneur"
       break
     case "thank_you":
       template = ThankYouEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Thank You for Registering with Re-New!"
+      subject = "[TEST] Merci pour votre inscription Re-New"
       break
     case "high_score_alert":
       template = HighScoreAlertEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Your Re-New Profile Stands Out!"
+      subject = "[TEST] Votre profil Re-New se distingue"
       break
     case "offer_received":
       template = OfferReceivedEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] New Offer from Re-New"
+      subject = "[TEST] L'offre de Re-New adaptée à votre projet"
       break
     case "milestone_completed":
       template = MilestoneCompletedEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Milestone Completed!"
+      subject = "[TEST] Étape franchie !"
       break
     case "offer_accepted":
       template = OfferAcceptedEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Offer Accepted"
+      subject = "[TEST] Offre acceptée"
       break
     case "offer_activated":
       template = OfferActivatedEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Your Engagement is Now Active!"
+      subject = "[TEST] Votre accompagnement est actif"
       break
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
-      subject = "[TEST] Update on Your Application"
+      subject = "[TEST] Suite à la revue de votre dossier repreneur"
       break
     default:
       return { success: false, message: `Unknown template: ${templateKey}` }

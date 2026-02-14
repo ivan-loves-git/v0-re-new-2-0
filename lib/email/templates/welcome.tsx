@@ -12,41 +12,46 @@ export function WelcomeEmail({ repreneur }: WelcomeEmailProps) {
 
   return (
     <BaseLayout previewText={`Bienvenue ${firstName} ! Votre parcours Re-New commence.`}>
-      <Text style={heading}>Bienvenue {firstName} !</Text>
+      <Text style={heading}>Bienvenue chez Re-New</Text>
 
       <Text style={paragraph}>
-        Nous sommes ravis de vous accueillir dans la communauté Re-New.
+        Bienvenue {firstName},
       </Text>
 
       <Text style={paragraph}>
-        Vous venez de franchir la première étape vers votre projet de reprise
-        d&apos;entreprise. Notre équipe est là pour vous accompagner à chaque
-        étape de ce parcours passionnant.
+        Nous sommes ravis de vous accueillir dans la communaut&eacute; Re-New.
+        Vous venez de franchir une &eacute;tape importante dans la structuration
+        de votre projet de reprise d&apos;entreprise.
+      </Text>
+
+      <Text style={paragraph}>
+        Notre &eacute;quipe est l&agrave; pour vous accompagner &agrave; chaque
+        &eacute;tape de ce parcours.
       </Text>
 
       <Section style={{ textAlign: "center", margin: "32px 0" }}>
-        <Link href="https://re-new.team" style={button}>
-          Découvrir Re-New
+        <Link href="https://re-new.team/fr" style={button}>
+          D&eacute;couvrir Re-New
         </Link>
       </Section>
 
-      <Text style={heading} as="h2">Prochaines étapes</Text>
+      <Text style={heading} as="h2">Prochaines &eacute;tapes</Text>
 
       <Text style={paragraph}>
-        Un membre de notre équipe vous contactera sous 48 à 72h pour un premier
-        échange. En attendant, n&apos;hésitez pas à explorer notre site et nos
-        ressources.
+        Un membre de notre &eacute;quipe vous contactera sous 24 &agrave; 48h
+        pour un premier &eacute;change. En attendant, n&apos;h&eacute;sitez pas
+        &agrave; explorer notre site et nos ressources.
       </Text>
 
       <Text style={paragraph}>
-        Si vous avez des questions, n&apos;hésitez pas à nous contacter à{" "}
+        Si vous avez des questions, contactez-nous &agrave;{" "}
         <Link href="mailto:contact@re-new.team">contact@re-new.team</Link>.
       </Text>
 
       <Text style={paragraph}>
-        À très bientôt,
+        &Agrave; tr&egrave;s bient&ocirc;t,
         <br />
-        L&apos;équipe Re-New
+        L&apos;&eacute;quipe Re-New
       </Text>
     </BaseLayout>
   )

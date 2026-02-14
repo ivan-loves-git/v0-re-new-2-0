@@ -3,6 +3,7 @@ import { EmailOverview } from "./components/email-overview"
 import { EmailLog } from "./components/email-log"
 import { EmailTemplates } from "./components/email-templates"
 import { ManualSend } from "./components/manual-send"
+import { AiDraftTest } from "./components/ai-draft-test"
 import { getEmailStats, getEmailLogs, getTemplateSettings, getDailyEmailCounts } from "@/lib/actions/emails"
 
 export const revalidate = 60
@@ -43,8 +44,9 @@ export default async function EmailsPage() {
           <EmailTemplates templates={templates} />
         </TabsContent>
 
-        <TabsContent value="send" className="mt-6">
+        <TabsContent value="send" className="mt-6 space-y-6">
           <ManualSend />
+          <AiDraftTest />
         </TabsContent>
       </Tabs>
     </div>

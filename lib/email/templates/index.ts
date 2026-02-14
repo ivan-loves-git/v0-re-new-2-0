@@ -35,7 +35,7 @@ export const TEMPLATE_METADATA: Record<
   },
   abandoned_reminder: {
     name: "Form Reminder",
-    description: "Sent 48h after form abandonment",
+    description: "Sent 24h after form abandonment",
     category: "intake",
   },
   thank_you: {

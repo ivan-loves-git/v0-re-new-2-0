@@ -1,11 +1,12 @@
 import { Text, Link, Section } from "@react-email/components"
 import * as React from "react"
-import { BaseLayout, heading, paragraph, button, highlight } from "./base-layout"
+import { BaseLayout, heading, paragraph, highlight } from "./base-layout"
 import type { OfferReceivedEmailProps } from "@/lib/types/email"
 
 /**
  * Offer Received Email - French
  * Sent when a repreneur receives a new offer/package
+ * Currently deactivated - will be activated later
  */
 export function OfferReceivedEmail({ repreneur, metadata }: OfferReceivedEmailProps) {
   const { firstName } = repreneur
@@ -21,16 +22,16 @@ export function OfferReceivedEmail({ repreneur, metadata }: OfferReceivedEmailPr
   }
 
   return (
-    <BaseLayout previewText={`${firstName}, vous avez reçu une offre de Re-New !`}>
-      <Text style={heading}>Une offre vous attend !</Text>
+    <BaseLayout previewText={`${firstName}, une offre Re-New adaptée à votre projet`}>
+      <Text style={heading}>L&apos;offre de Re-New adapt&eacute;e &agrave; votre projet</Text>
 
       <Text style={paragraph}>
         Cher(e) {firstName},
       </Text>
 
       <Text style={paragraph}>
-        Suite à l&apos;analyse de votre profil, nous avons le plaisir de vous
-        proposer un accompagnement personnalisé.
+        Une offre vous attend ! Suite &agrave; l&apos;analyse de votre profil,
+        nous avons le plaisir de vous proposer un accompagnement personnalis&eacute;.
       </Text>
 
       <Section style={highlight}>
@@ -43,30 +44,20 @@ export function OfferReceivedEmail({ repreneur, metadata }: OfferReceivedEmailPr
       </Section>
 
       <Text style={paragraph}>
-        Cette offre a été sélectionnée pour répondre à vos besoins spécifiques
-        et vous accompagner efficacement dans votre projet de reprise.
+        Cette offre a &eacute;t&eacute; s&eacute;lectionn&eacute;e pour r&eacute;pondre
+        &agrave; vos besoins sp&eacute;cifiques et vous accompagner efficacement
+        dans votre projet de reprise.
       </Text>
 
       <Text style={paragraph}>
-        Connectez-vous à votre espace pour découvrir le détail de cette offre
-        et prendre votre décision.
-      </Text>
-
-      <Section style={{ textAlign: "center", margin: "32px 0" }}>
-        <Link href="https://app.re-new.team" style={button}>
-          Voir l&apos;offre
-        </Link>
-      </Section>
-
-      <Text style={paragraph}>
-        N&apos;hésitez pas à nous contacter si vous avez des questions à{" "}
+        N&apos;h&eacute;sitez pas &agrave; nous contacter si vous avez des questions &agrave;{" "}
         <Link href="mailto:contact@re-new.team">contact@re-new.team</Link>.
       </Text>
 
       <Text style={paragraph}>
-        À bientôt,
+        &Agrave; bient&ocirc;t,
         <br />
-        L&apos;équipe Re-New
+        L&apos;&eacute;quipe Re-New
       </Text>
     </BaseLayout>
   )
