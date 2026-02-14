@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistanceToNow, format } from "date-fns"
 import type { Activity as ActivityType_DB, ActivityType } from "@/lib/types/repreneur"
 
 interface ActivityHistoryProps {
@@ -59,6 +59,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
   const [activityType, setActivityType] = useState<ActivityType>("welcome_email")
   const [notes, setNotes] = useState("")
   const [durationMinutes, setDurationMinutes] = useState("")
+  const [eventDate, setEventDate] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewingActivity, setViewingActivity] = useState<ActivityType_DB | null>(null)
@@ -71,11 +72,13 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
         repreneurId,
         activityType,
         notes || undefined,
-        durationMinutes ? parseInt(durationMinutes) : undefined
+        durationMinutes ? parseInt(durationMinutes) : undefined,
+        eventDate || undefined
       )
       toast.success("Activity logged")
       setNotes("")
       setDurationMinutes("")
+      setEventDate("")
       setActivityType("welcome_email")
       setIsOpen(false)
       router.refresh()
@@ -165,6 +168,14 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                   min="1"
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Event date (optional)</Label>
+                <Input
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
@@ -205,8 +216,14 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                     {activity.notes && (
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">{activity.notes}</p>
                     )}
+                    {activity.event_date && (
+                      <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(activity.event_date), "MMM d, yyyy")}
+                      </p>
+                    )}
                     <p className="text-xs text-gray-400 mt-1">
-                      {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                      {format(new Date(activity.created_at), "MMM d 'at' HH:mm")} ({formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })})
                       {activity.created_by_email && <span> · by {activity.created_by_email}</span>}
                     </p>
                   </div>
@@ -256,9 +273,10 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
             {viewingActivity && getActivityConfig(viewingActivity.activity_type).label}
           </DialogTitle>
           <DialogDescription>
-            {viewingActivity && formatDistanceToNow(new Date(viewingActivity.created_at), { addSuffix: true })}
+            {viewingActivity && format(new Date(viewingActivity.created_at), "MMM d 'at' HH:mm")} ({viewingActivity && formatDistanceToNow(new Date(viewingActivity.created_at), { addSuffix: true })})
             {viewingActivity?.created_by_email && ` · by ${viewingActivity.created_by_email}`}
             {viewingActivity?.duration_minutes && ` · ${viewingActivity.duration_minutes} minutes`}
+            {viewingActivity?.event_date && ` · Event: ${format(new Date(viewingActivity.event_date), "MMM d, yyyy")}`}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

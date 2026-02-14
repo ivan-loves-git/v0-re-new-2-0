@@ -244,11 +244,14 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
     return COLUMNS.reduce((acc, col) => {
       const filtered = filteredRepreneurs.filter((r) => r.lifecycle_status === col.status)
 
-      // Sort leads by tier1_score DESC (highest score first), nulls at bottom
+      // Sort leads by tier1_score DESC (highest score first), null/0 scores at bottom
       if (col.status === "lead") {
         filtered.sort((a, b) => {
-          const scoreA = a.tier1_score ?? -1
-          const scoreB = b.tier1_score ?? -1
+          const scoreA = a.tier1_score || 0
+          const scoreB = b.tier1_score || 0
+          if (scoreA === 0 && scoreB === 0) return 0
+          if (scoreA === 0) return 1
+          if (scoreB === 0) return -1
           return scoreB - scoreA
         })
       }

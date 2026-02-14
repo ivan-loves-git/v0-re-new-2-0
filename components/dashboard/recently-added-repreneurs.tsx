@@ -16,6 +16,17 @@ interface RecentRepreneur {
   lifecycle_status: string
   journey_stage: string | null
   created_at: string
+  tier1_score?: number | null
+  who_score?: number | null
+  when_score?: number | null
+}
+
+function getScoreColor(who: number, when: number) {
+  const total = who + when
+  if (total >= 140) return "text-green-600 bg-green-50"
+  if (total >= 100) return "text-blue-600 bg-blue-50"
+  if (total >= 60) return "text-yellow-600 bg-yellow-50"
+  return "text-gray-500 bg-gray-50"
 }
 
 interface RecentlyAddedRepreneursProps {
@@ -52,9 +63,31 @@ export function RecentlyAddedRepreneurs({ repreneurs, maxHeight = "300px" }: Rec
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">
-                      {repreneur.first_name} {repreneur.last_name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate">
+                        {repreneur.first_name} {repreneur.last_name}
+                      </p>
+                      {(() => {
+                        const who = repreneur.who_score ?? 0
+                        const when = repreneur.when_score ?? 0
+                        const hasWhoWhen = repreneur.who_score != null || repreneur.when_score != null
+                        if (hasWhoWhen) {
+                          return (
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${getScoreColor(who, when)}`}>
+                              {who} / {when}
+                            </span>
+                          )
+                        }
+                        if (repreneur.tier1_score != null && repreneur.tier1_score > 0) {
+                          return (
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded text-gray-500 bg-gray-50">
+                              {repreneur.tier1_score}
+                            </span>
+                          )
+                        }
+                        return null
+                      })()}
+                    </div>
                     <p className="text-xs text-gray-500 truncate">{repreneur.email}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       Added {formatDistanceToNow(new Date(repreneur.created_at), { addSuffix: true })}

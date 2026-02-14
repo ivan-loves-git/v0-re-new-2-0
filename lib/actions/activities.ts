@@ -9,7 +9,8 @@ export async function createActivity(
   repreneurId: string,
   activityType: ActivityType,
   notes?: string,
-  durationMinutes?: number
+  durationMinutes?: number,
+  eventDate?: string
 ) {
   const supabase = createAdminClient()
 
@@ -21,6 +22,7 @@ export async function createActivity(
     activity_type: activityType,
     notes: notes || undefined,
     duration_minutes: durationMinutes || undefined,
+    event_date: eventDate || undefined,
     created_by: user.id,
   }
 

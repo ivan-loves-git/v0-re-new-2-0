@@ -206,6 +206,7 @@ export interface Activity {
   activity_type: ActivityType
   notes?: string
   duration_minutes?: number // for future cost analytics
+  event_date?: string // optional date for the event (e.g., interview date)
   created_at: string
   created_by: string
   created_by_email?: string
@@ -216,6 +217,7 @@ export interface Activity_Insert {
   activity_type: ActivityType
   notes?: string
   duration_minutes?: number
+  event_date?: string
   created_by: string
 }
 

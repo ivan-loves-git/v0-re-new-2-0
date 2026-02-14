@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { MoreVertical, Ban, Undo, XCircle } from "lucide-react"
-import { rejectRepreneur, unrejectRepreneur, declineRepreneur, undeclineRepreneur } from "@/lib/actions/repreneurs"
+import { MoreVertical, Ban, Undo, XCircle, Trash2 } from "lucide-react"
+import { rejectRepreneur, unrejectRepreneur, declineRepreneur, undeclineRepreneur, deleteRepreneur } from "@/lib/actions/repreneurs"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ interface RepreneurActionsMenuProps {
 export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName }: RepreneurActionsMenuProps) {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const isRejected = currentStatus === "rejected"
@@ -82,6 +83,17 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
     }
   }
 
+  async function handleDelete() {
+    setIsLoading(true)
+    try {
+      await deleteRepreneur(repreneurId)
+    } catch (error) {
+      console.error("Failed to delete repreneur:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -120,6 +132,13 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
               </DropdownMenuItem>
             </>
           )}
+          <DropdownMenuItem
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="text-red-600 focus:text-red-600"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete permanently
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -173,6 +192,25 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
                 {isLoading ? "Declining..." : "Decline"}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Repreneur Permanently</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {repreneurName} and all their data (notes, activities, offers). This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
+              {isLoading ? "Deleting..." : "Delete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

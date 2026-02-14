@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trophy, Medal, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import { subDays } from "date-fns"
 import { CardInfoButton } from "./card-info-button"
 import { CardLinkButton } from "./card-link-button"
 
@@ -15,7 +17,7 @@ interface TopRepreneur {
   last_name: string
   lifecycle_status: string
   tier1_score: number | null
-  // Future: who_score and when_score will be added
+  created_at: string
 }
 
 interface TopTier1RepreneursProps {
@@ -36,10 +38,19 @@ const kpiInfo = {
 
 export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }: TopTier1RepreneursProps) {
   const [currentPage, setCurrentPage] = useState(0)
-  const totalPages = Math.ceil(repreneurs.length / itemsPerPage)
+  const [timeRange, setTimeRange] = useState<string>("all")
+
+  const filteredRepreneurs = useMemo(() => {
+    if (timeRange === "all") return repreneurs
+    const days = parseInt(timeRange)
+    const cutoff = subDays(new Date(), days)
+    return repreneurs.filter((r) => new Date(r.created_at) >= cutoff)
+  }, [repreneurs, timeRange])
+
+  const totalPages = Math.ceil(filteredRepreneurs.length / itemsPerPage)
 
   const startIndex = currentPage * itemsPerPage
-  const visibleRepreneurs = repreneurs.slice(startIndex, startIndex + itemsPerPage)
+  const visibleRepreneurs = filteredRepreneurs.slice(startIndex, startIndex + itemsPerPage)
 
   const getMedalColor = (index: number) => {
     const actualIndex = startIndex + index
@@ -81,7 +92,20 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
           Top Rated
           <CardInfoButton info={kpiInfo.topTier1} />
         </CardTitle>
-        <CardLinkButton href="/pipeline" tooltip="View Pipeline" />
+        <div className="flex items-center gap-2">
+          <Select value={timeRange} onValueChange={(v) => { setTimeRange(v); setCurrentPage(0) }}>
+            <SelectTrigger className="h-7 w-[120px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+            </SelectContent>
+          </Select>
+          <CardLinkButton href="/pipeline" tooltip="View Pipeline" />
+        </div>
       </CardHeader>
       <CardContent className="pt-0 flex-1 flex flex-col">
         <div className="space-y-2" style={{ minHeight: listHeight }}>

@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
 import { calculateOverallScore } from "@/lib/scoring-utils"
-import { ArrowRight, Users, TrendingUp, Compass } from "lucide-react"
+import { ArrowRight, Users, TrendingUp, Compass, TableProperties } from "lucide-react"
 import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
 
@@ -131,10 +131,10 @@ async function StatsAndTiersRow() {
       last_name: r.last_name,
       lifecycle_status: r.lifecycle_status,
       tier1_score: calculateOverallScore(r),
+      created_at: r.created_at,
     }))
     .filter(c => c.tier1_score > 0)
     .sort((a, b) => (b.tier1_score || 0) - (a.tier1_score || 0))
-    .slice(0, 30)
 
   // Top Tier 2 repreneurs
   const topTier2Repreneurs = repreneurs
@@ -401,7 +401,7 @@ export default function DashboardPage() {
       </Suspense>
 
       {/* Quick Navigation - renders immediately (no data) */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -414,6 +414,24 @@ export default function DashboardPage() {
             <Link href="/pipeline">
               <Button className="w-full">
                 Go to Pipeline
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TableProperties className="h-5 w-5" />
+              Explore Table
+            </CardTitle>
+            <CardDescription>Filter, sort, and explore all repreneurs in one table</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/repreneurs/explore">
+              <Button className="w-full">
+                Explore
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
