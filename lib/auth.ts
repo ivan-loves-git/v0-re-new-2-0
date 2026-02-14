@@ -100,18 +100,24 @@ export const auth = betterAuth({
   },
 
   // Trusted origins for CORS
-  trustedOrigins: (origin) => {
-    if (!origin) return true
-    const trusted = [
+  // Better Auth 1.4.14: function receives Request (can be undefined), must return string[]
+  trustedOrigins: async (request: Request | undefined) => {
+    const origins = [
       process.env.BETTER_AUTH_URL || "http://localhost:3000",
       "https://app.re-new.team",
     ]
-    if (trusted.includes(origin)) return true
-    // Allow Vercel preview deployments and V0 app builder
-    if (origin.endsWith(".vercel.app")) return true
-    if (origin.endsWith(".v0.dev") || origin === "https://v0.dev") return true
-    if (origin.endsWith(".v0.app") || origin === "https://v0.app") return true
-    return false
+    // Dynamically allow Vercel preview deployments and V0 app builder
+    const origin = request?.headers?.get("origin")
+    if (origin) {
+      if (
+        origin.endsWith(".vercel.app") ||
+        origin.endsWith(".v0.dev") || origin === "https://v0.dev" ||
+        origin.endsWith(".v0.app") || origin === "https://v0.app"
+      ) {
+        origins.push(origin)
+      }
+    }
+    return origins
   },
 })
 
