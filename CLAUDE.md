@@ -93,7 +93,7 @@ ctrl+t           → Toggle task panel
 ```
 Or just ask: "what tasks are pending?" / "create a task for X"
 
-**Current Progress:** 4/10 phases complete (40%)
+**Current Progress:** 9/10 phases complete (~90%) — v0.9.2 as of Feb 2026. Remaining: final testing, Flatchr migration validation, team onboarding, polish.
 
 ## Open Questions (Waiting on Bertrand)
 - Notes structure: free text vs structured (call/email/meeting + outcome)
