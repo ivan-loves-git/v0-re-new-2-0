@@ -7,7 +7,6 @@ import { formatDistanceToNow } from "date-fns"
 import { subDays } from "date-fns"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -34,19 +33,47 @@ import {
 import { StatusBadge } from "./status-badge"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
-import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
+import type { Repreneur, LifecycleStatus, JourneyStage, PersonaType } from "@/lib/types/repreneur"
 
 const ITEMS_PER_PAGE = 20
 
 type SortField = "name" | "email" | "status" | "who" | "when" | "tier2_stars" | "journey" | "created_at"
 type SortDirection = "asc" | "desc"
 
-const STATUS_OPTIONS: { value: LifecycleStatus; label: string }[] = [
-  { value: "lead", label: "Lead" },
-  { value: "qualified", label: "Qualified" },
-  { value: "client", label: "Client" },
-  { value: "rejected", label: "Rejected" },
-  { value: "declined", label: "Declined" },
+const DATE_RANGES = [
+  { value: "all", label: "All time" },
+  { value: "7", label: "Last 7 days" },
+  { value: "14", label: "Last 14 days" },
+  { value: "30", label: "Last 30 days" },
+  { value: "90", label: "Last 90 days" },
+]
+
+const SCORE_RANGES = [
+  { value: "all", label: "Any score" },
+  { value: "60", label: "60+" },
+  { value: "100", label: "100+" },
+  { value: "140", label: "140+" },
+]
+
+const JOURNEY_OPTIONS: { value: JourneyStage; label: string }[] = [
+  { value: "explorer", label: "Explorer" },
+  { value: "learner", label: "Learner" },
+  { value: "ready", label: "Ready" },
+  { value: "serial_acquirer", label: "Champion" },
+]
+
+const PERSONA_OPTIONS: { value: PersonaType; label: string }[] = [
+  { value: "first_time_buyer", label: "First-time buyer" },
+  { value: "serial_acquirer", label: "Serial acquirer" },
+  { value: "corporate_spinoff", label: "Corporate spinoff" },
+  { value: "family_succession", label: "Family succession" },
+]
+
+const RECOMMENDATION_OPTIONS = [
+  { value: "deal_flow", label: "Deal flow" },
+  { value: "priority_interview", label: "Priority interview" },
+  { value: "interview", label: "Interview" },
+  { value: "starter_pack", label: "Starter pack" },
 ]
 
 function getScoreColor(score: number | null | undefined) {
@@ -66,10 +93,13 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
 
   // Filter state
   const [search, setSearch] = useState("")
-  const [statusFilters, setStatusFilters] = useState<LifecycleStatus[]>([])
-  const [minWho, setMinWho] = useState("")
-  const [minWhen, setMinWhen] = useState("")
+  const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
+  const [sourceFilter, setSourceFilter] = useState("")
   const [dateRange, setDateRange] = useState("all")
+  const [minScore, setMinScore] = useState("all")
+  const [journeyFilter, setJourneyFilter] = useState<JourneyStage | "all">("all")
+  const [personaFilter, setPersonaFilter] = useState<PersonaType | "all">("all")
+  const [recommendationFilter, setRecommendationFilter] = useState("")
 
   // Sort state
   const [sortField, setSortField] = useState<SortField>("created_at")
@@ -78,28 +108,32 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
 
-  const hasActiveFilters = search || statusFilters.length > 0 || minWho || minWhen || dateRange !== "all"
+  // Extract unique sources
+  const sources = useMemo(() => {
+    const uniqueSources = new Set<string>()
+    repreneurs.forEach((r) => {
+      if (r.source) uniqueSources.add(r.source)
+    })
+    return Array.from(uniqueSources).sort()
+  }, [repreneurs])
+
+  const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all" || minScore !== "all" || journeyFilter !== "all" || personaFilter !== "all" || recommendationFilter
 
   const clearFilters = () => {
     setSearch("")
-    setStatusFilters([])
-    setMinWho("")
-    setMinWhen("")
+    setStatusFilter("all")
+    setSourceFilter("")
     setDateRange("all")
-    setCurrentPage(1)
-  }
-
-  const toggleStatus = (status: LifecycleStatus) => {
-    setStatusFilters((prev) =>
-      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
-    )
+    setMinScore("all")
+    setJourneyFilter("all")
+    setPersonaFilter("all")
+    setRecommendationFilter("")
     setCurrentPage(1)
   }
 
   // Filtered data
   const filtered = useMemo(() => {
     return repreneurs.filter((r) => {
-      // Search
       if (search) {
         const q = search.toLowerCase()
         const name = `${r.first_name} ${r.last_name}`.toLowerCase()
@@ -107,29 +141,31 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         if (!name.includes(q) && !email.includes(q)) return false
       }
 
-      // Status
-      if (statusFilters.length > 0 && !statusFilters.includes(r.lifecycle_status)) return false
+      if (statusFilter !== "all" && r.lifecycle_status !== statusFilter) return false
 
-      // Score filters
-      if (minWho) {
+      if (sourceFilter && r.source !== sourceFilter) return false
+
+      if (minScore !== "all") {
         const who = r.who_score ?? r.tier1_score ?? 0
-        if (who < parseInt(minWho)) return false
-      }
-      if (minWhen) {
         const when = r.when_score ?? 0
-        if (when < parseInt(minWhen)) return false
+        if (who + when < parseInt(minScore)) return false
       }
 
-      // Date range
       if (dateRange !== "all") {
         const days = parseInt(dateRange)
         const cutoff = subDays(new Date(), days)
         if (new Date(r.created_at) < cutoff) return false
       }
 
+      if (journeyFilter !== "all" && r.journey_stage !== journeyFilter) return false
+
+      if (personaFilter !== "all" && r.persona !== personaFilter) return false
+
+      if (recommendationFilter && r.recommendation !== recommendationFilter) return false
+
       return true
     })
-  }, [repreneurs, search, statusFilters, minWho, minWhen, dateRange])
+  }, [repreneurs, search, statusFilter, sourceFilter, dateRange, minScore, journeyFilter, personaFilter, recommendationFilter])
 
   // Sorted data
   const sorted = useMemo(() => {
@@ -189,79 +225,112 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
 
   return (
     <div className="space-y-4">
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-end gap-3 p-4 bg-white border rounded-lg">
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Search</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Name or email..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Status</label>
-          <div className="flex gap-1">
-            {STATUS_OPTIONS.map((opt) => (
-              <Badge
-                key={opt.value}
-                variant={statusFilters.includes(opt.value) ? "default" : "outline"}
-                className="cursor-pointer text-xs"
-                onClick={() => toggleStatus(opt.value)}
-              >
-                {opt.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-[90px]">
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Min WHO</label>
+      {/* Filter Bar - Row 1: Core filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            type="number"
-            placeholder="0"
-            value={minWho}
-            onChange={(e) => { setMinWho(e.target.value); setCurrentPage(1) }}
-            min="0"
-            max="100"
+            placeholder="Search by name..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
+            className="pl-9 w-[200px]"
           />
         </div>
 
-        <div className="w-[90px]">
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Min WHEN</label>
-          <Input
-            type="number"
-            placeholder="0"
-            value={minWhen}
-            onChange={(e) => { setMinWhen(e.target.value); setCurrentPage(1) }}
-            min="0"
-            max="100"
-          />
-        </div>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as LifecycleStatus | "all"); setCurrentPage(1) }}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="lead">Lead</SelectItem>
+            <SelectItem value="qualified">Qualified</SelectItem>
+            <SelectItem value="client">Client</SelectItem>
+            <SelectItem value="declined">Declined</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <div className="w-[140px]">
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Period</label>
-          <Select value={dateRange} onValueChange={(v) => { setDateRange(v); setCurrentPage(1) }}>
-            <SelectTrigger>
-              <SelectValue />
+        {sources.length > 0 && (
+          <Select
+            value={sourceFilter || "all"}
+            onValueChange={(v) => { setSourceFilter(v === "all" ? "" : v); setCurrentPage(1) }}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All sources" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All time</SelectItem>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
+              <SelectItem value="all">All sources</SelectItem>
+              {sources.map((source) => (
+                <SelectItem key={source} value={source}>{source}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </div>
+        )}
+
+        <Select value={dateRange} onValueChange={(v) => { setDateRange(v); setCurrentPage(1) }}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DATE_RANGES.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={minScore} onValueChange={(v) => { setMinScore(v); setCurrentPage(1) }}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SCORE_RANGES.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={journeyFilter} onValueChange={(v) => { setJourneyFilter(v as JourneyStage | "all"); setCurrentPage(1) }}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All journeys</SelectItem>
+            {JOURNEY_OPTIONS.map((j) => (
+              <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={personaFilter} onValueChange={(v) => { setPersonaFilter(v as PersonaType | "all"); setCurrentPage(1) }}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All personas</SelectItem>
+            {PERSONA_OPTIONS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={recommendationFilter || "all"}
+          onValueChange={(v) => { setRecommendationFilter(v === "all" ? "" : v); setCurrentPage(1) }}
+        >
+          <SelectTrigger className="w-[170px]">
+            <SelectValue placeholder="All recommendations" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All recommendations</SelectItem>
+            {RECOMMENDATION_OPTIONS.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
             <X className="h-4 w-4 mr-1" />
             Clear
           </Button>
