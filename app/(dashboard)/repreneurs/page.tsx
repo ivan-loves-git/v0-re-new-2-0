@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Plus, TableProperties } from "lucide-react"
+import { Plus } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { RepreneurTable } from "@/components/repreneurs/repreneur-table"
@@ -38,16 +38,10 @@ export default async function RepreneursPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Repreneurs</h1>
-          <p className="text-gray-600 mt-1">Manage entrepreneurs looking to acquire businesses</p>
+          <h1 className="text-3xl font-semibold text-gray-900">Groups</h1>
+          <p className="text-gray-600 mt-1">Repreneurs organized by lifecycle status</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/repreneurs/explore">
-            <Button variant="outline">
-              <TableProperties className="h-4 w-4 mr-2" />
-              Explore
-            </Button>
-          </Link>
           <Link href="/repreneurs/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />

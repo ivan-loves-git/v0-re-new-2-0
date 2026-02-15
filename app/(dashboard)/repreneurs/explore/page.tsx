@@ -15,7 +15,7 @@ export default async function RepreneurExplorePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Explore Repreneurs</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Find Repreneurs</h1>
         <p className="text-gray-600 mt-1">Filter, sort, and find repreneurs across your entire pipeline</p>
       </div>
 

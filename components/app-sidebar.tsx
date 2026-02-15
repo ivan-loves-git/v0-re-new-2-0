@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   Users,
+  Search,
   GitBranch,
   FileText,
   Compass,
@@ -51,7 +52,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 // Navigation data
 const mainNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Repreneurs", href: "/repreneurs", icon: Users },
+  { name: "Groups", href: "/repreneurs", icon: Users },
+  { name: "Find", href: "/repreneurs/explore", icon: Search },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Emails", href: "/emails", icon: Mail },
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
@@ -144,6 +146,8 @@ export function AppSidebar({
   const getIsActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard"
     if (href === "/guide") return pathname === "/guide"
+    // "Groups" (/repreneurs) should not match /repreneurs/explore
+    if (href === "/repreneurs") return pathname === "/repreneurs" || (pathname.startsWith("/repreneurs/") && !pathname.startsWith("/repreneurs/explore"))
     return pathname.startsWith(href)
   }
 

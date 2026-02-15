@@ -426,14 +426,14 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TableProperties className="h-5 w-5" />
-              Explore Table
+              Find Repreneurs
             </CardTitle>
-            <CardDescription>Filter, sort, and explore all repreneurs in one table</CardDescription>
+            <CardDescription>Filter, sort, and find repreneurs in one searchable table</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/repreneurs/explore">
               <Button className="w-full">
-                Explore
+                Find
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -444,14 +444,14 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              All Repreneurs
+              Groups
             </CardTitle>
-            <CardDescription>View and manage all repreneurs in a detailed list</CardDescription>
+            <CardDescription>View repreneurs organized by lifecycle status</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/repreneurs">
               <Button className="w-full">
-                View Repreneurs
+                View Groups
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>

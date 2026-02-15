@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
-import { Star, Target, Package, ChevronDown, Info } from "lucide-react"
+import { Star, Package, ChevronDown, Info, ArrowUpDown } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -47,21 +47,29 @@ function StarDisplay({ stars }: { stars: number | null | undefined }) {
   )
 }
 
+function ScoreBadge({ repreneur }: { repreneur: RepreneurWithOffers }) {
+  const who = repreneur.who_score ?? repreneur.tier1_score ?? 0
+  const when = repreneur.when_score ?? 0
+  const total = who + when
+  if (total === 0) return null
+
+  const color = total >= 140 ? "text-green-700 bg-green-50" :
+    total >= 100 ? "text-blue-700 bg-blue-50" :
+    total >= 60 ? "text-yellow-700 bg-yellow-50" :
+    "text-gray-600 bg-gray-50"
+
+  return (
+    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${color}`}>
+      {total}
+    </span>
+  )
+}
+
 function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
   const router = useRouter()
 
   const renderStatusInfo = () => {
     switch (repreneur.lifecycle_status) {
-      case "lead":
-        if (repreneur.tier1_score !== null && repreneur.tier1_score !== undefined) {
-          return (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <Target className="h-3 w-3" />
-              <span className="font-medium">{repreneur.tier1_score} pts</span>
-            </div>
-          )
-        }
-        return null
       case "qualified":
         return <StarDisplay stars={repreneur.tier2_stars} />
       case "client":
@@ -126,6 +134,7 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
             </h3>
             <p className="text-xs text-gray-500 truncate">{repreneur.email}</p>
           </div>
+          <ScoreBadge repreneur={repreneur} />
         </div>
         {renderStatusInfo()}
       </div>
@@ -191,12 +200,15 @@ function PipelineColumn({
   )
 }
 
+type SortMode = "score" | "date"
+
 export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
   const [filters, setFilters] = useState<KanbanFiltersState>({
     search: "",
     source: "",
     dateRange: "all",
   })
+  const [sortMode, setSortMode] = useState<SortMode>("score")
 
   // Extract unique sources from repreneurs
   const sources = useMemo(() => {
@@ -239,27 +251,34 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
     })
   }, [repreneurs, filters])
 
-  // Group by status and sort leads by T1 score (highest first)
+  // Group by status and sort by selected mode
   const groupedByStatus = useMemo(() => {
+    const getTotal = (r: RepreneurWithOffers) => {
+      const who = r.who_score ?? r.tier1_score ?? 0
+      const when = r.when_score ?? 0
+      return who + when
+    }
+
     return COLUMNS.reduce((acc, col) => {
       const filtered = filteredRepreneurs.filter((r) => r.lifecycle_status === col.status)
 
-      // Sort leads by tier1_score DESC (highest score first), null/0 scores at bottom
-      if (col.status === "lead") {
+      if (sortMode === "score") {
         filtered.sort((a, b) => {
-          const scoreA = a.tier1_score || 0
-          const scoreB = b.tier1_score || 0
+          const scoreA = getTotal(a)
+          const scoreB = getTotal(b)
           if (scoreA === 0 && scoreB === 0) return 0
           if (scoreA === 0) return 1
           if (scoreB === 0) return -1
           return scoreB - scoreA
         })
+      } else {
+        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       }
 
       acc[col.status] = filtered
       return acc
     }, {} as Record<LifecycleStatus, RepreneurWithOffers[]>)
-  }, [filteredRepreneurs])
+  }, [filteredRepreneurs, sortMode])
 
   const totalFiltered = filteredRepreneurs.length
   const totalAll = repreneurs.length
@@ -267,7 +286,20 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
 
   return (
     <div>
-      <KanbanFilters filters={filters} onFiltersChange={setFilters} sources={sources} />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1">
+          <KanbanFilters filters={filters} onFiltersChange={setFilters} sources={sources} />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 shrink-0"
+          onClick={() => setSortMode(sortMode === "score" ? "date" : "score")}
+        >
+          <ArrowUpDown className="h-3.5 w-3.5" />
+          {sortMode === "score" ? "By score" : "By date"}
+        </Button>
+      </div>
 
       {isFiltered && (
         <p className="text-sm text-gray-500 mb-4">

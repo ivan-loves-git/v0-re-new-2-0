@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, memo } from "react"
+import { useState, useMemo, memo } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy } from "lucide-react"
+import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -43,12 +44,13 @@ interface GroupSortState {
   direction: SortDirection
 }
 
-const STATUS_ORDER: LifecycleStatus[] = ["lead", "qualified", "client", "rejected"]
+const STATUS_ORDER: LifecycleStatus[] = ["lead", "qualified", "client", "declined", "rejected"]
 
 const STATUS_LABELS: Record<LifecycleStatus, string> = {
   lead: "Leads",
   qualified: "Qualified",
   client: "Clients",
+  declined: "Declined",
   rejected: "Rejected",
 }
 
@@ -56,8 +58,16 @@ const STATUS_COLORS: Record<LifecycleStatus, string> = {
   lead: "bg-blue-50 border-blue-200",
   qualified: "bg-yellow-50 border-yellow-200",
   client: "bg-green-50 border-green-200",
+  declined: "bg-gray-50 border-gray-200",
   rejected: "bg-red-50 border-red-200",
 }
+
+const DATE_RANGES = [
+  { value: "all", label: "All time" },
+  { value: "7", label: "Last 7 days" },
+  { value: "30", label: "Last 30 days" },
+  { value: "90", label: "Last 90 days" },
+]
 
 const StarDisplay = memo(function StarDisplay({ stars }: { stars: number | null | undefined }) {
   if (!stars) return <span className="text-gray-400 text-sm">Not rated</span>
@@ -160,6 +170,8 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
+  const [sourceFilter, setSourceFilter] = useState("")
+  const [dateRange, setDateRange] = useState("all")
   // Global sort for flat view
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -168,6 +180,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
     lead: { ...DEFAULT_GROUP_SORT },
     qualified: { ...DEFAULT_GROUP_SORT },
     client: { ...DEFAULT_GROUP_SORT },
+    declined: { ...DEFAULT_GROUP_SORT },
     rejected: { ...DEFAULT_GROUP_SORT },
   })
   // Initialize with empty groups collapsed
@@ -181,8 +194,28 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
     lead: 1,
     qualified: 1,
     client: 1,
+    declined: 1,
     rejected: 1,
   })
+
+  // Extract unique sources
+  const sources = useMemo(() => {
+    const uniqueSources = new Set<string>()
+    repreneurs.forEach((r) => {
+      if (r.source) uniqueSources.add(r.source)
+    })
+    return Array.from(uniqueSources).sort()
+  }, [repreneurs])
+
+  const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all"
+
+  const clearFilters = () => {
+    setSearch("")
+    setStatusFilter("all")
+    setSourceFilter("")
+    setDateRange("all")
+    setGroupPages({ lead: 1, qualified: 1, client: 1, declined: 1, rejected: 1 })
+  }
 
   const filtered = repreneurs.filter((r) => {
     const matchesSearch =
@@ -192,7 +225,17 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
 
     const matchesStatus = statusFilter === "all" || r.lifecycle_status === statusFilter
 
-    return matchesSearch && matchesStatus
+    const matchesSource = !sourceFilter || r.source === sourceFilter
+
+    let matchesDate = true
+    if (dateRange !== "all") {
+      const days = parseInt(dateRange)
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - days)
+      matchesDate = new Date(r.created_at) >= cutoffDate
+    }
+
+    return matchesSearch && matchesStatus && matchesSource && matchesDate
   })
 
   // Sort function for a group
@@ -227,11 +270,18 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
             case "client":
               comparison = (a.offer_names?.length || 0) - (b.offer_names?.length || 0)
               break
-            case "rejected":
+            case "declined": {
+              const aDeclined = a.declined_at ? new Date(a.declined_at).getTime() : 0
+              const bDeclined = b.declined_at ? new Date(b.declined_at).getTime() : 0
+              comparison = aDeclined - bDeclined
+              break
+            }
+            case "rejected": {
               const aDate = a.rejected_at ? new Date(a.rejected_at).getTime() : 0
               const bDate = b.rejected_at ? new Date(b.rejected_at).getTime() : 0
               comparison = aDate - bDate
               break
+            }
           }
           break
       }
@@ -279,7 +329,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   // Reset pages when search changes
   const handleSearchChange = (value: string) => {
     setSearch(value)
-    setGroupPages({ lead: 1, qualified: 1, client: 1, rejected: 1 })
+    setGroupPages({ lead: 1, qualified: 1, client: 1, declined: 1, rejected: 1 })
   }
 
   // Global sort for flat view
@@ -330,6 +380,14 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
         return <StarDisplay stars={repreneur.tier2_stars} />
       case "client":
         return <OfferDisplay offers={repreneur.offer_names} />
+      case "declined":
+        return (
+          <span className="text-sm text-gray-500">
+            {repreneur.declined_at
+              ? new Date(repreneur.declined_at).toLocaleDateString()
+              : "Unknown"}
+          </span>
+        )
       case "rejected":
         return (
           <span className="text-sm text-gray-500">
@@ -351,6 +409,8 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
         return "Tier 2 Rating"
       case "client":
         return "Offers"
+      case "declined":
+        return "Declined Date"
       case "rejected":
         return "Rejected Date"
       default:
@@ -381,6 +441,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
               <SelectItem value="lead">Lead</SelectItem>
               <SelectItem value="qualified">Qualified</SelectItem>
               <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="declined">Declined</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
@@ -459,18 +520,18 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   // Grouped view with collapsible sections
   return (
     <div className="space-y-4">
-      <div className="flex gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
-            placeholder="Search by name or email..."
+            placeholder="Search by name..."
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-10 w-[200px]"
           />
         </div>
         <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as LifecycleStatus | "all")}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -478,9 +539,46 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
             <SelectItem value="lead">Lead</SelectItem>
             <SelectItem value="qualified">Qualified</SelectItem>
             <SelectItem value="client">Client</SelectItem>
+            <SelectItem value="declined">Declined</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
+        {sources.length > 0 && (
+          <Select
+            value={sourceFilter || "all"}
+            onValueChange={(value) => setSourceFilter(value === "all" ? "" : value)}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All sources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sources</SelectItem>
+              {sources.map((source) => (
+                <SelectItem key={source} value={source}>
+                  {source}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={dateRange} onValueChange={setDateRange}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Date range" />
+          </SelectTrigger>
+          <SelectContent>
+            {DATE_RANGES.map((range) => (
+              <SelectItem key={range.value} value={range.value}>
+                {range.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+            <X className="h-4 w-4 mr-1" />
+            Clear
+          </Button>
+        )}
       </div>
 
       <div className="space-y-4">
