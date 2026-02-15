@@ -19,7 +19,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import type { Repreneur, LifecycleStatus, JourneyStage } from "@/lib/types/repreneur"
+import type { Repreneur, LifecycleStatus, JourneyStage, PersonaType } from "@/lib/types/repreneur"
 import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
 import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
@@ -67,6 +67,34 @@ const DATE_RANGES = [
   { value: "7", label: "Last 7 days" },
   { value: "30", label: "Last 30 days" },
   { value: "90", label: "Last 90 days" },
+]
+
+const SCORE_RANGES = [
+  { value: "all", label: "Any score" },
+  { value: "60", label: "60+" },
+  { value: "100", label: "100+" },
+  { value: "140", label: "140+" },
+]
+
+const JOURNEY_OPTIONS: { value: JourneyStage; label: string }[] = [
+  { value: "explorer", label: "Explorer" },
+  { value: "learner", label: "Learner" },
+  { value: "ready", label: "Ready" },
+  { value: "serial_acquirer", label: "Champion" },
+]
+
+const PERSONA_OPTIONS: { value: PersonaType; label: string }[] = [
+  { value: "first_time_buyer", label: "First-time buyer" },
+  { value: "serial_acquirer", label: "Serial acquirer" },
+  { value: "corporate_spinoff", label: "Corporate spinoff" },
+  { value: "family_succession", label: "Family succession" },
+]
+
+const RECOMMENDATION_OPTIONS = [
+  { value: "deal_flow", label: "Deal flow" },
+  { value: "priority_interview", label: "Priority interview" },
+  { value: "interview", label: "Interview" },
+  { value: "starter_pack", label: "Starter pack" },
 ]
 
 const StarDisplay = memo(function StarDisplay({ stars }: { stars: number | null | undefined }) {
@@ -172,6 +200,10 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
   const [sourceFilter, setSourceFilter] = useState("")
   const [dateRange, setDateRange] = useState("all")
+  const [minScore, setMinScore] = useState("all")
+  const [journeyFilter, setJourneyFilter] = useState<JourneyStage | "all">("all")
+  const [personaFilter, setPersonaFilter] = useState<PersonaType | "all">("all")
+  const [recommendationFilter, setRecommendationFilter] = useState("")
   // Global sort for flat view
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -207,13 +239,17 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
     return Array.from(uniqueSources).sort()
   }, [repreneurs])
 
-  const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all"
+  const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all" || minScore !== "all" || journeyFilter !== "all" || personaFilter !== "all" || recommendationFilter
 
   const clearFilters = () => {
     setSearch("")
     setStatusFilter("all")
     setSourceFilter("")
     setDateRange("all")
+    setMinScore("all")
+    setJourneyFilter("all")
+    setPersonaFilter("all")
+    setRecommendationFilter("")
     setGroupPages({ lead: 1, qualified: 1, client: 1, declined: 1, rejected: 1 })
   }
 
@@ -235,7 +271,20 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
       matchesDate = new Date(r.created_at) >= cutoffDate
     }
 
-    return matchesSearch && matchesStatus && matchesSource && matchesDate
+    let matchesScore = true
+    if (minScore !== "all") {
+      const who = r.who_score ?? r.tier1_score ?? 0
+      const when = r.when_score ?? 0
+      matchesScore = who + when >= parseInt(minScore)
+    }
+
+    const matchesJourney = journeyFilter === "all" || r.journey_stage === journeyFilter
+
+    const matchesPersona = personaFilter === "all" || r.persona === personaFilter
+
+    const matchesRecommendation = !recommendationFilter || r.recommendation === recommendationFilter
+
+    return matchesSearch && matchesStatus && matchesSource && matchesDate && matchesScore && matchesJourney && matchesPersona && matchesRecommendation
   })
 
   // Sort function for a group
@@ -570,6 +619,52 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
               <SelectItem key={range.value} value={range.value}>
                 {range.label}
               </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={minScore} onValueChange={setMinScore}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SCORE_RANGES.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={journeyFilter} onValueChange={(v) => setJourneyFilter(v as JourneyStage | "all")}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All journeys</SelectItem>
+            {JOURNEY_OPTIONS.map((j) => (
+              <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={personaFilter} onValueChange={(v) => setPersonaFilter(v as PersonaType | "all")}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All personas</SelectItem>
+            {PERSONA_OPTIONS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={recommendationFilter || "all"}
+          onValueChange={(v) => setRecommendationFilter(v === "all" ? "" : v)}
+        >
+          <SelectTrigger className="w-[170px]">
+            <SelectValue placeholder="All recommendations" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All recommendations</SelectItem>
+            {RECOMMENDATION_OPTIONS.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
