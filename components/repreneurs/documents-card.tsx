@@ -44,6 +44,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("repreneurId", repreneurId)
+      formData.append("documentType", field === "ldc_url" ? "ldc" : "cv")
 
       const response = await fetch("/api/upload-cv", {
         method: "POST",

@@ -66,6 +66,7 @@ export async function submitIntakeV2(
       email: formData.email.toLowerCase().trim(),
       phone: formData.phone.trim(),
       cv_url: formData.cv_url,
+      ldc_url: formData.q18_investment_thesis_url || null,
       linkedin_url: formData.linkedin_url?.trim() || null,
 
       // WHO answers (Q05-Q10)

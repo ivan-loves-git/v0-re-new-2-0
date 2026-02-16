@@ -67,7 +67,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('type', 'thesis')
+      formData.append('documentType', 'ldc')
 
       const response = await fetch('/api/upload-cv', {
         method: 'POST',
