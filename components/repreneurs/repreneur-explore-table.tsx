@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Star, X } from "lucide-react"
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Star, X, Download } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { subDays } from "date-fns"
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,7 @@ import { StatusBadge } from "./status-badge"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
 import type { Repreneur, LifecycleStatus, JourneyStage, PersonaType } from "@/lib/types/repreneur"
+import { exportRepreneursToCSV } from "@/lib/utils/csv-export"
 
 const ITEMS_PER_PAGE = 20
 
@@ -335,6 +336,16 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
             Clear
           </Button>
         )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 ml-auto"
+          onClick={() => exportRepreneursToCSV(sorted, "repreneurs.csv")}
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Export CSV ({sorted.length})
+        </Button>
       </div>
 
       {/* Results count */}

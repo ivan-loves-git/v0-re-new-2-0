@@ -2,7 +2,7 @@
 
 import { useState, useMemo, memo } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy, X } from "lucide-react"
+import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy, X, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -20,6 +20,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import type { Repreneur, LifecycleStatus, JourneyStage, PersonaType } from "@/lib/types/repreneur"
+import { exportRepreneursToCSV } from "@/lib/utils/csv-export"
 import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
 import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
@@ -674,6 +675,16 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
             Clear
           </Button>
         )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 ml-auto"
+          onClick={() => exportRepreneursToCSV(filtered, "repreneurs.csv")}
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Export CSV ({filtered.length})
+        </Button>
       </div>
 
       <div className="space-y-4">
