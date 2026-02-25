@@ -246,10 +246,6 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
 
   const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all" || minScore !== "all" || journeyFilter !== "all" || personaFilter !== "all" || recommendationFilter
 
-  useImperativeHandle(ref, () => ({
-    triggerExport: () => exportRepreneursToCSV(filtered, "repreneurs.csv"),
-  }), [filtered])
-
   const clearFilters = () => {
     setSearch("")
     setStatusFilter("all")
@@ -295,6 +291,10 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
 
     return matchesSearch && matchesStatus && matchesSource && matchesDate && matchesScore && matchesJourney && matchesPersona && matchesRecommendation
   })
+
+  useImperativeHandle(ref, () => ({
+    triggerExport: () => exportRepreneursToCSV(filtered, "repreneurs.csv"),
+  }), [filtered])
 
   // Sort function for a group
   const sortGroup = (items: RepreneurWithOffers[], status: LifecycleStatus) => {
