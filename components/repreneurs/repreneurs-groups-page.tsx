@@ -23,9 +23,9 @@ export function RepreneursGroupsPage({ repreneurs }: { repreneurs: RepreneurWith
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-9 w-9 text-gray-400 hover:text-gray-600"
+            className="h-9 w-9"
             onClick={() => tableRef.current?.triggerExport()}
             title="Export CSV"
           >

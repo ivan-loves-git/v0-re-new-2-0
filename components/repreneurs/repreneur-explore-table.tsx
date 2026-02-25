@@ -338,9 +338,9 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         )}
 
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="h-9 w-9 ml-auto text-gray-400 hover:text-gray-600"
+          className="h-9 w-9 ml-auto"
           onClick={() => exportRepreneursToCSV(sorted, "repreneurs.csv")}
           title="Export CSV"
         >
