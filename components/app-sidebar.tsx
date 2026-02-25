@@ -19,7 +19,6 @@ import {
   LogOut,
   Settings,
   User,
-  CheckSquare,
   Waves,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
@@ -67,8 +66,7 @@ const toolsNavigation = [
 const guidelinesNavigation = [
   { name: "Mission", href: "/guide", icon: Target },
   { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare },
-  { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
+{ name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
 // External users section removed - dead routes cleaned up
