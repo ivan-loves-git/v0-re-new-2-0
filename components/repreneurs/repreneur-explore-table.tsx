@@ -227,19 +227,19 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
   return (
     <div className="space-y-4">
       {/* Filter Bar - Row 1: Core filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by name..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
-            className="pl-9 w-[200px]"
+            className="pl-9 w-[160px]"
           />
         </div>
 
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as LifecycleStatus | "all"); setCurrentPage(1) }}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -257,7 +257,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
             value={sourceFilter || "all"}
             onValueChange={(v) => { setSourceFilter(v === "all" ? "" : v); setCurrentPage(1) }}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="All sources" />
             </SelectTrigger>
             <SelectContent>
@@ -270,7 +270,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         )}
 
         <Select value={dateRange} onValueChange={(v) => { setDateRange(v); setCurrentPage(1) }}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -281,7 +281,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         </Select>
 
         <Select value={minScore} onValueChange={(v) => { setMinScore(v); setCurrentPage(1) }}>
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -292,7 +292,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         </Select>
 
         <Select value={journeyFilter} onValueChange={(v) => { setJourneyFilter(v as JourneyStage | "all"); setCurrentPage(1) }}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -304,7 +304,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         </Select>
 
         <Select value={personaFilter} onValueChange={(v) => { setPersonaFilter(v as PersonaType | "all"); setCurrentPage(1) }}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[130px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -319,7 +319,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
           value={recommendationFilter || "all"}
           onValueChange={(v) => { setRecommendationFilter(v === "all" ? "" : v); setCurrentPage(1) }}
         >
-          <SelectTrigger className="w-[170px]">
+          <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="All recommendations" />
           </SelectTrigger>
           <SelectContent>
@@ -338,13 +338,13 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         )}
 
         <Button
-          variant="outline"
-          size="sm"
-          className="h-9 ml-auto"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 ml-auto text-gray-400 hover:text-gray-600"
           onClick={() => exportRepreneursToCSV(sorted, "repreneurs.csv")}
+          title="Export CSV"
         >
-          <Download className="h-4 w-4 mr-1" />
-          Export CSV ({sorted.length})
+          <Download className="h-4 w-4" />
         </Button>
       </div>
 

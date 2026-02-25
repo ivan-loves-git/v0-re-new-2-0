@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo, memo } from "react"
+import { useState, useMemo, memo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy, X, Download } from "lucide-react"
+import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -195,7 +195,11 @@ const JourneyDisplay = memo(function JourneyDisplay({ repreneur }: { repreneur: 
 
 const DEFAULT_GROUP_SORT: GroupSortState = { field: "created_at", direction: "desc" }
 
-export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTableProps) {
+export interface RepreneurTableRef {
+  triggerExport: () => void
+}
+
+export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>(function RepreneurTable({ repreneurs, viewMode = "grouped" }, ref) {
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
@@ -241,6 +245,10 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   }, [repreneurs])
 
   const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all" || minScore !== "all" || journeyFilter !== "all" || personaFilter !== "all" || recommendationFilter
+
+  useImperativeHandle(ref, () => ({
+    triggerExport: () => exportRepreneursToCSV(filtered, "repreneurs.csv"),
+  }), [filtered])
 
   const clearFilters = () => {
     setSearch("")
@@ -570,18 +578,18 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
   // Grouped view with collapsible sections
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search by name..."
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10 w-[200px]"
+            className="pl-10 w-[160px]"
           />
         </div>
         <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as LifecycleStatus | "all")}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -598,7 +606,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
             value={sourceFilter || "all"}
             onValueChange={(value) => setSourceFilter(value === "all" ? "" : value)}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="All sources" />
             </SelectTrigger>
             <SelectContent>
@@ -612,7 +620,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           </Select>
         )}
         <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[110px]">
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
           <SelectContent>
@@ -624,7 +632,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           </SelectContent>
         </Select>
         <Select value={minScore} onValueChange={setMinScore}>
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -634,7 +642,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           </SelectContent>
         </Select>
         <Select value={journeyFilter} onValueChange={(v) => setJourneyFilter(v as JourneyStage | "all")}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -645,7 +653,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           </SelectContent>
         </Select>
         <Select value={personaFilter} onValueChange={(v) => setPersonaFilter(v as PersonaType | "all")}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[130px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -659,7 +667,7 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           value={recommendationFilter || "all"}
           onValueChange={(v) => setRecommendationFilter(v === "all" ? "" : v)}
         >
-          <SelectTrigger className="w-[170px]">
+          <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="All recommendations" />
           </SelectTrigger>
           <SelectContent>
@@ -676,15 +684,6 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
           </Button>
         )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 ml-auto"
-          onClick={() => exportRepreneursToCSV(filtered, "repreneurs.csv")}
-        >
-          <Download className="h-4 w-4 mr-1" />
-          Export CSV ({filtered.length})
-        </Button>
       </div>
 
       <div className="space-y-4">
@@ -857,4 +856,4 @@ export function RepreneurTable({ repreneurs, viewMode = "grouped" }: RepreneurTa
       </div>
     </div>
   )
-}
+})
