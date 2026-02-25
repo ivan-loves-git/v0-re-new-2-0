@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Star, X, Download } from "lucide-react"
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Star, X } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { subDays } from "date-fns"
 import { Input } from "@/components/ui/input"
@@ -89,7 +89,11 @@ interface RepreneurExploreTableProps {
   repreneurs: Repreneur[]
 }
 
-export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps) {
+export interface RepreneurExploreTableRef {
+  triggerExport: () => void
+}
+
+export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, RepreneurExploreTableProps>(function RepreneurExploreTable({ repreneurs }, ref) {
   const router = useRouter()
 
   // Filter state
@@ -201,6 +205,10 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
       return sortDirection === "asc" ? comparison : -comparison
     })
   }, [filtered, sortField, sortDirection])
+
+  useImperativeHandle(ref, () => ({
+    triggerExport: () => exportRepreneursToCSV(sorted, "repreneurs.csv"),
+  }), [sorted])
 
   // Pagination
   const totalPages = Math.ceil(sorted.length / ITEMS_PER_PAGE)
@@ -337,15 +345,6 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
           </Button>
         )}
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9 ml-auto"
-          onClick={() => exportRepreneursToCSV(sorted, "repreneurs.csv")}
-          title="Export CSV"
-        >
-          <Download className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Results count */}
@@ -507,4 +506,4 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
       )}
     </div>
   )
-}
+})

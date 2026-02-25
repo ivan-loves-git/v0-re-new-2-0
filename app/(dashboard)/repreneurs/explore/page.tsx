@@ -1,8 +1,5 @@
-import Link from "next/link"
-import { Plus } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import { RepreneurExploreTable } from "@/components/repreneurs/repreneur-explore-table"
+import { RepreneursExplorePage } from "@/components/repreneurs/repreneurs-explore-page"
 import type { Repreneur } from "@/lib/types/repreneur"
 
 export const revalidate = 30
@@ -15,22 +12,5 @@ export default async function RepreneurExplorePage() {
     .select("*")
     .order("created_at", { ascending: false })
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Find Repreneurs</h1>
-          <p className="text-gray-600 mt-1">Filter, sort, and find repreneurs across your entire pipeline</p>
-        </div>
-        <Link href="/repreneurs/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Repreneur
-          </Button>
-        </Link>
-      </div>
-
-      <RepreneurExploreTable repreneurs={(repreneurs || []) as Repreneur[]} />
-    </div>
-  )
+  return <RepreneursExplorePage repreneurs={(repreneurs || []) as Repreneur[]} />
 }
