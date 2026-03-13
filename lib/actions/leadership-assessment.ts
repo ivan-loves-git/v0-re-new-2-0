@@ -58,23 +58,29 @@ export async function getAssessmentByToken(
 ): Promise<{ assessment: LeadershipAssessment | null; repreneur: { first_name: string; last_name: string } | null }> {
   const supabase = createAdminClient()
 
-  const { data, error } = await supabase
+  // Fetch assessment
+  const { data: assessment, error } = await supabase
     .from("leadership_assessments")
-    .select(`
-      *,
-      repreneurs (first_name, last_name)
-    `)
+    .select("*")
     .eq("token", token)
     .maybeSingle()
 
-  if (error || !data) {
+  if (error || !assessment) {
+    console.error("Assessment lookup error:", error)
     return { assessment: null, repreneur: null }
   }
 
-  const repreneur = (data as any).repreneurs as { first_name: string; last_name: string } | null
-  const { repreneurs: _, ...assessment } = data as any
+  // Fetch repreneur name separately
+  const { data: repreneur } = await supabase
+    .from("repreneurs")
+    .select("first_name, last_name")
+    .eq("id", assessment.repreneur_id)
+    .single()
 
-  return { assessment, repreneur }
+  return {
+    assessment: assessment as LeadershipAssessment,
+    repreneur: repreneur || null,
+  }
 }
 
 /**
