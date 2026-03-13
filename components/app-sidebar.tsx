@@ -12,6 +12,7 @@ import {
   FileText,
   Compass,
   Mail,
+  BarChart3,
   Target,
   BookOpen,
   Map,
@@ -56,6 +57,7 @@ const mainNavigation = [
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Emails", href: "/emails", icon: Mail },
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
 ]
 
