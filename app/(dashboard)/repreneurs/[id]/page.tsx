@@ -26,6 +26,8 @@ import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
+import { LeadershipResultsCard } from "@/components/repreneurs/leadership-results-card"
+import { getLatestAssessment, getPendingAssessment } from "@/lib/actions/leadership-assessment"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
@@ -202,6 +204,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
       console.log("Milestones table not available yet")
     }
   }
+
+  // Fetch leadership assessment data
+  const [leadershipAssessment, pendingAssessment] = await Promise.all([
+    getLatestAssessment(id),
+    getPendingAssessment(id),
+  ])
 
   // Build user email map
   const userEmailMap: Record<string, string> = {}
@@ -583,12 +591,19 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </CardContent>
         </Card>
 
-        {/* Col 3: Documents */}
-        <DocumentsCard
-          repreneurId={id}
-          cvUrl={repreneur.cv_url}
-          ldcUrl={repreneur.ldc_url}
-        />
+        {/* Col 3: Leadership Assessment + Documents */}
+        <div className="space-y-6">
+          <LeadershipResultsCard
+            repreneurId={id}
+            assessment={leadershipAssessment}
+            pendingToken={pendingAssessment?.token || null}
+          />
+          <DocumentsCard
+            repreneurId={id}
+            cvUrl={repreneur.cv_url}
+            ldcUrl={repreneur.ldc_url}
+          />
+        </div>
       </div>
 
       {/* Third Row: Activity History | Notes | Offers */}
