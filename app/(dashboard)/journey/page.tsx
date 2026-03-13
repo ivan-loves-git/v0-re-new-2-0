@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Compass, Map, Flag, Trophy, ChevronRight } from "lucide-react"
+import { Compass, Map, Flag, Rocket, Crown, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import type { JourneyStage, Repreneur } from "@/lib/types/repreneur"
 import { extractMilestones, countMilestones, deriveJourneyStage } from "@/lib/utils/journey-derivation"
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 // Cache for 30 seconds
 export const revalidate = 30
 
-const stages: JourneyStage[] = ["explorer", "learner", "ready", "serial_acquirer"]
+const stages: JourneyStage[] = ["explorer", "learner", "ready", "execution", "post_acquisition"]
 
 // Get milestones that unlock each stage
 function getMilestonesForStage(stage: JourneyStage): string[] {
@@ -22,8 +22,10 @@ function getMilestonesForStage(stage: JourneyStage): string[] {
       return MILESTONES.filter(m => m.stageGroup === 1).map(m => m.label)
     case "ready":
       return MILESTONES.filter(m => m.stageGroup === 2).map(m => m.label)
-    case "serial_acquirer":
+    case "execution":
       return MILESTONES.filter(m => m.stageGroup === 3).map(m => m.label)
+    case "post_acquisition":
+      return MILESTONES.filter(m => m.stageGroup === 4).map(m => m.label)
     default:
       return []
   }
@@ -57,9 +59,16 @@ const stageConfig: Record<JourneyStage, {
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
   },
-  serial_acquirer: {
-    label: "Serial Acquirer",
-    icon: Trophy,
+  execution: {
+    label: "Execution",
+    icon: Rocket,
+    color: "text-purple-700",
+    bgColor: "bg-purple-50",
+    borderColor: "border-purple-200",
+  },
+  post_acquisition: {
+    label: "Post-acquisition",
+    icon: Crown,
     color: "text-amber-700",
     bgColor: "bg-amber-50",
     borderColor: "border-amber-200",
@@ -72,8 +81,8 @@ function getMilestoneCount(repreneur: Repreneur): number {
 }
 
 function getDerivedStage(repreneur: Repreneur): JourneyStage {
-  const milestoneCount = getMilestoneCount(repreneur)
-  return deriveJourneyStage(milestoneCount, repreneur.persona)
+  const milestones = extractMilestones(repreneur as any)
+  return deriveJourneyStage(milestones)
 }
 
 export default async function JourneyPage() {
@@ -147,7 +156,7 @@ export default async function JourneyPage() {
       </div>
 
       {/* Stage Lists */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stages.map((stage) => {
           const config = stageConfig[stage]
           const Icon = config.icon
@@ -183,7 +192,7 @@ export default async function JourneyPage() {
                             </p>
                           </div>
                           <Badge variant="outline" className="text-xs ml-2 shrink-0">
-                            {milestoneCount}/11
+                            {milestoneCount}/18
                           </Badge>
                         </Link>
                       )

@@ -116,7 +116,7 @@ export interface TestDataManager {
 
 // Repreneur types (simplified from lib/types/repreneur.ts)
 export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected"
-export type JourneyStage = "explorer" | "learner" | "ready" | "serial_acquirer"
+export type JourneyStage = "explorer" | "learner" | "ready" | "execution" | "post_acquisition"
 
 export interface Repreneur {
   id: string

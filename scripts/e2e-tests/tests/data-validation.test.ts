@@ -57,7 +57,7 @@ export const dataValidationTests: TestSuite = {
           const allValid = Object.values(stageCounts).every(count => count >= 0)
 
           if (allValid) {
-            return pass(this.name, `Journey stages valid - Explorer: ${stageCounts.explorer}, Learner: ${stageCounts.learner}, Ready: ${stageCounts.ready}, Serial: ${stageCounts.serial_acquirer}`, Date.now() - start)
+            return pass(this.name, `Journey stages valid - Explorer: ${stageCounts.explorer}, Learner: ${stageCounts.learner}, Ready: ${stageCounts.ready}, Execution: ${stageCounts.execution}, Post-acq: ${stageCounts.post_acquisition}`, Date.now() - start)
           }
 
           return fail(this.name, "Invalid journey stage counts found", {

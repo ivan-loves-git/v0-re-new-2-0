@@ -15,7 +15,8 @@ const stageOptions: { value: JourneyStage; label: string }[] = [
   { value: "explorer", label: "Explorer" },
   { value: "learner", label: "Learner" },
   { value: "ready", label: "Ready" },
-  { value: "serial_acquirer", label: "Serial Acquirer" },
+  { value: "execution", label: "Execution" },
+  { value: "post_acquisition", label: "Post-acquisition" },
 ]
 
 export function UpdateJourneyStageForm({ repreneurId, currentStage }: UpdateJourneyStageFormProps) {

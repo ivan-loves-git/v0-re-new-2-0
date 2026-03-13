@@ -1,5 +1,5 @@
 export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected" | "declined"
-export type JourneyStage = "explorer" | "learner" | "ready" | "serial_acquirer"
+export type JourneyStage = "explorer" | "learner" | "ready" | "execution" | "post_acquisition"
 export type PersonaType = "first_time_buyer" | "serial_acquirer" | "corporate_spinoff" | "family_succession"
 
 // Tier 2 Competency Dimension keys
@@ -21,8 +21,59 @@ export interface Tier2Dimensions {
   commitment: number | null
 }
 
-// Tier 3 Milestone keys
+// Tier 3 Milestone keys (V2: 18 milestones in 4 transition groups)
 export type MilestoneKey =
+  // Group 1: Explorer → Learner
+  | "decision_to_pursue"
+  | "availability_confirmed"
+  // Group 2: Learner → Ready
+  | "target_profile_sheet"
+  | "pitch_plan"
+  | "equity_range"
+  | "deal_breakers"
+  | "advisory_team_structured"
+  | "leadership_assessment_passed"
+  | "advisory_team_identified"
+  // Group 3: Ready → Execution
+  | "intermediary_meeting"
+  | "seller_meeting"
+  | "loi_issued"
+  | "due_diligence"
+  | "negotiation"
+  | "financing_validated"
+  | "closing"
+  // Group 4: Execution → Post-acquisition
+  | "plan_100_days"
+  | "plan_3_years"
+
+// Tier 3 Milestones interface (V2)
+export interface Tier3Milestones {
+  // Group 1: Explorer → Learner
+  decision_to_pursue: boolean
+  availability_confirmed: boolean
+  // Group 2: Learner → Ready
+  target_profile_sheet: boolean
+  pitch_plan: boolean
+  equity_range: boolean
+  deal_breakers: boolean
+  advisory_team_structured: boolean
+  leadership_assessment_passed: boolean
+  advisory_team_identified: boolean
+  // Group 3: Ready → Execution
+  intermediary_meeting: boolean
+  seller_meeting: boolean
+  loi_issued: boolean
+  due_diligence: boolean
+  negotiation: boolean
+  financing_validated: boolean
+  closing: boolean
+  // Group 4: Execution → Post-acquisition
+  plan_100_days: boolean
+  plan_3_years: boolean
+}
+
+// Legacy milestone keys (kept for backwards compat, old columns still in DB)
+export type LegacyMilestoneKey =
   | "investment_thesis"
   | "target_profile"
   | "first_intermediary"
@@ -34,21 +85,6 @@ export type MilestoneKey =
   | "first_target"
   | "dd_checklist"
   | "first_acquisition"
-
-// Tier 3 Milestones interface
-export interface Tier3Milestones {
-  investment_thesis: boolean
-  target_profile: boolean
-  first_intermediary: boolean
-  starter_pack: boolean
-  ldc_validated: boolean
-  financing_proof: boolean
-  advisory_team: boolean
-  search_plan: boolean
-  first_target: boolean
-  dd_checklist: boolean
-  first_acquisition: boolean
-}
 
 // Persona options for the dropdown
 export const PERSONA_OPTIONS = [
@@ -108,7 +144,31 @@ export interface Repreneur {
   tier2_overall?: number | null // Weighted average of all 6 dimensions
   tier2_rated_at?: string
   tier2_rated_by?: string
-  // Tier 3 Readiness Milestones (10 checkboxes)
+  // Tier 3 Readiness Milestones V2 (18 milestones in 4 groups)
+  // Group 1: Explorer → Learner
+  ms_decision_to_pursue?: boolean
+  ms_availability_confirmed?: boolean
+  // Group 2: Learner → Ready
+  ms_target_profile_sheet?: boolean
+  ms_pitch_plan?: boolean
+  ms_equity_range?: boolean
+  ms_deal_breakers?: boolean
+  ms_advisory_team_structured?: boolean
+  ms_leadership_assessment_passed?: boolean
+  ms_advisory_team_identified?: boolean
+  // Group 3: Ready → Execution
+  ms_intermediary_meeting?: boolean
+  ms_seller_meeting?: boolean
+  ms_loi_issued?: boolean
+  ms_due_diligence?: boolean
+  ms_negotiation?: boolean
+  ms_financing_validated?: boolean
+  ms_closing?: boolean
+  // Group 4: Execution → Post-acquisition
+  ms_plan_100_days?: boolean
+  ms_plan_3_years?: boolean
+  tier3_milestone_count?: number // Computed count of completed milestones (0-18)
+  // Legacy milestone columns (still in DB, read-only)
   ms_investment_thesis?: boolean
   ms_target_profile?: boolean
   ms_first_intermediary?: boolean
@@ -120,7 +180,6 @@ export interface Repreneur {
   ms_first_target?: boolean
   ms_dd_checklist?: boolean
   ms_first_acquisition?: boolean
-  tier3_milestone_count?: number // Computed count of completed milestones (0-11)
   rejected_at?: string // timestamp when rejected, null if not rejected
   declined_at?: string // timestamp when declined (internal decision, no email)
   previous_status?: LifecycleStatus // status before rejection/decline, for restore

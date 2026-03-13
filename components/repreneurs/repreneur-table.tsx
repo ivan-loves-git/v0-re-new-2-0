@@ -2,7 +2,7 @@
 
 import { useState, useMemo, memo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Trophy, X } from "lucide-react"
+import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Rocket, Crown, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -81,7 +81,8 @@ const JOURNEY_OPTIONS: { value: JourneyStage; label: string }[] = [
   { value: "explorer", label: "Explorer" },
   { value: "learner", label: "Learner" },
   { value: "ready", label: "Ready" },
-  { value: "serial_acquirer", label: "Champion" },
+  { value: "execution", label: "Execution" },
+  { value: "post_acquisition", label: "Post-acquisition" },
 ]
 
 const PERSONA_OPTIONS: { value: PersonaType; label: string }[] = [
@@ -175,12 +176,13 @@ const OfferDisplay = memo(function OfferDisplay({ offers }: { offers: string[] |
 const JourneyDisplay = memo(function JourneyDisplay({ repreneur }: { repreneur: RepreneurWithOffers }) {
   const milestones = extractMilestones(repreneur)
   const milestoneCount = countMilestones(milestones)
-  const derivedStage = deriveJourneyStage(milestoneCount, repreneur.persona)
+  const derivedStage = deriveJourneyStage(milestones)
   const stageConfig = getStageConfig(derivedStage)
 
   const StageIcon = derivedStage === "explorer" ? Compass :
                    derivedStage === "learner" ? Map :
-                   derivedStage === "ready" ? Flag : Trophy
+                   derivedStage === "ready" ? Flag :
+                   derivedStage === "execution" ? Rocket : Crown
 
   return (
     <div className="flex items-center gap-1.5">
@@ -188,7 +190,7 @@ const JourneyDisplay = memo(function JourneyDisplay({ repreneur }: { repreneur: 
         <StageIcon className="h-3 w-3" />
         {stageConfig.label}
       </Badge>
-      <span className="text-xs text-gray-500">({milestoneCount}/10)</span>
+      <span className="text-xs text-gray-500">({milestoneCount}/18)</span>
     </div>
   )
 })

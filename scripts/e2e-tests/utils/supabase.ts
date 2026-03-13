@@ -192,7 +192,7 @@ export async function getCountsByStatus(): Promise<Record<LifecycleStatus, numbe
  */
 export async function getCountsByJourneyStage(): Promise<Record<string, number>> {
   const client = getClient()
-  const stages = ["explorer", "learner", "ready", "serial_acquirer"]
+  const stages = ["explorer", "learner", "ready", "execution", "post_acquisition"]
   const counts: Record<string, number> = {}
 
   for (const stage of stages) {

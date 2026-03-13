@@ -79,7 +79,7 @@ const TEST_REPRENEURS = [
     target_location: "Bordeaux, Nouvelle-Aquitaine",
     target_acquisition_size: "€2M - €5M revenue",
     lifecycle_status: "client",
-    journey_stage: "serial_acquirer",
+    journey_stage: "execution",
     source: "Website",
     tier2_stars: 5,
     // Questionnaire fields

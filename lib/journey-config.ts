@@ -1,4 +1,4 @@
-import { Compass, BookOpen, FileCheck, Trophy } from "lucide-react"
+import { Compass, BookOpen, FileCheck, Rocket, Crown } from "lucide-react"
 import type { JourneyStage } from "@/lib/types/repreneur"
 
 export const stageConfig: Record<JourneyStage, { label: string; color: string; icon: React.ElementType; description: string }> = {
@@ -20,10 +20,16 @@ export const stageConfig: Record<JourneyStage, { label: string; color: string; i
     icon: FileCheck,
     description: "Prepared to write LOIs and make offers",
   },
-  serial_acquirer: {
-    label: "Serial Acquirer",
+  execution: {
+    label: "Execution",
     color: "bg-purple-100 text-purple-800 border-purple-200",
-    icon: Trophy,
-    description: "Experienced buyer with multiple acquisitions",
+    icon: Rocket,
+    description: "Actively executing an acquisition deal",
+  },
+  post_acquisition: {
+    label: "Post-acquisition",
+    color: "bg-amber-100 text-amber-800 border-amber-200",
+    icon: Crown,
+    description: "Deal closed, building value in acquired company",
   },
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useOptimistic, useTransition, useRef, useCallback } from "react"
-import { Compass, Map, Flag, Trophy, CheckCircle2, Circle, LucideIcon } from "lucide-react"
+import { Compass, Map, Flag, Rocket, Crown, CheckCircle2, Circle, LucideIcon } from "lucide-react"
 import { toggleMilestone } from "@/lib/actions/repreneurs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -20,6 +20,26 @@ import { extractMilestones, countMilestones, deriveJourneyStage, getStageProgres
 interface Tier3MilestonesCardProps {
   repreneurId: string
   repreneur: {
+    // V2 milestones (18)
+    ms_decision_to_pursue?: boolean
+    ms_availability_confirmed?: boolean
+    ms_target_profile_sheet?: boolean
+    ms_pitch_plan?: boolean
+    ms_equity_range?: boolean
+    ms_deal_breakers?: boolean
+    ms_advisory_team_structured?: boolean
+    ms_leadership_assessment_passed?: boolean
+    ms_advisory_team_identified?: boolean
+    ms_intermediary_meeting?: boolean
+    ms_seller_meeting?: boolean
+    ms_loi_issued?: boolean
+    ms_due_diligence?: boolean
+    ms_negotiation?: boolean
+    ms_financing_validated?: boolean
+    ms_closing?: boolean
+    ms_plan_100_days?: boolean
+    ms_plan_3_years?: boolean
+    // Legacy milestones (still in DB)
     ms_investment_thesis?: boolean
     ms_target_profile?: boolean
     ms_first_intermediary?: boolean
@@ -42,7 +62,8 @@ const STAGE_ICONS: Record<JourneyStage, LucideIcon> = {
   explorer: Compass,
   learner: Map,
   ready: Flag,
-  serial_acquirer: Trophy,
+  execution: Rocket,
+  post_acquisition: Crown,
 }
 
 function StageIcon({ stage, className }: { stage: JourneyStage; className?: string }) {
@@ -124,12 +145,12 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
 
   // Debounce refs for batching rapid toggles
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
-  const pendingToggles = useRef<Record<MilestoneKey, boolean>>({})
+  const pendingToggles = useRef<Partial<Record<MilestoneKey, boolean>>>({})
 
   const optimisticCount = countMilestones(optimisticMilestones)
-  const derivedStage = deriveJourneyStage(optimisticCount, repreneur.persona)
+  const derivedStage = deriveJourneyStage(optimisticMilestones)
   const stageConfig = getStageConfig(derivedStage)
-  const progress = getStageProgress(optimisticCount)
+  const progress = getStageProgress(optimisticMilestones)
 
   // Debounced save for rapid toggles
   const debouncedSave = useCallback(async () => {
@@ -185,7 +206,7 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
             {stageConfig.label}
           </Badge>
           <span className="text-sm text-gray-500">
-            {optimisticCount}/11 milestones
+            {optimisticCount}/18 milestones
           </span>
         </div>
         {progress.nextStage && (
@@ -196,7 +217,7 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
       </div>
 
       {/* Progress Bar */}
-      <Progress value={(optimisticCount / 11) * 100} className="h-2" />
+      <Progress value={(optimisticCount / 18) * 100} className="h-2" />
 
       {/* Milestones in 2-column layout */}
       <TooltipProvider>
@@ -214,7 +235,7 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
             ))}
           </div>
 
-          {/* Right column: Group 3 */}
+          {/* Right column: Groups 3 & 4 */}
           <div className="space-y-3">
             {milestonesByGroup.slice(2).map((group) => (
               <MilestoneGroup

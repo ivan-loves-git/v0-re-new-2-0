@@ -219,7 +219,8 @@ async function MiddleRow() {
   const explorerCount = repreneurs.filter((r) => r.journey_stage === "explorer").length
   const learnerCount = repreneurs.filter((r) => r.journey_stage === "learner").length
   const readyCount = repreneurs.filter((r) => r.journey_stage === "ready").length
-  const serialAcquirerCount = repreneurs.filter((r) => r.journey_stage === "serial_acquirer").length
+  const executionCount = repreneurs.filter((r) => r.journey_stage === "execution").length
+  const postAcquisitionCount = repreneurs.filter((r) => r.journey_stage === "post_acquisition").length
   const noStageCount = repreneurs.filter((r) => !r.journey_stage).length
 
   // Recent repreneurs
@@ -264,7 +265,8 @@ async function MiddleRow() {
             explorerCount={explorerCount}
             learnerCount={learnerCount}
             readyCount={readyCount}
-            serialAcquirerCount={serialAcquirerCount}
+            executionCount={executionCount}
+            postAcquisitionCount={postAcquisitionCount}
             noStageCount={noStageCount}
           />
         </div>

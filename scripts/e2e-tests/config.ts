@@ -150,5 +150,6 @@ export const JOURNEY_STAGES = {
   explorer: "explorer",
   learner: "learner",
   ready: "ready",
-  serial_acquirer: "serial_acquirer",
+  execution: "execution",
+  post_acquisition: "post_acquisition",
 } as const

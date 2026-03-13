@@ -60,7 +60,8 @@ const JOURNEY_OPTIONS: { value: JourneyStage; label: string }[] = [
   { value: "explorer", label: "Explorer" },
   { value: "learner", label: "Learner" },
   { value: "ready", label: "Ready" },
-  { value: "serial_acquirer", label: "Champion" },
+  { value: "execution", label: "Execution" },
+  { value: "post_acquisition", label: "Post-acquisition" },
 ]
 
 const PERSONA_OPTIONS: { value: PersonaType; label: string }[] = [

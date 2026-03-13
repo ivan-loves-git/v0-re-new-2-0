@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Trophy, AlertTriangle } from "lucide-react"
+import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Rocket, Crown, AlertTriangle } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/auth-server"
 import { BackButton } from "@/components/ui/back-button"
@@ -311,18 +311,19 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           {(() => {
             const milestones = extractMilestones(repreneur)
             const milestoneCount = countMilestones(milestones)
-            const derivedStage = deriveJourneyStage(milestoneCount, repreneur.persona)
+            const derivedStage = deriveJourneyStage(milestones)
             const stageConfig = getStageConfig(derivedStage)
             const StageIcon = derivedStage === "explorer" ? Compass :
                              derivedStage === "learner" ? Map :
-                             derivedStage === "ready" ? Flag : Trophy
+                             derivedStage === "ready" ? Flag :
+                             derivedStage === "execution" ? Rocket : Crown
             return (
               <div>
                 <Label className="text-xs text-gray-500 mb-1 block">Journey</Label>
                 <Badge className={`gap-1.5 ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
                   <StageIcon className="h-3.5 w-3.5" />
                   {stageConfig.label}
-                  <span className="text-xs opacity-75">({milestoneCount}/11)</span>
+                  <span className="text-xs opacity-75">({milestoneCount}/18)</span>
                 </Badge>
               </div>
             )
@@ -566,8 +567,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="max-w-xs">
                     <p className="text-sm">
-                      10 readiness milestones. Completing milestones advances the journey stage:
-                      Explorer (0-2), Learner (3-6), Ready (7-9), Serial Acquirer (10 + persona).
+                      18 readiness milestones in 4 groups. Completing all milestones in a group advances the journey stage:
+                      Explorer, Learner, Ready, Execution, Post-acquisition.
                     </p>
                   </TooltipContent>
                 </Tooltip>

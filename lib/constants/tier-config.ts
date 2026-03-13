@@ -51,8 +51,10 @@ export const TIER2_DIMENSIONS: Tier2DimensionConfig[] = [
 export const TIER2_PASS_THRESHOLD = 4.0
 
 // Stage Group Configuration (for grouping milestones in UI)
+export type StageGroupNumber = 1 | 2 | 3 | 4
+
 export interface StageGroupConfig {
-  group: 1 | 2 | 3
+  group: StageGroupNumber
   title: string
   description: string
   fromStage: JourneyStage
@@ -63,23 +65,30 @@ export const STAGE_GROUPS: StageGroupConfig[] = [
   {
     group: 1,
     title: "Explorer → Learner",
-    description: "Define your acquisition criteria",
+    description: "Commit to the repreneurship project",
     fromStage: "explorer",
     toStage: "learner",
   },
   {
     group: 2,
     title: "Learner → Ready",
-    description: "Prepare your resources",
+    description: "Structure your project and prove readiness",
     fromStage: "learner",
     toStage: "ready",
   },
   {
     group: 3,
-    title: "Ready → Serial",
-    description: "Execute your search",
+    title: "Ready → Execution",
+    description: "Find, evaluate, and close a deal",
     fromStage: "ready",
-    toStage: "serial_acquirer",
+    toStage: "execution",
+  },
+  {
+    group: 4,
+    title: "Execution → Post-acquisition",
+    description: "Take ownership and create value",
+    fromStage: "execution",
+    toStage: "post_acquisition",
   },
 ]
 
@@ -88,78 +97,121 @@ export interface MilestoneConfig {
   key: MilestoneKey
   label: string
   tooltip: string
-  stageGroup: 1 | 2 | 3 // Which stage transition this milestone contributes to
+  stageGroup: StageGroupNumber
 }
 
 export const MILESTONES: MilestoneConfig[] = [
-  // Stage 1: Explorer → Learner (complete 3)
+  // Group 1: Explorer → Learner (2 milestones)
   {
-    key: "investment_thesis",
-    label: "Investment thesis defined",
-    tooltip: "Sector, size, geography, and deal criteria are clearly documented",
+    key: "decision_to_pursue",
+    label: "Repreneurship as main project",
+    tooltip: "Decided that SME acquisition is their primary professional project",
     stageGroup: 1,
   },
   {
-    key: "target_profile",
-    label: "Target profile approved",
-    tooltip: "Re-New has reviewed and approved the acquisition target criteria",
+    key: "availability_confirmed",
+    label: "Availability confirmed",
+    tooltip: "Can dedicate the necessary time to explore the project",
     stageGroup: 1,
   },
+  // Group 2: Learner → Ready (7 milestones)
   {
-    key: "first_intermediary",
-    label: "First intermediary intro",
-    tooltip: "Connected to at least one deal source (broker, M&A advisor)",
-    stageGroup: 1,
-  },
-  // Stage 2: Learner → Ready (complete 7 total, 4 more)
-  {
-    key: "starter_pack",
-    label: "Starter Pack completed",
-    tooltip: "Finished Re-New's preparation training program",
+    key: "target_profile_sheet",
+    label: "Target profile defined",
+    tooltip: "Geography, sectors, metrics, and business model criteria documented",
     stageGroup: 2,
   },
   {
-    key: "ldc_validated",
-    label: "LdC validated",
-    tooltip: "Lettre de Cadrage reviewed and approved by Re-New",
+    key: "pitch_plan",
+    label: "Pitch & value creation plan",
+    tooltip: "Why me + value creation plan clearly articulated",
     stageGroup: 2,
   },
   {
-    key: "financing_proof",
-    label: "Financing secured",
-    tooltip: "Bank letter, investor commitment, or proof of funds obtained",
+    key: "equity_range",
+    label: "Equity range confirmed",
+    tooltip: "Personal equity contribution range and source identified",
     stageGroup: 2,
   },
   {
-    key: "advisory_team",
-    label: "Advisory team engaged",
-    tooltip: "Lawyer, accountant, or M&A advisor contracted",
+    key: "deal_breakers",
+    label: "Deal breakers identified",
+    tooltip: "Key risks identified: client dependency, minimum margins, litigation, working capital",
     stageGroup: 2,
   },
-  // Stage 3: Ready → Serial Acquirer (complete all 11)
   {
-    key: "search_plan",
-    label: "Active search plan",
-    tooltip: "Search plan with timeline approved by Re-New",
+    key: "advisory_team_structured",
+    label: "Advisory team structured",
+    tooltip: "Accountant and lawyer engaged for the project",
+    stageGroup: 2,
+  },
+  {
+    key: "leadership_assessment_passed",
+    label: "Leadership assessment passed",
+    tooltip: "Completed leadership potential assessment with positive result",
+    stageGroup: 2,
+  },
+  {
+    key: "advisory_team_identified",
+    label: "Advisory team identified",
+    tooltip: "Lawyers and accountants identified and contacted",
+    stageGroup: 2,
+  },
+  // Group 3: Ready → Execution (7 milestones)
+  {
+    key: "intermediary_meeting",
+    label: "Intermediary meeting",
+    tooltip: "First meeting with a deal intermediary held",
     stageGroup: 3,
   },
   {
-    key: "first_target",
-    label: "First target contacted",
-    tooltip: "Engaged with a potential acquisition target",
+    key: "seller_meeting",
+    label: "Seller meeting",
+    tooltip: "First meeting with a company seller held",
     stageGroup: 3,
   },
   {
-    key: "dd_checklist",
-    label: "DD checklist ready",
-    tooltip: "Due diligence preparation complete, knows what to evaluate",
+    key: "loi_issued",
+    label: "LOI issued",
+    tooltip: "Letter of Intent submitted to the seller",
     stageGroup: 3,
   },
   {
-    key: "first_acquisition",
-    label: "First acquisition completed",
-    tooltip: "Successfully completed at least one company acquisition",
+    key: "due_diligence",
+    label: "Due diligence",
+    tooltip: "Due diligence process initiated",
     stageGroup: 3,
+  },
+  {
+    key: "negotiation",
+    label: "Negotiation",
+    tooltip: "Active negotiation on deal terms",
+    stageGroup: 3,
+  },
+  {
+    key: "financing_validated",
+    label: "Financing validated",
+    tooltip: "Bank contacts established and/or first validation obtained",
+    stageGroup: 3,
+  },
+  {
+    key: "closing",
+    label: "Closing",
+    tooltip: "Deal successfully closed",
+    stageGroup: 3,
+  },
+  // Group 4: Execution → Post-acquisition (2 milestones)
+  {
+    key: "plan_100_days",
+    label: "100-day plan delivered",
+    tooltip: "Post-acquisition 100-day integration plan delivered",
+    stageGroup: 4,
+  },
+  {
+    key: "plan_3_years",
+    label: "3-year value creation plan",
+    tooltip: "Long-term value creation plan defined and being executed",
+    stageGroup: 4,
   },
 ]
 
@@ -172,7 +224,7 @@ export interface JourneyStageConfig {
   bgColor: string // Background color class
   minMilestones: number
   maxMilestones: number
-  stageGroup: 1 | 2 | 3 | null // Which milestone group unlocks this stage (null for Explorer)
+  stageGroup: StageGroupNumber | null // Which milestone group unlocks this stage (null for Explorer)
 }
 
 export const JOURNEY_STAGES: JourneyStageConfig[] = [
@@ -183,8 +235,8 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     color: "text-gray-600",
     bgColor: "bg-gray-100",
     minMilestones: 0,
-    maxMilestones: 2,
-    stageGroup: null, // Starting point
+    maxMilestones: 1,
+    stageGroup: null,
   },
   {
     key: "learner",
@@ -192,9 +244,9 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     icon: "Map",
     color: "text-blue-600",
     bgColor: "bg-blue-100",
-    minMilestones: 3,
-    maxMilestones: 6,
-    stageGroup: 1, // Unlocked by completing Stage Group 1 milestones
+    minMilestones: 2,
+    maxMilestones: 8,
+    stageGroup: 1,
   },
   {
     key: "ready",
@@ -202,19 +254,29 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     icon: "Flag",
     color: "text-green-600",
     bgColor: "bg-green-100",
-    minMilestones: 7,
-    maxMilestones: 10,
-    stageGroup: 2, // Unlocked by completing Stage Group 2 milestones
+    minMilestones: 9,
+    maxMilestones: 15,
+    stageGroup: 2,
   },
   {
-    key: "serial_acquirer",
-    label: "Serial Acquirer",
-    icon: "Trophy",
+    key: "execution",
+    label: "Execution",
+    icon: "Rocket",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
+    minMilestones: 16,
+    maxMilestones: 17,
+    stageGroup: 3,
+  },
+  {
+    key: "post_acquisition",
+    label: "Post-acquisition",
+    icon: "Crown",
     color: "text-amber-600",
     bgColor: "bg-amber-100",
-    minMilestones: 11,
-    maxMilestones: 11,
-    stageGroup: 3, // Unlocked by completing Stage Group 3 milestones (incl. first acquisition)
+    minMilestones: 18,
+    maxMilestones: 18,
+    stageGroup: 4,
   },
 ]
 

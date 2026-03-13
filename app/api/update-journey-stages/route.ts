@@ -2,17 +2,17 @@ import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth-server"
 
-// Distribution: explorer (4), learner (3), ready (2), serial_acquirer (2)
+// Distribution: explorer (3), learner (3), ready (2), execution (1), post_acquisition (1)
 const JOURNEY_STAGE_DISTRIBUTION: Record<string, string> = {
   "test.alice@example.com": "explorer",
   "test.bob@example.com": "learner",
-  "test.charlie@example.com": "serial_acquirer",
+  "test.charlie@example.com": "execution",
   "test.diana@example.com": "explorer",
   "test.ethan@example.com": "learner",
   "test.fiona@example.com": "ready",
   "test.george@example.com": "learner",
   "test.hannah@example.com": "ready",
-  "test.ivan@example.com": "serial_acquirer",
+  "test.ivan@example.com": "post_acquisition",
   "test.julia@example.com": "explorer",
   // For the 11th user if exists, we'll default to explorer
 }
@@ -43,7 +43,7 @@ export async function POST() {
     }
 
     // Define stages for distribution if emails don't match the test data
-    const stages = ["explorer", "explorer", "explorer", "explorer", "learner", "learner", "learner", "ready", "ready", "serial_acquirer", "serial_acquirer"]
+    const stages = ["explorer", "explorer", "explorer", "learner", "learner", "learner", "ready", "ready", "execution", "post_acquisition"]
 
     const updates = []
 
@@ -87,7 +87,8 @@ export async function POST() {
       explorer: updates.filter(u => u.new_stage === "explorer" && u.status === "success").length,
       learner: updates.filter(u => u.new_stage === "learner" && u.status === "success").length,
       ready: updates.filter(u => u.new_stage === "ready" && u.status === "success").length,
-      serial_acquirer: updates.filter(u => u.new_stage === "serial_acquirer" && u.status === "success").length,
+      execution: updates.filter(u => u.new_stage === "execution" && u.status === "success").length,
+      post_acquisition: updates.filter(u => u.new_stage === "post_acquisition" && u.status === "success").length,
     }
 
     return NextResponse.json({

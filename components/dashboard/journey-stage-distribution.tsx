@@ -9,7 +9,8 @@ interface JourneyStageDistributionProps {
   explorerCount: number
   learnerCount: number
   readyCount: number
-  serialAcquirerCount: number
+  executionCount: number
+  postAcquisitionCount: number
   noStageCount: number
 }
 
@@ -17,15 +18,16 @@ const COLORS = {
   explorer: "#3b82f6",      // blue-500
   learner: "#f59e0b",       // amber-500
   ready: "#22c55e",         // green-500
-  serial_acquirer: "#a855f7", // purple-500
+  execution: "#a855f7",     // purple-500
+  post_acquisition: "#f59e0b", // amber-500
   no_stage: "#9ca3af",      // gray-400
 }
 
 const kpiInfo = {
   journeyStages: {
     title: "Journey Stage Distribution",
-    description: "Breakdown of repreneurs by their acquisition journey stage: Explorer (curious), Learner (building skills), Ready (prepared to buy), Serial Acquirer (experienced buyer).",
-    why: "Tailor your approach based on journey stage. Explorers need education, Learners need guidance, Ready candidates need opportunities, Serial Acquirers need deal flow.",
+    description: "Breakdown of repreneurs by their acquisition journey stage: Explorer (curious), Learner (building skills), Ready (prepared to buy), Execution (active deal), Post-acquisition (deal closed).",
+    why: "Tailor your approach based on journey stage. Explorers need education, Learners need guidance, Ready candidates need opportunities, Execution needs deal support, Post-acquisition needs integration help.",
   },
 }
 
@@ -33,18 +35,20 @@ export function JourneyStageDistribution({
   explorerCount,
   learnerCount,
   readyCount,
-  serialAcquirerCount,
+  executionCount,
+  postAcquisitionCount,
   noStageCount,
 }: JourneyStageDistributionProps) {
   const data = [
     { name: "Explorer", value: explorerCount, color: COLORS.explorer },
     { name: "Learner", value: learnerCount, color: COLORS.learner },
     { name: "Ready", value: readyCount, color: COLORS.ready },
-    { name: "Serial Acquirer", value: serialAcquirerCount, color: COLORS.serial_acquirer },
+    { name: "Execution", value: executionCount, color: COLORS.execution },
+    { name: "Post-acquisition", value: postAcquisitionCount, color: COLORS.post_acquisition },
     { name: "Not Set", value: noStageCount, color: COLORS.no_stage },
   ].filter(d => d.value > 0)
 
-  const total = explorerCount + learnerCount + readyCount + serialAcquirerCount + noStageCount
+  const total = explorerCount + learnerCount + readyCount + executionCount + postAcquisitionCount + noStageCount
 
   return (
     <Card className="h-full overflow-hidden gap-0">
