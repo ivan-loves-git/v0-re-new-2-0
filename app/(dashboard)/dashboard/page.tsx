@@ -8,7 +8,7 @@ import { EnhancedChart } from "@/components/dashboard/enhanced-chart"
 import { ConversionFunnel } from "@/components/dashboard/conversion-funnel"
 import { JourneyStageDistribution } from "@/components/dashboard/journey-stage-distribution"
 import { TopTier1Repreneurs } from "@/components/dashboard/top-tier1-repreneurs"
-import { TopTier2Repreneurs } from "@/components/dashboard/top-tier2-repreneurs"
+import { AssessmentStatus } from "@/components/dashboard/assessment-status"
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -99,13 +99,20 @@ function ChartSkeleton() {
 async function StatsAndTiersRow() {
   const supabase = await createServerClient()
 
-  // Fetch repreneurs
-  const repreneursResult = await supabase
-    .from("repreneurs")
-    .select("*")
-    .order("created_at", { ascending: false })
+  // Fetch repreneurs + assessments in parallel
+  const [repreneursResult, assessmentsResult] = await Promise.all([
+    supabase
+      .from("repreneurs")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("leadership_assessments")
+      .select("id, repreneur_id, decision, completed_at")
+      .order("completed_at", { ascending: false })
+  ])
 
   const repreneurs = repreneursResult.data || []
+  const assessmentsRaw = assessmentsResult.data || []
 
   // Calculate lifecycle stats
   const totalRepreneurs = repreneurs.length
@@ -138,18 +145,28 @@ async function StatsAndTiersRow() {
     .filter(c => c.tier1_score > 0)
     .sort((a, b) => (b.tier1_score || 0) - (a.tier1_score || 0))
 
-  // Top Tier 2 repreneurs
-  const topTier2Repreneurs = repreneurs
-    .map((r) => ({
-      id: r.id,
-      first_name: r.first_name,
-      last_name: r.last_name,
-      lifecycle_status: r.lifecycle_status,
-      tier2_stars: r.tier2_stars || null,
-    }))
-    .filter(c => c.tier2_stars !== null && c.tier2_stars > 0)
-    .sort((a, b) => (b.tier2_stars || 0) - (a.tier2_stars || 0))
-    .slice(0, 30)
+  // Build repreneur name lookup
+  const repreneurMap = new Map(repreneurs.map(r => [r.id, r]))
+
+  // Deduplicate assessments: keep latest per repreneur
+  const latestByRepreneur = new Map<string, typeof assessmentsRaw[0]>()
+  for (const a of assessmentsRaw) {
+    if (!latestByRepreneur.has(a.repreneur_id)) {
+      latestByRepreneur.set(a.repreneur_id, a)
+    }
+  }
+
+  const assessmentEntries = Array.from(latestByRepreneur.values()).map(a => {
+    const r = repreneurMap.get(a.repreneur_id)
+    return {
+      id: a.id,
+      first_name: r?.first_name || "Unknown",
+      last_name: r?.last_name || "",
+      repreneur_id: a.repreneur_id,
+      decision: a.decision,
+      completed: !!a.completed_at,
+    }
+  })
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -164,7 +181,7 @@ async function StatsAndTiersRow() {
         lastWeekClients={lastWeekClients}
       />
       <TopTier1Repreneurs repreneurs={topTier1Repreneurs} itemsPerPage={5} />
-      <TopTier2Repreneurs repreneurs={topTier2Repreneurs} itemsPerPage={5} />
+      <AssessmentStatus assessments={assessmentEntries} totalRepreneurs={totalRepreneurs} />
     </div>
   )
 }

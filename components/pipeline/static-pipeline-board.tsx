@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
-import { Star, Package, ChevronDown, Info, ArrowUpDown } from "lucide-react"
+import { Package, ChevronDown, Info, ArrowUpDown } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,8 @@ import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
+  assessment_decision?: string | null
+  assessment_pending?: boolean
 }
 
 interface StaticPipelineBoardProps {
@@ -31,20 +33,21 @@ const COLUMNS: { status: LifecycleStatus; title: string; color: string; bgColor:
   { status: "rejected", title: "Rejected", color: "bg-red-100", bgColor: "bg-red-50/50" },
 ]
 
-function StarDisplay({ stars }: { stars: number | null | undefined }) {
-  if (!stars) return null
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-3 w-3 ${
-            star <= stars ? "fill-yellow-400 text-yellow-400" : "fill-transparent text-gray-300"
-          }`}
-        />
-      ))}
-    </div>
-  )
+function AssessmentDot({ decision, pending }: { decision?: string | null; pending?: boolean }) {
+  if (pending) {
+    return <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-gray-500 border-gray-300">Pending</Badge>
+  }
+  if (!decision) return null
+  switch (decision) {
+    case "engagement":
+      return <Badge className="text-[10px] py-0 px-1.5 bg-green-100 text-green-700 border-0">Pass</Badge>
+    case "engagement_sous_conditions":
+      return <Badge className="text-[10px] py-0 px-1.5 bg-amber-100 text-amber-700 border-0">Review</Badge>
+    case "non_engagement":
+      return <Badge className="text-[10px] py-0 px-1.5 bg-red-100 text-red-700 border-0">Fail</Badge>
+    default:
+      return null
+  }
 }
 
 function ScoreBadge({ repreneur }: { repreneur: RepreneurWithOffers }) {
@@ -71,7 +74,7 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
   const renderStatusInfo = () => {
     switch (repreneur.lifecycle_status) {
       case "qualified":
-        return <StarDisplay stars={repreneur.tier2_stars} />
+        return <AssessmentDot decision={repreneur.assessment_decision} pending={repreneur.assessment_pending} />
       case "client":
         if (repreneur.offer_names && repreneur.offer_names.length > 0) {
           return (
@@ -312,7 +315,7 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
           <Info className="h-4 w-4 text-amber-600 flex-shrink-0" />
           <p className="text-sm text-amber-800">
             Status changes are action-driven. To move a repreneur:{" "}
-            <span className="font-medium">set Tier 2 rating</span> (→ Qualified),{" "}
+            <span className="font-medium">qualify manually</span> (→ Qualified),{" "}
             <span className="font-medium">assign an offer</span> (→ Client),{" "}
             <span className="font-medium">Decline</span> (internal, no email), or{" "}
             <span className="font-medium">Reject</span> (sends email).

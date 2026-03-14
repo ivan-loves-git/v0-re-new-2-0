@@ -2,7 +2,7 @@
 
 import { useState, useMemo, memo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Star, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Rocket, Crown, X } from "lucide-react"
+import { Search, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Rocket, Crown, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -30,6 +30,8 @@ const ITEMS_PER_PAGE = 8
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
+  assessment_decision?: string | null
+  assessment_pending?: boolean
 }
 
 interface RepreneurTableProps {
@@ -99,20 +101,23 @@ const RECOMMENDATION_OPTIONS = [
   { value: "starter_pack", label: "Starter pack" },
 ]
 
-const StarDisplay = memo(function StarDisplay({ stars }: { stars: number | null | undefined }) {
-  if (!stars) return <span className="text-gray-400 text-sm">Not rated</span>
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-4 w-4 ${
-            star <= stars ? "fill-yellow-400 text-yellow-400" : "fill-transparent text-gray-300"
-          }`}
-        />
-      ))}
-    </div>
-  )
+const AssessmentBadge = memo(function AssessmentBadge({ decision, pending }: { decision: string | null | undefined; pending?: boolean }) {
+  if (pending) {
+    return <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">Pending</Badge>
+  }
+  if (!decision) {
+    return <span className="text-gray-400 text-sm">—</span>
+  }
+  switch (decision) {
+    case "engagement":
+      return <Badge className="text-xs bg-green-100 text-green-700 border-0">Pass</Badge>
+    case "engagement_sous_conditions":
+      return <Badge className="text-xs bg-amber-100 text-amber-700 border-0">Review</Badge>
+    case "non_engagement":
+      return <Badge className="text-xs bg-red-100 text-red-700 border-0">Fail</Badge>
+    default:
+      return <span className="text-gray-400 text-sm">—</span>
+  }
 })
 
 // Display combined WHO+WHEN score with tooltip breakdown
@@ -324,9 +329,13 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
               const bWhen = (b as any).when_score ?? 0
               comparison = (aWho + aWhen) - (bWho + bWhen)
               break
-            case "qualified":
-              comparison = (a.tier2_stars || 0) - (b.tier2_stars || 0)
+            case "qualified": {
+              const decisionOrder: Record<string, number> = { engagement: 3, engagement_sous_conditions: 2, non_engagement: 1 }
+              const aOrder = a.assessment_decision ? (decisionOrder[a.assessment_decision] || 0) : (a.assessment_pending ? -1 : -2)
+              const bOrder = b.assessment_decision ? (decisionOrder[b.assessment_decision] || 0) : (b.assessment_pending ? -1 : -2)
+              comparison = aOrder - bOrder
               break
+            }
             case "client":
               comparison = (a.offer_names?.length || 0) - (b.offer_names?.length || 0)
               break
@@ -437,7 +446,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       case "lead":
         return <ScoreDisplay repreneur={repreneur} />
       case "qualified":
-        return <StarDisplay stars={repreneur.tier2_stars} />
+        return <AssessmentBadge decision={repreneur.assessment_decision} pending={repreneur.assessment_pending} />
       case "client":
         return <OfferDisplay offers={repreneur.offer_names} />
       case "declined":
@@ -466,7 +475,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       case "lead":
         return "Rating"
       case "qualified":
-        return "Tier 2 Rating"
+        return "Assessment"
       case "client":
         return "Offers"
       case "declined":

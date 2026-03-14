@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { DollarSign, Star, Info, Filter, Calculator, Mail, Phone, Compass, Map, Flag, Rocket, Crown, AlertTriangle } from "lucide-react"
+import { DollarSign, Star, Info, Mail, Phone, Compass, Map, Flag, Rocket, Crown, AlertTriangle } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/auth-server"
 import { BackButton } from "@/components/ui/back-button"
@@ -20,17 +20,14 @@ import { EditableSelectField } from "@/components/repreneurs/editable-select-fie
 import { EditableMultiSelect } from "@/components/repreneurs/editable-multi-select"
 import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
-import { Tier2DimensionRating } from "@/components/repreneurs/tier2-dimension-rating"
 import { Tier3MilestonesCard } from "@/components/repreneurs/tier3-milestones-card"
 import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
-import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { LeadershipResultsCard } from "@/components/repreneurs/leadership-results-card"
 import { getLatestAssessment, getPendingAssessment } from "@/lib/actions/leadership-assessment"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
-import { scoreToStarRating, getScoreDescription } from "@/lib/utils/tier1-scoring"
 import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
 import { FlagBadges } from "@/components/scoring-v2/flag-badges"
 import type { Flag as ScoringFlag } from "@/components/scoring-v2/types"
@@ -347,39 +344,20 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
-      {/* Profile Overview Row: Rating | Investment Profile | Radar Chart */}
+      {/* Profile Overview Row: Scores & Profile | Leadership Assessment (2-col span) */}
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Col 1: Rating Card - WHO + WHEN + Tier 2 */}
+        {/* Col 1: Combined Scores & Profile Card */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Star className="h-5 w-5" />
-                Rating
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                        <Info className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs">
-                      <p className="text-sm">
-                        <strong>WHO (0-100):</strong> Profile quality and execution capacity.
-                      </p>
-                      <p className="text-sm mt-2">
-                        <strong>WHEN (0-100):</strong> Project maturity and financial coherence.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                Scores & Profile
               </CardTitle>
-              {/* Right side: Recommendation + Flags + Edit */}
               <div className="flex items-center gap-2">
                 <Badge className={getRecommendationColor((repreneur as any).recommendation)} variant="outline">
                   {getRecommendationLabel((repreneur as any).recommendation, (repreneur as any).who_score, (repreneur as any).when_score)}
                 </Badge>
-                {/* Show flags if present */}
                 {(repreneur as any).scoring_flags?.length > 0 && (
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
@@ -402,14 +380,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Show needs completion banner if legacy data */}
             {(repreneur as any).needs_data_completion && !(repreneur as any).who_score && (
               <NeedsCompletionBadge repreneurId={id} />
             )}
 
             {/* WHO + WHEN side by side */}
             <div className="grid grid-cols-2 gap-4">
-              {/* WHO - use who_score if v2, fallback to tier1_score for v1 */}
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHO</span>
@@ -436,7 +412,6 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 </Badge>
               </div>
 
-              {/* WHEN - use when_score if v2, show dash for v1 */}
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHEN</span>
@@ -464,74 +439,72 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </div>
             </div>
 
-            {/* Tier 2 stars removed — replaced by Leadership Assessment */}
-          </CardContent>
-        </Card>
-
-        {/* Col 2: Investment Profile */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Investment Profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>
-              <Label className="text-xs text-gray-500">Investment Capacity</Label>
-              <p className="text-sm">
-                {getV2Label(WHEN_QUESTIONS as any, 'q16', (repreneur as any).q16_equity)
-                  || <span className="text-gray-400">Not set</span>}
+            {/* Divider */}
+            <div className="border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                Investment Profile
               </p>
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Target Acquisition Size</Label>
-              <p className="text-sm">
-                {formatV2Array(WHEN_QUESTIONS as any, 'q14', (repreneur as any).q14_deal_size)
-                  || <span className="text-gray-400">Not set</span>}
-              </p>
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Target Region</Label>
-              <p className="text-sm">
-                {formatV2Array(WHEN_QUESTIONS as any, 'q12', (repreneur as any).q12_geo_zones)
-                  || <span className="text-gray-400">Not set</span>}
-              </p>
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Sector Preferences</Label>
-              <EditableMultiSelect
-                repreneurId={id}
-                field="sector_preferences"
-                value={repreneur.sector_preferences}
-                options={SECTORS}
-                placeholder="Select sectors..."
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Years of Experience</Label>
-              <p className="text-sm">
-                {getV2Label(WHO_QUESTIONS as any, 'q06', (repreneur as any).q06_experience)
-                  || <span className="text-gray-400">Not specified</span>}
-              </p>
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Identified Targets</Label>
-              <p className="text-sm">
-                {repreneur.q12_has_identified_targets !== undefined
-                  ? (repreneur.q12_has_identified_targets ? "Yes" : "No")
-                  : <span className="text-gray-400">Not specified</span>}
-              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <Label className="text-xs text-gray-500">Investment Capacity</Label>
+                  <p className="text-sm">
+                    {getV2Label(WHEN_QUESTIONS as any, 'q16', (repreneur as any).q16_equity)
+                      || <span className="text-gray-400">Not set</span>}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Deal Size</Label>
+                  <p className="text-sm">
+                    {formatV2Array(WHEN_QUESTIONS as any, 'q14', (repreneur as any).q14_deal_size)
+                      || <span className="text-gray-400">Not set</span>}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Region</Label>
+                  <p className="text-sm">
+                    {formatV2Array(WHEN_QUESTIONS as any, 'q12', (repreneur as any).q12_geo_zones)
+                      || <span className="text-gray-400">Not set</span>}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Experience</Label>
+                  <p className="text-sm">
+                    {getV2Label(WHO_QUESTIONS as any, 'q06', (repreneur as any).q06_experience)
+                      || <span className="text-gray-400">Not specified</span>}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Sectors</Label>
+                  <EditableMultiSelect
+                    repreneurId={id}
+                    field="sector_preferences"
+                    value={repreneur.sector_preferences}
+                    options={SECTORS}
+                    placeholder="Select sectors..."
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Targets Identified</Label>
+                  <p className="text-sm">
+                    {repreneur.q12_has_identified_targets !== undefined
+                      ? (repreneur.q12_has_identified_targets ? "Yes" : "No")
+                      : <span className="text-gray-400">—</span>}
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Col 3: Leadership Assessment */}
-        <LeadershipResultsCard
-          repreneurId={id}
-          assessment={leadershipAssessment}
-          pendingToken={pendingAssessment?.token || null}
-        />
+        {/* Col 2-3: Leadership Assessment (flagship — 2/3 width) */}
+        <div className="md:col-span-2">
+          <LeadershipResultsCard
+            repreneurId={id}
+            assessment={leadershipAssessment}
+            pendingToken={pendingAssessment?.token || null}
+          />
+        </div>
       </div>
 
       {/* Milestones & Documents Row */}

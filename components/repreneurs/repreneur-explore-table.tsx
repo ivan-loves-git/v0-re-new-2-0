@@ -2,7 +2,7 @@
 
 import { useState, useMemo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Star, X } from "lucide-react"
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { subDays } from "date-fns"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { StatusBadge } from "./status-badge"
+import { Badge } from "@/components/ui/badge"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
 import type { Repreneur, LifecycleStatus, JourneyStage, PersonaType } from "@/lib/types/repreneur"
@@ -38,7 +39,7 @@ import { exportRepreneursToCSV } from "@/lib/utils/csv-export"
 
 const ITEMS_PER_PAGE = 20
 
-type SortField = "name" | "email" | "status" | "who" | "when" | "tier2_stars" | "journey" | "created_at"
+type SortField = "name" | "email" | "status" | "who" | "when" | "assessment" | "journey" | "created_at"
 type SortDirection = "asc" | "desc"
 
 const DATE_RANGES = [
@@ -86,8 +87,13 @@ function getScoreColor(score: number | null | undefined) {
   return "text-gray-500"
 }
 
+interface RepreneurWithAssessment extends Repreneur {
+  assessment_decision?: string | null
+  assessment_pending?: boolean
+}
+
 interface RepreneurExploreTableProps {
-  repreneurs: Repreneur[]
+  repreneurs: RepreneurWithAssessment[]
 }
 
 export interface RepreneurExploreTableRef {
@@ -193,9 +199,13 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
         case "when":
           comparison = (a.when_score ?? 0) - (b.when_score ?? 0)
           break
-        case "tier2_stars":
-          comparison = (a.tier2_stars ?? 0) - (b.tier2_stars ?? 0)
+        case "assessment": {
+          const decisionOrder: Record<string, number> = { engagement: 3, engagement_sous_conditions: 2, non_engagement: 1 }
+          const aOrder = a.assessment_decision ? (decisionOrder[a.assessment_decision] || 0) : (a.assessment_pending ? -1 : -2)
+          const bOrder = b.assessment_decision ? (decisionOrder[b.assessment_decision] || 0) : (b.assessment_pending ? -1 : -2)
+          comparison = aOrder - bOrder
           break
+        }
         case "journey":
           comparison = (a.journey_stage ?? "").localeCompare(b.journey_stage ?? "")
           break
@@ -373,8 +383,8 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
               <TableHead className="cursor-pointer hover:bg-gray-50 w-[80px]" onClick={() => handleSort("when")}>
                 <div className="flex items-center">WHEN<SortIcon field="when" /></div>
               </TableHead>
-              <TableHead className="cursor-pointer hover:bg-gray-50 w-[80px]" onClick={() => handleSort("tier2_stars")}>
-                <div className="flex items-center">T2<SortIcon field="tier2_stars" /></div>
+              <TableHead className="cursor-pointer hover:bg-gray-50 w-[100px]" onClick={() => handleSort("assessment")}>
+                <div className="flex items-center">Assessment<SortIcon field="assessment" /></div>
               </TableHead>
               <TableHead className="cursor-pointer hover:bg-gray-50 w-[110px]" onClick={() => handleSort("journey")}>
                 <div className="flex items-center">Journey<SortIcon field="journey" /></div>
@@ -426,17 +436,14 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
                     </span>
                   </TableCell>
                   <TableCell>
-                    {r.tier2_stars ? (
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-3 w-3 ${
-                              star <= (r.tier2_stars || 0) ? "fill-yellow-400 text-yellow-400" : "fill-transparent text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
+                    {r.assessment_pending ? (
+                      <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">Pending</Badge>
+                    ) : r.assessment_decision === "engagement" ? (
+                      <Badge className="text-xs bg-green-100 text-green-700 border-0">Pass</Badge>
+                    ) : r.assessment_decision === "engagement_sous_conditions" ? (
+                      <Badge className="text-xs bg-amber-100 text-amber-700 border-0">Review</Badge>
+                    ) : r.assessment_decision === "non_engagement" ? (
+                      <Badge className="text-xs bg-red-100 text-red-700 border-0">Fail</Badge>
                     ) : (
                       <span className="text-gray-400">{"\u2014"}</span>
                     )}

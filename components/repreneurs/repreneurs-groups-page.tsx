@@ -9,6 +9,8 @@ import type { Repreneur } from "@/lib/types/repreneur"
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
+  assessment_decision?: string | null
+  assessment_pending?: boolean
 }
 
 export function RepreneursGroupsPage({ repreneurs }: { repreneurs: RepreneurWithOffers[] }) {
