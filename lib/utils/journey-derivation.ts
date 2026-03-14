@@ -54,6 +54,13 @@ export function isGroupComplete(milestones: Partial<Tier3Milestones>, group: Sta
 }
 
 /**
+ * Check if at least one milestone in a group is complete
+ */
+export function hasAnyInGroup(milestones: Partial<Tier3Milestones>, group: StageGroupNumber): boolean {
+  return MILESTONE_GROUPS[group].some((key) => milestones[key] === true)
+}
+
+/**
  * Extract milestones from a repreneur object (V2: 18 milestones)
  */
 export function extractMilestones(repreneur: {
@@ -99,19 +106,25 @@ export function extractMilestones(repreneur: {
 }
 
 /**
- * Derive journey stage from milestones (V2: group-based, not count-based)
- * All milestones in a group must be complete to advance to the next stage
+ * Derive journey stage from milestones (V2: group-based)
+ *
+ * Explorer → Learner: ALL Group 1 milestones complete
+ * Learner → Ready: ALL Group 2 milestones complete
+ * Ready → Execution: ANY Group 3 milestone started (per Bertrand: execution is a process)
+ * Execution → Post-acquisition: ALL Group 3 milestones complete + ALL Group 4 complete
  */
 export function deriveJourneyStage(
   milestones: Partial<Tier3Milestones>,
 ): JourneyStage {
   const g1 = isGroupComplete(milestones, 1)
   const g2 = g1 && isGroupComplete(milestones, 2)
-  const g3 = g2 && isGroupComplete(milestones, 3)
-  const g4 = g3 && isGroupComplete(milestones, 4)
+  // Execution: ready + at least one execution milestone started
+  const g3Started = g2 && hasAnyInGroup(milestones, 3)
+  const g3Done = g2 && isGroupComplete(milestones, 3)
+  const g4 = g3Done && isGroupComplete(milestones, 4)
 
   if (g4) return "post_acquisition"
-  if (g3) return "execution"
+  if (g3Started) return "execution"
   if (g2) return "ready"
   if (g1) return "learner"
   return "explorer"
