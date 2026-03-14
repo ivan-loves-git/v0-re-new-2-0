@@ -464,33 +464,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </div>
             </div>
 
-            <div className="border-t pt-3" />
-
-            {/* Tier 2 Subsection */}
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Tier 2</span>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                        <Info className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs">
-                      <p className="text-sm">
-                        Tier 2 rates 6 competency dimensions after interview: Leadership, Financial Acumen,
-                        Communication, Clarity of Vision, Coachability, and Commitment. Pass threshold is 4.0.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Tier2DimensionRating
-                repreneurId={repreneur.id}
-                repreneur={repreneur}
-              />
-            </div>
+            {/* Tier 2 stars removed — replaced by Leadership Assessment */}
           </CardContent>
         </Card>
 
@@ -552,8 +526,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </CardContent>
         </Card>
 
-        {/* Col 3: Radar Chart */}
-        <RepreneurRadarChart repreneur={repreneur as Repreneur} />
+        {/* Col 3: Leadership Assessment */}
+        <LeadershipResultsCard
+          repreneurId={id}
+          assessment={leadershipAssessment}
+          pendingToken={pendingAssessment?.token || null}
+        />
       </div>
 
       {/* Milestones & Documents Row */}
@@ -591,19 +569,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </CardContent>
         </Card>
 
-        {/* Col 3: Leadership Assessment + Documents */}
-        <div className="space-y-6">
-          <LeadershipResultsCard
-            repreneurId={id}
-            assessment={leadershipAssessment}
-            pendingToken={pendingAssessment?.token || null}
-          />
-          <DocumentsCard
-            repreneurId={id}
-            cvUrl={repreneur.cv_url}
-            ldcUrl={repreneur.ldc_url}
-          />
-        </div>
+        {/* Col 3: Documents */}
+        <DocumentsCard
+          repreneurId={id}
+          cvUrl={repreneur.cv_url}
+          ldcUrl={repreneur.ldc_url}
+        />
       </div>
 
       {/* Third Row: Activity History | Notes | Offers */}
