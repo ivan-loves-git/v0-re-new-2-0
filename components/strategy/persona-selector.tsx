@@ -57,7 +57,7 @@ export function PersonaSelector({ personas, selectedIndex, onSelect }: PersonaSe
                     <div
                       key={j}
                       className={cn(
-                        "w-2 h-2 rounded-full",
+                        "size-2 rounded-full",
                         j < persona.badges.length ? "bg-emerald-500" : "bg-gray-200"
                       )}
                     />

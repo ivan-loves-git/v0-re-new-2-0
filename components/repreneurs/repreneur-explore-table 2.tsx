@@ -181,10 +181,10 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 text-gray-400" />
+    if (sortField !== field) return <ArrowUpDown className="size-3 ml-1 text-gray-400" />
     return sortDirection === "asc"
-      ? <ArrowUp className="h-3 w-3 ml-1" />
-      : <ArrowDown className="h-3 w-3 ml-1" />
+      ? <ArrowUp className="size-3 ml-1" />
+      : <ArrowDown className="size-3 ml-1" />
   }
 
   return (
@@ -194,7 +194,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
         <div className="flex-1 min-w-[200px]">
           <label className="text-xs font-medium text-gray-500 mb-1 block">Search</label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Name or email..."
               value={search}
@@ -262,7 +262,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
 
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
-            <X className="h-4 w-4 mr-1" />
+            <X className="size-4 mr-1" />
             Clear
           </Button>
         )}
@@ -351,7 +351,7 @@ export function RepreneurExploreTable({ repreneurs }: RepreneurExploreTableProps
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
                             key={star}
-                            className={`h-3 w-3 ${
+                            className={`size-3 ${
                               star <= (r.tier2_stars || 0) ? "fill-yellow-400 text-yellow-400" : "fill-transparent text-gray-300"
                             }`}
                           />

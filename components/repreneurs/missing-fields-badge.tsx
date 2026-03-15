@@ -29,8 +29,8 @@ export function MissingFieldsBadge({ repreneur, variant = "full" }: MissingField
       <TooltipProvider delayDuration={0}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600">
-              <AlertTriangle className="h-3 w-3" />
+            <span className="inline-flex items-center justify-center size-5 rounded-full bg-amber-100 text-amber-600">
+              <AlertTriangle className="size-3" />
             </span>
           </TooltipTrigger>
           <TooltipContent side="top">
@@ -43,7 +43,7 @@ export function MissingFieldsBadge({ repreneur, variant = "full" }: MissingField
 
   return (
     <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
-      <AlertTriangle className="h-3 w-3" />
+      <AlertTriangle className="size-3" />
       Missing: {missingLabels}
     </Badge>
   )

@@ -47,7 +47,7 @@ export function RecentlyAddedRepreneurs({ repreneurs, maxHeight = "300px" }: Rec
     <Card className="h-full gap-0">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <UserPlus className="h-5 w-5 text-gray-900" />
+          <UserPlus className="size-5 text-gray-900" />
           Recently Added
           <CardInfoButton info={kpiInfo.recentlyAdded} />
         </CardTitle>

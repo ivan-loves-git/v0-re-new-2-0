@@ -64,7 +64,7 @@ export function RepreneurSearch({
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
@@ -101,7 +101,7 @@ export function RepreneurSearch({
                   </div>
                   <Check
                     className={cn(
-                      "ml-2 h-4 w-4",
+                      "ml-2 size-4",
                       value?.id === repreneur.id ? "opacity-100" : "opacity-0"
                     )}
                   />

@@ -44,7 +44,7 @@ export function KeyPrinciples() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className={`p-2 rounded-lg ${principle.bgColor}`}>
-                  <principle.icon className={`h-4 w-4 ${principle.color}`} />
+                  <principle.icon className={`size-4 ${principle.color}`} />
                 </div>
                 {principle.title}
               </CardTitle>

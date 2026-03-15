@@ -90,14 +90,14 @@ export function StepBlocC({ data, onChange, onNext, onBack, errors }: Assessment
       <div className="flex justify-between pt-4">
         {onBack && (
           <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="size-4 mr-2" />
             {backLabel}
           </Button>
         )}
         <div className="ml-auto">
           <Button onClick={onNext} disabled={!allAnswered}>
             {nextLabel}
-            <ArrowRight className="w-4 h-4 ml-2" />
+            <ArrowRight className="size-4 ml-2" />
           </Button>
         </div>
       </div>

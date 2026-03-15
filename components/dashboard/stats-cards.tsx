@@ -23,7 +23,7 @@ export function StatsCards({
     {
       title: "Total Repreneurs",
       value: totalRepreneurs,
-      icon: <Users className="h-4 w-4 text-muted-foreground" />,
+      icon: <Users className="size-4 text-muted-foreground" />,
       badge: null,
     },
     {

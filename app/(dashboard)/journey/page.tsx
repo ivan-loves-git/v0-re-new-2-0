@@ -111,8 +111,8 @@ export default async function JourneyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Journey</h1>
-        <p className="text-gray-600 mt-1">Track repreneurs through their acquisition readiness journey</p>
+        <h1 className="text-3xl font-semibold text-foreground">Journey</h1>
+        <p className="text-muted-foreground mt-1">Track repreneurs through their acquisition readiness journey</p>
       </div>
 
       {/* Stage Pipeline */}
@@ -133,22 +133,22 @@ export default async function JourneyPage() {
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <Icon className={cn("h-6 w-6", config.color)} />
+                  <Icon className={cn("size-6", config.color)} />
                   <span className={cn("text-2xl font-bold", config.color)}>{count}</span>
                 </div>
                 <p className={cn("font-medium text-sm mb-2", config.color)}>{config.label}</p>
                 {milestones.length > 0 ? (
-                  <ul className="text-xs text-gray-600 space-y-0.5">
+                  <ul className="text-xs text-muted-foreground space-y-0.5">
                     {milestones.map((m, i) => (
                       <li key={i} className="truncate">• {m}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-gray-500 italic">Starting point</p>
+                  <p className="text-xs text-muted-foreground italic">Starting point</p>
                 )}
               </div>
               {index < stages.length - 1 && (
-                <ChevronRight className="h-6 w-6 mx-1 text-gray-300 flex-shrink-0" />
+                <ChevronRight className="size-6 mx-1 text-muted-foreground flex-shrink-0" />
               )}
             </div>
           )
@@ -167,7 +167,7 @@ export default async function JourneyPage() {
               <CardHeader className={cn("py-3", config.bgColor)}>
                 <CardTitle className={cn("flex items-center justify-between text-base", config.color)}>
                   <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
+                    <Icon className="size-4" />
                     {config.label}
                   </div>
                   <Badge variant="secondary" className="bg-white/80">
@@ -184,7 +184,7 @@ export default async function JourneyPage() {
                         <Link
                           key={repreneur.id}
                           href={`/repreneurs/${repreneur.id}`}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors group"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-sm truncate group-hover:text-blue-600">

@@ -14,6 +14,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -195,9 +196,9 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+          className="size-6 p-0 text-gray-400 hover:text-gray-600"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil className="size-3.5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
@@ -244,9 +245,9 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
             className="w-full"
           >
             {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="size-4 animate-spin mr-2" />
             ) : (
-              <Calculator className="h-4 w-4 mr-2" />
+              <Calculator className="size-4 mr-2" />
             )}
             {isPending ? "Calculating..." : "Calculate & Save"}
           </Button>
@@ -275,11 +276,13 @@ function SelectField({
         <SelectValue placeholder="Select..." />
       </SelectTrigger>
       <SelectContent>
+        <SelectGroup>
         {options.map((opt) => (
           <SelectItem key={opt.value} value={opt.value} className="text-xs">
             {opt.label}
           </SelectItem>
         ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   )
@@ -327,7 +330,7 @@ function MultiSelectField({
               ? selectedLabels[0]
               : `${value.length} selected`}
           </span>
-          <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+          <ChevronDown className="ml-1 size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-0" align="end">
@@ -347,13 +350,13 @@ function MultiSelectField({
                 >
                   <div
                     className={cn(
-                      "mr-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border",
+                      "mr-2 flex size-3.5 items-center justify-center rounded-sm border",
                       value.includes(opt.value)
                         ? "bg-primary border-primary text-primary-foreground"
                         : "border-gray-300"
                     )}
                   >
-                    {value.includes(opt.value) && <Check className="h-2.5 w-2.5" />}
+                    {value.includes(opt.value) && <Check className="size-2.5" />}
                   </div>
                   <span className="truncate">{opt.label}</span>
                 </CommandItem>

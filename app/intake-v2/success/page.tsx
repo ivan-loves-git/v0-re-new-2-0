@@ -47,8 +47,8 @@ export default function IntakeSuccessPage() {
         <div className="text-center">
           {/* Success icon */}
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <div className="size-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
             </div>
           </div>
 
@@ -67,7 +67,7 @@ export default function IntakeSuccessPage() {
 
             <div className="space-y-4">
               <div className="flex gap-3">
-                <Mail className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                <Mail className="size-5 text-primary mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">{content.emailTitle}</p>
                   <p className="text-sm text-muted-foreground">
@@ -77,7 +77,7 @@ export default function IntakeSuccessPage() {
               </div>
 
               <div className="flex gap-3">
-                <Calendar className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                <Calendar className="size-5 text-primary mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">{content.contactTitle}</p>
                   <p className="text-sm text-muted-foreground">
@@ -97,7 +97,7 @@ export default function IntakeSuccessPage() {
             <Button asChild>
               <Link href="https://re-new.team" target="_blank">
                 {content.visitSite}
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="size-4 ml-2" />
               </Link>
             </Button>
           </div>

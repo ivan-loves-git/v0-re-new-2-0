@@ -15,6 +15,19 @@ export async function createAssessment(
   try {
     const supabase = createAdminClient()
 
+    // Check if there's already a completed assessment (one-shot: cannot retake)
+    const { data: completed } = await supabase
+      .from("leadership_assessments")
+      .select("id")
+      .eq("repreneur_id", repreneurId)
+      .not("completed_at", "is", null)
+      .limit(1)
+      .maybeSingle()
+
+    if (completed) {
+      return { success: false, error: "Assessment already completed. Leadership assessment can only be taken once." }
+    }
+
     // Check if there's already an incomplete assessment
     const { data: existing } = await supabase
       .from("leadership_assessments")

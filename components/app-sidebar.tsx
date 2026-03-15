@@ -262,9 +262,9 @@ export function AppSidebar({
                     >
                       <Link href={item.href}>
                         <span className="relative inline-flex">
-                          <item.icon className="h-4 w-4" />
+                          <item.icon className="size-4" />
                           {showRedDot && (
-                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                            <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-500" />
                           )}
                         </span>
                         <span>{item.name}</span>
@@ -295,7 +295,7 @@ export function AppSidebar({
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <Avatar className="h-8 w-8 rounded-lg">
+                  <Avatar className="size-8 rounded-lg">
                     <AvatarImage src={userAvatar} alt={displayName} />
                     <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                       {userInitials}
@@ -316,7 +316,7 @@ export function AppSidebar({
               >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                    <Avatar className="h-8 w-8 rounded-lg">
+                    <Avatar className="size-8 rounded-lg">
                       <AvatarImage src={userAvatar} alt={displayName} />
                       <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                         {userInitials}
@@ -332,13 +332,13 @@ export function AppSidebar({
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
                     <Link href="/account">
-                      <User className="mr-2 h-4 w-4" />
+                      <User className="mr-2 size-4" />
                       Account
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/settings">
-                      <Settings className="mr-2 h-4 w-4" />
+                      <Settings className="mr-2 size-4" />
                       Settings
                     </Link>
                   </DropdownMenuItem>
@@ -346,7 +346,7 @@ export function AppSidebar({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <a href="/auth/logout" className="text-red-600 focus:text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="mr-2 size-4" />
                     Log out
                   </a>
                 </DropdownMenuItem>

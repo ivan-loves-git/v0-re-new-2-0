@@ -21,15 +21,15 @@ export function RepreneursExplorePage({ repreneurs }: { repreneurs: Repreneur[] 
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9"
+            className="size-9"
             onClick={() => tableRef.current?.triggerExport()}
             title="Export CSV"
           >
-            <Download className="h-4 w-4" />
+            <Download className="size-4" />
           </Button>
           <Link href="/repreneurs/new">
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               Add Repreneur
             </Button>
           </Link>

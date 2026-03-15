@@ -20,14 +20,13 @@ import { extractMilestones, countMilestones, deriveJourneyStage, getStageProgres
 interface Tier3MilestonesCardProps {
   repreneurId: string
   repreneur: {
-    // V2 milestones (18)
+    // V2 milestones (17)
     ms_decision_to_pursue?: boolean
     ms_availability_confirmed?: boolean
     ms_target_profile_sheet?: boolean
     ms_pitch_plan?: boolean
     ms_equity_range?: boolean
     ms_deal_breakers?: boolean
-    ms_advisory_team_structured?: boolean
     ms_leadership_assessment_passed?: boolean
     ms_advisory_team_identified?: boolean
     ms_intermediary_meeting?: boolean
@@ -108,9 +107,9 @@ function MilestoneGroup({ group, optimisticMilestones, onToggle, isPending }: Mi
                   )}
                 >
                   {isCompleted ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                    <CheckCircle2 className="size-3.5 text-green-600 flex-shrink-0" />
                   ) : (
-                    <Circle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                    <Circle className="size-3.5 text-gray-300 flex-shrink-0" />
                   )}
                   <span className={cn("text-sm", isCompleted ? "text-green-700" : "text-gray-600")}>
                     {milestone.label}
@@ -202,11 +201,11 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge className={cn("gap-1", stageConfig.bgColor, stageConfig.color, "border-0")}>
-            <StageIcon stage={derivedStage} className="h-3 w-3" />
+            <StageIcon stage={derivedStage} className="size-3" />
             {stageConfig.label}
           </Badge>
           <span className="text-sm text-gray-500">
-            {optimisticCount}/18 milestones
+            {optimisticCount}/{MILESTONES.length} milestones
           </span>
         </div>
         {progress.nextStage && (
@@ -217,7 +216,7 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
       </div>
 
       {/* Progress Bar */}
-      <Progress value={(optimisticCount / 18) * 100} className="h-2" />
+      <Progress value={(optimisticCount / MILESTONES.length) * 100} className="h-2" />
 
       {/* Milestones in 2-column layout */}
       <TooltipProvider>

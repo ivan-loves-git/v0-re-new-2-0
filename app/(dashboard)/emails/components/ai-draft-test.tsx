@@ -155,7 +155,7 @@ export function AiDraftTest() {
     <Card className="border-amber-200 bg-amber-50/30">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-amber-600" />
+          <Sparkles className="size-5 text-amber-600" />
           <div>
             <CardTitle>AI Draft Test</CardTitle>
             <CardDescription>
@@ -169,9 +169,9 @@ export function AiDraftTest() {
         {result && (
           <Alert variant={result.success ? "default" : "destructive"}>
             {result.success ? (
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="size-4" />
             ) : (
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="size-4" />
             )}
             <AlertDescription>{result.message}</AlertDescription>
           </Alert>
@@ -181,7 +181,7 @@ export function AiDraftTest() {
         <div className="space-y-2">
           <Label>Search for a repreneur</Label>
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
             <Input
               placeholder="Name or email..."
               value={search}
@@ -266,12 +266,12 @@ export function AiDraftTest() {
           >
             {generating ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
                 Generating...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Sparkles className="size-4 mr-2" />
                 Generate AI Draft
               </>
             )}
@@ -283,7 +283,7 @@ export function AiDraftTest() {
           <div className="space-y-4">
             {draft.warnings && draft.warnings.length > 0 && (
               <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="size-4" />
                 <AlertDescription>
                   {draft.warnings.join(", ")}
                 </AlertDescription>
@@ -309,12 +309,12 @@ export function AiDraftTest() {
               >
                 {sending ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-2 animate-spin" />
                     Sending...
                   </>
                 ) : (
                   <>
-                    <Send className="h-4 w-4 mr-2" />
+                    <Send className="size-4 mr-2" />
                     Send to {TEST_EMAIL}
                   </>
                 )}

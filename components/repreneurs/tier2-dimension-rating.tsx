@@ -59,7 +59,7 @@ function StarPicker({
         >
           <Star
             className={cn(
-              "h-4 w-4 transition-colors",
+              "size-4 transition-colors",
               star <= displayValue
                 ? "fill-amber-400 text-amber-400"
                 : "fill-transparent text-gray-300"
@@ -151,7 +151,7 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
                 <Star
                   key={star}
                   className={cn(
-                    "h-4 w-4",
+                    "size-4",
                     star <= displayStars
                       ? "fill-amber-400 text-amber-400"
                       : "fill-transparent text-gray-200"
@@ -163,14 +163,14 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
           <div className="flex items-center gap-2">
             {hasPassed && (
               <Badge className="bg-green-100 text-green-700 border-green-200">
-                <Check className="h-3 w-3 mr-1" />
+                <Check className="size-3 mr-1" />
                 Pass
               </Badge>
             )}
             {isExpanded ? (
-              <ChevronUp className="h-4 w-4 text-gray-400" />
+              <ChevronUp className="size-4 text-gray-400" />
             ) : (
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+              <ChevronDown className="size-4 text-gray-400" />
             )}
           </div>
         </div>

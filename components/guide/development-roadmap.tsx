@@ -1031,7 +1031,7 @@ export function DevelopmentRoadmap() {
             style={{ animationDelay: `${index * 50}ms` }}
           >
             {/* Timeline dot */}
-            <div className="absolute left-0 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-sm" />
+            <div className="absolute left-0 size-6 rounded-full bg-blue-500 border-4 border-white shadow-sm" />
 
             {/* Period card */}
             <Card className="overflow-hidden border-blue-100 py-0 gap-0">
@@ -1040,11 +1040,11 @@ export function DevelopmentRoadmap() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-xs bg-white">
-                        <Calendar className="w-3 h-3 mr-1" />
+                        <Calendar className="size-3 mr-1" />
                         {period.period}
                       </Badge>
                       {period.isCompleted && (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <CheckCircle className="size-4 text-green-500" />
                       )}
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -1070,7 +1070,7 @@ export function DevelopmentRoadmap() {
                         style={{ animationDelay: `${i * 30}ms` }}
                       >
                         <div className={`p-1.5 rounded-md ${config.bgColor} h-fit`}>
-                          <Icon className={`w-3.5 h-3.5 ${config.color}`} />
+                          <Icon className={`size-3.5 ${config.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1098,7 +1098,7 @@ export function DevelopmentRoadmap() {
       {/* Footer */}
       <div className="text-center text-sm text-gray-500 pt-4 border-t">
         <p className="flex items-center justify-center gap-2">
-          <Rocket className="h-4 w-4 text-blue-500" />
+          <Rocket className="size-4 text-blue-500" />
           {totalEvents} milestones completed in 3 weeks
         </p>
       </div>

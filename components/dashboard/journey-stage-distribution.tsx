@@ -54,14 +54,14 @@ export function JourneyStageDistribution({
     <Card className="h-full overflow-hidden gap-0">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Map className="h-5 w-5 text-gray-900" />
+          <Map className="size-5 text-gray-900" />
           Journey Stages
           <CardInfoButton info={kpiInfo.journeyStages} />
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 overflow-hidden">
         <div className="flex items-center gap-3">
-          <div className="w-24 h-24 shrink-0">
+          <div className="size-24 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -101,7 +101,7 @@ export function JourneyStageDistribution({
               <div key={item.name} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2 min-w-0">
                   <div
-                    className="w-2 h-2 rounded-full shrink-0"
+                    className="size-2 rounded-full shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
                   <span className="text-gray-600 text-xs truncate">{item.name}</span>

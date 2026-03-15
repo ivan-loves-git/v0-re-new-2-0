@@ -57,14 +57,14 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm">
-          <Settings className="h-4 w-4 mr-2" />
+          <Settings className="size-4 mr-2" />
           Manage Packages
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+            <Package className="size-5" />
             Offer Packages
           </SheetTitle>
           <SheetDescription>
@@ -75,7 +75,7 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
         <div className="mt-6 space-y-6">
           {/* Create new button */}
           <Button onClick={handleCreate} className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="size-4 mr-2" />
             Create New Package
           </Button>
 
@@ -119,7 +119,7 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
 
           {packages.length === 0 && (
             <div className="text-center py-8 text-gray-500">
-              <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <Package className="size-12 mx-auto mb-3 text-gray-300" />
               <p>No packages created yet.</p>
               <p className="text-sm">Create your first package to start assigning offers.</p>
             </div>
@@ -166,22 +166,22 @@ function PackageItem({ package: pkg, onEdit, onToggle, isToggling, formatPrice }
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="size-8"
             onClick={onEdit}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="size-8"
             onClick={onToggle}
             disabled={isToggling}
           >
             {pkg.is_active ? (
-              <PowerOff className="h-4 w-4 text-gray-400" />
+              <PowerOff className="size-4 text-gray-400" />
             ) : (
-              <Power className="h-4 w-4 text-green-500" />
+              <Power className="size-4 text-green-500" />
             )}
           </Button>
         </div>

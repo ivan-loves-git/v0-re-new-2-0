@@ -24,12 +24,12 @@ export function CardVariantD({ data, repreneurId }: CardVariantDProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Star className="h-4 w-4" />
+            <Star className="size-4" />
             Rating
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Info className="h-3 w-3" />
+                  <Info className="size-3" />
                 </button>
               </PopoverTrigger>
               <PopoverContent side="bottom" className="max-w-xs p-3">
@@ -68,7 +68,7 @@ export function CardVariantD({ data, repreneurId }: CardVariantDProps) {
           {repreneurId && (
             <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2 ml-auto" asChild>
               <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
-                <Pencil className="h-3 w-3" />
+                <Pencil className="size-3" />
               </Link>
             </Button>
           )}

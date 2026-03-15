@@ -5,6 +5,7 @@ import { ScoreDistribution } from "@/components/analytics/score-distribution"
 import { ConversionFunnelAnalytics } from "@/components/analytics/conversion-funnel"
 import { JourneyWaterfall } from "@/components/analytics/journey-waterfall"
 import { StaleLeads } from "@/components/analytics/stale-leads"
+import { OfferConversion } from "@/components/analytics/offer-conversion"
 import { PeriodSelector } from "@/components/analytics/period-selector"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,7 +19,7 @@ function KpiSkeleton() {
         <Card key={i}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="size-8 rounded-lg" />
               <div className="space-y-1.5 flex-1">
                 <Skeleton className="h-3 w-16" />
                 <Skeleton className="h-6 w-10" />
@@ -86,11 +87,14 @@ async function AnalyticsContent({ period }: { period: string }) {
         />
       </div>
 
-      {/* Row 3: Journey Stages + Stale Leads */}
+      {/* Row 3: Offer Conversion + Journey Stages */}
       <div className="grid gap-6 lg:grid-cols-2">
+        <OfferConversion data={data.offerConversion} />
         <JourneyWaterfall stageDistribution={data.stageDistribution} />
-        <StaleLeads staleLeads={data.staleLeads} />
       </div>
+
+      {/* Row 4: Stale Leads */}
+      <StaleLeads staleLeads={data.staleLeads} />
     </>
   )
 }

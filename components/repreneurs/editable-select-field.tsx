@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { updateRepreneurField } from "@/lib/actions/repreneurs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Pencil } from "lucide-react"
@@ -72,24 +72,26 @@ export function EditableSelectField({
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
-            {searchable && (
-              <div className="p-2">
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8"
-                />
-              </div>
-            )}
-            <SelectItem value={CLEAR_VALUE}>
-              <span className="text-muted-foreground italic">Clear</span>
-            </SelectItem>
-            {filteredOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+        {searchable && (
+          <div className="p-2">
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8"
+            />
+          </div>
+        )}
+        <SelectItem value={CLEAR_VALUE}>
+          <span className="text-muted-foreground italic">Clear</span>
+        </SelectItem>
+        {filteredOptions.map((option) => (
+          <SelectItem key={option} value={option}>
+            {option}
+          </SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
@@ -109,11 +111,11 @@ export function EditableSelectField({
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        className="size-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
         onClick={() => setIsEditing(true)}
         disabled={isSaving}
       >
-        <Pencil className="h-3 w-3" />
+        <Pencil className="size-3" />
       </Button>
     </div>
   )

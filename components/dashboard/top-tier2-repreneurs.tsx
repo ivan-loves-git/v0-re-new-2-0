@@ -59,7 +59,7 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
         {[1, 2, 3, 4, 5].map((i) => (
           <Star
             key={i}
-            className={`h-3.5 w-3.5 ${
+            className={`size-3.5 ${
               i <= stars
                 ? "text-yellow-400 fill-yellow-400"
                 : "text-gray-200"
@@ -77,7 +77,7 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
     <Card className="h-full flex flex-col gap-0">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Star className="h-5 w-5 text-gray-900" />
+          <Star className="size-5 text-gray-900" />
           Top Tier 2
           <CardInfoButton info={kpiInfo.topTier2} />
         </CardTitle>
@@ -96,7 +96,7 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
                 >
                   <div className="flex items-center justify-center w-6">
                     {actualIndex < 3 ? (
-                      <Medal className={`h-5 w-5 ${getMedalColor(index)}`} />
+                      <Medal className={`size-5 ${getMedalColor(index)}`} />
                     ) : (
                       <span className="text-sm text-gray-400 font-medium">{actualIndex + 1}</span>
                     )}
@@ -123,11 +123,11 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
             <Button
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
               disabled={currentPage === 0}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
             </Button>
             <span className="text-xs text-gray-500">
               {currentPage + 1} / {totalPages}
@@ -135,11 +135,11 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
             <Button
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
               disabled={currentPage >= totalPages - 1}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
         )}

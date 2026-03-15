@@ -68,7 +68,7 @@ export function KpiCards({ data, period }: KpiCardsProps) {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className={cn("rounded-lg p-2", card.iconBg)}>
-                <card.icon className={cn("h-4 w-4", card.iconColor)} />
+                <card.icon className={cn("size-4", card.iconColor)} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted-foreground truncate">{card.label}</p>
@@ -89,7 +89,7 @@ export function KpiCards({ data, period }: KpiCardsProps) {
                         ? "border-green-200 bg-green-50 text-green-700"
                         : card.delta < 0
                           ? "border-red-200 bg-red-50 text-red-700"
-                          : "border-gray-200 bg-gray-50 text-gray-600"
+                          : "border-border bg-muted text-muted-foreground"
                     )}
                   >
                     {card.delta > 0 ? `+${card.delta}` : card.delta === 0 ? "0" : card.delta} vs prev

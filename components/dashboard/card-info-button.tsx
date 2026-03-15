@@ -25,7 +25,7 @@ export function CardInfoButton({ info }: CardInfoButtonProps) {
     <Popover>
       <PopoverTrigger asChild>
         <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors">
-          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+          <Info className="size-3.5 text-muted-foreground cursor-help" />
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" className="max-w-xs p-3">

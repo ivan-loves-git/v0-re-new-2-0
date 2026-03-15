@@ -125,34 +125,34 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
             className="h-10 gap-2 px-3"
             onClick={() => window.open(currentCvUrl, "_blank")}
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="size-4" />
             <span className="hidden sm:inline">View CV</span>
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="size-3.5" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10"
+            className="size-10"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
           >
             {isUploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Upload className="h-4 w-4" />
+              <Upload className="size-4" />
             )}
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 text-gray-400 hover:text-red-500 hover:border-red-200"
+            className="size-10 text-gray-400 hover:text-red-500 hover:border-red-200"
             onClick={handleDelete}
             disabled={isDeleting}
           >
             {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="size-4" />
             )}
           </Button>
         </>
@@ -164,9 +164,9 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
           disabled={isUploading}
         >
           {isUploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Upload className="h-4 w-4" />
+            <Upload className="size-4" />
           )}
           <span>Upload CV</span>
         </Button>

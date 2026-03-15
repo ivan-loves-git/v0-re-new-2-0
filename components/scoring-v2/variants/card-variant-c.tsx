@@ -25,12 +25,12 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5" />
+            <Star className="size-5" />
             Rating
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Info className="h-4 w-4" />
+                  <Info className="size-4" />
                 </button>
               </PopoverTrigger>
               <PopoverContent side="bottom" className="max-w-xs p-3">
@@ -46,7 +46,7 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
           {repreneurId && (
             <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
               <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
-                <Pencil className="h-3 w-3 mr-1" />
+                <Pencil className="size-3 mr-1" />
                 <span className="text-xs">Edit</span>
               </Link>
             </Button>
@@ -62,7 +62,7 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
               <Popover>
                 <PopoverTrigger asChild>
                   <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                    <Info className="h-3 w-3" />
+                    <Info className="size-3" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="right" className="max-w-xs p-3">
@@ -94,7 +94,7 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
               <Popover>
                 <PopoverTrigger asChild>
                   <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                    <Info className="h-3 w-3" />
+                    <Info className="size-3" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="right" className="max-w-xs p-3">

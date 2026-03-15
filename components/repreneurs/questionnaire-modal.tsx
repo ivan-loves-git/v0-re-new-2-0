@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calculator, Loader2 } from "lucide-react"
 import { saveQuestionnaire, type QuestionnaireInput } from "@/lib/actions/repreneurs"
@@ -116,11 +116,11 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-4">
           {/* Section 1: Professional Background */}
           {currentSection === 0 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
                 <Label>Q1. Current employment status</Label>
                 <Select
                   value={formData.q1_employment_status ?? ""}
@@ -130,16 +130,18 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                     <SelectValue placeholder="Select status..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {EMPLOYMENT_STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+        {EMPLOYMENT_STATUS_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q2. Years of professional experience</Label>
                 <Select
                   value={formData.q2_years_experience ?? ""}
@@ -149,20 +151,22 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                     <SelectValue placeholder="Select range..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {YEARS_EXPERIENCE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+        {YEARS_EXPERIENCE_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q3. Industry sectors of experience</Label>
                 <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
                   {INDUSTRY_SECTOR_OPTIONS.map((opt) => (
-                    <div key={opt.value} className="flex items-center space-x-2">
+                    <div key={opt.value} className="flex items-center gap-2">
                       <Checkbox
                         id={`q3-${opt.value}`}
                         checked={formData.q3_industry_sectors.includes(opt.value)}
@@ -176,7 +180,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q5. Largest team size managed</Label>
                 <Select
                   value={formData.q5_team_size ?? ""}
@@ -186,20 +190,22 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                     <SelectValue placeholder="Select size..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {TEAM_SIZE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+        {TEAM_SIZE_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q8. Executive roles held</Label>
                 <div className="grid grid-cols-2 gap-2 border rounded-md p-3">
                   {EXECUTIVE_ROLE_OPTIONS.map((opt) => (
-                    <div key={opt.value} className="flex items-center space-x-2">
+                    <div key={opt.value} className="flex items-center gap-2">
                       <Checkbox
                         id={`q8-${opt.value}`}
                         checked={formData.q8_executive_roles.includes(opt.value)}
@@ -217,8 +223,8 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
 
           {/* Section 2: M&A Experience */}
           {currentSection === 1 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
                 <Label>Q4. Do you have M&A experience?</Label>
                 <div className="flex gap-4">
                   <Button
@@ -240,7 +246,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q6. Have you been directly involved in M&A transactions?</Label>
                 <div className="flex gap-4">
                   <Button
@@ -263,7 +269,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
               </div>
 
               {(formData.q4_has_ma_experience || formData.q6_involved_in_ma) && (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Q7. Describe your M&A experience</Label>
                   <Textarea
                     value={formData.q7_ma_details ?? ""}
@@ -274,7 +280,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q9. Do you have board or advisory experience?</Label>
                 <div className="flex gap-4">
                   <Button
@@ -300,12 +306,12 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
 
           {/* Section 3: Acquisition Journey */}
           {currentSection === 2 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
                 <Label>Q10. Current journey stage</Label>
-                <div className="space-y-2 border rounded-md p-3">
+                <div className="flex flex-col gap-2 border rounded-md p-3">
                   {JOURNEY_STAGE_OPTIONS.map((opt) => (
-                    <div key={opt.value} className="flex items-center space-x-2">
+                    <div key={opt.value} className="flex items-center gap-2">
                       <Checkbox
                         id={`q10-${opt.value}`}
                         checked={formData.q10_journey_stages.includes(opt.value)}
@@ -319,11 +325,11 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q11. Target acquisition sectors</Label>
                 <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
                   {INDUSTRY_SECTOR_OPTIONS.map((opt) => (
-                    <div key={opt.value} className="flex items-center space-x-2">
+                    <div key={opt.value} className="flex items-center gap-2">
                       <Checkbox
                         id={`q11-${opt.value}`}
                         checked={formData.q11_target_sectors.includes(opt.value)}
@@ -337,7 +343,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q12. Have you identified specific acquisition targets?</Label>
                 <div className="flex gap-4">
                   <Button
@@ -360,7 +366,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
               </div>
 
               {formData.q12_has_identified_targets && (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Q13. Describe your identified targets</Label>
                   <Textarea
                     value={formData.q13_target_details ?? ""}
@@ -375,8 +381,8 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
 
           {/* Section 4: Financial Readiness */}
           {currentSection === 3 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
                 <Label>Q14. Investment capacity</Label>
                 <Select
                   value={formData.q14_investment_capacity ?? ""}
@@ -386,16 +392,18 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                     <SelectValue placeholder="Select range..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {INVESTMENT_CAPACITY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+        {INVESTMENT_CAPACITY_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q15. Funding status</Label>
                 <Select
                   value={formData.q15_funding_status ?? ""}
@@ -405,11 +413,13 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                     <SelectValue placeholder="Select status..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {FUNDING_STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+        {FUNDING_STATUS_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -418,12 +428,12 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
 
           {/* Section 5: Network & Preferences */}
           {currentSection === 4 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
                 <Label>Q16. Network or training affiliations</Label>
                 <div className="flex flex-wrap gap-2 border rounded-md p-3">
                   {NETWORK_TRAINING_OPTIONS.map((opt) => (
-                    <div key={opt.value} className="flex items-center space-x-2">
+                    <div key={opt.value} className="flex items-center gap-2">
                       <Checkbox
                         id={`q16-${opt.value}`}
                         checked={formData.q16_network_training.includes(opt.value)}
@@ -437,7 +447,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>Q17. Open to co-acquisition?</Label>
                 <div className="flex gap-4">
                   <Button
@@ -485,12 +495,12 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
           <Button onClick={handleSubmit} disabled={isSaving}>
             {isSaving ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
                 Calculating...
               </>
             ) : (
               <>
-                <Calculator className="h-4 w-4 mr-2" />
+                <Calculator className="size-4 mr-2" />
                 Calculate Score & Save
               </>
             )}

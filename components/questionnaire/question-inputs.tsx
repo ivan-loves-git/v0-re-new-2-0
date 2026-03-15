@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Check, AlertCircle } from "lucide-react"
 import type { QuestionOption } from "./types"
@@ -76,7 +76,7 @@ export function YesNoButtons({
         )}
         onClick={() => onChange(true)}
       >
-        <Check className="h-5 w-5 mr-2" />
+        <Check className="size-5 mr-2" />
         Yes
       </Button>
       <Button
@@ -127,11 +127,13 @@ export function RadioOptionGrid({
           <SelectValue placeholder="Select..." />
         </SelectTrigger>
         <SelectContent>
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
+          <SelectGroup>
+        {options.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+          </SelectGroup>
         </SelectContent>
       </Select>
     )
@@ -313,7 +315,7 @@ export function TextInput({
       />
       {error && (
         <p className="text-sm text-red-500 flex items-center gap-1">
-          <AlertCircle className="w-4 h-4" />
+          <AlertCircle className="size-4" />
           {error}
         </p>
       )}

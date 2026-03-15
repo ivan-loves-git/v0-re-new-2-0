@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -110,13 +111,13 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
     <Card className="h-full flex flex-col gap-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Activity className="h-5 w-5 text-gray-900" />
+          <Activity className="size-5 text-gray-900" />
           Activity Stream
         </CardTitle>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
+              <Plus className="size-4" />
               Log Activity
             </Button>
           </DialogTrigger>
@@ -135,17 +136,19 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ACTIVITY_TYPES.map((type) => {
-                      const IconComponent = type.icon
-                      return (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex items-center gap-2">
-                            <IconComponent className="h-4 w-4" />
-                            {type.label}
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
+                    <SelectGroup>
+        {ACTIVITY_TYPES.map((type) => {
+          const IconComponent = type.icon
+          return (
+            <SelectItem key={type.value} value={type.value}>
+              <div className="flex items-center gap-2">
+                <IconComponent className="size-4" />
+                {type.label}
+              </div>
+            </SelectItem>
+          )
+        })}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -204,7 +207,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                   className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
                 >
                   <div className="p-2 rounded-full bg-blue-50 text-blue-600 shrink-0">
-                    <IconComponent className="h-4 w-4" />
+                    <IconComponent className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -218,7 +221,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                     )}
                     {activity.event_date && (
                       <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
+                        <Calendar className="size-3" />
                         {format(new Date(activity.event_date), "MMM d, yyyy")}
                       </p>
                     )}
@@ -232,22 +235,22 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 flex-shrink-0"
+                        className="size-8 flex-shrink-0"
                         disabled={deletingId === activity.id}
                       >
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreHorizontal className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setViewingActivity(activity)}>
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="size-4 mr-2" />
                         View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDelete(activity.id)}
                         className="text-red-600"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
+                        <Trash2 className="size-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -268,7 +271,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
             {viewingActivity && (() => {
               const config = getActivityConfig(viewingActivity.activity_type)
               const IconComponent = config.icon
-              return <IconComponent className="h-5 w-5" />
+              return <IconComponent className="size-5" />
             })()}
             {viewingActivity && getActivityConfig(viewingActivity.activity_type).label}
           </DialogTitle>

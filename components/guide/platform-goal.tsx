@@ -9,7 +9,7 @@ export function PlatformGoal() {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <div className="p-2 rounded-lg bg-blue-50">
-            <Target className="h-4 w-4 text-blue-600" />
+            <Target className="size-4 text-blue-600" />
           </div>
           What is Wave?
         </CardTitle>

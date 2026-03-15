@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { updateRepreneurJourneyStage } from "@/lib/actions/repreneurs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import type { JourneyStage } from "@/lib/types/repreneur"
 
@@ -58,11 +58,13 @@ export function UpdateJourneyStageForm({ repreneurId, currentStage }: UpdateJour
         <SelectValue placeholder="Select stage" />
       </SelectTrigger>
       <SelectContent>
+        <SelectGroup>
         {stageOptions.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
           </SelectItem>
         ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   )

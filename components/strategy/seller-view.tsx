@@ -47,7 +47,7 @@ No certification. No details.`
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Users className="h-4 w-4 text-purple-600" />
+          <Users className="size-4 text-purple-600" />
           Seller Perspective
         </CardTitle>
       </CardHeader>

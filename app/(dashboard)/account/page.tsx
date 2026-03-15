@@ -26,8 +26,8 @@ export default async function AccountPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Account</h1>
-        <p className="text-gray-600 mt-1">Your profile information</p>
+        <h1 className="text-3xl font-semibold text-foreground">Account</h1>
+        <p className="text-muted-foreground mt-1">Your profile information</p>
       </div>
 
       <div className="max-w-2xl">
@@ -39,7 +39,7 @@ export default async function AccountPage() {
           <CardContent className="space-y-6">
             {/* Avatar and Name */}
             <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 rounded-xl">
+              <Avatar className="size-20 rounded-xl">
                 <AvatarImage src={user?.image || undefined} alt={userName} />
                 <AvatarFallback className="rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl">
                   {userInitials}
@@ -47,38 +47,38 @@ export default async function AccountPage() {
               </Avatar>
               <div>
                 <h2 className="text-xl font-semibold">{userName}</h2>
-                <p className="text-gray-500">Re-New Team Member</p>
+                <p className="text-muted-foreground">Re-New Team Member</p>
               </div>
             </div>
 
             {/* Info Grid */}
             <div className="grid gap-4 pt-4 border-t">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
-                  <User className="h-5 w-5 text-gray-600" />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                  <User className="size-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Display Name</p>
+                  <p className="text-sm text-muted-foreground">Display Name</p>
                   <p className="font-medium">{userName}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
-                  <Mail className="h-5 w-5 text-gray-600" />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                  <Mail className="size-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="text-sm text-muted-foreground">Email</p>
                   <p className="font-medium">{userEmail}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
-                  <Calendar className="h-5 w-5 text-gray-600" />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                  <Calendar className="size-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Member Since</p>
+                  <p className="text-sm text-muted-foreground">Member Since</p>
                   <p className="font-medium">{userCreatedAt}</p>
                 </div>
               </div>
@@ -86,7 +86,7 @@ export default async function AccountPage() {
 
             {/* Note about editing */}
             <div className="pt-4 border-t">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 To update your profile or change your password, please contact your administrator.
               </p>
             </div>

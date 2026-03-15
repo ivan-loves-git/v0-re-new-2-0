@@ -2,7 +2,7 @@ import { JourneyStage, MilestoneKey, Tier3Milestones } from "@/lib/types/reprene
 import { MILESTONES, StageGroupNumber } from "@/lib/constants/tier-config"
 
 /**
- * All milestone keys in order (V2: 18 milestones)
+ * All milestone keys in order (V2: 17 milestones)
  */
 export const MILESTONE_KEYS: MilestoneKey[] = [
   // Group 1: Explorer → Learner
@@ -13,7 +13,6 @@ export const MILESTONE_KEYS: MilestoneKey[] = [
   "pitch_plan",
   "equity_range",
   "deal_breakers",
-  "advisory_team_structured",
   "leadership_assessment_passed",
   "advisory_team_identified",
   // Group 3: Ready → Execution
@@ -34,7 +33,7 @@ export const MILESTONE_KEYS: MilestoneKey[] = [
  */
 export const MILESTONE_GROUPS: Record<StageGroupNumber, MilestoneKey[]> = {
   1: ["decision_to_pursue", "availability_confirmed"],
-  2: ["target_profile_sheet", "pitch_plan", "equity_range", "deal_breakers", "advisory_team_structured", "leadership_assessment_passed", "advisory_team_identified"],
+  2: ["target_profile_sheet", "pitch_plan", "equity_range", "deal_breakers", "leadership_assessment_passed", "advisory_team_identified"],
   3: ["intermediary_meeting", "seller_meeting", "loi_issued", "due_diligence", "negotiation", "financing_validated", "closing"],
   4: ["plan_100_days", "plan_3_years"],
 }
@@ -61,7 +60,7 @@ export function hasAnyInGroup(milestones: Partial<Tier3Milestones>, group: Stage
 }
 
 /**
- * Extract milestones from a repreneur object (V2: 18 milestones)
+ * Extract milestones from a repreneur object (V2: 17 milestones)
  */
 export function extractMilestones(repreneur: {
   ms_decision_to_pursue?: boolean
@@ -70,7 +69,6 @@ export function extractMilestones(repreneur: {
   ms_pitch_plan?: boolean
   ms_equity_range?: boolean
   ms_deal_breakers?: boolean
-  ms_advisory_team_structured?: boolean
   ms_leadership_assessment_passed?: boolean
   ms_advisory_team_identified?: boolean
   ms_intermediary_meeting?: boolean
@@ -90,7 +88,6 @@ export function extractMilestones(repreneur: {
     pitch_plan: repreneur.ms_pitch_plan ?? false,
     equity_range: repreneur.ms_equity_range ?? false,
     deal_breakers: repreneur.ms_deal_breakers ?? false,
-    advisory_team_structured: repreneur.ms_advisory_team_structured ?? false,
     leadership_assessment_passed: repreneur.ms_leadership_assessment_passed ?? false,
     advisory_team_identified: repreneur.ms_advisory_team_identified ?? false,
     intermediary_meeting: repreneur.ms_intermediary_meeting ?? false,
@@ -138,9 +135,9 @@ export function deriveJourneyStageFromCount(
   milestoneCount: number,
   _persona?: string | null | undefined
 ): JourneyStage {
-  if (milestoneCount >= 18) return "post_acquisition"
-  if (milestoneCount >= 16) return "execution"
-  if (milestoneCount >= 9) return "ready"
+  if (milestoneCount >= 17) return "post_acquisition"
+  if (milestoneCount >= 15) return "execution"
+  if (milestoneCount >= 8) return "ready"
   if (milestoneCount >= 2) return "learner"
   return "explorer"
 }
@@ -156,7 +153,6 @@ export function milestonesToDbColumns(milestones: Partial<Tier3Milestones>): Rec
     ms_pitch_plan: milestones.pitch_plan ?? false,
     ms_equity_range: milestones.equity_range ?? false,
     ms_deal_breakers: milestones.deal_breakers ?? false,
-    ms_advisory_team_structured: milestones.advisory_team_structured ?? false,
     ms_leadership_assessment_passed: milestones.leadership_assessment_passed ?? false,
     ms_advisory_team_identified: milestones.advisory_team_identified ?? false,
     ms_intermediary_meeting: milestones.intermediary_meeting ?? false,

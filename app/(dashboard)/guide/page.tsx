@@ -22,7 +22,7 @@ export default function MissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="p-2 rounded-lg bg-blue-50">
-              <Target className="h-4 w-4 text-blue-600" />
+              <Target className="size-4 text-blue-600" />
             </div>
             What is Wave?
           </CardTitle>
@@ -51,7 +51,7 @@ export default function MissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="p-2 rounded-lg bg-purple-50">
-              <Rocket className="h-4 w-4 text-purple-600" />
+              <Rocket className="size-4 text-purple-600" />
             </div>
             Why We Built This
           </CardTitle>
@@ -79,7 +79,7 @@ export default function MissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="p-2 rounded-lg bg-green-50">
-              <Users className="h-4 w-4 text-green-600" />
+              <Users className="size-4 text-green-600" />
             </div>
             Who It's For
           </CardTitle>
@@ -107,7 +107,7 @@ export default function MissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="p-2 rounded-lg bg-amber-50">
-              <TrendingUp className="h-4 w-4 text-amber-600" />
+              <TrendingUp className="size-4 text-amber-600" />
             </div>
             The Vision
           </CardTitle>
@@ -140,7 +140,7 @@ export default function MissionPage() {
       {/* Footer */}
       <div className="text-center text-sm text-gray-500 py-8 border-t">
         <p className="flex items-center justify-center gap-2">
-          <Heart className="h-4 w-4 text-red-400" />
+          <Heart className="size-4 text-red-400" />
           Built with care for the Re-New team.
         </p>
       </div>

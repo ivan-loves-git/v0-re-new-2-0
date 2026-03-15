@@ -94,8 +94,8 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
   }
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-semibold">{t('step5Title')}</h2>
         <p className="text-muted-foreground">
           {t('step5Description')}
@@ -103,7 +103,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       </div>
 
       {/* Q17: Current Needs */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Label className="text-base font-medium">
           {t('q17Label')} *
         </Label>
@@ -115,7 +115,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
             return (
               <div
                 key={option.value}
-                className={`flex items-center space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                className={`flex items-center gap-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
                     : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -143,7 +143,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       </div>
 
       {/* Q18: Investment Thesis Upload (Optional) */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Label className="text-base font-medium">
           {t('q18Label')}
         </Label>
@@ -151,10 +151,10 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
 
         {thesisUpload.url ? (
           <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
-            <FileText className="h-5 w-5 text-muted-foreground" />
+            <FileText className="size-5 text-muted-foreground" />
             <span className="flex-1 text-sm truncate">{t('documentUploaded')}</span>
             <Button variant="ghost" size="sm" onClick={removeFile}>
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </Button>
           </div>
         ) : (
@@ -168,9 +168,9 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
             />
             <div className="flex items-center justify-center gap-2 p-6 border-2 border-dashed rounded-md hover:border-primary/50 transition-colors">
               {thesisUpload.uploading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="size-5 animate-spin" />
               ) : (
-                <Upload className="h-5 w-5 text-muted-foreground" />
+                <Upload className="size-5 text-muted-foreground" />
               )}
               <span className="text-sm text-muted-foreground">
                 {thesisUpload.uploading ? t('uploading') : t('thesisUploadText')}
@@ -184,9 +184,9 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       </div>
 
       {/* Marketing Consent */}
-      <div className="space-y-3 p-4 border rounded-md bg-muted/30">
+      <div className="flex flex-col gap-3 p-4 border rounded-md bg-muted/30">
         <div
-          className="flex items-start space-x-3 cursor-pointer"
+          className="flex items-start gap-3 cursor-pointer"
           onClick={() => onChange({ marketing_consent: !data.marketing_consent })}
         >
           <Checkbox
@@ -195,7 +195,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
             id="marketing_consent"
             className="mt-0.5"
           />
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <Label htmlFor="marketing_consent" className="cursor-pointer font-medium">
               {t('marketingConsent')} *
             </Label>
@@ -210,7 +210,7 @@ export function StepNeeds({ data, onChange, onNext, onBack, errors = {} }: Intak
       </div>
 
       <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-md text-sm">
-        <Info className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+        <Info className="size-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
         <p className="text-amber-700 dark:text-amber-300">
           {t('gdprNotice')}
         </p>

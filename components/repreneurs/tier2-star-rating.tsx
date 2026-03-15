@@ -87,7 +87,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
                 >
                   <Star
                     className={cn(
-                      "h-4 w-4 transition-colors",
+                      "size-4 transition-colors",
                       star <= displayStars
                         ? "fill-amber-400 text-amber-400"
                         : "fill-transparent text-gray-200"
@@ -133,7 +133,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
                 >
                   <Star
                     className={cn(
-                      "h-4 w-4 transition-colors",
+                      "size-4 transition-colors",
                       star <= displayStars
                         ? "fill-amber-400 text-amber-400"
                         : "fill-transparent text-gray-200"

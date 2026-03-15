@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
@@ -90,9 +90,11 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
+                  <SelectGroup>
+        <SelectItem value="lead">Lead</SelectItem>
+        <SelectItem value="qualified">Qualified</SelectItem>
+        <SelectItem value="client">Client</SelectItem>
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -104,11 +106,13 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
                   <SelectValue placeholder="Select source..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {SOURCE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+        {SOURCE_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -120,11 +124,13 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
                   <SelectValue placeholder="Select persona..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {PERSONA_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+        {PERSONA_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>

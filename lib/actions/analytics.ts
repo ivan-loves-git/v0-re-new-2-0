@@ -2,6 +2,13 @@
 
 import { createAdminClient } from "@/lib/supabase/admin"
 
+export interface OfferConversionData {
+  medianTimeToOfferSent: number | null // days
+  medianTimeToOfferAccepted: number | null // days
+  overallAcceptanceRate: number // %
+  acceptanceByOffer: { offerName: string; sent: number; accepted: number; rate: number }[]
+}
+
 export interface AnalyticsData {
   // Counts
   totalProfiles: number
@@ -29,6 +36,8 @@ export interface AnalyticsData {
   leadToQualifiedRate: number
   qualifiedToClientRate: number
   leadToClientRate: number
+  // Offer conversion KPIs
+  offerConversion: OfferConversionData
 }
 
 function getDateRange(period: string): { from: Date; to: Date; prevFrom: Date; prevTo: Date } {
@@ -174,6 +183,67 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     ? Math.round((clientCount / totalProfiles) * 100)
     : 0
 
+  // === Offer Conversion KPIs ===
+  const { data: offerAssignments } = await supabase
+    .from("repreneur_offers")
+    .select("id, repreneur_id, offer_id, status, offered_at, accepted_at, offer:offers(name)")
+
+  const assignments = offerAssignments || []
+
+  // Build a lookup: repreneur_id → created_at
+  const repreneurCreatedAt = new Map(repreneurs.map(r => [r.id, r.created_at]))
+
+  // Time to Offer Sent: median days from repreneur.created_at to offered_at
+  const timeToOfferSent: number[] = []
+  for (const a of assignments) {
+    const applicationDate = repreneurCreatedAt.get(a.repreneur_id)
+    if (applicationDate && a.offered_at) {
+      const days = Math.floor((new Date(a.offered_at).getTime() - new Date(applicationDate).getTime()) / (1000 * 60 * 60 * 24))
+      if (days >= 0) timeToOfferSent.push(days)
+    }
+  }
+
+  // Time to Offer Accepted: median days from repreneur.created_at to accepted_at
+  const timeToOfferAccepted: number[] = []
+  const acceptedAssignments = assignments.filter(a => a.accepted_at)
+  for (const a of acceptedAssignments) {
+    const applicationDate = repreneurCreatedAt.get(a.repreneur_id)
+    if (applicationDate && a.accepted_at) {
+      const days = Math.floor((new Date(a.accepted_at).getTime() - new Date(applicationDate).getTime()) / (1000 * 60 * 60 * 24))
+      if (days >= 0) timeToOfferAccepted.push(days)
+    }
+  }
+
+  // Offer Acceptance Rate (overall + split by offer)
+  const totalSent = assignments.length
+  const totalAccepted = assignments.filter(a => ["accepted", "active", "completed"].includes(a.status)).length
+  const overallAcceptanceRate = totalSent > 0 ? Math.round((totalAccepted / totalSent) * 100) : 0
+
+  // Group by offer name
+  const byOffer = new Map<string, { sent: number; accepted: number }>()
+  for (const a of assignments) {
+    const offerName = (a.offer as { name: string } | null)?.name || "Unknown"
+    const entry = byOffer.get(offerName) || { sent: 0, accepted: 0 }
+    entry.sent++
+    if (["accepted", "active", "completed"].includes(a.status)) {
+      entry.accepted++
+    }
+    byOffer.set(offerName, entry)
+  }
+  const acceptanceByOffer = Array.from(byOffer.entries()).map(([offerName, { sent, accepted }]) => ({
+    offerName,
+    sent,
+    accepted,
+    rate: sent > 0 ? Math.round((accepted / sent) * 100) : 0,
+  }))
+
+  const offerConversion: OfferConversionData = {
+    medianTimeToOfferSent: median(timeToOfferSent),
+    medianTimeToOfferAccepted: median(timeToOfferAccepted),
+    overallAcceptanceRate,
+    acceptanceByOffer,
+  }
+
   return {
     totalProfiles,
     newProfilesThisPeriod,
@@ -195,5 +265,6 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     leadToQualifiedRate,
     qualifiedToClientRate,
     leadToClientRate,
+    offerConversion,
   }
 }

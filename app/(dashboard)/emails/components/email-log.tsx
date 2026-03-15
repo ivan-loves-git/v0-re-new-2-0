@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TEMPLATE_METADATA } from "@/lib/email/templates"
 import type { EmailLogEntry } from "@/lib/actions/emails"
 import type { EmailTemplateKey } from "@/lib/types/email"
@@ -61,12 +61,14 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
                 <SelectValue placeholder="Template" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All templates</SelectItem>
-                {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
-                  <SelectItem key={key} value={key}>
-                    {meta.name}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+        <SelectItem value="all">All templates</SelectItem>
+        {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
+          <SelectItem key={key} value={key}>
+            {meta.name}
+          </SelectItem>
+        ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
 
@@ -75,12 +77,14 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+        <SelectItem value="all">All</SelectItem>
+        {Object.entries(statusLabels).map(([key, label]) => (
+          <SelectItem key={key} value={key}>
+            {label}
+          </SelectItem>
+        ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>

@@ -51,7 +51,7 @@ function TopRepreneursSkeleton() {
       <CardContent className="space-y-2">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex items-center gap-3 p-2 rounded-lg border">
-            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="size-5 rounded-full" />
             <Skeleton className="h-4 flex-1" />
             <Skeleton className="h-6 w-12" />
           </div>
@@ -70,7 +70,7 @@ function ActivityStreamSkeleton() {
       <CardContent className="space-y-3">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex items-start gap-3 p-2">
-            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="size-8 rounded-full" />
             <div className="flex-1 space-y-1">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-3 w-1/2" />
@@ -426,7 +426,7 @@ export default function DashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+              <TrendingUp className="size-5" />
               Pipeline View
             </CardTitle>
             <CardDescription>Visualize your repreneur pipeline in a kanban board</CardDescription>
@@ -435,7 +435,7 @@ export default function DashboardPage() {
             <Link href="/pipeline">
               <Button className="w-full">
                 Go to Pipeline
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 size-4" />
               </Button>
             </Link>
           </CardContent>
@@ -444,7 +444,7 @@ export default function DashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TableProperties className="h-5 w-5" />
+              <TableProperties className="size-5" />
               Find Repreneurs
             </CardTitle>
             <CardDescription>Filter, sort, and find repreneurs in one searchable table</CardDescription>
@@ -453,7 +453,7 @@ export default function DashboardPage() {
             <Link href="/repreneurs/explore">
               <Button className="w-full">
                 Find
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 size-4" />
               </Button>
             </Link>
           </CardContent>
@@ -462,7 +462,7 @@ export default function DashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+              <Users className="size-5" />
               Groups
             </CardTitle>
             <CardDescription>View repreneurs organized by lifecycle status</CardDescription>
@@ -471,7 +471,7 @@ export default function DashboardPage() {
             <Link href="/repreneurs">
               <Button className="w-full">
                 View Groups
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 size-4" />
               </Button>
             </Link>
           </CardContent>
@@ -480,7 +480,7 @@ export default function DashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Compass className="h-5 w-5" />
+              <Compass className="size-5" />
               Repreneur Journey
             </CardTitle>
             <CardDescription>Track repreneurs through their acquisition journey</CardDescription>
@@ -489,7 +489,7 @@ export default function DashboardPage() {
             <Link href="/journey">
               <Button className="w-full">
                 View Journey
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 size-4" />
               </Button>
             </Link>
           </CardContent>

@@ -18,7 +18,7 @@ export function CardSkeleton({
     <Card className={cn("animate-pulse", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-gray-200 rounded" />
+          <div className="size-5 bg-gray-200 rounded" />
           <div className={cn("bg-gray-200 rounded w-32", headerHeight)} />
         </div>
       </CardHeader>
@@ -34,7 +34,7 @@ export function StatCardSkeleton() {
     <Card className="animate-pulse">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="h-4 w-24 bg-gray-200 rounded" />
-        <div className="h-4 w-4 bg-gray-200 rounded" />
+        <div className="size-4 bg-gray-200 rounded" />
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
@@ -61,17 +61,17 @@ export function TierCardSkeleton() {
     <Card className="h-full animate-pulse">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-gray-200 rounded" />
+          <div className="size-5 bg-gray-200 rounded" />
           <div className="h-5 w-20 bg-gray-200 rounded" />
-          <div className="h-4 w-4 bg-gray-100 rounded-full" />
-          <div className="ml-auto h-6 w-6 bg-gray-200 rounded-full" />
+          <div className="size-4 bg-gray-100 rounded-full" />
+          <div className="ml-auto size-6 bg-gray-200 rounded-full" />
         </div>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-3 p-2 rounded-lg border">
-              <div className="h-5 w-5 bg-gray-200 rounded-full" />
+              <div className="size-5 bg-gray-200 rounded-full" />
               <div className="flex-1">
                 <div className="h-4 w-32 bg-gray-200 rounded" />
               </div>
@@ -89,7 +89,7 @@ export function FunnelSkeleton() {
     <Card className="h-full animate-pulse">
       <CardHeader className="pb-2 pt-3">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-gray-200 rounded" />
+          <div className="size-5 bg-gray-200 rounded" />
           <div className="h-5 w-32 bg-gray-200 rounded" />
         </div>
       </CardHeader>
@@ -113,18 +113,18 @@ export function JourneyStageSkeleton() {
     <Card className="animate-pulse">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-gray-200 rounded" />
+          <div className="size-5 bg-gray-200 rounded" />
           <div className="h-5 w-28 bg-gray-200 rounded" />
         </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4">
-          <div className="w-32 h-32 bg-gray-100 rounded-full" />
+          <div className="size-32 bg-gray-100 rounded-full" />
           <div className="flex-1 space-y-2">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-2.5 w-2.5 bg-gray-200 rounded-full" />
+                  <div className="size-2.5 bg-gray-200 rounded-full" />
                   <div className="h-4 w-20 bg-gray-200 rounded" />
                 </div>
                 <div className="h-4 w-6 bg-gray-200 rounded" />
@@ -142,7 +142,7 @@ export function ActivityStreamSkeleton() {
     <Card className="h-full animate-pulse">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-gray-200 rounded" />
+          <div className="size-5 bg-gray-200 rounded" />
           <div className="h-5 w-28 bg-gray-200 rounded" />
         </div>
       </CardHeader>
@@ -151,7 +151,7 @@ export function ActivityStreamSkeleton() {
           {[...Array(6)].map((_, i) => (
             <div key={i} className="flex items-start gap-3 pb-3 border-b last:border-0">
               <div className="p-2 rounded-full bg-blue-50">
-                <div className="h-4 w-4 bg-blue-100 rounded" />
+                <div className="size-4 bg-blue-100 rounded" />
               </div>
               <div className="flex-1 space-y-1">
                 <div className="h-4 w-24 bg-gray-200 rounded" />
@@ -171,7 +171,7 @@ export function RecentlyAddedSkeleton() {
     <Card className="h-full animate-pulse">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-gray-200 rounded" />
+          <div className="size-5 bg-gray-200 rounded" />
           <div className="h-5 w-28 bg-gray-200 rounded" />
         </div>
       </CardHeader>
@@ -204,13 +204,13 @@ export function ChartSkeleton() {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-5 w-5 bg-gray-200 rounded" />
+            <div className="size-5 bg-gray-200 rounded" />
             <div className="h-5 w-40 bg-gray-200 rounded" />
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-gray-200 rounded" />
+            <div className="size-8 bg-gray-200 rounded" />
             <div className="h-8 w-32 bg-gray-200 rounded" />
-            <div className="h-8 w-8 bg-gray-200 rounded" />
+            <div className="size-8 bg-gray-200 rounded" />
           </div>
         </div>
       </CardHeader>
@@ -229,7 +229,7 @@ export function StatsColumnSkeleton() {
     <Card className="h-full animate-pulse">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-gray-200 rounded" />
+          <div className="size-5 bg-gray-200 rounded" />
           <div className="h-5 w-24 bg-gray-200 rounded" />
         </div>
       </CardHeader>
@@ -239,7 +239,7 @@ export function StatsColumnSkeleton() {
             <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-gray-100">
-                  <div className="h-4 w-4 bg-gray-200 rounded" />
+                  <div className="size-4 bg-gray-200 rounded" />
                 </div>
                 <div className="space-y-1">
                   <div className="h-4 w-20 bg-gray-200 rounded" />

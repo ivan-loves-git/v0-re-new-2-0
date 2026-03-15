@@ -112,9 +112,9 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+          className="size-6 p-0 text-gray-400 hover:text-gray-600"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil className="size-3.5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -281,7 +281,7 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
           {flagResult.flags.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertTriangle className="size-4 text-red-600" />
                 <span className="text-sm font-medium text-red-700">Warning Flags</span>
               </div>
               <div className="space-y-2">
@@ -308,9 +308,9 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
             disabled={isPending}
           >
             {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="size-4 animate-spin mr-2" />
             ) : (
-              <Calculator className="h-4 w-4 mr-2" />
+              <Calculator className="size-4 mr-2" />
             )}
             {isPending ? "Saving..." : "Calculate & Save"}
           </Button>

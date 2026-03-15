@@ -39,7 +39,7 @@ export function RepreneurCard({ repreneur, isDragging = false }: RepreneurCardPr
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="outline" className="text-xs gap-1 cursor-help">
-                    <Target className="h-3 w-3" />
+                    <Target className="size-3" />
                     {combined}
                   </Badge>
                 </TooltipTrigger>

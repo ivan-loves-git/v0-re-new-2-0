@@ -64,14 +64,14 @@ function ResetPasswordContent() {
 
   if (tokenError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-muted flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <XCircle className="w-8 h-8 text-red-500" />
+          <div className="bg-background rounded-2xl shadow-sm border border-border p-8 text-center">
+            <div className="size-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="size-8 text-destructive" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid link</h1>
-            <p className="text-gray-500 mb-6">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Invalid link</h1>
+            <p className="text-muted-foreground mb-6">
               This password reset link is invalid or has expired.
             </p>
             <Link
@@ -87,16 +87,16 @@ function ResetPasswordContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-background rounded-2xl shadow-sm border border-border p-8">
           {success ? (
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-green-500" />
+              <div className="size-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="size-8 text-success" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Password reset</h1>
-              <p className="text-gray-500 mb-6">
+              <h1 className="text-2xl font-bold text-foreground mb-2">Password reset</h1>
+              <p className="text-muted-foreground mb-6">
                 Your password has been successfully reset.
               </p>
               <Link
@@ -108,14 +108,14 @@ function ResetPasswordContent() {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Set new password</h1>
-              <p className="text-gray-500 mb-6">
+              <h1 className="text-2xl font-bold text-foreground mb-2">Set new password</h1>
+              <p className="text-muted-foreground mb-6">
                 Enter your new password below.
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-700">
+                  <Label htmlFor="password" className="text-foreground">
                     New password
                   </Label>
                   <Input
@@ -126,12 +126,12 @@ function ResetPasswordContent() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-gray-700">
+                  <Label htmlFor="confirmPassword" className="text-foreground">
                     Confirm password
                   </Label>
                   <Input
@@ -142,7 +142,7 @@ function ResetPasswordContent() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
 
@@ -170,11 +170,11 @@ function ResetPasswordContent() {
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
-          <p className="text-gray-500 mt-4">Loading...</p>
+        <div className="bg-background rounded-2xl shadow-sm border border-border p-8 text-center">
+          <Loader2 className="size-8 animate-spin text-blue-500 mx-auto" />
+          <p className="text-muted-foreground mt-4">Loading...</p>
         </div>
       </div>
     </div>

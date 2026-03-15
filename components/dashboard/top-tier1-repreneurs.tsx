@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trophy, Medal, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { subDays } from "date-fns"
@@ -89,7 +89,7 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
     <Card className="h-full flex flex-col gap-0">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Trophy className="h-5 w-5 text-gray-900" />
+          <Trophy className="size-5 text-gray-900" />
           Top Rated
           <CardInfoButton info={kpiInfo.topTier1} />
         </CardTitle>
@@ -99,10 +99,12 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All time</SelectItem>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectGroup>
+        <SelectItem value="all">All time</SelectItem>
+        <SelectItem value="7">Last 7 days</SelectItem>
+        <SelectItem value="14">Last 14 days</SelectItem>
+        <SelectItem value="30">Last 30 days</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
           <CardLinkButton href="/pipeline" tooltip="View Pipeline" />
@@ -124,7 +126,7 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
                       >
                         <div className="flex items-center justify-center w-6">
                           {actualIndex < 3 ? (
-                            <Medal className={`h-5 w-5 ${getMedalColor(index)}`} />
+                            <Medal className={`size-5 ${getMedalColor(index)}`} />
                           ) : (
                             <span className="text-sm text-gray-400 font-medium">{actualIndex + 1}</span>
                           )}
@@ -168,11 +170,11 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
             <Button
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
               disabled={currentPage === 0}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
             </Button>
             <span className="text-xs text-gray-500">
               {currentPage + 1} / {totalPages}
@@ -180,11 +182,11 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
             <Button
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
               disabled={currentPage >= totalPages - 1}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
         )}

@@ -81,7 +81,7 @@ export function StepBlocA({ data, onChange, onNext, errors }: AssessmentStepProp
       <div className="flex justify-end pt-4">
         <Button onClick={onNext} disabled={!allAnswered}>
           {nextLabel}
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <ArrowRight className="size-4 ml-2" />
         </Button>
       </div>
     </div>

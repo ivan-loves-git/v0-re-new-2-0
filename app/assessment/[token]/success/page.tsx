@@ -33,8 +33,8 @@ export default function AssessmentSuccessPage() {
         <div className="text-center">
           {/* Success icon */}
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <div className="size-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
             </div>
           </div>
 
@@ -53,7 +53,7 @@ export default function AssessmentSuccessPage() {
           <Button asChild>
             <Link href="https://re-new.team" target="_blank">
               {content.cta}
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="size-4 ml-2" />
             </Link>
           </Button>
 

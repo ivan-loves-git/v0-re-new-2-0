@@ -39,7 +39,7 @@ export function NeedsCompletionBadge({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <AlertCircle className="h-4 w-4 text-amber-500 cursor-help flex-shrink-0" />
+            <AlertCircle className="size-4 text-amber-500 cursor-help flex-shrink-0" />
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs">
             <p className="font-medium text-amber-700 mb-1">
@@ -61,7 +61,7 @@ export function NeedsCompletionBadge({
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded-md text-amber-700 cursor-help">
-              <AlertCircle className="h-3.5 w-3.5" />
+              <AlertCircle className="size-3.5" />
               <span className="text-xs font-medium">Données incomplètes</span>
             </div>
           </TooltipTrigger>
@@ -88,7 +88,7 @@ export function NeedsCompletionBadge({
                   href={`/repreneurs/${repreneurId}?tab=questionnaire`}
                   className="inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800 font-medium mt-2"
                 >
-                  <Edit className="h-3 w-3" />
+                  <Edit className="size-3" />
                   Compléter le questionnaire
                 </Link>
               )}
@@ -102,7 +102,7 @@ export function NeedsCompletionBadge({
   return (
     <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
       <div className="flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+        <AlertCircle className="size-5 text-amber-600 mt-0.5 flex-shrink-0" />
         <div className="flex-1 space-y-2">
           <div>
             <p className="font-medium text-amber-800">
@@ -132,7 +132,7 @@ export function NeedsCompletionBadge({
               className="border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
             >
               <Link href={`/repreneurs/${repreneurId}?tab=questionnaire`}>
-                <Edit className="h-4 w-4 mr-2" />
+                <Edit className="size-4 mr-2" />
                 Compléter le questionnaire v2
               </Link>
             </Button>

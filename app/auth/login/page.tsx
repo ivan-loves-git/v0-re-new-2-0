@@ -160,8 +160,8 @@ export default function LoginPage() {
         />
 
         {/* Glow orbs */}
-        <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl" />
+        <div className="absolute top-1/4 left-1/4 size-48 bg-blue-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 size-32 bg-cyan-500/20 rounded-full blur-2xl" />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center lg:flex-1">
@@ -187,36 +187,36 @@ export default function LoginPage() {
           </div>
 
           {/* Description - desktop only */}
-          <p className="text-gray-400 text-lg leading-relaxed max-w-md hidden lg:block">
+          <p className="text-muted-foreground text-lg leading-relaxed max-w-md hidden lg:block">
             The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
           </p>
         </div>
 
         {/* Status indicator - desktop only */}
         <div className="relative z-10 items-center gap-2 text-white/40 text-sm hidden lg:flex">
-          <span className="relative flex h-2 w-2">
+          <span className="relative flex size-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
           </span>
           All systems operational
         </div>
       </div>
 
       {/* Right side - Light */}
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-8 lg:p-12">
+      <div className="w-full lg:w-1/2 bg-background flex items-center justify-center p-8 lg:p-12">
         <div className="w-full max-w-md">
           {mode === "signin" ? (
             <>
               {/* Sign In Header */}
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign in</h1>
-                <p className="text-gray-500">Enter your credentials to continue</p>
+                <h1 className="text-3xl font-bold text-foreground mb-2">Sign in</h1>
+                <p className="text-muted-foreground">Enter your credentials to continue</p>
               </div>
 
               {/* Sign In Form */}
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-700">
+              <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="email" className="text-foreground">
                     Email
                   </Label>
                   <Input
@@ -227,12 +227,12 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-gray-700">
+                    <Label htmlFor="password" className="text-foreground">
                       Password
                     </Label>
                     <a
@@ -249,7 +249,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
 
@@ -269,7 +269,7 @@ export default function LoginPage() {
               </form>
 
               {/* Toggle to Request Access */}
-              <p className="text-center text-sm text-gray-500 mt-6">
+              <p className="text-center text-sm text-muted-foreground mt-6">
                 Don&apos;t have access?{" "}
                 <button
                   type="button"
@@ -283,9 +283,9 @@ export default function LoginPage() {
           ) : requestSubmitted ? (
             /* Confirmation Screen */
             <div className="text-center py-4">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="size-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <svg
-                  className="w-8 h-8 text-emerald-600"
+                  className="size-8 text-emerald-600"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={2}
@@ -294,8 +294,8 @@ export default function LoginPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">You&apos;re on the list!</h1>
-              <p className="text-gray-500 leading-relaxed mb-8">
+              <h1 className="text-3xl font-bold text-foreground mb-3">You&apos;re on the list!</h1>
+              <p className="text-muted-foreground leading-relaxed mb-8">
                 We&apos;ve saved your request and will notify you by email as soon as the platform
                 is officially open. Stay tuned!
               </p>
@@ -311,14 +311,14 @@ export default function LoginPage() {
             <>
               {/* Request Access Header */}
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Request access</h1>
-                <p className="text-gray-500">Tell us a bit about yourself and we&apos;ll be in touch</p>
+                <h1 className="text-3xl font-bold text-foreground mb-2">Request access</h1>
+                <p className="text-muted-foreground">Tell us a bit about yourself and we&apos;ll be in touch</p>
               </div>
 
               {/* Request Access Form */}
-              <form onSubmit={handleRequestAccess} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="req-name" className="text-gray-700">
+              <form onSubmit={handleRequestAccess} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="req-name" className="text-foreground">
                     Name
                   </Label>
                   <Input
@@ -329,12 +329,12 @@ export default function LoginPage() {
                     onChange={(e) => setName(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="req-email" className="text-gray-700">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="req-email" className="text-foreground">
                     Email
                   </Label>
                   <Input
@@ -345,13 +345,13 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
 
                 {/* Role Selector */}
-                <div className="space-y-2">
-                  <Label className="text-gray-700">I am a...</Label>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-foreground">I am a...</Label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -360,14 +360,14 @@ export default function LoginPage() {
                       className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
                         role === "repreneur"
                           ? "border-blue-500 bg-blue-50 shadow-sm"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          : "border-border bg-background hover:border-gray-300"
                       }`}
                     >
                       <span className="text-2xl">🔑</span>
-                      <span className={`text-sm font-medium ${role === "repreneur" ? "text-blue-700" : "text-gray-700"}`}>
+                      <span className={`text-sm font-medium ${role === "repreneur" ? "text-blue-700" : "text-foreground"}`}>
                         Repreneur
                       </span>
-                      <span className={`text-xs ${role === "repreneur" ? "text-blue-500" : "text-gray-400"}`}>
+                      <span className={`text-xs ${role === "repreneur" ? "text-blue-500" : "text-muted-foreground"}`}>
                         Acquiring a business
                       </span>
                     </button>
@@ -378,14 +378,14 @@ export default function LoginPage() {
                       className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
                         role === "seller"
                           ? "border-blue-500 bg-blue-50 shadow-sm"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          : "border-border bg-background hover:border-gray-300"
                       }`}
                     >
                       <span className="text-2xl">🏪</span>
-                      <span className={`text-sm font-medium ${role === "seller" ? "text-blue-700" : "text-gray-700"}`}>
+                      <span className={`text-sm font-medium ${role === "seller" ? "text-blue-700" : "text-foreground"}`}>
                         Seller
                       </span>
-                      <span className={`text-xs ${role === "seller" ? "text-blue-500" : "text-gray-400"}`}>
+                      <span className={`text-xs ${role === "seller" ? "text-blue-500" : "text-muted-foreground"}`}>
                         Selling a business
                       </span>
                     </button>
@@ -408,7 +408,7 @@ export default function LoginPage() {
               </form>
 
               {/* Toggle to Sign In */}
-              <p className="text-center text-sm text-gray-500 mt-6">
+              <p className="text-center text-sm text-muted-foreground mt-6">
                 Already have an account?{" "}
                 <button
                   type="button"
@@ -422,10 +422,10 @@ export default function LoginPage() {
           )}
 
           {/* Status indicator - mobile only (at bottom of form) */}
-          <div className="flex lg:hidden items-center justify-center gap-2 text-gray-400 text-sm mt-8">
-            <span className="relative flex h-2 w-2">
+          <div className="flex lg:hidden items-center justify-center gap-2 text-muted-foreground text-sm mt-8">
+            <span className="relative flex size-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
             </span>
             All systems operational
           </div>

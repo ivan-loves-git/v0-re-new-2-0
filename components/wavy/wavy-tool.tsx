@@ -216,15 +216,15 @@ export function WavyTool({
             Choose who to write to and what kind of message
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="flex flex-col gap-6">
           {/* Channel Selection */}
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label>Channel</Label>
             <ChannelSelector value={channel} onChange={setChannel} />
           </div>
 
           {/* Repreneur Selection */}
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label>Repreneur</Label>
             <RepreneurSearch
               repreneurs={repreneurs}
@@ -254,7 +254,7 @@ export function WavyTool({
           </div>
 
           {/* Template Selection */}
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label>Template (optional)</Label>
             <TemplateSelector
               channel={channel}
@@ -267,7 +267,7 @@ export function WavyTool({
           </div>
 
           {/* Custom Instructions */}
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="instructions">Additional Instructions (optional)</Label>
             <Textarea
               id="instructions"
@@ -308,9 +308,9 @@ export function WavyTool({
             {body ? "Edit the generated message before sending" : "Your message will appear here"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-4">
           {channel === "email" && (
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="subject">Subject</Label>
               <Input
                 id="subject"
@@ -321,7 +321,7 @@ export function WavyTool({
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="body">
               {channel === "email" ? "Email Body" : "Message"}
             </Label>

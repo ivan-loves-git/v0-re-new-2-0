@@ -61,7 +61,7 @@ export function DeclineButton({ repreneurId, currentStatus, repreneurName }: Dec
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <Undo className="h-4 w-4" />
+            <Undo className="size-4" />
             Restore
           </Button>
         </DialogTrigger>
@@ -89,7 +89,7 @@ export function DeclineButton({ repreneurId, currentStatus, repreneurName }: Dec
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2 text-gray-600 hover:text-gray-700">
-          <XCircle className="h-4 w-4" />
+          <XCircle className="size-4" />
           Decline
         </Button>
       </DialogTrigger>

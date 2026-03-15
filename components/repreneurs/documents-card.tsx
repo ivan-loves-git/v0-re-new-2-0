@@ -110,7 +110,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       />
 
       <div className="flex items-center gap-3">
-        <FileText className="h-5 w-5 text-gray-400" />
+        <FileText className="size-5 text-gray-400" />
         <div>
           <p className="font-medium text-sm">{label}</p>
           <p className="text-xs text-gray-500">
@@ -128,33 +128,33 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
               className="h-8 gap-1.5"
               onClick={() => window.open(currentUrl, "_blank")}
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="size-3.5" />
               <span className="hidden sm:inline">View</span>
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
             >
               {isUploading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <Upload className="h-3.5 w-3.5" />
+                <Upload className="size-3.5" />
               )}
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 text-gray-400 hover:text-red-500 hover:border-red-200"
+              className="size-8 text-gray-400 hover:text-red-500 hover:border-red-200"
               onClick={handleDelete}
               disabled={isDeleting}
             >
               {isDeleting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="size-3.5" />
               )}
             </Button>
           </>
@@ -167,9 +167,9 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
             disabled={isUploading}
           >
             {isUploading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              <Upload className="h-3.5 w-3.5" />
+              <Upload className="size-3.5" />
             )}
             <span>Upload</span>
           </Button>
@@ -184,7 +184,7 @@ export function DocumentsCard({ repreneurId, cvUrl, ldcUrl }: DocumentsCardProps
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
-          <FolderOpen className="h-5 w-5" />
+          <FolderOpen className="size-5" />
           Documents
         </CardTitle>
       </CardHeader>

@@ -25,6 +25,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -254,7 +255,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1">
-                <Plus className="h-3 w-3" />
+                <Plus className="size-3" />
                 Add
               </Button>
             </DialogTrigger>
@@ -273,14 +274,16 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {MILESTONE_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex items-center gap-2">
-                            <type.icon className="h-4 w-4" />
-                            {type.label}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+        {MILESTONE_TYPES.map((type) => (
+          <SelectItem key={type.value} value={type.value}>
+            <div className="flex items-center gap-2">
+              <type.icon className="size-4" />
+              {type.label}
+            </div>
+          </SelectItem>
+        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -331,7 +334,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
           {deliverables.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-gray-500 uppercase font-medium">
-                <Package className="h-3 w-3" />
+                <Package className="size-3" />
                 Deliverables
               </div>
               {deliverables.map((milestone) => (
@@ -352,7 +355,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
           {checkpoints.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-gray-500 uppercase font-medium">
-                <Flag className="h-3 w-3" />
+                <Flag className="size-3" />
                 Checkpoints
               </div>
               {checkpoints.map((milestone) => (
@@ -421,9 +424,9 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedMilestone?.milestone_type === "deliverable" ? (
-                <Package className="h-5 w-5" />
+                <Package className="size-5" />
               ) : (
-                <Flag className="h-5 w-5" />
+                <Flag className="size-5" />
               )}
               {selectedMilestone?.title}
             </DialogTitle>
@@ -475,9 +478,9 @@ function MilestoneItem({ milestone, isActive, onToggle, onView, onEdit, onDelete
         className={`flex-shrink-0 ${!isActive ? "cursor-default" : "cursor-pointer"}`}
       >
         {milestone.is_completed ? (
-          <CheckCircle className="h-5 w-5 text-green-500" />
+          <CheckCircle className="size-5 text-green-500" />
         ) : (
-          <Circle className="h-5 w-5 text-gray-300 hover:text-gray-400" />
+          <Circle className="size-5 text-gray-300 hover:text-gray-400" />
         )}
       </button>
       <div className="flex-1 min-w-0">
@@ -492,23 +495,23 @@ function MilestoneItem({ milestone, isActive, onToggle, onView, onEdit, onDelete
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isTemp}>
-            <MoreHorizontal className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="size-8" disabled={isTemp}>
+            <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onView}>
-            <Eye className="h-4 w-4 mr-2" />
+            <Eye className="size-4 mr-2" />
             View
           </DropdownMenuItem>
           {isActive && (
             <>
               <DropdownMenuItem onClick={onEdit}>
-                <Pencil className="h-4 w-4 mr-2" />
+                <Pencil className="size-4 mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDelete} className="text-red-600">
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="size-4 mr-2" />
                 Delete
               </DropdownMenuItem>
             </>

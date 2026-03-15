@@ -188,7 +188,7 @@ export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <RadarIcon className="h-5 w-5" />
+          <RadarIcon className="size-5" />
           Profile Overview
         </CardTitle>
       </CardHeader>

@@ -10,7 +10,7 @@ export default function NewRepreneurPage() {
       <div>
         <Link href="/repreneurs">
           <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="size-4 mr-2" />
             Back to Repreneurs
           </Button>
         </Link>

@@ -49,7 +49,7 @@ export function AssessmentStatus({ assessments, totalRepreneurs }: AssessmentSta
     <Card className="h-full flex flex-col gap-0">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-base">
-          <ClipboardCheck className="h-5 w-5 text-gray-900" />
+          <ClipboardCheck className="size-5 text-gray-900" />
           Assessments
           <CardInfoButton info={kpiInfo.assessmentStatus} />
         </CardTitle>
@@ -79,7 +79,7 @@ export function AssessmentStatus({ assessments, totalRepreneurs }: AssessmentSta
             const Icon = row.icon
             return (
               <div key={row.label} className={`flex items-center gap-3 p-2 rounded-lg border ${row.bg}`}>
-                <Icon className={`h-4 w-4 ${row.color}`} />
+                <Icon className={`size-4 ${row.color}`} />
                 <span className={`text-sm font-medium ${row.color}`}>{row.label}</span>
                 <Badge variant="secondary" className="ml-auto">{row.count}</Badge>
               </div>

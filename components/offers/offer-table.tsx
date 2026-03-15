@@ -44,7 +44,7 @@ export function OfferTable({ offers }: OfferTableProps) {
     <div className="space-y-4">
       <div className="flex gap-4 justify-between">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search offers..."
             value={search}
@@ -53,7 +53,7 @@ export function OfferTable({ offers }: OfferTableProps) {
           />
         </div>
         <Button onClick={() => router.push("/offers/new")}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="size-4 mr-2" />
           New Offer
         </Button>
       </div>
@@ -105,24 +105,24 @@ export function OfferTable({ offers }: OfferTableProps) {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <MoreHorizontal className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => router.push(`/offers/${offer.id}/edit`)}>
-                          <Pencil className="h-4 w-4 mr-2" />
+                          <Pencil className="size-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleActive(offer.id, offer.is_active)}>
                           {offer.is_active ? (
                             <>
-                              <PowerOff className="h-4 w-4 mr-2" />
+                              <PowerOff className="size-4 mr-2" />
                               Deactivate
                             </>
                           ) : (
                             <>
-                              <Power className="h-4 w-4 mr-2" />
+                              <Power className="size-4 mr-2" />
                               Activate
                             </>
                           )}

@@ -24,7 +24,7 @@ export function AutofillButton({ onAutofill, label = 'Autofill' }: AutofillButto
       onClick={onAutofill}
       className="absolute top-2 right-2 text-xs bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800"
     >
-      <Zap className="h-3 w-3 mr-1" />
+      <Zap className="size-3 mr-1" />
       {label}
     </Button>
   )

@@ -81,7 +81,7 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
             <div className="flex flex-wrap gap-1">
               {repreneur.offer_names.slice(0, 2).map((name, idx) => (
                 <Badge key={idx} variant="outline" className="text-xs py-0 px-1.5">
-                  <Package className="h-2.5 w-2.5 mr-0.5" />
+                  <Package className="size-2.5 mr-0.5" />
                   {name}
                 </Badge>
               ))}
@@ -190,7 +190,7 @@ function PipelineColumn({
             onClick={handleLoadMore}
             className="w-full mt-2 text-gray-500 hover:text-gray-700"
           >
-            <ChevronDown className="h-4 w-4 mr-1" />
+            <ChevronDown className="size-4 mr-1" />
             Show {Math.min(remainingCount, LOAD_MORE_COUNT)} more ({remainingCount} hidden)
           </Button>
         )}
@@ -299,7 +299,7 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
           className="h-9 gap-1.5 shrink-0"
           onClick={() => setSortMode(sortMode === "score" ? "date" : "score")}
         >
-          <ArrowUpDown className="h-3.5 w-3.5" />
+          <ArrowUpDown className="size-3.5" />
           {sortMode === "score" ? "By score" : "By date"}
         </Button>
       </div>
@@ -312,7 +312,7 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
 
       <TooltipProvider>
         <div className="flex items-center gap-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <Info className="h-4 w-4 text-amber-600 flex-shrink-0" />
+          <Info className="size-4 text-amber-600 flex-shrink-0" />
           <p className="text-sm text-amber-800">
             Status changes are action-driven. To move a repreneur:{" "}
             <span className="font-medium">qualify manually</span> (→ Qualified),{" "}

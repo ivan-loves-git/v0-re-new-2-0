@@ -209,8 +209,8 @@ export function StepReview({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-semibold">{labels.title}</h2>
         <p className="text-muted-foreground">
           {labels.description}
@@ -222,10 +222,10 @@ export function StepReview({
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg">{labels.contact}</CardTitle>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(1)}>
-            <Pencil className="h-4 w-4 mr-1" /> {labels.edit}
+            <Pencil className="size-4 mr-1" /> {labels.edit}
           </Button>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
+        <CardContent className="flex flex-col gap-2 text-sm">
           <div><span className="text-muted-foreground">{labels.name}:</span> {data.first_name} {data.last_name}</div>
           <div><span className="text-muted-foreground">{labels.email}:</span> {data.email}</div>
           <div><span className="text-muted-foreground">{labels.phone}:</span> {data.phone}</div>
@@ -241,10 +241,10 @@ export function StepReview({
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg">{labels.profile}</CardTitle>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(2)}>
-            <Pencil className="h-4 w-4 mr-1" /> {labels.edit}
+            <Pencil className="size-4 mr-1" /> {labels.edit}
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="flex flex-col gap-3 text-sm">
           <div>
             <div className="text-muted-foreground text-xs">{labels.status}</div>
             <div>{getTranslatedLabel(WHO_OPTION_KEYS.q05_status, data.q05_status || '')}</div>
@@ -277,7 +277,7 @@ export function StepReview({
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg">{labels.project}</CardTitle>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(3)}>
-            <Pencil className="h-4 w-4 mr-1" /> {labels.edit}
+            <Pencil className="size-4 mr-1" /> {labels.edit}
           </Button>
         </CardHeader>
         <CardContent className="text-sm">
@@ -295,10 +295,10 @@ export function StepReview({
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg">{labels.criteria}</CardTitle>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(4)}>
-            <Pencil className="h-4 w-4 mr-1" /> {labels.edit}
+            <Pencil className="size-4 mr-1" /> {labels.edit}
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="flex flex-col gap-3 text-sm">
           {/* Geo Zones */}
           <div>
             <div className="text-muted-foreground text-xs">{labels.geoZones}</div>
@@ -352,10 +352,10 @@ export function StepReview({
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg">{labels.needs}</CardTitle>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(5)}>
-            <Pencil className="h-4 w-4 mr-1" /> {labels.edit}
+            <Pencil className="size-4 mr-1" /> {labels.edit}
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="flex flex-col gap-3 text-sm">
           <div>
             <div className="text-muted-foreground text-xs">{labels.currentNeeds}</div>
             <div className="flex flex-wrap gap-1 mt-1">
@@ -373,7 +373,7 @@ export function StepReview({
 
       {/* Consent confirmation */}
       <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-md text-sm">
-        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+        <CheckCircle2 className="size-4 text-green-600 dark:text-green-400" />
         <p className="text-green-700 dark:text-green-300">
           {labels.consentConfirmed}
         </p>
@@ -387,7 +387,7 @@ export function StepReview({
         <Button onClick={onSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="size-4 mr-2 animate-spin" />
               {labels.submitting}
             </>
           ) : (

@@ -164,10 +164,10 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
 
         {cvUpload.url ? (
           <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
-            <FileText className="h-5 w-5 text-muted-foreground" />
+            <FileText className="size-5 text-muted-foreground" />
             <span className="flex-1 text-sm truncate">{t('cvUploaded')}</span>
             <Button variant="ghost" size="sm" onClick={removeFile}>
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </Button>
           </div>
         ) : (
@@ -181,9 +181,9 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
             />
             <div className={`flex items-center justify-center gap-2 p-6 border-2 border-dashed rounded-md hover:border-primary/50 transition-colors ${errors.cv_url ? 'border-red-500' : ''}`}>
               {cvUpload.uploading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="size-5 animate-spin" />
               ) : (
-                <Upload className="h-5 w-5 text-muted-foreground" />
+                <Upload className="size-5 text-muted-foreground" />
               )}
               <span className="text-sm text-muted-foreground">
                 {cvUpload.uploading ? t('uploading') : t('cvUploadText')}

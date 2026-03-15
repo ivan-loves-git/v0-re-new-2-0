@@ -103,20 +103,20 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="h-9 w-9">
-            <MoreVertical className="h-4 w-4" />
+          <Button variant="outline" size="icon" className="size-9">
+            <MoreVertical className="size-4" />
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {isRejected ? (
             <DropdownMenuItem onClick={() => setIsRejectDialogOpen(true)}>
-              <Undo className="h-4 w-4 mr-2" />
+              <Undo className="size-4 mr-2" />
               Restore from Rejected
             </DropdownMenuItem>
           ) : isDeclined ? (
             <DropdownMenuItem onClick={() => setIsDeclineDialogOpen(true)}>
-              <Undo className="h-4 w-4 mr-2" />
+              <Undo className="size-4 mr-2" />
               Restore from Declined
             </DropdownMenuItem>
           ) : (
@@ -125,14 +125,14 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
                 onClick={() => setIsDeclineDialogOpen(true)}
                 className="text-gray-600"
               >
-                <XCircle className="h-4 w-4 mr-2" />
+                <XCircle className="size-4 mr-2" />
                 Decline (no email)
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setIsRejectDialogOpen(true)}
                 className="text-red-600 focus:text-red-600"
               >
-                <Ban className="h-4 w-4 mr-2" />
+                <Ban className="size-4 mr-2" />
                 Reject (sends email)
               </DropdownMenuItem>
             </>
@@ -141,7 +141,7 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
             onClick={() => setIsDeleteDialogOpen(true)}
             className="text-red-600 focus:text-red-600"
           >
-            <Trash2 className="h-4 w-4 mr-2" />
+            <Trash2 className="size-4 mr-2" />
             Delete permanently
           </DropdownMenuItem>
         </DropdownMenuContent>

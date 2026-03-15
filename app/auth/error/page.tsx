@@ -9,7 +9,7 @@ export default function AuthErrorPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-destructive" />
+            <AlertCircle className="size-5 text-destructive" />
             <CardTitle className="text-2xl font-semibold">Authentication Error</CardTitle>
           </div>
           <CardDescription>There was a problem signing you in</CardDescription>

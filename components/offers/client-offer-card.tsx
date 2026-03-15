@@ -134,7 +134,7 @@ export function ClientOfferCard({
           <div className="flex items-start gap-4">
             {/* Avatar */}
             <Link href={`/repreneurs/${repreneurId}`} className="flex-shrink-0">
-              <div className="relative h-12 w-12 rounded-full overflow-hidden bg-gray-200 border border-gray-200 hover:ring-2 hover:ring-blue-500 transition-all">
+              <div className="relative size-12 rounded-full overflow-hidden bg-gray-200 border border-gray-200 hover:ring-2 hover:ring-blue-500 transition-all">
                 <Image
                   src={imageSrc}
                   alt={repreneurName}
@@ -157,7 +157,7 @@ export function ClientOfferCard({
                     {repreneurName}
                   </Link>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <Package className="h-3.5 w-3.5 text-gray-400" />
+                    <Package className="size-3.5 text-gray-400" />
                     <span className="text-sm text-gray-600">{offer.name}</span>
                     <OfferStatusBadge status={status} />
                   </div>
@@ -166,24 +166,24 @@ export function ClientOfferCard({
                 {/* Actions dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLoading}>
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="size-8" disabled={isLoading}>
+                      <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setIsViewOpen(true)}>
-                      <Eye className="h-4 w-4 mr-2" />
+                      <Eye className="size-4 mr-2" />
                       View Details
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {status === "offered" && (
                       <>
                         <DropdownMenuItem onClick={() => handleStatusChange("active")}>
-                          <Check className="h-4 w-4 mr-2" />
+                          <Check className="size-4 mr-2" />
                           Mark as Active
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleStatusChange("expired")}>
-                          <Clock className="h-4 w-4 mr-2" />
+                          <Clock className="size-4 mr-2" />
                           Mark as Expired
                         </DropdownMenuItem>
                       </>
@@ -191,18 +191,18 @@ export function ClientOfferCard({
                     {status === "active" && (
                       <>
                         <DropdownMenuItem onClick={() => handleStatusChange("completed")}>
-                          <Check className="h-4 w-4 mr-2" />
+                          <Check className="size-4 mr-2" />
                           Mark as Completed
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleStatusChange("expired")}>
-                          <Clock className="h-4 w-4 mr-2" />
+                          <Clock className="size-4 mr-2" />
                           Mark as Expired
                         </DropdownMenuItem>
                       </>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="size-4 mr-2" />
                       Remove Offer
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -225,14 +225,14 @@ export function ClientOfferCard({
                             : "bg-gray-100 text-gray-400"
                         }`}>
                           {isComplete && !isCurrent ? (
-                            <CheckCircle2 className="h-3 w-3" />
+                            <CheckCircle2 className="size-3" />
                           ) : (
-                            <Circle className="h-3 w-3" />
+                            <Circle className="size-3" />
                           )}
                           <span className="capitalize">{step}</span>
                         </div>
                         {index < STATUS_STEPS.length - 1 && (
-                          <ArrowRight className={`h-3 w-3 mx-0.5 ${
+                          <ArrowRight className={`size-3 mx-0.5 ${
                             index < currentStepIndex ? "text-green-400" : "text-gray-300"
                           }`} />
                         )}
@@ -245,24 +245,24 @@ export function ClientOfferCard({
               {/* Info row: dates and milestones */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
+                  <Calendar className="size-3" />
                   <span>Offered {formatDate(offeredAt)}</span>
                 </div>
                 {acceptedAt && (
                   <div className="flex items-center gap-1">
-                    <Check className="h-3 w-3 text-green-500" />
+                    <Check className="size-3 text-green-500" />
                     <span>Active {formatDate(acceptedAt)}</span>
                   </div>
                 )}
                 {expiresAt && (
                   <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+                    <Clock className="size-3" />
                     <span>Expires {formatDate(expiresAt)}</span>
                   </div>
                 )}
                 {totalMilestones > 0 && (
                   <div className="flex items-center gap-1">
-                    <CheckCircle2 className={`h-3 w-3 ${completedMilestones === totalMilestones ? "text-green-500" : "text-gray-400"}`} />
+                    <CheckCircle2 className={`size-3 ${completedMilestones === totalMilestones ? "text-green-500" : "text-gray-400"}`} />
                     <span>{completedMilestones}/{totalMilestones} milestones</span>
                   </div>
                 )}
@@ -277,11 +277,11 @@ export function ClientOfferCard({
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+              <Package className="size-5" />
               {offer.name}
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2">
-              <User className="h-3.5 w-3.5" />
+              <User className="size-3.5" />
               {repreneurName}
               <span className="text-gray-300">|</span>
               Offered: {formatDate(offeredAt)}

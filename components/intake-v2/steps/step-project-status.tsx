@@ -73,7 +73,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
         </Label>
 
         <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm">
-          <Info className="h-4 w-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <Info className="size-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-blue-700 dark:text-blue-300">
             {t('q11HelpText')}
           </p>

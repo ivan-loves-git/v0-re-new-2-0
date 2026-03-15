@@ -113,7 +113,7 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarDays className="h-5 w-5" />
+            <CalendarDays className="size-5" />
             <span className="hidden sm:inline">Activity Heatmap</span>
             <span className="sm:hidden">Heatmap</span>
             <CardInfoButton info={kpiInfo.activityHeatmap} />

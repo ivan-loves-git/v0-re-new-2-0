@@ -114,7 +114,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="h-5 w-5 text-gray-900" />
+            <TrendingUp className="size-5 text-gray-900" />
             <span className="hidden sm:inline">Pipeline & Activity Trends</span>
             <span className="sm:hidden">Trends</span>
             <CardInfoButton info={kpiInfo.pipelineTrends} />
@@ -125,17 +125,17 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={() => navigateWeeks("left")}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
             </Button>
 
             {/* Date picker */}
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1 sm:gap-2 px-2 sm:px-3" suppressHydrationWarning>
-                  <Calendar className="h-4 w-4" />
+                  <Calendar className="size-4" />
                   <span className="text-xs hidden sm:inline">
                     {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
                   </span>
@@ -188,11 +188,11 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={() => navigateWeeks("right")}
               disabled={!canNavigateRight}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
         </div>

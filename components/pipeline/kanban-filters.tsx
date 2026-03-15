@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -40,7 +41,7 @@ export function KanbanFilters({ filters, onFiltersChange, sources }: KanbanFilte
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           placeholder="Search by name..."
           value={filters.search}
@@ -57,12 +58,14 @@ export function KanbanFilters({ filters, onFiltersChange, sources }: KanbanFilte
           <SelectValue placeholder="All sources" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All sources</SelectItem>
-          {sources.map((source) => (
-            <SelectItem key={source} value={source}>
-              {source}
-            </SelectItem>
-          ))}
+          <SelectGroup>
+        <SelectItem value="all">All sources</SelectItem>
+        {sources.map((source) => (
+          <SelectItem key={source} value={source}>
+            {source}
+          </SelectItem>
+        ))}
+          </SelectGroup>
         </SelectContent>
       </Select>
 
@@ -74,17 +77,19 @@ export function KanbanFilters({ filters, onFiltersChange, sources }: KanbanFilte
           <SelectValue placeholder="Date range" />
         </SelectTrigger>
         <SelectContent>
-          {DATE_RANGES.map((range) => (
-            <SelectItem key={range.value} value={range.value}>
-              {range.label}
-            </SelectItem>
-          ))}
+          <SelectGroup>
+        {DATE_RANGES.map((range) => (
+          <SelectItem key={range.value} value={range.value}>
+            {range.label}
+          </SelectItem>
+        ))}
+          </SelectGroup>
         </SelectContent>
       </Select>
 
       {hasActiveFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-          <X className="h-4 w-4 mr-1" />
+          <X className="size-4 mr-1" />
           Clear
         </Button>
       )}

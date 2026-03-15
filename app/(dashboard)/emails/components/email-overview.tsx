@@ -38,7 +38,7 @@ function InfoTooltip({ info }: { info: { title: string; description: string; why
     <Popover>
       <PopoverTrigger asChild>
         <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors ml-1">
-          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+          <Info className="size-3.5 text-muted-foreground cursor-help" />
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" className="max-w-xs p-3">
@@ -65,7 +65,7 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
               Emails Sent
               <InfoTooltip info={kpiInfo.sent} />
             </CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
+            <Mail className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalSent}</div>
@@ -79,7 +79,7 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
               Open Rate
               <InfoTooltip info={kpiInfo.openRate} />
             </CardTitle>
-            <MailOpen className="h-4 w-4 text-muted-foreground" />
+            <MailOpen className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.openRate.toFixed(1)}%</div>
@@ -95,7 +95,7 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
               Click Rate
               <InfoTooltip info={kpiInfo.clickRate} />
             </CardTitle>
-            <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+            <MousePointerClick className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.clickRate.toFixed(1)}%</div>
@@ -111,7 +111,7 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
               Bounces
               <InfoTooltip info={kpiInfo.bounced} />
             </CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            <AlertCircle className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalBounced}</div>

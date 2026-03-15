@@ -23,21 +23,21 @@ function getChangeIndicator(current: number, lastWeek: number | undefined) {
   if (diff > 0) {
     return (
       <span className="flex items-center gap-1 text-xs text-green-600">
-        <TrendingUp className="h-3 w-3" />
+        <TrendingUp className="size-3" />
         +{diff} vs LW
       </span>
     )
   } else if (diff < 0) {
     return (
       <span className="flex items-center gap-1 text-xs text-red-600">
-        <TrendingDown className="h-3 w-3" />
+        <TrendingDown className="size-3" />
         {diff} vs LW
       </span>
     )
   } else {
     return (
       <span className="flex items-center gap-1 text-xs text-gray-500">
-        <Minus className="h-3 w-3" />
+        <Minus className="size-3" />
         0 vs LW
       </span>
     )
@@ -101,7 +101,7 @@ export function StatsColumn({
     <Card className="h-full gap-0">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Users className="h-5 w-5 text-gray-900" />
+          <Users className="size-5 text-gray-900" />
           Pipeline Stats
           <CardInfoButton info={kpiInfo.pipelineStats} />
         </CardTitle>
@@ -117,7 +117,7 @@ export function StatsColumn({
               >
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                    <Icon className={`h-4 w-4 ${stat.color}`} />
+                    <Icon className={`size-4 ${stat.color}`} />
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">{stat.label}</p>

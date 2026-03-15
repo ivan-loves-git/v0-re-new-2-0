@@ -64,7 +64,7 @@ export function ReadinessRadar({ scores, onScoreChange }: ReadinessRadarProps) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <RadarIcon className="h-4 w-4 text-emerald-600" />
+          <RadarIcon className="size-4 text-emerald-600" />
           Readiness Radar
         </CardTitle>
       </CardHeader>

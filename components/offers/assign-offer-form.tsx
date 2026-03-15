@@ -14,6 +14,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -100,7 +101,7 @@ export function AssignOfferForm({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="size-4 mr-2" />
           Assign Offer
         </Button>
       </DialogTrigger>
@@ -121,11 +122,13 @@ export function AssignOfferForm({
                   <SelectValue placeholder="Select an offer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableOffers.map((offer) => (
-                    <SelectItem key={offer.id} value={offer.id}>
-                      {offer.name} - {formatPrice(offer.price)}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+        {availableOffers.map((offer) => (
+          <SelectItem key={offer.id} value={offer.id}>
+            {offer.name} - {formatPrice(offer.price)}
+          </SelectItem>
+        ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
               <div className="flex justify-end gap-2">

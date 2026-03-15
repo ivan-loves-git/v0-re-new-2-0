@@ -187,7 +187,7 @@ export function PageInstructions() {
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-gray-100">
-                  <page.icon className="h-4 w-4 text-gray-600" />
+                  <page.icon className="size-4 text-gray-600" />
                 </div>
                 <span className="font-medium">{page.title}</span>
               </div>

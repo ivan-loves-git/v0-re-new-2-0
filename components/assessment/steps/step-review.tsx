@@ -33,22 +33,22 @@ export function StepReview({ data, onBack, onEditStep, onSubmit, isSubmitting }:
   const blocCTitle = language === 'fr' ? 'Bloc C - Auto-evaluation' : 'Bloc C - Self-Assessment'
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       <div>
         <h2 className="text-xl font-semibold mb-2">{title}</h2>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
 
       {/* Bloc A Summary */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm">{blocATitle}</h3>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(1)}>
-            <Pencil className="w-3 h-3 mr-1" />
+            <Pencil className="size-3 mr-1" />
             {editLabel}
           </Button>
         </div>
-        <div className="space-y-2 bg-muted/30 rounded-lg p-4">
+        <div className="flex flex-col gap-2 bg-muted/30 rounded-lg p-4">
           {BLOC_A_QUESTIONS.map((question, index) => {
             const questionLabel = language === 'fr' ? question.label : question.labelEn
             const answer = data[question.id as keyof typeof data] as BlocAAnswer | undefined
@@ -73,15 +73,15 @@ export function StepReview({ data, onBack, onEditStep, onSubmit, isSubmitting }:
       </div>
 
       {/* Bloc B Summary */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm">{blocBTitle}</h3>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(2)}>
-            <Pencil className="w-3 h-3 mr-1" />
+            <Pencil className="size-3 mr-1" />
             {editLabel}
           </Button>
         </div>
-        <div className="space-y-2 bg-muted/30 rounded-lg p-4">
+        <div className="flex flex-col gap-2 bg-muted/30 rounded-lg p-4">
           {BLOC_B_QUESTIONS.map((question, index) => {
             const situationText = language === 'fr' ? question.situation : question.situationEn
             const answer = data[question.id as keyof typeof data] as BlocBAnswer | undefined
@@ -106,15 +106,15 @@ export function StepReview({ data, onBack, onEditStep, onSubmit, isSubmitting }:
       </div>
 
       {/* Bloc C Summary */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm">{blocCTitle}</h3>
           <Button variant="ghost" size="sm" onClick={() => onEditStep(3)}>
-            <Pencil className="w-3 h-3 mr-1" />
+            <Pencil className="size-3 mr-1" />
             {editLabel}
           </Button>
         </div>
-        <div className="space-y-2 bg-muted/30 rounded-lg p-4">
+        <div className="flex flex-col gap-2 bg-muted/30 rounded-lg p-4">
           {BLOC_C_QUESTIONS.map((question, index) => {
             const questionLabel = language === 'fr' ? question.label : question.labelEn
             const answer = data[question.id as keyof typeof data] as BlocCAnswer | undefined
@@ -139,7 +139,7 @@ export function StepReview({ data, onBack, onEditStep, onSubmit, isSubmitting }:
       <div className="flex justify-between pt-4">
         {onBack && (
           <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="size-4 mr-2" />
             {backLabel}
           </Button>
         )}
@@ -147,12 +147,12 @@ export function StepReview({ data, onBack, onEditStep, onSubmit, isSubmitting }:
           <Button onClick={onSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
                 {submittingLabel}
               </>
             ) : (
               <>
-                <Send className="w-4 h-4 mr-2" />
+                <Send className="size-4 mr-2" />
                 {submitLabel}
               </>
             )}

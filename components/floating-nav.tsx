@@ -58,14 +58,14 @@ export function FloatingNav() {
         )}
         aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
       >
-        <PanelLeft className="h-4 w-4" />
+        <PanelLeft className="size-4" />
       </button>
 
       {/* Breadcrumbs */}
       <div className="flex items-center gap-1">
         {breadcrumbItems.map((item, index) => (
           <div key={item.href} className="flex items-center gap-1">
-            {index > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />}
+            {index > 0 && <ChevronRight className="size-3.5 text-muted-foreground/50" />}
             {item.isLast ? (
               <span className="text-foreground font-medium">{item.name}</span>
             ) : (

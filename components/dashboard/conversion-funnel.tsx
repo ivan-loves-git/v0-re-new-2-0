@@ -50,7 +50,7 @@ export function ConversionFunnel({ leadCount, qualifiedCount, clientCount, compa
     <Card className="h-full gap-0">
       <CardHeader className={compact ? "pb-2" : "pb-3"}>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Filter className="h-5 w-5 text-gray-900" />
+          <Filter className="size-5 text-gray-900" />
           Conversion Funnel
           <CardInfoButton info={kpiInfo.conversionFunnel} />
         </CardTitle>

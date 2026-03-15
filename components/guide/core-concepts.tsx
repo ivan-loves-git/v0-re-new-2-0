@@ -207,7 +207,7 @@ export function CoreConcepts() {
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-50">
-                  <concept.icon className="h-4 w-4 text-blue-600" />
+                  <concept.icon className="size-4 text-blue-600" />
                 </div>
                 <span className="font-medium">{concept.title}</span>
               </div>

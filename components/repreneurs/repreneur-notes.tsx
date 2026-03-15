@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -45,13 +45,13 @@ function formatDate(dateString: string) {
 function getNoteTypeIcon(noteType: NoteType) {
   switch (noteType) {
     case "call":
-      return <Phone className="h-4 w-4" />
+      return <Phone className="size-4" />
     case "email":
-      return <Mail className="h-4 w-4" />
+      return <Mail className="size-4" />
     case "meeting":
-      return <Users className="h-4 w-4" />
+      return <Users className="size-4" />
     default:
-      return <FileText className="h-4 w-4" />
+      return <FileText className="size-4" />
   }
 }
 
@@ -122,13 +122,13 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="flex items-center gap-2">
-            <StickyNote className="h-5 w-5" />
+            <StickyNote className="size-5" />
             Notes
           </CardTitle>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 Add Note
               </Button>
             </DialogTrigger>
@@ -147,14 +147,16 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {NOTE_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <div className="flex items-center gap-2">
-                            {getNoteTypeIcon(option.value as NoteType)}
-                            {option.label}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+        {NOTE_TYPE_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            <div className="flex items-center gap-2">
+              {getNoteTypeIcon(option.value as NoteType)}
+              {option.label}
+            </div>
+          </SelectItem>
+        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -213,22 +215,22 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 ml-2 flex-shrink-0"
+                        className="size-8 ml-2 flex-shrink-0"
                         disabled={deletingId === note.id}
                       >
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreHorizontal className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setViewingNote(note)}>
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="size-4 mr-2" />
                         View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDelete(note.id)}
                         className="text-red-600"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
+                        <Trash2 className="size-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>

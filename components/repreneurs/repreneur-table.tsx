@@ -6,7 +6,7 @@ import { Search, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag,
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "./status-badge"
 import { Badge } from "@/components/ui/badge"
@@ -135,7 +135,7 @@ const ScoreDisplay = memo(function ScoreDisplay({ repreneur }: { repreneur: Repr
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1 cursor-help">
-            <Target className="h-4 w-4 text-gray-400" />
+            <Target className="size-4 text-gray-400" />
             <span className="font-medium">{combined}</span>
           </div>
         </TooltipTrigger>
@@ -168,7 +168,7 @@ const OfferDisplay = memo(function OfferDisplay({ offers }: { offers: string[] |
   return (
     <div className="flex items-center gap-1">
       <Badge variant="outline" className="text-xs">
-        <Package className="h-3 w-3 mr-1" />
+        <Package className="size-3 mr-1" />
         {firstOffer}
       </Badge>
       {additionalCount > 0 && (
@@ -192,7 +192,7 @@ const JourneyDisplay = memo(function JourneyDisplay({ repreneur }: { repreneur: 
   return (
     <div className="flex items-center gap-1.5">
       <Badge className={`gap-1 text-xs ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
-        <StageIcon className="h-3 w-3" />
+        <StageIcon className="size-3" />
         {stageConfig.label}
       </Badge>
       <span className="text-xs text-gray-500">({milestoneCount}/18)</span>
@@ -493,7 +493,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       <div className="space-y-4">
         <div className="flex gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Search by name or email..."
               value={search}
@@ -506,12 +506,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="lead">Lead</SelectItem>
-              <SelectItem value="qualified">Qualified</SelectItem>
-              <SelectItem value="client">Client</SelectItem>
-              <SelectItem value="declined">Declined</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectGroup>
+        <SelectItem value="all">All Status</SelectItem>
+        <SelectItem value="lead">Lead</SelectItem>
+        <SelectItem value="qualified">Qualified</SelectItem>
+        <SelectItem value="client">Client</SelectItem>
+        <SelectItem value="declined">Declined</SelectItem>
+        <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
@@ -591,7 +593,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search by name..."
             value={search}
@@ -604,12 +606,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="lead">Lead</SelectItem>
-            <SelectItem value="qualified">Qualified</SelectItem>
-            <SelectItem value="client">Client</SelectItem>
-            <SelectItem value="declined">Declined</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectGroup>
+        <SelectItem value="all">All Status</SelectItem>
+        <SelectItem value="lead">Lead</SelectItem>
+        <SelectItem value="qualified">Qualified</SelectItem>
+        <SelectItem value="client">Client</SelectItem>
+        <SelectItem value="declined">Declined</SelectItem>
+        <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
         {sources.length > 0 && (
@@ -621,12 +625,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
               <SelectValue placeholder="All sources" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              {sources.map((source) => (
-                <SelectItem key={source} value={source}>
-                  {source}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+        <SelectItem value="all">All sources</SelectItem>
+        {sources.map((source) => (
+          <SelectItem key={source} value={source}>
+            {source}
+          </SelectItem>
+        ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         )}
@@ -635,11 +641,13 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
           <SelectContent>
-            {DATE_RANGES.map((range) => (
-              <SelectItem key={range.value} value={range.value}>
-                {range.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+        {DATE_RANGES.map((range) => (
+          <SelectItem key={range.value} value={range.value}>
+            {range.label}
+          </SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select value={minScore} onValueChange={setMinScore}>
@@ -647,9 +655,11 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {SCORE_RANGES.map((r) => (
-              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        {SCORE_RANGES.map((r) => (
+          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select value={journeyFilter} onValueChange={(v) => setJourneyFilter(v as JourneyStage | "all")}>
@@ -657,10 +667,12 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All journeys</SelectItem>
-            {JOURNEY_OPTIONS.map((j) => (
-              <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        <SelectItem value="all">All journeys</SelectItem>
+        {JOURNEY_OPTIONS.map((j) => (
+          <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select value={personaFilter} onValueChange={(v) => setPersonaFilter(v as PersonaType | "all")}>
@@ -668,10 +680,12 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All personas</SelectItem>
-            {PERSONA_OPTIONS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        <SelectItem value="all">All personas</SelectItem>
+        {PERSONA_OPTIONS.map((p) => (
+          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select
@@ -682,15 +696,17 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             <SelectValue placeholder="All recommendations" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All recommendations</SelectItem>
-            {RECOMMENDATION_OPTIONS.map((r) => (
-              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        <SelectItem value="all">All recommendations</SelectItem>
+        {RECOMMENDATION_OPTIONS.map((r) => (
+          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-            <X className="h-4 w-4 mr-1" />
+            <X className="size-4 mr-1" />
             Clear
           </Button>
         )}
@@ -718,9 +734,9 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
               >
                 <div className="flex items-center gap-2">
                   {isCollapsed ? (
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                    <ChevronRight className="size-5 text-gray-400" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                    <ChevronDown className="size-5 text-gray-400" />
                   )}
                   <span className="font-semibold text-gray-900">{STATUS_LABELS[status]}</span>
                   <Badge variant="secondary" className="ml-2">

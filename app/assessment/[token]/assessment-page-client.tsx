@@ -35,8 +35,8 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
           </div>
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
+              <div className="size-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertCircle className="size-10 text-red-600 dark:text-red-400" />
               </div>
             </div>
             <h1 className="text-3xl font-bold tracking-tight mb-4">{content.title}</h1>
@@ -69,8 +69,8 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
           </div>
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+              <div className="size-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
               </div>
             </div>
             <h1 className="text-3xl font-bold tracking-tight mb-4">{content.title}</h1>

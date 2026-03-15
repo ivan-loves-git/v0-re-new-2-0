@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { updateRepreneurStatus } from "@/lib/actions/repreneurs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import type { LifecycleStatus } from "@/lib/types/repreneur"
 
@@ -50,10 +50,12 @@ export function UpdateStatusForm({ repreneurId, currentStatus }: UpdateStatusFor
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="lead">Lead</SelectItem>
-        <SelectItem value="qualified">Qualified</SelectItem>
-        <SelectItem value="client">Client</SelectItem>
-        <SelectItem value="rejected">Rejected</SelectItem>
+        <SelectGroup>
+              <SelectItem value="lead">Lead</SelectItem>
+              <SelectItem value="qualified">Qualified</SelectItem>
+              <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+        </SelectGroup>
       </SelectContent>
     </Select>
   )

@@ -214,7 +214,7 @@ export function IntakeFormV2() {
             onClick={handleFillCurrentStep}
             className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950"
           >
-            <Zap className="h-4 w-4 mr-1" />
+            <Zap className="size-4 mr-1" />
             {t('fillStep')}
           </Button>
         </div>
@@ -247,7 +247,7 @@ export function IntakeFormV2() {
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                  className={`size-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                     isCompleted
                       ? 'bg-primary text-primary-foreground'
                       : isCurrent

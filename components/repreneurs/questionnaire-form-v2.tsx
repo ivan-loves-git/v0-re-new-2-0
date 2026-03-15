@@ -125,7 +125,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5" />
+            <FileText className="size-5" />
             <div>
               <CardTitle>Questionnaire (Dual Scoring v2)</CardTitle>
               <CardDescription>
@@ -140,20 +140,20 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
           <div className="flex items-center gap-2">
             {hasV2Data && (
               <Badge variant="outline" className="bg-green-50 text-green-700">
-                <Check className="h-3 w-3 mr-1" />
+                <Check className="size-3 mr-1" />
                 v2 Complete
               </Badge>
             )}
             {!hasV2Data && hasLegacyData && (
               <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                <AlertTriangle className="h-3 w-3 mr-1" />
+                <AlertTriangle className="size-3 mr-1" />
                 Needs Upgrade
               </Badge>
             )}
             {isExpanded ? (
-              <ChevronUp className="h-5 w-5 text-gray-400" />
+              <ChevronUp className="size-5 text-gray-400" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-gray-400" />
+              <ChevronDown className="size-5 text-gray-400" />
             )}
           </div>
         </div>
@@ -165,7 +165,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
           {previewScore && (
             <div className="bg-muted/50 border rounded-lg p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Calculator className="h-4 w-4" />
+                <Calculator className="size-4" />
                 Score Preview (live)
               </div>
               <div className="flex flex-wrap gap-4">
@@ -192,7 +192,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
           {/* WHO Section (Q05-Q10) */}
           <section className="space-y-6">
             <div className="flex items-center gap-2 border-b pb-2">
-              <User className="h-5 w-5 text-primary" />
+              <User className="size-5 text-primary" />
               <h3 className="font-semibold">Profil (WHO Score)</h3>
             </div>
 
@@ -326,7 +326,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
           {/* Project Status Section (Q11) */}
           <section className="space-y-6">
             <div className="flex items-center gap-2 border-b pb-2">
-              <Target className="h-5 w-5 text-primary" />
+              <Target className="size-5 text-primary" />
               <h3 className="font-semibold">Projet (WHEN Score)</h3>
             </div>
 
@@ -355,7 +355,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
           {/* WHEN Section (Q12-Q16) */}
           <section className="space-y-6">
             <div className="flex items-center gap-2 border-b pb-2">
-              <Wallet className="h-5 w-5 text-primary" />
+              <Wallet className="size-5 text-primary" />
               <h3 className="font-semibold">Critères de Recherche</h3>
             </div>
 
@@ -464,11 +464,11 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="w-full justify-between">
                   <div className="flex items-center gap-2">
-                    <History className="h-4 w-4" />
+                    <History className="size-4" />
                     <span>Legacy Questionnaire Data (v1)</span>
                     <Badge variant="secondary">{repreneur.tier1_score} pts</Badge>
                   </div>
-                  {showLegacy ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {showLegacy ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-4">
@@ -510,7 +510,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
           {/* Submit Button */}
           <div className="flex justify-end pt-4 border-t">
             <Button onClick={handleSubmit} disabled={isSaving}>
-              <Calculator className="h-4 w-4 mr-2" />
+              <Calculator className="size-4 mr-2" />
               {isSaving ? "Calcul en cours..." : "Calculer Score & Sauvegarder"}
             </Button>
           </div>

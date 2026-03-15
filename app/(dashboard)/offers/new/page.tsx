@@ -9,7 +9,7 @@ export default function NewOfferPage() {
       <div className="flex items-center justify-between">
         <Link href="/offers">
           <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="size-4 mr-2" />
             Back to Offers
           </Button>
         </Link>

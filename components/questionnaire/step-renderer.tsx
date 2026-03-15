@@ -124,7 +124,7 @@ export function QuestionRenderer({
           placeholder={question.placeholder}
           error={error}
           required={question.required}
-          icon={Icon && <Icon className="w-4 h-4 text-gray-400" />}
+          icon={Icon && <Icon className="size-4 text-gray-400" />}
           variant={variant}
         />
       )
@@ -149,7 +149,7 @@ export function QuestionRenderer({
         <div className="space-y-2">
           {variant === "styled" && (
             <Label className="text-base font-semibold flex items-center gap-2">
-              {Icon && <Icon className="w-5 h-5 text-blue-600" />}
+              {Icon && <Icon className="size-5 text-blue-600" />}
               {question.label} {question.required && <span className="text-red-500">*</span>}
             </Label>
           )}
@@ -173,7 +173,7 @@ export function QuestionRenderer({
         <div className="space-y-2">
           {variant === "styled" && (
             <Label className="text-base font-semibold flex items-center gap-2">
-              {Icon && <Icon className="w-5 h-5 text-blue-600" />}
+              {Icon && <Icon className="size-5 text-blue-600" />}
               {question.label} {question.required && <span className="text-red-500">*</span>}
             </Label>
           )}
@@ -198,7 +198,7 @@ export function QuestionRenderer({
         <div className="space-y-2">
           {variant === "styled" && (
             <Label className="text-base font-semibold flex items-center gap-2">
-              {Icon && <Icon className="w-5 h-5 text-blue-600" />}
+              {Icon && <Icon className="size-5 text-blue-600" />}
               {question.label} {question.required && <span className="text-red-500">*</span>}
             </Label>
           )}

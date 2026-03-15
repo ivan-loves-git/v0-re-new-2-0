@@ -31,7 +31,7 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Wallet className="h-4 w-4 text-purple-600" />
+            <Wallet className="size-4 text-purple-600" />
             Revenue Journey
           </CardTitle>
           <div className="text-right text-xs text-muted-foreground">
@@ -112,7 +112,7 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
         <div className="flex flex-wrap gap-4">
           {(Object.keys(REVENUE_LABELS) as Array<keyof typeof REVENUE_LABELS>).map((key) => (
             <div key={key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <div className={cn("w-2.5 h-2.5 rounded-sm flex-shrink-0", LEGEND_DOTS[key])} />
+              <div className={cn("size-2.5 rounded-sm flex-shrink-0", LEGEND_DOTS[key])} />
               <span>{REVENUE_LABELS[key]}</span>
               <span className="font-semibold text-foreground">
                 {key === "commission" && projectedCommission > 0

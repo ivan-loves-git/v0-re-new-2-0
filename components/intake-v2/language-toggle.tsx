@@ -15,7 +15,7 @@ export function LanguageToggle() {
       <button
         onClick={() => setLanguage('fr')}
         className={cn(
-          'flex items-center justify-center w-8 h-8 rounded-full transition-all text-lg',
+          'flex items-center justify-center size-8 rounded-full transition-all text-lg',
           language === 'fr'
             ? 'bg-white shadow-sm scale-110'
             : 'opacity-50 hover:opacity-75'
@@ -28,7 +28,7 @@ export function LanguageToggle() {
       <button
         onClick={() => setLanguage('en')}
         className={cn(
-          'flex items-center justify-center w-8 h-8 rounded-full transition-all text-lg',
+          'flex items-center justify-center size-8 rounded-full transition-all text-lg',
           language === 'en'
             ? 'bg-white shadow-sm scale-110'
             : 'opacity-50 hover:opacity-75'

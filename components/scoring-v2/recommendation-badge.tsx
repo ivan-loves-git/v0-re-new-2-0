@@ -106,9 +106,9 @@ export function RecommendationBadge({
   }
 
   const iconSizes = {
-    sm: "h-3 w-3",
-    md: "h-3.5 w-3.5",
-    lg: "h-4 w-4",
+    sm: "size-3",
+    md: "size-3.5",
+    lg: "size-4",
   }
 
   const badge = (
@@ -162,7 +162,7 @@ export function RecommendationDot({
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1.5">
-            <div className={`h-2 w-2 rounded-full ${dotColors[recommendation] || "bg-gray-400"}`} />
+            <div className={`size-2 rounded-full ${dotColors[recommendation] || "bg-gray-400"}`} />
             <span className="text-sm text-muted-foreground">{config.labelFr}</span>
           </div>
         </TooltipTrigger>

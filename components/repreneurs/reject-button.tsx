@@ -56,7 +56,7 @@ export function RejectButton({ repreneurId, currentStatus, repreneurName }: Reje
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <Undo className="h-4 w-4" />
+            <Undo className="size-4" />
             Restore
           </Button>
         </DialogTrigger>
@@ -84,7 +84,7 @@ export function RejectButton({ repreneurId, currentStatus, repreneurName }: Reje
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="destructive" size="sm" className="gap-2">
-          <Ban className="h-4 w-4" />
+          <Ban className="size-4" />
           Reject
         </Button>
       </DialogTrigger>

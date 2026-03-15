@@ -96,7 +96,7 @@ export function OffersTimeline({ clientOffers }: OffersTimelineProps) {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search by client name, email, or package..."
             value={search}
@@ -107,14 +107,14 @@ export function OffersTimeline({ clientOffers }: OffersTimelineProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="size-4 mr-2" />
               Status
               {statusFilter.length > 0 && statusFilter.length < STATUS_ORDER.length && (
                 <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">
                   {statusFilter.length}
                 </span>
               )}
-              <ChevronDown className="h-4 w-4 ml-2" />
+              <ChevronDown className="size-4 ml-2" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -140,7 +140,7 @@ export function OffersTimeline({ clientOffers }: OffersTimelineProps) {
       {/* Timeline content */}
       {totalFiltered === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
-          <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+          <Package className="size-12 mx-auto mb-3 text-gray-300" />
           <h3 className="text-lg font-medium text-gray-900 mb-1">No offers found</h3>
           <p className="text-gray-500">
             {totalAll === 0

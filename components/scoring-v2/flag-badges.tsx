@@ -23,7 +23,7 @@ export function FlagBadges({ flags, compact = false }: FlagBadgesProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-md text-red-700">
-              <AlertTriangle className="h-3.5 w-3.5" />
+              <AlertTriangle className="size-3.5" />
               <span className="text-xs font-medium">{flags.length} flag{flags.length > 1 ? "s" : ""}</span>
             </div>
           </TooltipTrigger>
@@ -46,7 +46,7 @@ export function FlagBadges({ flags, compact = false }: FlagBadgesProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-red-600">
-        <AlertTriangle className="h-4 w-4" />
+        <AlertTriangle className="size-4" />
         <span className="text-sm font-medium">
           {flags.length} Warning Flag{flags.length > 1 ? "s" : ""} (overrides recommendation)
         </span>

@@ -14,7 +14,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
+              <Bell className="size-5" />
               Notifications
             </CardTitle>
             <CardDescription>Configure how you receive updates</CardDescription>
@@ -31,7 +31,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
+              <Palette className="size-5" />
               Appearance
             </CardTitle>
             <CardDescription>Customize the look and feel</CardDescription>
@@ -48,7 +48,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
+              <Shield className="size-5" />
               Security
             </CardTitle>
             <CardDescription>Account security options</CardDescription>

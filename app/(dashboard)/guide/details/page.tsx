@@ -114,7 +114,7 @@ export default function DetailedGuidePage() {
       <div className="flex items-center gap-4">
         <Link href="/guide">
           <Button variant="ghost" size="sm" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
             Back to Guide
           </Button>
         </Link>
@@ -135,7 +135,7 @@ export default function DetailedGuidePage() {
             <Card key={index}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <workflow.icon className="h-5 w-5 text-blue-600" />
+                  <workflow.icon className="size-5 text-blue-600" />
                   {workflow.title}
                 </CardTitle>
               </CardHeader>
@@ -143,7 +143,7 @@ export default function DetailedGuidePage() {
                 <ol className="space-y-2">
                   {workflow.steps.map((step, stepIndex) => (
                     <li key={stepIndex} className="flex gap-3 text-sm text-gray-600">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-medium">
+                      <span className="flex-shrink-0 size-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-medium">
                         {stepIndex + 1}
                       </span>
                       <span>{step}</span>
@@ -159,7 +159,7 @@ export default function DetailedGuidePage() {
       {/* Tips & Tricks */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-amber-500" />
+          <Lightbulb className="size-5 text-amber-500" />
           Tips & Tricks
         </h2>
         <div className="grid gap-3 md:grid-cols-2">
@@ -167,7 +167,7 @@ export default function DetailedGuidePage() {
             <Card key={index} className="border-amber-100">
               <CardContent className="p-4">
                 <div className="flex gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="size-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-gray-900 text-sm">{tip.title}</p>
                     <p className="text-sm text-gray-600 mt-1">{tip.description}</p>
@@ -182,7 +182,7 @@ export default function DetailedGuidePage() {
       {/* FAQ */}
       <section id="faq" className="space-y-4 scroll-mt-8">
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-blue-500" />
+          <AlertCircle className="size-5 text-blue-500" />
           Common Questions
         </h2>
         <div className="space-y-3">
@@ -204,7 +204,7 @@ export default function DetailedGuidePage() {
         </p>
         <Link href="/guide" className="mt-4 inline-block">
           <Button variant="outline" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
             Back to Main Guide
           </Button>
         </Link>

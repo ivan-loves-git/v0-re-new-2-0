@@ -165,7 +165,7 @@ export function AssessmentForm({ token, repreneurName }: AssessmentFormProps) {
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                  className={`size-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                     isCompleted
                       ? 'bg-primary text-primary-foreground'
                       : isCurrent

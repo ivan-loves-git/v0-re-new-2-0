@@ -89,7 +89,7 @@ export function LeadershipResultsCard({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Brain className="h-5 w-5" />
+            <Brain className="size-5" />
             Leadership Assessment
           </CardTitle>
         </CardHeader>
@@ -98,7 +98,7 @@ export function LeadershipResultsCard({
             No assessment yet. Send the assessment link to the repreneur.
           </p>
           <Button onClick={handleSendAssessment} disabled={isPending} size="sm">
-            <Send className="h-4 w-4 mr-2" />
+            <Send className="size-4 mr-2" />
             {isPending ? "Creating..." : "Create Assessment Link"}
           </Button>
         </CardContent>
@@ -112,21 +112,21 @@ export function LeadershipResultsCard({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Brain className="h-5 w-5" />
+            <Brain className="size-5" />
             Leadership Assessment
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 mb-3">
             <Badge variant="outline" className="gap-1">
-              <Clock className="h-3 w-3" />
+              <Clock className="size-3" />
               Pending
             </Badge>
             <span className="text-sm text-muted-foreground">Waiting for repreneur to complete</span>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyLink}>
-              {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+              {copied ? <Check className="size-4 mr-1" /> : <Copy className="size-4 mr-1" />}
               {copied ? "Copied" : "Copy Link"}
             </Button>
             <Button
@@ -134,7 +134,7 @@ export function LeadershipResultsCard({
               size="sm"
               onClick={() => window.open(`/assessment/${generatedToken}`, "_blank")}
             >
-              <ExternalLink className="h-4 w-4 mr-1" />
+              <ExternalLink className="size-4 mr-1" />
               Preview
             </Button>
           </div>
@@ -164,7 +164,7 @@ export function LeadershipResultsCard({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
+            <Brain className="size-5" />
             Leadership Assessment
           </div>
           {decisionDisplay && (

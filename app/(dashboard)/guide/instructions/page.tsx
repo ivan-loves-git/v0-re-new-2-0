@@ -25,7 +25,7 @@ export default function InstructionsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <div className="p-2 rounded-lg bg-blue-50">
-                <Workflow className="h-4 w-4 text-blue-600" />
+                <Workflow className="size-4 text-blue-600" />
               </div>
               Common Workflows
             </CardTitle>
@@ -37,7 +37,7 @@ export default function InstructionsPage() {
             <Link href="/guide/details#workflows">
               <Button className="gap-2">
                 View Workflows
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="size-4" />
               </Button>
             </Link>
           </CardContent>
@@ -47,7 +47,7 @@ export default function InstructionsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <div className="p-2 rounded-lg bg-amber-50">
-                <HelpCircle className="h-4 w-4 text-amber-600" />
+                <HelpCircle className="size-4 text-amber-600" />
               </div>
               FAQ
             </CardTitle>
@@ -59,7 +59,7 @@ export default function InstructionsPage() {
             <Link href="/guide/details#faq">
               <Button className="gap-2">
                 View FAQ
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="size-4" />
               </Button>
             </Link>
           </CardContent>

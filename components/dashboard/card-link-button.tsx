@@ -23,7 +23,7 @@ export function CardLinkButton({ href, tooltip = "View all" }: CardLinkButtonPro
             href={href}
             className="p-1 rounded-full hover:bg-gray-100 transition-colors"
           >
-            <ArrowRight className="h-4 w-4 text-gray-900" />
+            <ArrowRight className="size-4 text-gray-900" />
           </Link>
         </TooltipTrigger>
         <TooltipContent side="top">

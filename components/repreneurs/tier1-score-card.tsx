@@ -21,12 +21,12 @@ export function Tier1ScoreCard({ repreneur }: Tier1ScoreCardProps) {
       <CardHeader className="pb-3">
         <div>
           <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
+            <Filter className="size-5" />
             Tier 1 Rating
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Info className="h-4 w-4" />
+                  <Info className="size-4" />
                 </button>
               </PopoverTrigger>
               <PopoverContent side="bottom" className="max-w-xs p-3">
@@ -52,7 +52,7 @@ export function Tier1ScoreCard({ repreneur }: Tier1ScoreCardProps) {
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
-                    className={`h-4 w-4 ${
+                    className={`size-4 ${
                       i < scoreToStarRating(repreneur.tier1_score!)
                         ? "text-amber-400 fill-amber-400"
                         : "text-gray-200"
@@ -84,7 +84,7 @@ export function Tier1ScoreCard({ repreneur }: Tier1ScoreCardProps) {
             </p>
             <Button className="w-full" asChild>
               <Link href={`/repreneurs/${repreneur.id}/questionnaire`}>
-                <Calculator className="h-4 w-4 mr-2" />
+                <Calculator className="size-4 mr-2" />
                 Calculate Tier 1 Rating
               </Link>
             </Button>

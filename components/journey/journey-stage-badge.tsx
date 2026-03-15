@@ -17,7 +17,7 @@ export function JourneyStageBadge({ stage, showIcon = true, showTooltip = true }
 
   const badge = (
     <Badge variant="outline" className={`${config.color} gap-1 cursor-pointer`}>
-      {showIcon && <Icon className="h-3 w-3" />}
+      {showIcon && <Icon className="size-3" />}
       {config.label}
     </Badge>
   )

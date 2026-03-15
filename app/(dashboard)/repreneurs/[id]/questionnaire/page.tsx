@@ -233,7 +233,7 @@ export default function QuestionnairePage() {
           onClick={() => onChange(true)}
           disabled
         >
-          <Check className="h-4 w-4 mr-2" />
+          <Check className="size-4 mr-2" />
           Yes
         </Button>
         <Button
@@ -243,7 +243,7 @@ export default function QuestionnairePage() {
           onClick={() => onChange(false)}
           disabled
         >
-          <X className="h-4 w-4 mr-2" />
+          <X className="size-4 mr-2" />
           No
         </Button>
         <Button
@@ -272,7 +272,7 @@ export default function QuestionnairePage() {
               onClick={() => router.push(`/repreneurs/${repreneurId}`)}
               className="gap-2"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="size-4" />
               <span className="hidden sm:inline">Back to Profile</span>
               <span className="sm:hidden">Back</span>
             </Button>
@@ -310,8 +310,8 @@ export default function QuestionnairePage() {
                     <div className="px-2 py-2 flex-1">
                       <div className="flex items-start gap-1.5">
                         {complete && (
-                          <div className="flex-shrink-0 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
-                            <Check className="h-2.5 w-2.5 text-white" />
+                          <div className="flex-shrink-0 size-4 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
+                            <Check className="size-2.5 text-white" />
                           </div>
                         )}
                         <span className={`text-xs font-medium leading-tight whitespace-pre-line ${complete ? "text-green-700" : active ? "text-primary" : "text-gray-700"}`}>
@@ -345,7 +345,7 @@ export default function QuestionnairePage() {
         <div className="max-w-3xl mx-auto px-4 py-6">
           {/* Read-only Banner */}
           <Alert className="mb-6 bg-amber-50 border-amber-200">
-            <Info className="h-4 w-4 text-amber-600" />
+            <Info className="size-4 text-amber-600" />
             <AlertTitle className="text-amber-800">Questionnaire v1 (Lecture seule)</AlertTitle>
             <AlertDescription className="text-amber-700">
               Ce questionnaire est en lecture seule. Pour modifier les scores, utilisez le nouveau questionnaire v2 sur la page profil.
@@ -354,7 +354,7 @@ export default function QuestionnairePage() {
                 className="ml-2 inline-flex items-center gap-1 text-amber-800 font-medium hover:underline"
               >
                 Retour au profil
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="size-3" />
               </Link>
             </AlertDescription>
           </Alert>
@@ -652,7 +652,7 @@ export default function QuestionnairePage() {
               onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
               disabled={currentStep === 1}
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <ArrowLeft className="size-4 mr-2" />
               Previous
             </Button>
 
@@ -660,12 +660,12 @@ export default function QuestionnairePage() {
               {currentStep < STEPS.length ? (
                 <Button onClick={() => setCurrentStep(currentStep + 1)}>
                   Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="size-4 ml-2" />
                 </Button>
               ) : (
                 <Button asChild>
                   <Link href={`/repreneurs/${repreneurId}`}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeft className="size-4 mr-2" />
                     Retour au profil
                   </Link>
                 </Button>

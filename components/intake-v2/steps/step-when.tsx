@@ -121,7 +121,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
           return (
             <div
               key={option.value}
-              className={`flex items-center space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+              className={`flex items-center gap-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
                   : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -147,8 +147,8 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
   }
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-semibold">{t('step4Title')}</h2>
         <p className="text-muted-foreground">
           {t('step4Description')}
@@ -156,7 +156,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
       </div>
 
       {/* Q12: Geographic Zones */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Label className="text-base font-medium">
           {t('q12Label')} *
         </Label>
@@ -167,7 +167,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
       </div>
 
       {/* Q13: Target Sectors */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Label className="text-base font-medium">
           {t('q13Label')} *
         </Label>
@@ -178,12 +178,12 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
       </div>
 
       {/* Q14: Deal Size */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Label className="text-base font-medium">
           {t('q14Label')} *
         </Label>
         <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm">
-          <Info className="h-4 w-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <Info className="size-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-blue-700 dark:text-blue-300">
             {t('q14HelpText')}
           </p>
@@ -195,12 +195,12 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
       </div>
 
       {/* Q15: Capital Structure */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Label className="text-base font-medium">
           {t('q15Label')} *
         </Label>
         <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm">
-          <Info className="h-4 w-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <Info className="size-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-blue-700 dark:text-blue-300">
             {t('q15HelpText')}
           </p>
@@ -212,7 +212,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
       </div>
 
       {/* Q16: Equity Contribution (Single Select) */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Label className="text-base font-medium">
           {t('q16Label')} *
         </Label>
@@ -228,7 +228,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
             return (
               <div
                 key={option.value}
-                className={`flex items-center space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                className={`flex items-center gap-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
                     : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'

@@ -66,7 +66,7 @@ export function EditableMultiSelect({
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-start text-left font-normal">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               {selectedItems.length > 0
                 ? `${selectedItems.length} selected`
                 : placeholder}
@@ -108,7 +108,7 @@ export function EditableMultiSelect({
                 onClick={() => handleToggle(item)}
               >
                 {item}
-                <X className="h-3 w-3 ml-1" />
+                <X className="size-3 ml-1" />
               </Badge>
             ))}
           </div>
@@ -116,7 +116,7 @@ export function EditableMultiSelect({
 
         <div className="flex gap-2">
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
-            <Check className="h-3 w-3 mr-1" />
+            <Check className="size-3 mr-1" />
             {isSaving ? "Saving..." : "Save"}
           </Button>
           <Button size="sm" variant="outline" onClick={handleCancel} disabled={isSaving}>
@@ -144,10 +144,10 @@ export function EditableMultiSelect({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          className="size-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
           onClick={() => setIsEditing(true)}
         >
-          <Pencil className="h-3 w-3" />
+          <Pencil className="size-3" />
         </Button>
       </div>
     </div>

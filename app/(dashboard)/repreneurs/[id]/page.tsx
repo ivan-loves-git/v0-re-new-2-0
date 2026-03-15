@@ -252,32 +252,32 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           <div className="space-y-2 min-w-0 flex-1">
             <div className="flex flex-col sm:flex-row sm:gap-6 gap-1">
               <div>
-                <Label className="text-xs text-gray-400 mb-1 block">Name</Label>
+                <Label className="text-xs text-muted-foreground mb-1 block">Name</Label>
                 <EditableTextField
                   repreneurId={id}
                   field="first_name"
                   value={repreneur.first_name}
                   label="First Name"
                   placeholder="First name"
-                  textClassName="text-xl sm:text-2xl font-semibold text-gray-900"
+                  textClassName="text-xl sm:text-2xl font-semibold text-foreground"
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-400 mb-1 block">Surname</Label>
+                <Label className="text-xs text-muted-foreground mb-1 block">Surname</Label>
                 <EditableTextField
                   repreneurId={id}
                   field="last_name"
                   value={repreneur.last_name}
                   label="Last Name"
                   placeholder="Last name"
-                  textClassName="text-xl sm:text-2xl font-semibold text-gray-900"
+                  textClassName="text-xl sm:text-2xl font-semibold text-foreground"
                 />
               </div>
             </div>
             {/* Email and Phone - stacked on mobile */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5 min-w-0">
-                <Mail className="h-4 w-4 text-gray-400 shrink-0" />
+                <Mail className="size-4 text-muted-foreground shrink-0" />
                 <EditableTextField
                   repreneurId={id}
                   field="email"
@@ -288,7 +288,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 />
               </div>
               <div className="flex items-center gap-1.5 min-w-0">
-                <Phone className="h-4 w-4 text-gray-400 shrink-0" />
+                <Phone className="size-4 text-muted-foreground shrink-0" />
                 <EditableTextField
                   repreneurId={id}
                   field="phone"
@@ -309,7 +309,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         <div className="flex flex-wrap items-start gap-4 sm:gap-6">
           {/* Status */}
           <div>
-            <Label className="text-xs text-gray-500 mb-1 block">Status</Label>
+            <Label className="text-xs text-muted-foreground mb-1 block">Status</Label>
             <StatusBadge status={repreneur.lifecycle_status} />
           </div>
           {/* Journey Stage */}
@@ -324,9 +324,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                              derivedStage === "execution" ? Rocket : Crown
             return (
               <div>
-                <Label className="text-xs text-gray-500 mb-1 block">Journey</Label>
+                <Label className="text-xs text-muted-foreground mb-1 block">Journey</Label>
                 <Badge className={`gap-1.5 ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
-                  <StageIcon className="h-3.5 w-3.5" />
+                  <StageIcon className="size-3.5" />
                   {stageConfig.label}
                   <span className="text-xs opacity-75">({milestoneCount}/18)</span>
                 </Badge>
@@ -351,7 +351,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5" />
+                <Star className="size-5" />
                 Scores & Profile
               </CardTitle>
               <div className="flex items-center gap-2">
@@ -363,7 +363,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-md text-red-700">
-                          <AlertTriangle className="h-3 w-3" />
+                          <AlertTriangle className="size-3" />
                           <span className="text-xs font-medium">{(repreneur as any).scoring_flags.length}</span>
                         </div>
                       </TooltipTrigger>
@@ -393,7 +393,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                          <Info className="h-3 w-3" />
+                          <Info className="size-3" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
@@ -405,7 +405,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold">{(repreneur as any).who_score ?? repreneur.tier1_score ?? "—"}</span>
-                  <span className="text-sm text-gray-500">pts</span>
+                  <span className="text-sm text-muted-foreground">pts</span>
                 </div>
                 <Badge variant="outline" className="text-xs">
                   {getWhoDescription((repreneur as any).who_score ?? repreneur.tier1_score)}
@@ -419,7 +419,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                          <Info className="h-3 w-3" />
+                          <Info className="size-3" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
@@ -431,7 +431,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold">{(repreneur as any).when_score ?? "—"}</span>
-                  <span className="text-sm text-gray-500">pts</span>
+                  <span className="text-sm text-muted-foreground">pts</span>
                 </div>
                 <Badge variant="outline" className="text-xs">
                   {getWhenDescription((repreneur as any).when_score)}
@@ -442,40 +442,40 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             {/* Divider */}
             <div className="border-t pt-4">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <DollarSign className="h-3.5 w-3.5" />
+                <DollarSign className="size-3.5" />
                 Investment Profile
               </p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div>
-                  <Label className="text-xs text-gray-500">Investment Capacity</Label>
+                  <Label className="text-xs text-muted-foreground">Investment Capacity</Label>
                   <p className="text-sm">
                     {getV2Label(WHEN_QUESTIONS as any, 'q16', (repreneur as any).q16_equity)
-                      || <span className="text-gray-400">Not set</span>}
+                      || <span className="text-muted-foreground">Not set</span>}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">Deal Size</Label>
+                  <Label className="text-xs text-muted-foreground">Deal Size</Label>
                   <p className="text-sm">
                     {formatV2Array(WHEN_QUESTIONS as any, 'q14', (repreneur as any).q14_deal_size)
-                      || <span className="text-gray-400">Not set</span>}
+                      || <span className="text-muted-foreground">Not set</span>}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">Region</Label>
+                  <Label className="text-xs text-muted-foreground">Region</Label>
                   <p className="text-sm">
                     {formatV2Array(WHEN_QUESTIONS as any, 'q12', (repreneur as any).q12_geo_zones)
-                      || <span className="text-gray-400">Not set</span>}
+                      || <span className="text-muted-foreground">Not set</span>}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">Experience</Label>
+                  <Label className="text-xs text-muted-foreground">Experience</Label>
                   <p className="text-sm">
                     {getV2Label(WHO_QUESTIONS as any, 'q06', (repreneur as any).q06_experience)
-                      || <span className="text-gray-400">Not specified</span>}
+                      || <span className="text-muted-foreground">Not specified</span>}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">Sectors</Label>
+                  <Label className="text-xs text-muted-foreground">Sectors</Label>
                   <EditableMultiSelect
                     repreneurId={id}
                     field="sector_preferences"
@@ -485,11 +485,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">Targets Identified</Label>
+                  <Label className="text-xs text-muted-foreground">Targets Identified</Label>
                   <p className="text-sm">
                     {repreneur.q12_has_identified_targets !== undefined
                       ? (repreneur.q12_has_identified_targets ? "Yes" : "No")
-                      : <span className="text-gray-400">—</span>}
+                      : <span className="text-muted-foreground">—</span>}
                   </p>
                 </div>
               </div>
@@ -514,14 +514,14 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Flag className="h-5 w-5" />
+                <Flag className="size-5" />
                 Readiness Milestones
               </CardTitle>
               <TooltipProvider delayDuration={0}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                      <Info className="h-4 w-4" />
+                      <Info className="size-4" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="max-w-xs">

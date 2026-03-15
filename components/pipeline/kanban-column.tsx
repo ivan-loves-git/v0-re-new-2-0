@@ -58,7 +58,7 @@ export function KanbanColumn({ status, title, repreneurs, color }: KanbanColumnP
             onClick={handleLoadMore}
             className="w-full mt-2 text-muted-foreground hover:text-foreground"
           >
-            <ChevronDown className="h-4 w-4 mr-1" />
+            <ChevronDown className="size-4 mr-1" />
             Show {Math.min(remainingCount, LOAD_MORE_COUNT)} more ({remainingCount} hidden)
           </Button>
         )}

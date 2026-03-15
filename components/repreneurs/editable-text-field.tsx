@@ -106,11 +106,11 @@ export function EditableTextField({
         )}
         <div className="flex gap-2">
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
-            <Check className="h-3 w-3 mr-1" />
+            <Check className="size-3 mr-1" />
             {isSaving ? "Saving..." : "Save"}
           </Button>
           <Button size="sm" variant="outline" onClick={handleCancel} disabled={isSaving}>
-            <X className="h-3 w-3 mr-1" />
+            <X className="size-3 mr-1" />
             Cancel
           </Button>
         </div>
@@ -128,11 +128,11 @@ export function EditableTextField({
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        className="size-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
         onClick={() => setIsEditing(true)}
         disabled={isSaving}
       >
-        <Pencil className="h-3 w-3" />
+        <Pencil className="size-3" />
       </Button>
     </div>
   )

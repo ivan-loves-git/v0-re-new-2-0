@@ -21,7 +21,7 @@ export interface Tier2Dimensions {
   commitment: number | null
 }
 
-// Tier 3 Milestone keys (V2: 18 milestones in 4 transition groups)
+// Tier 3 Milestone keys (V2: 17 milestones in 4 transition groups)
 export type MilestoneKey =
   // Group 1: Explorer → Learner
   | "decision_to_pursue"
@@ -31,7 +31,6 @@ export type MilestoneKey =
   | "pitch_plan"
   | "equity_range"
   | "deal_breakers"
-  | "advisory_team_structured"
   | "leadership_assessment_passed"
   | "advisory_team_identified"
   // Group 3: Ready → Execution
@@ -56,7 +55,6 @@ export interface Tier3Milestones {
   pitch_plan: boolean
   equity_range: boolean
   deal_breakers: boolean
-  advisory_team_structured: boolean
   leadership_assessment_passed: boolean
   advisory_team_identified: boolean
   // Group 3: Ready → Execution
@@ -144,7 +142,7 @@ export interface Repreneur {
   tier2_overall?: number | null // Weighted average of all 6 dimensions
   tier2_rated_at?: string
   tier2_rated_by?: string
-  // Tier 3 Readiness Milestones V2 (18 milestones in 4 groups)
+  // Tier 3 Readiness Milestones V2 (17 milestones in 4 groups)
   // Group 1: Explorer → Learner
   ms_decision_to_pursue?: boolean
   ms_availability_confirmed?: boolean
@@ -153,7 +151,6 @@ export interface Repreneur {
   ms_pitch_plan?: boolean
   ms_equity_range?: boolean
   ms_deal_breakers?: boolean
-  ms_advisory_team_structured?: boolean
   ms_leadership_assessment_passed?: boolean
   ms_advisory_team_identified?: boolean
   // Group 3: Ready → Execution

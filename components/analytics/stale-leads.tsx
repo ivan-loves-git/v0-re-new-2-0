@@ -25,7 +25,7 @@ export function StaleLeads({ staleLeads }: StaleLeadsProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <AlertTriangle className={cn(
-            "h-4 w-4",
+            "size-4",
             staleLeads.length > 0 ? "text-red-500" : "text-muted-foreground"
           )} />
           Stale Leads
@@ -39,8 +39,8 @@ export function StaleLeads({ staleLeads }: StaleLeadsProps) {
       <CardContent>
         {staleLeads.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
-            <p className="text-sm font-medium text-gray-900">No stale leads</p>
+            <CheckCircle className="size-8 text-success mb-2" />
+            <p className="text-sm font-medium text-foreground">No stale leads</p>
             <p className="text-xs text-muted-foreground mt-1">
               All leads have been updated in the last 7 days
             </p>
@@ -54,7 +54,7 @@ export function StaleLeads({ staleLeads }: StaleLeadsProps) {
                 className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-red-50/50 transition-colors group"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate group-hover:text-red-700 transition-colors">
+                  <p className="text-sm font-medium text-foreground truncate group-hover:text-red-700 transition-colors">
                     {lead.first_name} {lead.last_name}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">{lead.email}</p>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import { TEMPLATE_METADATA } from "@/lib/email/templates"
@@ -117,7 +117,7 @@ export function ManualSend() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <FlaskConical className={`h-4 w-4 ${testMode ? "text-purple-600" : "text-muted-foreground"}`} />
+            <FlaskConical className={`size-4 ${testMode ? "text-purple-600" : "text-muted-foreground"}`} />
             <Switch
               checked={testMode}
               onCheckedChange={setTestMode}
@@ -134,9 +134,9 @@ export function ManualSend() {
         {result && (
           <Alert variant={result.success ? "default" : "destructive"}>
             {result.success ? (
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="size-4" />
             ) : (
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="size-4" />
             )}
             <AlertDescription>{result.message}</AlertDescription>
           </Alert>
@@ -146,7 +146,7 @@ export function ManualSend() {
         {testMode ? (
           <div className="space-y-4 p-4 border-2 border-dashed border-purple-200 rounded-lg bg-purple-50/50">
             <div className="flex items-center gap-2 text-purple-700 text-sm font-medium">
-              <FlaskConical className="h-4 w-4" />
+              <FlaskConical className="size-4" />
               Test Mode: Emails are sent directly without logging
             </div>
             <div className="space-y-2">
@@ -174,7 +174,7 @@ export function ManualSend() {
           <div className="space-y-2">
             <Label>Search for a repreneur</Label>
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
               <Input
                 placeholder="Name or email..."
                 value={search}
@@ -238,14 +238,16 @@ export function ManualSend() {
               <SelectValue placeholder="Select a template" />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
-                <SelectItem key={key} value={key}>
-                  <div className="flex items-center gap-2">
-                    <span>{meta.name}</span>
-                    <span className="text-xs text-muted-foreground">({meta.category})</span>
-                  </div>
-                </SelectItem>
-              ))}
+              <SelectGroup>
+        {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
+          <SelectItem key={key} value={key}>
+            <div className="flex items-center gap-2">
+              <span>{meta.name}</span>
+              <span className="text-xs text-muted-foreground">({meta.category})</span>
+            </div>
+          </SelectItem>
+        ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
 
@@ -262,7 +264,7 @@ export function ManualSend() {
           disabled={!canSend || loading}
           className={`w-full ${testMode ? "bg-purple-600 hover:bg-purple-700" : ""}`}
         >
-          <Send className="h-4 w-4 mr-2" />
+          <Send className="size-4 mr-2" />
           {loading ? "Sending..." : testMode ? "Send Test Email" : "Send Email"}
         </Button>
       </CardContent>

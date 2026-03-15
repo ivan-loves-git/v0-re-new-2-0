@@ -51,7 +51,7 @@ export function JourneyMap({ currentPhase, personaName }: JourneyMapProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Compass className="h-4 w-4 text-blue-600" />
+            <Compass className="size-4 text-blue-600" />
             13-Phase Acquisition Journey
           </CardTitle>
         </CardHeader>

@@ -45,7 +45,7 @@ export function GlobalActivityStream({ activities, maxHeight = "400px" }: Global
     <Card className="h-full gap-0">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Activity className="h-5 w-5 text-gray-900" />
+          <Activity className="size-5 text-gray-900" />
           Activity Stream
           <CardInfoButton info={kpiInfo.activityStream} />
         </CardTitle>
@@ -61,7 +61,7 @@ export function GlobalActivityStream({ activities, maxHeight = "400px" }: Global
                   className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
                 >
                   <div className="p-2 rounded-full bg-blue-50 text-blue-600 shrink-0">
-                    <Icon className="h-4 w-4" />
+                    <Icon className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

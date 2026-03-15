@@ -114,7 +114,7 @@ export const MILESTONES: MilestoneConfig[] = [
     tooltip: "Can dedicate the necessary time to explore the project",
     stageGroup: 1,
   },
-  // Group 2: Learner → Ready (7 milestones)
+  // Group 2: Learner → Ready (6 milestones)
   {
     key: "target_profile_sheet",
     label: "Target profile defined",
@@ -137,12 +137,6 @@ export const MILESTONES: MilestoneConfig[] = [
     key: "deal_breakers",
     label: "Deal breakers identified",
     tooltip: "Key risks identified: client dependency, minimum margins, litigation, working capital",
-    stageGroup: 2,
-  },
-  {
-    key: "advisory_team_structured",
-    label: "Advisory team structured",
-    tooltip: "Accountant and lawyer engaged for the project",
     stageGroup: 2,
   },
   {
@@ -245,7 +239,7 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     color: "text-blue-600",
     bgColor: "bg-blue-100",
     minMilestones: 2,
-    maxMilestones: 8,
+    maxMilestones: 7,
     stageGroup: 1,
   },
   {
@@ -254,8 +248,8 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     icon: "Flag",
     color: "text-green-600",
     bgColor: "bg-green-100",
-    minMilestones: 9,
-    maxMilestones: 15,
+    minMilestones: 8,
+    maxMilestones: 14,
     stageGroup: 2,
   },
   {
@@ -264,8 +258,8 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     icon: "Rocket",
     color: "text-purple-600",
     bgColor: "bg-purple-100",
-    minMilestones: 16,
-    maxMilestones: 17,
+    minMilestones: 15,
+    maxMilestones: 16,
     stageGroup: 3,
   },
   {
@@ -274,8 +268,8 @@ export const JOURNEY_STAGES: JourneyStageConfig[] = [
     icon: "Crown",
     color: "text-amber-600",
     bgColor: "bg-amber-100",
-    minMilestones: 18,
-    maxMilestones: 18,
+    minMilestones: 17,
+    maxMilestones: 17,
     stageGroup: 4,
   },
 ]

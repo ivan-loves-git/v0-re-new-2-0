@@ -101,7 +101,7 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5" />
+            <FileText className="size-5" />
             <div>
               <CardTitle>Intake Questionnaire</CardTitle>
               <CardDescription>
@@ -114,14 +114,14 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
           <div className="flex items-center gap-2">
             {isCompleted && (
               <Badge variant="outline" className="bg-green-50 text-green-700">
-                <Check className="h-3 w-3 mr-1" />
+                <Check className="size-3 mr-1" />
                 Completed
               </Badge>
             )}
             {isExpanded ? (
-              <ChevronUp className="h-5 w-5 text-gray-400" />
+              <ChevronUp className="size-5 text-gray-400" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-gray-400" />
+              <ChevronDown className="size-5 text-gray-400" />
             )}
           </div>
         </div>
@@ -143,7 +143,7 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
           {/* Submit Button */}
           <div className="flex justify-end pt-4 border-t">
             <Button onClick={handleSubmit} disabled={isSaving}>
-              <Calculator className="h-4 w-4 mr-2" />
+              <Calculator className="size-4 mr-2" />
               {isSaving ? "Calculating..." : "Calculate Score & Save"}
             </Button>
           </div>

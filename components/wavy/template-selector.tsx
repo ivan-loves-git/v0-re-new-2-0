@@ -98,7 +98,7 @@ export function TemplateSelector({
             ) : (
               <span className="text-muted-foreground">Select a template...</span>
             )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
@@ -126,7 +126,7 @@ export function TemplateSelector({
                     </div>
                     <Check
                       className={cn(
-                        "ml-2 h-4 w-4",
+                        "ml-2 size-4",
                         value === template.id ? "opacity-100" : "opacity-0"
                       )}
                     />
@@ -157,7 +157,7 @@ export function TemplateSelector({
                         <div className="flex items-center gap-1">
                           <Check
                             className={cn(
-                              "h-4 w-4",
+                              "size-4",
                               value === template.id ? "opacity-100" : "opacity-0"
                             )}
                           />
@@ -165,13 +165,13 @@ export function TemplateSelector({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              className="size-6 text-muted-foreground hover:text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 onDeleteTemplate(template.id)
                               }}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="size-3" />
                             </Button>
                           )}
                         </div>
@@ -192,7 +192,7 @@ export function TemplateSelector({
                         setAddDialogOpen(true)
                       }}
                     >
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="mr-2 size-4" />
                       <span>Create custom template</span>
                     </CommandItem>
                   </CommandGroup>

@@ -157,7 +157,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
+          <Package className="size-5" />
           Offers
         </CardTitle>
         <AssignOfferForm
@@ -199,25 +199,25 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="size-8"
                       disabled={isLoading === ro.id}
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setViewingOffer(ro)}>
-                      <Eye className="h-4 w-4 mr-2" />
+                      <Eye className="size-4 mr-2" />
                       View
                     </DropdownMenuItem>
                     {ro.status === "offered" && (
                       <>
                         <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "active")}>
-                          <Check className="h-4 w-4 mr-2" />
+                          <Check className="size-4 mr-2" />
                           Mark as Active
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "expired")}>
-                          <Clock className="h-4 w-4 mr-2" />
+                          <Clock className="size-4 mr-2" />
                           Mark as Expired
                         </DropdownMenuItem>
                       </>
@@ -225,11 +225,11 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                     {ro.status === "active" && (
                       <>
                         <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "completed")}>
-                          <Check className="h-4 w-4 mr-2" />
+                          <Check className="size-4 mr-2" />
                           Mark as Completed
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "expired")}>
-                          <Clock className="h-4 w-4 mr-2" />
+                          <Clock className="size-4 mr-2" />
                           Mark as Expired
                         </DropdownMenuItem>
                       </>
@@ -238,7 +238,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                       onClick={() => handleDelete(ro.id)}
                       className="text-red-600"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="size-4 mr-2" />
                       Remove
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -255,7 +255,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
       <DialogContent className={viewingOffer?.status === "active" ? "sm:max-w-[600px]" : "sm:max-w-[500px]"}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+            <Package className="size-5" />
             {viewingOffer?.offer?.name || "Offer Details"}
           </DialogTitle>
           <DialogDescription>

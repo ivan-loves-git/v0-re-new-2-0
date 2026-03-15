@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -237,10 +238,10 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 text-gray-400" />
+    if (sortField !== field) return <ArrowUpDown className="size-3 ml-1 text-gray-400" />
     return sortDirection === "asc"
-      ? <ArrowUp className="h-3 w-3 ml-1" />
-      : <ArrowDown className="h-3 w-3 ml-1" />
+      ? <ArrowUp className="size-3 ml-1" />
+      : <ArrowDown className="size-3 ml-1" />
   }
 
   return (
@@ -248,7 +249,7 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
       {/* Filter Bar - Row 1: Core filters */}
       <div className="flex items-center gap-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by name..."
             value={search}
@@ -262,12 +263,14 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="lead">Lead</SelectItem>
-            <SelectItem value="qualified">Qualified</SelectItem>
-            <SelectItem value="client">Client</SelectItem>
-            <SelectItem value="declined">Declined</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectGroup>
+        <SelectItem value="all">All Status</SelectItem>
+        <SelectItem value="lead">Lead</SelectItem>
+        <SelectItem value="qualified">Qualified</SelectItem>
+        <SelectItem value="client">Client</SelectItem>
+        <SelectItem value="declined">Declined</SelectItem>
+        <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
 
@@ -280,10 +283,12 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
               <SelectValue placeholder="All sources" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              {sources.map((source) => (
-                <SelectItem key={source} value={source}>{source}</SelectItem>
-              ))}
+              <SelectGroup>
+        <SelectItem value="all">All sources</SelectItem>
+        {sources.map((source) => (
+          <SelectItem key={source} value={source}>{source}</SelectItem>
+        ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         )}
@@ -293,9 +298,11 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {DATE_RANGES.map((r) => (
-              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        {DATE_RANGES.map((r) => (
+          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
 
@@ -304,9 +311,11 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {SCORE_RANGES.map((r) => (
-              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        {SCORE_RANGES.map((r) => (
+          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
 
@@ -315,10 +324,12 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All journeys</SelectItem>
-            {JOURNEY_OPTIONS.map((j) => (
-              <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        <SelectItem value="all">All journeys</SelectItem>
+        {JOURNEY_OPTIONS.map((j) => (
+          <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
 
@@ -327,10 +338,12 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All personas</SelectItem>
-            {PERSONA_OPTIONS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        <SelectItem value="all">All personas</SelectItem>
+        {PERSONA_OPTIONS.map((p) => (
+          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
 
@@ -342,16 +355,18 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
             <SelectValue placeholder="All recommendations" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All recommendations</SelectItem>
-            {RECOMMENDATION_OPTIONS.map((r) => (
-              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-            ))}
+            <SelectGroup>
+        <SelectItem value="all">All recommendations</SelectItem>
+        {RECOMMENDATION_OPTIONS.map((r) => (
+          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+        ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
 
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-            <X className="h-4 w-4 mr-1" />
+            <X className="size-4 mr-1" />
             Clear
           </Button>
         )}

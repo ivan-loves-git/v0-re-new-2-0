@@ -24,8 +24,8 @@ export default function DashboardError({
     <div className="flex items-center justify-center min-h-[60vh] p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-            <AlertTriangle className="h-6 w-6 text-red-600" />
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-100">
+            <AlertTriangle className="size-6 text-red-600" />
           </div>
           <CardTitle>Something went wrong</CardTitle>
           <CardDescription>
@@ -47,7 +47,7 @@ export default function DashboardError({
           )}
           <div className="flex flex-col sm:flex-row gap-2">
             <Button onClick={reset} variant="default" className="flex-1">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 size-4" />
               Try again
             </Button>
             <Button
@@ -55,7 +55,7 @@ export default function DashboardError({
               className="flex-1"
               onClick={() => router.push("/repreneurs")}
             >
-              <Home className="mr-2 h-4 w-4" />
+              <Home className="mr-2 size-4" />
               Go to dashboard
             </Button>
           </div>
