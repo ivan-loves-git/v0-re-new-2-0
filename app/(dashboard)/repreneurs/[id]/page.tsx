@@ -328,7 +328,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 <Badge className={`gap-1.5 ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
                   <StageIcon className="size-3.5" />
                   {stageConfig.label}
-                  <span className="text-xs opacity-75">({milestoneCount}/18)</span>
+                  <span className="text-xs opacity-75">({milestoneCount}/17)</span>
                 </Badge>
               </div>
             )

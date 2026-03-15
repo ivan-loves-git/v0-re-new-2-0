@@ -195,7 +195,7 @@ const JourneyDisplay = memo(function JourneyDisplay({ repreneur }: { repreneur: 
         <StageIcon className="size-3" />
         {stageConfig.label}
       </Badge>
-      <span className="text-xs text-gray-500">({milestoneCount}/18)</span>
+      <span className="text-xs text-gray-500">({milestoneCount}/17)</span>
     </div>
   )
 })
