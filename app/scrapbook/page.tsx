@@ -51,7 +51,25 @@ export default async function ScrapbookPage() {
         <h1 style={{ fontSize: 16, fontWeight: 600, color: "#333", margin: 0 }}>
           {data.title}
         </h1>
-        <CopyButton html={data.html_content} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <a
+            href="/scrapbook/review"
+            style={{
+              padding: "8px 16px",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#2563eb",
+              backgroundColor: "#eff6ff",
+              border: "1px solid #2563eb",
+              borderRadius: 6,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Review
+          </a>
+          <CopyButton html={data.html_content} />
+        </div>
       </div>
       <div dangerouslySetInnerHTML={{ __html: data.html_content }} />
     </div>
