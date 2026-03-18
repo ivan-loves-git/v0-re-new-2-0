@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
 import type { ActivityType, Activity_Insert } from "@/lib/types/repreneur"
+import { updateRepreneurOfferStatus } from "./offers"
 
 export async function createActivity(
   repreneurId: string,
@@ -30,6 +31,22 @@ export async function createActivity(
 
   if (error) {
     throw new Error(`Failed to create activity: ${error.message}`)
+  }
+
+  // Auto-activate offer when "Offer Approved" is logged
+  if (activityType === "offer_approved") {
+    const { data: pendingOffer } = await supabase
+      .from("repreneur_offers")
+      .select("id")
+      .eq("repreneur_id", repreneurId)
+      .eq("status", "offered")
+      .order("offered_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (pendingOffer) {
+      await updateRepreneurOfferStatus(pendingOffer.id, "active", repreneurId)
+    }
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
