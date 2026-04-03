@@ -20,7 +20,9 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import type { Repreneur, LifecycleStatus, JourneyStage, PersonaType } from "@/lib/types/repreneur"
-import { exportRepreneursToCSV } from "@/lib/utils/csv-export"
+import { exportRepreneursToCSV, type EnrichedRepreneur } from "@/lib/utils/csv-export"
+import { getExportEnrichmentData } from "@/lib/actions/repreneurs"
+import { DECLINE_REASON_OPTIONS } from "@/lib/types/repreneur"
 import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
 import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
@@ -300,7 +302,19 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   })
 
   useImperativeHandle(ref, () => ({
-    triggerExport: () => exportRepreneursToCSV(filtered, "repreneurs.csv"),
+    triggerExport: async () => {
+      const { interviewCounts, offerData } = await getExportEnrichmentData()
+      const enriched: EnrichedRepreneur[] = filtered.map(r => ({
+        ...r,
+        interview_count: interviewCounts[r.id] || 0,
+        offer_names: offerData[r.id]?.names || "",
+        offer_status: offerData[r.id]?.status || "",
+        decline_reason: r.decline_reason_category
+          ? DECLINE_REASON_OPTIONS.find(o => o.value === r.decline_reason_category)?.label || r.decline_reason_category
+          : "",
+      }))
+      exportRepreneursToCSV(enriched, "repreneurs.csv")
+    },
   }), [filtered])
 
   // Sort function for a group

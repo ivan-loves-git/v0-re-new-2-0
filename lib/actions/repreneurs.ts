@@ -59,10 +59,19 @@ export async function createRepreneur(formData: FormData) {
   // Parse marketing consent checkbox
   const marketingConsent = formData.get("marketing_consent") === "on"
 
+  // Validate required fields
+  const email = (formData.get("email") as string || "").toLowerCase().trim()
+  const first_name = (formData.get("first_name") as string || "").trim()
+  const last_name = (formData.get("last_name") as string || "").trim()
+
+  if (!first_name) throw new Error("First name is required")
+  if (!last_name) throw new Error("Last name is required")
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Valid email is required")
+
   const repreneur: Repreneur_Insert = {
-    email: formData.get("email") as string,
-    first_name: formData.get("first_name") as string,
-    last_name: formData.get("last_name") as string,
+    email,
+    first_name,
+    last_name,
     phone: (formData.get("phone") as string) || undefined,
     linkedin_url: (formData.get("linkedin_url") as string) || undefined,
     company_background: (formData.get("company_background") as string) || undefined,
@@ -345,10 +354,10 @@ export async function clearTier2Stars(id: string) {
 export async function rejectRepreneur(id: string) {
   const supabase = createAdminClient()
 
-  // First, get the current status to store as previous_status
+  // Fetch status + email fields in one query (avoids N+1)
   const { data: repreneur, error: fetchError } = await supabase
     .from("repreneurs")
-    .select("lifecycle_status")
+    .select("lifecycle_status, first_name, last_name, email")
     .eq("id", id)
     .single()
 
@@ -375,30 +384,22 @@ export async function rejectRepreneur(id: string) {
   }
 
   // Send rejection email
-  const { data: repreneurData } = await supabase
-    .from("repreneurs")
-    .select("first_name, last_name, email")
-    .eq("id", id)
-    .single()
-
-  if (repreneurData) {
-    sendEmail({
-      to: repreneurData.email,
-      subject: "Mise à jour concernant votre candidature Re-New",
-      repreneurId: id,
-      templateKey: "rejection",
-      react: RejectionEmail({
-        repreneur: {
-          id,
-          firstName: repreneurData.first_name,
-          lastName: repreneurData.last_name,
-          email: repreneurData.email,
-        },
-      }),
-    }).catch((err) => {
-      console.error("Failed to send rejection email:", err)
-    })
-  }
+  sendEmail({
+    to: repreneur.email,
+    subject: "Mise à jour concernant votre candidature Re-New",
+    repreneurId: id,
+    templateKey: "rejection",
+    react: RejectionEmail({
+      repreneur: {
+        id,
+        firstName: repreneur.first_name,
+        lastName: repreneur.last_name,
+        email: repreneur.email,
+      },
+    }),
+  }).catch((err) => {
+    console.error("Failed to send rejection email:", err)
+  })
 
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
@@ -452,7 +453,7 @@ export async function unrejectRepreneur(id: string) {
  * Decline a repreneur (internal decision, no email sent)
  * Different from reject: decline is a manual admin choice, reject sends rejection email
  */
-export async function declineRepreneur(id: string) {
+export async function declineRepreneur(id: string, reasonCategory?: string, reasonText?: string) {
   const supabase = createAdminClient()
 
   // First, get the current status to store as previous_status
@@ -480,6 +481,8 @@ export async function declineRepreneur(id: string) {
       lifecycle_status: "declined",
       previous_status: repreneur.lifecycle_status,
       declined_at: new Date().toISOString(),
+      decline_reason_category: reasonCategory || null,
+      decline_reason_text: reasonText || null,
     })
     .eq("id", id)
 
@@ -525,6 +528,8 @@ export async function undeclineRepreneur(id: string) {
       lifecycle_status: restoredStatus,
       previous_status: null,
       declined_at: null,
+      decline_reason_category: null,
+      decline_reason_text: null,
     })
     .eq("id", id)
 
@@ -535,6 +540,75 @@ export async function undeclineRepreneur(id: string) {
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
   revalidatePath("/pipeline")
+}
+
+/**
+ * Fetch enrichment data for CSV export (interview counts, offer info)
+ */
+export async function getExportEnrichmentData(): Promise<{
+  interviewCounts: Record<string, number>
+  offerData: Record<string, { names: string; status: string }>
+}> {
+  const supabase = createAdminClient()
+
+  // Interview counts by repreneur
+  const { data: activities } = await supabase
+    .from("activities")
+    .select("repreneur_id, activity_type")
+    .eq("activity_type", "interview")
+
+  const interviewCounts: Record<string, number> = {}
+  for (const a of activities || []) {
+    interviewCounts[a.repreneur_id] = (interviewCounts[a.repreneur_id] || 0) + 1
+  }
+
+  // Offer data by repreneur
+  const { data: offers } = await supabase
+    .from("repreneur_offers")
+    .select("repreneur_id, status, offer:offers(name)")
+
+  const offerData: Record<string, { names: string; status: string }> = {}
+  for (const o of offers || []) {
+    const offerName = (o.offer as { name: string } | null)?.name || "Unknown"
+    const existing = offerData[o.repreneur_id]
+    if (existing) {
+      existing.names += ` | ${offerName}`
+      existing.status += ` | ${o.status}`
+    } else {
+      offerData[o.repreneur_id] = { names: offerName, status: o.status }
+    }
+  }
+
+  return { interviewCounts, offerData }
+}
+
+/**
+ * Save scoring accuracy rating (post-interview assessment)
+ */
+export async function saveAccuracyRating(
+  repreneurId: string,
+  whoAccuracy: string,
+  whenAccuracy: string,
+  notes?: string,
+) {
+  const supabase = createAdminClient()
+
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({
+      who_accuracy: whoAccuracy,
+      when_accuracy: whenAccuracy,
+      accuracy_notes: notes || null,
+      accuracy_rated_at: new Date().toISOString(),
+      accuracy_rated_by: "team",
+    })
+    .eq("id", repreneurId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath(`/repreneurs/${repreneurId}`)
 }
 
 /**

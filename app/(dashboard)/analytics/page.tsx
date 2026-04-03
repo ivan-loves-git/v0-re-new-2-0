@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { getAnalyticsData, type AnalyticsData } from "@/lib/actions/analytics"
 import { KpiCards } from "@/components/analytics/kpi-cards"
+import { OperationalKpis } from "@/components/analytics/operational-kpis"
 import { ScoreDistribution } from "@/components/analytics/score-distribution"
 import { ConversionFunnelAnalytics } from "@/components/analytics/conversion-funnel"
 import { JourneyWaterfall } from "@/components/analytics/journey-waterfall"
@@ -70,6 +71,19 @@ async function AnalyticsContent({ period }: { period: string }) {
     <>
       {/* Row 1: KPI Cards */}
       <KpiCards data={data} period={period} />
+
+      {/* Row 1.5: Operational KPIs */}
+      <OperationalKpis data={{
+        timeToFirstMeeting: data.timeToFirstMeeting,
+        timeToQualification: data.timeToQualification,
+        firstMeetingBookingRate: data.firstMeetingBookingRate,
+        offerSubmissionRate: data.offerSubmissionRate,
+        dropOffByStage: data.dropOffByStage,
+        interviewsHeld: data.interviewsHeld,
+        noShowRate: data.noShowRate,
+        meetingToOfferRatio: data.meetingToOfferRatio,
+        accuracyStats: data.accuracyStats,
+      }} />
 
       {/* Row 2: Score Distribution + Conversion Funnel */}
       <div className="grid gap-6 lg:grid-cols-2">

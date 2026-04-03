@@ -1,4 +1,33 @@
 export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected" | "declined"
+
+// Decline reason categories (when repreneur declines Re-New's offer)
+export type DeclineReasonCategory =
+  | "chose_competitor"
+  | "doing_independently"
+  | "pricing_too_high"
+  | "timing_not_right"
+  | "changed_plans"
+  | "insufficient_funding"
+  | "other"
+
+export const DECLINE_REASON_OPTIONS = [
+  { value: "chose_competitor", label: "Chose a competitor" },
+  { value: "doing_independently", label: "Decided to do it independently" },
+  { value: "pricing_too_high", label: "Pricing too high" },
+  { value: "timing_not_right", label: "Timing not right" },
+  { value: "changed_plans", label: "Changed plans (no longer pursuing acquisition)" },
+  { value: "insufficient_funding", label: "Insufficient funding" },
+  { value: "other", label: "Other" },
+] as const
+
+// Scoring accuracy ratings (post-interview manual assessment)
+export type ScoringAccuracy = "understated" | "accurate" | "overstated"
+
+export const SCORING_ACCURACY_OPTIONS = [
+  { value: "understated", label: "Understated" },
+  { value: "accurate", label: "Accurate" },
+  { value: "overstated", label: "Overstated" },
+] as const
 export type JourneyStage = "explorer" | "learner" | "ready" | "execution" | "post_acquisition"
 export type PersonaType = "first_time_buyer" | "serial_acquirer" | "corporate_spinoff" | "family_succession"
 
@@ -179,7 +208,15 @@ export interface Repreneur {
   ms_first_acquisition?: boolean
   rejected_at?: string // timestamp when rejected, null if not rejected
   declined_at?: string // timestamp when declined (internal decision, no email)
+  decline_reason_category?: DeclineReasonCategory
+  decline_reason_text?: string
   previous_status?: LifecycleStatus // status before rejection/decline, for restore
+  // Scoring accuracy (post-interview manual assessment)
+  who_accuracy?: ScoringAccuracy
+  when_accuracy?: ScoringAccuracy
+  accuracy_notes?: string
+  accuracy_rated_at?: string
+  accuracy_rated_by?: string
   // Questionnaire fields (Q1-Q17)
   q1_employment_status?: string
   q2_years_experience?: string
@@ -255,6 +292,7 @@ export type ActivityType =
   | "offer_rejected"
   | "offer_approved"
   | "meeting"
+  | "no_show"
 
 export interface Activity {
   id: string
@@ -304,6 +342,8 @@ export interface Repreneur_Insert {
   tier2_stars?: number
   rejected_at?: string
   declined_at?: string
+  decline_reason_category?: DeclineReasonCategory
+  decline_reason_text?: string
   previous_status?: LifecycleStatus
   // WHO/WHEN Dual Scoring (v2 questionnaire)
   q05_status?: string

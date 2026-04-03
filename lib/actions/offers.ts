@@ -8,7 +8,6 @@ import type { Offer_Insert, OfferStatus, MilestoneType } from "@/lib/types/offer
 import { sendEmail } from "@/lib/email"
 import { OfferReceivedEmail } from "@/lib/email/templates/offer-received"
 import { OfferAcceptedEmail } from "@/lib/email/templates/offer-accepted"
-import { OfferActivatedEmail } from "@/lib/email/templates/offer-activated"
 import { MilestoneCompletedEmail } from "@/lib/email/templates/milestone-completed"
 
 export async function createOffer(formData: FormData) {
@@ -115,18 +114,11 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
     throw new Error(statusError.message)
   }
 
-  // Send offer received email
-  const { data: repreneurData } = await supabase
-    .from("repreneurs")
-    .select("first_name, last_name, email")
-    .eq("id", repreneurId)
-    .single()
-
-  const { data: offerData } = await supabase
-    .from("offers")
-    .select("name")
-    .eq("id", offerId)
-    .single()
+  // Send offer received email (parallel fetch)
+  const [{ data: repreneurData }, { data: offerData }] = await Promise.all([
+    supabase.from("repreneurs").select("first_name, last_name, email").eq("id", repreneurId).single(),
+    supabase.from("offers").select("name").eq("id", offerId).single(),
+  ])
 
   if (repreneurData && offerData) {
     sendEmail({
@@ -161,7 +153,7 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
 
   const updates: Record<string, unknown> = { status: newStatus }
 
-  if (newStatus === "accepted" || newStatus === "active") {
+  if (newStatus === "accepted") {
     const { data: repreneurOffer } = await supabase
       .from("repreneur_offers")
       .select("*, offer:offers(*)")
@@ -175,10 +167,6 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
       const expiresAt = new Date(now)
       expiresAt.setDate(expiresAt.getDate() + repreneurOffer.offer.duration_days)
       updates.expires_at = expiresAt.toISOString()
-
-      if (newStatus === "accepted") {
-        updates.status = "active"
-      }
     }
   }
 
@@ -188,19 +176,12 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
     throw new Error(error.message)
   }
 
-  // Send email for accepted/activated status changes
-  if (newStatus === "accepted" || newStatus === "active") {
-    const { data: repreneurData } = await supabase
-      .from("repreneurs")
-      .select("first_name, last_name, email")
-      .eq("id", repreneurId)
-      .single()
-
-    const { data: offerInfo } = await supabase
-      .from("repreneur_offers")
-      .select("offer:offers(name)")
-      .eq("id", repreneurOfferId)
-      .single()
+  // Send email for accepted status change
+  if (newStatus === "accepted") {
+    const [{ data: repreneurData }, { data: offerInfo }] = await Promise.all([
+      supabase.from("repreneurs").select("first_name, last_name, email").eq("id", repreneurId).single(),
+      supabase.from("repreneur_offers").select("offer:offers(name)").eq("id", repreneurOfferId).single(),
+    ])
 
     if (repreneurData && offerInfo?.offer) {
       const offerName = (offerInfo.offer as { name: string }).name
@@ -211,38 +192,18 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
         email: repreneurData.email,
       }
 
-      if (newStatus === "accepted") {
-        // User accepted the offer
-        sendEmail({
-          to: repreneurData.email,
-          subject: `Félicitations! Vous avez accepté l'offre ${offerName}`,
-          repreneurId,
-          templateKey: "offer_accepted",
-          react: OfferAcceptedEmail({
-            repreneur: emailData,
-            metadata: { offerName },
-          }),
-        }).catch((err) => {
-          console.error("Failed to send offer accepted email:", err)
-        })
-      } else {
-        // Offer was directly activated
-        sendEmail({
-          to: repreneurData.email,
-          subject: `Votre accompagnement ${offerName} est activé!`,
-          repreneurId,
-          templateKey: "offer_activated",
-          react: OfferActivatedEmail({
-            repreneur: emailData,
-            metadata: {
-              offerName,
-              startDate: new Date().toLocaleDateString("fr-FR"),
-            },
-          }),
-        }).catch((err) => {
-          console.error("Failed to send offer activated email:", err)
-        })
-      }
+      sendEmail({
+        to: repreneurData.email,
+        subject: `Félicitations! Vous avez accepté l'offre ${offerName}`,
+        repreneurId,
+        templateKey: "offer_accepted",
+        react: OfferAcceptedEmail({
+          repreneur: emailData,
+          metadata: { offerName },
+        }),
+      }).catch((err) => {
+        console.error("Failed to send offer accepted email:", err)
+      })
     }
   }
 

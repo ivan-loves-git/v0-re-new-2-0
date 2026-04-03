@@ -63,7 +63,7 @@ interface ClientOfferCardProps {
   milestones: OfferMilestone[]
 }
 
-const STATUS_STEPS: OfferStatus[] = ["offered", "active", "completed"]
+const STATUS_STEPS: OfferStatus[] = ["offered", "accepted", "completed"]
 
 export function ClientOfferCard({
   id,
@@ -121,7 +121,7 @@ export function ClientOfferCard({
 
   // Get current step index for timeline
   const currentStepIndex = STATUS_STEPS.indexOf(status)
-  const isExpired = status === "expired"
+  const isDeclined = status === "declined"
 
   // Avatar image
   const defaultAvatarNumber = getDefaultAvatarNumber(repreneurId)
@@ -178,25 +178,25 @@ export function ClientOfferCard({
                     <DropdownMenuSeparator />
                     {status === "offered" && (
                       <>
-                        <DropdownMenuItem onClick={() => handleStatusChange("active")}>
+                        <DropdownMenuItem onClick={() => handleStatusChange("accepted")}>
                           <Check className="size-4 mr-2" />
-                          Mark as Active
+                          Mark as Accepted
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange("expired")}>
+                        <DropdownMenuItem onClick={() => handleStatusChange("declined")}>
                           <Clock className="size-4 mr-2" />
-                          Mark as Expired
+                          Mark as Declined
                         </DropdownMenuItem>
                       </>
                     )}
-                    {status === "active" && (
+                    {status === "accepted" && (
                       <>
                         <DropdownMenuItem onClick={() => handleStatusChange("completed")}>
                           <Check className="size-4 mr-2" />
                           Mark as Completed
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange("expired")}>
+                        <DropdownMenuItem onClick={() => handleStatusChange("declined")}>
                           <Clock className="size-4 mr-2" />
-                          Mark as Expired
+                          Mark as Declined
                         </DropdownMenuItem>
                       </>
                     )}
@@ -210,7 +210,7 @@ export function ClientOfferCard({
               </div>
 
               {/* Timeline progress */}
-              {!isExpired && (
+              {!isDeclined && (
                 <div className="mt-3 flex items-center gap-1">
                   {STATUS_STEPS.map((step, index) => {
                     const isComplete = index <= currentStepIndex
@@ -251,7 +251,7 @@ export function ClientOfferCard({
                 {acceptedAt && (
                   <div className="flex items-center gap-1">
                     <Check className="size-3 text-green-500" />
-                    <span>Active {formatDate(acceptedAt)}</span>
+                    <span>Accepted {formatDate(acceptedAt)}</span>
                   </div>
                 )}
                 {expiresAt && (
@@ -323,13 +323,13 @@ export function ClientOfferCard({
             )}
 
             {/* Milestones section */}
-            {(status === "active" || status === "completed") && (
+            {(status === "accepted" || status === "completed") && (
               <div className="border-t pt-4">
                 <OfferMilestones
                   repreneurOfferId={id}
                   repreneurId={repreneurId}
                   milestones={milestones}
-                  isActive={status === "active"}
+                  isActive={status === "accepted"}
                 />
               </div>
             )}

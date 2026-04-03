@@ -45,7 +45,7 @@ export async function createActivity(
       .single()
 
     if (pendingOffer) {
-      await updateRepreneurOfferStatus(pendingOffer.id, "active", repreneurId)
+      await updateRepreneurOfferStatus(pendingOffer.id, "accepted", repreneurId)
     }
   }
 

@@ -14,18 +14,14 @@ const statusConfig: Record<OfferStatus, { label: string; className: string }> = 
   },
   accepted: {
     label: "Accepted",
-    className: "bg-yellow-100 text-yellow-800",
-  },
-  active: {
-    label: "Active",
     className: "bg-green-100 text-green-800",
   },
   completed: {
     label: "Completed",
     className: "bg-gray-100 text-gray-800",
   },
-  expired: {
-    label: "Expired",
+  declined: {
+    label: "Declined",
     className: "bg-red-100 text-red-800",
   },
 }

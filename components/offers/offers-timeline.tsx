@@ -40,16 +40,15 @@ interface OffersTimelineProps {
 const STATUS_LABELS: Record<OfferStatus, string> = {
   offered: "Pending",
   accepted: "Accepted",
-  active: "Active",
   completed: "Completed",
-  expired: "Expired",
+  declined: "Declined",
 }
 
-const STATUS_ORDER: OfferStatus[] = ["active", "offered", "completed", "expired"]
+const STATUS_ORDER: OfferStatus[] = ["accepted", "offered", "completed", "declined"]
 
 export function OffersTimeline({ clientOffers }: OffersTimelineProps) {
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<OfferStatus[]>(["active", "offered"])
+  const [statusFilter, setStatusFilter] = useState<OfferStatus[]>(["accepted", "offered"])
 
   // Filter offers based on search and status
   const filteredOffers = clientOffers.filter((offer) => {

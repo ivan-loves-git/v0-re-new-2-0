@@ -28,6 +28,7 @@ import { LeadershipResultsCard } from "@/components/repreneurs/leadership-result
 import { getLatestAssessment, getPendingAssessment } from "@/lib/actions/leadership-assessment"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
+import { ScoringAccuracy } from "@/components/repreneurs/scoring-accuracy"
 import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
 import { FlagBadges } from "@/components/scoring-v2/flag-badges"
 import type { Flag as ScoringFlag } from "@/components/scoring-v2/types"
@@ -438,6 +439,15 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 </Badge>
               </div>
             </div>
+
+            {/* Scoring Accuracy */}
+            <ScoringAccuracy
+              repreneurId={id}
+              whoAccuracy={(repreneur as any).who_accuracy}
+              whenAccuracy={(repreneur as any).when_accuracy}
+              accuracyNotes={(repreneur as any).accuracy_notes}
+              accuracyRatedAt={(repreneur as any).accuracy_rated_at}
+            />
 
             {/* Divider */}
             <div className="border-t pt-4">

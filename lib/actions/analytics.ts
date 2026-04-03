@@ -38,6 +38,17 @@ export interface AnalyticsData {
   leadToClientRate: number
   // Offer conversion KPIs
   offerConversion: OfferConversionData
+  // Operational KPIs
+  timeToFirstMeeting: number | null
+  timeToQualification: number | null
+  firstMeetingBookingRate: number
+  offerSubmissionRate: number
+  dropOffByStage: { stage: string; count: number; dropOff: number }[]
+  interviewsHeld: number
+  noShowRate: number
+  meetingToOfferRatio: number | null
+  // Accuracy stats
+  accuracyStats: { whoAccurate: number; whenAccurate: number; total: number }
 }
 
 function getDateRange(period: string): { from: Date; to: Date; prevFrom: Date; prevTo: Date } {
@@ -95,7 +106,7 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
   // Fetch all repreneurs (excluding rejected/declined for most metrics)
   const { data: allRepreneurs } = await supabase
     .from("repreneurs")
-    .select("id, first_name, last_name, email, lifecycle_status, journey_stage, who_score, when_score, created_at, updated_at")
+    .select("id, first_name, last_name, email, lifecycle_status, journey_stage, who_score, when_score, who_accuracy, when_accuracy, created_at, updated_at")
     .order("created_at", { ascending: false })
 
   const repreneurs = allRepreneurs || []
@@ -216,7 +227,7 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
 
   // Offer Acceptance Rate (overall + split by offer)
   const totalSent = assignments.length
-  const totalAccepted = assignments.filter(a => ["accepted", "active", "completed"].includes(a.status)).length
+  const totalAccepted = assignments.filter(a => ["accepted", "completed"].includes(a.status)).length
   const overallAcceptanceRate = totalSent > 0 ? Math.round((totalAccepted / totalSent) * 100) : 0
 
   // Group by offer name
@@ -225,7 +236,7 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     const offerName = (a.offer as { name: string } | null)?.name || "Unknown"
     const entry = byOffer.get(offerName) || { sent: 0, accepted: 0 }
     entry.sent++
-    if (["accepted", "active", "completed"].includes(a.status)) {
+    if (["accepted", "completed"].includes(a.status)) {
       entry.accepted++
     }
     byOffer.set(offerName, entry)
@@ -242,6 +253,83 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     medianTimeToOfferAccepted: median(timeToOfferAccepted),
     overallAcceptanceRate,
     acceptanceByOffer,
+  }
+
+  // === Operational KPIs ===
+  const { data: allActivities } = await supabase
+    .from("activities")
+    .select("repreneur_id, activity_type, event_date, created_at")
+
+  const activityList = allActivities || []
+  const interviews = activityList.filter(a => a.activity_type === "interview")
+  const noShows = activityList.filter(a => a.activity_type === "no_show")
+
+  // Time to First Meeting: median days from repreneur.created_at to first interview
+  const firstMeetingDays: number[] = []
+  const interviewsByRepreneur = new Map<string, string>()
+  for (const interview of interviews) {
+    const existing = interviewsByRepreneur.get(interview.repreneur_id)
+    const date = interview.event_date || interview.created_at
+    if (!existing || date < existing) {
+      interviewsByRepreneur.set(interview.repreneur_id, date)
+    }
+  }
+  for (const [repId, firstDate] of interviewsByRepreneur) {
+    const createdAt = repreneurCreatedAt.get(repId)
+    if (createdAt) {
+      const days = Math.floor((new Date(firstDate).getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      if (days >= 0) firstMeetingDays.push(days)
+    }
+  }
+
+  // Time to Qualification: median days from created_at for qualified/client repreneurs
+  // (Uses updated_at as approximation since we don't have exact qualification timestamp)
+  const qualifiedRepreneurs = repreneurs.filter(r => ["qualified", "client"].includes(r.lifecycle_status))
+  const qualificationDays: number[] = qualifiedRepreneurs.map(r => {
+    return Math.floor((new Date(r.updated_at).getTime() - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24))
+  }).filter(d => d >= 0)
+
+  // First Meeting Booking Rate: % of leads who have at least 1 interview
+  const leadsWithInterview = repreneurs.filter(r => interviewsByRepreneur.has(r.id)).length
+  const firstMeetingBookingRate = totalProfiles > 0
+    ? Math.round((leadsWithInterview / totalProfiles) * 100)
+    : 0
+
+  // Offer Submission Rate: % of qualified+ who received an offer
+  const qualifiedAndAbove = repreneurs.filter(r => ["qualified", "client"].includes(r.lifecycle_status)).length
+  const repreneursWithOffers = new Set(assignments.map(a => a.repreneur_id)).size
+  const offerSubmissionRate = qualifiedAndAbove > 0
+    ? Math.round((repreneursWithOffers / qualifiedAndAbove) * 100)
+    : 0
+
+  // Drop-off by stage
+  const stageCounts = stageDistribution.map(s => s.count)
+  const dropOffByStage = stageDistribution.map((s, i) => ({
+    stage: s.stage,
+    count: s.count,
+    dropOff: i > 0 && stageCounts[i - 1] > 0
+      ? Math.round(((stageCounts[i - 1] - s.count) / stageCounts[i - 1]) * 100)
+      : 0,
+  }))
+
+  // Operational: Interviews Held, No-show Rate, Meeting-to-Offer Ratio
+  const interviewsHeld = interviews.length
+  const noShowCount = noShows.length
+  const noShowRate = interviewsHeld + noShowCount > 0
+    ? Math.round((noShowCount / (interviewsHeld + noShowCount)) * 100)
+    : 0
+  const meetingToOfferRatio = totalSent > 0
+    ? Math.round((interviewsHeld / totalSent) * 10) / 10
+    : null
+
+  // Accuracy stats
+  const ratedRepreneurs = repreneurs.filter(r => (r as any).who_accuracy)
+  const whoAccurateCount = ratedRepreneurs.filter(r => (r as any).who_accuracy === "accurate").length
+  const whenAccurateCount = ratedRepreneurs.filter(r => (r as any).when_accuracy === "accurate").length
+  const accuracyStats = {
+    whoAccurate: ratedRepreneurs.length > 0 ? Math.round((whoAccurateCount / ratedRepreneurs.length) * 100) : 0,
+    whenAccurate: ratedRepreneurs.length > 0 ? Math.round((whenAccurateCount / ratedRepreneurs.length) * 100) : 0,
+    total: ratedRepreneurs.length,
   }
 
   return {
@@ -266,5 +354,14 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     qualifiedToClientRate,
     leadToClientRate,
     offerConversion,
+    timeToFirstMeeting: median(firstMeetingDays),
+    timeToQualification: median(qualificationDays),
+    firstMeetingBookingRate,
+    offerSubmissionRate,
+    dropOffByStage,
+    interviewsHeld,
+    noShowRate,
+    meetingToOfferRatio,
+    accuracyStats,
   }
 }

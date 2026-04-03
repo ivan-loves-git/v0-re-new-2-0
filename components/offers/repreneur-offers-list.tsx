@@ -212,25 +212,25 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                     </DropdownMenuItem>
                     {ro.status === "offered" && (
                       <>
-                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "active")}>
+                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "accepted")}>
                           <Check className="size-4 mr-2" />
-                          Mark as Active
+                          Mark as Accepted
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "expired")}>
+                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "declined")}>
                           <Clock className="size-4 mr-2" />
-                          Mark as Expired
+                          Mark as Declined
                         </DropdownMenuItem>
                       </>
                     )}
-                    {ro.status === "active" && (
+                    {ro.status === "accepted" && (
                       <>
                         <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "completed")}>
                           <Check className="size-4 mr-2" />
                           Mark as Completed
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "expired")}>
+                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "declined")}>
                           <Clock className="size-4 mr-2" />
-                          Mark as Expired
+                          Mark as Declined
                         </DropdownMenuItem>
                       </>
                     )}
@@ -252,7 +252,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
 
     {/* View Offer Dialog */}
     <Dialog open={!!viewingOffer} onOpenChange={(open) => !open && setViewingOffer(null)}>
-      <DialogContent className={viewingOffer?.status === "active" ? "sm:max-w-[600px]" : "sm:max-w-[500px]"}>
+      <DialogContent className={viewingOffer?.status === "accepted" ? "sm:max-w-[600px]" : "sm:max-w-[500px]"}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="size-5" />
@@ -296,13 +296,13 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
           )}
 
           {/* Milestones section - only for active offers */}
-          {viewingOffer && (viewingOffer.status === "active" || viewingOffer.status === "completed") && (
+          {viewingOffer && (viewingOffer.status === "accepted" || viewingOffer.status === "completed") && (
             <div className="border-t pt-4">
               <OfferMilestones
                 repreneurOfferId={viewingOffer.id}
                 repreneurId={repreneurId}
                 milestones={(viewingOffer.milestones || []) as OfferMilestone[]}
-                isActive={viewingOffer.status === "active"}
+                isActive={viewingOffer.status === "accepted"}
               />
             </div>
           )}

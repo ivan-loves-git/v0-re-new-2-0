@@ -1,4 +1,4 @@
-export type OfferStatus = "offered" | "accepted" | "active" | "completed" | "expired"
+export type OfferStatus = "offered" | "accepted" | "completed" | "declined"
 
 export interface Offer {
   id: string

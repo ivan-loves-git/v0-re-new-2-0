@@ -19,7 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { LifecycleStatus } from "@/lib/types/repreneur"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { DECLINE_REASON_OPTIONS, type LifecycleStatus } from "@/lib/types/repreneur"
 
 interface RepreneurActionsMenuProps {
   repreneurId: string
@@ -32,6 +41,8 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [declineReasonCategory, setDeclineReasonCategory] = useState("")
+  const [declineReasonText, setDeclineReasonText] = useState("")
 
   const isRejected = currentStatus === "rejected"
   const isDeclined = currentStatus === "declined"
@@ -63,8 +74,10 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
   async function handleDecline() {
     setIsLoading(true)
     try {
-      await declineRepreneur(repreneurId)
+      await declineRepreneur(repreneurId, declineReasonCategory || undefined, declineReasonText || undefined)
       setIsDeclineDialogOpen(false)
+      setDeclineReasonCategory("")
+      setDeclineReasonText("")
     } catch (error) {
       console.error("Failed to decline repreneur:", error)
     } finally {
@@ -181,9 +194,40 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
             <DialogDescription>
               {isDeclined
                 ? `Are you sure you want to restore ${repreneurName}? They will be returned to their previous status.`
-                : `Are you sure you want to decline ${repreneurName}? This is an internal decision and no email will be sent.`}
+                : `Mark ${repreneurName} as declined. No email will be sent.`}
             </DialogDescription>
           </DialogHeader>
+          {!isDeclined && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="menu-decline-reason">Reason</Label>
+                <Select value={declineReasonCategory} onValueChange={setDeclineReasonCategory}>
+                  <SelectTrigger id="menu-decline-reason">
+                    <SelectValue placeholder="Select a reason..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DECLINE_REASON_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="menu-decline-details">
+                  Details {declineReasonCategory === "other" ? "(required)" : "(optional)"}
+                </Label>
+                <Textarea
+                  id="menu-decline-details"
+                  placeholder="Additional context..."
+                  value={declineReasonText}
+                  onChange={(e) => setDeclineReasonText(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeclineDialogOpen(false)}>
               Cancel
@@ -193,7 +237,11 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
                 {isLoading ? "Restoring..." : "Restore"}
               </Button>
             ) : (
-              <Button variant="secondary" onClick={handleDecline} disabled={isLoading}>
+              <Button
+                variant="secondary"
+                onClick={handleDecline}
+                disabled={isLoading || (declineReasonCategory === "other" && !declineReasonText.trim())}
+              >
                 {isLoading ? "Declining..." : "Decline"}
               </Button>
             )}
