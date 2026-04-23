@@ -20,6 +20,7 @@ export type EmailTemplateKey =
   | "offer_accepted"
   | "offer_activated"
   | "rejection"
+  | "interview_reminder"
 
 export interface EmailTemplate {
   id: string
@@ -152,6 +153,15 @@ export interface OfferReceivedEmailProps extends EmailTemplateProps {
   metadata: {
     offerName: string
     offerPrice: number
+  }
+}
+
+export interface InterviewReminderEmailProps extends EmailTemplateProps {
+  metadata: {
+    /** ISO-8601 interview date/time (from activity.event_date). */
+    interviewAt: string
+    /** Optional notes logged with the interview activity (may contain a Calendly link). */
+    notes?: string
   }
 }
 

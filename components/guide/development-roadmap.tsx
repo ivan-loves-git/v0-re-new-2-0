@@ -9,6 +9,29 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Apr 23, 2026",
+    version: "0.9.4",
+    title: "V1 closeout — batch 2 (interview & assessment)",
+    isCompleted: true,
+    events: [
+      {
+        title: "Interview-booked filter on Groups",
+        type: "feature",
+        description: "New top filter [All / Interview booked / No interview] and a green calendar icon next to repreneurs who have an upcoming interview scheduled.",
+      },
+      {
+        title: "Leadership assessment answers viewer",
+        type: "feature",
+        description: "New 'Answers' button on the Leadership Assessment card — opens a read-only view of all 26 question answers, same pattern as the WHO/WHEN pencil.",
+      },
+      {
+        title: "24h pre-interview email reminder",
+        type: "feature",
+        description: "Automated email sent ~24h before a scheduled interview. Bertrand is BCC'd on every send. Placeholder French copy — he can edit lib/email/templates/interview-reminder.tsx directly.",
+      },
+    ],
+  },
+  {
+    period: "Apr 23, 2026",
     version: "0.9.3",
     title: "V1 closeout — Bertrand backlog pass",
     isCompleted: true,

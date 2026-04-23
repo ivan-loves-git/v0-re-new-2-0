@@ -11,6 +11,7 @@ interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
   assessment_decision?: string | null
   assessment_pending?: boolean
+  has_scheduled_interview?: boolean
 }
 
 export function RepreneursGroupsPage({ repreneurs }: { repreneurs: RepreneurWithOffers[] }) {

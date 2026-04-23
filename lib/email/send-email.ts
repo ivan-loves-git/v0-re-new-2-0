@@ -13,6 +13,8 @@ interface SendEmailParams {
   react: ReactElement
   metadata?: Record<string, unknown>
   requiresConsent?: boolean // For explicit consent check (overrides template setting)
+  /** Optional BCC recipients — used e.g. to copy Bertrand on interview reminders without exposing his email. */
+  bcc?: string[]
 }
 
 /**
@@ -152,7 +154,7 @@ async function updateEmailLogStatus(
  * Main function to send an email
  */
 export async function sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
-  const { to, subject, repreneurId, templateKey, react, metadata = {} } = params
+  const { to, subject, repreneurId, templateKey, react, metadata = {}, bcc } = params
 
   // Check API key at runtime
   if (!process.env.RESEND_API_KEY) {
@@ -197,6 +199,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
     const { data, error } = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to: [to],
+      ...(bcc && bcc.length > 0 ? { bcc } : {}),
       subject,
       react,
     })

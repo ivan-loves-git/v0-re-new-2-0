@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { createAssessment } from "@/lib/actions/leadership-assessment"
 import { getDecisionDisplay } from "@/lib/utils/leadership-scoring"
 import type { LeadershipAssessment } from "@/lib/types/leadership-assessment"
+import { LeadershipAnswersDialog } from "./leadership-answers-dialog"
 import {
   RadarChart,
   PolarGrid,
@@ -167,11 +168,14 @@ export function LeadershipResultsCard({
             <Brain className="size-5" />
             Leadership Assessment
           </div>
-          {decisionDisplay && (
-            <Badge className={cn("gap-1 border-0", decisionDisplay.bgColor, decisionDisplay.color)}>
-              {decisionDisplay.label}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            <LeadershipAnswersDialog assessment={assessment} />
+            {decisionDisplay && (
+              <Badge className={cn("gap-1 border-0", decisionDisplay.bgColor, decisionDisplay.color)}>
+                {decisionDisplay.label}
+              </Badge>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

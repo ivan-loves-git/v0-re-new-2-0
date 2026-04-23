@@ -2,7 +2,7 @@
 
 import { useState, useMemo, memo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Rocket, Crown, X } from "lucide-react"
+import { Search, Target, Package, ChevronDown, ChevronRight, Compass, Map, Flag, Rocket, Crown, X, CalendarCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -34,6 +34,8 @@ interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
   assessment_decision?: string | null
   assessment_pending?: boolean
+  /** True when an `interview` activity with a future event_date exists for this repreneur. */
+  has_scheduled_interview?: boolean
 }
 
 interface RepreneurTableProps {
@@ -218,6 +220,8 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   const [journeyFilter, setJourneyFilter] = useState<JourneyStage | "all">("all")
   const [personaFilter, setPersonaFilter] = useState<PersonaType | "all">("all")
   const [recommendationFilter, setRecommendationFilter] = useState("")
+  // Interview filter: "all" | "booked" | "none" — asked for by Bertrand 2026-04-23
+  const [interviewFilter, setInterviewFilter] = useState<"all" | "booked" | "none">("all")
   // Global sort for flat view
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -253,7 +257,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     return Array.from(uniqueSources).sort()
   }, [repreneurs])
 
-  const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all" || minScore !== "all" || journeyFilter !== "all" || personaFilter !== "all" || recommendationFilter
+  const hasActiveFilters = search || statusFilter !== "all" || sourceFilter || dateRange !== "all" || minScore !== "all" || journeyFilter !== "all" || personaFilter !== "all" || recommendationFilter || interviewFilter !== "all"
 
   const clearFilters = () => {
     setSearch("")
@@ -264,6 +268,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     setJourneyFilter("all")
     setPersonaFilter("all")
     setRecommendationFilter("")
+    setInterviewFilter("all")
     setGroupPages({ lead: 1, qualified: 1, client: 1, declined: 1, rejected: 1 })
   }
 
@@ -298,7 +303,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
 
     const matchesRecommendation = !recommendationFilter || r.recommendation === recommendationFilter
 
-    return matchesSearch && matchesStatus && matchesSource && matchesDate && matchesScore && matchesJourney && matchesPersona && matchesRecommendation
+    const matchesInterview =
+      interviewFilter === "all"
+        ? true
+        : interviewFilter === "booked"
+          ? Boolean(r.has_scheduled_interview)
+          : !r.has_scheduled_interview
+
+    return matchesSearch && matchesStatus && matchesSource && matchesDate && matchesScore && matchesJourney && matchesPersona && matchesRecommendation && matchesInterview
   })
 
   useImperativeHandle(ref, () => ({
@@ -577,6 +589,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                           {repreneur.first_name} {repreneur.last_name}
                         </span>
                         <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
+                        {repreneur.has_scheduled_interview && (
+                          <CalendarCheck
+                            className="size-3.5 text-emerald-600 shrink-0"
+                            aria-label="Interview booked"
+                          >
+                            <title>Interview booked</title>
+                          </CalendarCheck>
+                        )}
                         {(repreneur as any).needs_data_completion && (
                           <NeedsCompletionBadge repreneurId={repreneur.id} variant="icon-only" />
                         )}
@@ -718,6 +738,18 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             </SelectGroup>
           </SelectContent>
         </Select>
+        <Select value={interviewFilter} onValueChange={(v) => setInterviewFilter(v as "all" | "booked" | "none")}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">Any interview</SelectItem>
+              <SelectItem value="booked">Interview booked</SelectItem>
+              <SelectItem value="none">No interview</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
             <X className="size-4 mr-1" />
@@ -814,6 +846,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                                 {repreneur.first_name} {repreneur.last_name}
                               </span>
                               <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
+                        {repreneur.has_scheduled_interview && (
+                          <CalendarCheck
+                            className="size-3.5 text-emerald-600 shrink-0"
+                            aria-label="Interview booked"
+                          >
+                            <title>Interview booked</title>
+                          </CalendarCheck>
+                        )}
                               {(repreneur as any).needs_data_completion && (
                                 <NeedsCompletionBadge repreneurId={repreneur.id} variant="icon-only" />
                               )}

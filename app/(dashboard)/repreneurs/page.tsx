@@ -9,13 +9,15 @@ interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
   assessment_decision?: string | null
   assessment_pending?: boolean
+  has_scheduled_interview?: boolean
 }
 
 export default async function RepreneursPage() {
   const supabase = await createServerClient()
 
-  // Fetch repreneurs with their offers + leadership assessments in parallel
-  const [repreneursResult, assessmentsResult] = await Promise.all([
+  // Fetch repreneurs with their offers + leadership assessments + upcoming interviews in parallel
+  const nowIso = new Date().toISOString()
+  const [repreneursResult, assessmentsResult, interviewsResult] = await Promise.all([
     supabase
       .from("repreneurs")
       .select(`
@@ -27,11 +29,19 @@ export default async function RepreneursPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("leadership_assessments")
-      .select("repreneur_id, decision, completed_at")
+      .select("repreneur_id, decision, completed_at"),
+    // Upcoming interview = activity_type='interview' with an event_date in the future.
+    supabase
+      .from("activities")
+      .select("repreneur_id, event_date")
+      .eq("activity_type", "interview")
+      .gte("event_date", nowIso),
   ])
 
   const repreneurs = repreneursResult.data || []
   const assessments = assessmentsResult.data || []
+  const upcomingInterviews = interviewsResult.data || []
+  const interviewRepreneurIds = new Set(upcomingInterviews.map((a) => a.repreneur_id))
 
   // Build lookup: repreneur_id → latest assessment
   const assessmentMap = new Map<string, { decision: string | null; completed: boolean }>()
@@ -56,6 +66,7 @@ export default async function RepreneursPage() {
         .filter(Boolean) || [],
       assessment_decision: assessment?.decision || null,
       assessment_pending: assessment ? !assessment.completed : false,
+      has_scheduled_interview: interviewRepreneurIds.has(r.id),
     }
   })
 
