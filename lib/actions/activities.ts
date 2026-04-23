@@ -33,8 +33,10 @@ export async function createActivity(
     throw new Error(`Failed to create activity: ${error.message}`)
   }
 
-  // Auto-activate offer when "Offer Approved" is logged
-  if (activityType === "offer_approved") {
+  // Activity-driven lifecycle transitions.
+  // offer_approved  → offer.status = accepted, repreneur.lifecycle_status = client
+  // offer_rejected  → offer.status = declined, repreneur.lifecycle_status = declined
+  if (activityType === "offer_approved" || activityType === "offer_rejected") {
     const { data: pendingOffer } = await supabase
       .from("repreneur_offers")
       .select("id")
@@ -44,8 +46,22 @@ export async function createActivity(
       .limit(1)
       .single()
 
-    if (pendingOffer) {
-      await updateRepreneurOfferStatus(pendingOffer.id, "accepted", repreneurId)
+    if (activityType === "offer_approved") {
+      if (pendingOffer) {
+        await updateRepreneurOfferStatus(pendingOffer.id, "accepted", repreneurId)
+      }
+      await supabase
+        .from("repreneurs")
+        .update({ lifecycle_status: "client" })
+        .eq("id", repreneurId)
+    } else {
+      if (pendingOffer) {
+        await updateRepreneurOfferStatus(pendingOffer.id, "declined", repreneurId)
+      }
+      await supabase
+        .from("repreneurs")
+        .update({ lifecycle_status: "declined", declined_at: new Date().toISOString() })
+        .eq("id", repreneurId)
     }
   }
 

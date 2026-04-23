@@ -30,7 +30,8 @@ export const TEST_WHO_DATA: Partial<IntakeV2FormData> = {
 
 // Step 3: Project Status (Q11)
 export const TEST_PROJECT_STATUS_DATA: Partial<IntakeV2FormData> = {
-  q11_project_status: ['searching', 'framed'], // Highest = 15 pts
+  q11_priority_choice: 'preferred',             // 0 pts (no penalty)
+  q11_project_status: ['searching', 'framed'],  // Highest = 15 pts
 }
 
 // Step 4: WHEN Questions (Q12-Q16)
@@ -74,6 +75,7 @@ export const TEST_LOW_SCORE_DATA: Partial<IntakeV2FormData> = {
   q09_investment: 'none',            // 0 pts
   q10_impact: 'none',                // 0 pts
   // WHO: 7/100
+  q11_priority_choice: 'one_among_others', // -10 WHEN penalty
   q11_project_status: ['discovery'], // 0 pts
   q12_geo_zones: ['bretagne'],
   q13_target_sectors_v2: ['commerce_detail'],

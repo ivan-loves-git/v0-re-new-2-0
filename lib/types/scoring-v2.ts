@@ -32,7 +32,10 @@ export type Q10Impact = 'financial' | 'trajectory' | 'limited' | 'none'
 // WHEN Question Answer Types (Q11-Q16)
 // ========================================
 
-/** Q11: Project status (multi-select, highest counts) */
+/** Q11 (v3): SME acquisition priority — added 2026-04-23 */
+export type Q11PriorityChoice = 'preferred' | 'one_among_others'
+
+/** Q11 (legacy numbering): Project status (multi-select, highest counts) */
 export type Q11ProjectStatus = 'discovery' | 'exploratory' | 'framed' | 'searching' | 'loi'
 
 /** Q14: Target deal size (multi-select) */
@@ -66,6 +69,12 @@ export interface WhenAnswers {
   q14: Q14DealSize[]       // Multi-select
   q15: Q15Structure[]      // Multi-select
   q16: Q16Equity           // Single select
+
+  // v3 additions — null for records submitted under v2 scoring (retroactive protection).
+  /** Q11 priority choice. When `one_among_others` → -10 WHEN. */
+  q11_priority?: Q11PriorityChoice | null
+  /** Whether a lettre de cadrage was uploaded. -10 WHEN if q11 includes `framed` without one. */
+  hasFicheDeCadrage?: boolean
 }
 
 // ========================================
@@ -89,7 +98,7 @@ export interface WhoScoreResult {
 
 /** WHEN score result with breakdown */
 export interface WhenScoreResult {
-  /** Total WHEN score (0-100) */
+  /** Total WHEN score (0-100, floored at 0) */
   score: number
   /** Points breakdown by component */
   breakdown: {
@@ -99,6 +108,8 @@ export interface WhenScoreResult {
     clarity: number
     /** Project status from Q11 (0-20) */
     projectStatus: number
+    /** v3 penalties (negative numbers, 0 if none apply) */
+    penalties?: number
   }
 }
 

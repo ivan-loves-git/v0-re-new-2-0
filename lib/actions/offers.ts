@@ -103,11 +103,11 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
     throw new Error(`Database error: ${offerError.message}`)
   }
 
-  // Auto-set lifecycle_status to "client" when an offer is assigned
-  // This is part of the action-driven status system
+  // Assigning an offer moves the repreneur to "qualified" (offer sent, pending response).
+  // "client" only once the offer is accepted (handled by offer_approved activity).
   const { error: statusError } = await supabase
     .from("repreneurs")
-    .update({ lifecycle_status: "client" })
+    .update({ lifecycle_status: "qualified" })
     .eq("id", repreneurId)
 
   if (statusError) {
@@ -174,6 +174,19 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  // Keep repreneur.lifecycle_status in sync with the offer status.
+  if (newStatus === "accepted") {
+    await supabase
+      .from("repreneurs")
+      .update({ lifecycle_status: "client" })
+      .eq("id", repreneurId)
+  } else if (newStatus === "declined") {
+    await supabase
+      .from("repreneurs")
+      .update({ lifecycle_status: "declined", declined_at: new Date().toISOString() })
+      .eq("id", repreneurId)
   }
 
   // Send email for accepted status change

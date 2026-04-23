@@ -8,6 +8,39 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "Apr 23, 2026",
+    version: "0.9.3",
+    title: "V1 closeout — Bertrand backlog pass",
+    isCompleted: true,
+    events: [
+      {
+        title: "Qualified now means 'offer pending'",
+        type: "decision",
+        description: "Assigning an offer moves a repreneur to Qualified. Offer accepted → Client, offer rejected → Declined. Matches how Bertrand thinks about the pipeline.",
+      },
+      {
+        title: "Offer-rejected bug fixed",
+        type: "fix",
+        description: "Logging an 'Offer rejected' activity now correctly flips the offer status to Declined (it used to stay Pending).",
+      },
+      {
+        title: "Updated application questionnaire",
+        type: "feature",
+        description: "New first question on career priority (-10 if acquisition is 'one option among others'). Equity '<150 K€' replaces the vague 'To be evaluated'. Claiming a framed project without a fiche de cadrage now costs -10. Old records keep their original scores.",
+      },
+      {
+        title: "Current needs visible on profile",
+        type: "fix",
+        description: "Q18 'besoins actuels' was captured by the form but never shown. Now rendered in the Investment Profile card.",
+      },
+      {
+        title: "Decline reasons chart on analytics",
+        type: "feature",
+        description: "New bar chart shows why repreneurs decline offers — pricing, timing, competitor, etc. Feeds directly into conversion analysis.",
+      },
+    ],
+  },
+  {
     period: "Feb 12, 2026",
     version: "0.9.2",
     title: "Login Security & Waitlist System",

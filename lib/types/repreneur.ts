@@ -244,6 +244,10 @@ export interface Repreneur {
   q08_crisis?: string // 'multiple' | 'once' | 'none'
   q09_investment?: string // 'both' | 'personal' | 'professional' | 'none'
   q10_impact?: string // 'financial' | 'trajectory' | 'limited' | 'none'
+  // Q11 v3 priority choice (added 2026-04-23) — null for records from v2 questionnaire
+  q11_priority_choice?: 'preferred' | 'one_among_others' | null
+  // Q18 in Notion spec (code: q17) — current needs (multi-select)
+  q17_current_needs?: string[]
   // WHEN answers (Q11-Q16)
   q11_project_status?: string[] // ['discovery' | 'exploratory' | 'framed' | 'searching' | 'loi']
   q12_geo_zones?: string[] // geographic zones (no scoring)
@@ -352,6 +356,7 @@ export interface Repreneur_Insert {
   q08_crisis?: string
   q09_investment?: string
   q10_impact?: string
+  q11_priority_choice?: 'preferred' | 'one_among_others' | null
   q11_project_status?: string[]
   q12_geo_zones?: string[]
   q13_target_sectors_v2?: string[]

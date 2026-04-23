@@ -6,6 +6,7 @@ import { ScoreDistribution } from "@/components/analytics/score-distribution"
 import { ConversionFunnelAnalytics } from "@/components/analytics/conversion-funnel"
 import { JourneyWaterfall } from "@/components/analytics/journey-waterfall"
 import { StaleLeads } from "@/components/analytics/stale-leads"
+import { DeclineReasons } from "@/components/analytics/decline-reasons"
 import { OfferConversion } from "@/components/analytics/offer-conversion"
 import { PeriodSelector } from "@/components/analytics/period-selector"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -107,8 +108,11 @@ async function AnalyticsContent({ period }: { period: string }) {
         <JourneyWaterfall stageDistribution={data.stageDistribution} />
       </div>
 
-      {/* Row 4: Stale Leads */}
-      <StaleLeads staleLeads={data.staleLeads} />
+      {/* Row 4: Stale Leads + Decline Reasons */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <StaleLeads staleLeads={data.staleLeads} />
+        <DeclineReasons breakdown={data.declineReasonBreakdown} />
+      </div>
     </>
   )
 }

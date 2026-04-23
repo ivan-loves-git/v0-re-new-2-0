@@ -3,7 +3,8 @@
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { PROJECT_STATUS_QUESTION } from '@/lib/config/questionnaire-v2'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { PRIORITY_CHOICE_QUESTION, PROJECT_STATUS_QUESTION } from '@/lib/config/questionnaire-v2'
 import { useLanguage } from '@/lib/i18n/language-context'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
 import { Info } from 'lucide-react'
@@ -24,7 +25,9 @@ const Q11_TRANSLATION_MAP: Record<string, string> = {
 export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} }: IntakeV2StepProps) {
   const { t } = useLanguage()
   const question = PROJECT_STATUS_QUESTION.q11
+  const priorityQuestion = PRIORITY_CHOICE_QUESTION.q11_priority
   const selectedValues = data.q11_project_status || []
+  const priorityValue = data.q11_priority_choice || ''
 
   const toggleOption = (value: string) => {
     const current = [...selectedValues]
@@ -55,7 +58,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
   const highestSelected = getHighestSelected()
 
   const isValid = () => {
-    return selectedValues.length > 0
+    return selectedValues.length > 0 && priorityValue !== ''
   }
 
   return (
@@ -65,6 +68,40 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
         <p className="text-muted-foreground">
           {t('step3Description')}
         </p>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          {priorityQuestion.label} *
+        </Label>
+        <RadioGroup
+          value={priorityValue}
+          onValueChange={(value) => onChange({ q11_priority_choice: value })}
+          className="grid grid-cols-1 md:grid-cols-2 gap-2"
+        >
+          {priorityQuestion.options.map((option) => (
+            <div
+              key={option.value}
+              className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                priorityValue === option.value
+                  ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                  : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+              }`}
+              onClick={() => onChange({ q11_priority_choice: option.value })}
+            >
+              <RadioGroupItem value={option.value} id={`q11-priority-${option.value}`} className="mt-0.5" />
+              <Label
+                htmlFor={`q11-priority-${option.value}`}
+                className={`cursor-pointer font-normal leading-relaxed flex-1 ${priorityValue === option.value ? 'text-blue-900' : ''}`}
+              >
+                {option.label}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+        {errors.q11_priority_choice && (
+          <p className="text-sm text-red-500">{errors.q11_priority_choice}</p>
+        )}
       </div>
 
       <div className="space-y-3">

@@ -49,6 +49,8 @@ export interface AnalyticsData {
   meetingToOfferRatio: number | null
   // Accuracy stats
   accuracyStats: { whoAccurate: number; whenAccurate: number; total: number }
+  // Decline reason breakdown
+  declineReasonBreakdown: { category: string; count: number }[]
 }
 
 function getDateRange(period: string): { from: Date; to: Date; prevFrom: Date; prevTo: Date } {
@@ -322,6 +324,21 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     ? Math.round((interviewsHeld / totalSent) * 10) / 10
     : null
 
+  // Decline reasons breakdown (for declined repreneurs)
+  const { data: declinedRepreneurs } = await supabase
+    .from("repreneurs")
+    .select("id, decline_reason_category")
+    .eq("lifecycle_status", "declined")
+
+  const declineByReason = new Map<string, number>()
+  for (const row of declinedRepreneurs || []) {
+    const key = (row as { decline_reason_category: string | null }).decline_reason_category || "unspecified"
+    declineByReason.set(key, (declineByReason.get(key) || 0) + 1)
+  }
+  const declineReasonBreakdown = Array.from(declineByReason.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+
   // Accuracy stats
   const ratedRepreneurs = repreneurs.filter(r => (r as any).who_accuracy)
   const whoAccurateCount = ratedRepreneurs.filter(r => (r as any).who_accuracy === "accurate").length
@@ -363,5 +380,6 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     noShowRate,
     meetingToOfferRatio,
     accuracyStats,
+    declineReasonBreakdown,
   }
 }

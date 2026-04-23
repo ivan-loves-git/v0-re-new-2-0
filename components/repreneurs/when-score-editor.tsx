@@ -40,6 +40,9 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
       q14: (repreneur as any).q14_deal_size || [],
       q15: (repreneur as any).q15_structure || [],
       q16: (repreneur as any).q16_equity || 'tbd',
+      // v3 penalty inputs — read from DB, read-only in this editor
+      q11_priority: (repreneur as any).q11_priority_choice || null,
+      hasFicheDeCadrage: Boolean((repreneur as any).ldc_url),
     }
   }
 
@@ -70,7 +73,7 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
 
   // Update radio (single select)
   const handleRadioChange = (field: 'q16', value: string) => {
-    setLocalAnswers(prev => ({ ...prev, [field]: value }))
+    setLocalAnswers(prev => ({ ...prev, [field]: value as Q16Equity }))
   }
 
   // Save all changes and recalculate score

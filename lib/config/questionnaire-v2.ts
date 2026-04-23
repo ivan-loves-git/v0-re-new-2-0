@@ -96,7 +96,28 @@ export const WHO_QUESTIONS = {
 } as const
 
 // ========================================
-// Project Status (Q11) - Contributes to WHEN
+// Q11 v3 - Priority choice (added 2026-04-23)
+// Binary: SME acquisition is either the preferred career path (0 pts)
+// or one option among others (-10 WHEN penalty).
+// ========================================
+
+export const PRIORITY_CHOICE_QUESTION = {
+  q11_priority: {
+    id: 'q11_priority',
+    field: 'q11_priority_choice',
+    label: 'Pour vous la reprise est ?',
+    labelEn: 'For you, acquiring a company is?',
+    required: true,
+    type: 'radio' as const,
+    options: [
+      { value: 'preferred', label: 'Mon option préférentielle de carrière', points: 0 },
+      { value: 'one_among_others', label: 'Une option parmi d\'autres', points: -10 },
+    ],
+  },
+} as const
+
+// ========================================
+// Project Status (Q11 legacy numbering) - Contributes to WHEN
 // ========================================
 
 export const PROJECT_STATUS_QUESTION = {
@@ -209,7 +230,9 @@ export const WHEN_QUESTIONS = {
     required: true,
     type: 'radio' as const, // Single select
     options: [
-      { value: 'tbd', label: 'En cours d\'évaluation / à définir' },
+      // 'tbd' is now displayed as "<150 K€" — the enum value is kept so old
+      // records keep scoring correctly. v3 adds a -10 penalty on this value.
+      { value: 'tbd', label: '<150 K€' },
       { value: '151-250', label: '151-250 K€' },
       { value: '251-350', label: '251-350 K€' },
       { value: '351-450', label: '351-450 K€' },
@@ -364,6 +387,7 @@ export const INTAKE_STEPS = [
 export const QUESTIONNAIRE_V2_CONFIG = {
   contact: CONTACT_FIELDS,
   who: WHO_QUESTIONS,
+  priorityChoice: PRIORITY_CHOICE_QUESTION,
   projectStatus: PROJECT_STATUS_QUESTION,
   when: WHEN_QUESTIONS,
   needs: NEEDS_QUESTIONS,

@@ -268,6 +268,15 @@ export function calculateWhenScore(answers: WhenAnswers): WhenScoreResult {
     ? Math.max(...answers.q11.map(s => Q11_POINTS[s] ?? 0))
     : 0
 
+  // v3 penalties — only apply to records that went through the v3 questionnaire
+  // (q11_priority is set). Retroactive protection for v2 records.
+  let penalties = 0
+  if (answers.q11_priority != null) {
+    if (answers.q11_priority === 'one_among_others') penalties -= 10
+    if (answers.q11.includes('framed') && !answers.hasFicheDeCadrage) penalties -= 10
+    if (answers.q16 === 'tbd') penalties -= 10 // "<150 K€" uses the same enum value
+  }
+
   // Fit financier: triangulation × 20 (0-40)
   const triangulationScore = calculateTriangulation(answers.q14, answers.q15, answers.q16)
   const fitFinancier = triangulationScore * 20
@@ -308,9 +317,12 @@ export function calculateWhenScore(answers: WhenAnswers): WhenScoreResult {
 
   const clarity = clarityRaw * 20
 
+  const rawScore = fitFinancier + clarity + projectStatus + penalties
+  const score = Math.max(0, rawScore)
+
   return {
-    score: fitFinancier + clarity + projectStatus,
-    breakdown: { fitFinancier, clarity, projectStatus }
+    score,
+    breakdown: { fitFinancier, clarity, projectStatus, penalties }
   }
 }
 

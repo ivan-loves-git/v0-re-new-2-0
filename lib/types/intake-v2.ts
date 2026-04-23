@@ -29,7 +29,9 @@ export interface IntakeV2FormData {
   q09_investment: string  // 'both' | 'personal' | 'professional' | 'none'
   q10_impact: string      // 'financial' | 'trajectory' | 'limited' | 'none'
 
-  // Step 3: Project Status (Q11)
+  // Step 3: Priority + Project Status
+  // Q11 v3: 'preferred' | 'one_among_others' (-10 WHEN if "one among others")
+  q11_priority_choice: string
   q11_project_status: string[]  // Multi-select: ['discovery', 'exploratory', 'framed', 'searching', 'loi']
 
   // Step 4: WHEN Questions (Q12-Q16)
@@ -63,6 +65,7 @@ export const EMPTY_INTAKE_FORM: IntakeV2FormData = {
   q08_crisis: '',
   q09_investment: '',
   q10_impact: '',
+  q11_priority_choice: '',
   q11_project_status: [],
   q12_geo_zones: [],
   q13_target_sectors_v2: [],

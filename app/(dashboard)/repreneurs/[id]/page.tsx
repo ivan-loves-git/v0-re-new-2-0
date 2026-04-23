@@ -35,7 +35,7 @@ import type { Flag as ScoringFlag } from "@/components/scoring-v2/types"
 import { FRENCH_REGIONS } from "@/lib/constants/french-regions"
 import { SECTORS } from "@/lib/constants/sectors"
 import { INVESTMENT_CAPACITY_RANGES, TARGET_ACQUISITION_SIZE_RANGES } from "@/lib/constants/investment-ranges"
-import { WHO_QUESTIONS, WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
+import { WHO_QUESTIONS, WHEN_QUESTIONS, NEEDS_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
 import type { RepreneurOffer, Offer, OfferMilestone } from "@/lib/types/offer"
 
@@ -502,6 +502,23 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                       : <span className="text-muted-foreground">—</span>}
                   </p>
                 </div>
+                <div className="col-span-2">
+                  <Label className="text-xs text-muted-foreground">Current Needs</Label>
+                  <p className="text-sm">
+                    {formatV2Array(NEEDS_QUESTIONS as any, 'q17', (repreneur as any).q17_current_needs)
+                      || <span className="text-muted-foreground">Not answered</span>}
+                  </p>
+                </div>
+                {(repreneur as any).q11_priority_choice && (
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">Acquisition Priority</Label>
+                    <p className="text-sm">
+                      {(repreneur as any).q11_priority_choice === 'preferred'
+                        ? 'Preferred career option'
+                        : 'One option among others'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

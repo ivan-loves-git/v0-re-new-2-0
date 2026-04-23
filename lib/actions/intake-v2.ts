@@ -51,7 +51,10 @@ export async function submitIntakeV2(
       q13: formData.q13_target_sectors_v2,
       q14: formData.q14_deal_size as WhenAnswers['q14'],
       q15: formData.q15_structure as WhenAnswers['q15'],
-      q16: formData.q16_equity as WhenAnswers['q16']
+      q16: formData.q16_equity as WhenAnswers['q16'],
+      // v3: priority choice + fiche de cadrage presence drive three -10 penalties.
+      q11_priority: (formData.q11_priority_choice || null) as WhenAnswers['q11_priority'],
+      hasFicheDeCadrage: Boolean(formData.q18_investment_thesis_url),
     }
 
     // Calculate dual score
@@ -77,6 +80,10 @@ export async function submitIntakeV2(
       q09_investment: formData.q09_investment,
       q10_impact: formData.q10_impact,
 
+      // Q11 v3 priority choice
+      q11_priority_choice: formData.q11_priority_choice || null,
+      // Needs (Q18 in Notion spec / q17 in code)
+      q17_current_needs: formData.q17_current_needs,
       // WHEN answers (Q11-Q16)
       q11_project_status: formData.q11_project_status,
       q12_geo_zones: formData.q12_geo_zones,

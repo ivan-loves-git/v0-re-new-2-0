@@ -989,6 +989,8 @@ export interface QuestionnaireV2Input {
   q08_crisis: string | null
   q09_investment: string | null
   q10_impact: string | null
+  // Q11 v3 priority choice (added 2026-04-23) — optional; null preserves v2 scoring for legacy records
+  q11_priority_choice?: 'preferred' | 'one_among_others' | null
   // WHEN (Q11-Q16)
   q11_project_status: string[]
   q12_geo_zones: string[]
@@ -1004,6 +1006,20 @@ export interface QuestionnaireV2Input {
  */
 export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input) {
   const supabase = createAdminClient()
+
+  // v3 penalties read q11_priority_choice + ldc_url. If the input doesn't include
+  // priority_choice, fall back to the current DB value (profile-edit path may not
+  // surface it). ldc_url is always read from DB since it's uploaded separately.
+  const { data: existing } = await supabase
+    .from("repreneurs")
+    .select("q11_priority_choice, ldc_url")
+    .eq("id", id)
+    .maybeSingle()
+
+  const priorityChoice: 'preferred' | 'one_among_others' | null =
+    data.q11_priority_choice !== undefined
+      ? (data.q11_priority_choice ?? null)
+      : ((existing?.q11_priority_choice as 'preferred' | 'one_among_others' | null) ?? null)
 
   // Build WHO answers for scoring (use defaults for null values to prevent scoring errors)
   const whoAnswers: WhoAnswers = {
@@ -1023,6 +1039,8 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
     q14: (data.q14_deal_size || []) as WhenAnswers['q14'],
     q15: (data.q15_structure || []) as WhenAnswers['q15'],
     q16: (data.q16_equity || 'tbd') as WhenAnswers['q16'],
+    q11_priority: priorityChoice,
+    hasFicheDeCadrage: Boolean(existing?.ldc_url),
   }
 
   // Calculate dual scores
@@ -1039,6 +1057,10 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
       q08_crisis: data.q08_crisis,
       q09_investment: data.q09_investment,
       q10_impact: data.q10_impact,
+      // Q11 v3 priority choice (only update if explicitly provided in input)
+      ...(data.q11_priority_choice !== undefined
+        ? { q11_priority_choice: data.q11_priority_choice }
+        : {}),
       // WHEN answers
       q11_project_status: data.q11_project_status,
       q12_geo_zones: data.q12_geo_zones,
