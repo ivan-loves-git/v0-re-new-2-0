@@ -172,6 +172,7 @@ export function IntakeFormV2() {
         q10_impact: 'financial',
       },
       3: {
+        q11_priority_choice: 'preferred',
         q11_project_status: ['framed', 'searching'],
       },
       4: {

@@ -280,12 +280,26 @@ export function StepReview({
             <Pencil className="size-4 mr-1" /> {labels.edit}
           </Button>
         </CardHeader>
-        <CardContent className="text-sm">
-          <div className="text-muted-foreground text-xs">{labels.projectStatus}</div>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {getTranslatedLabels(Q11_OPTION_KEYS, data.q11_project_status || []).map((label, i) => (
-              <Badge key={i} variant="secondary">{label}</Badge>
-            ))}
+        <CardContent className="text-sm space-y-3">
+          {data.q11_priority_choice && (
+            <div>
+              <div className="text-muted-foreground text-xs">Pour vous la reprise est</div>
+              <div className="mt-1">
+                <Badge variant="secondary">
+                  {data.q11_priority_choice === 'preferred'
+                    ? "Mon option préférentielle de carrière"
+                    : "Une option parmi d'autres"}
+                </Badge>
+              </div>
+            </div>
+          )}
+          <div>
+            <div className="text-muted-foreground text-xs">{labels.projectStatus}</div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {getTranslatedLabels(Q11_OPTION_KEYS, data.q11_project_status || []).map((label, i) => (
+                <Badge key={i} variant="secondary">{label}</Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

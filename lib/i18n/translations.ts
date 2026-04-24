@@ -446,8 +446,8 @@ export const translations = {
     en: 'What equity contribution can you mobilize?',
   },
   q16_tbd: {
-    fr: 'À définir',
-    en: 'To be determined',
+    fr: '< 150 K€',
+    en: '< €150K',
   },
   q16_151_250: {
     fr: '151 à 250 K€',

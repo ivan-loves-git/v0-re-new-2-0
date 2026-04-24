@@ -158,7 +158,11 @@ export interface OfferReceivedEmailProps extends EmailTemplateProps {
 
 export interface InterviewReminderEmailProps extends EmailTemplateProps {
   metadata: {
-    /** ISO-8601 interview date/time (from activity.event_date). */
+    /**
+     * Interview date. Normally `YYYY-MM-DD` because `activities.event_date` is a
+     * DATE column (no time). Full ISO-8601 timestamps also accepted — the email
+     * template formats with time only when one is present.
+     */
     interviewAt: string
     /** Optional notes logged with the interview activity (may contain a Calendly link). */
     notes?: string

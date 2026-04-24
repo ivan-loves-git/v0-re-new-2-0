@@ -56,14 +56,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    if (!abandonedForms || abandonedForms.length === 0) {
-      return NextResponse.json({ message: "No abandoned forms to process", sent: 0 })
-    }
-
     let sentCount = 0
     const errors: string[] = []
 
-    for (const form of abandonedForms) {
+    // Empty abandoned-forms list is fine — still fall through to the
+    // interview-reminder sub-job below (they share the same daily cron slot).
+    for (const form of abandonedForms || []) {
       const repreneur = form.repreneurs as {
         id: string
         first_name: string
@@ -130,14 +128,16 @@ export async function GET(request: Request) {
       }
     }
 
-    // === Second job on the same cron: 24h pre-interview reminders ===
-    // Hobby plan caps us at one cron/day, so we piggyback here. Looks for
-    // interview activities with event_date roughly 24h in the future.
+    // === Second job on the same cron: pre-interview reminders ===
+    // Hobby plan caps us at one cron/day, so we piggyback here. `activities.event_date`
+    // is a DATE column (no time), so precision is whole-day: at 9am today we email
+    // everyone whose interview is scheduled for tomorrow.
     let interviewSent = 0
     const interviewErrors: string[] = []
     try {
-      const windowStart = new Date(now.getTime() + 22 * 60 * 60 * 1000)
-      const windowEnd = new Date(now.getTime() + 26 * 60 * 60 * 1000)
+      const tomorrow = new Date(now)
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      const tomorrowDate = tomorrow.toISOString().slice(0, 10) // YYYY-MM-DD
 
       const { data: upcomingInterviews } = await supabase
         .from("activities")
@@ -149,8 +149,7 @@ export async function GET(request: Request) {
           repreneur:repreneurs(id, first_name, last_name, email)
         `)
         .eq("activity_type", "interview")
-        .gte("event_date", windowStart.toISOString())
-        .lt("event_date", windowEnd.toISOString())
+        .eq("event_date", tomorrowDate)
 
       for (const activity of upcomingInterviews || []) {
         // Supabase returns the joined row as an object (single relation); `as unknown` to
@@ -199,7 +198,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
-      message: `Processed ${abandonedForms.length} abandoned forms; interview reminders sent: ${interviewSent}`,
+      message: `Processed ${abandonedForms?.length ?? 0} abandoned forms; interview reminders sent: ${interviewSent}`,
       sent: sentCount,
       interviewSent,
       errors: errors.length + interviewErrors.length > 0

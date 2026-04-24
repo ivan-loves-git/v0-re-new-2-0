@@ -13,13 +13,16 @@ export function InterviewReminderEmail({ repreneur, metadata }: InterviewReminde
   const { firstName } = repreneur
   const { interviewAt, notes } = metadata
 
-  const when = new Date(interviewAt).toLocaleString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  // `interviewAt` can be either a date-only string (YYYY-MM-DD, from activities.event_date)
+  // or a full ISO timestamp. Only include the time component if it looks precise.
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(interviewAt)
+  const parsed = new Date(isDateOnly ? interviewAt + "T12:00:00" : interviewAt)
+  const when = parsed.toLocaleString(
+    "fr-FR",
+    isDateOnly
+      ? { weekday: "long", day: "numeric", month: "long" }
+      : { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }
+  )
 
   return (
     <BaseLayout previewText={`Rappel : votre entretien Re-New ${when}`}>
