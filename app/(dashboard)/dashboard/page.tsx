@@ -119,6 +119,7 @@ async function StatsAndTiersRow() {
   const leadCount = repreneurs.filter((r) => r.lifecycle_status === "lead").length
   const qualifiedCount = repreneurs.filter((r) => r.lifecycle_status === "qualified").length
   const clientCount = repreneurs.filter((r) => r.lifecycle_status === "client").length
+  const toReactivateCount = repreneurs.filter((r) => r.lifecycle_status === "to_reactivate").length
 
   // Calculate last week stats
   const now = new Date()
@@ -175,6 +176,7 @@ async function StatsAndTiersRow() {
         leadCount={leadCount}
         qualifiedCount={qualifiedCount}
         clientCount={clientCount}
+        toReactivateCount={toReactivateCount}
         lastWeekTotal={lastWeekTotal}
         lastWeekLeads={lastWeekLeads}
         lastWeekQualified={lastWeekQualified}
@@ -231,6 +233,7 @@ async function MiddleRow() {
   const leadCount = repreneurs.filter((r) => r.lifecycle_status === "lead").length
   const qualifiedCount = repreneurs.filter((r) => r.lifecycle_status === "qualified").length
   const clientCount = repreneurs.filter((r) => r.lifecycle_status === "client").length
+  const toReactivateCount = repreneurs.filter((r) => r.lifecycle_status === "to_reactivate").length
 
   // Journey stage distribution
   const explorerCount = repreneurs.filter((r) => r.journey_stage === "explorer").length

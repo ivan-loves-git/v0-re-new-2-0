@@ -19,6 +19,7 @@ export interface AnalyticsData {
   clientCount: number
   rejectedCount: number
   declinedCount: number
+  toReactivateCount: number
   // Scores
   avgWhoScore: number | null
   avgWhenScore: number | null
@@ -127,13 +128,16 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
   const newProfilesThisPeriod = inPeriod.length
   const newProfilesPreviousPeriod = inPrevPeriod.length
 
-  // Lifecycle counts (all time, not filtered by period)
-  const active = repreneurs.filter(r => !["rejected", "declined"].includes(r.lifecycle_status))
+  // Lifecycle counts (all time, not filtered by period).
+  // `active` = the live funnel; rejected, declined, and to_reactivate are explicitly out
+  // (to_reactivate exists precisely so stale leads stop polluting these averages).
+  const active = repreneurs.filter(r => !["rejected", "declined", "to_reactivate"].includes(r.lifecycle_status))
   const leadCount = repreneurs.filter(r => r.lifecycle_status === "lead").length
   const qualifiedCount = repreneurs.filter(r => r.lifecycle_status === "qualified").length
   const clientCount = repreneurs.filter(r => r.lifecycle_status === "client").length
   const rejectedCount = repreneurs.filter(r => r.lifecycle_status === "rejected").length
   const declinedCount = repreneurs.filter(r => r.lifecycle_status === "declined").length
+  const toReactivateCount = repreneurs.filter(r => r.lifecycle_status === "to_reactivate").length
 
   // Score calculations (only scored repreneurs)
   const whoScores = active.map(r => r.who_score).filter((s): s is number => s !== null && s > 0)
@@ -358,6 +362,7 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
     clientCount,
     rejectedCount,
     declinedCount,
+    toReactivateCount,
     avgWhoScore,
     avgWhenScore,
     medianWhoScore,

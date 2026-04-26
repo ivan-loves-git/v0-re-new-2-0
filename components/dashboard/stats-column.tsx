@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, UserCheck, Briefcase, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { Users, UserCheck, Briefcase, TrendingUp, TrendingDown, Minus, Clock } from "lucide-react"
 import { CardInfoButton } from "./card-info-button"
 
 interface StatsColumnProps {
@@ -9,6 +9,7 @@ interface StatsColumnProps {
   leadCount: number
   qualifiedCount: number
   clientCount: number
+  toReactivateCount?: number
   // Last week comparison
   lastWeekTotal?: number
   lastWeekLeads?: number
@@ -57,6 +58,7 @@ export function StatsColumn({
   leadCount,
   qualifiedCount,
   clientCount,
+  toReactivateCount = 0,
   lastWeekTotal,
   lastWeekLeads,
   lastWeekQualified,
@@ -95,6 +97,20 @@ export function StatsColumn({
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
+    // Only render the To-be-reactivated row when there's actually something there;
+    // skips visual noise on a fresh install.
+    ...(toReactivateCount > 0
+      ? [
+          {
+            label: "To be reactivated",
+            value: toReactivateCount,
+            lastWeek: undefined as number | undefined,
+            icon: Clock,
+            color: "text-amber-600",
+            bgColor: "bg-amber-50",
+          },
+        ]
+      : []),
   ]
 
   return (

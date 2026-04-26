@@ -88,10 +88,12 @@ function getDerivedStage(repreneur: Repreneur): JourneyStage {
 export default async function JourneyPage() {
   const supabase = await createClient()
 
+  // Exclude inactive states from the journey funnel: rejected (we said no),
+  // declined (they said no), and to_reactivate (stale, no engagement).
   const { data: repreneurs } = await supabase
     .from("repreneurs")
     .select("*")
-    .neq("lifecycle_status", "rejected")
+    .not("lifecycle_status", "in", "(rejected,declined,to_reactivate)")
     .order("created_at", { ascending: false })
 
   // Group repreneurs by derived journey stage
