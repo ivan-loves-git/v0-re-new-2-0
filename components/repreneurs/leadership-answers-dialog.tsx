@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Eye } from "lucide-react"
+import { Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,13 +25,13 @@ export function LeadershipAnswersDialog({ assessment }: LeadershipAnswersDialogP
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-          title="View answers"
+          className="h-7 px-2 text-xs gap-1"
+          title="Voir les réponses"
         >
-          <Eye className="size-3.5 mr-1" />
-          Answers
+          <Pencil className="size-3" />
+          Voir les réponses
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">

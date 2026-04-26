@@ -11,6 +11,7 @@ export { MilestoneCompletedEmail } from "./milestone-completed"
 export { OfferAcceptedEmail } from "./offer-accepted"
 export { OfferActivatedEmail } from "./offer-activated"
 export { RejectionEmail } from "./rejection"
+export { InterviewReminderEmail } from "./interview-reminder"
 
 import type { EmailTemplateKey } from "@/lib/types/email"
 
@@ -71,6 +72,11 @@ export const TEMPLATE_METADATA: Record<
   rejection: {
     name: "Rejection",
     description: "Sent when a candidate is rejected",
+    category: "status",
+  },
+  interview_reminder: {
+    name: "Interview Reminder",
+    description: "Sent 24h before a scheduled interview",
     category: "status",
   },
 }

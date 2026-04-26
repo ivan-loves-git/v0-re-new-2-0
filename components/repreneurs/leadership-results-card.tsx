@@ -167,15 +167,13 @@ export function LeadershipResultsCard({
           <div className="flex items-center gap-2">
             <Brain className="size-5" />
             Leadership Assessment
-          </div>
-          <div className="flex items-center gap-2">
             <LeadershipAnswersDialog assessment={assessment} />
-            {decisionDisplay && (
-              <Badge className={cn("gap-1 border-0", decisionDisplay.bgColor, decisionDisplay.color)}>
-                {decisionDisplay.label}
-              </Badge>
-            )}
           </div>
+          {decisionDisplay && (
+            <Badge className={cn("gap-1 border-0", decisionDisplay.bgColor, decisionDisplay.color)}>
+              {decisionDisplay.label}
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

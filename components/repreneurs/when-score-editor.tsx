@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Calculator, Loader2, Pencil, AlertTriangle } from "lucide-react"
+import { Calculator, Loader2, Pencil, AlertTriangle, FileWarning } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -125,6 +125,37 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
           <DialogTitle>Edit WHEN Score</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+          {/* Q11 v3 priority choice — read-only context for the score */}
+          {localAnswers.q11_priority && (
+            <div className="space-y-1 rounded-md border border-gray-200 bg-gray-50 p-3">
+              <Label className="text-xs uppercase tracking-wide text-gray-500">
+                Acquisition priority (Q11)
+              </Label>
+              <p className="text-sm text-gray-900">
+                {localAnswers.q11_priority === 'preferred'
+                  ? 'Preferred career option'
+                  : "One option among others"}
+                {localAnswers.q11_priority === 'one_among_others' && (
+                  <span className="ml-2 text-xs font-medium text-red-700">−10 WHEN penalty</span>
+                )}
+              </p>
+            </div>
+          )}
+
+          {/* Fiche de cadrage status — flag the missing-fiche penalty */}
+          {localAnswers.q11_priority && localAnswers.q11.includes('framed') && !localAnswers.hasFicheDeCadrage && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <FileWarning className="size-4 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-medium">Projet cadré without fiche de cadrage</span>
+                <span className="ml-2 text-xs font-medium text-red-700">−10 WHEN penalty</span>
+                <p className="mt-1 text-xs text-amber-800">
+                  The candidate selected &quot;Projet cadré&quot; in Q12 but no lettre de cadrage was uploaded.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Q11 - Project Status (multi-select) */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">
@@ -277,6 +308,12 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
                 <span>Project Status:</span>
                 <span className="font-medium">{liveScore.breakdown.projectStatus} pts</span>
               </div>
+              {(liveScore.breakdown.penalties ?? 0) < 0 && (
+                <div className="flex justify-between border-t border-gray-200 pt-1 mt-1 text-red-700">
+                  <span>v3 penalties:</span>
+                  <span className="font-medium">{liveScore.breakdown.penalties} pts</span>
+                </div>
+              )}
             </div>
           </div>
 
