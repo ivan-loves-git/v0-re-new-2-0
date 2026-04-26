@@ -271,7 +271,8 @@ describe('WHEN Score Calculation', () => {
     expect(result.breakdown).toEqual({
       fitFinancier: 40,
       clarity: 40,
-      projectStatus: 20
+      projectStatus: 20,
+      penalties: 0
     })
   })
 
@@ -292,8 +293,27 @@ describe('WHEN Score Calculation', () => {
     expect(result.breakdown).toEqual({
       fitFinancier: 0,
       clarity: 0,
-      projectStatus: 0
+      projectStatus: 0,
+      penalties: 0
     })
+  })
+
+  it('applies v3 penalties when priority data is present', () => {
+    const answers: WhenAnswers = {
+      q11: ['framed'],
+      q12: [],
+      q13: [],
+      q14: ['1-3M'],
+      q15: ['majority_without_fund'],
+      q16: 'tbd',
+      q11_priority: 'one_among_others',
+      hasFicheDeCadrage: false
+    }
+
+    const result = calculateWhenScore(answers)
+
+    expect(result.breakdown.penalties).toBe(-30)
+    expect(result.score).toBe(20)
   })
 
   it('havent_thought structure = 0 clarity', () => {

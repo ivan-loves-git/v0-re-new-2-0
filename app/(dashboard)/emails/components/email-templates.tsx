@@ -33,7 +33,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
     try {
       await toggleTemplateEnabled(templateKey as keyof typeof TEMPLATE_METADATA, enabled)
       setLocalTemplates((prev) =>
-        prev.map((t) => (t.template_key === templateKey ? { ...t, is_enabled: enabled } : t))
+        prev.map((t) => (t.template_key === templateKey ? { ...t, is_active: enabled } : t))
       )
     } catch (error) {
       console.error("Failed to toggle template:", error)

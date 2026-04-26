@@ -199,20 +199,21 @@ export async function GET(request: Request) {
     }
 
     // === Third job on the same cron: Day-5 booking reminders ===
-    // Fires once for repreneurs who applied >5 days ago (and ≤9 days, so we
-    // don't keep nagging old leads forever) AND have no interview activity
-    // logged yet AND haven't already received a booking_reminder.
+    // Fires once for repreneurs who applied >5 days ago AND have no interview
+    // activity logged yet AND haven't already received a booking_reminder.
+    // Cap at 30 days so stale leads are handled by the reactivation flow below
+    // rather than receiving a surprise old booking nudge.
     let bookingSent = 0
     const bookingErrors: string[] = []
     try {
       const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
-      const nineDaysAgo = new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000)
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
       const { data: candidates } = await supabase
         .from("repreneurs")
         .select("id, first_name, last_name, email, lifecycle_status, created_at, marketing_consent")
         .eq("lifecycle_status", "lead")
-        .gte("created_at", nineDaysAgo.toISOString())
+        .gt("created_at", thirtyDaysAgo.toISOString())
         .lte("created_at", fiveDaysAgo.toISOString())
 
       // Pre-load any interview activities for these repreneurs in one query.
