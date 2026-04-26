@@ -21,6 +21,7 @@ export type EmailTemplateKey =
   | "offer_activated"
   | "rejection"
   | "interview_reminder"
+  | "booking_reminder"
 
 export interface EmailTemplate {
   id: string

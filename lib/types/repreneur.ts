@@ -1,4 +1,4 @@
-export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected" | "declined"
+export type LifecycleStatus = "lead" | "qualified" | "client" | "rejected" | "declined" | "to_reactivate"
 
 // Decline reason categories (when repreneur declines Re-New's offer)
 export type DeclineReasonCategory =

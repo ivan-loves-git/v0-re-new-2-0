@@ -51,12 +51,13 @@ interface GroupSortState {
   direction: SortDirection
 }
 
-const STATUS_ORDER: LifecycleStatus[] = ["lead", "qualified", "client", "declined", "rejected"]
+const STATUS_ORDER: LifecycleStatus[] = ["lead", "qualified", "client", "to_reactivate", "declined", "rejected"]
 
 const STATUS_LABELS: Record<LifecycleStatus, string> = {
   lead: "Leads",
   qualified: "Qualified",
   client: "Clients",
+  to_reactivate: "To be reactivated",
   declined: "Declined",
   rejected: "Rejected",
 }
@@ -65,6 +66,7 @@ const STATUS_COLORS: Record<LifecycleStatus, string> = {
   lead: "bg-blue-50 border-blue-200",
   qualified: "bg-yellow-50 border-yellow-200",
   client: "bg-green-50 border-green-200",
+  to_reactivate: "bg-amber-50 border-amber-200",
   declined: "bg-gray-50 border-gray-200",
   rejected: "bg-red-50 border-red-200",
 }
@@ -230,6 +232,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     lead: { ...DEFAULT_GROUP_SORT },
     qualified: { ...DEFAULT_GROUP_SORT },
     client: { ...DEFAULT_GROUP_SORT },
+    to_reactivate: { ...DEFAULT_GROUP_SORT },
     declined: { ...DEFAULT_GROUP_SORT },
     rejected: { ...DEFAULT_GROUP_SORT },
   })
@@ -244,6 +247,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     lead: 1,
     qualified: 1,
     client: 1,
+    to_reactivate: 1,
     declined: 1,
     rejected: 1,
   })
@@ -269,7 +273,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     setPersonaFilter("all")
     setRecommendationFilter("")
     setInterviewFilter("all")
-    setGroupPages({ lead: 1, qualified: 1, client: 1, declined: 1, rejected: 1 })
+    setGroupPages({ lead: 1, qualified: 1, client: 1, to_reactivate: 1, declined: 1, rejected: 1 })
   }
 
   const filtered = repreneurs.filter((r) => {
@@ -315,10 +319,11 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
 
   useImperativeHandle(ref, () => ({
     triggerExport: async () => {
-      const { interviewCounts, offerData } = await getExportEnrichmentData()
+      const { interviewCounts, interviewBooked, offerData } = await getExportEnrichmentData()
       const enriched: EnrichedRepreneur[] = filtered.map(r => ({
         ...r,
         interview_count: interviewCounts[r.id] || 0,
+        interview_booked: interviewBooked[r.id] ? "Yes" : "No",
         offer_names: offerData[r.id]?.names || "",
         offer_status: offerData[r.id]?.status || "",
         decline_reason: r.decline_reason_category
@@ -377,6 +382,11 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
               comparison = aDate - bDate
               break
             }
+            case "to_reactivate": {
+              // Sort by created_at descending so the most recently flipped show first.
+              comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              break
+            }
           }
           break
       }
@@ -424,7 +434,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   // Reset pages when search changes
   const handleSearchChange = (value: string) => {
     setSearch(value)
-    setGroupPages({ lead: 1, qualified: 1, client: 1, declined: 1, rejected: 1 })
+    setGroupPages({ lead: 1, qualified: 1, client: 1, to_reactivate: 1, declined: 1, rejected: 1 })
   }
 
   // Global sort for flat view
@@ -491,6 +501,8 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
               : "Unknown"}
           </span>
         )
+      case "to_reactivate":
+        return <ScoreDisplay repreneur={repreneur} />
       default:
         return null
     }
@@ -504,6 +516,8 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
         return "Assessment"
       case "client":
         return "Offers"
+      case "to_reactivate":
+        return "Rating"
       case "declined":
         return "Declined Date"
       case "rejected":
@@ -537,6 +551,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
         <SelectItem value="lead">Lead</SelectItem>
         <SelectItem value="qualified">Qualified</SelectItem>
         <SelectItem value="client">Client</SelectItem>
+        <SelectItem value="to_reactivate">To be reactivated</SelectItem>
         <SelectItem value="declined">Declined</SelectItem>
         <SelectItem value="rejected">Rejected</SelectItem>
               </SelectGroup>
@@ -645,6 +660,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
         <SelectItem value="lead">Lead</SelectItem>
         <SelectItem value="qualified">Qualified</SelectItem>
         <SelectItem value="client">Client</SelectItem>
+        <SelectItem value="to_reactivate">To be reactivated</SelectItem>
         <SelectItem value="declined">Declined</SelectItem>
         <SelectItem value="rejected">Rejected</SelectItem>
             </SelectGroup>

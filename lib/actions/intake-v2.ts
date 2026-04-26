@@ -3,6 +3,8 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { calculateDualScore } from "@/lib/utils/scoring-v2"
+import { sendEmail } from "@/lib/email"
+import { WelcomeEmail } from "@/lib/email/templates/welcome"
 import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
 
@@ -132,7 +134,25 @@ export async function submitIntakeV2(
     revalidatePath("/pipeline")
     revalidatePath("/dashboard")
 
-    // TODO: Send welcome email (will be added in Sprint 5)
+    // Send the welcome email. Transactional (no consent gate). Failure here
+    // must not block the submission flow — log and continue.
+    sendEmail({
+      to: record.email,
+      subject: "Bienvenue chez Re-New !",
+      repreneurId: repreneur.id,
+      templateKey: "welcome",
+      react: WelcomeEmail({
+        repreneur: {
+          id: repreneur.id,
+          firstName: record.first_name,
+          lastName: record.last_name,
+          email: record.email,
+        },
+      }),
+    }).catch((err) => {
+      console.error("Welcome email failed for", record.email, err)
+    })
+
     // TODO: Send high score alert if recommendation is deal_flow or priority_interview
 
     return {

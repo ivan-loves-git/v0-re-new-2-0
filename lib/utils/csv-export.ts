@@ -2,6 +2,8 @@ import type { Repreneur } from "@/lib/types/repreneur"
 
 export interface EnrichedRepreneur extends Repreneur {
   interview_count?: number
+  /** "Yes" / "No" — set true when at least one interview activity has a future event_date. */
+  interview_booked?: string
   offer_names?: string
   offer_status?: string
   decline_reason?: string
@@ -18,6 +20,7 @@ const HEADERS: { key: keyof EnrichedRepreneur; label: string }[] = [
   { key: "who_score", label: "who_score" },
   { key: "when_score", label: "when_score" },
   { key: "interview_count", label: "interview_count" },
+  { key: "interview_booked", label: "interview_booked" },
   { key: "offer_names", label: "offer_names" },
   { key: "offer_status", label: "offer_status" },
   { key: "decline_reason", label: "decline_reason" },

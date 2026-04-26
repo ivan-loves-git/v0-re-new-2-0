@@ -547,19 +547,25 @@ export async function undeclineRepreneur(id: string) {
  */
 export async function getExportEnrichmentData(): Promise<{
   interviewCounts: Record<string, number>
+  interviewBooked: Record<string, boolean>
   offerData: Record<string, { names: string; status: string }>
 }> {
   const supabase = createAdminClient()
+  const nowIso = new Date().toISOString()
 
-  // Interview counts by repreneur
+  // Interview counts (all-time) and "interview booked" flag (any future event_date).
   const { data: activities } = await supabase
     .from("activities")
-    .select("repreneur_id, activity_type")
+    .select("repreneur_id, activity_type, event_date")
     .eq("activity_type", "interview")
 
   const interviewCounts: Record<string, number> = {}
+  const interviewBooked: Record<string, boolean> = {}
   for (const a of activities || []) {
     interviewCounts[a.repreneur_id] = (interviewCounts[a.repreneur_id] || 0) + 1
+    if (a.event_date && a.event_date >= nowIso) {
+      interviewBooked[a.repreneur_id] = true
+    }
   }
 
   // Offer data by repreneur
@@ -579,7 +585,7 @@ export async function getExportEnrichmentData(): Promise<{
     }
   }
 
-  return { interviewCounts, offerData }
+  return { interviewCounts, interviewBooked, offerData }
 }
 
 /**

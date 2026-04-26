@@ -29,6 +29,7 @@ const COLUMNS: { status: LifecycleStatus; title: string; color: string; bgColor:
   { status: "lead", title: "Leads", color: "bg-blue-100", bgColor: "bg-blue-50/50" },
   { status: "qualified", title: "Qualified", color: "bg-yellow-100", bgColor: "bg-yellow-50/50" },
   { status: "client", title: "Clients", color: "bg-green-100", bgColor: "bg-green-50/50" },
+  { status: "to_reactivate", title: "To be reactivated", color: "bg-amber-100", bgColor: "bg-amber-50/50" },
   { status: "declined", title: "Declined", color: "bg-gray-100", bgColor: "bg-gray-50/50" },
   { status: "rejected", title: "Rejected", color: "bg-red-100", bgColor: "bg-red-50/50" },
 ]

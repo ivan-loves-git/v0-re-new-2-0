@@ -12,6 +12,10 @@ import { LanguageToggle } from '@/components/intake-v2/language-toggle'
 export default function IntakeSuccessPage() {
   const { language } = useLanguage()
 
+  // Site URL is locale-aware: French applicants land on /fr (the marketing site
+  // serves an English version by default), English applicants stay on the root.
+  const siteUrl = language === 'fr' ? 'https://re-new.team/fr' : 'https://re-new.team'
+
   const content = language === 'fr' ? {
     title: 'Merci pour votre candidature !',
     subtitle: 'Nous avons bien reçu votre dossier et nous l\'étudions avec attention.',
@@ -95,7 +99,7 @@ export default function IntakeSuccessPage() {
             </p>
 
             <Button asChild>
-              <Link href="https://re-new.team" target="_blank">
+              <Link href={siteUrl} target="_blank">
                 {content.visitSite}
                 <ArrowRight className="size-4 ml-2" />
               </Link>

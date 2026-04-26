@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail, wasEmailSent } from "@/lib/email"
 import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
+import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
 
 // Vercel Cron: runs every hour
 // cron: 0 * * * *
@@ -197,13 +198,117 @@ export async function GET(request: Request) {
       interviewErrors.push(String(err))
     }
 
+    // === Third job on the same cron: Day-5 booking reminders ===
+    // Fires once for repreneurs who applied >5 days ago (and ≤9 days, so we
+    // don't keep nagging old leads forever) AND have no interview activity
+    // logged yet AND haven't already received a booking_reminder.
+    let bookingSent = 0
+    const bookingErrors: string[] = []
+    try {
+      const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
+      const nineDaysAgo = new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000)
+
+      const { data: candidates } = await supabase
+        .from("repreneurs")
+        .select("id, first_name, last_name, email, lifecycle_status, created_at, marketing_consent")
+        .eq("lifecycle_status", "lead")
+        .gte("created_at", nineDaysAgo.toISOString())
+        .lte("created_at", fiveDaysAgo.toISOString())
+
+      // Pre-load any interview activities for these repreneurs in one query.
+      const candidateIds = (candidates || []).map((c) => c.id)
+      let withInterview = new Set<string>()
+      if (candidateIds.length > 0) {
+        const { data: existingInterviews } = await supabase
+          .from("activities")
+          .select("repreneur_id")
+          .eq("activity_type", "interview")
+          .in("repreneur_id", candidateIds)
+        withInterview = new Set((existingInterviews || []).map((a) => a.repreneur_id))
+      }
+
+      for (const c of candidates || []) {
+        if (withInterview.has(c.id)) continue
+        if (!c.email) continue
+
+        // Dedupe: never send a booking_reminder twice (regardless of how long ago).
+        const alreadySent = await wasEmailSent(c.id, "booking_reminder")
+        if (alreadySent) continue
+
+        try {
+          const result = await sendEmail({
+            to: c.email,
+            subject: "Planifions un premier échange Re-New",
+            repreneurId: c.id,
+            templateKey: "booking_reminder",
+            bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
+            react: BookingReminderEmail({
+              repreneur: {
+                id: c.id,
+                firstName: c.first_name,
+                lastName: c.last_name,
+                email: c.email,
+              },
+            }),
+          })
+          if (result.success) bookingSent++
+        } catch (err) {
+          bookingErrors.push(`Booking reminder to ${c.email}: ${err}`)
+        }
+      }
+    } catch (err) {
+      console.error("Booking reminder sub-job failed:", err)
+      bookingErrors.push(String(err))
+    }
+
+    // === Fourth job: auto-shift stale Leads to "to_reactivate" ===
+    // Leads with no interview activity at all and created >30 days ago move
+    // to a separate group so they stop polluting Bertrand's top funnel view.
+    let staleShifted = 0
+    const staleErrors: string[] = []
+    try {
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+      const { data: staleCandidates } = await supabase
+        .from("repreneurs")
+        .select("id")
+        .eq("lifecycle_status", "lead")
+        .lte("created_at", thirtyDaysAgo)
+
+      const candidateIds = (staleCandidates || []).map((r) => r.id)
+      if (candidateIds.length > 0) {
+        const { data: withInterview } = await supabase
+          .from("activities")
+          .select("repreneur_id")
+          .eq("activity_type", "interview")
+          .in("repreneur_id", candidateIds)
+        const skip = new Set((withInterview || []).map((a) => a.repreneur_id))
+        const toShift = candidateIds.filter((id) => !skip.has(id))
+        if (toShift.length > 0) {
+          const { error: shiftError } = await supabase
+            .from("repreneurs")
+            .update({ lifecycle_status: "to_reactivate" })
+            .in("id", toShift)
+          if (shiftError) {
+            staleErrors.push(`Stale-lead shift: ${shiftError.message}`)
+          } else {
+            staleShifted = toShift.length
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Stale-lead shift sub-job failed:", err)
+      staleErrors.push(String(err))
+    }
+
+    const allErrors = [...errors, ...interviewErrors, ...bookingErrors, ...staleErrors]
     return NextResponse.json({
-      message: `Processed ${abandonedForms?.length ?? 0} abandoned forms; interview reminders sent: ${interviewSent}`,
+      message: `abandoned: ${sentCount}; interview reminders: ${interviewSent}; booking reminders: ${bookingSent}; stale leads shifted: ${staleShifted}`,
       sent: sentCount,
       interviewSent,
-      errors: errors.length + interviewErrors.length > 0
-        ? [...errors, ...interviewErrors]
-        : undefined,
+      bookingSent,
+      staleShifted,
+      errors: allErrors.length > 0 ? allErrors : undefined,
     })
   } catch (err) {
     console.error("Cron job error:", err)

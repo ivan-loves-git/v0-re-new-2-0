@@ -12,6 +12,7 @@ export { OfferAcceptedEmail } from "./offer-accepted"
 export { OfferActivatedEmail } from "./offer-activated"
 export { RejectionEmail } from "./rejection"
 export { InterviewReminderEmail } from "./interview-reminder"
+export { BookingReminderEmail } from "./booking-reminder"
 
 import type { EmailTemplateKey } from "@/lib/types/email"
 
@@ -78,5 +79,10 @@ export const TEMPLATE_METADATA: Record<
     name: "Interview Reminder",
     description: "Sent 24h before a scheduled interview",
     category: "status",
+  },
+  booking_reminder: {
+    name: "Booking Reminder",
+    description: "Sent once after 5 days if no interview is booked",
+    category: "intake",
   },
 }
