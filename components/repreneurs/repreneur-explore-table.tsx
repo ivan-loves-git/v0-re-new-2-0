@@ -222,10 +222,11 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
 
   useImperativeHandle(ref, () => ({
     triggerExport: async () => {
-      const { interviewCounts, offerData } = await getExportEnrichmentData()
+      const { interviewCounts, interviewBooked, offerData } = await getExportEnrichmentData()
       const enriched: EnrichedRepreneur[] = sorted.map(r => ({
         ...r,
         interview_count: interviewCounts[r.id] || 0,
+        interview_booked: interviewBooked[r.id] ? "Yes" : "No",
         offer_names: offerData[r.id]?.names || "",
         offer_status: offerData[r.id]?.status || "",
         decline_reason: r.decline_reason_category
