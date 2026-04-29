@@ -181,7 +181,8 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       return { success: false, error: "Daily email limit reached" }
     }
 
-    // 4. Create email log (pending)
+    // 4. Create email log (pending). If this fails, send anyway —
+    // observability is a nice-to-have, delivery is the contract.
     const emailLogId = await logEmail({
       repreneur_id: repreneurId,
       template_key: templateKey,
@@ -192,7 +193,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
     })
 
     if (!emailLogId) {
-      return { success: false, error: "Failed to create email log" }
+      console.warn(`[sendEmail] log insert failed for ${templateKey} → ${to}; sending anyway.`)
     }
 
     // 5. Send email via Resend
@@ -205,26 +206,30 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
     })
 
     if (error) {
-      await updateEmailLogStatus(emailLogId, {
-        status: "failed",
-        error_message: error.message,
-      })
-      return { success: false, emailLogId, error: error.message }
+      if (emailLogId) {
+        await updateEmailLogStatus(emailLogId, {
+          status: "failed",
+          error_message: error.message,
+        })
+      }
+      return { success: false, emailLogId: emailLogId ?? undefined, error: error.message }
     }
 
-    // 6. Update log with success
-    await updateEmailLogStatus(emailLogId, {
-      status: "sent",
-      resend_id: data?.id,
-      sent_at: new Date().toISOString(),
-    })
+    // 6. Update log with success (best-effort)
+    if (emailLogId) {
+      await updateEmailLogStatus(emailLogId, {
+        status: "sent",
+        resend_id: data?.id,
+        sent_at: new Date().toISOString(),
+      })
+    }
 
     // 7. Increment daily counter
     await incrementDailyCount()
 
     return {
       success: true,
-      emailLogId,
+      emailLogId: emailLogId ?? undefined,
       resendId: data?.id,
     }
   } catch (err) {

@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail } from "@/lib/email"
 import { revalidatePath } from "next/cache"
+import { render } from "@react-email/render"
 import type { EmailTemplateKey } from "@/lib/types/email"
 
 // Import all email templates
@@ -16,6 +17,8 @@ import { MilestoneCompletedEmail } from "@/lib/email/templates/milestone-complet
 import { OfferAcceptedEmail } from "@/lib/email/templates/offer-accepted"
 import { OfferActivatedEmail } from "@/lib/email/templates/offer-activated"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
+import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
+import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
 
 export interface EmailStats {
   totalSent: number
@@ -191,7 +194,7 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
  */
 export async function updateTemplateSettings(
   templateKey: EmailTemplateKey,
-  settings: { subject_override?: string; preview_text?: string }
+  settings: { subject?: string; preview_text?: string }
 ) {
   const supabase = createAdminClient()
 
@@ -205,6 +208,119 @@ export async function updateTemplateSettings(
   }
 
   revalidatePath("/emails")
+}
+
+/**
+ * Resolve the subject line for a template at send time.
+ * Reads from email_templates.subject in the DB, falling back to the
+ * hardcoded value if the DB lookup fails.
+ */
+export async function getTemplateSubject(
+  templateKey: EmailTemplateKey,
+  fallback: string,
+): Promise<string> {
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from("email_templates")
+      .select("subject")
+      .eq("template_key", templateKey)
+      .single()
+    return (data?.subject?.trim()) || fallback
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Render an email template to HTML for in-app preview.
+ * Uses sample data so the preview is realistic without targeting a real repreneur.
+ */
+export async function getRenderedTemplate(
+  templateKey: EmailTemplateKey,
+): Promise<{ subject: string; html: string }> {
+  const supabase = createAdminClient()
+  const { data: row } = await supabase
+    .from("email_templates")
+    .select("subject")
+    .eq("template_key", templateKey)
+    .single()
+  const subject = row?.subject || ""
+
+  const sampleRepreneur = {
+    id: "preview",
+    firstName: "Sophie",
+    lastName: "Martin",
+    email: "sophie.martin@example.com",
+  }
+  let element: React.ReactElement
+  switch (templateKey) {
+    case "welcome":
+      element = WelcomeEmail({ repreneur: sampleRepreneur })
+      break
+    case "form_step_complete":
+      element = FormStepCompleteEmail({ repreneur: sampleRepreneur, metadata: { stepCompleted: 2 } })
+      break
+    case "abandoned_reminder":
+      element = AbandonedReminderEmail({
+        repreneur: sampleRepreneur,
+        metadata: { lastStep: 2, totalSteps: 4, daysAgo: 2 },
+      })
+      break
+    case "thank_you":
+      element = ThankYouEmail({
+        repreneur: sampleRepreneur,
+        metadata: { whoScore: 85, whenScore: 70, recommendation: "interview" },
+      })
+      break
+    case "high_score_alert":
+      element = HighScoreAlertEmail({
+        repreneur: sampleRepreneur,
+        metadata: { whoScore: 85, whenScore: 70, recommendation: "interview" },
+      })
+      break
+    case "offer_received":
+      element = OfferReceivedEmail({
+        repreneur: sampleRepreneur,
+        metadata: { offerName: "Starter Pack", offerPrice: 2500 },
+      })
+      break
+    case "milestone_completed":
+      element = MilestoneCompletedEmail({
+        repreneur: sampleRepreneur,
+        metadata: { milestoneTitle: "Profile Complete", offerName: "Starter Pack" },
+      })
+      break
+    case "offer_accepted":
+      element = OfferAcceptedEmail({
+        repreneur: sampleRepreneur,
+        metadata: { offerName: "Starter Pack" },
+      })
+      break
+    case "offer_activated":
+      element = OfferActivatedEmail({
+        repreneur: sampleRepreneur,
+        metadata: { offerName: "Starter Pack", startDate: new Date().toISOString() },
+      })
+      break
+    case "rejection":
+      element = RejectionEmail({ repreneur: sampleRepreneur })
+      break
+    case "interview_reminder":
+      element = InterviewReminderEmail({
+        repreneur: sampleRepreneur,
+        metadata: { interviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
+      })
+      break
+    case "booking_reminder":
+      element = BookingReminderEmail({ repreneur: sampleRepreneur })
+      break
+    default:
+      throw new Error(`Unknown template: ${templateKey}`)
+  }
+
+  const html = await render(element)
+  return { subject, html }
 }
 
 /**

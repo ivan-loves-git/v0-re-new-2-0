@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail, wasEmailSent } from "@/lib/email"
+import { getTemplateSubject } from "@/lib/actions/emails"
 import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
@@ -16,11 +17,22 @@ const MAX_REMINDERS_PER_REPRENEUR = 2
 const INTERVIEW_REMINDER_BCC = process.env.CC_ON_INTERVIEW_REMINDER || "bertrand.galas@edu.escp.eu"
 
 export async function GET(request: Request) {
-  // Verify the request is from Vercel Cron
+  // Verify the request is from Vercel Cron.
+  // Primary: bearer token matching CRON_SECRET (Vercel auto-injects this when
+  // the env var is set on the project). Fallback: Vercel auto-stamps every
+  // cron request with a "vercel-cron/1.0" user-agent — accept that too so
+  // the cron still runs if CRON_SECRET is missing on prod (otherwise the job
+  // silently fails for days).
   const authHeader = request.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const userAgent = request.headers.get("user-agent") || ""
+  const secret = process.env.CRON_SECRET
+  const bearerOk = !!secret && authHeader === `Bearer ${secret}`
+  const vercelCronOk = userAgent.toLowerCase().includes("vercel-cron")
+  if (!bearerOk && !vercelCronOk) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  console.log(`[cron/abandoned-forms] firing — auth=${bearerOk ? "bearer" : "vercel-cron"} ua="${userAgent}"`)
 
   try {
     const supabase = createAdminClient()
@@ -92,9 +104,10 @@ export async function GET(request: Request) {
         const lastActivity = new Date(form.last_activity_at || now)
         const daysAgo = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
 
+        const abandonedSubject = await getTemplateSubject("abandoned_reminder", "Reprenez votre inscription Re-New")
         await sendEmail({
           to: repreneur.email,
-          subject: "Reprenez votre inscription Re-New",
+          subject: abandonedSubject,
           repreneurId: repreneur.id,
           templateKey: "abandoned_reminder",
           requiresConsent: true,
@@ -169,9 +182,10 @@ export async function GET(request: Request) {
         if (alreadySent) continue
 
         try {
+          const interviewSubject = await getTemplateSubject("interview_reminder", "Rappel : votre entretien Re-New demain")
           const result = await sendEmail({
             to: rep.email,
-            subject: "Rappel : votre entretien Re-New demain",
+            subject: interviewSubject,
             repreneurId: rep.id,
             templateKey: "interview_reminder",
             bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
@@ -237,9 +251,10 @@ export async function GET(request: Request) {
         if (alreadySent) continue
 
         try {
+          const bookingSubject = await getTemplateSubject("booking_reminder", "Planifions un premier échange Re-New")
           const result = await sendEmail({
             to: c.email,
-            subject: "Planifions un premier échange Re-New",
+            subject: bookingSubject,
             repreneurId: c.id,
             templateKey: "booking_reminder",
             bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,

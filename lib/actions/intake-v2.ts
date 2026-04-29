@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { calculateDualScore } from "@/lib/utils/scoring-v2"
 import { sendEmail } from "@/lib/email"
+import { getTemplateSubject } from "@/lib/actions/emails"
 import { WelcomeEmail } from "@/lib/email/templates/welcome"
 import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
@@ -136,9 +137,10 @@ export async function submitIntakeV2(
 
     // Send the welcome email. Transactional (no consent gate). Failure here
     // must not block the submission flow — log and continue.
+    const welcomeSubject = await getTemplateSubject("welcome", "Bienvenue chez Re-New !")
     sendEmail({
       to: record.email,
-      subject: "Bienvenue chez Re-New !",
+      subject: welcomeSubject,
       repreneurId: repreneur.id,
       templateKey: "welcome",
       react: WelcomeEmail({
