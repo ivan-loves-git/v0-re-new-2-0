@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,9 @@ interface PreviewState {
   templateName: string
   subject: string
   initialSubject: string
+  body: string
+  initialBody: string
+  bodyEditable: boolean
   html: string | null
   loading: boolean
   saving: boolean
@@ -77,6 +81,9 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       templateName: name,
       subject: "",
       initialSubject: "",
+      body: "",
+      initialBody: "",
+      bodyEditable: false,
       html: null,
       loading: true,
       saving: false,
@@ -84,10 +91,19 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       saved: false,
     })
     try {
-      const { subject, html } = await getRenderedTemplate(key as EmailTemplateKey)
+      const { subject, html, bodyMarkdown, bodyEditable } = await getRenderedTemplate(key as EmailTemplateKey)
       setPreview((prev) =>
         prev && prev.templateKey === key
-          ? { ...prev, subject, initialSubject: subject, html, loading: false }
+          ? {
+              ...prev,
+              subject,
+              initialSubject: subject,
+              body: bodyMarkdown ?? "",
+              initialBody: bodyMarkdown ?? "",
+              bodyEditable,
+              html,
+              loading: false,
+            }
           : prev,
       )
     } catch (err) {
@@ -99,12 +115,30 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
     }
   }
 
-  const saveSubject = async () => {
+  const saveTemplate = async () => {
     if (!preview) return
     setPreview({ ...preview, saving: true, saved: false, error: null })
     try {
-      await updateTemplateSettings(preview.templateKey, { subject: preview.subject })
-      setPreview((prev) => (prev ? { ...prev, saving: false, saved: true, initialSubject: prev.subject } : prev))
+      const updates: { subject?: string; body_markdown?: string } = {}
+      if (preview.subject !== preview.initialSubject) updates.subject = preview.subject
+      if (preview.bodyEditable && preview.body !== preview.initialBody) updates.body_markdown = preview.body
+      if (Object.keys(updates).length > 0) {
+        await updateTemplateSettings(preview.templateKey, updates)
+      }
+      // Re-render the preview with the new body so the iframe matches what was saved
+      const { html } = await getRenderedTemplate(preview.templateKey)
+      setPreview((prev) =>
+        prev
+          ? {
+              ...prev,
+              saving: false,
+              saved: true,
+              initialSubject: prev.subject,
+              initialBody: prev.body,
+              html,
+            }
+          : prev,
+      )
     } catch (err) {
       setPreview((prev) =>
         prev ? { ...prev, saving: false, error: err instanceof Error ? err.message : "Save failed" } : prev,
@@ -190,13 +224,14 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
           <DialogHeader>
             <DialogTitle>{preview?.templateName ?? ""}</DialogTitle>
             <DialogDescription>
-              Aperçu avec données fictives. Vous pouvez modifier le sujet — le corps du message
-              est défini dans le code et nécessite une intervention dev pour changer.
+              {preview?.bodyEditable
+                ? "Sujet et corps du message modifiables. L'aperçu utilise des données fictives. Utilisez {firstName} pour insérer le prénom du destinataire."
+                : "Aperçu avec données fictives. Sujet modifiable. Le corps de ce template est défini dans le code (variables dynamiques)."}
             </DialogDescription>
           </DialogHeader>
 
           {preview && (
-            <>
+            <div className="flex-1 overflow-auto space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="subject">Sujet</Label>
                 <Input
@@ -207,17 +242,37 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                   }
                   disabled={preview.loading || preview.saving}
                 />
-                {preview.saved && (
-                  <p className="text-xs text-green-600">Sujet enregistré.</p>
-                )}
-                {preview.error && (
-                  <p className="text-xs text-red-600">{preview.error}</p>
-                )}
               </div>
 
-              <div className="space-y-2 flex-1 overflow-hidden flex flex-col">
+              {preview.bodyEditable && (
+                <div className="space-y-2">
+                  <Label htmlFor="body">Corps du message</Label>
+                  <Textarea
+                    id="body"
+                    rows={10}
+                    value={preview.body}
+                    onChange={(e) =>
+                      setPreview({ ...preview, body: e.target.value, saved: false, error: null })
+                    }
+                    disabled={preview.loading || preview.saving}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Une ligne vide sépare les paragraphes. Les variables disponibles sont indiquées dans le texte ({"{firstName}"}).
+                  </p>
+                </div>
+              )}
+
+              {preview.saved && (
+                <p className="text-xs text-green-600">Modifications enregistrées.</p>
+              )}
+              {preview.error && (
+                <p className="text-xs text-red-600">{preview.error}</p>
+              )}
+
+              <div className="space-y-2">
                 <Label>Aperçu</Label>
-                <div className="border rounded-md overflow-auto flex-1 bg-white">
+                <div className="border rounded-md overflow-auto bg-white">
                   {preview.loading ? (
                     <div className="flex items-center justify-center h-64 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin mr-2" /> Chargement…
@@ -234,25 +289,28 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                   )}
                 </div>
               </div>
+            </div>
+          )}
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setPreview(null)}>
-                  Fermer
-                </Button>
-                <Button
-                  onClick={saveSubject}
-                  disabled={
-                    preview.loading ||
-                    preview.saving ||
-                    preview.subject.trim() === "" ||
-                    preview.subject === preview.initialSubject
-                  }
-                >
-                  {preview.saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Enregistrer le sujet
-                </Button>
-              </DialogFooter>
-            </>
+          {preview && (
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPreview(null)}>
+                Fermer
+              </Button>
+              <Button
+                onClick={saveTemplate}
+                disabled={
+                  preview.loading ||
+                  preview.saving ||
+                  preview.subject.trim() === "" ||
+                  (preview.subject === preview.initialSubject &&
+                    (!preview.bodyEditable || preview.body === preview.initialBody))
+                }
+              >
+                {preview.saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Enregistrer
+              </Button>
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>

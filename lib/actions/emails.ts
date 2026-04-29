@@ -190,11 +190,12 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
 }
 
 /**
- * Update template subject/preview text
+ * Update template settings (subject and/or body_markdown).
+ * Only fields that are explicitly passed are updated.
  */
 export async function updateTemplateSettings(
   templateKey: EmailTemplateKey,
-  settings: { subject?: string; preview_text?: string }
+  settings: { subject?: string; preview_text?: string; body_markdown?: string }
 ) {
   const supabase = createAdminClient()
 
@@ -208,6 +209,26 @@ export async function updateTemplateSettings(
   }
 
   revalidatePath("/emails")
+}
+
+/**
+ * Fetch the editable body markdown for a template at send time.
+ * Returns null if the template is not body-editable or has no body set.
+ */
+export async function getTemplateBody(templateKey: EmailTemplateKey): Promise<string | null> {
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from("email_templates")
+      .select("body_markdown, body_editable")
+      .eq("template_key", templateKey)
+      .single()
+    if (!data?.body_editable) return null
+    const body = (data?.body_markdown ?? "").trim()
+    return body || null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -238,14 +259,17 @@ export async function getTemplateSubject(
  */
 export async function getRenderedTemplate(
   templateKey: EmailTemplateKey,
-): Promise<{ subject: string; html: string }> {
+): Promise<{ subject: string; html: string; bodyMarkdown: string | null; bodyEditable: boolean }> {
   const supabase = createAdminClient()
   const { data: row } = await supabase
     .from("email_templates")
-    .select("subject")
+    .select("subject, body_markdown, body_editable")
     .eq("template_key", templateKey)
     .single()
   const subject = row?.subject || ""
+  const bodyEditable = !!row?.body_editable
+  const bodyMarkdown: string | null = bodyEditable && row?.body_markdown ? row.body_markdown : null
+  const bodyOverride = bodyMarkdown ?? undefined
 
   const sampleRepreneur = {
     id: "preview",
@@ -256,7 +280,7 @@ export async function getRenderedTemplate(
   let element: React.ReactElement
   switch (templateKey) {
     case "welcome":
-      element = WelcomeEmail({ repreneur: sampleRepreneur })
+      element = WelcomeEmail({ repreneur: sampleRepreneur, bodyOverride })
       break
     case "form_step_complete":
       element = FormStepCompleteEmail({ repreneur: sampleRepreneur, metadata: { stepCompleted: 2 } })
@@ -313,14 +337,14 @@ export async function getRenderedTemplate(
       })
       break
     case "booking_reminder":
-      element = BookingReminderEmail({ repreneur: sampleRepreneur })
+      element = BookingReminderEmail({ repreneur: sampleRepreneur, bodyOverride })
       break
     default:
       throw new Error(`Unknown template: ${templateKey}`)
   }
 
   const html = await render(element)
-  return { subject, html }
+  return { subject, html, bodyMarkdown, bodyEditable }
 }
 
 /**

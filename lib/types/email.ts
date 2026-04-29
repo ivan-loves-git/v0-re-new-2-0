@@ -98,6 +98,12 @@ export interface EmailTemplateProps {
   }
   metadata?: Record<string, unknown>
   previewText?: string
+  /**
+   * Optional markdown body that overrides the hardcoded JSX content.
+   * Set when an admin edits a template's body from the Templates UI.
+   * Templates that opt in to body_editable should render this when present.
+   */
+  bodyOverride?: string | null
 }
 
 // Specific template props

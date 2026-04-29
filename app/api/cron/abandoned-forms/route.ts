@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail, wasEmailSent } from "@/lib/email"
-import { getTemplateSubject } from "@/lib/actions/emails"
+import { getTemplateSubject, getTemplateBody } from "@/lib/actions/emails"
 import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
@@ -252,6 +252,7 @@ export async function GET(request: Request) {
 
         try {
           const bookingSubject = await getTemplateSubject("booking_reminder", "Planifions un premier échange Re-New")
+          const bookingBody = await getTemplateBody("booking_reminder")
           const result = await sendEmail({
             to: c.email,
             subject: bookingSubject,
@@ -265,6 +266,7 @@ export async function GET(request: Request) {
                 lastName: c.last_name,
                 email: c.email,
               },
+              bodyOverride: bookingBody,
             }),
           })
           if (result.success) bookingSent++
