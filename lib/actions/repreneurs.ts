@@ -543,39 +543,63 @@ export async function undeclineRepreneur(id: string) {
 }
 
 /**
- * Fetch enrichment data for CSV export (interview counts, offer info)
+ * Fetch enrichment data for CSV export (interview counts, offer info, event dates).
+ *
+ * Event dates are formatted YYYY-MM-DD so spreadsheets parse them as dates, not strings.
+ * "1st" and "2nd" offer are ordered chronologically by offered_at — there is no
+ * explicit sequence column on repreneur_offers.
  */
 export async function getExportEnrichmentData(): Promise<{
   interviewCounts: Record<string, number>
   interviewBooked: Record<string, boolean>
+  firstInterviewAt: Record<string, string>
   offerData: Record<string, { names: string; status: string }>
+  firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }>
+  secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }>
 }> {
   const supabase = createAdminClient()
   const nowIso = new Date().toISOString()
+  const toDate = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "")
 
-  // Interview counts (all-time) and "interview booked" flag (any future event_date).
+  // Interview counts (all-time), "interview booked" flag (any future event_date),
+  // and earliest interview date (event_date if set, else activity created_at).
   const { data: activities } = await supabase
     .from("activities")
-    .select("repreneur_id, activity_type, event_date")
+    .select("repreneur_id, activity_type, event_date, created_at")
     .eq("activity_type", "interview")
 
   const interviewCounts: Record<string, number> = {}
   const interviewBooked: Record<string, boolean> = {}
+  const firstInterviewIso: Record<string, string> = {}
   for (const a of activities || []) {
     interviewCounts[a.repreneur_id] = (interviewCounts[a.repreneur_id] || 0) + 1
     if (a.event_date && a.event_date >= nowIso) {
       interviewBooked[a.repreneur_id] = true
     }
+    const when = a.event_date || a.created_at
+    if (when) {
+      const prev = firstInterviewIso[a.repreneur_id]
+      if (!prev || when < prev) firstInterviewIso[a.repreneur_id] = when
+    }
+  }
+  const firstInterviewAt: Record<string, string> = {}
+  for (const [id, iso] of Object.entries(firstInterviewIso)) {
+    firstInterviewAt[id] = toDate(iso)
   }
 
-  // Offer data by repreneur
+  // Offer data by repreneur. Order ASC by offered_at so we can pick 1st / 2nd.
   const { data: offers } = await supabase
     .from("repreneur_offers")
-    .select("repreneur_id, status, offer:offers(name)")
+    .select("repreneur_id, status, offered_at, accepted_at, offer:offers(name)")
+    .order("offered_at", { ascending: true })
 
   const offerData: Record<string, { names: string; status: string }> = {}
+  const firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }> = {}
+  const secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }> = {}
+  const seenCount: Record<string, number> = {}
   for (const o of offers || []) {
-    const offerName = (o.offer as { name: string } | null)?.name || "Unknown"
+    const offerRaw = o.offer as { name: string } | { name: string }[] | null
+    const offerName = (Array.isArray(offerRaw) ? offerRaw[0]?.name : offerRaw?.name) || "Unknown"
     const existing = offerData[o.repreneur_id]
     if (existing) {
       existing.names += ` | ${offerName}`
@@ -583,9 +607,15 @@ export async function getExportEnrichmentData(): Promise<{
     } else {
       offerData[o.repreneur_id] = { names: offerName, status: o.status }
     }
+
+    const idx = seenCount[o.repreneur_id] || 0
+    const slot = { offeredAt: toDate(o.offered_at), status: o.status, acceptedAt: toDate(o.accepted_at) }
+    if (idx === 0) firstOffer[o.repreneur_id] = slot
+    else if (idx === 1) secondOffer[o.repreneur_id] = slot
+    seenCount[o.repreneur_id] = idx + 1
   }
 
-  return { interviewCounts, interviewBooked, offerData }
+  return { interviewCounts, interviewBooked, firstInterviewAt, offerData, firstOffer, secondOffer }
 }
 
 /**

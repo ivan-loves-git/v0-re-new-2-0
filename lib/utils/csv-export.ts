@@ -7,6 +7,18 @@ export interface EnrichedRepreneur extends Repreneur {
   offer_names?: string
   offer_status?: string
   decline_reason?: string
+  /** YYYY-MM-DD aliases of repreneurs.created_at for funnel analysis. */
+  first_contact_at?: string
+  /** YYYY-MM-DD — earliest interview activity (event_date, fallback created_at). */
+  first_interview_at?: string
+  /** YYYY-MM-DD — repreneur_offers.offered_at, ordered chronologically. */
+  first_offer_at?: string
+  first_offer_status?: string
+  /** YYYY-MM-DD — repreneur_offers.accepted_at, blank if not accepted. */
+  first_offer_accepted_at?: string
+  second_offer_at?: string
+  second_offer_status?: string
+  second_offer_accepted_at?: string
 }
 
 const HEADERS: { key: keyof EnrichedRepreneur; label: string }[] = [
@@ -25,6 +37,14 @@ const HEADERS: { key: keyof EnrichedRepreneur; label: string }[] = [
   { key: "offer_status", label: "offer_status" },
   { key: "decline_reason", label: "decline_reason" },
   { key: "marketing_consent", label: "marketing_consent" },
+  { key: "first_contact_at", label: "first_contact_at" },
+  { key: "first_interview_at", label: "first_interview_at" },
+  { key: "first_offer_at", label: "first_offer_at" },
+  { key: "first_offer_status", label: "first_offer_status" },
+  { key: "first_offer_accepted_at", label: "first_offer_accepted_at" },
+  { key: "second_offer_at", label: "second_offer_at" },
+  { key: "second_offer_status", label: "second_offer_status" },
+  { key: "second_offer_accepted_at", label: "second_offer_accepted_at" },
   { key: "created_at", label: "created_at" },
 ]
 

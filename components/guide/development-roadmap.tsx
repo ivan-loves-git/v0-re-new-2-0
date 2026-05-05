@@ -8,6 +8,24 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "May 5, 2026",
+    version: "0.9.5",
+    title: "Funnel-analysis dates in CSV export",
+    isCompleted: true,
+    events: [
+      {
+        title: "Event dates added to repreneur export",
+        type: "feature",
+        description: "Find-page CSV now includes first_contact_at, first_interview_at, first_offer_at, second_offer_at, plus offer status and accepted dates. All ISO YYYY-MM-DD so spreadsheets parse them as dates.",
+      },
+      {
+        title: "Conversion-rate analysis unblocked",
+        type: "fix",
+        description: "Previous export only carried created_at plus a boolean — analysts couldn't tell when offers were sent vs accepted. Now they can.",
+      },
+    ],
+  },
+  {
     period: "Apr 23, 2026",
     version: "0.9.4",
     title: "V1 closeout — batch 2 (interview & assessment)",

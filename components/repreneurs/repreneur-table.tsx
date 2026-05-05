@@ -319,7 +319,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
 
   useImperativeHandle(ref, () => ({
     triggerExport: async () => {
-      const { interviewCounts, interviewBooked, offerData } = await getExportEnrichmentData()
+      const { interviewCounts, interviewBooked, firstInterviewAt, offerData, firstOffer, secondOffer } = await getExportEnrichmentData()
       const enriched: EnrichedRepreneur[] = filtered.map(r => ({
         ...r,
         interview_count: interviewCounts[r.id] || 0,
@@ -329,6 +329,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
         decline_reason: r.decline_reason_category
           ? DECLINE_REASON_OPTIONS.find(o => o.value === r.decline_reason_category)?.label || r.decline_reason_category
           : "",
+        first_contact_at: r.created_at ? r.created_at.slice(0, 10) : "",
+        first_interview_at: firstInterviewAt[r.id] || "",
+        first_offer_at: firstOffer[r.id]?.offeredAt || "",
+        first_offer_status: firstOffer[r.id]?.status || "",
+        first_offer_accepted_at: firstOffer[r.id]?.acceptedAt || "",
+        second_offer_at: secondOffer[r.id]?.offeredAt || "",
+        second_offer_status: secondOffer[r.id]?.status || "",
+        second_offer_accepted_at: secondOffer[r.id]?.acceptedAt || "",
       }))
       exportRepreneursToCSV(enriched, "repreneurs.csv")
     },
