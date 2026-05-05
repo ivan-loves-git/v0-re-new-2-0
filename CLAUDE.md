@@ -66,34 +66,9 @@ emba--renew-platform/
 
 To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` to `.env.local` and restart dev server. This shows yellow "Autofill" buttons on each form step for quick testing with dummy data. **Must be off in production** (it is off by default since build 335).
 
-## Task Management (MANDATORY - Tasks Persist Across Sessions)
+## Task Management
 
-**This project uses `CLAUDE_CODE_TASK_LIST_ID=renew-tasks` for persistent task storage.**
-
-**50 existing tasks** from Jan 25 are available and WILL be visible when you run TaskList.
-
-### SESSION START RULES
-1. **Run TaskList FIRST** to see pending work
-2. Read task descriptions for context
-3. Update status to `in_progress` when starting work
-
-### SESSION END RULES
-1. Mark completed tasks with TaskUpdate (status: completed)
-2. Create new tasks for discovered work
-3. Commit changes to preserve git history
-
-### Configuration
-- Environment variable: `CLAUDE_CODE_TASK_LIST_ID=renew-tasks`
-- Configured in: `.claude/settings.local.json`
-- Tasks stored in: `~/.claude/tasks/renew-tasks/`
-
-**Ivan's commands:**
-```
-ctrl+t           → Toggle task panel
-```
-Or just ask: "what tasks are pending?" / "create a task for X"
-
-**Current Progress:** 4/10 phases complete (40%)
+Per-project work → `TASKS.md` in this folder. Cross-session items Ivan is tracking → `/to-COS`. Never use Claude Code's native TaskCreate/TaskList (retired 2026-04-23).
 
 ## Open Questions (Waiting on Bertrand)
 - Notes structure: free text vs structured (call/email/meeting + outcome)
@@ -107,137 +82,30 @@ Or just ask: "what tasks are pending?" / "create a task for X"
 - **Repreneur_Offer:** Junction tracking offer status per repreneur
 - **Note:** Free-text notes with author tracking
 
-## Git Commits: Project Memory
+## Verification
 
-**CRITICAL:** GitHub is the project's memory. Every commit must tell a complete story.
-
-### When to Commit
-- After completing a phase or plan
-- After any meaningful change (even mid-task if significant)
-- Before switching to a different task
-
-### Commit Format
+After code changes:
+```bash
+npm run build && npm run lint
 ```
-<type>: <short description>
+Fix root causes, don't suppress errors.
 
-## What Changed
-- Detailed bullet points of actual changes
+## Git workflow
 
-## Why
-- The reasoning/context behind these changes
+GitHub is the project's memory. Commit format, types, push-immediately rule, browser testing constraints, build-number reporting → `docs/commit-style.md`.
 
-## Files Modified
-- List of files with brief notes
-```
+## Roadmap updates
 
-### Types
-- **feat:** New feature
-- **fix:** Bug fix
-- **refactor:** Code restructuring
-- **style:** Formatting/UI changes
-- **docs:** Documentation
-- **chore:** Build/config changes
+In-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team. When to update, how to update, entry format, founder-friendly language → `docs/roadmap-workflow.md`.
 
-### Rules
-- First line under 72 characters
-- Include enough context that someone reading later understands WHY, not just WHAT
-- NO "Generated with Claude Code" attribution
-- Use `/commit` command for guided process
-- **ALWAYS push immediately after committing** - Ivan prefers commit + push as one action
-- **ALWAYS report build number after push** - Tell Ivan the build number (from `lib/version.ts`) so he knows what version to look for in the deployed app to confirm it's live
+## Wavy — team communications
 
-## Browser Testing Rules
-- **NEVER test animations** - The browser plugin is too slow to capture animations. Always ask Ivan to test animations on his device.
-- Push changes first, then Ivan tests on mobile/actual device
-- Only use browser automation for static content verification or form interactions
+Wavy is the platform's AI mascot for internal team updates. Always test-send to `ivanpaudice@me.com` first; only after Ivan confirms, send to team.
 
-### Why This Matters
-Ivan is non-technical. Months from now, the git history should explain the entire development journey without needing to ask anyone. Each commit should be a self-contained story.
-
-## Roadmap Updates
-
-**The in-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team.**
-
-### When to Update Roadmap
-Proactively add entries after completing:
-- New features (user-facing functionality)
-- Important bug fixes (especially "was broken, now works" fixes)
-- Architecture decisions (why we chose X over Y)
-- Key learnings (gotchas, surprises, things to remember)
-
-### When NOT to Update
-Skip roadmap for:
-- Small fixes, typos, config changes
-- Refactors with no user-visible impact
-- Chores (dependencies, build config)
-
-### How to Update
-1. Edit `components/guide/development-roadmap.tsx` - add new entry at TOP of `roadmapEvents` array
-2. Update `lib/data/roadmap-status.ts` - set `LAST_ROADMAP_UPDATE` to today's date (triggers red dot notification)
-3. Increment version number:
-   - Current: **0.7.0** (~70% to 1.0)
-   - Increment by 0.0.1 for small updates, 0.1.0 for bigger milestones
-   - **1.0.0** = Production launch with real users
-4. Commit with message: `📝 docs(roadmap): add [milestone name]`
-5. **ALWAYS tell Ivan**: "Roadmap updated with [milestone name] (vX.X.X)" so he knows it was done
-
-### Entry Format
-```typescript
-{
-  period: "Jan 12, 2026",
-  version: "0.7.1",
-  title: "Milestone Name",
-  isCompleted: true,
-  events: [
-    { title: "Feature name", type: "feature", description: "What it does" },
-    { title: "Bug fixed", type: "fix", description: "What was broken, now works" },
-    { title: "Decision made", type: "decision", description: "Why we chose this approach" },
-  ],
-}
-```
-
-Event types: `feature`, `fix`, `style`, `refactor`, `decision`, `learning`
-
-## Wavy 🌊 - Team Communications
-
-**Wavy is the platform's AI mascot who sends internal team updates.**
-
-### Before Sending ANY Wavy Communication
-1. **Read** `docs/communications/WAVY.md` - her personality, voice, sign-offs
-2. **Read** `docs/communications/PRODUCT_UPDATE_TEMPLATE.md` - email structure rules
-3. **Check** `docs/emails-sent/` - previous emails for format/style consistency
-4. **Check** `docs/communications/` - WhatsApp history for tone reference
-
-### Workflow (MANDATORY)
-1. **Test first**: Always send to `ivanpaudice@me.com` before anyone else
-2. **Ivan reviews**: Wait for approval
-3. **Then team**: Only after Ivan confirms, send to full team
-
-### Quick Reference
 | Item | Location |
 |------|----------|
-| Wavy personality | `docs/communications/WAVY.md` |
+| Personality + voice | `docs/communications/WAVY.md` |
 | Email template rules | `docs/communications/PRODUCT_UPDATE_TEMPLATE.md` |
-| Sent emails archive | `docs/emails-sent/` |
+| Sent archive | `docs/emails-sent/` |
 | Send script | `scripts/send-roadmap-email.ts` |
 | Team list | `lib/distribution-lists.ts` |
-
-### Send Commands
-```bash
-# Test to Ivan first (ALWAYS DO THIS)
-npx tsx scripts/send-roadmap-email.ts ivanpaudice@me.com Ivan 1
-
-# After Ivan approves, send to team
-npx tsx scripts/send-roadmap-email.ts --team 1
-```
-
-### Wavy's Voice (memorize this)
-- **Witty & self-aware**: Knows she's an AI, jokes about it
-- **Cheeky but professional**: "Try not to miss me too much"
-- **English only**: Never French for internal comms
-- **Sign-off rotation**: Check WAVY.md for options
-
-### Roadmap Language Rule
-Roadmap entries must be **founder-friendly**, not developer jargon:
-- ❌ "QuestionnaireFormV2 now embedded directly in repreneur profile"
-- ✅ "Edit answers directly on profile"
