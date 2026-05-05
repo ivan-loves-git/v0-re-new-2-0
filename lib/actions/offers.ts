@@ -168,6 +168,8 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
       expiresAt.setDate(expiresAt.getDate() + repreneurOffer.offer.duration_days)
       updates.expires_at = expiresAt.toISOString()
     }
+  } else if (newStatus === "declined") {
+    updates.declined_at = new Date().toISOString()
   }
 
   const { error } = await supabase.from("repreneur_offers").update(updates).eq("id", repreneurOfferId)

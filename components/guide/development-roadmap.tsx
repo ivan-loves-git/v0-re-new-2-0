@@ -16,12 +16,17 @@ const roadmapEvents = [
       {
         title: "Event dates added to repreneur export",
         type: "feature",
-        description: "Find-page CSV now includes first_contact_at, first_interview_at, first_offer_at, second_offer_at, plus offer status and accepted dates. All ISO YYYY-MM-DD so spreadsheets parse them as dates.",
+        description: "Find-page CSV now includes first_contact_at, first_interview_at, first_offer_at, second_offer_at, plus per-offer status, accepted_at and declined_at. All ISO YYYY-MM-DD so spreadsheets parse them as dates.",
+      },
+      {
+        title: "Per-offer decline timestamp",
+        type: "feature",
+        description: "New repreneur_offers.declined_at column. Going forward, declining an offer stamps the precise rejection time on that offer (not just on the repreneur). Existing declined offers backfilled best-effort from repreneur.declined_at.",
       },
       {
         title: "Conversion-rate analysis unblocked",
         type: "fix",
-        description: "Previous export only carried created_at plus a boolean — analysts couldn't tell when offers were sent vs accepted. Now they can.",
+        description: "Previous export only carried created_at plus a boolean — analysts couldn't tell when offers were sent, accepted, or rejected. Now they can.",
       },
     ],
   },

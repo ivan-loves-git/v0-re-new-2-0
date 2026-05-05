@@ -554,8 +554,8 @@ export async function getExportEnrichmentData(): Promise<{
   interviewBooked: Record<string, boolean>
   firstInterviewAt: Record<string, string>
   offerData: Record<string, { names: string; status: string }>
-  firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }>
-  secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }>
+  firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }>
+  secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }>
 }> {
   const supabase = createAdminClient()
   const nowIso = new Date().toISOString()
@@ -590,12 +590,12 @@ export async function getExportEnrichmentData(): Promise<{
   // Offer data by repreneur. Order ASC by offered_at so we can pick 1st / 2nd.
   const { data: offers } = await supabase
     .from("repreneur_offers")
-    .select("repreneur_id, status, offered_at, accepted_at, offer:offers(name)")
+    .select("repreneur_id, status, offered_at, accepted_at, declined_at, offer:offers(name)")
     .order("offered_at", { ascending: true })
 
   const offerData: Record<string, { names: string; status: string }> = {}
-  const firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }> = {}
-  const secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string }> = {}
+  const firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }> = {}
+  const secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }> = {}
   const seenCount: Record<string, number> = {}
   for (const o of offers || []) {
     const offerRaw = o.offer as { name: string } | { name: string }[] | null
@@ -609,7 +609,12 @@ export async function getExportEnrichmentData(): Promise<{
     }
 
     const idx = seenCount[o.repreneur_id] || 0
-    const slot = { offeredAt: toDate(o.offered_at), status: o.status, acceptedAt: toDate(o.accepted_at) }
+    const slot = {
+      offeredAt: toDate(o.offered_at),
+      status: o.status,
+      acceptedAt: toDate(o.accepted_at),
+      declinedAt: toDate((o as { declined_at?: string | null }).declined_at),
+    }
     if (idx === 0) firstOffer[o.repreneur_id] = slot
     else if (idx === 1) secondOffer[o.repreneur_id] = slot
     seenCount[o.repreneur_id] = idx + 1

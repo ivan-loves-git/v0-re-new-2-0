@@ -237,9 +237,11 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
         first_offer_at: firstOffer[r.id]?.offeredAt || "",
         first_offer_status: firstOffer[r.id]?.status || "",
         first_offer_accepted_at: firstOffer[r.id]?.acceptedAt || "",
+        first_offer_declined_at: firstOffer[r.id]?.declinedAt || "",
         second_offer_at: secondOffer[r.id]?.offeredAt || "",
         second_offer_status: secondOffer[r.id]?.status || "",
         second_offer_accepted_at: secondOffer[r.id]?.acceptedAt || "",
+        second_offer_declined_at: secondOffer[r.id]?.declinedAt || "",
       }))
       exportRepreneursToCSV(enriched, "repreneurs.csv")
     },
