@@ -1,0 +1,740 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - list:
+              - listitem:
+                - button:
+                  - generic: 🌊
+                  - img
+          - generic:
+            - generic:
+              - generic: Re-New Team
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard
+                      - img
+                      - generic: Dashboard
+                  - listitem:
+                    - link:
+                      - /url: /repreneurs
+                      - img
+                      - generic: Groups
+                  - listitem:
+                    - link:
+                      - /url: /repreneurs/explore
+                      - img
+                      - generic: Find
+                  - listitem:
+                    - link:
+                      - /url: /pipeline
+                      - img
+                      - generic: Pipeline
+                  - listitem:
+                    - link:
+                      - /url: /emails
+                      - img
+                      - generic: Emails
+                  - listitem:
+                    - link:
+                      - /url: /journey
+                      - img
+                      - generic: Journey
+                      - generic: WIP
+                  - listitem:
+                    - link:
+                      - /url: /analytics
+                      - img
+                      - generic: Analytics
+                  - listitem:
+                    - link:
+                      - /url: /offers
+                      - img
+                      - generic: Offers
+                      - generic: WIP
+            - generic:
+              - generic: Tools
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /tools/wavy
+                      - img
+                      - generic: Wavy
+            - generic:
+              - generic: Guidelines
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /guide
+                      - generic:
+                        - img
+                      - generic: Mission
+                  - listitem:
+                    - link:
+                      - /url: /guide/instructions
+                      - generic:
+                        - img
+                      - generic: Instructions
+                  - listitem:
+                    - link:
+                      - /url: /guide/roadmap
+                      - generic:
+                        - img
+                      - generic: Roadmap
+          - generic:
+            - generic: build 10.af340c9
+            - list:
+              - listitem:
+                - button:
+                  - generic:
+                    - generic: CA
+                  - generic:
+                    - generic: Codex Auth Test
+                    - generic: codex-auth-test-1777224659506@example.com
+                  - img
+    - main:
+      - main:
+        - generic:
+          - navigation:
+            - button:
+              - img
+            - generic:
+              - generic:
+                - generic: Repreneurs
+          - generic:
+            - generic:
+              - generic:
+                - button:
+                  - img
+                  - text: Back
+              - generic:
+                - generic:
+                  - button:
+                    - generic:
+                      - img
+                    - generic:
+                      - img
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Name
+                        - generic:
+                          - paragraph: John John
+                          - button:
+                            - img
+                      - generic:
+                        - generic: Surname
+                        - generic:
+                          - paragraph: Florence
+                          - button:
+                            - img
+                    - generic:
+                      - generic:
+                        - img
+                        - generic:
+                          - paragraph: tramberinmotion@gmail.com
+                          - button:
+                            - img
+                      - generic:
+                        - img
+                        - generic:
+                          - paragraph: "0612345678"
+                          - button:
+                            - img
+                - generic:
+                  - generic:
+                    - generic: Status
+                    - generic: Declined
+                  - generic:
+                    - generic: Journey
+                    - generic:
+                      - img
+                      - text: Explorer
+                      - generic: (0/17)
+                  - generic:
+                    - button:
+                      - img
+                      - generic: Open menu
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - img
+                        - text: Scores & Profile
+                      - generic:
+                        - generic: Starter Pack
+                        - generic:
+                          - img
+                          - generic: "1"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: WHO
+                          - button:
+                            - img
+                          - button:
+                            - img
+                        - generic:
+                          - generic: "100"
+                          - generic: pts
+                        - generic: Excellent profile
+                      - generic:
+                        - generic:
+                          - generic: WHEN
+                          - button:
+                            - img
+                          - button [expanded]:
+                            - img
+                        - generic:
+                          - generic: "20"
+                          - generic: pts
+                        - generic: Explorer
+                    - generic:
+                      - generic:
+                        - img
+                        - generic: Score Accuracy
+                      - generic:
+                        - generic:
+                          - generic: WHO accuracy
+                          - group:
+                            - radio: Understated
+                            - radio: Accurate
+                            - radio: Overstated
+                        - generic:
+                          - generic: WHEN accuracy
+                          - group:
+                            - radio: Understated
+                            - radio: Accurate
+                            - radio: Overstated
+                      - textbox:
+                        - /placeholder: Optional notes on scoring accuracy...
+                    - generic:
+                      - paragraph:
+                        - img
+                        - text: Investment Profile
+                      - generic:
+                        - generic:
+                          - generic: Investment Capacity
+                          - paragraph: <150 K€
+                        - generic:
+                          - generic: Deal Size
+                          - paragraph: 1-3 M€
+                        - generic:
+                          - generic: Region
+                          - paragraph: Toute la France
+                        - generic:
+                          - generic: Experience
+                          - paragraph: Plus de 20 ans
+                        - generic:
+                          - generic: Sectors
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic: all
+                              - button:
+                                - img
+                        - generic:
+                          - generic: Targets Identified
+                          - paragraph: "No"
+                        - generic:
+                          - generic: Current Needs
+                          - paragraph: Accès à des opportunités de reprise
+                        - generic:
+                          - generic: Acquisition Priority
+                          - paragraph: One option among others
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - text: Leadership Assessment
+                          - button:
+                            - img
+                            - text: Voir les réponses
+                        - generic: Non-engagement
+                    - generic:
+                      - generic:
+                        - paragraph: Leadership Profile
+                        - generic:
+                          - generic:
+                            - generic:
+                              - img:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic: Drive
+                                    - generic:
+                                      - generic: Authority
+                                    - generic:
+                                      - generic: Control
+                                    - generic:
+                                      - generic: Prudence
+                                    - generic:
+                                      - generic: Collective
+                                    - generic:
+                                      - generic: Delegation
+                                    - generic:
+                                      - generic: Long-term
+                                    - generic:
+                                      - generic: Short-term
+                      - generic:
+                        - paragraph: Situational Maturity
+                        - generic:
+                          - generic: "-3"
+                          - generic: /16 points
+                          - generic: 3 red flags
+                        - generic:
+                          - generic: Autorite
+                          - generic: Action
+                          - generic: Finance risk
+                          - generic: Humain
+                          - generic: Finance
+                          - generic: Burnout risk
+                          - generic: Ethique risk
+                          - generic: Responsabilite
+                      - generic:
+                        - paragraph: Personal Risk Index
+                        - generic:
+                          - generic: "3"
+                          - generic: /5
+                          - generic: Elevated risk
+                      - paragraph: Completed 4/26/2026
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - img
+                        - text: Readiness Milestones
+                      - button:
+                        - img
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - img
+                            - text: Explorer
+                          - generic: 0/17 milestones
+                        - generic: 2 more for Learner
+                      - progressbar
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: Explorer → Learner
+                              - generic: (0/2)
+                            - generic:
+                              - button:
+                                - img
+                                - generic: Repreneurship as main project
+                              - button:
+                                - img
+                                - generic: Availability confirmed
+                          - generic:
+                            - generic:
+                              - generic: Learner → Ready
+                              - generic: (0/6)
+                            - generic:
+                              - button:
+                                - img
+                                - generic: Target profile defined
+                              - button:
+                                - img
+                                - generic: Pitch & value creation plan
+                              - button:
+                                - img
+                                - generic: Equity range confirmed
+                              - button:
+                                - img
+                                - generic: Deal breakers identified
+                              - button:
+                                - img
+                                - generic: Leadership assessment passed
+                              - button:
+                                - img
+                                - generic: Advisory team identified
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: Ready → Execution
+                              - generic: (0/7)
+                            - generic:
+                              - button:
+                                - img
+                                - generic: Intermediary meeting
+                              - button:
+                                - img
+                                - generic: Seller meeting
+                              - button:
+                                - img
+                                - generic: LOI issued
+                              - button:
+                                - img
+                                - generic: Due diligence
+                              - button:
+                                - img
+                                - generic: Negotiation
+                              - button:
+                                - img
+                                - generic: Financing validated
+                              - button:
+                                - img
+                                - generic: Closing
+                          - generic:
+                            - generic:
+                              - generic: Execution → Post-acquisition
+                              - generic: (0/2)
+                            - generic:
+                              - button:
+                                - img
+                                - generic: 100-day plan delivered
+                              - button:
+                                - img
+                                - generic: 3-year value creation plan
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                      - text: Documents
+                  - generic:
+                    - generic:
+                      - generic:
+                        - img
+                        - generic:
+                          - paragraph: CV
+                          - paragraph: PDF uploaded
+                      - generic:
+                        - button:
+                          - img
+                          - generic: View
+                        - button:
+                          - img
+                        - button:
+                          - img
+                    - generic:
+                      - generic:
+                        - img
+                        - generic:
+                          - paragraph: Lettre de Cadrage
+                          - paragraph: No file uploaded
+                      - generic:
+                        - button:
+                          - img
+                          - generic: Upload
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                      - text: Activity Stream
+                    - button:
+                      - img
+                      - text: Log Activity
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                        - generic:
+                          - generic:
+                            - generic: Offer Rejected
+                          - paragraph:
+                            - text: Apr 26 at 11:18 (about 8 hours ago)
+                            - generic: · by Team
+                        - button:
+                          - img
+                      - generic:
+                        - generic:
+                          - img
+                        - generic:
+                          - generic:
+                            - generic: Offer Submitted
+                          - paragraph:
+                            - img
+                            - text: Apr 26, 2026
+                          - paragraph:
+                            - text: Apr 26 at 11:12 (about 8 hours ago)
+                            - generic: · by Team
+                        - button:
+                          - img
+                      - generic:
+                        - generic:
+                          - img
+                        - generic:
+                          - generic:
+                            - generic: Interview
+                          - paragraph:
+                            - img
+                            - text: Apr 28, 2026
+                          - paragraph:
+                            - text: Apr 26 at 10:25 (about 9 hours ago)
+                            - generic: · by Team
+                        - button:
+                          - img
+                      - generic:
+                        - generic:
+                          - img
+                        - generic:
+                          - generic:
+                            - generic: Interview
+                          - paragraph:
+                            - img
+                            - text: Apr 27, 2026
+                          - paragraph:
+                            - text: Apr 26 at 10:25 (about 9 hours ago)
+                            - generic: · by Team
+                        - button:
+                          - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                      - text: Notes
+                    - button:
+                      - img
+                      - text: Add Note
+                  - generic:
+                    - generic:
+                      - paragraph: No notes yet
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                      - text: Offers
+                    - button:
+                      - img
+                      - text: Assign Offer
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Deal Flow - Free
+                            - generic: Declined
+                          - generic:
+                            - text: 0,00 €
+                            - generic: "Offered: 26 avr. 2026"
+                        - button:
+                          - img
+  - region "Notifications alt+T"
+  - alert
+  - dialog "Edit WHEN Score" [ref=e998]:
+    - heading "Edit WHEN Score" [level=2] [ref=e1000]
+    - generic [ref=e1001]:
+      - generic [ref=e1002]:
+        - generic [ref=e1003]: Acquisition priority (Q11)
+        - paragraph [ref=e1004]: One option among others−10 WHEN penalty
+      - generic [ref=e1005]:
+        - img [ref=e1006]
+        - generic [ref=e1008]:
+          - text: Projet cadré without fiche de cadrage−10 WHEN penalty
+          - paragraph [ref=e1009]: The candidate selected "Projet cadré" in Q12 but no lettre de cadrage was uploaded.
+      - generic [ref=e1010]:
+        - generic [ref=e1011]: At this stage, where is your acquisition project?
+        - paragraph [ref=e1012]: Select all stages that apply. The score will be based on the most advanced option.
+        - generic [ref=e1013]:
+          - generic [ref=e1014]:
+            - checkbox "Découverte / Je veux en apprendre plus (0 pts)" [active] [ref=e1015]
+            - generic [ref=e1016] [cursor=pointer]: Découverte / Je veux en apprendre plus (0 pts)
+          - generic [ref=e1017]:
+            - checkbox "Phase exploratoire / réflexion (5 pts)" [ref=e1018]
+            - generic [ref=e1019] [cursor=pointer]: Phase exploratoire / réflexion (5 pts)
+          - generic [ref=e1020]:
+            - checkbox "Projet cadré (cible et apport définis) (10 pts)" [checked] [ref=e1021]:
+              - generic:
+                - img
+            - generic [ref=e1022] [cursor=pointer]: Projet cadré (cible et apport définis) (10 pts)
+          - generic [ref=e1023]:
+            - checkbox "Recherche active de cibles (15 pts)" [ref=e1024]
+            - generic [ref=e1025] [cursor=pointer]: Recherche active de cibles (15 pts)
+          - generic [ref=e1026]:
+            - checkbox "Discussions avancées (LOI en cours) (20 pts)" [ref=e1027]
+            - generic [ref=e1028] [cursor=pointer]: Discussions avancées (LOI en cours) (20 pts)
+      - generic [ref=e1029]:
+        - generic [ref=e1030]:
+          - text: What are your priority geographic search zones?
+          - generic [ref=e1031]: (info only)
+        - generic [ref=e1032]:
+          - generic [ref=e1033]:
+            - checkbox "Toute la France" [checked] [ref=e1034]:
+              - generic:
+                - img
+            - generic [ref=e1035] [cursor=pointer]: Toute la France
+          - generic [ref=e1036]:
+            - checkbox "Auvergne-Rhône-Alpes" [ref=e1037]
+            - generic [ref=e1038] [cursor=pointer]: Auvergne-Rhône-Alpes
+          - generic [ref=e1039]:
+            - checkbox "Bourgogne-Franche-Comté" [ref=e1040]
+            - generic [ref=e1041] [cursor=pointer]: Bourgogne-Franche-Comté
+          - generic [ref=e1042]:
+            - checkbox "Bretagne" [ref=e1043]
+            - generic [ref=e1044] [cursor=pointer]: Bretagne
+          - generic [ref=e1045]:
+            - checkbox "Centre-Val de Loire" [ref=e1046]
+            - generic [ref=e1047] [cursor=pointer]: Centre-Val de Loire
+          - generic [ref=e1048]:
+            - checkbox "Corse" [ref=e1049]
+            - generic [ref=e1050] [cursor=pointer]: Corse
+          - generic [ref=e1051]:
+            - checkbox "DOM-TOM" [ref=e1052]
+            - generic [ref=e1053] [cursor=pointer]: DOM-TOM
+          - generic [ref=e1054]:
+            - checkbox "Grand Est" [ref=e1055]
+            - generic [ref=e1056] [cursor=pointer]: Grand Est
+          - generic [ref=e1057]:
+            - checkbox "Hauts-de-France" [ref=e1058]
+            - generic [ref=e1059] [cursor=pointer]: Hauts-de-France
+          - generic [ref=e1060]:
+            - checkbox "Île-de-France" [ref=e1061]
+            - generic [ref=e1062] [cursor=pointer]: Île-de-France
+          - generic [ref=e1063]:
+            - checkbox "Normandie" [ref=e1064]
+            - generic [ref=e1065] [cursor=pointer]: Normandie
+          - generic [ref=e1066]:
+            - checkbox "Nouvelle-Aquitaine" [ref=e1067]
+            - generic [ref=e1068] [cursor=pointer]: Nouvelle-Aquitaine
+          - generic [ref=e1069]:
+            - checkbox "Occitanie" [ref=e1070]
+            - generic [ref=e1071] [cursor=pointer]: Occitanie
+          - generic [ref=e1072]:
+            - checkbox "Pays de la Loire" [ref=e1073]
+            - generic [ref=e1074] [cursor=pointer]: Pays de la Loire
+          - generic [ref=e1075]:
+            - checkbox "Provence-Alpes-Côte d'Azur" [ref=e1076]
+            - generic [ref=e1077] [cursor=pointer]: Provence-Alpes-Côte d'Azur
+      - generic [ref=e1078]:
+        - generic [ref=e1079]:
+          - text: Which sector(s) are you targeting for your acquisition project?
+          - generic [ref=e1080]: (info only)
+        - generic [ref=e1081]:
+          - generic [ref=e1082]:
+            - checkbox "Tous secteurs" [checked] [ref=e1083]:
+              - generic:
+                - img
+            - generic [ref=e1084] [cursor=pointer]: Tous secteurs
+          - generic [ref=e1085]:
+            - checkbox "Commerce / Distribution" [ref=e1086]
+            - generic [ref=e1087] [cursor=pointer]: Commerce / Distribution
+          - generic [ref=e1088]:
+            - checkbox "Industrie" [ref=e1089]
+            - generic [ref=e1090] [cursor=pointer]: Industrie
+          - generic [ref=e1091]:
+            - checkbox "Services" [ref=e1092]
+            - generic [ref=e1093] [cursor=pointer]: Services
+          - generic [ref=e1094]:
+            - checkbox "BTP / Construction" [ref=e1095]
+            - generic [ref=e1096] [cursor=pointer]: BTP / Construction
+          - generic [ref=e1097]:
+            - checkbox "Santé" [ref=e1098]
+            - generic [ref=e1099] [cursor=pointer]: Santé
+          - generic [ref=e1100]:
+            - checkbox "Tech / Digital" [ref=e1101]
+            - generic [ref=e1102] [cursor=pointer]: Tech / Digital
+          - generic [ref=e1103]:
+            - checkbox "Environnement" [ref=e1104]
+            - generic [ref=e1105] [cursor=pointer]: Environnement
+          - generic [ref=e1106]:
+            - checkbox "Hôtellerie / Restauration" [ref=e1107]
+            - generic [ref=e1108] [cursor=pointer]: Hôtellerie / Restauration
+          - generic [ref=e1109]:
+            - checkbox "Transport / Logistique" [ref=e1110]
+            - generic [ref=e1111] [cursor=pointer]: Transport / Logistique
+          - generic [ref=e1112]:
+            - checkbox "Autre" [ref=e1113]
+            - generic [ref=e1114] [cursor=pointer]: Autre
+      - generic [ref=e1115]:
+        - generic [ref=e1116]: Target deal size (equity value)
+        - paragraph [ref=e1117]: You can select multiple ranges if you are flexible.
+        - generic [ref=e1118]:
+          - generic [ref=e1119]:
+            - checkbox "1-3 M€" [checked] [ref=e1120]:
+              - generic:
+                - img
+            - generic [ref=e1121] [cursor=pointer]: 1-3 M€
+          - generic [ref=e1122]:
+            - checkbox "3-5 M€" [ref=e1123]
+            - generic [ref=e1124] [cursor=pointer]: 3-5 M€
+          - generic [ref=e1125]:
+            - checkbox ">5 M€" [ref=e1126]
+            - generic [ref=e1127] [cursor=pointer]: ">5 M€"
+      - generic [ref=e1128]:
+        - generic [ref=e1129]: How do you envision the capital structure and your role?
+        - paragraph [ref=e1130]: This question helps evaluate the financial coherence of your project.
+        - generic [ref=e1131]:
+          - generic [ref=e1132]:
+            - checkbox "Repreneur majoritaire sans fonds" [checked] [ref=e1133]:
+              - generic:
+                - img
+            - generic [ref=e1134] [cursor=pointer]: Repreneur majoritaire sans fonds
+          - generic [ref=e1135]:
+            - checkbox "Repreneur majoritaire avec fonds minoritaire" [ref=e1136]
+            - generic [ref=e1137] [cursor=pointer]: Repreneur majoritaire avec fonds minoritaire
+          - generic [ref=e1138]:
+            - checkbox "Manager associé à un fonds majoritaire" [ref=e1139]
+            - generic [ref=e1140] [cursor=pointer]: Manager associé à un fonds majoritaire
+          - generic [ref=e1141]:
+            - checkbox "Je n'y ai pas encore réfléchi" [ref=e1142]
+            - generic [ref=e1143] [cursor=pointer]: Je n'y ai pas encore réfléchi
+      - generic [ref=e1144]:
+        - generic [ref=e1145]: What is your total personal equity contribution?
+        - radiogroup [ref=e1146]:
+          - generic [ref=e1147]:
+            - radio "<150 K€" [checked] [ref=e1148]:
+              - img [ref=e1149]
+            - generic [ref=e1151] [cursor=pointer]: <150 K€
+          - generic [ref=e1152]:
+            - radio "151-250 K€" [ref=e1153]
+            - generic [ref=e1154] [cursor=pointer]: 151-250 K€
+          - generic [ref=e1155]:
+            - radio "251-350 K€" [ref=e1156]
+            - generic [ref=e1157] [cursor=pointer]: 251-350 K€
+          - generic [ref=e1158]:
+            - radio "351-450 K€" [ref=e1159]
+            - generic [ref=e1160] [cursor=pointer]: 351-450 K€
+          - generic [ref=e1161]:
+            - radio "Plus de 450 K€" [ref=e1162]
+            - generic [ref=e1163] [cursor=pointer]: Plus de 450 K€
+      - generic [ref=e1164]:
+        - generic [ref=e1165]:
+          - generic [ref=e1166]: Live Score Preview
+          - generic [ref=e1167]:
+            - generic [ref=e1168]: "20"
+            - generic [ref=e1169]: / 100
+        - generic [ref=e1170]:
+          - generic [ref=e1171]:
+            - generic [ref=e1172]: "Financial Fit:"
+            - generic [ref=e1173]: 0 pts
+          - generic [ref=e1174]:
+            - generic [ref=e1175]: "Clarity:"
+            - generic [ref=e1176]: 40 pts
+          - generic [ref=e1177]:
+            - generic [ref=e1178]: "Project Status:"
+            - generic [ref=e1179]: 10 pts
+          - generic [ref=e1180]:
+            - generic [ref=e1181]: "v3 penalties:"
+            - generic [ref=e1182]: "-30 pts"
+      - generic [ref=e1183]:
+        - generic [ref=e1184]:
+          - img [ref=e1185]
+          - generic [ref=e1187]: Warning Flags
+        - generic [ref=e1189]:
+          - generic [ref=e1190]: F4
+          - generic [ref=e1191]: Solo acquisition without fund with ≤250K equity on 1-3M deal - underfunded
+    - generic [ref=e1192]:
+      - button "Cancel" [ref=e1193]
+      - button "Calculate & Save" [ref=e1194]:
+        - img
+        - text: Calculate & Save
+    - button "Close" [ref=e1195]:
+      - img
+      - generic [ref=e1196]: Close

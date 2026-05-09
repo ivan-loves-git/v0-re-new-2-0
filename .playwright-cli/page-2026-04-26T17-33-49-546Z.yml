@@ -1,0 +1,478 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - button "🌊 Wave - the repreneur CRM" [ref=e9]:
+            - generic [ref=e10]: 🌊
+            - img "Wave - the repreneur CRM" [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Re-New Team
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Dashboard" [ref=e18] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e19]
+                - generic [ref=e24]: Dashboard
+            - listitem [ref=e25]:
+              - link "Groups" [ref=e26] [cursor=pointer]:
+                - /url: /repreneurs
+                - img [ref=e27]
+                - generic [ref=e32]: Groups
+            - listitem [ref=e33]:
+              - link "Find" [ref=e34] [cursor=pointer]:
+                - /url: /repreneurs/explore
+                - img [ref=e35]
+                - generic [ref=e38]: Find
+            - listitem [ref=e39]:
+              - link "Pipeline" [ref=e40] [cursor=pointer]:
+                - /url: /pipeline
+                - img [ref=e41]
+                - generic [ref=e45]: Pipeline
+            - listitem [ref=e46]:
+              - link "Emails" [ref=e47] [cursor=pointer]:
+                - /url: /emails
+                - img [ref=e48]
+                - generic [ref=e51]: Emails
+            - listitem [ref=e52]:
+              - link "Journey WIP" [ref=e53] [cursor=pointer]:
+                - /url: /journey
+                - img [ref=e54]
+                - generic [ref=e57]: Journey
+                - generic [ref=e58]: WIP
+            - listitem [ref=e59]:
+              - link "Analytics" [ref=e60] [cursor=pointer]:
+                - /url: /analytics
+                - img [ref=e61]
+                - generic [ref=e63]: Analytics
+            - listitem [ref=e64]:
+              - link "Offers WIP" [ref=e65] [cursor=pointer]:
+                - /url: /offers
+                - img [ref=e66]
+                - generic [ref=e69]: Offers
+                - generic [ref=e70]: WIP
+        - generic [ref=e71]:
+          - generic [ref=e72]: Tools
+          - list [ref=e74]:
+            - listitem [ref=e75]:
+              - link "Wavy" [ref=e76] [cursor=pointer]:
+                - /url: /tools/wavy
+                - img [ref=e77]
+                - generic [ref=e81]: Wavy
+        - generic [ref=e82]:
+          - generic [ref=e83]: Guidelines
+          - list [ref=e85]:
+            - listitem [ref=e86]:
+              - link "Mission" [ref=e87] [cursor=pointer]:
+                - /url: /guide
+                - img [ref=e89]
+                - generic [ref=e93]: Mission
+            - listitem [ref=e94]:
+              - link "Instructions" [ref=e95] [cursor=pointer]:
+                - /url: /guide/instructions
+                - img [ref=e97]
+                - generic [ref=e99]: Instructions
+            - listitem [ref=e100]:
+              - link "Roadmap" [ref=e101] [cursor=pointer]:
+                - /url: /guide/roadmap
+                - img [ref=e103]
+                - generic [ref=e106]: Roadmap
+      - generic [ref=e107]:
+        - generic [ref=e108]: build 10.af340c9
+        - list [ref=e109]:
+          - listitem [ref=e110]:
+            - button "CA Codex Auth Test codex-auth-test-1777224659506@example.com" [ref=e111]:
+              - generic [ref=e113]: CA
+              - generic [ref=e114]:
+                - generic [ref=e115]: Codex Auth Test
+                - generic [ref=e116]: codex-auth-test-1777224659506@example.com
+              - img [ref=e117]
+    - main [ref=e120]:
+      - main [ref=e121]:
+        - generic [ref=e122]:
+          - navigation [ref=e123]:
+            - button "Collapse sidebar" [ref=e124]:
+              - img [ref=e125]
+            - generic [ref=e129]: Repreneurs
+          - generic [ref=e545]:
+            - button "Back" [ref=e547]:
+              - img
+              - text: Back
+            - generic [ref=e548]:
+              - generic [ref=e549]:
+                - button "John John Florence" [ref=e550] [cursor=pointer]:
+                  - img "John John Florence" [ref=e552]
+                  - img [ref=e554]
+                - generic [ref=e557]:
+                  - generic [ref=e558]:
+                    - generic [ref=e559]:
+                      - generic [ref=e560]: Name
+                      - generic [ref=e561]:
+                        - paragraph [ref=e562]: John John
+                        - button [ref=e563]:
+                          - img
+                    - generic [ref=e564]:
+                      - generic [ref=e565]: Surname
+                      - generic [ref=e566]:
+                        - paragraph [ref=e567]: Florence
+                        - button [ref=e568]:
+                          - img
+                  - generic [ref=e569]:
+                    - generic [ref=e570]:
+                      - img [ref=e571]
+                      - generic [ref=e574]:
+                        - paragraph [ref=e575]: tramberinmotion@gmail.com
+                        - button [ref=e576]:
+                          - img
+                    - generic [ref=e577]:
+                      - img [ref=e578]
+                      - generic [ref=e580]:
+                        - paragraph [ref=e581]: "0612345678"
+                        - button [ref=e582]:
+                          - img
+              - generic [ref=e583]:
+                - generic [ref=e584]:
+                  - generic [ref=e585]: Status
+                  - generic [ref=e586]: Declined
+                - generic [ref=e587]:
+                  - generic [ref=e588]: Journey
+                  - generic [ref=e589]:
+                    - img
+                    - text: Explorer
+                    - generic [ref=e590]: (0/17)
+                - button "Open menu" [ref=e592]:
+                  - img
+                  - generic [ref=e593]: Open menu
+            - generic [ref=e594]:
+              - generic [ref=e595]:
+                - generic [ref=e597]:
+                  - generic [ref=e598]:
+                    - img [ref=e599]
+                    - text: Scores & Profile
+                  - generic [ref=e601]:
+                    - generic [ref=e602]: Starter Pack
+                    - generic [ref=e603]:
+                      - img [ref=e604]
+                      - generic [ref=e606]: "1"
+                - generic [ref=e607]:
+                  - generic [ref=e608]:
+                    - generic [ref=e609]:
+                      - generic [ref=e610]:
+                        - generic [ref=e611]: WHO
+                        - button [ref=e612]:
+                          - img [ref=e613]
+                        - button [ref=e615]:
+                          - img
+                      - generic [ref=e616]:
+                        - generic [ref=e617]: "100"
+                        - generic [ref=e618]: pts
+                      - generic [ref=e619]: Excellent profile
+                    - generic [ref=e620]:
+                      - generic [ref=e621]:
+                        - generic [ref=e622]: WHEN
+                        - button [ref=e623]:
+                          - img [ref=e624]
+                        - button [active] [ref=e626]:
+                          - img
+                      - generic [ref=e627]:
+                        - generic [ref=e628]: "20"
+                        - generic [ref=e629]: pts
+                      - generic [ref=e630]: Explorer
+                  - generic [ref=e631]:
+                    - generic [ref=e632]:
+                      - img [ref=e633]
+                      - generic [ref=e637]: Score Accuracy
+                    - generic [ref=e638]:
+                      - generic [ref=e639]:
+                        - generic [ref=e640]: WHO accuracy
+                        - group [ref=e641]:
+                          - radio "Understated" [ref=e642]
+                          - radio "Accurate" [ref=e643]
+                          - radio "Overstated" [ref=e644]
+                      - generic [ref=e645]:
+                        - generic [ref=e646]: WHEN accuracy
+                        - group [ref=e647]:
+                          - radio "Understated" [ref=e648]
+                          - radio "Accurate" [ref=e649]
+                          - radio "Overstated" [ref=e650]
+                    - textbox "Optional notes on scoring accuracy..." [ref=e651]
+                  - generic [ref=e652]:
+                    - paragraph [ref=e653]:
+                      - img [ref=e654]
+                      - text: Investment Profile
+                    - generic [ref=e656]:
+                      - generic [ref=e657]:
+                        - generic [ref=e658]: Investment Capacity
+                        - paragraph [ref=e659]: <150 K€
+                      - generic [ref=e660]:
+                        - generic [ref=e661]: Deal Size
+                        - paragraph [ref=e662]: 1-3 M€
+                      - generic [ref=e663]:
+                        - generic [ref=e664]: Region
+                        - paragraph [ref=e665]: Toute la France
+                      - generic [ref=e666]:
+                        - generic [ref=e667]: Experience
+                        - paragraph [ref=e668]: Plus de 20 ans
+                      - generic [ref=e669]:
+                        - generic [ref=e670]: Sectors
+                        - generic [ref=e672]:
+                          - generic [ref=e674]: all
+                          - button [ref=e675]:
+                            - img
+                      - generic [ref=e676]:
+                        - generic [ref=e677]: Targets Identified
+                        - paragraph [ref=e678]: "No"
+                      - generic [ref=e679]:
+                        - generic [ref=e680]: Current Needs
+                        - paragraph [ref=e681]: Accès à des opportunités de reprise
+                      - generic [ref=e682]:
+                        - generic [ref=e683]: Acquisition Priority
+                        - paragraph [ref=e684]: One option among others
+              - generic [ref=e686]:
+                - generic [ref=e688]:
+                  - generic [ref=e689]:
+                    - img [ref=e690]
+                    - text: Leadership Assessment
+                    - button "Voir les réponses" [ref=e700]:
+                      - img
+                      - text: Voir les réponses
+                  - generic [ref=e701]: Non-engagement
+                - generic [ref=e702]:
+                  - generic [ref=e703]:
+                    - paragraph [ref=e704]: Leadership Profile
+                    - img [ref=e708]:
+                      - generic [ref=e722]:
+                        - generic [ref=e724]: Drive
+                        - generic [ref=e727]: Authority
+                        - generic [ref=e729]: Control
+                        - generic [ref=e732]: Prudence
+                        - generic [ref=e734]: Collective
+                        - generic [ref=e737]: Delegation
+                        - generic [ref=e739]: Long-term
+                        - generic [ref=e742]: Short-term
+                  - generic [ref=e746]:
+                    - paragraph [ref=e747]: Situational Maturity
+                    - generic [ref=e748]:
+                      - generic [ref=e749]: "-3"
+                      - generic [ref=e750]: /16 points
+                      - generic [ref=e751]: 3 red flags
+                    - generic [ref=e752]:
+                      - generic [ref=e753]: Autorite
+                      - generic [ref=e754]: Action
+                      - generic [ref=e755]: Finance risk
+                      - generic [ref=e756]: Humain
+                      - generic [ref=e757]: Finance
+                      - generic [ref=e758]: Burnout risk
+                      - generic [ref=e759]: Ethique risk
+                      - generic [ref=e760]: Responsabilite
+                  - generic [ref=e761]:
+                    - paragraph [ref=e762]: Personal Risk Index
+                    - generic [ref=e763]:
+                      - generic [ref=e764]: "3"
+                      - generic [ref=e765]: /5
+                      - generic [ref=e766]: Elevated risk
+                  - paragraph [ref=e767]: Completed 4/26/2026
+            - generic [ref=e768]:
+              - generic [ref=e769]:
+                - generic [ref=e771]:
+                  - generic [ref=e772]:
+                    - img [ref=e773]
+                    - text: Readiness Milestones
+                  - button [ref=e775]:
+                    - img [ref=e776]
+                - generic [ref=e779]:
+                  - generic [ref=e780]:
+                    - generic [ref=e781]:
+                      - generic [ref=e782]:
+                        - img
+                        - text: Explorer
+                      - generic [ref=e783]: 0/17 milestones
+                    - generic [ref=e784]: 2 more for Learner
+                  - progressbar [ref=e785]
+                  - generic [ref=e787]:
+                    - generic [ref=e788]:
+                      - generic [ref=e789]:
+                        - generic [ref=e790]:
+                          - generic [ref=e791]: Explorer → Learner
+                          - generic [ref=e792]: (0/2)
+                        - generic [ref=e793]:
+                          - button "Repreneurship as main project" [ref=e794]:
+                            - img [ref=e795]
+                            - generic [ref=e797]: Repreneurship as main project
+                          - button "Availability confirmed" [ref=e798]:
+                            - img [ref=e799]
+                            - generic [ref=e801]: Availability confirmed
+                      - generic [ref=e802]:
+                        - generic [ref=e803]:
+                          - generic [ref=e804]: Learner → Ready
+                          - generic [ref=e805]: (0/6)
+                        - generic [ref=e806]:
+                          - button "Target profile defined" [ref=e807]:
+                            - img [ref=e808]
+                            - generic [ref=e810]: Target profile defined
+                          - button "Pitch & value creation plan" [ref=e811]:
+                            - img [ref=e812]
+                            - generic [ref=e814]: Pitch & value creation plan
+                          - button "Equity range confirmed" [ref=e815]:
+                            - img [ref=e816]
+                            - generic [ref=e818]: Equity range confirmed
+                          - button "Deal breakers identified" [ref=e819]:
+                            - img [ref=e820]
+                            - generic [ref=e822]: Deal breakers identified
+                          - button "Leadership assessment passed" [ref=e823]:
+                            - img [ref=e824]
+                            - generic [ref=e826]: Leadership assessment passed
+                          - button "Advisory team identified" [ref=e827]:
+                            - img [ref=e828]
+                            - generic [ref=e830]: Advisory team identified
+                    - generic [ref=e831]:
+                      - generic [ref=e832]:
+                        - generic [ref=e833]:
+                          - generic [ref=e834]: Ready → Execution
+                          - generic [ref=e835]: (0/7)
+                        - generic [ref=e836]:
+                          - button "Intermediary meeting" [ref=e837]:
+                            - img [ref=e838]
+                            - generic [ref=e840]: Intermediary meeting
+                          - button "Seller meeting" [ref=e841]:
+                            - img [ref=e842]
+                            - generic [ref=e844]: Seller meeting
+                          - button "LOI issued" [ref=e845]:
+                            - img [ref=e846]
+                            - generic [ref=e848]: LOI issued
+                          - button "Due diligence" [ref=e849]:
+                            - img [ref=e850]
+                            - generic [ref=e852]: Due diligence
+                          - button "Negotiation" [ref=e853]:
+                            - img [ref=e854]
+                            - generic [ref=e856]: Negotiation
+                          - button "Financing validated" [ref=e857]:
+                            - img [ref=e858]
+                            - generic [ref=e860]: Financing validated
+                          - button "Closing" [ref=e861]:
+                            - img [ref=e862]
+                            - generic [ref=e864]: Closing
+                      - generic [ref=e865]:
+                        - generic [ref=e866]:
+                          - generic [ref=e867]: Execution → Post-acquisition
+                          - generic [ref=e868]: (0/2)
+                        - generic [ref=e869]:
+                          - button "100-day plan delivered" [ref=e870]:
+                            - img [ref=e871]
+                            - generic [ref=e873]: 100-day plan delivered
+                          - button "3-year value creation plan" [ref=e874]:
+                            - img [ref=e875]
+                            - generic [ref=e877]: 3-year value creation plan
+              - generic [ref=e878]:
+                - generic [ref=e880]:
+                  - img [ref=e881]
+                  - text: Documents
+                - generic [ref=e883]:
+                  - generic [ref=e884]:
+                    - generic [ref=e885]:
+                      - img [ref=e886]
+                      - generic [ref=e889]:
+                        - paragraph [ref=e890]: CV
+                        - paragraph [ref=e891]: PDF uploaded
+                    - generic [ref=e892]:
+                      - button "View" [ref=e893]:
+                        - img
+                        - generic [ref=e894]: View
+                      - button [ref=e895]:
+                        - img
+                      - button [ref=e896]:
+                        - img
+                  - generic [ref=e897]:
+                    - generic [ref=e898]:
+                      - img [ref=e899]
+                      - generic [ref=e902]:
+                        - paragraph [ref=e903]: Lettre de Cadrage
+                        - paragraph [ref=e904]: No file uploaded
+                    - button "Upload" [ref=e906]:
+                      - img
+                      - generic [ref=e907]: Upload
+            - generic [ref=e908]:
+              - generic [ref=e909]:
+                - generic [ref=e910]:
+                  - generic [ref=e911]:
+                    - img [ref=e912]
+                    - text: Activity Stream
+                  - button "Log Activity" [ref=e914]:
+                    - img
+                    - text: Log Activity
+                - generic [ref=e916]:
+                  - generic [ref=e917]:
+                    - img [ref=e919]
+                    - generic [ref=e923]:
+                      - generic [ref=e925]: Offer Rejected
+                      - paragraph [ref=e926]:
+                        - text: Apr 26 at 11:18 (about 8 hours ago)
+                        - generic [ref=e927]: · by Team
+                    - button [ref=e928]:
+                      - img
+                  - generic [ref=e929]:
+                    - img [ref=e931]
+                    - generic [ref=e934]:
+                      - generic [ref=e936]: Offer Submitted
+                      - paragraph [ref=e937]:
+                        - img [ref=e938]
+                        - text: Apr 26, 2026
+                      - paragraph [ref=e940]:
+                        - text: Apr 26 at 11:12 (about 8 hours ago)
+                        - generic [ref=e941]: · by Team
+                    - button [ref=e942]:
+                      - img
+                  - generic [ref=e943]:
+                    - img [ref=e945]
+                    - generic [ref=e947]:
+                      - generic [ref=e949]: Interview
+                      - paragraph [ref=e950]:
+                        - img [ref=e951]
+                        - text: Apr 28, 2026
+                      - paragraph [ref=e953]:
+                        - text: Apr 26 at 10:25 (about 9 hours ago)
+                        - generic [ref=e954]: · by Team
+                    - button [ref=e955]:
+                      - img
+                  - generic [ref=e956]:
+                    - img [ref=e958]
+                    - generic [ref=e960]:
+                      - generic [ref=e962]: Interview
+                      - paragraph [ref=e963]:
+                        - img [ref=e964]
+                        - text: Apr 27, 2026
+                      - paragraph [ref=e966]:
+                        - text: Apr 26 at 10:25 (about 9 hours ago)
+                        - generic [ref=e967]: · by Team
+                    - button [ref=e968]:
+                      - img
+              - generic [ref=e969]:
+                - generic [ref=e970]:
+                  - generic [ref=e971]:
+                    - img [ref=e972]
+                    - text: Notes
+                  - button "Add Note" [ref=e975]:
+                    - img
+                    - text: Add Note
+                - paragraph [ref=e978]: No notes yet
+              - generic [ref=e979]:
+                - generic [ref=e980]:
+                  - generic [ref=e981]:
+                    - img [ref=e982]
+                    - text: Offers
+                  - button "Assign Offer" [ref=e986]:
+                    - img
+                    - text: Assign Offer
+                - generic [ref=e989]:
+                  - generic [ref=e990]:
+                    - generic [ref=e991]:
+                      - generic [ref=e992]: Deal Flow - Free
+                      - generic [ref=e993]: Declined
+                    - generic [ref=e994]:
+                      - text: 0,00 €
+                      - generic [ref=e995]: "Offered: 26 avr. 2026"
+                  - button [ref=e996]:
+                    - img
+  - region "Notifications alt+T"
+  - alert [ref=e544]

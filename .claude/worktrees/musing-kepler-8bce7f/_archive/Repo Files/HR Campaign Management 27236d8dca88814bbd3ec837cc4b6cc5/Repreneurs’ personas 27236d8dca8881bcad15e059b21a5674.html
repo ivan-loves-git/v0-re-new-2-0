@@ -1,0 +1,708 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>Repreneurs’ personas</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="27236d8d-ca88-81bc-ad15-e059b21a5674" class="page sans"><header><div class="page-header-icon undefined"><span class="icon">🧑🏼‍🤝‍🧑🏻</span></div><h1 class="page-title">Repreneurs’ personas</h1><p class="page-description"></p></header><div class="page-body"><p id="27236d8d-ca88-81b7-a47a-fed374076168" class="">This page presents a structured synthesis of five ideal CEO repreneur personas for SME acquisition and transformation. Each persona includes details on background, motivations, strengths, needs, and potential challenges.</p><h2 id="27236d8d-ca88-81fb-ae49-f766de5ca1e9" class=""><mark class="highlight-teal"><strong>Executive Summary Table</strong></mark></h2><table id="27236d8d-ca88-8105-8937-d196b55c4f04" class="simple-table"><tbody><tr id="27236d8d-ca88-812c-a62b-d1ae7ff2a1ec"><td id="}DSv" class=""><strong>Persona</strong></td><td id="aC_m" class="" style="width:141px"><strong>Key Experience</strong></td><td id="Q&gt;b&gt;" class="" style="width:148px"><strong>Main Motivation</strong></td><td id="sW\]" class="" style="width:147px"><strong>Major Strengths</strong></td><td id="|?o=" class="" style="width:177px"><strong>Key Needs</strong></td><td id="yU=L" class="" style="width:207px"><strong>Red Flags</strong></td></tr><tr id="27236d8d-ca88-814c-ba86-e69b713a34ce"><td id="}DSv" class="">Experienced Operator</td><td id="aC_m" class="" style="width:141px">SME/Division Mgmt</td><td id="Q&gt;b&gt;" class="" style="width:148px">Modernize &amp; grow SME</td><td id="sW\]" class="" style="width:147px">Ops &amp; finance, leadership</td><td id="|?o=" class="" style="width:177px">Acquisition &amp; ESG support</td><td id="yU=L" class="" style="width:207px">Risk aversion, role transition</td></tr><tr id="27236d8d-ca88-8153-9d36-eca2b722a845"><td id="}DSv" class="">Sustainability Visionary</td><td id="aC_m" class="" style="width:141px">Sustainability/ESG</td><td id="Q&gt;b&gt;" class="" style="width:148px">Green transformation</td><td id="sW\]" class="" style="width:147px">ESG, innovation, stakeholder mgmt</td><td id="|?o=" class="" style="width:177px">M&amp;A process, impact network</td><td id="yU=L" class="" style="width:207px">Limited M&amp;A, sector specialization</td></tr><tr id="27236d8d-ca88-8170-94e0-dea12134468c"><td id="}DSv" class="">Financial Strategist</td><td id="aC_m" class="" style="width:141px">Finance/PE/CFO</td><td id="Q&gt;b&gt;" class="" style="width:148px">Value via finance</td><td id="sW\]" class="" style="width:147px">Modeling, deal execution</td><td id="|?o=" class="" style="width:177px">Ops leadership, value plan</td><td id="yU=L" class="" style="width:207px">Limited M&amp;A, strategic planning</td></tr><tr id="27236d8d-ca88-81b7-935b-d09166fe0fdf"><td id="}DSv" class="">Commercial Strategist</td><td id="aC_m" class="" style="width:141px">CEO/Commercial Lead</td><td id="Q&gt;b&gt;" class="" style="width:148px">Growth &amp; legacy</td><td id="sW\]" class="" style="width:147px">Commercial strategy, leadership</td><td id="|?o=" class="" style="width:177px">Deal flow, scaling tools</td><td id="yU=L" class="" style="width:207px">Ambition vs. pragmatism</td></tr><tr id="27236d8d-ca88-81d6-82bc-dd8386363dda"><td id="}DSv" class="">Turnaround Specialist</td><td id="aC_m" class="" style="width:141px">CRO/CFO</td><td id="Q&gt;b&gt;" class="" style="width:148px">Direct Impact</td><td id="sW\]" class="" style="width:147px">Crisis manager, Decision maker</td><td id="|?o=" class="" style="width:177px">Network, restructuring tools (legal, finance)</td><td id="yU=L" class="" style="width:207px">Visionary, risk averse</td></tr></tbody></table><p id="27236d8d-ca88-81ec-9eb4-d4a397ad76df" class="">
+</p><h2 id="27236d8d-ca88-8179-a5d2-c328fec7779b" class=""><mark class="highlight-teal"><strong>1. The Experienced Operator</strong></mark></h2><p id="27236d8d-ca88-8119-94e2-fc8c5871b52b" class=""><strong>Background</strong></p><ul id="27236d8d-ca88-81ed-8df1-e23063e38f8a" class="bulleted-list"><li style="list-style-type:disc">10+ years managing SMEs or leading divisions in larger organizations</li></ul><ul id="27236d8d-ca88-818b-95e6-dae8de8cf0a6" class="bulleted-list"><li style="list-style-type:disc">Proven track record in driving growth, managing teams, and improving operational efficiency</li></ul><ul id="27236d8d-ca88-817c-aeca-d3b11d9dc629" class="bulleted-list"><li style="list-style-type:disc">Experience across sectors such as manufacturing, retail, logistics, or technology</li></ul><p id="27236d8d-ca88-818a-b030-f45cfd874100" class=""><strong>Motivations</strong></p><ul id="27236d8d-ca88-8137-a9aa-db1720e49f21" class="bulleted-list"><li style="list-style-type:disc">Transition to entrepreneurship through acquisition</li></ul><ul id="27236d8d-ca88-811f-affd-febdd88940cb" class="bulleted-list"><li style="list-style-type:disc">Desire for ownership, autonomy, and legacy building</li></ul><ul id="27236d8d-ca88-81d6-b170-da02ee0b5ff2" class="bulleted-list"><li style="list-style-type:disc">Driven by the challenge of revitalizing underperforming or stable SMEs</li></ul><p id="27236d8d-ca88-81ff-a27f-d60a447dddba" class=""><strong>Strengths</strong></p><ul id="27236d8d-ca88-81c5-83bb-cc405794d2c3" class="bulleted-list"><li style="list-style-type:disc">Operational expertise and financial management</li></ul><ul id="27236d8d-ca88-8139-9b62-c8abefa99383" class="bulleted-list"><li style="list-style-type:disc">Strong leadership and team-building skills</li></ul><ul id="27236d8d-ca88-816f-92bd-f6066239f3a0" class="bulleted-list"><li style="list-style-type:disc">Strategic vision and practical problem-solving</li></ul><p id="27236d8d-ca88-8185-bb13-ecb1c3fbb1bf" class=""><strong>Needs</strong></p><ul id="27236d8d-ca88-81e5-990f-ed014626be42" class="bulleted-list"><li style="list-style-type:disc">Support in structuring and financing acquisitions</li></ul><ul id="27236d8d-ca88-8117-9c39-e3a423cd2a18" class="bulleted-list"><li style="list-style-type:disc">Guidance on sustainability (ESG) integration</li></ul><ul id="27236d8d-ca88-8159-9e77-f451201d147d" class="bulleted-list"><li style="list-style-type:disc">Access to networks of brokers, advisors, and mentors</li></ul><p id="27236d8d-ca88-81fc-acf7-e20699694ef8" class=""><strong>Red Flags</strong></p><ul id="27236d8d-ca88-817f-829f-df7b74c3fc81" class="bulleted-list"><li style="list-style-type:disc">May be risk-averse, preferring calculated decisions</li></ul><ul id="27236d8d-ca88-81f0-a102-e5992a2bf283" class="bulleted-list"><li style="list-style-type:disc">Needs to shift from executive to owner-operator mindset</li></ul><ul id="27236d8d-ca88-81b9-ad10-f4cc6d806b8b" class="bulleted-list"><li style="list-style-type:disc">Must navigate emotional dynamics in family business acquisitions</li></ul><h2 id="27236d8d-ca88-813b-aba5-f18393caeda6" class=""><mark class="highlight-teal"><strong>2. The Sustainability Visionary</strong></mark></h2><p id="27236d8d-ca88-8198-9aaf-ebb7add026d6" class=""><strong>Background</strong></p><ul id="27236d8d-ca88-81c5-b0a5-dbcef24d1126" class="bulleted-list"><li style="list-style-type:disc">Entrepreneurial or consulting experience in sustainability-focused industries</li></ul><ul id="27236d8d-ca88-81a2-bb87-c2df3e7f4aa9" class="bulleted-list"><li style="list-style-type:disc">Expertise in green transformation and ESG initiatives</li></ul><ul id="27236d8d-ca88-8164-aecc-c8db1e352b16" class="bulleted-list"><li style="list-style-type:disc">Direct participation in M&amp;A processes as a consultant</li></ul><p id="27236d8d-ca88-818e-8fe2-c3d28bf8a6fb" class=""><strong>Motivations</strong></p><ul id="27236d8d-ca88-8141-a8f4-c60d33570e07" class="bulleted-list"><li style="list-style-type:disc">Acquire and transform companies into green, innovative enterprises</li></ul><ul id="27236d8d-ca88-8195-ad75-ff883f511867" class="bulleted-list"><li style="list-style-type:disc">Combine profit with purpose through sustainable leadership</li></ul><p id="27236d8d-ca88-81c9-938d-f7da7b8091f8" class=""><strong>Strengths</strong></p><ul id="27236d8d-ca88-8117-afd1-e7946d4ee664" class="bulleted-list"><li style="list-style-type:disc">Passion for sustainability and innovation</li></ul><ul id="27236d8d-ca88-81a6-9cc2-cd1da75fffd9" class="bulleted-list"><li style="list-style-type:disc">Stakeholder engagement, change management, and ESG strategy</li></ul><p id="27236d8d-ca88-81fd-8b7e-d0671ce1ba1a" class=""><strong>Needs</strong></p><ul id="27236d8d-ca88-8184-bac8-efd804c69288" class="bulleted-list"><li style="list-style-type:disc">Insights into SME acquisition processes</li></ul><ul id="27236d8d-ca88-814f-a031-f8ce50e272bc" class="bulleted-list"><li style="list-style-type:disc">Access to impact investors and sustainability mentors</li></ul><ul id="27236d8d-ca88-81be-903c-e99bd3c7f3e6" class="bulleted-list"><li style="list-style-type:disc">Digital transformation tools for ESG reporting</li></ul><p id="27236d8d-ca88-8158-973e-d8bd5e5a013b" class=""><strong>Red Flags</strong></p><ul id="27236d8d-ca88-811a-9b7a-ed37523d152c" class="bulleted-list"><li style="list-style-type:disc">Limited direct experience in high-stakes transactions</li></ul><ul id="27236d8d-ca88-8177-b2fe-d34939a60b37" class="bulleted-list"><li style="list-style-type:disc">Specialized in sustainability, may need to adapt to other industries</li></ul><h2 id="27236d8d-ca88-8143-80a3-cedcba7daad6" class=""><mark class="highlight-teal"><strong>3. The Financial Strategist</strong></mark></h2><p id="27236d8d-ca88-81a4-8b9d-f3dbdaac8d20" class=""><strong>Background</strong></p><ul id="27236d8d-ca88-811d-af47-ed4e57619dc5" class="bulleted-list"><li style="list-style-type:disc">Experience in private equity, investment banking, or as a CFO</li></ul><ul id="27236d8d-ca88-81df-a8f7-d6528920ae42" class="bulleted-list"><li style="list-style-type:disc">Expertise in financial modeling, planning, and risk assessment</li></ul><ul id="27236d8d-ca88-816b-92ab-f8e3fc4fcad8" class="bulleted-list"><li style="list-style-type:disc">Direct participation in at least one M&amp;A process</li></ul><p id="27236d8d-ca88-815a-9564-ed5dc5c9b6dc" class=""><strong>Motivations</strong></p><ul id="27236d8d-ca88-8105-823a-c692aae44980" class="bulleted-list"><li style="list-style-type:disc">Move from advisory roles to direct ownership and management</li></ul><ul id="27236d8d-ca88-81b7-8223-e813490b5ac4" class="bulleted-list"><li style="list-style-type:disc">Apply financial acumen to build value in an SME</li></ul><p id="27236d8d-ca88-8189-80f2-cda8ba9f3909" class=""><strong>Strengths</strong></p><ul id="27236d8d-ca88-8185-8c1b-f1de3df46d62" class="bulleted-list"><li style="list-style-type:disc">Financial planning, investment, and transformation</li></ul><ul id="27236d8d-ca88-8175-b02b-e16724d54d6c" class="bulleted-list"><li style="list-style-type:disc">Strategic problem-solving and leadership</li></ul><p id="27236d8d-ca88-81d7-b7b5-e602b443344f" class=""><strong>Needs</strong></p><ul id="27236d8d-ca88-81dc-b6d2-ee144e32d5b8" class="bulleted-list"><li style="list-style-type:disc">Coaching on operational management and leadership</li></ul><ul id="27236d8d-ca88-8135-946a-efa3fc41cb90" class="bulleted-list"><li style="list-style-type:disc">Support in crafting a post-acquisition value creation plan</li></ul><ul id="27236d8d-ca88-8139-b48d-e17ab19c4097" class="bulleted-list"><li style="list-style-type:disc">Digital transformation for financial modeling</li></ul><p id="27236d8d-ca88-8178-a3f3-d4e4489a9467" class=""><strong>Red Flags</strong></p><ul id="27236d8d-ca88-8126-a682-e5f7a421fa74" class="bulleted-list"><li style="list-style-type:disc">Limited hands-on M&amp;A experience</li></ul><ul id="27236d8d-ca88-8155-92bd-e64b7ef32cc3" class="bulleted-list"><li style="list-style-type:disc">May lack long-term strategic planning expertise</li></ul><h2 id="27236d8d-ca88-81a7-93ba-eecef7d6a33d" class=""><mark class="highlight-teal"><strong>4. The Commercial Strategist</strong></mark></h2><p id="27236d8d-ca88-812d-a0fd-dd1fe5a47773" class=""><strong>Background</strong></p><ul id="27236d8d-ca88-8145-a40e-eee1c8a1d0de" class="bulleted-list"><li style="list-style-type:disc">15+ years in senior leadership, including CEO or executive roles</li></ul><ul id="27236d8d-ca88-8177-a94a-e9ac8e6a98b7" class="bulleted-list"><li style="list-style-type:disc">Proven experience in scaling businesses, driving revenue growth, and optimizing operations</li></ul><ul id="27236d8d-ca88-813c-b86f-d22622d61ba4" class="bulleted-list"><li style="list-style-type:disc">Exposure to diverse industries with a focus on commercial growth</li></ul><p id="27236d8d-ca88-8133-89ac-ee2567b09416" class=""><strong>Motivations</strong></p><ul id="27236d8d-ca88-8177-ac92-c11029dcc112" class="bulleted-list"><li style="list-style-type:disc">Acquire and operate a business to leverage leadership and entrepreneurial skills</li></ul><ul id="27236d8d-ca88-81ed-aeb3-c33609f9fadb" class="bulleted-list"><li style="list-style-type:disc">Create measurable value through strategic expansion and operational efficiency</li></ul><ul id="27236d8d-ca88-810d-a461-dfe3567ba7ac" class="bulleted-list"><li style="list-style-type:disc">Build a legacy by transforming overlooked businesses into market leaders</li></ul><p id="27236d8d-ca88-81f0-8b08-ecf878f9caf8" class=""><strong>Strengths</strong></p><ul id="27236d8d-ca88-81dd-ba81-d4e1c03bb25d" class="bulleted-list"><li style="list-style-type:disc">Expertise in commercial strategy, market penetration, and pricing</li></ul><ul id="27236d8d-ca88-81d4-b65a-ea0e0cefe3de" class="bulleted-list"><li style="list-style-type:disc">Strong leadership and people management</li></ul><ul id="27236d8d-ca88-81d0-a3c1-f91eb4ecc536" class="bulleted-list"><li style="list-style-type:disc">Visionary with the ability to identify and seize market opportunities</li></ul><p id="27236d8d-ca88-8175-a420-d73e81050a71" class=""><strong>Needs</strong></p><ul id="27236d8d-ca88-81f3-9bcd-f212655a4142" class="bulleted-list"><li style="list-style-type:disc">Access to deal flow and aligned acquisition opportunities</li></ul><ul id="27236d8d-ca88-81eb-ac1d-f3dd3d8b441a" class="bulleted-list"><li style="list-style-type:disc">Guidance on acquisition financing structures</li></ul><ul id="27236d8d-ca88-81d1-b57e-fa1b37483254" class="bulleted-list"><li style="list-style-type:disc">Tools for post-acquisition scalability planning</li></ul><p id="27236d8d-ca88-81b5-b42b-dcc1a2b2daa8" class=""><strong>Red Flags</strong></p><ul id="27236d8d-ca88-8166-9ae4-e66ad216331e" class="bulleted-list"><li style="list-style-type:disc">Must balance ambition with pragmatic execution</li></ul><ul id="27236d8d-ca88-8194-b144-e6490fa473ad" class="bulleted-list"><li style="list-style-type:disc">Needs to inspire and align diverse teams</li></ul><h2 id="27236d8d-ca88-8190-8bb1-dae29a6d1cb8" class=""><mark class="highlight-teal"><strong>5. The Turnaround Specialist</strong></mark></h2><p id="27236d8d-ca88-8154-9a0c-ca972c62b9e7" class=""><strong>Background</strong></p><ul id="27236d8d-ca88-81be-b3a3-cb929b17126f" class="bulleted-list"><li style="list-style-type:disc">Former CRO, CFO, or COO with deep restructuring experience</li></ul><ul id="27236d8d-ca88-81d9-81e9-e16cc2300d42" class="bulleted-list"><li style="list-style-type:disc">Proven experience in 2-3 recoveries in distressed companies</li></ul><ul id="27236d8d-ca88-81f3-97c0-fffc2c7401aa" class="bulleted-list"><li style="list-style-type:disc">Background in private equity, restructuring advisory, or corporate recovery consulting</li></ul><p id="27236d8d-ca88-8150-b3d4-cae3f3d0d93d" class=""><strong>Motivations</strong></p><ul id="27236d8d-ca88-8166-97d6-f024eb52a16b" class="bulleted-list"><li style="list-style-type:disc">Direct business impact, with decisions showing results within weeks</li></ul><ul id="27236d8d-ca88-8197-9df4-e32dcae11108" class="bulleted-list"><li style="list-style-type:disc">Thrives on challenge and intensity, with projects typically lasting 6-24 months</li></ul><ul id="27236d8d-ca88-8104-8e69-c98ad19f26a1" class="bulleted-list"><li style="list-style-type:disc">Seeks reputation enhancement and financial rewards through successful turnarounds</li></ul><p id="27236d8d-ca88-81c0-9a1f-e796f5a6fb7c" class=""><strong>Strengths</strong></p><ul id="27236d8d-ca88-810a-a892-c07eaade8dbe" class="bulleted-list"><li style="list-style-type:disc">Rapid decision-making under pressure</li></ul><ul id="27236d8d-ca88-81cb-a963-fd98cdbd52f6" class="bulleted-list"><li style="list-style-type:disc">Financial and operational triage skills</li></ul><ul id="27236d8d-ca88-81e5-98a7-ef5f5513ddb4" class="bulleted-list"><li style="list-style-type:disc">Stakeholder management in crisis situations</li></ul><p id="27236d8d-ca88-8148-9bbb-e92a743e58e4" class=""><strong>Needs</strong></p><ul id="27236d8d-ca88-8180-b5fe-e803b395d6a9" class="bulleted-list"><li style="list-style-type:disc">Strong network of restructuring advisors, turnaround firms, and private equity funds</li></ul><ul id="27236d8d-ca88-813b-a329-f7ff45d6de6d" class="bulleted-list"><li style="list-style-type:disc">Solid proven track record and personal brand positioning</li></ul><ul id="27236d8d-ca88-817f-95aa-cf39ee30d3dc" class="bulleted-list"><li style="list-style-type:disc">Access to technical experts for specialized finance and operational management</li></ul><p id="27236d8d-ca88-8158-aab7-ce8b402699b1" class=""><strong>Red Flags</strong></p><ul id="27236d8d-ca88-81a2-84a3-d3e0b375f986" class="bulleted-list"><li style="list-style-type:disc">No experience with distressed companies or crisis management</li></ul><ul id="27236d8d-ca88-81f3-b071-eae9ec980ee9" class="bulleted-list"><li style="list-style-type:disc">Overly visionary or focused on long-term strategy</li></ul><ul id="27236d8d-ca88-81a9-b454-d494f43133cf" class="bulleted-list"><li style="list-style-type:disc">Consensus-building approach, as crisis situations often require decisive action</li></ul><ul id="27236d8d-ca88-81fe-8a4a-cff07920c789" class="bulleted-list"><li style="list-style-type:disc">Weak finance background, as financial strategy is critical in distressed situations</li></ul><p id="27236d8d-ca88-8140-a499-d84076bf353f" class="">
+</p></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

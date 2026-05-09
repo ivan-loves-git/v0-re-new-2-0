@@ -1,0 +1,181 @@
+RE-NEW PROJECT - ABSOLUTE FILE REFERENCE PATHS
+Project Root: /Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/Re-New
+
+========================================
+EXPLORATION REPORTS (Just Generated)
+========================================
+
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/EXPLORATION-REPORT.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/QUICK-SUMMARY.md
+
+========================================
+CANONICAL STRATEGY FILES (Source of Truth)
+========================================
+
+STRATEGY:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/strategy/business-model.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/strategy/value-proposition.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/strategy/expansion-thesis.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/strategy/validation-assumptions.md
+
+BRAND (PARTIALLY COMPLETE):
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/brand/audience.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/brand/foundations.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/brand/brand-voice.md (EMPTY - needs creation)
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/brand/key-messages.md (EMPTY - needs creation)
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/brand/visual-identity.md (EMPTY - needs creation)
+
+OPERATIONS:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/operations/team-structure.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/operations/tools-stack.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/operations/meeting-cadence.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/operations/decision-framework.md
+
+KNOWLEDGE:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/knowledge/stakeholder-map.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/knowledge/lessons-learned.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/00_CANONICAL/knowledge/academic-context.md
+
+========================================
+PRODUCT DOCUMENTATION (MOSTLY COMPLETE)
+========================================
+
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/01_PRODUCT_DOCUMENTATION/README.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/01_PRODUCT_DOCUMENTATION/product-overview.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/01_PRODUCT_DOCUMENTATION/information-architecture.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/01_PRODUCT_DOCUMENTATION/user-personas.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/01_PRODUCT_DOCUMENTATION/user-journeys.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/01_PRODUCT_DOCUMENTATION/feature-requirements.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/01_PRODUCT_DOCUMENTATION/monetization-model.md
+
+========================================
+PAGE SPECIFICATIONS (PARTIALLY COMPLETE)
+========================================
+
+COMPLETE (5 pages):
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/01-authentication/signup.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/01-authentication/login.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/01-authentication/onboarding.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/02-dashboard/home.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/03-discovery/hub.md
+
+INCOMPLETE (47 pages, see batch specs):
+[See folders 03-discovery (5 remaining), 04-deal-flow, 05-acquisition-support, 06-post-acquisition, 07-exit-planning, 08-network, 09-resources, 10-settings]
+
+TOOLS:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/_TEMPLATE.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/README.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_PAGE_SPECIFICATIONS/README-BATCH-SPECS.md
+
+========================================
+DESIGN SYSTEM
+========================================
+
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DESIGN_SYSTEM/design-system.md
+
+========================================
+DECISION LOG (KEY DECISIONS)
+========================================
+
+CRITICAL (November 2024 Pivots):
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DECISION_LOG/2024-Q4/DEC-20241101-ats-to-crm-operational-pivot.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DECISION_LOG/2024-Q4/DEC-20241101-dual-monetization-testing.md
+
+OTHER DECISIONS:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DECISION_LOG/2024-Q4/DEC-20241020-expansion-strategy-pivot.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DECISION_LOG/2024-Q4/DEC-20241020-notion-adoption.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DECISION_LOG/2024-Q4/DEC-20241020-weekly-meeting-cadence.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DECISION_LOG/2024-Q4/DEC-20241101-lead-de-cadrage-mandatory.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/03_DECISION_LOG/2025-Q4/001-strategic-framing-integration.md
+
+========================================
+ROOT DOCUMENTATION
+========================================
+
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/START-HERE.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/README.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/KNOWLEDGE-SYSTEM.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/DOCUMENTATION_STATUS.md
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/PAGE_SPECIFICATIONS_COMPLETE.md
+
+========================================
+SUPPORTING FILES
+========================================
+
+ARTIFACTS:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_ARTIFACTS/briefs/
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_ARTIFACTS/decks/
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_ARTIFACTS/emails/
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_ARTIFACTS/reports/
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/02_ARTIFACTS/sops/
+
+MEETINGS & REFERENCE:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/04_MEETINGS/ (Weekly syncs, stakeholder check-ins, tutor sessions)
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/06_SCRATCHPAD/ (Working drafts, explorations)
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/07_ARCHIVE/ (Historical reference)
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/08_SYSTEM/ (Templates, workflows, AI instructions)
+
+EXTERNAL MATERIALS:
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/Repo\ Files/Re-New_ICP_Day_Pitchdeck_2025\ 06\ 03_Final\ -\ sent.pptx
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/Repo\ Files/Re-New_2.0_ICP_Project_Update_20251022.pptx.pdf
+/Users/ivanpaudice/Library/Mobile\ Documents/com~apple~CloudDocs/Progetti/Re-New/Repo\ Files/Re-New\ 2.0\ Q\&A\ for\ candidates.pdf
+
+========================================
+RECOMMENDED READING ORDER
+========================================
+
+Quick Start (30 min):
+1. START-HERE.md
+2. QUICK-SUMMARY.md
+3. business-model.md (skim change history section)
+
+Full Context (2-3 hours):
+1. KNOWLEDGE-SYSTEM.md (understand the documentation system)
+2. business-model.md (complete read)
+3. DEC-20241101-ats-to-crm-operational-pivot.md
+4. DEC-20241101-dual-monetization-testing.md
+5. product-overview.md
+6. audience.md
+
+For Product Development:
+1. 01_PRODUCT_DOCUMENTATION/README.md
+2. 02_PAGE_SPECIFICATIONS/_TEMPLATE.md
+3. 02_PAGE_SPECIFICATIONS/01-authentication/signup.md (reference example)
+4. 03_DESIGN_SYSTEM/design-system.md
+
+For Marketing/Brand:
+1. audience.md
+2. foundations.md
+3. monetization-model.md
+4. Repo Files/Re-New 2.0 Q&A for candidates.pdf
+
+========================================
+FILES NEEDING UPDATES FOR BUSINESS PIVOT
+========================================
+
+HIGH PRIORITY (Create new files):
+- brand-voice.md (establish tone and communication style)
+- key-messages.md (establish messaging pillars)
+- visual-identity.md (establish visual system)
+
+HIGH PRIORITY (Complete existing):
+- 02_PAGE_SPECIFICATIONS/ (47 of 52 pages incomplete)
+  Priority: Discovery (5), Deal Flow (5), Settings (2) = 12 pages for MVP
+
+MEDIUM PRIORITY (Update existing):
+- business-model.md (add May 2025 dual monetization experiment results when available)
+- tools-stack.md (update with CRM implementation details)
+
+MEDIUM PRIORITY (Create new):
+- Marketing materials (sales deck for subscriptions, email sequences, success stories)
+
+========================================
+END OF FILE REFERENCE
+========================================
+
+Note: All paths use \ to escape spaces in directory names. 
+When using in terminal, can also use quotes: "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/Re-New/..."
+
+Total files explored: 50+
+Documentation completion: 37%
+Quality assessment: Good foundation, systematic execution needed to completion

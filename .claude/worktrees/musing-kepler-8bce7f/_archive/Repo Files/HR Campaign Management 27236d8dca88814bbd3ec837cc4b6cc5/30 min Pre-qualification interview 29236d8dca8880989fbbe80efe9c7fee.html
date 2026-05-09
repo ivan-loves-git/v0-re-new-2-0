@@ -1,0 +1,711 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>30 min Pre-qualification interview</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(134, 131, 126, 1);
+	fill: rgba(134, 131, 126, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="29236d8d-ca88-8098-9fbb-e80efe9c7fee" class="page sans"><header><div class="page-header-icon undefined"><span class="icon">⏱️</span></div><h1 class="page-title">30 min Pre-qualification interview</h1><p class="page-description"></p></header><div class="page-body"><h2 id="29236d8d-ca88-801c-8581-cee0b62d6eb1" class=""><mark class="highlight-blue">Objective - capture as many info as possible on the candidate</mark></h2><details open=""><summary style="font-weight:600;font-size:1.5em;line-height:1.3;margin:0"><mark class="highlight-blue">Expected output - Go, No-go, or Not yet</mark></summary><div class="indented"><h3 id="29236d8d-ca88-8002-8211-f24a64449a00" class=""><mark class="highlight-teal">Decision-making aids (to be checked in 1 minute)</mark></h3><p id="29236d8d-ca88-801f-8cd6-eedcdda1aae2" class=""><mark class="highlight-teal_background"><strong>&quot;GO&quot; Signals</strong></mark></p><ul id="29236d8d-ca88-8096-989e-da54d3fec893" class="bulleted-list"><li style="list-style-type:disc">Clear investment thesis + written criteria; active and measured pipeline (KPIs).</li></ul><ul id="29236d8d-ca88-80cb-8d2c-fa00bb586d03" class="bulleted-list"><li style="list-style-type:disc">Contribution and financing structure <strong>consistent</strong> with target ticket size; advisors already identified.</li></ul><ul id="29236d8d-ca88-800d-b8a1-fe20415e6ddc" class="bulleted-list"><li style="list-style-type:disc"><strong>Specific</strong> value creation levers linked to track record.</li></ul><ul id="29236d8d-ca88-8016-a9ee-e3736ac4cc68" class="bulleted-list"><li style="list-style-type:disc">Concrete 100-day plan; credible availability and runway.</li></ul><ul id="29236d8d-ca88-8015-8f41-e1899c6807b0" class="bulleted-list"><li style="list-style-type:disc"><strong>Targeted</strong> request for introductions (2–3 specific needs).</li></ul><p id="29236d8d-ca88-8012-81fb-ef53077eea56" class=""><mark class="highlight-yellow_background"><strong>&quot;NO-GO&quot; (or &quot;not yet&quot;) Signals</strong></mark></p><ul id="29236d8d-ca88-803b-b920-eeeb423fb0b9" class="bulleted-list"><li style="list-style-type:disc">Vague thesis, unstable criteria, opportunistic discourse.</li></ul><ul id="29236d8d-ca88-807c-a9e7-d6975f353372" class="bulleted-list"><li style="list-style-type:disc">No funnel KPIs; no progress (NDAs/site visits/offers) over 60–90 days.</li></ul><ul id="29236d8d-ca88-80b6-be9d-d05722a5b11e" class="bulleted-list"><li style="list-style-type:disc">Uncertain contribution / unrealistic deal structure / lack of working capital &amp; capex knowledge.</li></ul><ul id="29236d8d-ca88-8017-a3f4-c39e084612a9" class="bulleted-list"><li style="list-style-type:disc">Strong mismatch between track record ↔ target, or insufficient availability.</li></ul><ul id="29236d8d-ca88-8077-99b5-e82c1885e42d" class="bulleted-list"><li style="list-style-type:disc">Generic requests (&quot;I&#x27;ll take anything&quot;), no commitment on next steps.</li></ul><p id="29236d8d-ca88-8089-8380-d9c2f51bf6f2" class="">
+</p><h3 id="29236d8d-ca88-801d-9e27-de1740cda45a" class=""><mark class="highlight-teal"><strong>Quick decision</strong></mark></h3><ul id="29236d8d-ca88-8090-9476-e737f660be52" class="bulleted-list"><li style="list-style-type:disc"><strong>Immediate GO + routing</strong> (name 1–2 specific partners + 2 dated actions)</li></ul><ul id="29236d8d-ca88-80a9-ae13-feb6b6e813f8" class="bulleted-list"><li style="list-style-type:disc"><strong>Conditional GO</strong> (list 2 prerequisites → re-check within 2 weeks)</li></ul><ul id="29236d8d-ca88-8075-9371-f9d035ebb525" class="bulleted-list"><li style="list-style-type:disc"><strong>NO-GO / &quot;come back when&quot;</strong> (3 concrete areas for work)</li></ul></div></details><details open=""><summary style="font-weight:600;font-size:1.5em;line-height:1.3;margin:0"><mark class="highlight-blue">Interview guide (Fr)</mark></summary><div class="indented"><p id="29236d8d-ca88-8000-ae2f-e576ffc002f9" class=""><strong>0–2&#x27; | Contexte &amp; pitch</strong></p><ul id="29236d8d-ca88-80b2-a7d9-f7c1d5201780" class="bulleted-list"><li style="list-style-type:disc"><em>En 60 secondes : qui êtes-vous, quelle thèse d&#x27;investissement, pourquoi maintenant ?</em></li></ul><ul id="29236d8d-ca88-809e-8b0e-c94bd51adf6a" class="bulleted-list"><li style="list-style-type:disc"><em>Qu&#x27;est-ce qu&#x27;un « bon deal » pour vous (secteur, zone géographique, taille CA/EBITDA, situation) ?</em></li></ul><p id="29236d8d-ca88-8078-9ecc-e475e16ec687" class=""><strong>2–7&#x27; | Maturité du projet &amp; méthode</strong></p><ul id="29236d8d-ca88-80d3-8088-d333ccaad1f1" class="bulleted-list"><li style="list-style-type:disc"><em>Quels sont vos 3 « must-have » et 3 « nice-to-have » ? Comment arbitrez-vous entre les deux ?</em></li></ul><ul id="29236d8d-ca88-8043-9a3d-fce50b542acd" class="bulleted-list"><li style="list-style-type:disc"><em>Combien d&#x27;opportunités avez-vous regardées ces 90 derniers jours ? Quelles sources ? Où en êtes-vous (NDA signés, appels avec les cédants, visites, LOI, offres) ?</em></li></ul><ul id="29236d8d-ca88-80ed-adf4-c2b9f217c9b9" class="bulleted-list"><li style="list-style-type:disc"><em>Racontez-moi votre meilleur dossier vu récemment : pourquoi vous êtes dessus, qu&#x27;est-ce qui bloque, quelle est la prochaine étape ?</em></li></ul><ul id="29236d8d-ca88-80ce-ada2-dcceacb37244" class="bulleted-list"><li style="list-style-type:disc"><em>Votre routine hebdomadaire de sourcing : temps dédié, outils, KPI suivis (ex. nombre de contacts, dossiers filtrés, appels) ?</em></li></ul><p id="29236d8d-ca88-802e-a4c3-c98e22478d4e" class=""><strong>7–12&#x27; | Adéquation parcours/thèse</strong></p><ul id="29236d8d-ca88-804d-86ee-dd4fff0df263" class="bulleted-list"><li style="list-style-type:disc"><em>Quelles compétences transférables feront la différence dans votre cible ?</em></li></ul><ul id="29236d8d-ca88-800e-85b2-d19c6e3a34e0" class="bulleted-list"><li style="list-style-type:disc"><em>Citez 3 leviers de création de valeur post-reprise que vous maîtrisez (commercial, digital, opérations, RH, achats…) et un levier que vous externaliserez.</em></li></ul><ul id="29236d8d-ca88-8001-8b53-c2ccf0e17c69" class="bulleted-list"><li style="list-style-type:disc"><em>Dans quel contexte ne seriez-vous </em><em><strong>pas</strong></em><em> à votre place (type d&#x27;entreprise ou situation à éviter) ?</em></li></ul><p id="29236d8d-ca88-8081-b4cf-fb9f75bf941d" class=""><strong>12–17&#x27; | Faisabilité financière &amp; structure</strong></p><ul id="29236d8d-ca88-80e9-bba4-fc90254ecb0c" class="bulleted-list"><li style="list-style-type:disc"><em>Apport personnel immédiatement mobilisable ? Fourchette (ordre de grandeur) ?</em></li></ul><ul id="29236d8d-ca88-809c-9b57-c3d2a761ea99" class="bulleted-list"><li style="list-style-type:disc"><em>Structure cible type (LBO/MBI/MBO, % dette senior, mezz/equity, earn-out) ?</em></li></ul><ul id="29236d8d-ca88-80a8-86eb-ebf31fc8c1a6" class="bulleted-list"><li style="list-style-type:disc"><em>Capex et BFR estimés à l&#x27;entrée ? Stress-test : et si le CA baisse de 10 % la première année ?</em></li></ul><ul id="29236d8d-ca88-801e-b05b-f826e6234a09" class="bulleted-list"><li style="list-style-type:disc"><em>Holding prête (statuts, compte bancaire) ? Quels conseils déjà mandatés (avocat, expert-comptable, M&amp;A) ?</em></li></ul><p id="29236d8d-ca88-805c-aaec-f1584119a89b" class=""><strong>17–22&#x27; | Exécution &amp; gouvernance</strong></p><ul id="29236d8d-ca88-80d3-8be8-d9bfbb7a416a" class="bulleted-list"><li style="list-style-type:disc"><em>Plan « 100 jours » : 3 priorités concrètes et métriques associées.</em></li></ul><ul id="29236d8d-ca88-8074-b730-cef724aa9a01" class="bulleted-list"><li style="list-style-type:disc"><em>Disponibilité réelle (par semaine), horizon de recherche (mois restants), contraintes familiales ou géographiques.</em></li></ul><ul id="29236d8d-ca88-8055-b755-c2a6d3f3fbbb" class="bulleted-list"><li style="list-style-type:disc"><em>Qui compose votre « cercle de décision » (mentors, investisseurs, co-repreneur) ? Quel est le rôle de chacun ?</em></li></ul><p id="29236d8d-ca88-800f-91d2-d19b53629581" class=""><strong>22–26&#x27; | Alignement Re-New &amp; mise en relation</strong></p><ul id="29236d8d-ca88-8007-8134-f3077e29406e" class="bulleted-list"><li style="list-style-type:disc"><em>De quoi avez-vous le plus besoin maintenant : deal-flow qualifié, financement, sparring stratégique, conseil juridique, due diligence ?</em></li></ul><ul id="29236d8d-ca88-8059-954c-eb1f69f10615" class="bulleted-list"><li style="list-style-type:disc"><em>Quel type de partenaires souhaitez-vous rencontrer en priorité (banques d&#x27;affaires, intermédiaires, plateformes, banques, investisseurs, avocats en restructuring, opérateurs sectoriels) ?</em></li></ul><ul id="29236d8d-ca88-8060-a40a-d47404b2523b" class="bulleted-list"><li style="list-style-type:disc"><em>Êtes-vous ouvert à élargir ou resserrer vos critères pour accélérer ? Où ?</em></li></ul><p id="29236d8d-ca88-80b0-a5e2-eb5e18d14be6" class=""><strong>26–30&#x27; | Stress-test &amp; conclusion</strong></p><ul id="29236d8d-ca88-8035-b0eb-df9c6d205583" class="bulleted-list"><li style="list-style-type:disc"><em>Un deal est tombé à l&#x27;eau : que s&#x27;est-il passé, que feriez-vous différemment ?</em></li></ul><ul id="29236d8d-ca88-8029-ad57-f39fbb648301" class="bulleted-list"><li style="list-style-type:disc"><em>Quels seraient vos </em><em><strong>deux</strong></em><em> prochains pas concrets si on vous met en relation d&#x27;ici 72 h ?</em></li></ul><ul id="29236d8d-ca88-80a0-8da3-edfb346ca665" class="bulleted-list"><li style="list-style-type:disc"><em>Si je vous dis « GO » aujourd&#x27;hui, quel créneau cette semaine êtes-vous disponible pour avancer ?</em></li></ul></div></details><p id="29236d8d-ca88-80aa-be91-ec7090541eb8" class="">
+</p><details open=""><summary style="font-weight:600;font-size:1.5em;line-height:1.3;margin:0"><mark class="highlight-blue">Follow up emails (Fr)</mark></summary><div class="indented"><details open=""><summary style="font-weight:600;font-size:1.25em;line-height:1.3;margin:0"><mark class="highlight-teal">1) GO immédiat + mise en relation</mark></summary><div class="indented"><p id="29236d8d-ca88-801d-a26d-fb877b60dca4" class="">Objet : Suite à notre entretien — mise en relation et prochaines étapes</p><p id="29236d8d-ca88-8084-9fb3-e34a624ddaf6" class="">Bonjour {Prénom},</p><p id="29236d8d-ca88-803d-965f-f4442545546d" class="">Merci pour notre échange. Ton projet présente une <strong>maturité et un alignement solides</strong> avec ta thèse : nous avançons en <strong>GO</strong>.</p><p id="29236d8d-ca88-8023-b16b-fc8e53d8082e" class="">👉 <strong>Mises en relation proposées</strong></p><ul id="29236d8d-ca88-8003-97fb-fbc0c8fd2804" class="bulleted-list"><li style="list-style-type:disc">{Partenaire 1 — rôle / valeur ajoutée}</li></ul><ul id="29236d8d-ca88-804d-ae1f-ef6888152363" class="bulleted-list"><li style="list-style-type:disc">{Partenaire 2 — rôle / valeur ajoutée}</li></ul><p id="29236d8d-ca88-8014-8e0f-d7d349935fd4" class="">👉 <strong>Tes 2 prochaines étapes</strong></p><ol type="1" id="29236d8d-ca88-808f-ad84-f5b91f55633d" class="numbered-list" start="1"><li>Partager avant le {échéance/date} : fiche de cadrage à jour + CV + (si disponible) statuts de holding / attestation de fonds.</li></ol><ol type="1" id="29236d8d-ca88-80b5-a8e2-f96dca1a416d" class="numbered-list" start="2"><li>Confirmer un créneau le {jour, heure} pour un call de cadrage avec {Partenaire X}.</li></ol><p id="29236d8d-ca88-804b-bd2b-d1380ea9a1f1" class="">Merci de me confirmer :</p><ul id="29236d8d-ca88-8044-8e10-f0f3182dc3ff" class="bulleted-list"><li style="list-style-type:disc">ton accord pour partager <strong>nom, email, thèse et périmètre de recherche</strong> aux partenaires ci-dessus ;</li></ul><ul id="29236d8d-ca88-804a-b333-ca12a974ea6a" class="bulleted-list"><li style="list-style-type:disc">tes <strong>disponibilités</strong> cette semaine.</li></ul><p id="29236d8d-ca88-80d8-94a6-fba6755c0900" class="">À très vite,</p><p id="29236d8d-ca88-803a-acd2-c21bf0a0ca49" class="">Bien à toi,</p><p id="29236d8d-ca88-80b7-8859-cca8105816d1" class="">Bertrand — Re-New</p><p id="29236d8d-ca88-8021-bfc5-ec8df72bdeb2" class="">
+</p></div></details><details open=""><summary style="font-weight:600;font-size:1.25em;line-height:1.3;margin:0"><mark class="highlight-teal">2) GO conditionnel (2 prérequis précis)</mark></summary><div class="indented"><p id="29236d8d-ca88-802c-8672-c4051f719e49" class="">Objet : Suite à notre entretien — prérequis &amp; re-check</p><p id="29236d8d-ca88-80fd-aab0-fd2b06cd18da" class="">Bonjour {Prénom},</p><p id="29236d8d-ca88-803d-b443-efd7b8622f0d" class="">Merci pour notre échange. Ton projet est <strong>prometteur</strong>. Nous proposons un <strong>GO conditionnel</strong> sous réserve des éléments ci-dessous :</p><p id="29236d8d-ca88-80d0-a709-d36c4eb50bf0" class=""><strong>Prérequis d&#x27;ici le {date sous 10–14 jours}</strong></p><ol type="1" id="29236d8d-ca88-80c3-8fdc-d785822d148e" class="numbered-list" start="1"><li><strong>Fiche de cadrage</strong> finalisée : must-have et nice-to-have priorisés + zones à exclure.</li></ol><ol type="1" id="29236d8d-ca88-8098-ba74-e495462bbbfa" class="numbered-list" start="2"><li><strong>Cadre financier</strong> : apport sécurisé (ordre de grandeur + justificatif simple) et structure cible (senior / mezz / equity / earn-out).(Optionnel selon cas : KPI pipeline 90 jours — opportunités vues, NDA, calls, visites, LOI.)</li></ol><p id="29236d8d-ca88-806f-a08b-f3778edf84df" class="">Dès réception, nous calons un <strong>re-check de 15 minutes</strong> pour valider la mise en relation avec {type(s) de partenaires}.</p><p id="29236d8d-ca88-80e6-bdb6-dad476fdf743" class="">Je reste dispo si besoin d&#x27;un modèle ou d&#x27;un exemple.</p><p id="29236d8d-ca88-804b-9b17-c3f60c4617b8" class="">Bien à toi,</p><p id="29236d8d-ca88-80bf-b3cb-c3ad8760d28a" class="">Bertrand — Re-New</p><p id="29236d8d-ca88-807d-8533-c65f120e55cb" class="">
+</p></div></details><details open=""><summary style="font-weight:600;font-size:1.25em;line-height:1.3;margin:0"><mark class="highlight-teal">3) NO-GO (constructif &amp; respectueux)</mark></summary><div class="indented"><p id="29236d8d-ca88-80fd-8c0a-cf9177ffa16f" class="">Objet : Suite à notre entretien — recommandations pour la suite</p><p id="29236d8d-ca88-8005-bb57-ee8a1919576b" class="">Bonjour {Prénom},</p><p id="29236d8d-ca88-8081-b052-d78fd23603b1" class="">Merci pour l&#x27;échange. À ce stade, nous <strong>ne donnons pas suite</strong> à une mise en relation, principalement en raison de :</p><ul id="29236d8d-ca88-8034-a4ac-f2beae42cc53" class="bulleted-list"><li style="list-style-type:disc">{ex. thèse encore trop large / apport incertain / disponibilité limitée / leviers de valeur non démontrés}.</li></ul><p id="29236d8d-ca88-80ab-bd21-ee1d976993db" class="">Pour <strong>atteindre le bon niveau</strong>, voici 3 actions concrètes :</p><ol type="1" id="29236d8d-ca88-80d7-a414-c8742d166bf8" class="numbered-list" start="1"><li><strong>Clarifier la thèse</strong> : 3 must-have / 3 nice-to-have, périmètre de recherche précis.</li></ol><ol type="1" id="29236d8d-ca88-80d8-9b2c-f70ff80d87ca" class="numbered-list" start="2"><li><strong>Sécuriser l&#x27;apport</strong> et cadrer une structure réaliste (BFR &amp; capex compris).</li></ol><ol type="1" id="29236d8d-ca88-8090-9150-f019cc214780" class="numbered-list" start="3"><li><strong>Structurer le pipeline</strong> : KPI hebdo + 10 opportunités qualifiées sur 90 jours.</li></ol><p id="29236d8d-ca88-80a6-b52d-c864285f7f7b" class="">Si tu le souhaites, nous pouvons refaire un point <strong>dans {4–6 semaines}</strong> pour réévaluer la mise en relation.</p><p id="29236d8d-ca88-8036-a8e8-de673f816243" class="">Bonne continuation et merci encore,</p><p id="29236d8d-ca88-80c9-8e92-ea812823a32e" class="">Bertrand — Re-New</p></div></details></div></details><p id="29236d8d-ca88-804a-807f-f5a2842d69b1" class="">
+</p><h2 id="29236d8d-ca88-8059-8d40-dd5aff082c3c" class=""></h2></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

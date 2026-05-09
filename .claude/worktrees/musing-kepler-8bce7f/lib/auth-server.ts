@@ -1,0 +1,42 @@
+import { headers } from "next/headers"
+import { auth } from "@/lib/auth"
+
+/**
+ * Get the current authenticated user from Better Auth on the server side.
+ * Use this in Server Components and Server Actions.
+ *
+ * @returns The current user or null if not authenticated
+ */
+export async function getCurrentUser() {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    })
+
+    if (!session?.user) {
+      return null
+    }
+
+    return session.user
+  } catch (error) {
+    console.error("Error getting current user:", error)
+    return null
+  }
+}
+
+/**
+ * Get the current authenticated user, throwing if not authenticated.
+ * Use this in protected Server Actions where authentication is required.
+ *
+ * @throws Error if not authenticated
+ * @returns The current user
+ */
+export async function requireUser() {
+  const user = await getCurrentUser()
+
+  if (!user) {
+    throw new Error("Not authenticated")
+  }
+
+  return user
+}

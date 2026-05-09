@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Re-New Strategy Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f172a;
+    --bg-card: #1e293b;
+    --bg-hover: #334155;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-bright: #f8fafc;
+    --emerald: #10b981;
+    --emerald-dim: rgba(16, 185, 129, 0.15);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245, 158, 11, 0.15);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59, 130, 246, 0.15);
+    --purple: #a855f7;
+    --purple-dim: rgba(168, 85, 247, 0.15);
+    --green: #10b981;
+    --grey: #374151;
+    --red: #ef4444;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -0.3px;
+  }
+  .header h1 span { color: var(--emerald); }
+  .header .subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .header-right {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: right;
+  }
+
+  /* Persona Selector */
+  .persona-bar {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.8);
+  }
+  .persona-card {
+    flex: 1;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--bg-card);
+    position: relative;
+    overflow: hidden;
+  }
+  .persona-card:hover { border-color: var(--text-dim); }
+  .persona-card.active {
+    border-color: var(--emerald);
+    background: var(--emerald-dim);
+  }
+  .persona-card.active::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--emerald);
+  }
+  .persona-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 2px;
+  }
+  .persona-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tag-explorer { background: var(--grey); color: var(--text-dim); }
+  .tag-searcher { background: var(--blue-dim); color: var(--blue); }
+  .tag-deal { background: var(--amber-dim); color: var(--amber); }
+  .persona-meta {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .persona-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-style: italic;
+  }
+  .persona-badges {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .mini-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--emerald);
+  }
+  .mini-badge.empty { background: var(--grey); }
+
+  /* Main Layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr 300px;
+    gap: 0;
+    min-height: calc(100vh - 200px);
+  }
+
+  .panel {
+    padding: 16px;
+    border-right: 1px solid var(--border);
+  }
+  .panel:last-child { border-right: none; }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel-title::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--emerald);
+  }
+
+  /* Radar Panel */
+  .radar-panel { display: flex; flex-direction: column; }
+  .radar-canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    margin-bottom: 8px;
+  }
+  .radar-canvas-wrap canvas {
+    width: 100%;
+    height: 100%;
+  }
+  .sliders-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+  }
+  .slider-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+  .slider-group label span { color: var(--emerald); font-weight: 600; }
+  .slider-group input[type=range] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  .slider-group input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--emerald);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  /* Journey Map */
+  .journey-panel {
+    overflow-x: auto;
+    overflow-y: auto;
+    padding: 16px;
+    border-right: 1px solid var(--border);
+  }
+  .journey-scroll {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .phase-card {
+    min-width: 130px;
+    max-width: 130px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .phase-card:hover { transform: translateY(-2px); }
+  .phase-card.completed {
+    border-color: var(--green);
+    background: rgba(16, 185, 129, 0.08);
+  }
+  .phase-card.current {
+    border-color: var(--blue);
+    background: rgba(59, 130, 246, 0.12);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+  }
+  .phase-card.upcoming {
+    border-color: var(--grey);
+    opacity: 0.5;
+  }
+  .phase-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .phase-card.completed .phase-num { color: var(--green); }
+  .phase-card.current .phase-num { color: var(--blue); }
+  .phase-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .phase-question {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-bottom: 6px;
+  }
+  .phase-badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .phase-card.completed .phase-badge { background: rgba(16,185,129,0.2); color: var(--green); }
+  .phase-card.current .phase-badge { background: rgba(59,130,246,0.2); color: var(--blue); }
+  .phase-card.upcoming .phase-badge { background: rgba(55,65,81,0.5); color: var(--text-dim); }
+
+  /* Phase Detail Modal */
+  .phase-detail {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    z-index: 100;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .phase-detail.open { display: block; }
+  .phase-detail-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 99;
+  }
+  .phase-detail-overlay.open { display: block; }
+  .phase-detail h3 {
+    font-size: 18px;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .phase-detail .detail-question {
+    font-size: 14px;
+    color: var(--emerald);
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  .phase-detail .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .phase-detail .detail-row:last-child { border-bottom: none; }
+  .detail-label { color: var(--text-dim); }
+  .detail-value { color: var(--text-bright); font-weight: 600; }
+  .detail-close {
+    position: absolute;
+    top: 12px; right: 16px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .detail-close:hover { color: var(--text-bright); }
+  .detail-status-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-completed { background: rgba(16,185,129,0.2); color: var(--green); }
+  .status-current { background: rgba(59,130,246,0.2); color: var(--blue); }
+  .status-upcoming { background: rgba(55,65,81,0.5); color: var(--text-dim); }
+
+  /* Seller View */
+  .seller-panel {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: var(--grey);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--emerald); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(18px); }
+  .toggle-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .seller-profiles {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .profile-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .profile-block.renew { border-left: 3px solid var(--emerald); }
+  .profile-block.generic { border-left: 3px solid var(--red); opacity: 0.6; }
+  .profile-header {
+    color: var(--emerald);
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  .generic-header {
+    color: var(--red);
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  .vs-label {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 8px 0;
+  }
+
+  .seller-hidden {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+    padding: 20px;
+    line-height: 1.6;
+  }
+
+  /* Revenue Bar */
+  .revenue-bar {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.8);
+  }
+  .revenue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .revenue-total {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-bright);
+  }
+  .revenue-total .currency { font-size: 14px; color: var(--text-dim); }
+  .revenue-projected {
+    font-size: 12px;
+    color: var(--purple);
+    font-weight: 500;
+  }
+  .stacked-bar-wrap {
+    height: 32px;
+    background: var(--bg-card);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .bar-segment {
+    height: 100%;
+    transition: width 0.5s ease;
+    position: relative;
+  }
+  .bar-sub { background: var(--emerald); }
+  .bar-consulting { background: var(--amber); }
+  .bar-cert { background: var(--blue); }
+  .bar-commission {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--purple),
+      var(--purple) 4px,
+      rgba(168, 85, 247, 0.4) 4px,
+      rgba(168, 85, 247, 0.4) 8px
+    );
+  }
+  .bar-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .revenue-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-value { color: var(--text-bright); font-weight: 600; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .main-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    .panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .radar-canvas-wrap { max-width: 300px; margin: 0 auto 8px; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1><span>Re-New</span> Strategy Explorer</h1>
+    <div class="subtitle">Interactive Platform Vision V2.0</div>
+  </div>
+  <div class="header-right">
+    February 2026<br>
+    <span style="color:var(--emerald)">For: Bertrand, Marie, Thomas</span>
+  </div>
+</div>
+
+<!-- Persona Selector -->
+<div class="persona-bar" id="personaBar"></div>
+
+<!-- Main Grid -->
+<div class="main-grid">
+  <!-- Radar Panel -->
+  <div class="panel radar-panel">
+    <div class="panel-title">Readiness Radar</div>
+    <div class="radar-canvas-wrap">
+      <canvas id="radarCanvas" width="580" height="580"></canvas>
+    </div>
+    <div class="sliders-grid" id="sliders"></div>
+  </div>
+
+  <!-- Journey Map -->
+  <div class="journey-panel">
+    <div class="panel-title">13-Phase Acquisition Journey</div>
+    <div class="journey-scroll" id="journeyMap"></div>
+  </div>
+
+  <!-- Seller View -->
+  <div class="panel seller-panel">
+    <div class="panel-title">Seller Perspective</div>
+    <div class="toggle-wrap">
+      <div class="toggle" id="sellerToggle"></div>
+      <span class="toggle-label">What the seller sees</span>
+    </div>
+    <div class="seller-profiles" id="sellerContent">
+      <div class="seller-hidden" id="sellerHidden">
+        Toggle on to see how Re-New presents this repreneur to sellers and intermediaries vs. a generic candidate.
+      </div>
+      <div id="sellerProfiles" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Revenue Bar -->
+<div class="revenue-bar" id="revenueBar"></div>
+
+<!-- Phase Detail Modal -->
+<div class="phase-detail-overlay" id="detailOverlay"></div>
+<div class="phase-detail" id="detailModal">
+  <button class="detail-close" id="detailClose">&times;</button>
+  <div id="detailContent"></div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+
+const DIMENSIONS = [
+  'Financial Capacity',
+  'Industry Expertise',
+  'Deal Experience',
+  'Operational Capability',
+  'Network Strength',
+  'Process Maturity'
+];
+
+const PHASES = [
+  { num: 0, name: 'Ideation & Exploration', question: 'Should I buy a business?', cert: 'Explorer Badge', tier: 'Free', desc: 'The repreneur explores whether acquisition is the right path. Discovery phase with self-assessment and initial research.' },
+  { num: 1, name: 'Self-Assessment', question: 'What kind of buyer am I?', cert: 'Profile Verified', tier: 'Free', desc: 'Self-examination of strengths, gaps, buyer type. Articulating a personal acquisition thesis. WHO score becomes a mirror.' },
+  { num: 2, name: 'Acquisition Thesis', question: 'What am I looking for?', cert: 'Thesis Validated', tier: 'Coaching', desc: 'Define target criteria: sectors, geography, deal size, deal-breakers. This becomes the search compass.' },
+  { num: 3, name: 'Financial Preparation', question: 'Can I actually afford this?', cert: 'Financially Verified', tier: 'Pro', desc: 'The most critical preparation phase. Understanding financial capacity, French financing stack, and getting bank pre-approval.' },
+  { num: 4, name: 'Advisory Team Assembly', question: "Who's on my team?", cert: 'Team Ready', tier: 'Pro', desc: 'Building the right team: lawyer (M&A), accountant (DD), and ideally an M&A advisor/broker.' },
+  { num: 5, name: 'Deal Sourcing', question: 'Where do I find businesses?', cert: 'Active Searcher', tier: 'Pro', desc: 'Active search begins. Engaging with deal platforms, intermediaries, and direct approaches. Pipeline management is critical.' },
+  { num: 6, name: 'Target Evaluation', question: 'Is this business worth pursuing?', cert: 'Evaluation Competent', tier: 'Pro', desc: 'Initial evaluation per target: reading financials, normalizing EBITDA, estimating valuation, making go/no-go decisions.' },
+  { num: 7, name: 'Letter of Intent (LOI)', question: 'Making it official', cert: 'LDC Validated', tier: 'Consulting', desc: 'Submitting a Lettre de Cadrage (LDC) or Letter of Intent (LOI). Proposed terms, price range, conditions, and exclusivity period.' },
+  { num: 8, name: 'Due Diligence', question: 'What am I really buying?', cert: 'DD Competent', tier: 'Consulting', desc: 'The most intensive phase. Comprehensive DD across 6 workstreams: financial, legal, tax, operational, HR, environmental.' },
+  { num: 9, name: 'Negotiation', question: 'Getting to the right price', cert: 'Negotiation Ready', tier: 'Consulting', desc: 'Post-DD negotiation of final terms. Price adjustment, GAP structuring, earn-out mechanics, seller financing.' },
+  { num: 10, name: 'Financing Finalization', question: 'Getting the money', cert: 'Financing Secured', tier: 'Consulting', desc: 'Securing binding financing commitments. Bank presentations, holding company creation, BPI guarantee applications.' },
+  { num: 11, name: 'Closing', question: 'Signing day', cert: 'Deal Closed', tier: 'Commission', desc: 'Legal ownership transfer. The culmination of 12-18 months of work. Primarily administrative but emotionally significant.' },
+  { num: 12, name: 'Transition & Handover', question: 'Taking the wheel', cert: 'Transition Complete', tier: 'Consulting', desc: 'Seller hands over operational control. Building trust with existing team while implementing vision. 3-12 months.' },
+  { num: 13, name: 'First 100 Days', question: 'Making it yours', cert: 'Certified Repreneur', tier: 'Recognition', desc: 'The critical period determining long-term success. Stabilize operations, achieve quick wins, establish credibility.' }
+];
+
+const PERSONAS = [
+  {
+    id: 'karim',
+    name: 'Karim',
+    tag: 'Explorer',
+    tagClass: 'tag-explorer',
+    age: 45,
+    role: 'Operations Director, Logistics',
+    phase: 0,
+    desc: 'Just submitted questionnaire. Beginning the exploration journey.',
+    scores: [4, 6, 2, 7, 2, 1],
+    badges: ['Explorer Badge'],
+    subscription: 'Free',
+    subMonths: 0,
+    target: { sector: 'Industrial Services', size: '1-2M EUR', region: 'Ile-de-France' },
+    revenue: { subscription: 0, consulting: 0, certification: 0, commission: 0 },
+    projectedCommission: 0,
+    projectedDeal: null
+  },
+  {
+    id: 'sophie',
+    name: 'Sophie',
+    tag: 'Active Searcher',
+    tagClass: 'tag-searcher',
+    age: 42,
+    role: 'Ex-COO, Manufacturing',
+    phase: 5,
+    desc: 'Strong operator, actively sourcing deals. Weak on deal experience.',
+    scores: [7, 8, 2, 9, 3, 2],
+    badges: ['Explorer Badge', 'Profile Verified', 'Thesis Validated', 'Financially Verified', 'Team Ready', 'Active Searcher'],
+    subscription: 'Pro (149/mo)',
+    subMonths: 4,
+    target: { sector: 'Manufacturing', size: '2-3M EUR', region: 'Rhone-Alpes' },
+    revenue: { subscription: 596, consulting: 3300, certification: 0, commission: 0 },
+    projectedCommission: 0,
+    projectedDeal: null
+  },
+  {
+    id: 'marc',
+    name: 'Marc',
+    tag: 'In Deal',
+    tagClass: 'tag-deal',
+    age: 38,
+    role: 'Pro Subscriber, 10 months',
+    phase: 7,
+    desc: 'Balanced profile, actively evaluating targets. LDC submitted.',
+    scores: [8, 6, 5, 7, 6, 7],
+    badges: ['Explorer Badge', 'Profile Verified', 'Thesis Validated', 'Financially Verified', 'Team Ready', 'Active Searcher', 'Evaluation Competent', 'LDC Validated'],
+    subscription: 'Pro (149/mo)',
+    subMonths: 10,
+    target: { sector: 'Services / IT', size: '1.5-2.5M EUR', region: 'National' },
+    revenue: { subscription: 1490, consulting: 6400, certification: 800, commission: 0 },
+    projectedCommission: 36000,
+    projectedDeal: '2% on 1.8M deal'
+  }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+
+const state = {
+  personaIndex: 0,
+  scores: [...PERSONAS[0].scores],
+  sellerView: false,
+  animating: false
+};
+
+// ============================================================
+// PERSONA BAR
+// ============================================================
+
+function renderPersonaBar() {
+  const bar = document.getElementById('personaBar');
+  bar.innerHTML = PERSONAS.map((p, i) => {
+    const badgeDots = Array.from({length: 14}, (_, j) =>
+      `<div class="mini-badge ${j < p.badges.length ? '' : 'empty'}"></div>`
+    ).join('');
+    return `
+      <div class="persona-card ${i === state.personaIndex ? 'active' : ''}" onclick="selectPersona(${i})">
+        <div class="persona-name">${p.name} <span class="persona-tag ${p.tagClass}">${p.tag}</span></div>
+        <div class="persona-meta">${p.age} | ${p.role}</div>
+        <div class="persona-desc">${p.desc}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <div class="persona-badges">${badgeDots}</div>
+          <span style="font-size:10px;color:var(--text-dim)">${p.badges.length}/14</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectPersona(idx) {
+  state.personaIndex = idx;
+  const targetScores = [...PERSONAS[idx].scores];
+  animateScores(targetScores);
+  renderPersonaBar();
+  renderJourney();
+  renderSellerView();
+  renderRevenue();
+  updateSliders();
+}
+
+function animateScores(target) {
+  const start = [...state.scores];
+  const duration = 400;
+  const startTime = performance.now();
+
+  function step(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    state.scores = start.map((s, i) => s + (target[i] - s) * ease);
+    drawRadar();
+    updateSliderValues();
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ============================================================
+// RADAR CHART
+// ============================================================
+
+function drawRadar() {
+  const canvas = document.getElementById('radarCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const maxR = Math.min(cx, cy) - 70;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid hexagons at 3, 6, 9
+  [3, 6, 9].forEach(level => {
+    const r = (level / 9) * maxR;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 2;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = level === 9 ? 'rgba(226,232,240,0.15)' : 'rgba(226,232,240,0.07)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Level label
+    const labelAngle = -Math.PI / 2;
+    ctx.fillStyle = 'rgba(148,163,184,0.4)';
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(level.toString(), cx + 12, cy - r + 4);
+  });
+
+  // Axis lines
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + maxR * Math.cos(angle), cy + maxR * Math.sin(angle));
+    ctx.strokeStyle = 'rgba(226,232,240,0.07)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Data shape
+  ctx.beginPath();
+  state.scores.forEach((score, i) => {
+    const angle = (Math.PI / 3) * i - Math.PI / 2;
+    const r = (score / 9) * maxR;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+  ctx.fill();
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Data points
+  state.scores.forEach((score, i) => {
+    const angle = (Math.PI / 3) * i - Math.PI / 2;
+    const r = (score / 9) * maxR;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#10b981';
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // Labels
+  DIMENSIONS.forEach((dim, i) => {
+    const angle = (Math.PI / 3) * i - Math.PI / 2;
+    const labelR = maxR + 40;
+    const x = cx + labelR * Math.cos(angle);
+    const y = cy + labelR * Math.sin(angle);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Dimension name
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = '#94a3b8';
+    const lines = dim.split(' ');
+    if (lines.length > 1 && dim.length > 12) {
+      ctx.fillText(lines[0], x, y - 8);
+      ctx.fillText(lines.slice(1).join(' '), x, y + 6);
+      // Score
+      ctx.font = 'bold 14px system-ui';
+      ctx.fillStyle = '#10b981';
+      ctx.fillText(Math.round(state.scores[i]) + '/9', x, y + 22);
+    } else {
+      ctx.fillText(dim, x, y - 4);
+      ctx.font = 'bold 14px system-ui';
+      ctx.fillStyle = '#10b981';
+      ctx.fillText(Math.round(state.scores[i]) + '/9', x, y + 14);
+    }
+  });
+}
+
+// ============================================================
+// SLIDERS
+// ============================================================
+
+function renderSliders() {
+  const wrap = document.getElementById('sliders');
+  wrap.innerHTML = DIMENSIONS.map((dim, i) => `
+    <div class="slider-group">
+      <label>${dim.length > 18 ? dim.replace(' ', '<br>') : dim} <span id="sv${i}">${state.scores[i]}</span></label>
+      <input type="range" min="1" max="9" step="1" value="${state.scores[i]}" oninput="onSlider(${i}, this.value)">
+    </div>
+  `).join('');
+}
+
+function updateSliders() {
+  renderSliders();
+}
+
+function updateSliderValues() {
+  const inputs = document.querySelectorAll('#sliders input[type=range]');
+  DIMENSIONS.forEach((_, i) => {
+    if (inputs[i]) {
+      inputs[i].value = Math.round(state.scores[i]);
+      const sv = document.getElementById(`sv${i}`);
+      if (sv) sv.textContent = Math.round(state.scores[i]);
+    }
+  });
+}
+
+function onSlider(idx, val) {
+  state.scores[idx] = parseInt(val);
+  document.getElementById(`sv${idx}`).textContent = val;
+  drawRadar();
+  renderSellerView();
+}
+
+// ============================================================
+// JOURNEY MAP
+// ============================================================
+
+function renderJourney() {
+  const persona = PERSONAS[state.personaIndex];
+  const map = document.getElementById('journeyMap');
+  map.innerHTML = PHASES.map(p => {
+    let cls = 'upcoming';
+    if (p.num < persona.phase) cls = 'completed';
+    else if (p.num === persona.phase) cls = 'current';
+    return `
+      <div class="phase-card ${cls}" onclick="showPhaseDetail(${p.num})">
+        <div class="phase-num">PHASE ${p.num}</div>
+        <div class="phase-name">${p.name}</div>
+        <div class="phase-question">"${p.question}"</div>
+        <div class="phase-badge">${p.cert}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// PHASE DETAIL MODAL
+// ============================================================
+
+function showPhaseDetail(num) {
+  const p = PHASES[num];
+  const persona = PERSONAS[state.personaIndex];
+  let statusCls = 'status-upcoming';
+  let statusText = 'Upcoming';
+  if (num < persona.phase) { statusCls = 'status-completed'; statusText = 'Completed'; }
+  else if (num === persona.phase) { statusCls = 'status-current'; statusText = 'Current Phase'; }
+
+  document.getElementById('detailContent').innerHTML = `
+    <h3>Phase ${p.num}: ${p.name}</h3>
+    <div class="detail-question">"${p.question}"</div>
+    <div class="detail-row">
+      <span class="detail-label">Status for ${persona.name}</span>
+      <span class="detail-status-tag ${statusCls}">${statusText}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Certification</span>
+      <span class="detail-value">${p.cert}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Tier Access</span>
+      <span class="detail-value">${p.tier}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Description</span>
+      <span class="detail-value" style="max-width:280px;text-align:right;font-weight:400">${p.desc}</span>
+    </div>
+  `;
+
+  document.getElementById('detailModal').classList.add('open');
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+document.getElementById('detailClose').onclick = closeDetail;
+document.getElementById('detailOverlay').onclick = closeDetail;
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('open');
+  document.getElementById('detailOverlay').classList.remove('open');
+}
+
+// ============================================================
+// SELLER VIEW
+// ============================================================
+
+document.getElementById('sellerToggle').onclick = function() {
+  state.sellerView = !state.sellerView;
+  this.classList.toggle('on', state.sellerView);
+  renderSellerView();
+};
+
+function renderSellerView() {
+  const hidden = document.getElementById('sellerHidden');
+  const profiles = document.getElementById('sellerProfiles');
+
+  if (!state.sellerView) {
+    hidden.style.display = 'flex';
+    profiles.style.display = 'none';
+    return;
+  }
+
+  hidden.style.display = 'none';
+  profiles.style.display = 'block';
+
+  const p = PERSONAS[state.personaIndex];
+  const scores = state.scores.map(s => Math.round(s));
+
+  function bar(score) {
+    return '='.repeat(score) + ' '.repeat(9 - score);
+  }
+
+  const badgeList = p.badges.join(', ');
+
+  const renew = `REPRENEUR PROFILE: ${p.name}
+Re-New Certified: ${p.tag} | Phase: ${p.phase}/13
+
+Readiness Radar:
+  Financial Capacity:     ${bar(scores[0])} ${scores[0]}/9
+  Industry Expertise:     ${bar(scores[1])} ${scores[1]}/9
+  Deal Experience:        ${bar(scores[2])} ${scores[2]}/9
+  Operational Capability: ${bar(scores[3])} ${scores[3]}/9
+  Network Strength:       ${bar(scores[4])} ${scores[4]}/9
+  Process Maturity:       ${bar(scores[5])} ${scores[5]}/9
+
+Target: ${p.target.sector} | ${p.target.size} | ${p.target.region}
+
+Certifications: ${badgeList}`;
+
+  const generic = `CANDIDATE PROFILE: Anonymous Buyer
+
+"Interested buyer, 15 years business
+experience, has financing."
+
+No verification. No readiness data.
+No certification. No details.`;
+
+  profiles.innerHTML = `
+    <div class="profile-header">Re-New Certified Profile</div>
+    <div class="profile-block renew">${renew}</div>
+    <div class="vs-label">vs.</div>
+    <div class="generic-header">Generic Candidate</div>
+    <div class="profile-block generic">${generic}</div>
+  `;
+}
+
+// ============================================================
+// REVENUE BAR
+// ============================================================
+
+function renderRevenue() {
+  const p = PERSONAS[state.personaIndex];
+  const r = p.revenue;
+  const total = r.subscription + r.consulting + r.certification + r.commission;
+  const maxVal = 10000; // scale reference
+
+  const bar = document.getElementById('revenueBar');
+
+  if (total === 0) {
+    bar.innerHTML = `
+      <div class="revenue-header">
+        <div>
+          <div class="panel-title" style="margin-bottom:4px">Revenue Journey</div>
+          <div class="revenue-total">0 <span class="currency">EUR</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim)">
+          ${p.name} just signed up. No revenue yet.<br>
+          <span style="color:var(--emerald)">Potential lifetime value: 47,000-52,000 EUR</span>
+        </div>
+      </div>
+      <div class="stacked-bar-wrap">
+        <div class="bar-empty">No revenue yet. Journey begins here.</div>
+      </div>
+      <div class="revenue-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--emerald)"></div>Subscription <span class="legend-value">0</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Consulting <span class="legend-value">0</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Certification <span class="legend-value">0</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Commission <span class="legend-value">0</span></div>
+      </div>
+    `;
+    return;
+  }
+
+  const displayMax = Math.max(total, p.projectedCommission > 0 ? total + p.projectedCommission : total) * 1.1;
+
+  function pct(v) { return ((v / displayMax) * 100).toFixed(1) + '%'; }
+
+  const projectedTotal = total + p.projectedCommission;
+  const projectedText = p.projectedCommission > 0
+    ? `<div class="revenue-projected">Projected if deal closes: +${p.projectedCommission.toLocaleString()} EUR commission (${p.projectedDeal}) = ${projectedTotal.toLocaleString()} EUR total</div>`
+    : '';
+
+  bar.innerHTML = `
+    <div class="revenue-header">
+      <div>
+        <div class="panel-title" style="margin-bottom:4px">Revenue Journey</div>
+        <div class="revenue-total">${total.toLocaleString()} <span class="currency">EUR</span></div>
+        ${projectedText}
+      </div>
+      <div style="font-size:12px;color:var(--text-dim);text-align:right">
+        ${p.name} | ${p.subscription}<br>
+        <span style="color:var(--emerald)">${p.badges.length} badges earned</span>
+      </div>
+    </div>
+    <div class="stacked-bar-wrap">
+      ${r.subscription > 0 ? `<div class="bar-segment bar-sub" style="width:${pct(r.subscription)}" title="Subscription: ${r.subscription} EUR"></div>` : ''}
+      ${r.consulting > 0 ? `<div class="bar-segment bar-consulting" style="width:${pct(r.consulting)}" title="Consulting: ${r.consulting} EUR"></div>` : ''}
+      ${r.certification > 0 ? `<div class="bar-segment bar-cert" style="width:${pct(r.certification)}" title="Certification: ${r.certification} EUR"></div>` : ''}
+      ${r.commission > 0 ? `<div class="bar-segment bar-commission" style="width:${pct(r.commission)}" title="Commission: ${r.commission} EUR"></div>` : ''}
+      ${p.projectedCommission > 0 ? `<div class="bar-segment bar-commission" style="width:${pct(p.projectedCommission)};opacity:0.35" title="Projected commission: ${p.projectedCommission} EUR"></div>` : ''}
+    </div>
+    <div class="revenue-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--emerald)"></div>Subscription <span class="legend-value">${r.subscription.toLocaleString()}</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Consulting <span class="legend-value">${r.consulting.toLocaleString()}</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Certification <span class="legend-value">${r.certification.toLocaleString()}</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Commission <span class="legend-value">${p.projectedCommission > 0 ? `(projected: ${p.projectedCommission.toLocaleString()})` : '0'}</span></div>
+    </div>
+  `;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+function init() {
+  renderPersonaBar();
+  renderSliders();
+  drawRadar();
+  renderJourney();
+  renderSellerView();
+  renderRevenue();
+}
+
+init();
+</script>
+</body>
+</html>

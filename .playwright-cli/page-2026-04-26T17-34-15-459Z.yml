@@ -1,0 +1,481 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - button "🌊 Wave - the repreneur CRM" [ref=e9]:
+            - generic [ref=e10]: 🌊
+            - img "Wave - the repreneur CRM" [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Re-New Team
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Dashboard" [ref=e18] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e19]
+                - generic [ref=e24]: Dashboard
+            - listitem [ref=e25]:
+              - link "Groups" [ref=e26] [cursor=pointer]:
+                - /url: /repreneurs
+                - img [ref=e27]
+                - generic [ref=e32]: Groups
+            - listitem [ref=e33]:
+              - link "Find" [ref=e34] [cursor=pointer]:
+                - /url: /repreneurs/explore
+                - img [ref=e35]
+                - generic [ref=e38]: Find
+            - listitem [ref=e39]:
+              - link "Pipeline" [ref=e40] [cursor=pointer]:
+                - /url: /pipeline
+                - img [ref=e41]
+                - generic [ref=e45]: Pipeline
+            - listitem [ref=e46]:
+              - link "Emails" [ref=e47] [cursor=pointer]:
+                - /url: /emails
+                - img [ref=e48]
+                - generic [ref=e51]: Emails
+            - listitem [ref=e52]:
+              - link "Journey WIP" [ref=e53] [cursor=pointer]:
+                - /url: /journey
+                - img [ref=e54]
+                - generic [ref=e57]: Journey
+                - generic [ref=e58]: WIP
+            - listitem [ref=e59]:
+              - link "Analytics" [ref=e60] [cursor=pointer]:
+                - /url: /analytics
+                - img [ref=e61]
+                - generic [ref=e63]: Analytics
+            - listitem [ref=e64]:
+              - link "Offers WIP" [ref=e65] [cursor=pointer]:
+                - /url: /offers
+                - img [ref=e66]
+                - generic [ref=e69]: Offers
+                - generic [ref=e70]: WIP
+        - generic [ref=e71]:
+          - generic [ref=e72]: Tools
+          - list [ref=e74]:
+            - listitem [ref=e75]:
+              - link "Wavy" [ref=e76] [cursor=pointer]:
+                - /url: /tools/wavy
+                - img [ref=e77]
+                - generic [ref=e81]: Wavy
+        - generic [ref=e82]:
+          - generic [ref=e83]: Guidelines
+          - list [ref=e85]:
+            - listitem [ref=e86]:
+              - link "Mission" [ref=e87] [cursor=pointer]:
+                - /url: /guide
+                - img [ref=e89]
+                - generic [ref=e93]: Mission
+            - listitem [ref=e94]:
+              - link "Instructions" [ref=e95] [cursor=pointer]:
+                - /url: /guide/instructions
+                - img [ref=e97]
+                - generic [ref=e99]: Instructions
+            - listitem [ref=e100]:
+              - link "Roadmap" [ref=e101] [cursor=pointer]:
+                - /url: /guide/roadmap
+                - img [ref=e103]
+                - generic [ref=e106]: Roadmap
+      - generic [ref=e107]:
+        - generic [ref=e108]: build 10.af340c9
+        - list [ref=e109]:
+          - listitem [ref=e110]:
+            - button "CA Codex Auth Test codex-auth-test-1777224659506@example.com" [ref=e111]:
+              - generic [ref=e113]: CA
+              - generic [ref=e114]:
+                - generic [ref=e115]: Codex Auth Test
+                - generic [ref=e116]: codex-auth-test-1777224659506@example.com
+              - img [ref=e117]
+    - main [ref=e120]:
+      - main [ref=e121]:
+        - generic [ref=e122]:
+          - navigation [ref=e123]:
+            - button "Collapse sidebar" [ref=e124]:
+              - img [ref=e125]
+            - generic [ref=e127]:
+              - link "Repreneurs" [ref=e129] [cursor=pointer]:
+                - /url: /repreneurs
+              - generic [ref=e130]:
+                - img [ref=e131]
+                - generic [ref=e133]: Explore
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - heading "Find Repreneurs" [level=1] [ref=e138]
+                - paragraph [ref=e139]: Filter, sort, and find repreneurs across your entire pipeline
+              - generic [ref=e140]:
+                - button "Export CSV" [ref=e141]:
+                  - img
+                - link "Add Repreneur" [ref=e142] [cursor=pointer]:
+                  - /url: /repreneurs/new
+                  - button "Add Repreneur" [ref=e143]:
+                    - img
+                    - text: Add Repreneur
+            - generic [ref=e144]:
+              - generic [ref=e145]:
+                - generic [ref=e146]:
+                  - img [ref=e147]
+                  - textbox "Search by name..." [ref=e150]
+                - combobox [ref=e151]:
+                  - generic: All Status
+                  - img
+                - combobox [ref=e152]:
+                  - generic: All sources
+                  - img
+                - combobox [ref=e153]:
+                  - generic: All time
+                  - img
+                - combobox [ref=e154]:
+                  - generic: Any score
+                  - img
+                - combobox [ref=e155]:
+                  - generic: All journeys
+                  - img
+                - combobox [ref=e156]:
+                  - generic: All personas
+                  - img
+                - combobox [ref=e157]:
+                  - generic: All recommendations
+                  - img
+              - paragraph [ref=e158]: 216 repreneurs
+              - table [ref=e161]:
+                - rowgroup [ref=e162]:
+                  - row "Name Email Status WHO WHEN Assessment Journey Added" [ref=e163]:
+                    - columnheader "Name" [ref=e164] [cursor=pointer]:
+                      - generic [ref=e165]:
+                        - text: Name
+                        - img [ref=e166]
+                    - columnheader "Email" [ref=e169] [cursor=pointer]:
+                      - generic [ref=e170]:
+                        - text: Email
+                        - img [ref=e171]
+                    - columnheader "Status" [ref=e174] [cursor=pointer]:
+                      - generic [ref=e175]:
+                        - text: Status
+                        - img [ref=e176]
+                    - columnheader "WHO" [ref=e179] [cursor=pointer]:
+                      - generic [ref=e180]:
+                        - text: WHO
+                        - img [ref=e181]
+                    - columnheader "WHEN" [ref=e184] [cursor=pointer]:
+                      - generic [ref=e185]:
+                        - text: WHEN
+                        - img [ref=e186]
+                    - columnheader "Assessment" [ref=e189] [cursor=pointer]:
+                      - generic [ref=e190]:
+                        - text: Assessment
+                        - img [ref=e191]
+                    - columnheader "Journey" [ref=e194] [cursor=pointer]:
+                      - generic [ref=e195]:
+                        - text: Journey
+                        - img [ref=e196]
+                    - columnheader "Added" [ref=e199] [cursor=pointer]:
+                      - generic [ref=e200]:
+                        - text: Added
+                        - img [ref=e201]
+                - rowgroup [ref=e203]:
+                  - row "Jean Dupont Jean Dupont verify-1777218060596@example.com Lead 100 25 — Explorer about 2 hours ago" [ref=e204] [cursor=pointer]:
+                    - cell "Jean Dupont Jean Dupont" [ref=e205]:
+                      - generic [ref=e206]:
+                        - img "Jean Dupont" [ref=e208]
+                        - generic [ref=e209]: Jean Dupont
+                    - cell "verify-1777218060596@example.com" [ref=e210]
+                    - cell "Lead" [ref=e211]:
+                      - generic [ref=e212]: Lead
+                    - cell "100" [ref=e213]
+                    - cell "25" [ref=e214]
+                    - cell "—" [ref=e215]
+                    - cell "Explorer" [ref=e216]:
+                      - generic [ref=e217]: Explorer
+                    - cell "about 2 hours ago" [ref=e218]
+                  - row "John John Florence John John Florence tramberinmotion@gmail.com Declined 100 20 Fail Explorer about 9 hours ago" [ref=e219] [cursor=pointer]:
+                    - cell "John John Florence John John Florence" [ref=e220]:
+                      - generic [ref=e221]:
+                        - img "John John Florence" [ref=e223]
+                        - generic [ref=e224]: John John Florence
+                    - cell "tramberinmotion@gmail.com" [ref=e225]
+                    - cell "Declined" [ref=e226]:
+                      - generic [ref=e227]: Declined
+                    - cell "100" [ref=e228]
+                    - cell "20" [ref=e229]
+                    - cell "Fail" [ref=e230]:
+                      - generic [ref=e231]: Fail
+                    - cell "Explorer" [ref=e232]:
+                      - generic [ref=e233]: Explorer
+                    - cell "about 9 hours ago" [ref=e234]
+                  - row "hatem mabrouk hatem mabrouk hatem.mabrouk@live.co.uk Lead 91 40 — Explorer about 23 hours ago" [ref=e235] [cursor=pointer]:
+                    - cell "hatem mabrouk hatem mabrouk" [ref=e236]:
+                      - generic [ref=e237]:
+                        - img "hatem mabrouk" [ref=e239]
+                        - generic [ref=e240]: hatem mabrouk
+                    - cell "hatem.mabrouk@live.co.uk" [ref=e241]
+                    - cell "Lead" [ref=e242]:
+                      - generic [ref=e243]: Lead
+                    - cell "91" [ref=e244]
+                    - cell "40" [ref=e245]
+                    - cell "—" [ref=e246]
+                    - cell "Explorer" [ref=e247]:
+                      - generic [ref=e248]: Explorer
+                    - cell "about 23 hours ago" [ref=e249]
+                  - row "Yohan Monlor Yohan Monlor monlor.yohan@gmail.com Rejected 60 0 — Explorer 2 days ago" [ref=e250] [cursor=pointer]:
+                    - cell "Yohan Monlor Yohan Monlor" [ref=e251]:
+                      - generic [ref=e252]:
+                        - img "Yohan Monlor" [ref=e254]
+                        - generic [ref=e255]: Yohan Monlor
+                    - cell "monlor.yohan@gmail.com" [ref=e256]
+                    - cell "Rejected" [ref=e257]:
+                      - generic [ref=e258]: Rejected
+                    - cell "60" [ref=e259]
+                    - cell "0" [ref=e260]
+                    - cell "—" [ref=e261]
+                    - cell "Explorer" [ref=e262]:
+                      - generic [ref=e263]: Explorer
+                    - cell "2 days ago" [ref=e264]
+                  - row "Justine Michelat Justine Michelat justine-michelat@hotmail.fr Lead 92 0 — Explorer 2 days ago" [ref=e265] [cursor=pointer]:
+                    - cell "Justine Michelat Justine Michelat" [ref=e266]:
+                      - generic [ref=e267]:
+                        - img "Justine Michelat" [ref=e269]
+                        - generic [ref=e270]: Justine Michelat
+                    - cell "justine-michelat@hotmail.fr" [ref=e271]
+                    - cell "Lead" [ref=e272]:
+                      - generic [ref=e273]: Lead
+                    - cell "92" [ref=e274]
+                    - cell "0" [ref=e275]
+                    - cell "—" [ref=e276]
+                    - cell "Explorer" [ref=e277]:
+                      - generic [ref=e278]: Explorer
+                    - cell "2 days ago" [ref=e279]
+                  - row "Théo Courreges Théo Courreges theocourreges@gmail.com Rejected 43 0 — Explorer 3 days ago" [ref=e280] [cursor=pointer]:
+                    - cell "Théo Courreges Théo Courreges" [ref=e281]:
+                      - generic [ref=e282]:
+                        - img "Théo Courreges" [ref=e284]
+                        - generic [ref=e285]: Théo Courreges
+                    - cell "theocourreges@gmail.com" [ref=e286]
+                    - cell "Rejected" [ref=e287]:
+                      - generic [ref=e288]: Rejected
+                    - cell "43" [ref=e289]
+                    - cell "0" [ref=e290]
+                    - cell "—" [ref=e291]
+                    - cell "Explorer" [ref=e292]:
+                      - generic [ref=e293]: Explorer
+                    - cell "3 days ago" [ref=e294]
+                  - row "Pierre Bondroit Pierre Bondroit pierre@orhata.com Qualified — — — Learner 4 days ago" [ref=e295] [cursor=pointer]:
+                    - cell "Pierre Bondroit Pierre Bondroit" [ref=e296]:
+                      - generic [ref=e297]:
+                        - img "Pierre Bondroit" [ref=e299]
+                        - generic [ref=e300]: Pierre Bondroit
+                    - cell "pierre@orhata.com" [ref=e301]
+                    - cell "Qualified" [ref=e302]:
+                      - generic [ref=e303]: Qualified
+                    - cell "—" [ref=e304]
+                    - cell "—" [ref=e305]
+                    - cell "—" [ref=e306]
+                    - cell "Learner" [ref=e307]:
+                      - generic [ref=e308]: Learner
+                    - cell "4 days ago" [ref=e309]
+                  - row "Alexandre Salvador Alexandre Salvador alexandre.salvador@gmail.com Lead — — — Explorer 4 days ago" [ref=e310] [cursor=pointer]:
+                    - cell "Alexandre Salvador Alexandre Salvador" [ref=e311]:
+                      - generic [ref=e312]:
+                        - img "Alexandre Salvador" [ref=e314]
+                        - generic [ref=e315]: Alexandre Salvador
+                    - cell "alexandre.salvador@gmail.com" [ref=e316]
+                    - cell "Lead" [ref=e317]:
+                      - generic [ref=e318]: Lead
+                    - cell "—" [ref=e319]
+                    - cell "—" [ref=e320]
+                    - cell "—" [ref=e321]
+                    - cell "Explorer" [ref=e322]:
+                      - generic [ref=e323]: Explorer
+                    - cell "4 days ago" [ref=e324]
+                  - row "Dimitri LECOCQ Dimitri LECOCQ dimitri.lecocq0740@orange.fr Lead 86 5 — Explorer 6 days ago" [ref=e325] [cursor=pointer]:
+                    - cell "Dimitri LECOCQ Dimitri LECOCQ" [ref=e326]:
+                      - generic [ref=e327]:
+                        - img "Dimitri LECOCQ" [ref=e329]
+                        - generic [ref=e330]: Dimitri LECOCQ
+                    - cell "dimitri.lecocq0740@orange.fr" [ref=e331]
+                    - cell "Lead" [ref=e332]:
+                      - generic [ref=e333]: Lead
+                    - cell "86" [ref=e334]
+                    - cell "5" [ref=e335]
+                    - cell "—" [ref=e336]
+                    - cell "Explorer" [ref=e337]:
+                      - generic [ref=e338]: Explorer
+                    - cell "6 days ago" [ref=e339]
+                  - row "Marc Philouze Marc Philouze marc.philouze@gmail.com Qualified 96 75 — Learner 6 days ago" [ref=e340] [cursor=pointer]:
+                    - cell "Marc Philouze Marc Philouze" [ref=e341]:
+                      - generic [ref=e342]:
+                        - img "Marc Philouze" [ref=e344]
+                        - generic [ref=e345]: Marc Philouze
+                    - cell "marc.philouze@gmail.com" [ref=e346]
+                    - cell "Qualified" [ref=e347]:
+                      - generic [ref=e348]: Qualified
+                    - cell "96" [ref=e349]
+                    - cell "75" [ref=e350]
+                    - cell "—" [ref=e351]
+                    - cell "Learner" [ref=e352]:
+                      - generic [ref=e353]: Learner
+                    - cell "6 days ago" [ref=e354]
+                  - row "Jea-Marie HAUWEL Jea-Marie HAUWEL hauweljm@gmai.com Lead 73 95 — Explorer 6 days ago" [ref=e355] [cursor=pointer]:
+                    - cell "Jea-Marie HAUWEL Jea-Marie HAUWEL" [ref=e356]:
+                      - generic [ref=e357]:
+                        - img "Jea-Marie HAUWEL" [ref=e359]
+                        - generic [ref=e360]: Jea-Marie HAUWEL
+                    - cell "hauweljm@gmai.com" [ref=e361]
+                    - cell "Lead" [ref=e362]:
+                      - generic [ref=e363]: Lead
+                    - cell "73" [ref=e364]
+                    - cell "95" [ref=e365]
+                    - cell "—" [ref=e366]
+                    - cell "Explorer" [ref=e367]:
+                      - generic [ref=e368]: Explorer
+                    - cell "6 days ago" [ref=e369]
+                  - row "nicolas hauchecorne nicolas hauchecorne nhauchecorne@yahoo.com Qualified 86 5 — Learner 6 days ago" [ref=e370] [cursor=pointer]:
+                    - cell "nicolas hauchecorne nicolas hauchecorne" [ref=e371]:
+                      - generic [ref=e372]:
+                        - img "nicolas hauchecorne" [ref=e374]
+                        - generic [ref=e375]: nicolas hauchecorne
+                    - cell "nhauchecorne@yahoo.com" [ref=e376]
+                    - cell "Qualified" [ref=e377]:
+                      - generic [ref=e378]: Qualified
+                    - cell "86" [ref=e379]
+                    - cell "5" [ref=e380]
+                    - cell "—" [ref=e381]
+                    - cell "Learner" [ref=e382]:
+                      - generic [ref=e383]: Learner
+                    - cell "6 days ago" [ref=e384]
+                  - row "Bayram Kilic Bayram Kilic bayram.kilic@scania.com Lead 95 10 — Explorer 7 days ago" [ref=e385] [cursor=pointer]:
+                    - cell "Bayram Kilic Bayram Kilic" [ref=e386]:
+                      - generic [ref=e387]:
+                        - img "Bayram Kilic" [ref=e389]
+                        - generic [ref=e390]: Bayram Kilic
+                    - cell "bayram.kilic@scania.com" [ref=e391]
+                    - cell "Lead" [ref=e392]:
+                      - generic [ref=e393]: Lead
+                    - cell "95" [ref=e394]
+                    - cell "10" [ref=e395]
+                    - cell "—" [ref=e396]
+                    - cell "Explorer" [ref=e397]:
+                      - generic [ref=e398]: Explorer
+                    - cell "7 days ago" [ref=e399]
+                  - row "Guillaume Jacques Guillaume Jacques jacquesguillaume23@orange.fr Qualified 82 55 — Explorer 7 days ago" [ref=e400] [cursor=pointer]:
+                    - cell "Guillaume Jacques Guillaume Jacques" [ref=e401]:
+                      - generic [ref=e402]:
+                        - img "Guillaume Jacques" [ref=e404]
+                        - generic [ref=e405]: Guillaume Jacques
+                    - cell "jacquesguillaume23@orange.fr" [ref=e406]
+                    - cell "Qualified" [ref=e407]:
+                      - generic [ref=e408]: Qualified
+                    - cell "82" [ref=e409]
+                    - cell "55" [ref=e410]
+                    - cell "—" [ref=e411]
+                    - cell "Explorer" [ref=e412]:
+                      - generic [ref=e413]: Explorer
+                    - cell "7 days ago" [ref=e414]
+                  - row "Marco Bonzanino Marco Bonzanino marcobonzanino@gmail.com Qualified 64 80 — Explorer 10 days ago" [ref=e415] [cursor=pointer]:
+                    - cell "Marco Bonzanino Marco Bonzanino" [ref=e416]:
+                      - generic [ref=e417]:
+                        - img "Marco Bonzanino" [ref=e419]
+                        - generic [ref=e420]: Marco Bonzanino
+                    - cell "marcobonzanino@gmail.com" [ref=e421]
+                    - cell "Qualified" [ref=e422]:
+                      - generic [ref=e423]: Qualified
+                    - cell "64" [ref=e424]
+                    - cell "80" [ref=e425]
+                    - cell "—" [ref=e426]
+                    - cell "Explorer" [ref=e427]:
+                      - generic [ref=e428]: Explorer
+                    - cell "10 days ago" [ref=e429]
+                  - row "laurence abadie laurence abadie laurenceabadie@hotmail.com Lead 90 0 — Explorer 11 days ago" [ref=e430] [cursor=pointer]:
+                    - cell "laurence abadie laurence abadie" [ref=e431]:
+                      - generic [ref=e432]:
+                        - img "laurence abadie" [ref=e434]
+                        - generic [ref=e435]: laurence abadie
+                    - cell "laurenceabadie@hotmail.com" [ref=e436]
+                    - cell "Lead" [ref=e437]:
+                      - generic [ref=e438]: Lead
+                    - cell "90" [ref=e439]
+                    - cell "0" [ref=e440]
+                    - cell "—" [ref=e441]
+                    - cell "Explorer" [ref=e442]:
+                      - generic [ref=e443]: Explorer
+                    - cell "11 days ago" [ref=e444]
+                  - row "romain Boube romain Boube romain.boube@gmail.com Lead 93 85 — Explorer 12 days ago" [ref=e445] [cursor=pointer]:
+                    - cell "romain Boube romain Boube" [ref=e446]:
+                      - generic [ref=e447]:
+                        - img "romain Boube" [ref=e449]
+                        - generic [ref=e450]: romain Boube
+                    - cell "romain.boube@gmail.com" [ref=e451]
+                    - cell "Lead" [ref=e452]:
+                      - generic [ref=e453]: Lead
+                    - cell "93" [ref=e454]
+                    - cell "85" [ref=e455]
+                    - cell "—" [ref=e456]
+                    - cell "Explorer" [ref=e457]:
+                      - generic [ref=e458]: Explorer
+                    - cell "12 days ago" [ref=e459]
+                  - row "Jean Mourlan Jean Mourlan jmourlan@hotmail.com Lead 91 0 — Explorer 13 days ago" [ref=e460] [cursor=pointer]:
+                    - cell "Jean Mourlan Jean Mourlan" [ref=e461]:
+                      - generic [ref=e462]:
+                        - img "Jean Mourlan" [ref=e464]
+                        - generic [ref=e465]: Jean Mourlan
+                    - cell "jmourlan@hotmail.com" [ref=e466]
+                    - cell "Lead" [ref=e467]:
+                      - generic [ref=e468]: Lead
+                    - cell "91" [ref=e469]
+                    - cell "0" [ref=e470]
+                    - cell "—" [ref=e471]
+                    - cell "Explorer" [ref=e472]:
+                      - generic [ref=e473]: Explorer
+                    - cell "13 days ago" [ref=e474]
+                  - row "Hugo Davy Hugo Davy hugodavy01@gmail.com Lead 74 0 — Explorer 13 days ago" [ref=e475] [cursor=pointer]:
+                    - cell "Hugo Davy Hugo Davy" [ref=e476]:
+                      - generic [ref=e477]:
+                        - img "Hugo Davy" [ref=e479]
+                        - generic [ref=e480]: Hugo Davy
+                    - cell "hugodavy01@gmail.com" [ref=e481]
+                    - cell "Lead" [ref=e482]:
+                      - generic [ref=e483]: Lead
+                    - cell "74" [ref=e484]
+                    - cell "0" [ref=e485]
+                    - cell "—" [ref=e486]
+                    - cell "Explorer" [ref=e487]:
+                      - generic [ref=e488]: Explorer
+                    - cell "13 days ago" [ref=e489]
+                  - row "Maxime d’Hauteville Maxime d’Hauteville dhauteville.maxime@gmail.com Lead 100 5 — Explorer 14 days ago" [ref=e490] [cursor=pointer]:
+                    - cell "Maxime d’Hauteville Maxime d’Hauteville" [ref=e491]:
+                      - generic [ref=e492]:
+                        - img "Maxime d’Hauteville" [ref=e494]
+                        - generic [ref=e495]: Maxime d’Hauteville
+                    - cell "dhauteville.maxime@gmail.com" [ref=e496]
+                    - cell "Lead" [ref=e497]:
+                      - generic [ref=e498]: Lead
+                    - cell "100" [ref=e499]
+                    - cell "5" [ref=e500]
+                    - cell "—" [ref=e501]
+                    - cell "Explorer" [ref=e502]:
+                      - generic [ref=e503]: Explorer
+                    - cell "14 days ago" [ref=e504]
+              - generic [ref=e505]:
+                - generic [ref=e506]: Showing 1-20 of 216
+                - navigation "pagination" [ref=e507]:
+                  - list [ref=e508]:
+                    - listitem [ref=e509]:
+                      - generic "Go to previous page":
+                        - img
+                        - generic: Previous
+                    - listitem [ref=e511]:
+                      - generic [ref=e512] [cursor=pointer]: "1"
+                    - listitem [ref=e514]:
+                      - generic [ref=e515] [cursor=pointer]: "2"
+                    - generic [ref=e516]:
+                      - generic [ref=e517]: ...
+                      - listitem [ref=e518]:
+                        - generic [ref=e519] [cursor=pointer]: "11"
+                    - listitem [ref=e520]:
+                      - generic "Go to next page" [ref=e521] [cursor=pointer]:
+                        - generic [ref=e522]: Next
+                        - img
+  - region "Notifications alt+T"
+  - alert [ref=e523]

@@ -1,0 +1,928 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - button "🌊 Wave - the repreneur CRM" [ref=e9]:
+            - generic [ref=e10]: 🌊
+            - img "Wave - the repreneur CRM" [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Re-New Team
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Dashboard" [ref=e18] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e19]
+                - generic [ref=e24]: Dashboard
+            - listitem [ref=e25]:
+              - link "Groups" [ref=e26] [cursor=pointer]:
+                - /url: /repreneurs
+                - img [ref=e27]
+                - generic [ref=e32]: Groups
+            - listitem [ref=e33]:
+              - link "Find" [ref=e34] [cursor=pointer]:
+                - /url: /repreneurs/explore
+                - img [ref=e35]
+                - generic [ref=e38]: Find
+            - listitem [ref=e39]:
+              - link "Pipeline" [ref=e40] [cursor=pointer]:
+                - /url: /pipeline
+                - img [ref=e41]
+                - generic [ref=e45]: Pipeline
+            - listitem [ref=e46]:
+              - link "Emails" [ref=e47] [cursor=pointer]:
+                - /url: /emails
+                - img [ref=e48]
+                - generic [ref=e51]: Emails
+            - listitem [ref=e52]:
+              - link "Journey WIP" [ref=e53] [cursor=pointer]:
+                - /url: /journey
+                - img [ref=e54]
+                - generic [ref=e57]: Journey
+                - generic [ref=e58]: WIP
+            - listitem [ref=e59]:
+              - link "Analytics" [ref=e60] [cursor=pointer]:
+                - /url: /analytics
+                - img [ref=e61]
+                - generic [ref=e63]: Analytics
+            - listitem [ref=e64]:
+              - link "Offers WIP" [ref=e65] [cursor=pointer]:
+                - /url: /offers
+                - img [ref=e66]
+                - generic [ref=e69]: Offers
+                - generic [ref=e70]: WIP
+        - generic [ref=e71]:
+          - generic [ref=e72]: Tools
+          - list [ref=e74]:
+            - listitem [ref=e75]:
+              - link "Wavy" [ref=e76] [cursor=pointer]:
+                - /url: /tools/wavy
+                - img [ref=e77]
+                - generic [ref=e81]: Wavy
+        - generic [ref=e82]:
+          - generic [ref=e83]: Guidelines
+          - list [ref=e85]:
+            - listitem [ref=e86]:
+              - link "Mission" [ref=e87] [cursor=pointer]:
+                - /url: /guide
+                - img [ref=e89]
+                - generic [ref=e93]: Mission
+            - listitem [ref=e94]:
+              - link "Instructions" [ref=e95] [cursor=pointer]:
+                - /url: /guide/instructions
+                - img [ref=e97]
+                - generic [ref=e99]: Instructions
+            - listitem [ref=e100]:
+              - link "Roadmap" [ref=e101] [cursor=pointer]:
+                - /url: /guide/roadmap
+                - img [ref=e103]
+                - generic [ref=e106]: Roadmap
+      - generic [ref=e107]:
+        - generic [ref=e108]: build 10.af340c9
+        - list [ref=e109]:
+          - listitem [ref=e110]:
+            - button "CA Codex Auth Test codex-auth-test-1777224659506@example.com" [ref=e111]:
+              - generic [ref=e113]: CA
+              - generic [ref=e114]:
+                - generic [ref=e115]: Codex Auth Test
+                - generic [ref=e116]: codex-auth-test-1777224659506@example.com
+              - img [ref=e117]
+    - main [ref=e120]:
+      - main [ref=e121]:
+        - generic [ref=e122]:
+          - navigation [ref=e123]:
+            - button "Collapse sidebar" [ref=e124]:
+              - img [ref=e125]
+            - generic [ref=e129]: Repreneurs
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - generic [ref=e133]:
+                - heading "Groups" [level=1] [ref=e134]
+                - paragraph [ref=e135]: Repreneurs organized by lifecycle status
+              - generic [ref=e136]:
+                - button "Export CSV" [ref=e137]:
+                  - img
+                - link "Add Repreneur" [ref=e138] [cursor=pointer]:
+                  - /url: /repreneurs/new
+                  - button "Add Repreneur" [ref=e139]:
+                    - img
+                    - text: Add Repreneur
+            - generic [ref=e140]:
+              - generic [ref=e141]:
+                - generic [ref=e142]:
+                  - img [ref=e143]
+                  - textbox "Search by name..." [ref=e146]
+                - combobox [ref=e147]:
+                  - img
+                - combobox [ref=e148]
+                - combobox [ref=e149]:
+                  - img
+                - combobox [ref=e150]
+                - combobox [ref=e151]:
+                  - img
+                - combobox [ref=e152]
+                - combobox [ref=e153]:
+                  - img
+                - combobox [ref=e154]
+                - combobox [ref=e155]:
+                  - img
+                - combobox [ref=e156]
+                - combobox [ref=e157]:
+                  - img
+                - combobox [ref=e158]
+                - combobox [ref=e159]:
+                  - img
+                - combobox [ref=e160]
+                - combobox [ref=e161]:
+                  - img
+                - combobox [ref=e162]
+              - generic [ref=e163]:
+                - generic [ref=e164]:
+                  - button "Leads 54" [ref=e165]:
+                    - generic [ref=e166]:
+                      - img [ref=e167]
+                      - generic [ref=e169]: Leads
+                      - generic [ref=e170]: "54"
+                  - generic [ref=e171]:
+                    - table [ref=e173]:
+                      - rowgroup [ref=e174]:
+                        - row "Name Email Rating Journey Created ↓" [ref=e175]:
+                          - columnheader "Name" [ref=e176] [cursor=pointer]
+                          - columnheader "Email" [ref=e177] [cursor=pointer]
+                          - columnheader "Rating" [ref=e178] [cursor=pointer]
+                          - columnheader "Journey" [ref=e179]
+                          - columnheader "Created ↓" [ref=e180] [cursor=pointer]
+                      - rowgroup [ref=e181]:
+                        - row "Jean Dupont Jean Dupont verify-1777218060596@example.com 125 Explorer (0/17) 4/26/2026" [ref=e182] [cursor=pointer]:
+                          - cell "Jean Dupont Jean Dupont" [ref=e183]:
+                            - generic [ref=e184]:
+                              - img "Jean Dupont" [ref=e186]
+                              - generic [ref=e187]: Jean Dupont
+                          - cell "verify-1777218060596@example.com" [ref=e188]
+                          - cell "125" [ref=e189]:
+                            - generic [ref=e190]:
+                              - img [ref=e191]
+                              - generic [ref=e195]: "125"
+                          - cell "Explorer (0/17)" [ref=e196]:
+                            - generic [ref=e197]:
+                              - generic [ref=e198]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e199]: (0/17)
+                          - cell "4/26/2026" [ref=e200]
+                        - row "hatem mabrouk hatem mabrouk hatem.mabrouk@live.co.uk 131 Explorer (0/17) 4/25/2026" [ref=e201] [cursor=pointer]:
+                          - cell "hatem mabrouk hatem mabrouk" [ref=e202]:
+                            - generic [ref=e203]:
+                              - img "hatem mabrouk" [ref=e205]
+                              - generic [ref=e206]: hatem mabrouk
+                          - cell "hatem.mabrouk@live.co.uk" [ref=e207]
+                          - cell "131" [ref=e208]:
+                            - generic [ref=e209]:
+                              - img [ref=e210]
+                              - generic [ref=e214]: "131"
+                          - cell "Explorer (0/17)" [ref=e215]:
+                            - generic [ref=e216]:
+                              - generic [ref=e217]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e218]: (0/17)
+                          - cell "4/25/2026" [ref=e219]
+                        - row "Justine Michelat Justine Michelat justine-michelat@hotmail.fr 92 Explorer (0/17) 4/24/2026" [ref=e220] [cursor=pointer]:
+                          - cell "Justine Michelat Justine Michelat" [ref=e221]:
+                            - generic [ref=e222]:
+                              - img "Justine Michelat" [ref=e224]
+                              - generic [ref=e225]: Justine Michelat
+                          - cell "justine-michelat@hotmail.fr" [ref=e226]
+                          - cell "92" [ref=e227]:
+                            - generic [ref=e228]:
+                              - img [ref=e229]
+                              - generic [ref=e233]: "92"
+                          - cell "Explorer (0/17)" [ref=e234]:
+                            - generic [ref=e235]:
+                              - generic [ref=e236]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e237]: (0/17)
+                          - cell "4/24/2026" [ref=e238]
+                        - row "Alexandre Salvador Alexandre Salvador Interview booked alexandre.salvador@gmail.com N/A Explorer (0/17) 4/22/2026" [ref=e239] [cursor=pointer]:
+                          - cell "Alexandre Salvador Alexandre Salvador Interview booked" [ref=e240]:
+                            - generic [ref=e241]:
+                              - img "Alexandre Salvador" [ref=e243]
+                              - generic [ref=e244]: Alexandre Salvador
+                              - img "Interview booked" [ref=e245]
+                          - cell "alexandre.salvador@gmail.com" [ref=e248]
+                          - cell "N/A" [ref=e249]
+                          - cell "Explorer (0/17)" [ref=e250]:
+                            - generic [ref=e251]:
+                              - generic [ref=e252]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e253]: (0/17)
+                          - cell "4/22/2026" [ref=e254]
+                        - row "Dimitri LECOCQ Dimitri LECOCQ dimitri.lecocq0740@orange.fr 91 Explorer (0/17) 4/20/2026" [ref=e255] [cursor=pointer]:
+                          - cell "Dimitri LECOCQ Dimitri LECOCQ" [ref=e256]:
+                            - generic [ref=e257]:
+                              - img "Dimitri LECOCQ" [ref=e259]
+                              - generic [ref=e260]: Dimitri LECOCQ
+                          - cell "dimitri.lecocq0740@orange.fr" [ref=e261]
+                          - cell "91" [ref=e262]:
+                            - generic [ref=e263]:
+                              - img [ref=e264]
+                              - generic [ref=e268]: "91"
+                          - cell "Explorer (0/17)" [ref=e269]:
+                            - generic [ref=e270]:
+                              - generic [ref=e271]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e272]: (0/17)
+                          - cell "4/20/2026" [ref=e273]
+                        - row "Jea-Marie HAUWEL Jea-Marie HAUWEL hauweljm@gmai.com 168 Explorer (0/17) 4/20/2026" [ref=e274] [cursor=pointer]:
+                          - cell "Jea-Marie HAUWEL Jea-Marie HAUWEL" [ref=e275]:
+                            - generic [ref=e276]:
+                              - img "Jea-Marie HAUWEL" [ref=e278]
+                              - generic [ref=e279]: Jea-Marie HAUWEL
+                          - cell "hauweljm@gmai.com" [ref=e280]
+                          - cell "168" [ref=e281]:
+                            - generic [ref=e282]:
+                              - img [ref=e283]
+                              - generic [ref=e287]: "168"
+                          - cell "Explorer (0/17)" [ref=e288]:
+                            - generic [ref=e289]:
+                              - generic [ref=e290]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e291]: (0/17)
+                          - cell "4/20/2026" [ref=e292]
+                        - row "Bayram Kilic Bayram Kilic bayram.kilic@scania.com 105 Explorer (0/17) 4/19/2026" [ref=e293] [cursor=pointer]:
+                          - cell "Bayram Kilic Bayram Kilic" [ref=e294]:
+                            - generic [ref=e295]:
+                              - img "Bayram Kilic" [ref=e297]
+                              - generic [ref=e298]: Bayram Kilic
+                          - cell "bayram.kilic@scania.com" [ref=e299]
+                          - cell "105" [ref=e300]:
+                            - generic [ref=e301]:
+                              - img [ref=e302]
+                              - generic [ref=e306]: "105"
+                          - cell "Explorer (0/17)" [ref=e307]:
+                            - generic [ref=e308]:
+                              - generic [ref=e309]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e310]: (0/17)
+                          - cell "4/19/2026" [ref=e311]
+                        - row "laurence abadie laurence abadie laurenceabadie@hotmail.com 90 Explorer (0/17) 4/15/2026" [ref=e312] [cursor=pointer]:
+                          - cell "laurence abadie laurence abadie" [ref=e313]:
+                            - generic [ref=e314]:
+                              - img "laurence abadie" [ref=e316]
+                              - generic [ref=e317]: laurence abadie
+                          - cell "laurenceabadie@hotmail.com" [ref=e318]
+                          - cell "90" [ref=e319]:
+                            - generic [ref=e320]:
+                              - img [ref=e321]
+                              - generic [ref=e325]: "90"
+                          - cell "Explorer (0/17)" [ref=e326]:
+                            - generic [ref=e327]:
+                              - generic [ref=e328]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e329]: (0/17)
+                          - cell "4/15/2026" [ref=e330]
+                    - generic [ref=e331]:
+                      - generic [ref=e332]: Showing 1-8 of 54
+                      - navigation "pagination" [ref=e333]:
+                        - list [ref=e334]:
+                          - listitem [ref=e335]:
+                            - generic "Go to previous page":
+                              - img
+                              - generic: Previous
+                          - listitem [ref=e337]:
+                            - generic [ref=e338] [cursor=pointer]: "1"
+                          - listitem [ref=e340]:
+                            - generic [ref=e341] [cursor=pointer]: "2"
+                          - generic [ref=e342]:
+                            - generic [ref=e343]: ...
+                            - listitem [ref=e344]:
+                              - generic [ref=e345] [cursor=pointer]: "7"
+                          - listitem [ref=e346]:
+                            - generic "Go to next page" [ref=e347] [cursor=pointer]:
+                              - generic [ref=e348]: Next
+                              - img
+                - generic [ref=e349]:
+                  - button "Qualified 104" [ref=e350]:
+                    - generic [ref=e351]:
+                      - img [ref=e352]
+                      - generic [ref=e354]: Qualified
+                      - generic [ref=e355]: "104"
+                  - generic [ref=e356]:
+                    - table [ref=e358]:
+                      - rowgroup [ref=e359]:
+                        - row "Name Email Assessment Journey Created ↓" [ref=e360]:
+                          - columnheader "Name" [ref=e361] [cursor=pointer]
+                          - columnheader "Email" [ref=e362] [cursor=pointer]
+                          - columnheader "Assessment" [ref=e363] [cursor=pointer]
+                          - columnheader "Journey" [ref=e364]
+                          - columnheader "Created ↓" [ref=e365] [cursor=pointer]
+                      - rowgroup [ref=e366]:
+                        - row "Pierre Bondroit Pierre Bondroit pierre@orhata.com — Learner (9/17) 4/22/2026" [ref=e367] [cursor=pointer]:
+                          - cell "Pierre Bondroit Pierre Bondroit" [ref=e368]:
+                            - generic [ref=e369]:
+                              - img "Pierre Bondroit" [ref=e371]
+                              - generic [ref=e372]: Pierre Bondroit
+                              - img [ref=e374]
+                          - cell "pierre@orhata.com" [ref=e376]
+                          - cell "—" [ref=e377]
+                          - cell "Learner (9/17)" [ref=e378]:
+                            - generic [ref=e379]:
+                              - generic [ref=e380]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e381]: (9/17)
+                          - cell "4/22/2026" [ref=e382]
+                        - row "Marc Philouze Marc Philouze marc.philouze@gmail.com — Learner (3/17) 4/20/2026" [ref=e383] [cursor=pointer]:
+                          - cell "Marc Philouze Marc Philouze" [ref=e384]:
+                            - generic [ref=e385]:
+                              - img "Marc Philouze" [ref=e387]
+                              - generic [ref=e388]: Marc Philouze
+                          - cell "marc.philouze@gmail.com" [ref=e389]
+                          - cell "—" [ref=e390]
+                          - cell "Learner (3/17)" [ref=e391]:
+                            - generic [ref=e392]:
+                              - generic [ref=e393]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e394]: (3/17)
+                          - cell "4/20/2026" [ref=e395]
+                        - row "nicolas hauchecorne nicolas hauchecorne nhauchecorne@yahoo.com — Learner (3/17) 4/20/2026" [ref=e396] [cursor=pointer]:
+                          - cell "nicolas hauchecorne nicolas hauchecorne" [ref=e397]:
+                            - generic [ref=e398]:
+                              - img "nicolas hauchecorne" [ref=e400]
+                              - generic [ref=e401]: nicolas hauchecorne
+                          - cell "nhauchecorne@yahoo.com" [ref=e402]
+                          - cell "—" [ref=e403]
+                          - cell "Learner (3/17)" [ref=e404]:
+                            - generic [ref=e405]:
+                              - generic [ref=e406]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e407]: (3/17)
+                          - cell "4/20/2026" [ref=e408]
+                        - row "Guillaume Jacques Guillaume Jacques jacquesguillaume23@orange.fr — Explorer (0/17) 4/19/2026" [ref=e409] [cursor=pointer]:
+                          - cell "Guillaume Jacques Guillaume Jacques" [ref=e410]:
+                            - generic [ref=e411]:
+                              - img "Guillaume Jacques" [ref=e413]
+                              - generic [ref=e414]: Guillaume Jacques
+                          - cell "jacquesguillaume23@orange.fr" [ref=e415]
+                          - cell "—" [ref=e416]
+                          - cell "Explorer (0/17)" [ref=e417]:
+                            - generic [ref=e418]:
+                              - generic [ref=e419]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e420]: (0/17)
+                          - cell "4/19/2026" [ref=e421]
+                        - row "Marco Bonzanino Marco Bonzanino marcobonzanino@gmail.com — Explorer (1/17) 4/16/2026" [ref=e422] [cursor=pointer]:
+                          - cell "Marco Bonzanino Marco Bonzanino" [ref=e423]:
+                            - generic [ref=e424]:
+                              - img "Marco Bonzanino" [ref=e426]
+                              - generic [ref=e427]: Marco Bonzanino
+                          - cell "marcobonzanino@gmail.com" [ref=e428]
+                          - cell "—" [ref=e429]
+                          - cell "Explorer (1/17)" [ref=e430]:
+                            - generic [ref=e431]:
+                              - generic [ref=e432]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e433]: (1/17)
+                          - cell "4/16/2026" [ref=e434]
+                        - row "Martial PAPILLON Martial PAPILLON martial.papillon@laposte.net — Explorer (0/17) 4/11/2026" [ref=e435] [cursor=pointer]:
+                          - cell "Martial PAPILLON Martial PAPILLON" [ref=e436]:
+                            - generic [ref=e437]:
+                              - img "Martial PAPILLON" [ref=e439]
+                              - generic [ref=e440]: Martial PAPILLON
+                          - cell "martial.papillon@laposte.net" [ref=e441]
+                          - cell "—" [ref=e442]
+                          - cell "Explorer (0/17)" [ref=e443]:
+                            - generic [ref=e444]:
+                              - generic [ref=e445]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e446]: (0/17)
+                          - cell "4/11/2026" [ref=e447]
+                        - row "Olivier Capelle Olivier Capelle Interview booked olivier.capelle@insead.edu — Learner (2/17) 4/9/2026" [ref=e448] [cursor=pointer]:
+                          - cell "Olivier Capelle Olivier Capelle Interview booked" [ref=e449]:
+                            - generic [ref=e450]:
+                              - img "Olivier Capelle" [ref=e452]
+                              - generic [ref=e453]: Olivier Capelle
+                              - img "Interview booked" [ref=e454]
+                          - cell "olivier.capelle@insead.edu" [ref=e457]
+                          - cell "—" [ref=e458]
+                          - cell "Learner (2/17)" [ref=e459]:
+                            - generic [ref=e460]:
+                              - generic [ref=e461]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e462]: (2/17)
+                          - cell "4/9/2026" [ref=e463]
+                        - row "Jacques JOCELYN Jacques JOCELYN jacques.jocelyn@gmail.com — Learner (3/17) 4/6/2026" [ref=e464] [cursor=pointer]:
+                          - cell "Jacques JOCELYN Jacques JOCELYN" [ref=e465]:
+                            - generic [ref=e466]:
+                              - img "Jacques JOCELYN" [ref=e468]
+                              - generic [ref=e469]: Jacques JOCELYN
+                          - cell "jacques.jocelyn@gmail.com" [ref=e470]
+                          - cell "—" [ref=e471]
+                          - cell "Learner (3/17)" [ref=e472]:
+                            - generic [ref=e473]:
+                              - generic [ref=e474]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e475]: (3/17)
+                          - cell "4/6/2026" [ref=e476]
+                    - generic [ref=e477]:
+                      - generic [ref=e478]: Showing 1-8 of 104
+                      - navigation "pagination" [ref=e479]:
+                        - list [ref=e480]:
+                          - listitem [ref=e481]:
+                            - generic "Go to previous page":
+                              - img
+                              - generic: Previous
+                          - listitem [ref=e483]:
+                            - generic [ref=e484] [cursor=pointer]: "1"
+                          - listitem [ref=e486]:
+                            - generic [ref=e487] [cursor=pointer]: "2"
+                          - generic [ref=e488]:
+                            - generic [ref=e489]: ...
+                            - listitem [ref=e490]:
+                              - generic [ref=e491] [cursor=pointer]: "13"
+                          - listitem [ref=e492]:
+                            - generic "Go to next page" [ref=e493] [cursor=pointer]:
+                              - generic [ref=e494]: Next
+                              - img
+                - generic [ref=e495]:
+                  - button "Clients 22" [ref=e496]:
+                    - generic [ref=e497]:
+                      - img [ref=e498]
+                      - generic [ref=e500]: Clients
+                      - generic [ref=e501]: "22"
+                  - generic [ref=e502]:
+                    - table [ref=e504]:
+                      - rowgroup [ref=e505]:
+                        - row "Name Email Offers Journey Created ↓" [ref=e506]:
+                          - columnheader "Name" [ref=e507] [cursor=pointer]
+                          - columnheader "Email" [ref=e508] [cursor=pointer]
+                          - columnheader "Offers" [ref=e509] [cursor=pointer]
+                          - columnheader "Journey" [ref=e510]
+                          - columnheader "Created ↓" [ref=e511] [cursor=pointer]
+                      - rowgroup [ref=e512]:
+                        - row "thomas pineau thomas pineau thomas.pineau33@gmail.com Deal Flow - Paid Learner (3/17) 3/24/2026" [ref=e513] [cursor=pointer]:
+                          - cell "thomas pineau thomas pineau" [ref=e514]:
+                            - generic [ref=e515]:
+                              - img "thomas pineau" [ref=e517]
+                              - generic [ref=e518]: thomas pineau
+                          - cell "thomas.pineau33@gmail.com" [ref=e519]
+                          - cell "Deal Flow - Paid" [ref=e520]:
+                            - generic [ref=e522]:
+                              - img
+                              - text: Deal Flow - Paid
+                          - cell "Learner (3/17)" [ref=e523]:
+                            - generic [ref=e524]:
+                              - generic [ref=e525]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e526]: (3/17)
+                          - cell "3/24/2026" [ref=e527]
+                        - row "Pierre-Alexis Buaillon Pierre-Alexis Buaillon pab3691@gmail.com End-to-end support Learner (6/17) 3/17/2026" [ref=e528] [cursor=pointer]:
+                          - cell "Pierre-Alexis Buaillon Pierre-Alexis Buaillon" [ref=e529]:
+                            - generic [ref=e530]:
+                              - img "Pierre-Alexis Buaillon" [ref=e532]
+                              - generic [ref=e533]: Pierre-Alexis Buaillon
+                          - cell "pab3691@gmail.com" [ref=e534]
+                          - cell "End-to-end support" [ref=e535]:
+                            - generic [ref=e537]:
+                              - img
+                              - text: End-to-end support
+                          - cell "Learner (6/17)" [ref=e538]:
+                            - generic [ref=e539]:
+                              - generic [ref=e540]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e541]: (6/17)
+                          - cell "3/17/2026" [ref=e542]
+                        - row "Guillaume Masurel Guillaume Masurel g.masurel@gmail.com Starter Pack Explorer (0/17) 3/11/2026" [ref=e543] [cursor=pointer]:
+                          - cell "Guillaume Masurel Guillaume Masurel" [ref=e544]:
+                            - generic [ref=e545]:
+                              - img "Guillaume Masurel" [ref=e547]
+                              - generic [ref=e548]: Guillaume Masurel
+                          - cell "g.masurel@gmail.com" [ref=e549]
+                          - cell "Starter Pack" [ref=e550]:
+                            - generic [ref=e552]:
+                              - img
+                              - text: Starter Pack
+                          - cell "Explorer (0/17)" [ref=e553]:
+                            - generic [ref=e554]:
+                              - generic [ref=e555]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e556]: (0/17)
+                          - cell "3/11/2026" [ref=e557]
+                        - row "Florent Lafleur Florent Lafleur florent-lafleur@outlook.fr Deal Flow - Paid Execution (9/17) 3/10/2026" [ref=e558] [cursor=pointer]:
+                          - cell "Florent Lafleur Florent Lafleur" [ref=e559]:
+                            - generic [ref=e560]:
+                              - img "Florent Lafleur" [ref=e562]
+                              - generic [ref=e563]: Florent Lafleur
+                          - cell "florent-lafleur@outlook.fr" [ref=e564]
+                          - cell "Deal Flow - Paid" [ref=e565]:
+                            - generic [ref=e567]:
+                              - img
+                              - text: Deal Flow - Paid
+                          - cell "Execution (9/17)" [ref=e568]:
+                            - generic [ref=e569]:
+                              - generic [ref=e570]:
+                                - img
+                                - text: Execution
+                              - generic [ref=e571]: (9/17)
+                          - cell "3/10/2026" [ref=e572]
+                        - row "Mathieu Figueres Mathieu Figueres mathieufigueres@gmail.com Deal Flow - Free Explorer (0/17) 3/9/2026" [ref=e573] [cursor=pointer]:
+                          - cell "Mathieu Figueres Mathieu Figueres" [ref=e574]:
+                            - generic [ref=e575]:
+                              - img "Mathieu Figueres" [ref=e577]
+                              - generic [ref=e578]: Mathieu Figueres
+                          - cell "mathieufigueres@gmail.com" [ref=e579]
+                          - cell "Deal Flow - Free" [ref=e580]:
+                            - generic [ref=e582]:
+                              - img
+                              - text: Deal Flow - Free
+                          - cell "Explorer (0/17)" [ref=e583]:
+                            - generic [ref=e584]:
+                              - generic [ref=e585]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e586]: (0/17)
+                          - cell "3/9/2026" [ref=e587]
+                        - row "pascal turcot pascal turcot pascalturcot@hotmail.com Deal Flow - Free Execution (9/17) 3/4/2026" [ref=e588] [cursor=pointer]:
+                          - cell "pascal turcot pascal turcot" [ref=e589]:
+                            - generic [ref=e590]:
+                              - img "pascal turcot" [ref=e592]
+                              - generic [ref=e593]: pascal turcot
+                          - cell "pascalturcot@hotmail.com" [ref=e594]
+                          - cell "Deal Flow - Free" [ref=e595]:
+                            - generic [ref=e597]:
+                              - img
+                              - text: Deal Flow - Free
+                          - cell "Execution (9/17)" [ref=e598]:
+                            - generic [ref=e599]:
+                              - generic [ref=e600]:
+                                - img
+                                - text: Execution
+                              - generic [ref=e601]: (9/17)
+                          - cell "3/4/2026" [ref=e602]
+                        - row "Arnaud Sené Arnaud Sené arnaud.sene72@gmail.com End-to-end support Explorer (0/17) 2/18/2026" [ref=e603] [cursor=pointer]:
+                          - cell "Arnaud Sené Arnaud Sené" [ref=e604]:
+                            - generic [ref=e605]:
+                              - img "Arnaud Sené" [ref=e607]
+                              - generic [ref=e608]: Arnaud Sené
+                          - cell "arnaud.sene72@gmail.com" [ref=e609]
+                          - cell "End-to-end support" [ref=e610]:
+                            - generic [ref=e612]:
+                              - img
+                              - text: End-to-end support
+                          - cell "Explorer (0/17)" [ref=e613]:
+                            - generic [ref=e614]:
+                              - generic [ref=e615]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e616]: (0/17)
+                          - cell "2/18/2026" [ref=e617]
+                        - row "Nicolas Gauly Nicolas Gauly nicolas_gauly@yahoo.fr End-to-end support Explorer (0/17) 2/16/2026" [ref=e618] [cursor=pointer]:
+                          - cell "Nicolas Gauly Nicolas Gauly" [ref=e619]:
+                            - generic [ref=e620]:
+                              - img "Nicolas Gauly" [ref=e622]
+                              - generic [ref=e623]: Nicolas Gauly
+                          - cell "nicolas_gauly@yahoo.fr" [ref=e624]
+                          - cell "End-to-end support" [ref=e625]:
+                            - generic [ref=e627]:
+                              - img
+                              - text: End-to-end support
+                          - cell "Explorer (0/17)" [ref=e628]:
+                            - generic [ref=e629]:
+                              - generic [ref=e630]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e631]: (0/17)
+                          - cell "2/16/2026" [ref=e632]
+                    - generic [ref=e633]:
+                      - generic [ref=e634]: Showing 1-8 of 22
+                      - navigation "pagination" [ref=e635]:
+                        - list [ref=e636]:
+                          - listitem [ref=e637]:
+                            - generic "Go to previous page":
+                              - img
+                              - generic: Previous
+                          - listitem [ref=e639]:
+                            - generic [ref=e640] [cursor=pointer]: "1"
+                          - listitem [ref=e642]:
+                            - generic [ref=e643] [cursor=pointer]: "2"
+                          - listitem [ref=e645]:
+                            - generic [ref=e646] [cursor=pointer]: "3"
+                          - listitem [ref=e647]:
+                            - generic "Go to next page" [ref=e648] [cursor=pointer]:
+                              - generic [ref=e649]: Next
+                              - img
+                - button "To be reactivated 0" [ref=e651]:
+                  - generic [ref=e652]:
+                    - img [ref=e653]
+                    - generic [ref=e655]: To be reactivated
+                    - generic [ref=e656]: "0"
+                - generic [ref=e657]:
+                  - button "Declined 15" [ref=e658]:
+                    - generic [ref=e659]:
+                      - img [ref=e660]
+                      - generic [ref=e662]: Declined
+                      - generic [ref=e663]: "15"
+                  - generic [ref=e664]:
+                    - table [ref=e666]:
+                      - rowgroup [ref=e667]:
+                        - row "Name Email Declined Date Journey Created ↓" [ref=e668]:
+                          - columnheader "Name" [ref=e669] [cursor=pointer]
+                          - columnheader "Email" [ref=e670] [cursor=pointer]
+                          - columnheader "Declined Date" [ref=e671] [cursor=pointer]
+                          - columnheader "Journey" [ref=e672]
+                          - columnheader "Created ↓" [ref=e673] [cursor=pointer]
+                      - rowgroup [ref=e674]:
+                        - row "John John Florence John John Florence Interview booked tramberinmotion@gmail.com 4/26/2026 Explorer (0/17) 4/26/2026" [ref=e675] [cursor=pointer]:
+                          - cell "John John Florence John John Florence Interview booked" [ref=e676]:
+                            - generic [ref=e677]:
+                              - img "John John Florence" [ref=e679]
+                              - generic [ref=e680]: John John Florence
+                              - img "Interview booked" [ref=e681]
+                          - cell "tramberinmotion@gmail.com" [ref=e684]
+                          - cell "4/26/2026" [ref=e685]
+                          - cell "Explorer (0/17)" [ref=e686]:
+                            - generic [ref=e687]:
+                              - generic [ref=e688]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e689]: (0/17)
+                          - cell "4/26/2026" [ref=e690]
+                        - row "Guillaume Chenegros Guillaume Chenegros guillaume.chenegros@gmail.com 4/10/2026 Explorer (0/17) 3/30/2026" [ref=e691] [cursor=pointer]:
+                          - cell "Guillaume Chenegros Guillaume Chenegros" [ref=e692]:
+                            - generic [ref=e693]:
+                              - img "Guillaume Chenegros" [ref=e695]
+                              - generic [ref=e696]: Guillaume Chenegros
+                          - cell "guillaume.chenegros@gmail.com" [ref=e697]
+                          - cell "4/10/2026" [ref=e698]
+                          - cell "Explorer (0/17)" [ref=e699]:
+                            - generic [ref=e700]:
+                              - generic [ref=e701]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e702]: (0/17)
+                          - cell "3/30/2026" [ref=e703]
+                        - row "Marion ALLONCLE Marion ALLONCLE maalloncle@yahoo.fr 4/10/2026 Explorer (0/17) 3/30/2026" [ref=e704] [cursor=pointer]:
+                          - cell "Marion ALLONCLE Marion ALLONCLE" [ref=e705]:
+                            - generic [ref=e706]:
+                              - img "Marion ALLONCLE" [ref=e708]
+                              - generic [ref=e709]: Marion ALLONCLE
+                          - cell "maalloncle@yahoo.fr" [ref=e710]
+                          - cell "4/10/2026" [ref=e711]
+                          - cell "Explorer (0/17)" [ref=e712]:
+                            - generic [ref=e713]:
+                              - generic [ref=e714]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e715]: (0/17)
+                          - cell "3/30/2026" [ref=e716]
+                        - row "Cyril Esnault Cyril Esnault cyresne@yahoo.com 4/26/2026 Explorer (0/17) 3/18/2026" [ref=e717] [cursor=pointer]:
+                          - cell "Cyril Esnault Cyril Esnault" [ref=e718]:
+                            - generic [ref=e719]:
+                              - img "Cyril Esnault" [ref=e721]
+                              - generic [ref=e722]: Cyril Esnault
+                          - cell "cyresne@yahoo.com" [ref=e723]
+                          - cell "4/26/2026" [ref=e724]
+                          - cell "Explorer (0/17)" [ref=e725]:
+                            - generic [ref=e726]:
+                              - generic [ref=e727]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e728]: (0/17)
+                          - cell "3/18/2026" [ref=e729]
+                        - row "Raphaele Leyendecker Raphaele Leyendecker r.leyen.fabbri@gmail.com 3/25/2026 Learner (2/17) 3/18/2026" [ref=e730] [cursor=pointer]:
+                          - cell "Raphaele Leyendecker Raphaele Leyendecker" [ref=e731]:
+                            - generic [ref=e732]:
+                              - img "Raphaele Leyendecker" [ref=e734]
+                              - generic [ref=e735]: Raphaele Leyendecker
+                          - cell "r.leyen.fabbri@gmail.com" [ref=e736]
+                          - cell "3/25/2026" [ref=e737]
+                          - cell "Learner (2/17)" [ref=e738]:
+                            - generic [ref=e739]:
+                              - generic [ref=e740]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e741]: (2/17)
+                          - cell "3/18/2026" [ref=e742]
+                        - row "Alexandre Prihnenko Alexandre Prihnenko aprihnenko@gmail.com 4/26/2026 Learner (2/17) 3/18/2026" [ref=e743] [cursor=pointer]:
+                          - cell "Alexandre Prihnenko Alexandre Prihnenko" [ref=e744]:
+                            - generic [ref=e745]:
+                              - img "Alexandre Prihnenko" [ref=e747]
+                              - generic [ref=e748]: Alexandre Prihnenko
+                          - cell "aprihnenko@gmail.com" [ref=e749]
+                          - cell "4/26/2026" [ref=e750]
+                          - cell "Learner (2/17)" [ref=e751]:
+                            - generic [ref=e752]:
+                              - generic [ref=e753]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e754]: (2/17)
+                          - cell "3/18/2026" [ref=e755]
+                        - row "Clément SOURIOUX Clément SOURIOUX clemsourioux@gmail.com 4/10/2026 Explorer (0/17) 3/13/2026" [ref=e756] [cursor=pointer]:
+                          - cell "Clément SOURIOUX Clément SOURIOUX" [ref=e757]:
+                            - generic [ref=e758]:
+                              - img "Clément SOURIOUX" [ref=e760]
+                              - generic [ref=e761]: Clément SOURIOUX
+                          - cell "clemsourioux@gmail.com" [ref=e762]
+                          - cell "4/10/2026" [ref=e763]
+                          - cell "Explorer (0/17)" [ref=e764]:
+                            - generic [ref=e765]:
+                              - generic [ref=e766]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e767]: (0/17)
+                          - cell "3/13/2026" [ref=e768]
+                        - row "David Chipaux David Chipaux dchipaux@free.fr 3/18/2026 Learner (2/17) 3/7/2026" [ref=e769] [cursor=pointer]:
+                          - cell "David Chipaux David Chipaux" [ref=e770]:
+                            - generic [ref=e771]:
+                              - img "David Chipaux" [ref=e773]
+                              - generic [ref=e774]: David Chipaux
+                          - cell "dchipaux@free.fr" [ref=e775]
+                          - cell "3/18/2026" [ref=e776]
+                          - cell "Learner (2/17)" [ref=e777]:
+                            - generic [ref=e778]:
+                              - generic [ref=e779]:
+                                - img
+                                - text: Learner
+                              - generic [ref=e780]: (2/17)
+                          - cell "3/7/2026" [ref=e781]
+                    - generic [ref=e782]:
+                      - generic [ref=e783]: Showing 1-8 of 15
+                      - navigation "pagination" [ref=e784]:
+                        - list [ref=e785]:
+                          - listitem [ref=e786]:
+                            - generic "Go to previous page":
+                              - img
+                              - generic: Previous
+                          - listitem [ref=e788]:
+                            - generic [ref=e789] [cursor=pointer]: "1"
+                          - listitem [ref=e791]:
+                            - generic [ref=e792] [cursor=pointer]: "2"
+                          - listitem [ref=e793]:
+                            - generic "Go to next page" [ref=e794] [cursor=pointer]:
+                              - generic [ref=e795]: Next
+                              - img
+                - generic [ref=e796]:
+                  - button "Rejected 21" [ref=e797]:
+                    - generic [ref=e798]:
+                      - img [ref=e799]
+                      - generic [ref=e801]: Rejected
+                      - generic [ref=e802]: "21"
+                  - generic [ref=e803]:
+                    - table [ref=e805]:
+                      - rowgroup [ref=e806]:
+                        - row "Name Email Rejected Date Journey Created ↓" [ref=e807]:
+                          - columnheader "Name" [ref=e808] [cursor=pointer]
+                          - columnheader "Email" [ref=e809] [cursor=pointer]
+                          - columnheader "Rejected Date" [ref=e810] [cursor=pointer]
+                          - columnheader "Journey" [ref=e811]
+                          - columnheader "Created ↓" [ref=e812] [cursor=pointer]
+                      - rowgroup [ref=e813]:
+                        - row "Yohan Monlor Yohan Monlor monlor.yohan@gmail.com 4/26/2026 Explorer (0/17) 4/24/2026" [ref=e814] [cursor=pointer]:
+                          - cell "Yohan Monlor Yohan Monlor" [ref=e815]:
+                            - generic [ref=e816]:
+                              - img "Yohan Monlor" [ref=e818]
+                              - generic [ref=e819]: Yohan Monlor
+                          - cell "monlor.yohan@gmail.com" [ref=e820]
+                          - cell "4/26/2026" [ref=e821]
+                          - cell "Explorer (0/17)" [ref=e822]:
+                            - generic [ref=e823]:
+                              - generic [ref=e824]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e825]: (0/17)
+                          - cell "4/24/2026" [ref=e826]
+                        - row "Théo Courreges Théo Courreges theocourreges@gmail.com 4/26/2026 Explorer (0/17) 4/23/2026" [ref=e827] [cursor=pointer]:
+                          - cell "Théo Courreges Théo Courreges" [ref=e828]:
+                            - generic [ref=e829]:
+                              - img "Théo Courreges" [ref=e831]
+                              - generic [ref=e832]: Théo Courreges
+                          - cell "theocourreges@gmail.com" [ref=e833]
+                          - cell "4/26/2026" [ref=e834]
+                          - cell "Explorer (0/17)" [ref=e835]:
+                            - generic [ref=e836]:
+                              - generic [ref=e837]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e838]: (0/17)
+                          - cell "4/23/2026" [ref=e839]
+                        - row "Clément Collardez Clément Collardez clement.collardez@icloud.com 4/3/2026 Explorer (0/17) 3/23/2026" [ref=e840] [cursor=pointer]:
+                          - cell "Clément Collardez Clément Collardez" [ref=e841]:
+                            - generic [ref=e842]:
+                              - img "Clément Collardez" [ref=e844]
+                              - generic [ref=e845]: Clément Collardez
+                          - cell "clement.collardez@icloud.com" [ref=e846]
+                          - cell "4/3/2026" [ref=e847]
+                          - cell "Explorer (0/17)" [ref=e848]:
+                            - generic [ref=e849]:
+                              - generic [ref=e850]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e851]: (0/17)
+                          - cell "3/23/2026" [ref=e852]
+                        - row "Hugo Carru Hugo Carru hugo.carru@edhec.com 3/26/2026 Explorer (0/17) 3/20/2026" [ref=e853] [cursor=pointer]:
+                          - cell "Hugo Carru Hugo Carru" [ref=e854]:
+                            - generic [ref=e855]:
+                              - img "Hugo Carru" [ref=e857]
+                              - generic [ref=e858]: Hugo Carru
+                          - cell "hugo.carru@edhec.com" [ref=e859]
+                          - cell "3/26/2026" [ref=e860]
+                          - cell "Explorer (0/17)" [ref=e861]:
+                            - generic [ref=e862]:
+                              - generic [ref=e863]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e864]: (0/17)
+                          - cell "3/20/2026" [ref=e865]
+                        - row "Radwane MOUTAWADI Radwane MOUTAWADI radwanemoutawadi@yahoo.fr 3/24/2026 Explorer (0/17) 3/18/2026" [ref=e866] [cursor=pointer]:
+                          - cell "Radwane MOUTAWADI Radwane MOUTAWADI" [ref=e867]:
+                            - generic [ref=e868]:
+                              - img "Radwane MOUTAWADI" [ref=e870]
+                              - generic [ref=e871]: Radwane MOUTAWADI
+                          - cell "radwanemoutawadi@yahoo.fr" [ref=e872]
+                          - cell "3/24/2026" [ref=e873]
+                          - cell "Explorer (0/17)" [ref=e874]:
+                            - generic [ref=e875]:
+                              - generic [ref=e876]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e877]: (0/17)
+                          - cell "3/18/2026" [ref=e878]
+                        - row "Guillaume DEPIERRE Guillaume DEPIERRE guillaume.depierre@tardix.fr 3/23/2026 Explorer (0/17) 3/2/2026" [ref=e879] [cursor=pointer]:
+                          - cell "Guillaume DEPIERRE Guillaume DEPIERRE" [ref=e880]:
+                            - generic [ref=e881]:
+                              - img "Guillaume DEPIERRE" [ref=e883]
+                              - generic [ref=e884]: Guillaume DEPIERRE
+                          - cell "guillaume.depierre@tardix.fr" [ref=e885]
+                          - cell "3/23/2026" [ref=e886]
+                          - cell "Explorer (0/17)" [ref=e887]:
+                            - generic [ref=e888]:
+                              - generic [ref=e889]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e890]: (0/17)
+                          - cell "3/2/2026" [ref=e891]
+                        - row "MAXIME DELCOURT MAXIME DELCOURT maximedelcourt@yahoo.fr 3/2/2026 Explorer (0/17) 3/1/2026" [ref=e892] [cursor=pointer]:
+                          - cell "MAXIME DELCOURT MAXIME DELCOURT" [ref=e893]:
+                            - generic [ref=e894]:
+                              - img "MAXIME DELCOURT" [ref=e896]
+                              - generic [ref=e897]: MAXIME DELCOURT
+                          - cell "maximedelcourt@yahoo.fr" [ref=e898]
+                          - cell "3/2/2026" [ref=e899]
+                          - cell "Explorer (0/17)" [ref=e900]:
+                            - generic [ref=e901]:
+                              - generic [ref=e902]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e903]: (0/17)
+                          - cell "3/1/2026" [ref=e904]
+                        - row "GILDAS BOPAHBE DEUDIBE GILDAS BOPAHBE DEUDIBE gildasdeudibeise@gmail.com 2/26/2026 Explorer (0/17) 2/26/2026" [ref=e905] [cursor=pointer]:
+                          - cell "GILDAS BOPAHBE DEUDIBE GILDAS BOPAHBE DEUDIBE" [ref=e906]:
+                            - generic [ref=e907]:
+                              - img "GILDAS BOPAHBE DEUDIBE" [ref=e909]
+                              - generic [ref=e910]: GILDAS BOPAHBE DEUDIBE
+                          - cell "gildasdeudibeise@gmail.com" [ref=e911]
+                          - cell "2/26/2026" [ref=e912]
+                          - cell "Explorer (0/17)" [ref=e913]:
+                            - generic [ref=e914]:
+                              - generic [ref=e915]:
+                                - img
+                                - text: Explorer
+                              - generic [ref=e916]: (0/17)
+                          - cell "2/26/2026" [ref=e917]
+                    - generic [ref=e918]:
+                      - generic [ref=e919]: Showing 1-8 of 21
+                      - navigation "pagination" [ref=e920]:
+                        - list [ref=e921]:
+                          - listitem [ref=e922]:
+                            - generic "Go to previous page":
+                              - img
+                              - generic: Previous
+                          - listitem [ref=e924]:
+                            - generic [ref=e925] [cursor=pointer]: "1"
+                          - listitem [ref=e927]:
+                            - generic [ref=e928] [cursor=pointer]: "2"
+                          - listitem [ref=e930]:
+                            - generic [ref=e931] [cursor=pointer]: "3"
+                          - listitem [ref=e932]:
+                            - generic "Go to next page" [ref=e933] [cursor=pointer]:
+                              - generic [ref=e934]: Next
+                              - img
+  - region "Notifications alt+T"
+  - alert [ref=e935]

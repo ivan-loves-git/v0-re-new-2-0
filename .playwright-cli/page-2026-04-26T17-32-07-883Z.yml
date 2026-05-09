@@ -1,0 +1,147 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - button "🌊 Wave - the repreneur CRM" [ref=e9]:
+            - generic [ref=e10]: 🌊
+            - img "Wave - the repreneur CRM" [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Re-New Team
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Dashboard" [ref=e18] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e19]
+                - generic [ref=e24]: Dashboard
+            - listitem [ref=e25]:
+              - link "Groups" [ref=e26] [cursor=pointer]:
+                - /url: /repreneurs
+                - img [ref=e27]
+                - generic [ref=e32]: Groups
+            - listitem [ref=e33]:
+              - link "Find" [ref=e34] [cursor=pointer]:
+                - /url: /repreneurs/explore
+                - img [ref=e35]
+                - generic [ref=e38]: Find
+            - listitem [ref=e39]:
+              - link "Pipeline" [ref=e40] [cursor=pointer]:
+                - /url: /pipeline
+                - img [ref=e41]
+                - generic [ref=e45]: Pipeline
+            - listitem [ref=e46]:
+              - link "Emails" [ref=e47] [cursor=pointer]:
+                - /url: /emails
+                - img [ref=e48]
+                - generic [ref=e51]: Emails
+            - listitem [ref=e52]:
+              - link "Journey WIP" [ref=e53] [cursor=pointer]:
+                - /url: /journey
+                - img [ref=e54]
+                - generic [ref=e57]: Journey
+                - generic [ref=e58]: WIP
+            - listitem [ref=e59]:
+              - link "Analytics" [ref=e60] [cursor=pointer]:
+                - /url: /analytics
+                - img [ref=e61]
+                - generic [ref=e63]: Analytics
+            - listitem [ref=e64]:
+              - link "Offers WIP" [ref=e65] [cursor=pointer]:
+                - /url: /offers
+                - img [ref=e66]
+                - generic [ref=e69]: Offers
+                - generic [ref=e70]: WIP
+        - generic [ref=e71]:
+          - generic [ref=e72]: Tools
+          - list [ref=e74]:
+            - listitem [ref=e75]:
+              - link "Wavy" [ref=e76] [cursor=pointer]:
+                - /url: /tools/wavy
+                - img [ref=e77]
+                - generic [ref=e81]: Wavy
+        - generic [ref=e82]:
+          - generic [ref=e83]: Guidelines
+          - list [ref=e85]:
+            - listitem [ref=e86]:
+              - link "Mission" [ref=e87] [cursor=pointer]:
+                - /url: /guide
+                - img [ref=e89]
+                - generic [ref=e93]: Mission
+            - listitem [ref=e94]:
+              - link "Instructions" [ref=e95] [cursor=pointer]:
+                - /url: /guide/instructions
+                - img [ref=e97]
+                - generic [ref=e99]: Instructions
+            - listitem [ref=e100]:
+              - link "Roadmap" [ref=e101] [cursor=pointer]:
+                - /url: /guide/roadmap
+                - img [ref=e103]
+                - generic [ref=e106]: Roadmap
+      - generic [ref=e107]:
+        - generic [ref=e108]: build 10.af340c9
+        - list [ref=e109]:
+          - listitem [ref=e110]:
+            - button "CA Codex Auth Test codex-auth-test-1777224659506@example.com" [ref=e111]:
+              - generic [ref=e113]: CA
+              - generic [ref=e114]:
+                - generic [ref=e115]: Codex Auth Test
+                - generic [ref=e116]: codex-auth-test-1777224659506@example.com
+              - img [ref=e117]
+    - main [ref=e120]:
+      - main [ref=e121]:
+        - generic [ref=e122]:
+          - navigation [ref=e123]:
+            - button "Collapse sidebar" [ref=e124]:
+              - img [ref=e125]
+            - generic [ref=e129]: Dashboard
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - heading "Dashboard" [level=1] [ref=e133]
+              - paragraph [ref=e134]: Overview of your repreneur pipeline
+            - generic [ref=e286]:
+              - generic [ref=e287]:
+                - generic [ref=e288]:
+                  - generic [ref=e289]:
+                    - img [ref=e290]
+                    - text: Pipeline View
+                  - generic [ref=e293]: Visualize your repreneur pipeline in a kanban board
+                - link "Go to Pipeline" [ref=e295] [cursor=pointer]:
+                  - /url: /pipeline
+                  - button "Go to Pipeline" [ref=e296]:
+                    - text: Go to Pipeline
+                    - img
+              - generic [ref=e297]:
+                - generic [ref=e298]:
+                  - generic [ref=e299]:
+                    - img [ref=e300]
+                    - text: Find Repreneurs
+                  - generic [ref=e302]: Filter, sort, and find repreneurs in one searchable table
+                - link "Find" [ref=e304] [cursor=pointer]:
+                  - /url: /repreneurs/explore
+                  - button "Find" [ref=e305]:
+                    - text: Find
+                    - img
+              - generic [ref=e306]:
+                - generic [ref=e307]:
+                  - generic [ref=e308]:
+                    - img [ref=e309]
+                    - text: Groups
+                  - generic [ref=e314]: View repreneurs organized by lifecycle status
+                - link "View Groups" [ref=e316] [cursor=pointer]:
+                  - /url: /repreneurs
+                  - button "View Groups" [ref=e317]:
+                    - text: View Groups
+                    - img
+              - generic [ref=e318]:
+                - generic [ref=e319]:
+                  - generic [ref=e320]:
+                    - img [ref=e321]
+                    - text: Repreneur Journey
+                  - generic [ref=e324]: Track repreneurs through their acquisition journey
+                - link "View Journey" [ref=e326] [cursor=pointer]:
+                  - /url: /journey
+                  - button "View Journey" [ref=e327]:
+                    - text: View Journey
+                    - img
+  - region "Notifications alt+T"
