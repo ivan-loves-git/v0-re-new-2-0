@@ -7,7 +7,9 @@ export interface EnrichedRepreneur extends Repreneur {
   offer_names?: string
   offer_status?: string
   decline_reason?: string
-  /** YYYY-MM-DD aliases of repreneurs.created_at for funnel analysis. */
+  /** YYYY-MM-DD — date the candidate submitted the intake form (= repreneurs.created_at). */
+  application_date?: string
+  /** YYYY-MM-DD — earliest team-logged activity for this repreneur (MIN(activities.created_at), any type). Blank if no activity yet. */
   first_contact_at?: string
   /** YYYY-MM-DD — earliest interview activity (event_date, fallback created_at). */
   first_interview_at?: string
@@ -40,6 +42,7 @@ const HEADERS: { key: keyof EnrichedRepreneur; label: string }[] = [
   { key: "offer_status", label: "offer_status" },
   { key: "decline_reason", label: "decline_reason" },
   { key: "marketing_consent", label: "marketing_consent" },
+  { key: "application_date", label: "application_date" },
   { key: "first_contact_at", label: "first_contact_at" },
   { key: "first_interview_at", label: "first_interview_at" },
   { key: "first_offer_at", label: "first_offer_at" },

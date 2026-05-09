@@ -222,7 +222,7 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
 
   useImperativeHandle(ref, () => ({
     triggerExport: async () => {
-      const { interviewCounts, interviewBooked, firstInterviewAt, offerData, firstOffer, secondOffer } = await getExportEnrichmentData()
+      const { interviewCounts, interviewBooked, firstInterviewAt, firstContactAt, offerData, firstOffer, secondOffer } = await getExportEnrichmentData()
       const enriched: EnrichedRepreneur[] = sorted.map(r => ({
         ...r,
         interview_count: interviewCounts[r.id] || 0,
@@ -232,7 +232,8 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
         decline_reason: r.decline_reason_category
           ? DECLINE_REASON_OPTIONS.find(o => o.value === r.decline_reason_category)?.label || r.decline_reason_category
           : "",
-        first_contact_at: r.created_at ? r.created_at.slice(0, 10) : "",
+        application_date: r.created_at ? r.created_at.slice(0, 10) : "",
+        first_contact_at: firstContactAt[r.id] || "",
         first_interview_at: firstInterviewAt[r.id] || "",
         first_offer_at: firstOffer[r.id]?.offeredAt || "",
         first_offer_status: firstOffer[r.id]?.status || "",

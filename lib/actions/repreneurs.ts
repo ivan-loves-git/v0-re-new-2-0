@@ -553,6 +553,7 @@ export async function getExportEnrichmentData(): Promise<{
   interviewCounts: Record<string, number>
   interviewBooked: Record<string, boolean>
   firstInterviewAt: Record<string, string>
+  firstContactAt: Record<string, string>
   offerData: Record<string, { names: string; status: string }>
   firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }>
   secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }>
@@ -561,30 +562,46 @@ export async function getExportEnrichmentData(): Promise<{
   const nowIso = new Date().toISOString()
   const toDate = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "")
 
-  // Interview counts (all-time), "interview booked" flag (any future event_date),
-  // and earliest interview date (event_date if set, else activity created_at).
+  // Pull all activities once. Used for three things:
+  //   - first_contact_at  = MIN(activities.created_at) per repreneur (any activity_type)
+  //   - first_interview_at = earliest interview activity (event_date if set, else created_at)
+  //   - interview_count + interview_booked
+  // first_contact_at is Bertrand's KPI anchor for "Application → 1st Contact" lag.
+  // We use any logged activity rather than the welcome email specifically, because
+  // (a) email_logs has no welcome rows in production today, and (b) any activity row
+  // = the team did something with this lead, which is the operational definition of contact.
   const { data: activities } = await supabase
     .from("activities")
     .select("repreneur_id, activity_type, event_date, created_at")
-    .eq("activity_type", "interview")
 
   const interviewCounts: Record<string, number> = {}
   const interviewBooked: Record<string, boolean> = {}
   const firstInterviewIso: Record<string, string> = {}
+  const firstActivityIso: Record<string, string> = {}
   for (const a of activities || []) {
-    interviewCounts[a.repreneur_id] = (interviewCounts[a.repreneur_id] || 0) + 1
-    if (a.event_date && a.event_date >= nowIso) {
-      interviewBooked[a.repreneur_id] = true
+    if (a.created_at) {
+      const prevAny = firstActivityIso[a.repreneur_id]
+      if (!prevAny || a.created_at < prevAny) firstActivityIso[a.repreneur_id] = a.created_at
     }
-    const when = a.event_date || a.created_at
-    if (when) {
-      const prev = firstInterviewIso[a.repreneur_id]
-      if (!prev || when < prev) firstInterviewIso[a.repreneur_id] = when
+    if (a.activity_type === "interview") {
+      interviewCounts[a.repreneur_id] = (interviewCounts[a.repreneur_id] || 0) + 1
+      if (a.event_date && a.event_date >= nowIso) {
+        interviewBooked[a.repreneur_id] = true
+      }
+      const when = a.event_date || a.created_at
+      if (when) {
+        const prev = firstInterviewIso[a.repreneur_id]
+        if (!prev || when < prev) firstInterviewIso[a.repreneur_id] = when
+      }
     }
   }
   const firstInterviewAt: Record<string, string> = {}
   for (const [id, iso] of Object.entries(firstInterviewIso)) {
     firstInterviewAt[id] = toDate(iso)
+  }
+  const firstContactAt: Record<string, string> = {}
+  for (const [id, iso] of Object.entries(firstActivityIso)) {
+    firstContactAt[id] = toDate(iso)
   }
 
   // Offer data by repreneur. Order ASC by offered_at so we can pick 1st / 2nd.
@@ -620,7 +637,7 @@ export async function getExportEnrichmentData(): Promise<{
     seenCount[o.repreneur_id] = idx + 1
   }
 
-  return { interviewCounts, interviewBooked, firstInterviewAt, offerData, firstOffer, secondOffer }
+  return { interviewCounts, interviewBooked, firstInterviewAt, firstContactAt, offerData, firstOffer, secondOffer }
 }
 
 /**

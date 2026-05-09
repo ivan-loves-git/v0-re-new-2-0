@@ -8,6 +8,24 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "May 9, 2026",
+    version: "0.9.6",
+    title: "CSV export: application_date split from first_contact_at",
+    isCompleted: true,
+    events: [
+      {
+        title: "Application and first contact are now two distinct columns",
+        type: "feature",
+        description: "Per Bertrand's KPI definitions: application_date = date the candidate submitted the intake form (the prior first_contact_at column was actually showing this). first_contact_at = date of the earliest team-logged activity for that repreneur (any activity type — interview, offer, welcome email log, meeting). Blank if no activity has been logged yet. Both YYYY-MM-DD.",
+      },
+      {
+        title: "Unblocks Application → 1st Contact lag KPI",
+        type: "fix",
+        description: "Previous export collapsed both events into one date, so analysts couldn't measure the lag between submission and outreach. Both dates are now exported separately.",
+      },
+    ],
+  },
+  {
     period: "May 5, 2026",
     version: "0.9.5",
     title: "Funnel-analysis dates in CSV export",
