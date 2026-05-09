@@ -15,6 +15,21 @@ Ivan is a business/product person, NOT a developer. Claude must:
 - Marking tasks done based on code existing (must test in browser)
 - Assuming Ivan knows dev workflows (npm, env vars, deployment)
 - Moving forward without validating the foundation works
+- **Stopping at the login wall and saying "I don't have credentials"** — see Testing Credentials below.
+
+## ⚠️ Testing Credentials (READ BEFORE stopping at any login screen)
+
+**Login at `app.re-new.team` (production) or `http://localhost:3000` (local dev):**
+- Email: `ivanpaudice@icloud.com`
+- Password: `Ciaociao01`
+
+**Rule:** When verifying any change to this platform, log in with these credentials and click through the actual UI. **Never report "I don't have credentials" or stop at the login wall** — Ivan has explicitly approved storing them in plain text in this file. Wasting his time by halting at login is the #1 anti-pattern in this project.
+
+**Where to test:**
+- Default: production app at `app.re-new.team` via the `claude-in-chrome` MCP (`mcp__Claude_in_Chrome__*` tools — load via `ToolSearch` if deferred). Real data, the live deploy.
+- Fallback: local dev via `preview_*` MCP at `localhost:3000` (run `preview_start renew-dev`). Use only when testing changes that aren't yet deployed.
+
+After Vercel auto-deploys a push to `main` (typically 1–3 min), test on production. The app footer shows the build number — confirm it matches your push (`git rev-list --count HEAD`).
 
 ## Project Context
 - **What:** Internal CRM replacing Flatchr ATS for managing repreneurs
