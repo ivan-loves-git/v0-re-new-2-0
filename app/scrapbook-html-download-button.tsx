@@ -58,8 +58,10 @@ export function HtmlPreview({ html, title }: { html: string; title: string }) {
       style={{
         display: "block",
         width: "100%",
-        minHeight: "calc(100vh - 150px)",
-        border: 0,
+        height: "calc(100vh - 96px)",
+        minHeight: 640,
+        border: "1px solid #e5e7eb",
+        borderRadius: 8,
         backgroundColor: "#fff",
       }}
     />

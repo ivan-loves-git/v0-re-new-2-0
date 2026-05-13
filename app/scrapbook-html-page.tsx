@@ -40,10 +40,13 @@ export async function ScrapbookHtmlPage({ slot }: { slot: number }) {
   return (
     <div
       style={{
-        maxWidth: 900,
-        margin: "40px auto",
-        padding: "0 20px",
+        width: "100%",
+        minHeight: "100vh",
+        margin: 0,
+        padding: "16px 20px 20px",
+        boxSizing: "border-box",
         fontFamily: "system-ui, sans-serif",
+        background: "#f8fafc",
       }}
     >
       <div
@@ -51,9 +54,11 @@ export async function ScrapbookHtmlPage({ slot }: { slot: number }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 24,
-          paddingBottom: 16,
-          borderBottom: "1px solid #e5e5e5",
+          marginBottom: 12,
+          padding: "10px 12px",
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          background: "#fff",
           gap: 16,
         }}
       >
