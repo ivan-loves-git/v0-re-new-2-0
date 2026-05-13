@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useState } from "react"
+
 export function DownloadButton({
   html,
   filename,
@@ -38,5 +40,28 @@ export function DownloadButton({
     >
       Download .html
     </button>
+  )
+}
+
+export function HtmlPreview({ html, title }: { html: string; title: string }) {
+  const [srcDoc, setSrcDoc] = useState("")
+
+  useEffect(() => {
+    setSrcDoc(html)
+  }, [html])
+
+  return (
+    <iframe
+      title={title}
+      srcDoc={srcDoc}
+      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+      style={{
+        display: "block",
+        width: "100%",
+        minHeight: "calc(100vh - 150px)",
+        border: 0,
+        backgroundColor: "#fff",
+      }}
+    />
   )
 }
