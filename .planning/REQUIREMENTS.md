@@ -7,11 +7,11 @@
 
 ### Opportunities
 
-- [ ] **OPP-01**: Staff can create, edit, and archive opportunities.
-- [ ] **OPP-02**: Opportunity records include the locked June fields: reference, source, location, sector, description, revenue, EBITDA, headcount, and date added.
-- [ ] **OPP-03**: Staff can import opportunities from the supplied Excel sources.
-- [ ] **OPP-04**: Repreneur-visible opportunity fields are anonymized and do not expose M&A firm/source details.
-- [ ] **OPP-05**: Staff can attach PDFs or deal documents to an opportunity.
+- [x] **OPP-01**: Staff can create, edit, and archive opportunities.
+- [x] **OPP-02**: Opportunity records include the locked June fields: reference, source, location, sector, description, revenue, EBITDA, headcount, and date added.
+- [x] **OPP-03**: Staff can import opportunities from the supplied Excel sources.
+- [x] **OPP-04**: Repreneur-visible opportunity fields are anonymized and do not expose M&A firm/source details.
+- [x] **OPP-05**: Staff can attach PDFs or deal documents to an opportunity.
 
 ### Matching
 
@@ -42,7 +42,7 @@
 ### Freshness and M&A Follow-Up
 
 - [ ] **FRESH-01**: Each opportunity shows date added and month added.
-- [ ] **MNA-01**: Staff can record basic M&A source/contact information needed for the opportunity.
+- [x] **MNA-01**: Staff can record basic M&A source/contact information needed for the opportunity.
 - [ ] **MNA-02**: Staff get a simple stale-opportunity reminder after 3 months when nobody is actively pursuing the opportunity.
 
 ### Reporting
@@ -84,7 +84,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | OPP-01, OPP-02, OPP-03, OPP-04, OPP-05 | Phase 1 | Pending |
-| MNA-01 | Phase 1 | Pending |
+| MNA-01 | Phase 1 | Complete |
 | MATCH-01, MATCH-02, MATCH-03 | Phase 2 | Pending |
 | REP-01, REP-02, REP-03, REP-04 | Phase 2 | Pending |
 | DEAL-01, DEAL-02, DEAL-03, DEAL-04 | Phase 2 | Pending |

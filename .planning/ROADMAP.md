@@ -6,7 +6,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 
 ## Phases
 
-- [ ] **Phase 1: Scope Lock and Data Foundation** - Lock the opportunity schema, import path, and staff-side opportunity management.
+- [x] **Phase 1: Scope Lock and Data Foundation** - Lock the opportunity schema, import path, and staff-side opportunity management. (completed 2026-05-16)
 - [ ] **Phase 2: Core Deal Workflow** - Build matching, repreneur access, interest/reject actions, validated pursuit, stages, NDA/document handling.
 - [ ] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness.
 
@@ -29,11 +29,11 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 **Plans**: 5 plans
 
 Plans:
-- [ ] 01-01: Finalize database model and field visibility.
-- [ ] 01-02: Build opportunity create/edit/list/detail for staff.
-- [ ] 01-03: Build Excel import mapper for source and shared deal-flow files.
-- [ ] 01-04: Add basic M&A source/contact fields where required by opportunities.
-- [ ] 01-05: Add file attachment storage and staff-side document management.
+- [x] 01-01: Finalize database model and field visibility.
+- [x] 01-02: Build opportunity create/edit/list/detail for staff.
+- [x] 01-03: Build Excel import mapper for source and shared deal-flow files.
+- [x] 01-04: Add basic M&A source/contact fields where required by opportunities.
+- [x] 01-05: Add file attachment storage and staff-side document management.
 
 ### Phase 2: Core Deal Workflow
 
@@ -89,6 +89,6 @@ Phases execute in numeric order: 1 -> 2 -> 3.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Scope Lock and Data Foundation | 0/5 | Not started | - |
+| 1. Scope Lock and Data Foundation | 5/5 | Complete   | 2026-05-16 |
 | 2. Core Deal Workflow | 0/6 | Not started | - |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 0/4 | Not started | - |
