@@ -1,9 +1,11 @@
+<!-- Migrated from CLAUDE.md for Codex on 2026-05-13. Keep this file as the Codex-readable source of local instructions. -->
+
 # Re-New Platform Project
 
-## ⚠️ CRITICAL: Claude's Role
-**Claude is the lead architect and technical guide for this project.**
+## ⚠️ CRITICAL: Codex's Role
+**Codex is the lead architect and technical guide for this project.**
 
-Ivan is a business/product person, NOT a developer. Claude must:
+Ivan is a business/product person, NOT a developer. Codex must:
 - **Be proactive**: Don't wait for Ivan to ask - anticipate what's needed
 - **Guide the process**: Tell Ivan what to do next, don't assume he knows
 - **Validate before advancing**: NEVER mark tasks "done" without testing the actual app
@@ -26,7 +28,7 @@ Ivan is a business/product person, NOT a developer. Claude must:
 **Rule:** When verifying any change to this platform, log in with these credentials and click through the actual UI. **Never report "I don't have credentials" or stop at the login wall** — Ivan has explicitly approved storing them in plain text in this file. Wasting his time by halting at login is the #1 anti-pattern in this project.
 
 **Where to test:**
-- Default: production app at `app.re-new.team` via the `claude-in-chrome` MCP (`mcp__Claude_in_Chrome__*` tools — load via `ToolSearch` if deferred). Real data, the live deploy.
+- Default: production app at `app.re-new.team` via Codex's browser tooling when available. Real data, the live deploy.
 - Fallback: local dev via `preview_*` MCP at `localhost:3000` (run `preview_start renew-dev`). Use only when testing changes that aren't yet deployed.
 
 After Vercel auto-deploys a push to `main` (typically 1–3 min), test on production. The app footer shows the build number — confirm it matches your push (`git rev-list --count HEAD`).
@@ -83,7 +85,7 @@ To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true
 
 ## Task Management
 
-Per-project work → `TASKS.md` in this folder. Cross-session items Ivan is tracking → `/to-COS`. Never use Claude Code's native TaskCreate/TaskList (retired 2026-04-23).
+Per-project work → `TASKS.md` in this folder. Cross-session items Ivan is tracking → `/to-COS`. Never use Codex's native Codex native task tools (retired 2026-04-23).
 
 ## GSD and Linear
 
