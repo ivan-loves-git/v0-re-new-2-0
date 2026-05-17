@@ -7,6 +7,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 ## Phases
 
 - [x] **Phase 1: Scope Lock and Data Foundation** - Lock the opportunity schema, import path, and staff-side opportunity management. (completed 2026-05-16)
+- [ ] **Phase 1.1: Testing Environment and Release Protocol** - Set up safe test environment, UAT, and release gates before building more product scope. (INSERTED)
 - [ ] **Phase 2: Core Deal Workflow** - Build matching, repreneur access, interest/reject actions, validated pursuit, stages, NDA/document handling.
 - [ ] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness.
 
@@ -34,6 +35,25 @@ Plans:
 - [x] 01-03: Build Excel import mapper for source and shared deal-flow files.
 - [x] 01-04: Add basic M&A source/contact fields where required by opportunities.
 - [x] 01-05: Add file attachment storage and staff-side document management.
+
+### Phase 01.1: Testing Environment and Release Protocol (INSERTED)
+
+**Goal:** Re-New can test Phase 1 safely in a known environment, then push/merge/release only after UAT and rollback conditions are clear.
+**Requirements**: ENV-01, ENV-02, TEST-01, REL-01, REL-02
+**Depends on:** Phase 1
+
+**Success Criteria** (what must be TRUE):
+1. The team knows whether testing uses a separate Supabase project or the current database with a manual backup.
+2. Codex/Claude can run the worktree app against the chosen test database without touching production by accident.
+3. Phase 1 has a concrete UAT checklist and result log.
+4. Push, PR, merge, deploy, and rollback responsibilities are written in simple language.
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01.1-01: Decide and document environment policy and database safety level.
+- [ ] 01.1-02: Set up the test run for Phase 1 opportunity features.
+- [ ] 01.1-03: Write and apply the release protocol for branch, PR, merge, deploy, and rollback.
 
 ### Phase 2: Core Deal Workflow
 
@@ -85,10 +105,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3.
+Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Scope Lock and Data Foundation | 5/5 | Complete   | 2026-05-16 |
-| 2. Core Deal Workflow | 0/6 | Not started | - |
+| 1.1. Testing Environment and Release Protocol | 0/3 | Not started | - |
+| 2. Core Deal Workflow | 0/6 | Blocked by Phase 1.1 | - |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 0/4 | Not started | - |

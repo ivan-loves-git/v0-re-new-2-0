@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed Phase 1 plans in worktree
-last_updated: "2026-05-16T21:34:50.809Z"
+last_updated: "2026-05-17T05:52:45.094Z"
 last_activity: 2026-05-16
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 1
   total_plans: 5
   completed_plans: 5
-  percent: 33
+  percent: 25
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 1: Scope Lock and Data Foundation
+**Current focus:** Phase 1.1: Testing Environment and Release Protocol
 
 ## Current Position
 
-Phase: 1 of 3 (Scope Lock and Data Foundation)
-Plan: 5 of 5 in current phase
-Status: Ready to execute
-Last activity: 2026-05-16
+Phase: 1.1 of 4 (Testing Environment and Release Protocol)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-05-17
 
-Progress: [██████████] 100%
+Progress: [███-------] 25%
 
 ## Performance Metrics
 
@@ -42,6 +42,10 @@ Progress: [██████████] 100%
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 1.1 inserted after Phase 1: Testing Environment and Release Protocol (URGENT)
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
@@ -52,7 +56,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-- Mirror this GSD roadmap into Linear.
+- Choose whether the Phase 1 test run uses a separate Supabase project or the current database with backup.
+- Mirror Phase 1.1 into Linear after the protocol is accepted.
 - Save the sent 2026-05-16 WhatsApp scope-boundary message in project communications.
 
 ### Blockers/Concerns
@@ -60,6 +65,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Repreneur platform access is directionally chosen but must stay tightly bounded for June.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
+- Phase 2 is blocked until Phase 1.1 defines the test environment and release protocol.
 
 ## Deferred Items
 
