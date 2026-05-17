@@ -93,7 +93,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OPP-01, OPP-02, OPP-03, OPP-04, OPP-05 | Phase 1 | Pending |
+| OPP-01, OPP-02, OPP-03, OPP-04, OPP-05 | Phase 1 | Complete |
 | MNA-01 | Phase 1 | Complete |
 | MATCH-01, MATCH-02, MATCH-03 | Phase 2 | Complete |
 | REP-01, REP-04 | Phase 2 | Complete |
@@ -113,4 +113,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after Phase 3 freshness and stale reminders*
+*Last updated: 2026-05-17 after June V2 implementation completion*

@@ -18,15 +18,15 @@ Re-New staff can manage opportunities and confidently connect the right repreneu
 
 ### Active
 
-- [ ] Opportunity database with the minimum schema confirmed by Bertrand's Excel and teaser samples.
-- [ ] Excel import and manual opportunity creation/editing.
-- [ ] Staff-facing structured match recommendation plus optional human recommendation.
-- [ ] Repreneur access to anonymized opportunities with simple interest/reject actions.
-- [ ] Deal progress tracking from interest through intermediary meeting, seller meeting, LOI, dropped, or closed.
-- [ ] Per-opportunity NDA status and document attachment tracking without e-signature.
-- [ ] PDF upload/download linked to opportunities.
-- [ ] Simple operational reporting for deal-flow KPIs.
-- [ ] Simple stale-opportunity reminder after 3 months if nobody is actively pursuing the opportunity.
+- [x] Opportunity database with the minimum schema confirmed by Bertrand's Excel and teaser samples.
+- [x] Excel import and manual opportunity creation/editing.
+- [x] Staff-facing structured match recommendation plus optional human recommendation.
+- [x] Repreneur access to anonymized opportunities with simple interest/reject actions.
+- [x] Deal progress tracking from interest through intermediary meeting, seller meeting, LOI, dropped, or closed.
+- [x] Per-opportunity NDA status and document attachment tracking without e-signature.
+- [x] PDF upload/download linked to opportunities.
+- [x] Simple operational reporting for deal-flow KPIs.
+- [x] Simple stale-opportunity reminder after 3 months if nobody is actively pursuing the opportunity.
 
 ### Out of Scope
 
@@ -60,12 +60,12 @@ Re-New staff can manage opportunities and confidently connect the right repreneu
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Repreneur access via platform for V2 | Bertrand strongly prefers opening Wave to repreneurs rather than email-only | Pending scope boundary |
+| Repreneur access via platform for V2 | Bertrand strongly prefers opening Wave to repreneurs rather than email-only | Implemented with separate `/portal/*` routes |
 | PDF upload/download only | Bertrand confirmed no in-platform memo generation needed for V2 | Good for June |
 | M&A firms have no portal in V2 | Keeps relationship management human and avoids a second external user group | Good for June |
 | Month/date added is enough freshness signal | Avoids unnecessary aging taxonomy | Good for June |
-| Platform recommendation plus human recommendation | Balances structure with human judgment while data model stabilizes | Pending implementation |
+| Platform recommendation plus human recommendation | Balances structure with human judgment while data model stabilizes | Implemented for June V2 |
 | Same Supabase project for Phase 1.1 testing | Avoids extra Supabase project cost; acceptable because Phase 1 migrations are additive and UAT data will be marked | Approved with controlled migration guardrails |
 
 ---
-*Last updated: 2026-05-17 after Phase 1.1 same-project Supabase decision*
+*Last updated: 2026-05-17 after June V2 implementation completion*

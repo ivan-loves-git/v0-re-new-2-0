@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 03-03 complete
-last_updated: "2026-05-17T15:28:36Z"
+status: complete
+stopped_at: June V2 implementation complete
+last_updated: "2026-05-17T15:33:31Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 19
-  completed_plans: 18
-  percent: 95
+  completed_plans: 19
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 3: Reporting, Reminders, QA, and Launch Hardening
+**Current focus:** June V2 implementation complete; ready for release monitoring and V3 selection
 
 ## Current Position
 
-Phase: 3 of 4 (Reporting, Reminders, QA, and Launch Hardening)
-Plan: 3 of 4 in current phase
-Status: Ready for 03-04 launch/demo checklist and V3 deferred backlog
+Phase: 4 of 4 complete
+Plan: 19 of 19 complete
+Status: June V2 implementation complete
 Last activity: 2026-05-17
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 16
+- Total plans completed: 19
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -49,6 +49,7 @@ Progress: [██████████] 95%
 | 2026-05-17 | Phase 3 operational KPI dashboard | Added internal deal-flow operating KPIs to `/dashboard`; browser UAT showed 15 active intermediaries, 15 active opportunities, 3 introductions, and 1 pending review. |
 | 2026-05-17 | Phase 3 opportunity freshness reminders | Added date/month display on opportunity list/detail and a staff-dashboard stale reminder for open opportunities older than 90 days with no active pursuit. |
 | 2026-05-17 | Phase 3 end-to-end QA | Created `03-UAT.md`; seeded one marked demo active-pursuit path with seller-meeting stage, signed NDA, approved teaser, and staff-only NDA document. |
+| 2026-05-17 | Phase 3 launch/demo checklist | Created launch/demo checklist and V3 deferred backlog; marked June V2 implementation complete. |
 
 ## Accumulated Context
 
@@ -89,6 +90,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 3 plan 03-01 completed: staff dashboard now has an internal deal-flow operating view for active intermediaries, active opportunities, introductions, active pursuits, seller meetings, LOIs, dropped deals, closed deals, current stages, approved documents, and NDA-blocked pursuits.
 - Phase 3 plan 03-02 completed: opportunity list/detail now show exact date added and month added, and staff dashboard flags open opportunities older than 90 days when no active pursuit exists.
 - Phase 3 plan 03-03 completed: UAT passes after adding a minimal marked demo path for one active pursuit, seller meeting, signed NDA, approved teaser, and staff-only NDA document.
+- Phase 3 plan 03-04 completed: launch/demo checklist and V3 deferred backlog are written, and the June V2 implementation is marked complete.
 
 ### Pending Todos
 
@@ -97,11 +99,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-- Phase 3 should focus on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.
+- June V2 implementation is complete; next risk is release monitoring and disciplined V3 selection.
+- Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
 - Phase 2 review remediation completed: email matching is case-insensitive, role precedence is documented, the match status state machine is documented, legacy `/my-opportunities` URLs redirect to `/portal/deals`, and the staff review/recommendation tables received focused UI fixes.
-- Phase 2 Core Deal Workflow is complete and ready to continue with Phase 3 under the Phase 1.1 release protocol.
+- Phase 3 Reporting, Reminders, QA, and Launch Hardening is complete under the Phase 1.1 release protocol.
 
 ## Deferred Items
 
@@ -115,6 +118,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-17T15:28:36Z
-Stopped at: Phase 03-03 complete; ready for Phase 03-04
-Resume file: .planning/phases/03-reporting-reminders-qa-and-launch-hardening/03-03-SUMMARY.md
+Last session: 2026-05-17T15:33:31Z
+Stopped at: June V2 implementation complete; ready for release monitoring and V3 selection
+Resume file: .planning/phases/03-reporting-reminders-qa-and-launch-hardening/03-04-SUMMARY.md
