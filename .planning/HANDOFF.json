@@ -1,174 +1,64 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-16T15:28:10.919Z",
-  "source": "auto-postool",
+  "timestamp": "2026-05-17T10:59:07Z",
+  "source": "codex-gsd",
   "partial": false,
-  "phase": null,
-  "phase_name": "1 of 3 (Scope Lock and Data Foundation)",
-  "phase_dir": null,
-  "plan": "0",
-  "task": null,
-  "total_tasks": null,
-  "status": "auto-checkpoint",
-  "completed_tasks": [],
-  "remaining_tasks": [],
+  "phase": "02",
+  "phase_name": "Core Deal Workflow",
+  "phase_dir": ".planning/phases/02-core-deal-workflow",
+  "plan": "02-05",
+  "task": "Validated pursuit, active-pursuit lock, and reopen logic",
+  "total_tasks": 7,
+  "status": "plan-complete",
+  "completed_tasks": [
+    "Added database lock for one active pursuit per opportunity",
+    "Added staff validate, drop, and reopen actions",
+    "Added staff review and recommendations UI controls",
+    "Hid non-active portal matches when another repreneur owns the active pursuit",
+    "Applied and verified the additive Supabase migration",
+    "Browser-verified validate, drop, and reopen with demo data"
+  ],
+  "remaining_tasks": [
+    "02-06 deal stage tracking from interest to closed/dropped",
+    "02-07 per-opportunity NDA and repreneur document download flow",
+    "Phase 3 reporting, stale reminders, QA, and launch hardening"
+  ],
   "blockers": [
     {
-      "description": "Repreneur platform access is directionally chosen but must stay tightly bounded for June.",
-      "type": "technical",
-      "workaround": ""
+      "description": "Deal stage tracking must stay lightweight and avoid becoming a full CRM in June.",
+      "type": "scope",
+      "workaround": "Use explicit stage fields/statuses only; defer rich activity history."
     },
     {
       "description": "Matching must avoid hidden AI scope until structured data is stable.",
-      "type": "technical",
-      "workaround": ""
+      "type": "scope",
+      "workaround": "Keep platform recommendation values structured/manual for V2."
     },
     {
-      "description": "M&A CRM must remain basic source/contact tracking in June.",
-      "type": "technical",
-      "workaround": ""
+      "description": "NDA/document access remains unbuilt until 02-07.",
+      "type": "product",
+      "workaround": "Keep document metadata staff-controlled for now."
     }
   ],
   "human_actions_pending": [],
   "decisions": [
     {
-      "decision": "Bertrand answered several original PDR questions but expanded the target product direction.",
-      "rationale": "",
-      "phase": null
+      "decision": "Interest does not automatically create an active pursuit.",
+      "rationale": "Staff must remain the decision gate.",
+      "phase": "02"
     },
     {
-      "decision": "June V2 should be scoped tightly around core validation.",
-      "rationale": "",
-      "phase": null
+      "decision": "Only one active pursuit is allowed per opportunity.",
+      "rationale": "Prevents multiple repreneurs being treated as the live deal path at the same time.",
+      "phase": "02"
     },
     {
-      "decision": "V3 can follow quickly once basics are validated.",
-      "rationale": "",
-      "phase": null
+      "decision": "Dropping the active pursuit reopens the opportunity.",
+      "rationale": "The team can recover if the live path fails without losing prior matching history.",
+      "phase": "02"
     }
   ],
-  "uncommitted_files": [
-    {
-      "status": "M",
-      "path": "CLAUDE.md"
-    },
-    {
-      "status": "M",
-      "path": "docs/V7_STATUS_UPDATE.md"
-    },
-    {
-      "status": "??",
-      "path": ".next.stale-1778684723/"
-    },
-    {
-      "status": "??",
-      "path": ".planning/"
-    },
-    {
-      "status": "??",
-      "path": "AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "app/(dashboard)/dashboard/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "app/(dashboard)/repreneurs/[id]/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "app/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "app/api/upload-avatar/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "app/api/wavy/generate/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "archive/"
-    },
-    {
-      "status": "??",
-      "path": "components/dashboard/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "components/repreneurs/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/GSD_LINEAR_OPERATING_MODEL.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/V2-PDR-DRAFT.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/communications/2026-05-16_whatsapp-bertrand-v2-scope-boundaries.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/communications/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/emails-drafts/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/emails-sent/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/actions/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/config/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/email/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/email/templates/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/i18n/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/supabase/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/types/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "lib/utils/AGENTS.md"
-    },
-    {
-      "status": "??",
-      "path": "scripts/AGENTS.md"
-    }
-  ],
-  "next_action": "Ready to plan",
-  "context_notes": "Status: Ready to plan\n\nRecent commits:\n6ea673b fix(scrapbook-html): make preview responsive\n9cc3931 feat(scrapbook-html): add public slot URLs\n8c1a7dc feat(scrapbook-html): add multi-slot HTML route /scrapbook-html/[slot]\nb742192 docs(CLAUDE.md): store login credentials so Claude never halts at the wall\nc3b2446 feat(csv): split application_date from first_contact_at"
+  "uncommitted_files": [],
+  "next_action": "Plan and execute 02-06 deal stage tracking",
+  "context_notes": "Phase 2 is 5/7 complete. Demo opportunity DEMO-OPP-20260517-01 is restored to interested and remains visible in /opportunities/reviews for Ivan to test."
 }

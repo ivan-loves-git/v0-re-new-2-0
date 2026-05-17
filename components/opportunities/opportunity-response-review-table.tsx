@@ -1,11 +1,11 @@
 import Link from "next/link"
-import { CheckCircle2, ExternalLink, Inbox } from "lucide-react"
+import { CheckCircle2, ExternalLink, Inbox, LockKeyhole, ShieldCheck } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { markOpportunityMatchReviewed } from "@/lib/actions/opportunity-matches"
+import { markOpportunityMatchReviewed, validateOpportunityPursuit } from "@/lib/actions/opportunity-matches"
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
@@ -80,6 +80,8 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
             <TableBody>
               {responses.map((response) => {
                 const reviewAction = markOpportunityMatchReviewed.bind(null, response.id, response.opportunity_id)
+                const validateAction = validateOpportunityPursuit.bind(null, response.id, response.opportunity_id)
+                const activeLock = Boolean(response.active_pursuit_match_id)
                 return (
                   <TableRow key={response.id}>
                     <TableCell>
@@ -123,16 +125,34 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                     </TableCell>
                     <TableCell>{formatDateTime(response.updated_at)}</TableCell>
                     <TableCell>
-                      {response.reviewed_at ? (
-                        <span className="text-sm text-muted-foreground">Reviewed {formatDateTime(response.reviewed_at)}</span>
-                      ) : (
-                        <form action={reviewAction}>
-                          <Button type="submit" variant="outline" size="sm">
-                            <CheckCircle2 data-icon="inline-start" />
-                            Mark reviewed
-                          </Button>
-                        </form>
-                      )}
+                      <div className="flex flex-col gap-2">
+                        {response.status === "interested" && activeLock && (
+                          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                            <LockKeyhole className="size-4" />
+                            Locked by {response.active_pursuit_repreneur_name ?? response.active_pursuit_repreneur_email ?? "active pursuit"}
+                          </div>
+                        )}
+
+                        {response.status === "interested" && !activeLock && (
+                          <form action={validateAction}>
+                            <Button type="submit" size="sm">
+                              <ShieldCheck data-icon="inline-start" />
+                              Validate pursuit
+                            </Button>
+                          </form>
+                        )}
+
+                        {response.reviewed_at ? (
+                          <span className="text-sm text-muted-foreground">Reviewed {formatDateTime(response.reviewed_at)}</span>
+                        ) : (
+                          <form action={reviewAction}>
+                            <Button type="submit" variant="outline" size="sm">
+                              <CheckCircle2 data-icon="inline-start" />
+                              Mark reviewed
+                            </Button>
+                          </form>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="icon" aria-label="Open opportunity">

@@ -271,6 +271,10 @@ export interface OpportunityMatchResponse {
   updated_at: string
   opportunity?: Pick<Opportunity, "id" | "reference" | "public_title" | "sector" | "location"> | null
   repreneur?: OpportunityMatchRepreneur | null
+  active_pursuit_match_id?: string | null
+  active_pursuit_repreneur_id?: string | null
+  active_pursuit_repreneur_name?: string | null
+  active_pursuit_repreneur_email?: string | null
 }
 
 export interface RepreneurOpportunityProfile {

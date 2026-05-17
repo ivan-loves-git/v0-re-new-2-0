@@ -1,7 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Save, Trash2, UsersRound } from "lucide-react"
+import { CheckCircle2, CircleSlash2, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +22,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { removeOpportunityMatch, saveOpportunityMatch } from "@/lib/actions/opportunity-matches"
+import {
+  dropOpportunityPursuit,
+  removeOpportunityMatch,
+  reopenDroppedOpportunityMatch,
+  saveOpportunityMatch,
+  validateOpportunityPursuit,
+} from "@/lib/actions/opportunity-matches"
 import {
   OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS,
   OPPORTUNITY_MATCH_STATUS_OPTIONS,
@@ -20,6 +38,8 @@ import {
   type OpportunityMatchCandidate,
   type OpportunityMatchRecommendation,
 } from "@/lib/types/opportunity"
+
+const STAFF_EDITABLE_STATUS_OPTIONS = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter((option) => option.value !== "active_pursuit")
 
 interface OpportunityMatchesPanelProps {
   opportunityId: string
@@ -41,6 +61,8 @@ function recommendationVariant(recommendation: OpportunityMatchRecommendation): 
 
 export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: OpportunityMatchesPanelProps) {
   const [isSaving, setIsSaving] = useState(false)
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null)
+  const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
 
   async function handleSave(formData: FormData) {
     setIsSaving(true)
@@ -53,6 +75,33 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
 
   async function handleRemove(matchId: string) {
     await removeOpportunityMatch(matchId, opportunityId)
+  }
+
+  async function handleValidate(matchId: string) {
+    setPendingActionId(matchId)
+    try {
+      await validateOpportunityPursuit(matchId, opportunityId)
+    } finally {
+      setPendingActionId(null)
+    }
+  }
+
+  async function handleDrop(matchId: string) {
+    setPendingActionId(matchId)
+    try {
+      await dropOpportunityPursuit(matchId, opportunityId)
+    } finally {
+      setPendingActionId(null)
+    }
+  }
+
+  async function handleReopen(matchId: string) {
+    setPendingActionId(matchId)
+    try {
+      await reopenDroppedOpportunityMatch(matchId, opportunityId)
+    } finally {
+      setPendingActionId(null)
+    }
   }
 
   return (
@@ -94,7 +143,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {OPPORTUNITY_MATCH_STATUS_OPTIONS.map((option) => (
+                      {STAFF_EDITABLE_STATUS_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -163,9 +212,24 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
       <Card>
         <CardHeader>
           <CardTitle>Recommendations</CardTitle>
-          <CardDescription>Structured matching records for this opportunity.</CardDescription>
+          <CardDescription>Structured matching records and staff-controlled pursuit validation.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
+          {activeMatch ? (
+            <Alert>
+              <CheckCircle2 />
+              <AlertTitle>Active pursuit locked</AlertTitle>
+              <AlertDescription>
+                {repreneurName(activeMatch.repreneur)} is the active pursuit for this opportunity. Drop that pursuit before validating another repreneur.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <UsersRound />
+              <AlertTitle>Open for validation</AlertTitle>
+              <AlertDescription>Any interested repreneur can be validated into the active pursuit.</AlertDescription>
+            </Alert>
+          )}
           <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
@@ -176,7 +240,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                   <TableHead>Human</TableHead>
                   <TableHead>Score</TableHead>
                   <TableHead>Reasons</TableHead>
-                  <TableHead className="w-10"></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -187,48 +251,109 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                     </TableCell>
                   </TableRow>
                 ) : (
-                  matches.map((match) => (
-                    <TableRow key={match.id}>
-                      <TableCell>
-                        <div className="font-medium">{repreneurName(match.repreneur)}</div>
-                        <div className="text-xs text-muted-foreground">{match.repreneur?.email ?? "-"}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={recommendationVariant(match.platform_recommendation)}>
-                          {getOpportunityMatchRecommendationLabel(match.platform_recommendation)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={recommendationVariant(match.human_recommendation)}>
-                          {getOpportunityMatchRecommendationLabel(match.human_recommendation)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{match.platform_score ?? "-"}</TableCell>
-                      <TableCell>
-                        <div className="flex max-w-sm flex-col gap-1 text-xs">
-                          {match.platform_reasons.length === 0 ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : (
-                            match.platform_reasons.map((reason) => <span key={reason}>{reason}</span>)
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Remove recommendation"
-                          onClick={() => void handleRemove(match.id)}
-                        >
-                          <Trash2 data-icon="inline-start" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  matches.map((match) => {
+                    const isLockedByAnother = Boolean(activeMatch && activeMatch.id !== match.id)
+                    const canValidate = match.status === "interested" && !isLockedByAnother
+                    const isPending = pendingActionId === match.id
+
+                    return (
+                      <TableRow key={match.id}>
+                        <TableCell>
+                          <div className="font-medium">{repreneurName(match.repreneur)}</div>
+                          <div className="text-xs text-muted-foreground">{match.repreneur?.email ?? "-"}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={recommendationVariant(match.platform_recommendation)}>
+                            {getOpportunityMatchRecommendationLabel(match.platform_recommendation)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={recommendationVariant(match.human_recommendation)}>
+                            {getOpportunityMatchRecommendationLabel(match.human_recommendation)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{match.platform_score ?? "-"}</TableCell>
+                        <TableCell>
+                          <div className="flex max-w-sm flex-col gap-1 text-xs">
+                            {match.platform_reasons.length === 0 ? (
+                              <span className="text-muted-foreground">-</span>
+                            ) : (
+                              match.platform_reasons.map((reason) => <span key={reason}>{reason}</span>)
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            {canValidate && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() => void handleValidate(match.id)}
+                              >
+                                <CheckCircle2 data-icon="inline-start" />
+                                Validate
+                              </Button>
+                            )}
+
+                            {match.status === "interested" && isLockedByAnother && (
+                              <Badge variant="secondary">Locked</Badge>
+                            )}
+
+                            {match.status === "active_pursuit" && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button type="button" variant="outline" size="sm" disabled={isPending}>
+                                    <CircleSlash2 data-icon="inline-start" />
+                                    Drop
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Drop active pursuit?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will unlock the opportunity so another interested repreneur can be validated.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => void handleDrop(match.id)}>Drop pursuit</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+
+                            {match.status === "dropped" && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() => void handleReopen(match.id)}
+                              >
+                                <RotateCcw data-icon="inline-start" />
+                                Reopen
+                              </Button>
+                            )}
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Remove recommendation"
+                              onClick={() => void handleRemove(match.id)}
+                            >
+                              <Trash2 data-icon="inline-start" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>

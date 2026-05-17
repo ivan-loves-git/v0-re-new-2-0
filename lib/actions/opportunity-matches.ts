@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
-import { requireUser } from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   OpportunityMatch,
@@ -63,8 +62,53 @@ function normalizeResponse(row: any): OpportunityMatchResponse {
   } as OpportunityMatchResponse
 }
 
+function repreneurName(repreneur: any): string | null {
+  if (!repreneur) return null
+  const name = [repreneur.first_name, repreneur.last_name].filter(Boolean).join(" ")
+  return name || repreneur.email || null
+}
+
+function lockedMatchError(error: { code?: string; message?: string }) {
+  if (error.code === "23505") {
+    return new Error("This opportunity already has an active pursuit. Drop the current pursuit before validating another repreneur.")
+  }
+
+  return new Error(error.message ?? "Opportunity match update failed")
+}
+
+function ensureStaffMatchStatus(status: OpportunityMatchStatus) {
+  if (status === "active_pursuit") {
+    throw new Error("Use Validate pursuit instead of manually saving Active pursuit.")
+  }
+}
+
+async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, status: OpportunityMatchStatus) {
+  if (status !== "proposed" && status !== "interested") return
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select("id")
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "active_pursuit")
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (data) {
+    throw new Error("This opportunity already has an active pursuit. Drop it before exposing the opportunity to another repreneur.")
+  }
+}
+
+function revalidateMatchPaths(opportunityId: string, matchId?: string) {
+  revalidatePath("/opportunities/reviews")
+  revalidatePath(`/opportunities/${opportunityId}`)
+  revalidatePath("/portal/deals")
+  if (matchId) revalidatePath(`/portal/deals/${matchId}`)
+}
+
 export async function listOpportunityMatches(opportunityId: string): Promise<OpportunityMatch[]> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -103,11 +147,44 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
     .order("updated_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(normalizeResponse)
+
+  const responses = (data ?? []).map(normalizeResponse)
+  const opportunityIds = Array.from(new Set(responses.map((response) => response.opportunity_id)))
+
+  if (opportunityIds.length === 0) return responses
+
+  const { data: activeRows, error: activeError } = await supabase
+    .from("opportunity_matches")
+    .select(`
+      id,
+      opportunity_id,
+      repreneur_id,
+      repreneur:repreneurs(id, first_name, last_name, email)
+    `)
+    .in("opportunity_id", opportunityIds)
+    .eq("status", "active_pursuit")
+
+  if (activeError) throw new Error(activeError.message)
+
+  const activeByOpportunity = new Map<string, OpportunityMatchResponse>()
+  for (const row of activeRows ?? []) {
+    const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
+    activeByOpportunity.set(row.opportunity_id, {
+      active_pursuit_match_id: row.id,
+      active_pursuit_repreneur_id: row.repreneur_id,
+      active_pursuit_repreneur_name: repreneurName(repreneur),
+      active_pursuit_repreneur_email: repreneur?.email ?? null,
+    } as OpportunityMatchResponse)
+  }
+
+  return responses.map((response) => ({
+    ...response,
+    ...(activeByOpportunity.get(response.opportunity_id) ?? {}),
+  }))
 }
 
 export async function listOpportunityMatchCandidates(): Promise<OpportunityMatchCandidate[]> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -122,12 +199,16 @@ export async function listOpportunityMatchCandidates(): Promise<OpportunityMatch
 }
 
 export async function saveOpportunityMatch(formData: FormData) {
-  const user = await requireUser()
+  const access = await requireStaffAccess()
   const opportunityId = readString(formData, "opportunity_id")
   const repreneurId = readString(formData, "repreneur_id")
 
   if (!opportunityId) throw new Error("Opportunity is required")
   if (!repreneurId) throw new Error("Repreneur is required")
+
+  const status = readStatus(formData)
+  ensureStaffMatchStatus(status)
+  await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 
   const humanRecommendation = readRecommendation(formData, "human_recommendation")
   const humanNotes = readString(formData, "human_notes")
@@ -138,14 +219,14 @@ export async function saveOpportunityMatch(formData: FormData) {
     {
       opportunity_id: opportunityId,
       repreneur_id: repreneurId,
-      status: readStatus(formData),
+      status,
       platform_recommendation: readRecommendation(formData, "platform_recommendation"),
       platform_score: readNumber(formData, "platform_score"),
       platform_reasons: readReasons(formData),
       human_recommendation: humanRecommendation,
       human_notes: humanNotes,
-      created_by: user.id,
-      reviewed_by: hasHumanReview ? user.id : null,
+      created_by: access.user.id,
+      reviewed_by: hasHumanReview ? access.user.id : null,
       reviewed_at: hasHumanReview ? new Date().toISOString() : null,
     },
     { onConflict: "opportunity_id,repreneur_id" }
@@ -156,7 +237,7 @@ export async function saveOpportunityMatch(formData: FormData) {
 }
 
 export async function removeOpportunityMatch(matchId: string, opportunityId: string) {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase.from("opportunity_matches").delete().eq("id", matchId)
@@ -178,6 +259,87 @@ export async function markOpportunityMatchReviewed(matchId: string, opportunityI
 
   if (error) throw new Error(error.message)
 
-  revalidatePath("/opportunities/reviews")
-  revalidatePath(`/opportunities/${opportunityId}`)
+  revalidateMatchPaths(opportunityId, matchId)
+}
+
+export async function validateOpportunityPursuit(matchId: string, opportunityId: string) {
+  const access = await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data: match, error: matchError } = await supabase
+    .from("opportunity_matches")
+    .select("id, opportunity_id, status")
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .maybeSingle()
+
+  if (matchError) throw new Error(matchError.message)
+  if (!match) throw new Error("Opportunity match not found")
+  if (match.status !== "interested") {
+    throw new Error("Only an interested response can be validated into an active pursuit.")
+  }
+
+  const { data: updatedMatch, error } = await supabase
+    .from("opportunity_matches")
+    .update({
+      status: "active_pursuit",
+      reviewed_by: access.user.id,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "interested")
+    .select("id")
+    .maybeSingle()
+
+  if (error) throw lockedMatchError(error)
+  if (!updatedMatch) throw new Error("Only an interested response can be validated into an active pursuit.")
+
+  revalidateMatchPaths(opportunityId, matchId)
+}
+
+export async function dropOpportunityPursuit(matchId: string, opportunityId: string) {
+  const access = await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .update({
+      status: "dropped",
+      reviewed_by: access.user.id,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "active_pursuit")
+    .select("id")
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error("Only an active pursuit can be dropped.")
+
+  revalidateMatchPaths(opportunityId, matchId)
+}
+
+export async function reopenDroppedOpportunityMatch(matchId: string, opportunityId: string) {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .update({
+      status: "interested",
+      reviewed_by: null,
+      reviewed_at: null,
+    })
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "dropped")
+    .select("id")
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error("Only a dropped pursuit can be reopened.")
+
+  revalidateMatchPaths(opportunityId, matchId)
 }

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 2 plan 02-04 interest/reject and staff review flow
-last_updated: "2026-05-17T09:54:14.000Z"
+stopped_at: Completed Phase 2 plan 02-05 validated pursuit, active lock, and reopen logic
+last_updated: "2026-05-17T10:59:07.000Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 19
-  completed_plans: 12
-  percent: 63
+  completed_plans: 13
+  percent: 68
 ---
 
 # Project State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 2 of 4 (Core Deal Workflow)
-Plan: 4 of 7 in current phase
-Status: Ready for 02-05 validated pursuit, active-pursuit lock, and re-open logic
+Plan: 5 of 7 in current phase
+Status: Ready for 02-06 deal stage tracking
 Last activity: 2026-05-17
 
-Progress: [██████----] 63%
+Progress: [███████---] 68%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -77,6 +77,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 2 plan 02-03 completed: repreneur deal access moved to `/portal/deals`, a read-only `/portal/profile` was added, post-login routing now splits staff vs repreneur users, and staff dashboard layout blocks repreneur-role access.
 - Quick task completed: `myworkmail4@gmail.com` is a linked demo repreneur login with a populated portal, and deleting a repreneur now removes their repreneur portal role and active sessions.
 - Phase 2 plan 02-04 completed: repreneurs can mark a proposed opportunity as interested or not a fit, and staff can review those responses at `/opportunities/reviews` without creating active pursuit yet.
+- Phase 2 plan 02-05 completed: staff can validate one interested match into active pursuit, the database blocks a second active pursuit, dropping the active pursuit releases the lock, and dropped matches can be reopened into review.
+- Active pursuit also hides non-active matches for the same opportunity from other repreneurs in the portal until the pursuit is dropped.
 
 ### Pending Todos
 
@@ -85,7 +87,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-- Validated pursuit must preserve staff control and avoid accidentally locking an opportunity too early.
+- Deal stage tracking must build on active pursuit without turning the app into a full CRM.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
 - Phase 2 is now unblocked, but should proceed under the Phase 1.1 release protocol.

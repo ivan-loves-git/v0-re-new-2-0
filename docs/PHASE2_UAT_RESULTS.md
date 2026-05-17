@@ -1,6 +1,6 @@
 # Phase 2 UAT Results
 
-**Status:** Plans 02-01 and 02-02 implemented; local worktree verification complete
+**Status:** Plans 02-01 through 02-05 implemented; local worktree verification complete
 **Environment:** Same Supabase project, controlled additive migration
 **Branch:** `codex/gsd-v2-phase2-20260517`
 **Worktree:** `_worktrees/renew-platform-gsd-v2-phase2`
@@ -35,6 +35,33 @@
 - Added `/my-opportunities` and `/my-opportunities/[matchId]`.
 - Shows only active, non-staff-only opportunities where the match is `proposed`, `interested`, or `active_pursuit`.
 - Does not expose source/contact, staff notes, raw descriptions, documents, profile editing, interest/reject, or pursuit workflow.
+
+## Plan 02-05 Scope
+
+- Added `scripts/048_opportunity_active_pursuit_lock.sql`.
+- Enforced one `active_pursuit` match per opportunity with a database partial unique index.
+- Added staff validate/drop/reopen actions for active pursuit control.
+- Added `Validate pursuit` to `/opportunities/reviews`.
+- Added active-lock, drop, and reopen controls to the opportunity Recommendations tab.
+- Hid non-active portal matches when another repreneur owns the active pursuit.
+
+## Plan 02-05 Verification
+
+- Applied and verified the active-pursuit lock index in the approved Supabase project.
+- Database UAT confirmed:
+  - first interested match can become `active_pursuit`
+  - second active pursuit for the same opportunity is blocked
+  - dropping the active pursuit releases the lock
+  - another interested match can then become `active_pursuit`
+- Browser UAT confirmed:
+  - staff review queue renders `Validate pursuit`
+  - validation moves the demo response out of the queue
+  - Recommendations tab shows `Active pursuit locked`
+  - drop returns the opportunity to `Open for validation`
+  - reopen restores the match to `Interested` and returns it to the review queue
+- Demo state after verification:
+  - `DEMO-OPP-20260517-01` for `myworkmail4@gmail.com` is restored to `interested`
+  - response remains unreviewed for Ivan to test
 
 ## Temporary UAT Data
 

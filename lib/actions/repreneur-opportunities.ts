@@ -50,6 +50,31 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
   }
 }
 
+async function getActivePursuitOwners(
+  supabase: ReturnType<typeof createAdminClient>,
+  opportunityIds: string[]
+): Promise<Map<string, string>> {
+  if (opportunityIds.length === 0) return new Map()
+
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select("opportunity_id, repreneur_id")
+    .in("opportunity_id", opportunityIds)
+    .eq("status", "active_pursuit")
+
+  if (error) throw new Error(error.message)
+  return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))
+}
+
+function isVisibleUnderActiveLock(
+  exposure: RepreneurOpportunityExposure,
+  currentRepreneurId: string,
+  activeOwnerByOpportunity: Map<string, string>
+) {
+  const activeOwner = activeOwnerByOpportunity.get(exposure.opportunity_id)
+  return !activeOwner || activeOwner === currentRepreneurId
+}
+
 async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile | null> {
   const user = await requireUser()
   const email = user.email?.trim().toLowerCase()
@@ -110,7 +135,17 @@ export async function listMyRepreneurOpportunities(): Promise<{
     .map(normalizeExposure)
     .filter((exposure): exposure is RepreneurOpportunityExposure => Boolean(exposure))
 
-  return { repreneur, opportunities }
+  const activeOwnerByOpportunity = await getActivePursuitOwners(
+    supabase,
+    opportunities.map((opportunity) => opportunity.opportunity_id)
+  )
+
+  return {
+    repreneur,
+    opportunities: opportunities.filter((opportunity) =>
+      isVisibleUnderActiveLock(opportunity, repreneur.id, activeOwnerByOpportunity)
+    ),
+  }
 }
 
 export async function getMyRepreneurOpportunity(matchId: string): Promise<RepreneurOpportunityExposure | null> {
@@ -149,7 +184,11 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  return data ? normalizeExposure(data) : null
+  const exposure = data ? normalizeExposure(data) : null
+  if (!exposure) return null
+
+  const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
+  return isVisibleUnderActiveLock(exposure, repreneur.id, activeOwnerByOpportunity) ? exposure : null
 }
 
 async function updateMyOpportunityResponse(matchId: string, status: "interested" | "declined") {
