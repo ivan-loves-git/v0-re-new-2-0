@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
+  OpportunityNdaStatus,
   OpportunityMatch,
   OpportunityMatchCandidate,
   OpportunityPursuitEvent,
@@ -20,6 +21,7 @@ const STAFF_EDITABLE_PURSUIT_STAGES: OpportunityPursuitStage[] = [
   "loi",
   "closed",
 ]
+const STAFF_EDITABLE_NDA_STATUSES: OpportunityNdaStatus[] = ["not_required", "required", "sent", "signed", "waived"]
 
 function readString(formData: FormData, key: string): string | null {
   const value = formData.get(key)
@@ -51,6 +53,15 @@ function readPursuitStage(formData: FormData): OpportunityPursuitStage {
   }
 
   return stage
+}
+
+function readNdaStatus(formData: FormData): OpportunityNdaStatus {
+  const status = readString(formData, "nda_status") as OpportunityNdaStatus | null
+  if (!status || !STAFF_EDITABLE_NDA_STATUSES.includes(status)) {
+    throw new Error("Select a valid NDA status.")
+  }
+
+  return status
 }
 
 function readReasons(formData: FormData): string[] {
@@ -511,6 +522,51 @@ export async function updateOpportunityPursuitStage(matchId: string, opportunity
     note,
     createdBy: access.user.id,
   })
+
+  revalidateMatchPaths(opportunityId, matchId)
+}
+
+export async function updateOpportunityPursuitNda(matchId: string, opportunityId: string, formData: FormData) {
+  const access = await requireStaffAccess()
+  const ndaStatus = readNdaStatus(formData)
+  const ndaDocumentId = readString(formData, "nda_document_id")
+  const ndaNotes = readString(formData, "nda_notes")
+  const supabase = createAdminClient()
+  const now = new Date().toISOString()
+  const linkedNdaDocumentId = ndaDocumentId === "none" ? null : ndaDocumentId
+
+  if (linkedNdaDocumentId) {
+    const { data: document, error: documentError } = await supabase
+      .from("opportunity_documents")
+      .select("id")
+      .eq("id", linkedNdaDocumentId)
+      .eq("opportunity_id", opportunityId)
+      .eq("document_type", "nda")
+      .maybeSingle()
+
+    if (documentError) throw new Error(documentError.message)
+    if (!document) throw new Error("Select an NDA document from this opportunity.")
+  }
+
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .update({
+      nda_status: ndaStatus,
+      nda_document_id: linkedNdaDocumentId,
+      nda_notes: ndaNotes,
+      nda_updated_by: access.user.id,
+      nda_updated_at: now,
+      reviewed_by: access.user.id,
+      reviewed_at: now,
+    })
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "active_pursuit")
+    .select("id")
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error("Only an active pursuit can have NDA status updated.")
 
   revalidateMatchPaths(opportunityId, matchId)
 }

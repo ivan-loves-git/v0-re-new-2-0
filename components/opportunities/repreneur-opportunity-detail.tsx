@@ -1,12 +1,15 @@
-import { CalendarDays, CheckCircle2, Gauge, MapPin, XCircle, Users } from "lucide-react"
+import Link from "next/link"
+import { CalendarDays, CheckCircle2, Download, FileText, Gauge, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { declineMyOpportunity, markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunities"
 import {
+  canDownloadOpportunityDocuments,
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
+  getOpportunityNdaStatusLabel,
   getOpportunityPursuitStageLabel,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
@@ -29,6 +32,12 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
 }
 
+function formatBytes(bytes: number | null | undefined) {
+  if (!bytes) return "-"
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function canRespond(status: RepreneurOpportunityExposure["match_status"]) {
   return status === "proposed" || status === "interested" || status === "declined"
 }
@@ -36,12 +45,16 @@ function canRespond(status: RepreneurOpportunityExposure["match_status"]) {
 export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunityDetailProps) {
   const interestAction = markMyOpportunityInterested.bind(null, opportunity.match_id)
   const declineAction = declineMyOpportunity.bind(null, opportunity.match_id)
+  const documentsAllowed = canDownloadOpportunityDocuments(opportunity.nda_status ?? "not_required")
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
+          {opportunity.match_status === "active_pursuit" && (
+            <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge>
+          )}
           <Badge variant="secondary">{getOpportunityMatchRecommendationLabel(opportunity.human_recommendation)}</Badge>
         </div>
         <div>
@@ -114,6 +127,49 @@ export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunity
           )}
         </CardContent>
       </Card>
+
+      {opportunity.match_status === "active_pursuit" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="size-5" />
+              Documents
+            </CardTitle>
+            <CardDescription>NDA status: {getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {!documentsAllowed && (
+              <Alert>
+                <FileText />
+                <AlertTitle>Documents locked</AlertTitle>
+                <AlertDescription>Re-New will open document downloads once the NDA status is signed or waived.</AlertDescription>
+              </Alert>
+            )}
+
+            {documentsAllowed && opportunity.visible_documents.length === 0 && (
+              <p className="text-sm text-muted-foreground">No approved documents are available yet.</p>
+            )}
+
+            {documentsAllowed &&
+              opportunity.visible_documents.map((document) => (
+                <div key={document.id} className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">{document.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {document.document_type.replaceAll("_", " ")} · {formatBytes(document.size_bytes)}
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/portal/deals/${opportunity.match_id}/documents/${document.id}`}>
+                      <Download data-icon="inline-start" />
+                      Download
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

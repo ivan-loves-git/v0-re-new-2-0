@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   OpportunityMatchStatus,
+  RepreneurOpportunityDocument,
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
@@ -38,6 +39,9 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     match_status: row.status,
     pursuit_stage: row.pursuit_stage,
     pursuit_stage_updated_at: row.pursuit_stage_updated_at,
+    nda_status: row.nda_status,
+    nda_updated_at: row.nda_updated_at,
+    visible_documents: [],
     opportunity_id: opportunity.id,
     public_title: opportunity.public_title,
     anonymized_description: opportunity.anonymized_description,
@@ -54,6 +58,38 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     human_recommendation: row.human_recommendation,
     updated_at: row.updated_at,
   }
+}
+
+async function listApprovedDocumentsByOpportunity(
+  supabase: ReturnType<typeof createAdminClient>,
+  opportunityIds: string[]
+): Promise<Map<string, RepreneurOpportunityDocument[]>> {
+  if (opportunityIds.length === 0) return new Map()
+
+  const { data, error } = await supabase
+    .from("opportunity_documents")
+    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at")
+    .in("opportunity_id", opportunityIds)
+    .eq("visibility", "approved_for_repreneur")
+    .order("uploaded_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  const documentsByOpportunity = new Map<string, RepreneurOpportunityDocument[]>()
+  for (const document of data ?? []) {
+    const documents = documentsByOpportunity.get(document.opportunity_id) ?? []
+    documents.push({
+      id: document.id,
+      title: document.title,
+      document_type: document.document_type,
+      file_name: document.file_name,
+      size_bytes: document.size_bytes,
+      uploaded_at: document.uploaded_at,
+    } as RepreneurOpportunityDocument)
+    documentsByOpportunity.set(document.opportunity_id, documents)
+  }
+
+  return documentsByOpportunity
 }
 
 async function getActivePursuitOwners(
@@ -117,6 +153,8 @@ export async function listMyRepreneurOpportunities(): Promise<{
       human_recommendation,
       pursuit_stage,
       pursuit_stage_updated_at,
+      nda_status,
+      nda_updated_at,
       updated_at,
       opportunity:opportunities(
         id,
@@ -147,12 +185,20 @@ export async function listMyRepreneurOpportunities(): Promise<{
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
+  const documentsByOpportunity = await listApprovedDocumentsByOpportunity(
+    supabase,
+    opportunities.map((opportunity) => opportunity.opportunity_id)
+  )
 
   return {
     repreneur,
-    opportunities: opportunities.filter((opportunity) =>
-      isVisibleUnderActiveLock(opportunity, repreneur.id, activeOwnerByOpportunity)
-    ),
+    opportunities: opportunities
+      .filter((opportunity) => isVisibleUnderActiveLock(opportunity, repreneur.id, activeOwnerByOpportunity))
+      .map((opportunity) => ({
+        ...opportunity,
+        visible_documents:
+          opportunity.match_status === "active_pursuit" ? documentsByOpportunity.get(opportunity.opportunity_id) ?? [] : [],
+      })),
   }
 }
 
@@ -172,6 +218,8 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
       human_recommendation,
       pursuit_stage,
       pursuit_stage_updated_at,
+      nda_status,
+      nda_updated_at,
       updated_at,
       opportunity:opportunities(
         id,
@@ -198,7 +246,14 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
   if (!exposure) return null
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
-  return isVisibleUnderActiveLock(exposure, repreneur.id, activeOwnerByOpportunity) ? exposure : null
+  if (!isVisibleUnderActiveLock(exposure, repreneur.id, activeOwnerByOpportunity)) return null
+
+  const documentsByOpportunity = await listApprovedDocumentsByOpportunity(supabase, [exposure.opportunity_id])
+  return {
+    ...exposure,
+    visible_documents:
+      exposure.match_status === "active_pursuit" ? documentsByOpportunity.get(exposure.opportunity_id) ?? [] : [],
+  }
 }
 
 async function updateMyOpportunityResponse(matchId: string, status: "interested" | "declined") {

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 02 plan 02-06 completed
-last_updated: "2026-05-17T12:49:22Z"
+stopped_at: Phase 02 complete
+last_updated: "2026-05-17T13:07:37Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 19
-  completed_plans: 14
-  percent: 74
+  completed_plans: 15
+  percent: 79
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 2: Core Deal Workflow
+**Current focus:** Phase 3: Reporting, Reminders, QA, and Launch Hardening
 
 ## Current Position
 
-Phase: 2 of 4 (Core Deal Workflow)
-Plan: 6 of 7 in current phase
-Status: Ready for 02-07 NDA and repreneur document download flow
+Phase: 3 of 4 (Reporting, Reminders, QA, and Launch Hardening)
+Plan: 0 of 4 in current phase
+Status: Ready for 03-01 operational KPI dashboard
 Last activity: 2026-05-17
 
-Progress: [███████---] 74%
+Progress: [████████--] 79%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -80,6 +80,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 2 plan 02-05 completed: staff can validate one interested match into active pursuit, the database blocks a second active pursuit, dropping the active pursuit releases the lock, and dropped matches can be reopened into review.
 - Active pursuit also hides non-active matches for the same opportunity from other repreneurs in the portal until the pursuit is dropped.
 - Phase 2 plan 02-06 completed: staff can track the active pursuit stage from interest through intermediary meeting, seller meeting, LOI, closed, or dropped, with internal history and safe portal-stage display.
+- Phase 2 plan 02-07 completed: staff can track pursuit-level NDA status, link an NDA document, and active repreneurs can download only approved documents once NDA status allows access.
 
 ### Pending Todos
 
@@ -88,11 +89,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-- NDA/document visibility should build on the active-pursuit and stage model without adding e-signature or full legal workflow.
+- Phase 3 should focus on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
 - Phase 2 review remediation completed: email matching is case-insensitive, role precedence is documented, the match status state machine is documented, legacy `/my-opportunities` URLs redirect to `/portal/deals`, and the staff review/recommendation tables received focused UI fixes.
-- Phase 2 is now ready to continue with 02-07 NDA and repreneur document download flow, proceeding under the Phase 1.1 release protocol.
+- Phase 2 Core Deal Workflow is complete and ready to continue with Phase 3 under the Phase 1.1 release protocol.
 
 ## Deferred Items
 
@@ -106,6 +107,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-17T12:49:22Z
-Stopped at: Phase 02 plan 02-06 completed
-Resume file: .planning/phases/02-core-deal-workflow/02-06-SUMMARY.md
+Last session: 2026-05-17T13:07:37Z
+Stopped at: Phase 02 complete
+Resume file: .planning/phases/02-core-deal-workflow/02-07-SUMMARY.md

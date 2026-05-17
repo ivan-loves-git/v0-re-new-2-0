@@ -148,7 +148,7 @@ export function OpportunityDetail({ opportunity, documents, matches, matchCandid
         </TabsContent>
 
         <TabsContent value="pursuit">
-          <OpportunityPursuitPanel opportunityId={opportunity.id} matches={matches} events={pursuitEvents} />
+          <OpportunityPursuitPanel opportunityId={opportunity.id} matches={matches} events={pursuitEvents} documents={documents} />
         </TabsContent>
 
         <TabsContent value="edit">

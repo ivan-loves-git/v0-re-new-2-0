@@ -37,9 +37,9 @@
 
 ### NDA and Documents
 
-- [ ] **NDA-01**: Staff can track whether an opportunity requires a per-opportunity NDA.
-- [ ] **NDA-02**: Staff can attach or record the NDA document/status for an opportunity-repreneur pursuit.
-- [ ] **DOC-01**: Repreneurs can download opportunity PDFs that staff choose to expose.
+- [x] **NDA-01**: Staff can track whether an opportunity requires a per-opportunity NDA.
+- [x] **NDA-02**: Staff can attach or record the NDA document/status for an opportunity-repreneur pursuit.
+- [x] **DOC-01**: Repreneurs can download opportunity PDFs that staff choose to expose.
 
 ### Freshness and M&A Follow-Up
 
@@ -101,7 +101,7 @@
 | REP-02, REP-03 | Phase 2 | Complete |
 | DEAL-01, DEAL-02, DEAL-03 | Phase 2 | Complete |
 | DEAL-04 | Phase 2 | Complete |
-| NDA-01, NDA-02, DOC-01 | Phase 2 | Pending |
+| NDA-01, NDA-02, DOC-01 | Phase 2 | Complete |
 | FRESH-01, MNA-02 | Phase 3 | Pending |
 | KPI-01, KPI-02 | Phase 3 | Pending |
 | ENV-01, ENV-02, TEST-01, REL-01, REL-02 | Phase 1.1 | Complete |
@@ -113,4 +113,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after Phase 2 deal stage tracking*
+*Last updated: 2026-05-17 after Phase 2 NDA/document flow*

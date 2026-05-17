@@ -32,6 +32,8 @@ export type OpportunityPursuitStage =
   | "closed"
   | "dropped"
 
+export type OpportunityNdaStatus = "not_required" | "required" | "sent" | "signed" | "waived"
+
 export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
@@ -91,6 +93,14 @@ export const OPPORTUNITY_PURSUIT_STAGE_OPTIONS = [
   { value: "loi", label: "LOI" },
   { value: "closed", label: "Closed" },
   { value: "dropped", label: "Dropped" },
+] as const
+
+export const OPPORTUNITY_NDA_STATUS_OPTIONS = [
+  { value: "not_required", label: "Not required" },
+  { value: "required", label: "Required" },
+  { value: "sent", label: "Sent" },
+  { value: "signed", label: "Signed" },
+  { value: "waived", label: "Waived" },
 ] as const
 
 export interface MaSource {
@@ -263,6 +273,11 @@ export interface OpportunityMatch {
   pursuit_stage_notes?: string | null
   pursuit_stage_updated_by?: string | null
   pursuit_stage_updated_at?: string | null
+  nda_status?: OpportunityNdaStatus | null
+  nda_document_id?: string | null
+  nda_notes?: string | null
+  nda_updated_by?: string | null
+  nda_updated_at?: string | null
   platform_recommendation: OpportunityMatchRecommendation
   platform_score?: number | null
   platform_reasons: string[]
@@ -317,11 +332,23 @@ export interface RepreneurOpportunityProfile {
   email: string
 }
 
+export interface RepreneurOpportunityDocument {
+  id: string
+  title: string
+  document_type: OpportunityDocumentType
+  file_name?: string | null
+  size_bytes?: number | null
+  uploaded_at: string
+}
+
 export interface RepreneurOpportunityExposure {
   match_id: string
   match_status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
   pursuit_stage_updated_at?: string | null
+  nda_status?: OpportunityNdaStatus | null
+  nda_updated_at?: string | null
+  visible_documents: RepreneurOpportunityDocument[]
   opportunity_id: string
   public_title?: string | null
   anonymized_description?: string | null
@@ -357,4 +384,12 @@ export function getOpportunityMatchStatusLabel(status: OpportunityMatchStatus): 
 
 export function getOpportunityPursuitStageLabel(stage: OpportunityPursuitStage): string {
   return OPPORTUNITY_PURSUIT_STAGE_OPTIONS.find((option) => option.value === stage)?.label ?? stage
+}
+
+export function getOpportunityNdaStatusLabel(status: OpportunityNdaStatus): string {
+  return OPPORTUNITY_NDA_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+}
+
+export function canDownloadOpportunityDocuments(ndaStatus: OpportunityNdaStatus | null | undefined): boolean {
+  return ndaStatus === "not_required" || ndaStatus === "signed" || ndaStatus === "waived"
 }
