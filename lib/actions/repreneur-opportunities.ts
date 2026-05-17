@@ -14,6 +14,10 @@ import type {
 const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined"]
 
+function normalizeEmail(email: string | null | undefined) {
+  return email?.trim().toLowerCase() || null
+}
+
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
   return {
     id: row.id,
@@ -77,19 +81,19 @@ function isVisibleUnderActiveLock(
 
 async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile | null> {
   const user = await requireUser()
-  const email = user.email?.trim().toLowerCase()
+  const email = normalizeEmail(user.email)
   if (!email) return null
 
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("repreneurs")
     .select("id, first_name, last_name, email")
-    .eq("email", email)
-    .limit(1)
-    .maybeSingle()
+    .ilike("email", email)
+    .limit(20)
 
   if (error) throw new Error(error.message)
-  return data ? normalizeProfile(data) : null
+  const profile = (data ?? []).find((row) => normalizeEmail(row.email) === email)
+  return profile ? normalizeProfile(profile) : null
 }
 
 export async function listMyRepreneurOpportunities(): Promise<{

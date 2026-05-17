@@ -10,6 +10,13 @@ export async function middleware(request: NextRequest) {
   const isLoggedIn = !!sessionCookie?.value
   const { pathname } = request.nextUrl
 
+  if (pathname === "/my-opportunities" || pathname.startsWith("/my-opportunities/")) {
+    const suffix = pathname.slice("/my-opportunities".length)
+    const redirectUrl = new URL(`/portal/deals${suffix}`, request.url)
+    redirectUrl.search = request.nextUrl.search
+    return NextResponse.redirect(redirectUrl, 308)
+  }
+
   // Protected routes - require authentication
   const protectedPaths = [
     "/dashboard",

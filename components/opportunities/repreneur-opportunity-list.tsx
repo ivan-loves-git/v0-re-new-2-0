@@ -67,7 +67,7 @@ export function RepreneurOpportunityList({ repreneur, opportunities }: Repreneur
             <p className="line-clamp-3 text-sm text-muted-foreground">
               {opportunity.anonymized_description || "Anonymized opportunity details are being prepared."}
             </p>
-            <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="grid gap-3 text-sm sm:grid-cols-3">
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">Revenue</span>
                 <span className="font-medium">{opportunity.revenue_meur ?? "-"} M EUR</span>

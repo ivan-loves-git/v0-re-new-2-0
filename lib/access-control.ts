@@ -14,16 +14,22 @@ export interface CurrentUserAccess {
 
 interface RoleRow {
   role: AppUserRole
+  email?: string | null
 }
 
 interface RepreneurAccessRow {
   id: string
   first_name: string | null
   last_name: string | null
+  email?: string | null
 }
 
 function normalizeEmail(email: string | null | undefined) {
   return email?.trim().toLowerCase() || null
+}
+
+function sameNormalizedEmail(candidate: string | null | undefined, email: string) {
+  return normalizeEmail(candidate) === email
 }
 
 function displayName(row: RepreneurAccessRow | null) {
@@ -39,17 +45,16 @@ async function findRoleByEmail(email: string, userId: string): Promise<AppUserRo
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("app_user_roles")
-    .select("role")
-    .eq("email", email)
-    .limit(1)
-    .maybeSingle()
+    .select("role, email")
+    .ilike("email", email)
+    .limit(20)
 
   if (error) {
     if (error.code === "42P01") return null
     throw new Error(error.message)
   }
 
-  const role = (data as RoleRow | null)?.role ?? null
+  const role = ((data as RoleRow[] | null) ?? []).find((row) => sameNormalizedEmail(row.email, email))?.role ?? null
   if (role) return role
 
   const { data: userRole, error: userRoleError } = await supabase
@@ -71,13 +76,12 @@ async function findRepreneurByEmail(email: string): Promise<RepreneurAccessRow |
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("repreneurs")
-    .select("id, first_name, last_name")
-    .eq("email", email)
-    .limit(1)
-    .maybeSingle()
+    .select("id, first_name, last_name, email")
+    .ilike("email", email)
+    .limit(20)
 
   if (error) throw new Error(error.message)
-  return (data as RepreneurAccessRow | null) ?? null
+  return ((data as RepreneurAccessRow[] | null) ?? []).find((row) => sameNormalizedEmail(row.email, email)) ?? null
 }
 
 export async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> {
@@ -98,6 +102,7 @@ export async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> 
     findRoleByEmail(email, user.id),
     findRepreneurByEmail(email),
   ])
+  // Explicit platform roles are the source of truth; staff wins over a repreneur email match.
   const role: CurrentUserRole = explicitRole ?? (repreneur ? "repreneur" : "unassigned")
 
   return {

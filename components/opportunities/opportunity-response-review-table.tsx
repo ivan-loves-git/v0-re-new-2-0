@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
 import { markOpportunityMatchReviewed, validateOpportunityPursuit } from "@/lib/actions/opportunity-matches"
 import {
   getOpportunityMatchRecommendationLabel,
@@ -64,8 +65,8 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-hidden rounded-md border">
-          <Table>
+        <div className="overflow-x-auto rounded-md border">
+          <Table className="min-w-[960px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Response</TableHead>
@@ -135,10 +136,9 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
 
                         {response.status === "interested" && !activeLock && (
                           <form action={validateAction}>
-                            <Button type="submit" size="sm">
+                            <OpportunityReviewSubmitButton size="sm" label="Validate pursuit" pendingLabel="Validating...">
                               <ShieldCheck data-icon="inline-start" />
-                              Validate pursuit
-                            </Button>
+                            </OpportunityReviewSubmitButton>
                           </form>
                         )}
 
@@ -146,10 +146,14 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                           <span className="text-sm text-muted-foreground">Reviewed {formatDateTime(response.reviewed_at)}</span>
                         ) : (
                           <form action={reviewAction}>
-                            <Button type="submit" variant="outline" size="sm">
+                            <OpportunityReviewSubmitButton
+                              variant="outline"
+                              size="sm"
+                              label="Mark reviewed"
+                              pendingLabel="Marking..."
+                            >
                               <CheckCircle2 data-icon="inline-start" />
-                              Mark reviewed
-                            </Button>
+                            </OpportunityReviewSubmitButton>
                           </form>
                         )}
                       </div>

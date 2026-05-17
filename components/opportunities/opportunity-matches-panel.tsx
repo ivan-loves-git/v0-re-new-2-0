@@ -230,8 +230,8 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
               <AlertDescription>Any interested repreneur can be validated into the active pursuit.</AlertDescription>
             </Alert>
           )}
-          <div className="overflow-hidden rounded-md border">
-            <Table>
+          <div className="overflow-x-auto rounded-md border">
+            <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Repreneur</TableHead>
