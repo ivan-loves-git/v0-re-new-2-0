@@ -8,6 +8,22 @@ export type OpportunityDocumentType = "teaser" | "deal_book" | "nda" | "external
 
 export type OpportunityDocumentVisibility = "staff_only" | "approved_for_repreneur"
 
+export type OpportunityMatchRecommendation =
+  | "not_evaluated"
+  | "strong_fit"
+  | "possible_fit"
+  | "weak_fit"
+  | "not_fit"
+
+export type OpportunityMatchStatus =
+  | "draft"
+  | "shortlisted"
+  | "proposed"
+  | "interested"
+  | "declined"
+  | "active_pursuit"
+  | "dropped"
+
 export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
@@ -40,6 +56,24 @@ export const OPPORTUNITY_DOCUMENT_TYPE_OPTIONS = [
 export const OPPORTUNITY_DOCUMENT_VISIBILITY_OPTIONS = [
   { value: "staff_only", label: "Staff only" },
   { value: "approved_for_repreneur", label: "Approved for repreneur" },
+] as const
+
+export const OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS = [
+  { value: "not_evaluated", label: "Not evaluated" },
+  { value: "strong_fit", label: "Strong fit" },
+  { value: "possible_fit", label: "Possible fit" },
+  { value: "weak_fit", label: "Weak fit" },
+  { value: "not_fit", label: "Not a fit" },
+] as const
+
+export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "shortlisted", label: "Shortlisted" },
+  { value: "proposed", label: "Proposed" },
+  { value: "interested", label: "Interested" },
+  { value: "declined", label: "Declined" },
+  { value: "active_pursuit", label: "Active pursuit" },
+  { value: "dropped", label: "Dropped" },
 ] as const
 
 export interface MaSource {
@@ -191,10 +225,50 @@ export interface OpportunityDocument_Update {
   size_bytes?: number | null
 }
 
+export interface OpportunityMatchRepreneur {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  lifecycle_status?: string | null
+  journey_stage?: string | null
+  recommendation?: string | null
+  who_score?: number | null
+  when_score?: number | null
+}
+
+export interface OpportunityMatch {
+  id: string
+  opportunity_id: string
+  repreneur_id: string
+  status: OpportunityMatchStatus
+  platform_recommendation: OpportunityMatchRecommendation
+  platform_score?: number | null
+  platform_reasons: string[]
+  human_recommendation: OpportunityMatchRecommendation
+  human_notes?: string | null
+  created_by?: string | null
+  reviewed_by?: string | null
+  reviewed_at?: string | null
+  created_at: string
+  updated_at: string
+  repreneur?: OpportunityMatchRepreneur | null
+}
+
+export interface OpportunityMatchCandidate extends OpportunityMatchRepreneur {}
+
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
   return OPPORTUNITY_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
 }
 
 export function getOpportunityVisibilityLabel(visibility: OpportunityVisibility): string {
   return OPPORTUNITY_VISIBILITY_OPTIONS.find((option) => option.value === visibility)?.label ?? visibility
+}
+
+export function getOpportunityMatchRecommendationLabel(recommendation: OpportunityMatchRecommendation): string {
+  return OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.find((option) => option.value === recommendation)?.label ?? recommendation
+}
+
+export function getOpportunityMatchStatusLabel(status: OpportunityMatchStatus): string {
+  return OPPORTUNITY_MATCH_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
 }
