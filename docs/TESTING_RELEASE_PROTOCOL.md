@@ -23,7 +23,7 @@ Use the current Re-New Supabase project for Phase 1.1 because creating another S
 
 **Rules**
 - Phase 1.1 is treated as a controlled production-style migration, not a disposable sandbox.
-- Only the reviewed additive Phase 1 migrations may be applied: `scripts/044_create_opportunities_foundation.sql` and `scripts/045_setup_opportunity_documents_storage.sql`.
+- Only the reviewed additive Phase 1 migrations may be applied: `scripts/044_create_opportunities_foundation.sql` plus the opportunity document storage bucket setup from `scripts/045_setup_opportunity_documents_storage.sql`.
 - No destructive SQL is allowed in Phase 1.1: no dropping existing tables, dropping existing columns, or deleting existing non-UAT data.
 - Before migration, the target Supabase project URL/ref must be confirmed and recorded without secrets.
 - Before migration, the available backup route must be confirmed. If no dashboard backup is available, create a manual logical dump with Supabase CLI/connection string where possible, or record the accepted risk before proceeding.
@@ -120,7 +120,8 @@ Pass when:
 - Target Supabase URL/ref is confirmed as the intended current Re-New project.
 - Backup/rollback route is recorded before migration.
 - `scripts/044_create_opportunities_foundation.sql` is applied to the approved Supabase project.
-- `scripts/045_setup_opportunity_documents_storage.sql` is applied to the approved Supabase project.
+- The private `opportunity-documents` storage bucket exists in the approved Supabase project.
+- Any `storage.objects` policy limitation is documented; Phase 1 server-side document actions must still work.
 - Worktree app can run on `http://localhost:3011` against the approved project.
 - `git status --short` confirms no secrets were committed.
 

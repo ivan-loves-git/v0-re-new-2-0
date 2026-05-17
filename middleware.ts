@@ -19,6 +19,7 @@ export async function middleware(request: NextRequest) {
     "/journey",
     "/emails",
     "/guide",
+    "/opportunities",
     "/account",
     "/settings",
     "/tasks",
