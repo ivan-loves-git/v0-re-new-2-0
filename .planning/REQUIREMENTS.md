@@ -25,6 +25,8 @@
 - [ ] **REP-02**: A repreneur can express interest in an opportunity.
 - [ ] **REP-03**: A repreneur can reject or ignore an opportunity without creating staff ambiguity.
 - [x] **REP-04**: June access does not imply full repreneur profile editing or advanced self-service.
+- [x] **REP-05**: Repreneur access uses a separate external portal route/layout instead of the internal staff dashboard shell.
+- [x] **REP-06**: A repreneur can view a read-only profile summary with scores, strengths, improvement points, and calls to action.
 
 ### Deal Progress
 
@@ -85,7 +87,7 @@
 | E-signature | Legal workflow complexity exceeds June need |
 | M&A firm portal | Bertrand confirmed no V2 portal |
 | In-platform memo generation | Already defined as V3 |
-| Advanced repreneur self-service | Repreneur access must stay narrow |
+| Advanced repreneur self-service | Repreneur access must stay read-only/narrow in June |
 
 ## Traceability
 
@@ -95,6 +97,7 @@
 | MNA-01 | Phase 1 | Complete |
 | MATCH-01, MATCH-02, MATCH-03 | Phase 2 | Complete |
 | REP-01, REP-04 | Phase 2 | Complete |
+| REP-05, REP-06 | Phase 2 | Complete |
 | REP-02, REP-03 | Phase 2 | Pending |
 | DEAL-01, DEAL-02, DEAL-03, DEAL-04 | Phase 2 | Pending |
 | NDA-01, NDA-02, DOC-01 | Phase 2 | Pending |
@@ -103,8 +106,8 @@
 | ENV-01, ENV-02, TEST-01, REL-01, REL-02 | Phase 1.1 | Complete |
 
 **Coverage:**
-- June V2 requirements: 27 total
-- Mapped to phases: 27
+- June V2 requirements: 29 total
+- Mapped to phases: 29
 - Unmapped: 0
 
 ---

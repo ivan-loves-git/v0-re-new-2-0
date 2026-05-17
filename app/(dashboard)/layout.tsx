@@ -3,12 +3,15 @@ import { cookies } from "next/headers"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { FloatingNav } from "@/components/floating-nav"
+import { requireStaffAccess } from "@/lib/access-control"
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  await requireStaffAccess()
+
   // Get sidebar state from cookies
   const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false"

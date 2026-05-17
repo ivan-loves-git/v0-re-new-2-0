@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 2 plan 02-02 repreneur opportunity access
-last_updated: "2026-05-17T08:35:00.000Z"
+stopped_at: Completed quick task for demo repreneur credentials and portal access guard
+last_updated: "2026-05-17T09:18:36.000Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 18
-  completed_plans: 10
-  percent: 56
+  total_plans: 19
+  completed_plans: 11
+  percent: 58
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 2 of 4 (Core Deal Workflow)
-Plan: 2 of 6 in current phase
-Status: Ready for 02-03 interest/reject actions and staff notification/review flow
+Plan: 3 of 7 in current phase
+Status: Ready for 02-04 interest/reject actions and staff notification/review flow
 Last activity: 2026-05-17
 
 Progress: [██████----] 56%
@@ -39,6 +39,12 @@ Progress: [██████----] 56%
 - Total plans completed: 10
 - Average duration: n/a
 - Total execution time: 0 hours
+
+## Quick Tasks Completed
+
+| Date | Task | Result |
+|------|------|--------|
+| 2026-05-17 | Demo repreneur credentials and access guard | Created/reset `myworkmail4@gmail.com` as a linked demo repreneur user, populated three portal-visible demo matches, and tightened portal access after repreneur deletion. |
 
 ## Accumulated Context
 
@@ -67,6 +73,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Matching remains structured/manual for June; no hidden AI interpretation was introduced.
 - Phase 2 plan 02-02 completed: logged-in repreneurs can access `/my-opportunities` and anonymized opportunity detail only for active non-staff-only opportunities explicitly proposed to their matching repreneur profile.
 - Phase 2 UAT data for 02-01 and 02-02 was cleaned after verification.
+- Phase 2 plan 02-03 inserted after Ivan clarified that repreneur access must not live inside the staff dashboard shell.
+- Phase 2 plan 02-03 completed: repreneur deal access moved to `/portal/deals`, a read-only `/portal/profile` was added, post-login routing now splits staff vs repreneur users, and staff dashboard layout blocks repreneur-role access.
+- Quick task completed: `myworkmail4@gmail.com` is a linked demo repreneur login with a populated portal, and deleting a repreneur now removes their repreneur portal role and active sessions.
 
 ### Pending Todos
 

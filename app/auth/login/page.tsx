@@ -93,7 +93,7 @@ export default function LoginPage() {
       }
 
       if (result.data) {
-        window.location.href = "/dashboard"
+        window.location.href = "/routing"
       } else {
         setError("Login succeeded but no session was created. Please try again.")
         setLoading(false)

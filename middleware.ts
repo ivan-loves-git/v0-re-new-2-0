@@ -21,6 +21,8 @@ export async function middleware(request: NextRequest) {
     "/guide",
     "/opportunities",
     "/my-opportunities",
+    "/portal",
+    "/routing",
     "/account",
     "/settings",
     "/tasks",
@@ -35,16 +37,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Redirect root to dashboard if logged in
+  // Redirect root through role routing if logged in
   if (pathname === "/" && isLoggedIn) {
-    const dashboardUrl = new URL("/dashboard", request.url)
-    return NextResponse.redirect(dashboardUrl)
+    const routingUrl = new URL("/routing", request.url)
+    return NextResponse.redirect(routingUrl)
   }
 
-  // Redirect to dashboard if already logged in and trying to access login
+  // Redirect through role routing if already logged in and trying to access login
   if (pathname === "/auth/login" && isLoggedIn) {
-    const dashboardUrl = new URL("/dashboard", request.url)
-    return NextResponse.redirect(dashboardUrl)
+    const routingUrl = new URL("/routing", request.url)
+    return NextResponse.redirect(routingUrl)
   }
 
   return NextResponse.next()

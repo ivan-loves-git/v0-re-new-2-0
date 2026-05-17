@@ -82,7 +82,7 @@ export function RepreneurOpportunityList({ repreneur, opportunities }: Repreneur
               </div>
             </div>
             <Button asChild variant="outline" className="w-fit">
-              <Link href={`/my-opportunities/${opportunity.match_id}`}>
+              <Link href={`/portal/deals/${opportunity.match_id}`}>
                 View detail
                 <ArrowRight data-icon="inline-end" />
               </Link>

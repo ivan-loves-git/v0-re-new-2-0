@@ -8,7 +8,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 
 - [x] **Phase 1: Scope Lock and Data Foundation** - Lock the opportunity schema, import path, and staff-side opportunity management. (completed 2026-05-16)
 - [x] **Phase 1.1: Testing Environment and Release Protocol** - Set up safe test environment, UAT, and release gates before building more product scope. (completed 2026-05-17)
-- [ ] **Phase 2: Core Deal Workflow** - Build matching, repreneur access, interest/reject actions, validated pursuit, stages, NDA/document handling.
+- [ ] **Phase 2: Core Deal Workflow** - Build matching, separated repreneur portal access, interest/reject actions, validated pursuit, stages, NDA/document handling.
 - [ ] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness.
 
 ## Phase Details
@@ -61,7 +61,7 @@ Plans:
 
 **Depends on**: Phase 1.
 
-**Requirements**: MATCH-01, MATCH-02, MATCH-03, REP-01, REP-02, REP-03, REP-04, DEAL-01, DEAL-02, DEAL-03, DEAL-04, NDA-01, NDA-02, DOC-01
+**Requirements**: MATCH-01, MATCH-02, MATCH-03, REP-01, REP-02, REP-03, REP-04, REP-05, REP-06, DEAL-01, DEAL-02, DEAL-03, DEAL-04, NDA-01, NDA-02, DOC-01
 
 **Success Criteria** (what must be TRUE):
 1. Staff can see platform-recommended fit plus optional human recommendation.
@@ -70,15 +70,16 @@ Plans:
 4. Multi-repreneur exposure and active-pursuit lock behave consistently.
 5. NDA/document status is visible on the relevant pursuit.
 
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
 - [x] 02-01: Build structured matching and recommendation fields.
 - [x] 02-02: Build repreneur opportunity access and anonymized opportunity detail.
-- [ ] 02-03: Build interest/reject actions and staff notification/review flow.
-- [ ] 02-04: Build validated pursuit, active-pursuit lock, and re-open logic when dropped.
-- [ ] 02-05: Build deal stage tracking from interest to closed/dropped.
-- [ ] 02-06: Build per-opportunity NDA and repreneur document download flow.
+- [x] 02-03: Split staff dashboard and repreneur portal routing/profile.
+- [ ] 02-04: Build interest/reject actions and staff notification/review flow.
+- [ ] 02-05: Build validated pursuit, active-pursuit lock, and re-open logic when dropped.
+- [ ] 02-06: Build deal stage tracking from interest to closed/dropped.
+- [ ] 02-07: Build per-opportunity NDA and repreneur document download flow.
 
 ### Phase 3: Reporting, Reminders, QA, and Launch Hardening
 
@@ -111,5 +112,5 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
 |-------|----------------|--------|-----------|
 | 1. Scope Lock and Data Foundation | 5/5 | Complete   | 2026-05-16 |
 | 1.1. Testing Environment and Release Protocol | 3/3 | Complete | 2026-05-17 |
-| 2. Core Deal Workflow | 2/6 | In progress | - |
+| 2. Core Deal Workflow | 3/7 | In progress | - |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 0/4 | Not started | - |

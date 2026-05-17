@@ -275,6 +275,16 @@ export async function deleteNote(noteId: string, repreneurId: string) {
 export async function deleteRepreneur(id: string) {
   const supabase = createAdminClient()
 
+  const { data: repreneur, error: fetchError } = await supabase
+    .from("repreneurs")
+    .select("email")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
   // Database cascades handle related data automatically (notes, activities, offers, etc.)
   // Foreign keys are set up with ON DELETE CASCADE
   const { error } = await supabase.from("repreneurs").delete().eq("id", id)
@@ -283,7 +293,56 @@ export async function deleteRepreneur(id: string) {
     throw new Error(error.message)
   }
 
+  const email = typeof repreneur?.email === "string" ? repreneur.email.trim().toLowerCase() : null
+  if (email) {
+    const { data: authUsers, error: authUserError } = await supabase
+      .from("user")
+      .select("id")
+      .eq("email", email)
+
+    if (authUserError) {
+      throw new Error(authUserError.message)
+    }
+
+    const userIds = (authUsers ?? [])
+      .map((user) => user.id)
+      .filter((userId): userId is string => typeof userId === "string" && userId.length > 0)
+
+    const { error: roleByEmailError } = await supabase
+      .from("app_user_roles")
+      .delete()
+      .eq("email", email)
+      .eq("role", "repreneur")
+
+    if (roleByEmailError && roleByEmailError.code !== "42P01") {
+      throw new Error(roleByEmailError.message)
+    }
+
+    if (userIds.length > 0) {
+      const { error: roleByUserError } = await supabase
+        .from("app_user_roles")
+        .delete()
+        .in("user_id", userIds)
+        .eq("role", "repreneur")
+
+      if (roleByUserError && roleByUserError.code !== "42P01") {
+        throw new Error(roleByUserError.message)
+      }
+
+      const { error: sessionError } = await supabase
+        .from("session")
+        .delete()
+        .in("userId", userIds)
+
+      if (sessionError) {
+        throw new Error(sessionError.message)
+      }
+    }
+  }
+
   revalidatePath("/repreneurs")
+  revalidatePath("/portal/deals")
+  revalidatePath("/portal/profile")
   redirect("/repreneurs")
 }
 
