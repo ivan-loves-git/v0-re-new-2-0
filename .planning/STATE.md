@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 1 plans in worktree
-last_updated: "2026-05-17T05:52:45.094Z"
-last_activity: 2026-05-16
+stopped_at: Locked Phase 1.1 separate Supabase test environment plan
+last_updated: "2026-05-17T06:25:00.000Z"
+last_activity: 2026-05-17
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 25
+  total_plans: 18
+  completed_plans: 6
+  percent: 33
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 1.1 of 4 (Testing Environment and Release Protocol)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
+Plan: 1 of 3 in current phase
+Status: Ready to execute 01.1-02 test Supabase setup
 Last activity: 2026-05-17
 
 Progress: [███-------] 25%
@@ -36,7 +36,7 @@ Progress: [███-------] 25%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 6
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -53,10 +53,15 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Bertrand answered several original PDR questions but expanded the target product direction.
 - June V2 should be scoped tightly around core validation.
 - V3 can follow quickly once basics are validated.
+- Ivan selected Option 1 for Phase 1.1: a separate Supabase test project.
+- The current/shared Supabase database is not approved for Phase 1.1 testing.
 
 ### Pending Todos
 
-- Choose whether the Phase 1 test run uses a separate Supabase project or the current database with backup.
+- Create or identify the separate Supabase test project for Phase 1.1.
+- Configure the worktree `.env.local` with test Supabase credentials only.
+- Apply Phase 1 migrations to the test Supabase project only.
+- Run Phase 1 UAT on `http://localhost:3011/opportunities`.
 - Mirror Phase 1.1 into Linear after the protocol is accepted.
 - Save the sent 2026-05-16 WhatsApp scope-boundary message in project communications.
 

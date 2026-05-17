@@ -1,7 +1,8 @@
 # Re-New Testing and Release Protocol
 
-**Status:** Draft for Phase 1.1
-**Owner:** Ivan decides product risk. Codex/Claude execute technical setup and testing.
+**Status:** Approved direction for Phase 1.1
+**Decision:** Option A selected - separate Supabase test project.
+**Owner:** Ivan approves product risk. Codex/Claude execute technical setup and testing.
 **Purpose:** Prevent Re-New from mixing product development, database changes, and release decisions in the same informal step.
 
 ## Simple Mental Model
@@ -14,55 +15,39 @@ The product has three different things:
 
 Worktrees are for code isolation. They do not automatically isolate the database.
 
-## Environment Options
+## Locked Environment Policy
 
-### Option A: Separate Test Supabase
+### Selected Path: Separate Test Supabase
 
 Use a dedicated Supabase project for fake data and migration testing.
 
-**Pros**
-- Safest option.
-- We can create/delete fake opportunities freely.
+**Rules**
+- Phase 1 migrations are applied first to the test Supabase project only.
+- The current/shared Supabase database is not touched during Phase 1.1.
+- The worktree `.env.local` must point to the test Supabase project before the app is started for UAT.
+- Real secrets stay local and are never committed.
+- Test records can be fake, minimal, and disposable.
+
+**Why this path**
+- It is the safest option.
+- We can create, edit, import, attach, and delete fake opportunities freely.
 - Mistakes do not touch real Re-New data.
-- Best foundation for a professional process.
+- It creates the professional habit we need before Phase 2 adds repreneur-facing workflow.
 
-**Cons**
-- Requires setup time.
-- Needs separate `.env.local` values.
-- Test data may differ from production unless we deliberately copy samples.
+**Known tradeoff**
+- Setup takes longer than using the current database.
+- Test data may differ from production unless we deliberately copy safe samples.
+- We need one separate set of Supabase credentials for the test project.
 
-**Recommendation:** Best default for Re-New now.
+## Rejected Paths For Phase 1.1
 
-### Option B: Current Supabase With Manual Backup
+### Current Supabase With Manual Backup
 
-Use the existing database after taking a manual backup and confirming it is acceptable to touch.
+This is faster, but it can pollute or damage real/shared data. We are not using it for Phase 1.1.
 
-**Pros**
-- Faster.
-- Tests against the real app configuration.
-- Less environment maintenance.
+### Local UI Only
 
-**Cons**
-- Higher risk.
-- Test records can pollute real data.
-- Rollback is heavier than Git rollback.
-- A bad migration may require downtime or manual cleanup.
-
-**Recommendation:** Acceptable only if the database is still prototype-level or the team explicitly accepts the risk.
-
-### Option C: Local UI Only
-
-Run the app without applying database migrations.
-
-**Pros**
-- No database risk.
-- Useful for checking whether pages visually load.
-
-**Cons**
-- Not enough for Phase 1 because create/edit/import/documents depend on the database.
-- Gives false confidence.
-
-**Recommendation:** Not sufficient for release validation.
+This is useful for quick visual checks, but it is not enough because Phase 1 depends on database migrations, import, and document storage.
 
 ## Roles
 
@@ -122,9 +107,12 @@ Run the app without applying database migrations.
 ### Gate 1: Test Environment Ready
 
 Pass when:
-- Approved database/environment is documented.
-- Backup/rollback route is documented.
-- Worktree app can run against the chosen environment.
+- Test Supabase project exists.
+- `.env.local` in the worktree points to the test Supabase project.
+- `scripts/044_create_opportunities_foundation.sql` is applied to the test project.
+- `scripts/045_setup_opportunity_documents_storage.sql` is applied to the test project.
+- Worktree app can run on `http://localhost:3011` against the test project.
+- `git status --short` confirms no secrets were committed.
 
 ### Gate 2: UAT Passed
 
@@ -143,7 +131,7 @@ Pass when:
 ### Gate 4: Release Ready
 
 Pass when:
-- Production migration order is known.
+- Production migration order is known and reviewed.
 - Rollback notes exist.
 - Team knows what changed and what did not change.
 
@@ -151,3 +139,17 @@ Pass when:
 
 Do not start Phase 2 product features until Phase 1 has passed the test environment and UAT gate.
 
+## What Codex Can Do Without More Product Decisions
+
+- Create/update the GSD plan.
+- Prepare local test configuration templates.
+- Apply migrations to the separate test Supabase project once credentials are available.
+- Start the worktree app against the test project.
+- Run technical checks and record UAT findings.
+
+## What Requires Ivan Approval
+
+- Supplying or approving test Supabase credentials.
+- Deciding whether UAT findings block merge or become follow-up tasks.
+- Approving push/PR/merge.
+- Approving any later production database migration.

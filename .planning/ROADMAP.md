@@ -38,22 +38,22 @@ Plans:
 
 ### Phase 01.1: Testing Environment and Release Protocol (INSERTED)
 
-**Goal:** Re-New can test Phase 1 safely in a known environment, then push/merge/release only after UAT and rollback conditions are clear.
+**Goal:** Re-New can test Phase 1 safely in a separate Supabase test project, then push/merge/release only after UAT and rollback conditions are clear.
 **Requirements**: ENV-01, ENV-02, TEST-01, REL-01, REL-02
 **Depends on:** Phase 1
 
 **Success Criteria** (what must be TRUE):
-1. The team knows whether testing uses a separate Supabase project or the current database with a manual backup.
-2. Codex/Claude can run the worktree app against the chosen test database without touching production by accident.
+1. Testing uses a separate Supabase test project.
+2. Codex/Claude can run the worktree app against the test database without touching the current/shared Supabase project by accident.
 3. Phase 1 has a concrete UAT checklist and result log.
 4. Push, PR, merge, deploy, and rollback responsibilities are written in simple language.
 
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01.1-01: Decide and document environment policy and database safety level.
-- [ ] 01.1-02: Set up the test run for Phase 1 opportunity features.
-- [ ] 01.1-03: Write and apply the release protocol for branch, PR, merge, deploy, and rollback.
+- [x] 01.1-01: Lock separate Supabase test project policy and local env rules.
+- [ ] 01.1-02: Configure the test project, apply Phase 1 migrations, and run the worktree app.
+- [ ] 01.1-03: Complete Phase 1 UAT, classify findings, and prepare PR/merge/release recommendation.
 
 ### Phase 2: Core Deal Workflow
 
@@ -110,6 +110,6 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Scope Lock and Data Foundation | 5/5 | Complete   | 2026-05-16 |
-| 1.1. Testing Environment and Release Protocol | 0/3 | Not started | - |
+| 1.1. Testing Environment and Release Protocol | 1/3 | In progress | - |
 | 2. Core Deal Workflow | 0/6 | Blocked by Phase 1.1 | - |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 0/4 | Not started | - |

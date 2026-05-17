@@ -1,25 +1,29 @@
 # Phase 1 UAT Results
 
 **Status:** Not started
-**Environment:** TBD
+**Environment:** Separate Supabase test project
 **Branch:** `codex/gsd-v2-phase1-20260516`
 **Worktree:** `_worktrees/renew-platform-gsd-v2-phase1`
 
 ## Environment Decision
 
-Pending Ivan decision:
+Approved by Ivan on 2026-05-17:
 
-1. Separate test Supabase project.
-2. Current Supabase with manual backup.
-3. Local UI-only check.
+- Use a separate Supabase test project.
+- Do not apply Phase 1 migrations to the current/shared Supabase database during Phase 1.1.
+- Use fake or sanitized opportunity data for UAT.
+- Keep secrets local and uncommitted.
 
 ## Migration Checklist
 
-- [ ] Confirm target database.
-- [ ] Confirm backup/rollback route.
+- [ ] Create or identify the Re-New test Supabase project.
+- [ ] Confirm worktree `.env.local` points to the test project.
+- [ ] Confirm no production/current Supabase credentials are used in the worktree.
 - [ ] Apply `scripts/044_create_opportunities_foundation.sql`.
 - [ ] Apply `scripts/045_setup_opportunity_documents_storage.sql`.
-- [ ] Confirm app can connect to the target database.
+- [ ] Confirm app can connect to the test database.
+- [ ] Confirm app can use the test storage bucket for opportunity documents.
+- [ ] Confirm `git status --short` shows no committed secrets.
 
 ## UAT Checklist
 
@@ -61,7 +65,7 @@ Pending Ivan decision:
 
 | Area | Result | Severity | Notes |
 |------|--------|----------|-------|
-| Environment | Not started | - | - |
+| Environment | Not started | - | Separate test Supabase selected; setup pending. |
 
 ## Release Recommendation
 
