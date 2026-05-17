@@ -1,6 +1,6 @@
 # Phase 1 UAT Results
 
-**Status:** Phase 1.1 UAT passed; release review pending
+**Status:** Phase 1.1 UAT accepted; UAT cleanup complete
 **Environment:** Same Supabase project, controlled Phase 1.1 migration
 **Branch:** `codex/gsd-v2-phase1-20260516`
 **Worktree:** `_worktrees/renew-platform-gsd-v2-phase1`
@@ -75,11 +75,12 @@ Approved by Ivan on 2026-05-17 and superseding the earlier separate-project plan
 | Auth guard | Fixed | Medium | Unauthenticated `/opportunities` returned 500 because middleware did not protect the route. Added `/opportunities` to protected paths; now redirects to `/auth/login`. |
 | Browser UAT | Pass | - | Created, edited, archived, imported, and managed document visibility/removal through the browser using marked UAT records. |
 | Import review | Pass | - | One valid row was committed and one missing-reference row was blocked/skipped as expected. |
+| UAT cleanup | Pass | - | Removed `UAT-1779001031632`, `UAT-BROWSER-1779001491408`, `UAT-IMPORT-1779001652678`, the temporary UAT logins/sessions, and the stored UAT document file after Ivan accepted the local result. |
 | Dev server warning | Follow-up | Low | Next dev logs warn that `prettier` is missing for `@react-email/render`; not blocking opportunity UAT. |
 | Typecheck | Existing blocker outside Phase 1.1 | Medium | Full `tsc --noEmit` still fails on pre-existing unrelated project errors in archived/intake/email/test areas. Phase 1.1 browser UAT is not blocked, but merge should acknowledge this baseline. |
 
 ## Release Recommendation
 
-Ready to push/open a PR for review, but do not merge/deploy to the live branch until Ivan accepts the UAT result and cleanup choice. The Phase 1 opportunity foundation is usable in the worktree test run; the remaining caution is project-wide TypeScript baseline noise that predates this phase.
+Ivan accepted the local UAT result on 2026-05-17 and approved push/merge. Phase 1 is ready to merge from the worktree branch. The remaining caution is project-wide TypeScript baseline noise that predates this phase.
 
-UAT cleanup decision: keep `UAT-1779001031632`, `UAT-BROWSER-1779001491408`, `UAT-IMPORT-1779001652678`, and the temporary UAT logins temporarily so Ivan can inspect the live test result. Remove them before final release unless Ivan chooses to keep test fixtures.
+UAT cleanup decision: completed before push/merge. No marked Phase 1.1 UAT opportunities or temporary UAT users remain in the approved Supabase project.

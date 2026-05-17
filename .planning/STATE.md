@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 1.1 UAT; ready for Phase 2 planning/execution gate
-last_updated: "2026-05-17T07:15:00.000Z"
+stopped_at: Phase 1.1 accepted by Ivan; UAT cleanup complete; shipping to main
+last_updated: "2026-05-17T07:25:00.000Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 
 Phase: 2 of 4 (Core Deal Workflow)
 Plan: 0 of 6 in current phase
-Status: Ready for Phase 2 planning/execution decision
+Status: Shipping Phase 1 branch, then continue Phase 2 under release protocol
 Last activity: 2026-05-17
 
 Progress: [████------] 44%
@@ -59,11 +59,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 1.1 plan 02 completed: opportunity tables applied, private opportunity document bucket created, app runs on port 3011, authenticated `/opportunities` renders marked UAT data.
 - Middleware now protects `/opportunities` so unauthenticated requests redirect to login instead of returning 500.
 - Phase 1.1 plan 03 completed: browser UAT passed for create, edit, archive, import review, and document visibility/removal using marked UAT records.
-- Release recommendation: ready to push/open PR for review, but merge/deploy should wait for Ivan's acceptance of UAT cleanup and existing typecheck baseline risk.
+- Release recommendation: ready to push/merge after Ivan's acceptance; note existing typecheck baseline risk.
+- Ivan accepted the local UAT result on 2026-05-17 and approved push/merge.
+- Marked Phase 1.1 UAT opportunities, temporary UAT users/sessions, and UAT document storage file were removed before push/merge.
 
 ### Pending Todos
 
-- Decide cleanup timing for `UAT-1779001031632`, `UAT-BROWSER-1779001491408`, `UAT-IMPORT-1779001652678`, and temporary UAT logins.
 - Mirror Phase 1.1 into Linear after the protocol is accepted.
 - Save the sent 2026-05-16 WhatsApp scope-boundary message in project communications.
 
