@@ -14,6 +14,7 @@ import {
   Mail,
   BarChart3,
   Briefcase,
+  Inbox,
   Target,
   BookOpen,
   Map,
@@ -60,6 +61,7 @@ const mainNavigation = [
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Opportunities", href: "/opportunities", icon: Briefcase },
+  { name: "Reviews", href: "/opportunities/reviews", icon: Inbox },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
 ]
 
@@ -148,6 +150,7 @@ export function AppSidebar({
   const getIsActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard"
     if (href === "/guide") return pathname === "/guide"
+    if (href === "/opportunities") return pathname === "/opportunities" || (pathname.startsWith("/opportunities/") && !pathname.startsWith("/opportunities/reviews"))
     // "Groups" (/repreneurs) should not match /repreneurs/explore
     if (href === "/repreneurs") return pathname === "/repreneurs" || (pathname.startsWith("/repreneurs/") && !pathname.startsWith("/repreneurs/explore"))
     return pathname.startsWith(href)

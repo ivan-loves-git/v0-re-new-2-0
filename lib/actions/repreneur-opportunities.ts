@@ -1,5 +1,8 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { requirePortalAccess } from "@/lib/access-control"
 import { requireUser } from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
@@ -8,7 +11,8 @@ import type {
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
 
-const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "active_pursuit"]
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
+const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined"]
 
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
   return {
@@ -146,4 +150,49 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
 
   if (error) throw new Error(error.message)
   return data ? normalizeExposure(data) : null
+}
+
+async function updateMyOpportunityResponse(matchId: string, status: "interested" | "declined") {
+  const access = await requirePortalAccess()
+  if (!access.repreneurId) throw new Error("No linked repreneur profile")
+
+  const supabase = createAdminClient()
+  const { data: match, error: matchError } = await supabase
+    .from("opportunity_matches")
+    .select("id, opportunity_id, status")
+    .eq("id", matchId)
+    .eq("repreneur_id", access.repreneurId)
+    .maybeSingle()
+
+  if (matchError) throw new Error(matchError.message)
+  if (!match) throw new Error("Opportunity match not found")
+  if (!REPRENEUR_RESPONSE_ALLOWED_STATUSES.includes(match.status as OpportunityMatchStatus)) {
+    throw new Error("This opportunity response can no longer be changed")
+  }
+
+  const { error } = await supabase
+    .from("opportunity_matches")
+    .update({
+      status,
+      reviewed_by: null,
+      reviewed_at: null,
+    })
+    .eq("id", matchId)
+    .eq("repreneur_id", access.repreneurId)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath("/portal/deals")
+  revalidatePath(`/portal/deals/${matchId}`)
+  revalidatePath("/opportunities/reviews")
+  revalidatePath(`/opportunities/${match.opportunity_id}`)
+  redirect("/portal/deals")
+}
+
+export async function markMyOpportunityInterested(matchId: string) {
+  await updateMyOpportunityResponse(matchId, "interested")
+}
+
+export async function declineMyOpportunity(matchId: string) {
+  await updateMyOpportunityResponse(matchId, "declined")
 }

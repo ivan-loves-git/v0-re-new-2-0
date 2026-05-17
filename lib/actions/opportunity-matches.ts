@@ -1,12 +1,14 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { requireStaffAccess } from "@/lib/access-control"
 import { requireUser } from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
   OpportunityMatchRecommendation,
+  OpportunityMatchResponse,
   OpportunityMatchStatus,
 } from "@/lib/types/opportunity"
 
@@ -51,6 +53,16 @@ function normalizeMatch(row: any): OpportunityMatch {
   } as OpportunityMatch
 }
 
+function normalizeResponse(row: any): OpportunityMatchResponse {
+  const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
+  const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
+  return {
+    ...row,
+    opportunity: opportunity ?? null,
+    repreneur: repreneur ?? null,
+  } as OpportunityMatchResponse
+}
+
 export async function listOpportunityMatches(opportunityId: string): Promise<OpportunityMatch[]> {
   await requireUser()
   const supabase = createAdminClient()
@@ -63,6 +75,35 @@ export async function listOpportunityMatches(opportunityId: string): Promise<Opp
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(normalizeMatch)
+}
+
+export async function listOpportunityMatchResponses(): Promise<OpportunityMatchResponse[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select(`
+      id,
+      opportunity_id,
+      repreneur_id,
+      status,
+      platform_recommendation,
+      platform_score,
+      human_recommendation,
+      human_notes,
+      reviewed_by,
+      reviewed_at,
+      updated_at,
+      opportunity:opportunities(id, reference, public_title, sector, location),
+      repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)
+    `)
+    .in("status", ["interested", "declined"])
+    .order("reviewed_at", { ascending: true, nullsFirst: true })
+    .order("updated_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(normalizeResponse)
 }
 
 export async function listOpportunityMatchCandidates(): Promise<OpportunityMatchCandidate[]> {
@@ -120,5 +161,23 @@ export async function removeOpportunityMatch(matchId: string, opportunityId: str
 
   const { error } = await supabase.from("opportunity_matches").delete().eq("id", matchId)
   if (error) throw new Error(error.message)
+  revalidatePath(`/opportunities/${opportunityId}`)
+}
+
+export async function markOpportunityMatchReviewed(matchId: string, opportunityId: string) {
+  const access = await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { error } = await supabase
+    .from("opportunity_matches")
+    .update({
+      reviewed_by: access.user.id,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", matchId)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath("/opportunities/reviews")
   revalidatePath(`/opportunities/${opportunityId}`)
 }

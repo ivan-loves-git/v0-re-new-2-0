@@ -22,8 +22,8 @@
 ### Repreneur Access
 
 - [x] **REP-01**: A repreneur can access anonymized opportunities through the platform.
-- [ ] **REP-02**: A repreneur can express interest in an opportunity.
-- [ ] **REP-03**: A repreneur can reject or ignore an opportunity without creating staff ambiguity.
+- [x] **REP-02**: A repreneur can express interest in an opportunity.
+- [x] **REP-03**: A repreneur can reject or ignore an opportunity without creating staff ambiguity.
 - [x] **REP-04**: June access does not imply full repreneur profile editing or advanced self-service.
 - [x] **REP-05**: Repreneur access uses a separate external portal route/layout instead of the internal staff dashboard shell.
 - [x] **REP-06**: A repreneur can view a read-only profile summary with scores, strengths, improvement points, and calls to action.
@@ -98,7 +98,7 @@
 | MATCH-01, MATCH-02, MATCH-03 | Phase 2 | Complete |
 | REP-01, REP-04 | Phase 2 | Complete |
 | REP-05, REP-06 | Phase 2 | Complete |
-| REP-02, REP-03 | Phase 2 | Pending |
+| REP-02, REP-03 | Phase 2 | Complete |
 | DEAL-01, DEAL-02, DEAL-03, DEAL-04 | Phase 2 | Pending |
 | NDA-01, NDA-02, DOC-01 | Phase 2 | Pending |
 | FRESH-01, MNA-02 | Phase 3 | Pending |
@@ -112,4 +112,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after Phase 2 repreneur opportunity access*
+*Last updated: 2026-05-17 after Phase 2 interest/reject actions*

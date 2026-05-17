@@ -1,6 +1,9 @@
-import { CalendarDays, Gauge, MapPin, Users } from "lucide-react"
+import { CalendarDays, CheckCircle2, Gauge, MapPin, XCircle, Users } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { declineMyOpportunity, markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunities"
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
@@ -25,7 +28,14 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
 }
 
+function canRespond(status: RepreneurOpportunityExposure["match_status"]) {
+  return status === "proposed" || status === "interested" || status === "declined"
+}
+
 export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunityDetailProps) {
+  const interestAction = markMyOpportunityInterested.bind(null, opportunity.match_id)
+  const declineAction = declineMyOpportunity.bind(null, opportunity.match_id)
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
@@ -51,6 +61,55 @@ export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunity
           </div>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your response</CardTitle>
+          <CardDescription>Tell Re-New whether this opportunity should be explored further.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {opportunity.match_status === "interested" && (
+            <Alert>
+              <CheckCircle2 />
+              <AlertTitle>Interest sent</AlertTitle>
+              <AlertDescription>Re-New can now review this signal and decide the next step.</AlertDescription>
+            </Alert>
+          )}
+
+          {opportunity.match_status === "declined" && (
+            <Alert>
+              <XCircle />
+              <AlertTitle>Marked as not a fit</AlertTitle>
+              <AlertDescription>This response is visible to Re-New for review.</AlertDescription>
+            </Alert>
+          )}
+
+          {opportunity.match_status === "active_pursuit" && (
+            <Alert>
+              <CheckCircle2 />
+              <AlertTitle>Active pursuit</AlertTitle>
+              <AlertDescription>Re-New has validated this opportunity as an active pursuit.</AlertDescription>
+            </Alert>
+          )}
+
+          {canRespond(opportunity.match_status) && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <form action={interestAction}>
+                <Button type="submit" disabled={opportunity.match_status === "interested"}>
+                  <CheckCircle2 data-icon="inline-start" />
+                  {opportunity.match_status === "interested" ? "Interest sent" : "I'm interested"}
+                </Button>
+              </form>
+              <form action={declineAction}>
+                <Button type="submit" variant="outline" disabled={opportunity.match_status === "declined"}>
+                  <XCircle data-icon="inline-start" />
+                  {opportunity.match_status === "declined" ? "Not a fit sent" : "Not a fit"}
+                </Button>
+              </form>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

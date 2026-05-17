@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed quick task for demo repreneur credentials and portal access guard
-last_updated: "2026-05-17T09:18:36.000Z"
+stopped_at: Completed Phase 2 plan 02-04 interest/reject and staff review flow
+last_updated: "2026-05-17T09:54:14.000Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 19
-  completed_plans: 11
-  percent: 58
+  completed_plans: 12
+  percent: 63
 ---
 
 # Project State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 2 of 4 (Core Deal Workflow)
-Plan: 3 of 7 in current phase
-Status: Ready for 02-04 interest/reject actions and staff notification/review flow
+Plan: 4 of 7 in current phase
+Status: Ready for 02-05 validated pursuit, active-pursuit lock, and re-open logic
 Last activity: 2026-05-17
 
-Progress: [██████----] 56%
+Progress: [██████----] 63%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 12
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -76,6 +76,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 2 plan 02-03 inserted after Ivan clarified that repreneur access must not live inside the staff dashboard shell.
 - Phase 2 plan 02-03 completed: repreneur deal access moved to `/portal/deals`, a read-only `/portal/profile` was added, post-login routing now splits staff vs repreneur users, and staff dashboard layout blocks repreneur-role access.
 - Quick task completed: `myworkmail4@gmail.com` is a linked demo repreneur login with a populated portal, and deleting a repreneur now removes their repreneur portal role and active sessions.
+- Phase 2 plan 02-04 completed: repreneurs can mark a proposed opportunity as interested or not a fit, and staff can review those responses at `/opportunities/reviews` without creating active pursuit yet.
 
 ### Pending Todos
 
@@ -84,7 +85,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-- Interest/reject actions must preserve staff clarity and not accidentally create active pursuit.
+- Validated pursuit must preserve staff control and avoid accidentally locking an opportunity too early.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
 - Phase 2 is now unblocked, but should proceed under the Phase 1.1 release protocol.

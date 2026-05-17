@@ -257,6 +257,22 @@ export interface OpportunityMatch {
 
 export interface OpportunityMatchCandidate extends OpportunityMatchRepreneur {}
 
+export interface OpportunityMatchResponse {
+  id: string
+  opportunity_id: string
+  repreneur_id: string
+  status: Extract<OpportunityMatchStatus, "interested" | "declined">
+  platform_recommendation: OpportunityMatchRecommendation
+  platform_score?: number | null
+  human_recommendation: OpportunityMatchRecommendation
+  human_notes?: string | null
+  reviewed_by?: string | null
+  reviewed_at?: string | null
+  updated_at: string
+  opportunity?: Pick<Opportunity, "id" | "reference" | "public_title" | "sector" | "location"> | null
+  repreneur?: OpportunityMatchRepreneur | null
+}
+
 export interface RepreneurOpportunityProfile {
   id: string
   first_name: string
