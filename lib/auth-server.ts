@@ -1,4 +1,5 @@
 import { headers } from "next/headers"
+import { unstable_rethrow } from "next/navigation"
 import { auth } from "@/lib/auth"
 
 /**
@@ -19,6 +20,7 @@ export async function getCurrentUser() {
 
     return session.user
   } catch (error) {
+    unstable_rethrow(error)
     console.error("Error getting current user:", error)
     return null
   }
