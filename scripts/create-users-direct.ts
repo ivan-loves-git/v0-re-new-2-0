@@ -3,8 +3,9 @@
  * Run with: PASSWORD=YourPassword npx tsx scripts/create-users-direct.ts
  */
 
-import { createHash, randomBytes } from "crypto"
+import { randomBytes } from "crypto"
 import { Pool } from "pg"
+import { hashPassword } from "better-auth/crypto"
 
 const USERS = [
   { email: "alexandre.devulder@sony.com", name: "Alexandre" },
@@ -13,13 +14,6 @@ const USERS = [
   { email: "ivanpaudice@icloud.com", name: "Ivan" },
   { email: "piera.gallo@edu.escp.eu", name: "Piera" },
 ]
-
-// Simple bcrypt-like hash for Better Auth (uses scrypt internally)
-async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString("hex")
-  const hash = createHash("sha256").update(password + salt).digest("hex")
-  return `sha256:${hash}:${salt}`
-}
 
 async function createUsers() {
   const password = process.env.PASSWORD || process.argv[2]
