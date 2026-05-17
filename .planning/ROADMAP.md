@@ -100,7 +100,7 @@ Plans:
 Plans:
 - [x] 03-01: Build operational KPI dashboard.
 - [x] 03-02: Build freshness display and stale-opportunity reminder.
-- [ ] 03-03: Run end-to-end QA with sample opportunities, repreneurs, PDFs, NDA states, and stage changes.
+- [x] 03-03: Run end-to-end QA with sample opportunities, repreneurs, PDFs, NDA states, and stage changes.
 - [ ] 03-04: Prepare launch/demo checklist and create V3 deferred backlog.
 
 ## Progress
@@ -113,4 +113,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
 | 1. Scope Lock and Data Foundation | 5/5 | Complete   | 2026-05-16 |
 | 1.1. Testing Environment and Release Protocol | 3/3 | Complete | 2026-05-17 |
 | 2. Core Deal Workflow | 7/7 | Complete | 2026-05-17 |
-| 3. Reporting, Reminders, QA, and Launch Hardening | 2/4 | In Progress | - |
+| 3. Reporting, Reminders, QA, and Launch Hardening | 3/4 | In Progress | - |
