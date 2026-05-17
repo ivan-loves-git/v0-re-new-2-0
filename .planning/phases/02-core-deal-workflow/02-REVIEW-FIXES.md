@@ -26,7 +26,7 @@ status: complete
 
 - `lib/access-control.ts`: uses case-insensitive email lookup for `app_user_roles` and `repreneurs`, then confirms exact normalized equality in code.
 - `lib/actions/repreneur-opportunities.ts`: uses the same case-insensitive profile lookup for portal deal access.
-- `middleware.ts`: redirects old `/my-opportunities` URLs to `/portal/deals` before the staff layout can intercept repreneur users.
+- `proxy.ts`: redirects old `/my-opportunities` URLs to `/portal/deals` before the staff layout can intercept repreneur users.
 - `app/(dashboard)/my-opportunities/page.tsx`: redirects old list URL to `/portal/deals`.
 - `app/(dashboard)/my-opportunities/[matchId]/page.tsx`: redirects old detail URL to `/portal/deals/:matchId`.
 - `components/opportunities/opportunity-response-review-table.tsx`: keeps staff review actions stable while a submit is pending.

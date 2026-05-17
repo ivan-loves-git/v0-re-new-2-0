@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Check for Better Auth session cookie (works in Edge runtime)
   // The actual session validation happens in server components/actions
   // In production, cookies have __Secure- prefix
