@@ -1,0 +1,13 @@
+{
+  "project_name": "Re-New Platform V2",
+  "created": "2026-05-16",
+  "runtime": "claude-code-and-codex",
+  "planning_granularity": "coarse",
+  "source_documents": [
+    "docs/V2-PDR-DRAFT.md",
+    "Notion: PDR - v 2026/05/14",
+    "docs/communications/2026-05-16_whatsapp-bertrand-v2-scope-boundaries.md"
+  ],
+  "linear_project": "Re-New platform",
+  "linear_project_url": "https://linear.app/almost-impossible/project/re-new-platform-7fa19925065d"
+}

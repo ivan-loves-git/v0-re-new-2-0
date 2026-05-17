@@ -13,6 +13,7 @@ import {
   Compass,
   Mail,
   BarChart3,
+  Briefcase,
   Target,
   BookOpen,
   Map,
@@ -58,6 +59,7 @@ const mainNavigation = [
   { name: "Emails", href: "/emails", icon: Mail },
   { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Opportunities", href: "/opportunities", icon: Briefcase },
   { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
 ]
 
