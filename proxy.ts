@@ -20,6 +20,11 @@ export async function proxy(request: NextRequest) {
   // Protected routes - require authentication
   const protectedPaths = [
     "/dashboard",
+    "/dashboard_re",
+    "/dashboard_op",
+    "/analytics",
+    "/analytics_re",
+    "/analytics_op",
     "/repreneurs",
     "/pipeline",
     "/offers",

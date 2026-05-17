@@ -53,7 +53,7 @@ export function AssessmentStatus({ assessments, totalRepreneurs }: AssessmentSta
           Assessments
           <CardInfoButton info={kpiInfo.assessmentStatus} />
         </CardTitle>
-        <CardLinkButton href="/analytics" tooltip="View Analytics" />
+        <CardLinkButton href="/analytics_re" tooltip="View Analytics" />
       </CardHeader>
       <CardContent className="pt-0 flex-1 flex flex-col">
         {/* Summary counts */}

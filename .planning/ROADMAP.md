@@ -10,6 +10,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 1.1: Testing Environment and Release Protocol** - Set up safe test environment, UAT, and release gates before building more product scope. (completed 2026-05-17)
 - [x] **Phase 2: Core Deal Workflow** - Build matching, separated repreneur portal access, interest/reject actions, validated pursuit, stages, NDA/document handling. (completed 2026-05-17)
 - [x] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness. (completed 2026-05-17)
+- [x] **Phase 4: Staff Information Architecture and Dashboard Separation** - Split internal staff navigation and dashboards into repreneur and opportunity work surfaces. (completed 2026-05-17)
 
 ## Phase Details
 
@@ -103,10 +104,32 @@ Plans:
 - [x] 03-03: Run end-to-end QA with sample opportunities, repreneurs, PDFs, NDA states, and stage changes.
 - [x] 03-04: Prepare launch/demo checklist and create V3 deferred backlog.
 
+### Phase 4: Staff Information Architecture and Dashboard Separation
+
+**Goal**: Staff can navigate repreneur and opportunity work as separate operating areas, with dashboards and analytics pages that do not blend the two domains.
+
+**Depends on**: Phase 3.
+
+**Requirements**: STAFF-IA-01, DASH-RE-01, DASH-OP-01, ANALYTICS-RE-01, ANALYTICS-OP-01, ARCHIVE-01, REDIRECT-01
+
+**Success Criteria** (what must be TRUE):
+1. Sidebar navigation is grouped into `Repreneurs`, `Opportunities`, `Tools`, and `Project`.
+2. Existing repreneur dashboard and analytics content live on `/dashboard_re` and `/analytics_re`.
+3. Opportunity operations live on `/dashboard_op`, while opportunity KPIs live on `/analytics_op`.
+4. Old `/dashboard` and `/analytics` routes redirect to the repreneur equivalents.
+5. Archived pages are removed from sidebar navigation but still available by direct URL.
+
+**Plans**: 3 plans
+
+Plans:
+- [x] 04-01: Split staff navigation and route redirects.
+- [x] 04-02: Separate repreneur and opportunity dashboard/analytics surfaces.
+- [x] 04-03: Update roadmap, requirements, GSD summaries, and verification evidence.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
+Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -114,3 +137,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
 | 1.1. Testing Environment and Release Protocol | 3/3 | Complete | 2026-05-17 |
 | 2. Core Deal Workflow | 7/7 | Complete | 2026-05-17 |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 4/4 | Complete | 2026-05-17 |
+| 4. Staff Information Architecture and Dashboard Separation | 3/3 | Complete | 2026-05-17 |

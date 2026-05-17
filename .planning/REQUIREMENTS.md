@@ -52,6 +52,16 @@
 - [x] **KPI-01**: Staff can see operational counts for active intermediaries, opportunities, introductions, seller meetings, LOIs, dropped deals, and closed deals.
 - [x] **KPI-02**: Reporting is internal only for June.
 
+### Staff Information Architecture
+
+- [x] **STAFF-IA-01**: Internal staff navigation separates repreneur work from opportunity work with clear sidebar groups.
+- [x] **DASH-RE-01**: The repreneur dashboard is available at `/dashboard_re` and contains repreneur pipeline content only.
+- [x] **DASH-OP-01**: The opportunity dashboard is available at `/dashboard_op` and focuses on operational opportunity queues and follow-up work.
+- [x] **ANALYTICS-RE-01**: Repreneur analytics are available at `/analytics_re`.
+- [x] **ANALYTICS-OP-01**: Opportunity KPI reporting is available at `/analytics_op`.
+- [x] **ARCHIVE-01**: Journey, opportunity reviews, mission, and instructions are hidden from sidebar navigation while remaining available by direct URL.
+- [x] **REDIRECT-01**: Legacy `/dashboard` and `/analytics` routes redirect to the repreneur dashboard and analytics pages.
+
 ### Test Environment and Release Protocol
 
 - [x] **ENV-01**: Re-New has a documented test environment policy selecting the same/current Supabase project for controlled Phase 1.1 migration, fake data, and UAT.
@@ -105,12 +115,13 @@
 | FRESH-01, MNA-02 | Phase 3 | Complete |
 | KPI-01, KPI-02 | Phase 3 | Complete |
 | ENV-01, ENV-02, TEST-01, REL-01, REL-02 | Phase 1.1 | Complete |
+| STAFF-IA-01, DASH-RE-01, DASH-OP-01, ANALYTICS-RE-01, ANALYTICS-OP-01, ARCHIVE-01, REDIRECT-01 | Phase 4 | Complete |
 
 **Coverage:**
-- June V2 requirements: 29 total
-- Mapped to phases: 29
+- June V2 requirements: 36 total
+- Mapped to phases: 36
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after June V2 implementation completion*
+*Last updated: 2026-05-17 after Phase 4 staff IA and dashboard separation*

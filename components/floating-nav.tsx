@@ -9,7 +9,13 @@ import { cn } from "@/lib/utils"
 // Map paths to readable names
 const pathNames: Record<string, string> = {
   dashboard: "Dashboard",
+  dashboard_re: "Dashboard || Repreneurs",
+  dashboard_op: "Dashboard || Opportunities",
+  analytics: "Analytics",
+  analytics_re: "Analytics || Repreneurs",
+  analytics_op: "Analytics || Opportunities",
   repreneurs: "Repreneurs",
+  opportunities: "Opportunities",
   pipeline: "Pipeline",
   emails: "Emails",
   journey: "Journey",

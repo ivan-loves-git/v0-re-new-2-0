@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { DevelopmentRoadmap } from "@/components/guide"
 
 export const revalidate = 3600 // Cache for 1 hour
@@ -11,11 +10,7 @@ export default function RoadmapPage() {
 
       {/* Footer */}
       <div className="text-center text-sm text-gray-500 py-8 border-t">
-        <p>
-          See the <Link href="/guide" className="text-blue-600 hover:underline">Mission</Link> for the vision
-          behind Wave, or <Link href="/guide/instructions" className="text-blue-600 hover:underline">Instructions</Link> to
-          learn how to use the platform.
-        </p>
+        <p>Roadmap is the active project reference for current delivery scope and completed platform work.</p>
       </div>
     </div>
   )

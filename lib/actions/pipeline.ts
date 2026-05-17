@@ -14,6 +14,6 @@ export async function updateRepreneurStatusPipeline(id: string, status: Lifecycl
   }
 
   revalidatePath("/pipeline")
-  revalidatePath("/dashboard")
+  revalidatePath("/dashboard_re")
   revalidatePath(`/repreneurs/${id}`)
 }

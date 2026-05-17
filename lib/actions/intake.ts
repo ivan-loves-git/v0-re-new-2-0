@@ -358,7 +358,7 @@ export async function completeIntake(
 
     revalidatePath("/repreneurs")
     revalidatePath("/pipeline")
-    revalidatePath("/dashboard")
+    revalidatePath("/dashboard_re")
 
     // Get repreneur info for emails
     const { data: repreneurData } = await supabase

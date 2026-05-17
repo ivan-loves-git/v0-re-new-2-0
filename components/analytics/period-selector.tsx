@@ -23,7 +23,7 @@ export function PeriodSelector() {
       params.set("period", value)
     }
     const qs = params.toString()
-    router.push(`/analytics${qs ? `?${qs}` : ""}`)
+    router.push(`/analytics_re${qs ? `?${qs}` : ""}`)
   }
 
   return (

@@ -133,7 +133,7 @@ export async function submitIntakeV2(
     // Revalidate relevant paths
     revalidatePath("/repreneurs")
     revalidatePath("/pipeline")
-    revalidatePath("/dashboard")
+    revalidatePath("/dashboard_re")
 
     // Send the welcome email. Transactional (no consent gate). Failure here
     // must not block the submission flow — log and continue.

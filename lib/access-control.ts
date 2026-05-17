@@ -116,7 +116,7 @@ export async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> 
 export async function getPostLoginDestination() {
   const access = await getCurrentUserAccess()
   if (!access) return "/auth/login"
-  if (access.role === "staff") return "/dashboard"
+  if (access.role === "staff") return "/dashboard_re"
   if (hasPortalAccess(access)) return "/portal/deals"
   return "/auth/logout"
 }
@@ -133,7 +133,7 @@ export async function requirePortalAccess() {
   const access = await getCurrentUserAccess()
   if (!access) redirect("/auth/login")
   if (hasPortalAccess(access)) return access
-  if (access.role === "staff") redirect("/dashboard")
+  if (access.role === "staff") redirect("/dashboard_re")
   redirect("/auth/logout")
 }
 

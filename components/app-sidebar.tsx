@@ -9,14 +9,9 @@ import {
   Users,
   Search,
   GitBranch,
-  FileText,
-  Compass,
   Mail,
   BarChart3,
   Briefcase,
-  Inbox,
-  Target,
-  BookOpen,
   Map,
   ChevronsUpDown,
   LogOut,
@@ -51,28 +46,27 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Navigation data
-const mainNavigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+const repreneurNavigation = [
+  { name: "Dashboard", href: "/dashboard_re", icon: LayoutDashboard },
   { name: "Groups", href: "/repreneurs", icon: Users },
   { name: "Find", href: "/repreneurs/explore", icon: Search },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Emails", href: "/emails", icon: Mail },
-  { name: "Journey", href: "/journey", icon: Compass, badge: "WIP" },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Opportunities", href: "/opportunities", icon: Briefcase },
-  { name: "Reviews", href: "/opportunities/reviews", icon: Inbox },
-  { name: "Offers", href: "/offers", icon: FileText, badge: "WIP" },
+  { name: "Analytics", href: "/analytics_re", icon: BarChart3 },
+]
+
+const opportunityNavigation = [
+  { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
+  { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
+  { name: "Records", href: "/opportunities", icon: Briefcase },
 ]
 
 const toolsNavigation = [
   { name: "Wavy", href: "/tools/wavy", icon: Waves },
 ]
 
-const guidelinesNavigation = [
-  { name: "Mission", href: "/guide", icon: Target },
-  { name: "Instructions", href: "/guide/instructions", icon: BookOpen },
-{ name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
+const projectNavigation = [
+  { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 
 // External users section removed - dead routes cleaned up
@@ -148,8 +142,10 @@ export function AppSidebar({
 
   // Check if current path is active
   const getIsActive = (href: string) => {
-    if (href === "/dashboard") return pathname === "/dashboard"
-    if (href === "/guide") return pathname === "/guide"
+    if (href === "/dashboard_re") return pathname === "/dashboard_re" || pathname === "/dashboard"
+    if (href === "/dashboard_op") return pathname === "/dashboard_op"
+    if (href === "/analytics_re") return pathname === "/analytics_re" || pathname === "/analytics"
+    if (href === "/analytics_op") return pathname === "/analytics_op"
     if (href === "/opportunities") return pathname === "/opportunities" || (pathname.startsWith("/opportunities/") && !pathname.startsWith("/opportunities/reviews"))
     // "Groups" (/repreneurs) should not match /repreneurs/explore
     if (href === "/repreneurs") return pathname === "/repreneurs" || (pathname.startsWith("/repreneurs/") && !pathname.startsWith("/repreneurs/explore"))
@@ -196,12 +192,42 @@ export function AppSidebar({
 
       {/* Main Content */}
       <SidebarContent>
-        {/* Re-New Team Section */}
+        {/* Repreneurs Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Re-New Team</SidebarGroupLabel>
+          <SidebarGroupLabel>Repreneurs</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavigation.map((item) => (
+              {repreneurNavigation.map((item) => (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={getIsActive(item.href)}
+                    tooltip={item.name}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.name}</span>
+                      {item.badge && (
+                        <span className="ml-auto text-[10px] font-medium opacity-50 bg-sidebar-accent px-1.5 py-0.5 rounded">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Opportunities Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Opportunities</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {opportunityNavigation.map((item) => (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
@@ -251,12 +277,12 @@ export function AppSidebar({
 
         <SidebarSeparator />
 
-        {/* Guidelines Section */}
+        {/* Project Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Guidelines</SidebarGroupLabel>
+          <SidebarGroupLabel>Project</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {guidelinesNavigation.map((item) => {
+              {projectNavigation.map((item) => {
                 const showRedDot = item.showNotification && hasNewRoadmap
                 return (
                   <SidebarMenuItem key={item.name}>

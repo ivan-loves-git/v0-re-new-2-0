@@ -1208,7 +1208,7 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
   revalidatePath("/pipeline")
-  revalidatePath("/dashboard")
+  revalidatePath("/dashboard_re")
 
   return dualScore
 }

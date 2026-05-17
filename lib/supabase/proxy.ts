@@ -38,7 +38,23 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Protected routes - redirect to login if not authenticated
-  const protectedPaths = ["/dashboard", "/repreneurs", "/pipeline", "/offers", "/journey", "/emails", "/guide", "/account", "/settings"]
+  const protectedPaths = [
+    "/dashboard",
+    "/dashboard_re",
+    "/dashboard_op",
+    "/analytics",
+    "/analytics_re",
+    "/analytics_op",
+    "/opportunities",
+    "/repreneurs",
+    "/pipeline",
+    "/offers",
+    "/journey",
+    "/emails",
+    "/guide",
+    "/account",
+    "/settings",
+  ]
   const isProtectedPath = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path))
 
   if (isProtectedPath && !user) {
@@ -50,14 +66,14 @@ export async function updateSession(request: NextRequest) {
   // Redirect root to dashboard if logged in
   if (request.nextUrl.pathname === "/" && user) {
     const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
+    url.pathname = "/dashboard_re"
     return NextResponse.redirect(url)
   }
 
   // Redirect to dashboard if already logged in and trying to access login
   if (request.nextUrl.pathname === "/auth/login" && user) {
     const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
+    url.pathname = "/dashboard_re"
     return NextResponse.redirect(url)
   }
 
