@@ -53,7 +53,7 @@ Plans:
 Plans:
 - [x] 01.1-01: Lock same-project Supabase policy and local env rules.
 - [x] 01.1-02: Confirm backup/rollback, apply Phase 1 migrations, and run the worktree app.
-- [ ] 01.1-03: Complete Phase 1 UAT, classify findings, and prepare PR/merge/release recommendation.
+- [x] 01.1-03: Complete Phase 1 UAT, classify findings, and prepare PR/merge/release recommendation.
 
 ### Phase 2: Core Deal Workflow
 
@@ -110,6 +110,6 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Scope Lock and Data Foundation | 5/5 | Complete   | 2026-05-16 |
-| 1.1. Testing Environment and Release Protocol | 2/3 | In progress | - |
-| 2. Core Deal Workflow | 0/6 | Blocked by Phase 1.1 | - |
+| 1.1. Testing Environment and Release Protocol | 3/3 | Complete | 2026-05-17 |
+| 2. Core Deal Workflow | 0/6 | Ready | - |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 0/4 | Not started | - |

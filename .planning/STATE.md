@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 1.1 same-project migration setup; UAT pending
-last_updated: "2026-05-17T07:00:00.000Z"
+stopped_at: Completed Phase 1.1 UAT; ready for Phase 2 planning/execution gate
+last_updated: "2026-05-17T07:15:00.000Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 18
-  completed_plans: 7
-  percent: 39
+  completed_plans: 8
+  percent: 44
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 1.1: Testing Environment and Release Protocol
+**Current focus:** Phase 2: Core Deal Workflow
 
 ## Current Position
 
-Phase: 1.1 of 4 (Testing Environment and Release Protocol)
-Plan: 2 of 3 in current phase
-Status: Ready to execute 01.1-03 UAT and release recommendation
+Phase: 2 of 4 (Core Deal Workflow)
+Plan: 0 of 6 in current phase
+Status: Ready for Phase 2 planning/execution decision
 Last activity: 2026-05-17
 
-Progress: [████------] 39%
+Progress: [████------] 44%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -58,11 +58,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 1.1 is now a controlled same-project migration: additive SQL only, backup/rollback note first, marked UAT data, cleanup plan.
 - Phase 1.1 plan 02 completed: opportunity tables applied, private opportunity document bucket created, app runs on port 3011, authenticated `/opportunities` renders marked UAT data.
 - Middleware now protects `/opportunities` so unauthenticated requests redirect to login instead of returning 500.
+- Phase 1.1 plan 03 completed: browser UAT passed for create, edit, archive, import review, and document visibility/removal using marked UAT records.
+- Release recommendation: ready to push/open PR for review, but merge/deploy should wait for Ivan's acceptance of UAT cleanup and existing typecheck baseline risk.
 
 ### Pending Todos
 
-- Run Phase 1 browser UAT for manual create/edit/archive/import/document visibility flows.
-- Decide cleanup timing for `UAT-1779001031632` and the temporary UAT login.
+- Decide cleanup timing for `UAT-1779001031632`, `UAT-BROWSER-1779001491408`, `UAT-IMPORT-1779001652678`, and temporary UAT logins.
 - Mirror Phase 1.1 into Linear after the protocol is accepted.
 - Save the sent 2026-05-16 WhatsApp scope-boundary message in project communications.
 
@@ -71,7 +72,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Repreneur platform access is directionally chosen but must stay tightly bounded for June.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
-- Phase 2 is blocked until Phase 1.1 defines the test environment and release protocol.
+- Phase 2 is now unblocked, but should proceed under the Phase 1.1 release protocol.
 
 ## Deferred Items
 
