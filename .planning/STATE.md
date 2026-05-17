@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 02 UI-SPEC approved
-last_updated: "2026-05-17T11:14:58.095Z"
+stopped_at: Phase 02 review fixes applied
+last_updated: "2026-05-17T11:37:08Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
@@ -90,7 +90,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Deal stage tracking must build on active pursuit without turning the app into a full CRM.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
-- Phase 2 is now unblocked, but should proceed under the Phase 1.1 release protocol.
+- Phase 2 review remediation completed: email matching is case-insensitive, role precedence is documented, the match status state machine is documented, legacy `/my-opportunities` URLs redirect to `/portal/deals`, and the staff review/recommendation tables received focused UI fixes.
+- Phase 2 is now ready to continue with 02-06 deal stage tracking, but should proceed under the Phase 1.1 release protocol.
 
 ## Deferred Items
 
@@ -104,6 +105,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-17T11:14:58.088Z
-Stopped at: Phase 02 UI-SPEC approved
-Resume file: .planning/phases/02-core-deal-workflow/02-UI-SPEC.md
+Last session: 2026-05-17T11:37:08Z
+Stopped at: Phase 02 review fixes applied
+Resume file: .planning/phases/02-core-deal-workflow/02-REVIEW-FIXES.md
