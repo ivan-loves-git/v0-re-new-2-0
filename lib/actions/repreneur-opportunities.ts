@@ -1,0 +1,149 @@
+"use server"
+
+import { requireUser } from "@/lib/auth-server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import type {
+  OpportunityMatchStatus,
+  RepreneurOpportunityExposure,
+  RepreneurOpportunityProfile,
+} from "@/lib/types/opportunity"
+
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "active_pursuit"]
+
+function normalizeProfile(row: any): RepreneurOpportunityProfile {
+  return {
+    id: row.id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    email: row.email,
+  }
+}
+
+function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
+  const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
+  if (!opportunity) return null
+  if (opportunity.status !== "active") return null
+  if (opportunity.repreneur_visibility === "staff_only") return null
+
+  return {
+    match_id: row.id,
+    match_status: row.status,
+    opportunity_id: opportunity.id,
+    public_title: opportunity.public_title,
+    anonymized_description: opportunity.anonymized_description,
+    sector: opportunity.sector,
+    activity: opportunity.activity,
+    location: opportunity.location,
+    revenue_meur: opportunity.revenue_meur,
+    ebitda_keur: opportunity.ebitda_keur,
+    headcount: opportunity.headcount,
+    date_added: opportunity.date_added,
+    platform_recommendation: row.platform_recommendation,
+    platform_score: row.platform_score,
+    platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
+    human_recommendation: row.human_recommendation,
+    updated_at: row.updated_at,
+  }
+}
+
+async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile | null> {
+  const user = await requireUser()
+  const email = user.email?.trim().toLowerCase()
+  if (!email) return null
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("repreneurs")
+    .select("id, first_name, last_name, email")
+    .eq("email", email)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data ? normalizeProfile(data) : null
+}
+
+export async function listMyRepreneurOpportunities(): Promise<{
+  repreneur: RepreneurOpportunityProfile | null
+  opportunities: RepreneurOpportunityExposure[]
+}> {
+  const repreneur = await getCurrentRepreneurProfile()
+  if (!repreneur) return { repreneur: null, opportunities: [] }
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select(`
+      id,
+      status,
+      platform_recommendation,
+      platform_score,
+      platform_reasons,
+      human_recommendation,
+      updated_at,
+      opportunity:opportunities(
+        id,
+        status,
+        repreneur_visibility,
+        public_title,
+        anonymized_description,
+        sector,
+        activity,
+        location,
+        revenue_meur,
+        ebitda_keur,
+        headcount,
+        date_added
+      )
+    `)
+    .eq("repreneur_id", repreneur.id)
+    .in("status", VISIBLE_MATCH_STATUSES)
+    .order("updated_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  const opportunities = (data ?? [])
+    .map(normalizeExposure)
+    .filter((exposure): exposure is RepreneurOpportunityExposure => Boolean(exposure))
+
+  return { repreneur, opportunities }
+}
+
+export async function getMyRepreneurOpportunity(matchId: string): Promise<RepreneurOpportunityExposure | null> {
+  const repreneur = await getCurrentRepreneurProfile()
+  if (!repreneur) return null
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select(`
+      id,
+      status,
+      platform_recommendation,
+      platform_score,
+      platform_reasons,
+      human_recommendation,
+      updated_at,
+      opportunity:opportunities(
+        id,
+        status,
+        repreneur_visibility,
+        public_title,
+        anonymized_description,
+        sector,
+        activity,
+        location,
+        revenue_meur,
+        ebitda_keur,
+        headcount,
+        date_added
+      )
+    `)
+    .eq("id", matchId)
+    .eq("repreneur_id", repreneur.id)
+    .in("status", VISIBLE_MATCH_STATUSES)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data ? normalizeExposure(data) : null
+}

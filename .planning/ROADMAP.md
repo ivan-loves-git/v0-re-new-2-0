@@ -7,7 +7,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 ## Phases
 
 - [x] **Phase 1: Scope Lock and Data Foundation** - Lock the opportunity schema, import path, and staff-side opportunity management. (completed 2026-05-16)
-- [ ] **Phase 1.1: Testing Environment and Release Protocol** - Set up safe test environment, UAT, and release gates before building more product scope. (INSERTED)
+- [x] **Phase 1.1: Testing Environment and Release Protocol** - Set up safe test environment, UAT, and release gates before building more product scope. (completed 2026-05-17)
 - [ ] **Phase 2: Core Deal Workflow** - Build matching, repreneur access, interest/reject actions, validated pursuit, stages, NDA/document handling.
 - [ ] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness.
 
@@ -73,8 +73,8 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 02-01: Build structured matching and recommendation fields.
-- [ ] 02-02: Build repreneur opportunity access and anonymized opportunity detail.
+- [x] 02-01: Build structured matching and recommendation fields.
+- [x] 02-02: Build repreneur opportunity access and anonymized opportunity detail.
 - [ ] 02-03: Build interest/reject actions and staff notification/review flow.
 - [ ] 02-04: Build validated pursuit, active-pursuit lock, and re-open logic when dropped.
 - [ ] 02-05: Build deal stage tracking from interest to closed/dropped.
@@ -111,5 +111,5 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3.
 |-------|----------------|--------|-----------|
 | 1. Scope Lock and Data Foundation | 5/5 | Complete   | 2026-05-16 |
 | 1.1. Testing Environment and Release Protocol | 3/3 | Complete | 2026-05-17 |
-| 2. Core Deal Workflow | 0/6 | Ready | - |
+| 2. Core Deal Workflow | 2/6 | In progress | - |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 0/4 | Not started | - |

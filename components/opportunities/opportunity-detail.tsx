@@ -5,12 +5,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MaSourcePanel } from "@/components/opportunities/ma-source-panel"
 import { OpportunityDocumentsPanel } from "@/components/opportunities/opportunity-documents-panel"
 import { OpportunityForm } from "@/components/opportunities/opportunity-form"
+import { OpportunityMatchesPanel } from "@/components/opportunities/opportunity-matches-panel"
 import { OpportunityStatusBadge, OpportunityVisibilityBadge } from "@/components/opportunities/opportunity-status-badge"
-import type { OpportunityDocument, OpportunityWithSource } from "@/lib/types/opportunity"
+import type { OpportunityDocument, OpportunityMatch, OpportunityMatchCandidate, OpportunityWithSource } from "@/lib/types/opportunity"
 
 interface OpportunityDetailProps {
   opportunity: OpportunityWithSource
   documents: OpportunityDocument[]
+  matches: OpportunityMatch[]
+  matchCandidates: OpportunityMatchCandidate[]
   updateAction: (formData: FormData) => Promise<void>
 }
 
@@ -24,7 +27,7 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
 }
 
-export function OpportunityDetail({ opportunity, documents, updateAction }: OpportunityDetailProps) {
+export function OpportunityDetail({ opportunity, documents, matches, matchCandidates, updateAction }: OpportunityDetailProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -57,6 +60,7 @@ export function OpportunityDetail({ opportunity, documents, updateAction }: Oppo
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
           <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
@@ -134,6 +138,10 @@ export function OpportunityDetail({ opportunity, documents, updateAction }: Oppo
               sourceVisibility={opportunity.source_visibility}
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="recommendations">
+          <OpportunityMatchesPanel opportunityId={opportunity.id} matches={matches} candidates={matchCandidates} />
         </TabsContent>
 
         <TabsContent value="edit">
