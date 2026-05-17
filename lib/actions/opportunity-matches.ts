@@ -100,6 +100,21 @@ async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, stat
   }
 }
 
+async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId: string) {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select("id, status")
+    .eq("opportunity_id", opportunityId)
+    .eq("repreneur_id", repreneurId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (data?.status === "active_pursuit") {
+    throw new Error("This repreneur is already the active pursuit. Drop the pursuit before changing this recommendation.")
+  }
+}
+
 function revalidateMatchPaths(opportunityId: string, matchId?: string) {
   revalidatePath("/opportunities/reviews")
   revalidatePath(`/opportunities/${opportunityId}`)
@@ -208,6 +223,7 @@ export async function saveOpportunityMatch(formData: FormData) {
 
   const status = readStatus(formData)
   ensureStaffMatchStatus(status)
+  await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
   await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 
   const humanRecommendation = readRecommendation(formData, "human_recommendation")
@@ -240,7 +256,25 @@ export async function removeOpportunityMatch(matchId: string, opportunityId: str
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { error } = await supabase.from("opportunity_matches").delete().eq("id", matchId)
+  const { data: match, error: matchError } = await supabase
+    .from("opportunity_matches")
+    .select("id, status")
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .maybeSingle()
+
+  if (matchError) throw new Error(matchError.message)
+  if (!match) throw new Error("Opportunity match not found")
+  if (match.status === "active_pursuit") {
+    throw new Error("Drop the active pursuit before removing this recommendation.")
+  }
+
+  const { error } = await supabase
+    .from("opportunity_matches")
+    .delete()
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+
   if (error) throw new Error(error.message)
   revalidatePath(`/opportunities/${opportunityId}`)
 }

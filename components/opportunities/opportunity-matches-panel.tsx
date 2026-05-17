@@ -340,15 +340,17 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                               </Button>
                             )}
 
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Remove recommendation"
-                              onClick={() => void handleRemove(match.id)}
-                            >
-                              <Trash2 data-icon="inline-start" />
-                            </Button>
+                            {match.status !== "active_pursuit" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Remove recommendation"
+                                onClick={() => void handleRemove(match.id)}
+                              >
+                                <Trash2 data-icon="inline-start" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
