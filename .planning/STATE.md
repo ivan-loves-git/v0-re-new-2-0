@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 03-01 complete
-last_updated: "2026-05-17T14:56:36Z"
+stopped_at: Phase 03-02 complete
+last_updated: "2026-05-17T15:20:48Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 19
-  completed_plans: 16
-  percent: 84
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 3 of 4 (Reporting, Reminders, QA, and Launch Hardening)
-Plan: 1 of 4 in current phase
-Status: Ready for 03-02 freshness display and stale-opportunity reminder
+Plan: 2 of 4 in current phase
+Status: Ready for 03-03 end-to-end QA with realistic data
 Last activity: 2026-05-17
 
-Progress: [████████--] 84%
+Progress: [█████████-] 89%
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [████████--] 84%
 | 2026-05-17 | Demo repreneur credentials and access guard | Created/reset `myworkmail4@gmail.com` as a linked demo repreneur user, populated three portal-visible demo matches, and tightened portal access after repreneur deletion. |
 | 2026-05-17 | Phase 2 GSD verification gate | Created `02-UAT.md`; build, browser, routing, Supabase API, active-pursuit lock, stage, and NDA/document gate checks passed. |
 | 2026-05-17 | Phase 3 operational KPI dashboard | Added internal deal-flow operating KPIs to `/dashboard`; browser UAT showed 15 active intermediaries, 15 active opportunities, 3 introductions, and 1 pending review. |
+| 2026-05-17 | Phase 3 opportunity freshness reminders | Added date/month display on opportunity list/detail and a staff-dashboard stale reminder for open opportunities older than 90 days with no active pursuit. |
 
 ## Accumulated Context
 
@@ -85,6 +86,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 2 plan 02-07 completed: staff can track pursuit-level NDA status, link an NDA document, and active repreneurs can download only approved documents once NDA status allows access.
 - Phase 2 GSD UAT gate completed on 2026-05-17: no blockers found; Phase 2 is safe to use as the base for Phase 3, but the full June V2 milestone should not be closed until Phase 3 QA and launch readiness are complete.
 - Phase 3 plan 03-01 completed: staff dashboard now has an internal deal-flow operating view for active intermediaries, active opportunities, introductions, active pursuits, seller meetings, LOIs, dropped deals, closed deals, current stages, approved documents, and NDA-blocked pursuits.
+- Phase 3 plan 03-02 completed: opportunity list/detail now show exact date added and month added, and staff dashboard flags open opportunities older than 90 days when no active pursuit exists.
 
 ### Pending Todos
 
@@ -111,6 +113,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-17T14:56:36Z
-Stopped at: Phase 03-01 complete; ready for Phase 03-02
-Resume file: .planning/phases/03-reporting-reminders-qa-and-launch-hardening/03-01-SUMMARY.md
+Last session: 2026-05-17T15:20:48Z
+Stopped at: Phase 03-02 complete; ready for Phase 03-03
+Resume file: .planning/phases/03-reporting-reminders-qa-and-launch-hardening/03-02-SUMMARY.md

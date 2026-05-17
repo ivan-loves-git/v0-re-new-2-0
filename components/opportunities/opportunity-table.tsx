@@ -27,9 +27,22 @@ function formatNumber(value: number | null | undefined, suffix: string) {
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(value)} ${suffix}`
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return "-"
-  return new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric" }).format(new Date(value))
+function parseDate(value: string | null | undefined) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatExactDate(value: string | null | undefined) {
+  const date = parseDate(value)
+  if (!date) return "-"
+  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(date)
+}
+
+function formatMonth(value: string | null | undefined) {
+  const date = parseDate(value)
+  if (!date) return "-"
+  return new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date)
 }
 
 export function OpportunityTable({ opportunities }: OpportunityTableProps) {
@@ -150,7 +163,12 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                   <TableCell className="text-right">{formatNumber(opportunity.revenue_meur, "M")}</TableCell>
                   <TableCell className="text-right">{formatNumber(opportunity.ebitda_keur, "K")}</TableCell>
                   <TableCell className="text-right">{opportunity.headcount ?? "-"}</TableCell>
-                  <TableCell>{formatDate(opportunity.date_added)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <span>{formatExactDate(opportunity.date_added)}</span>
+                      <span className="text-xs text-muted-foreground">Month: {formatMonth(opportunity.date_added)}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <OpportunityStatusBadge status={opportunity.status} />
                   </TableCell>

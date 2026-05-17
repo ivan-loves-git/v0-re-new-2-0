@@ -43,9 +43,9 @@
 
 ### Freshness and M&A Follow-Up
 
-- [ ] **FRESH-01**: Each opportunity shows date added and month added.
+- [x] **FRESH-01**: Each opportunity shows date added and month added.
 - [x] **MNA-01**: Staff can record basic M&A source/contact information needed for the opportunity.
-- [ ] **MNA-02**: Staff get a simple stale-opportunity reminder after 3 months when nobody is actively pursuing the opportunity.
+- [x] **MNA-02**: Staff get a simple stale-opportunity reminder after 3 months when nobody is actively pursuing the opportunity.
 
 ### Reporting
 
@@ -102,7 +102,7 @@
 | DEAL-01, DEAL-02, DEAL-03 | Phase 2 | Complete |
 | DEAL-04 | Phase 2 | Complete |
 | NDA-01, NDA-02, DOC-01 | Phase 2 | Complete |
-| FRESH-01, MNA-02 | Phase 3 | Pending |
+| FRESH-01, MNA-02 | Phase 3 | Complete |
 | KPI-01, KPI-02 | Phase 3 | Complete |
 | ENV-01, ENV-02, TEST-01, REL-01, REL-02 | Phase 1.1 | Complete |
 
@@ -113,4 +113,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after Phase 3 operational KPI dashboard*
+*Last updated: 2026-05-17 after Phase 3 freshness and stale reminders*

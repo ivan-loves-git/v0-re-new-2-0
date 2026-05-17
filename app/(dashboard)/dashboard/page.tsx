@@ -11,6 +11,7 @@ import { TopTier1Repreneurs } from "@/components/dashboard/top-tier1-repreneurs"
 import { AssessmentStatus } from "@/components/dashboard/assessment-status"
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap"
 import { OpportunityKpiPanel } from "@/components/dashboard/opportunity-kpi-panel"
+import { OpportunityFreshnessPanel } from "@/components/dashboard/opportunity-freshness-panel"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,6 +22,7 @@ import { ArrowRight, Users, TrendingUp, Compass, TableProperties } from "lucide-
 import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
 import { getOpportunityKpiData } from "@/lib/actions/opportunity-analytics"
+import { getOpportunityFreshnessData } from "@/lib/actions/opportunity-freshness"
 
 // Cache page data for 30 seconds - prevents re-fetching on rapid navigation
 export const revalidate = 30
@@ -378,7 +380,10 @@ async function WavySuggestsRow() {
 }
 
 export default async function DashboardPage() {
-  const opportunityKpiData = await getOpportunityKpiData()
+  const [opportunityKpiData, opportunityFreshnessData] = await Promise.all([
+    getOpportunityKpiData(),
+    getOpportunityFreshnessData(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -390,6 +395,9 @@ export default async function DashboardPage() {
 
       {/* Phase 3: internal deal-flow operating KPIs */}
       <OpportunityKpiPanel data={opportunityKpiData} />
+
+      {/* Phase 3: freshness and stale-opportunity reminders */}
+      <OpportunityFreshnessPanel data={opportunityFreshnessData} />
 
       {/* Row 1: Stats + Top Tiers - streams in */}
       <Suspense fallback={

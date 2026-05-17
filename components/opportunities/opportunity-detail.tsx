@@ -26,7 +26,16 @@ function formatNumber(value: number | null | undefined, suffix: string) {
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "-"
-  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "-"
+  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(date)
+}
+
+function formatMonth(value: string | null | undefined) {
+  if (!value) return "-"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "-"
+  return new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date)
 }
 
 export function OpportunityDetail({ opportunity, documents, matches, matchCandidates, pursuitEvents, updateAction }: OpportunityDetailProps) {
@@ -49,7 +58,7 @@ export function OpportunityDetail({ opportunity, documents, matches, matchCandid
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="size-4" />
-              {formatDate(opportunity.date_added)}
+              Added {formatDate(opportunity.date_added)} / Month: {formatMonth(opportunity.date_added)}
             </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-4" />
