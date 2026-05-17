@@ -6,10 +6,20 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
+  OpportunityPursuitEvent,
+  OpportunityPursuitStage,
   OpportunityMatchRecommendation,
   OpportunityMatchResponse,
   OpportunityMatchStatus,
 } from "@/lib/types/opportunity"
+
+const STAFF_EDITABLE_PURSUIT_STAGES: OpportunityPursuitStage[] = [
+  "interest",
+  "intermediary_meeting",
+  "seller_meeting",
+  "loi",
+  "closed",
+]
 
 function readString(formData: FormData, key: string): string | null {
   const value = formData.get(key)
@@ -32,6 +42,15 @@ function readRecommendation(formData: FormData, key: string): OpportunityMatchRe
 
 function readStatus(formData: FormData): OpportunityMatchStatus {
   return (readString(formData, "status") as OpportunityMatchStatus | null) ?? "draft"
+}
+
+function readPursuitStage(formData: FormData): OpportunityPursuitStage {
+  const stage = readString(formData, "pursuit_stage") as OpportunityPursuitStage | null
+  if (!stage || !STAFF_EDITABLE_PURSUIT_STAGES.includes(stage)) {
+    throw new Error("Select a valid pursuit stage.")
+  }
+
+  return stage
 }
 
 function readReasons(formData: FormData): string[] {
@@ -60,6 +79,14 @@ function normalizeResponse(row: any): OpportunityMatchResponse {
     opportunity: opportunity ?? null,
     repreneur: repreneur ?? null,
   } as OpportunityMatchResponse
+}
+
+function normalizePursuitEvent(row: any): OpportunityPursuitEvent {
+  const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
+  return {
+    ...row,
+    repreneur: repreneur ?? null,
+  } as OpportunityPursuitEvent
 }
 
 function repreneurName(repreneur: any): string | null {
@@ -122,6 +149,34 @@ function revalidateMatchPaths(opportunityId: string, matchId?: string) {
   if (matchId) revalidatePath(`/portal/deals/${matchId}`)
 }
 
+async function createPursuitEvent({
+  matchId,
+  opportunityId,
+  repreneurId,
+  stage,
+  note,
+  createdBy,
+}: {
+  matchId: string
+  opportunityId: string
+  repreneurId: string
+  stage: OpportunityPursuitStage
+  note?: string | null
+  createdBy?: string | null
+}) {
+  const supabase = createAdminClient()
+  const { error } = await supabase.from("opportunity_pursuit_events").insert({
+    match_id: matchId,
+    opportunity_id: opportunityId,
+    repreneur_id: repreneurId,
+    stage,
+    note,
+    created_by: createdBy,
+  })
+
+  if (error) throw new Error(error.message)
+}
+
 export async function listOpportunityMatches(opportunityId: string): Promise<OpportunityMatch[]> {
   await requireStaffAccess()
   const supabase = createAdminClient()
@@ -134,6 +189,21 @@ export async function listOpportunityMatches(opportunityId: string): Promise<Opp
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(normalizeMatch)
+}
+
+export async function listOpportunityPursuitEvents(opportunityId: string): Promise<OpportunityPursuitEvent[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunity_pursuit_events")
+    .select("*, repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)")
+    .eq("opportunity_id", opportunityId)
+    .order("created_at", { ascending: false })
+    .limit(50)
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(normalizePursuitEvent)
 }
 
 export async function listOpportunityMatchResponses(): Promise<OpportunityMatchResponse[]> {
@@ -302,7 +372,7 @@ export async function validateOpportunityPursuit(matchId: string, opportunityId:
 
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select("id, opportunity_id, status")
+    .select("id, opportunity_id, repreneur_id, status")
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
@@ -317,6 +387,10 @@ export async function validateOpportunityPursuit(matchId: string, opportunityId:
     .from("opportunity_matches")
     .update({
       status: "active_pursuit",
+      pursuit_stage: "interest",
+      pursuit_stage_notes: null,
+      pursuit_stage_updated_by: access.user.id,
+      pursuit_stage_updated_at: new Date().toISOString(),
       reviewed_by: access.user.id,
       reviewed_at: new Date().toISOString(),
     })
@@ -329,6 +403,15 @@ export async function validateOpportunityPursuit(matchId: string, opportunityId:
   if (error) throw lockedMatchError(error)
   if (!updatedMatch) throw new Error("Only an interested response can be validated into an active pursuit.")
 
+  await createPursuitEvent({
+    matchId,
+    opportunityId,
+    repreneurId: match.repreneur_id,
+    stage: "interest",
+    note: "Pursuit validated.",
+    createdBy: access.user.id,
+  })
+
   revalidateMatchPaths(opportunityId, matchId)
 }
 
@@ -340,17 +423,29 @@ export async function dropOpportunityPursuit(matchId: string, opportunityId: str
     .from("opportunity_matches")
     .update({
       status: "dropped",
+      pursuit_stage: "dropped",
+      pursuit_stage_updated_by: access.user.id,
+      pursuit_stage_updated_at: new Date().toISOString(),
       reviewed_by: access.user.id,
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
     .eq("status", "active_pursuit")
-    .select("id")
+    .select("id, repreneur_id")
     .maybeSingle()
 
   if (error) throw new Error(error.message)
   if (!data) throw new Error("Only an active pursuit can be dropped.")
+
+  await createPursuitEvent({
+    matchId,
+    opportunityId,
+    repreneurId: data.repreneur_id,
+    stage: "dropped",
+    note: "Pursuit dropped.",
+    createdBy: access.user.id,
+  })
 
   revalidateMatchPaths(opportunityId, matchId)
 }
@@ -363,6 +458,10 @@ export async function reopenDroppedOpportunityMatch(matchId: string, opportunity
     .from("opportunity_matches")
     .update({
       status: "interested",
+      pursuit_stage: null,
+      pursuit_stage_notes: null,
+      pursuit_stage_updated_by: null,
+      pursuit_stage_updated_at: null,
       reviewed_by: null,
       reviewed_at: null,
     })
@@ -374,6 +473,44 @@ export async function reopenDroppedOpportunityMatch(matchId: string, opportunity
 
   if (error) throw new Error(error.message)
   if (!data) throw new Error("Only a dropped pursuit can be reopened.")
+
+  revalidateMatchPaths(opportunityId, matchId)
+}
+
+export async function updateOpportunityPursuitStage(matchId: string, opportunityId: string, formData: FormData) {
+  const access = await requireStaffAccess()
+  const stage = readPursuitStage(formData)
+  const note = readString(formData, "pursuit_stage_notes")
+  const supabase = createAdminClient()
+  const now = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .update({
+      pursuit_stage: stage,
+      pursuit_stage_notes: note,
+      pursuit_stage_updated_by: access.user.id,
+      pursuit_stage_updated_at: now,
+      reviewed_by: access.user.id,
+      reviewed_at: now,
+    })
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "active_pursuit")
+    .select("id, repreneur_id")
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error("Only an active pursuit can have its stage updated.")
+
+  await createPursuitEvent({
+    matchId,
+    opportunityId,
+    repreneurId: data.repreneur_id,
+    stage,
+    note,
+    createdBy: access.user.id,
+  })
 
   revalidateMatchPaths(opportunityId, matchId)
 }

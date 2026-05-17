@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { OpportunityDetail } from "@/components/opportunities/opportunity-detail"
 import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
-import { listOpportunityMatchCandidates, listOpportunityMatches } from "@/lib/actions/opportunity-matches"
+import { listOpportunityMatchCandidates, listOpportunityMatches, listOpportunityPursuitEvents } from "@/lib/actions/opportunity-matches"
 import { getOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
 
 export const revalidate = 30
@@ -17,10 +17,11 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
     notFound()
   }
 
-  const [documents, matches, matchCandidates] = await Promise.all([
+  const [documents, matches, matchCandidates, pursuitEvents] = await Promise.all([
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
     listOpportunityMatchCandidates(),
+    listOpportunityPursuitEvents(id),
   ])
 
   async function updateAction(formData: FormData) {
@@ -42,6 +43,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
         documents={documents}
         matches={matches}
         matchCandidates={matchCandidates}
+        pursuitEvents={pursuitEvents}
         updateAction={updateAction}
       />
     </div>

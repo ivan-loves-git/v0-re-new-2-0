@@ -7,6 +7,7 @@ import { declineMyOpportunity, markMyOpportunityInterested } from "@/lib/actions
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
+  getOpportunityPursuitStageLabel,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
 
@@ -88,7 +89,10 @@ export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunity
             <Alert>
               <CheckCircle2 />
               <AlertTitle>Active pursuit</AlertTitle>
-              <AlertDescription>Re-New has validated this opportunity as an active pursuit.</AlertDescription>
+              <AlertDescription>
+                Re-New has validated this opportunity as an active pursuit.
+                {opportunity.pursuit_stage ? ` Current stage: ${getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}.` : ""}
+              </AlertDescription>
             </Alert>
           )}
 

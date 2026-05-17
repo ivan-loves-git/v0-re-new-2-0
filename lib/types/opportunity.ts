@@ -24,6 +24,14 @@ export type OpportunityMatchStatus =
   | "active_pursuit"
   | "dropped"
 
+export type OpportunityPursuitStage =
+  | "interest"
+  | "intermediary_meeting"
+  | "seller_meeting"
+  | "loi"
+  | "closed"
+  | "dropped"
+
 export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
@@ -73,6 +81,15 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
   { value: "interested", label: "Interested" },
   { value: "declined", label: "Declined" },
   { value: "active_pursuit", label: "Active pursuit" },
+  { value: "dropped", label: "Dropped" },
+] as const
+
+export const OPPORTUNITY_PURSUIT_STAGE_OPTIONS = [
+  { value: "interest", label: "Interest" },
+  { value: "intermediary_meeting", label: "Intermediary meeting" },
+  { value: "seller_meeting", label: "Seller meeting" },
+  { value: "loi", label: "LOI" },
+  { value: "closed", label: "Closed" },
   { value: "dropped", label: "Dropped" },
 ] as const
 
@@ -242,6 +259,10 @@ export interface OpportunityMatch {
   opportunity_id: string
   repreneur_id: string
   status: OpportunityMatchStatus
+  pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_notes?: string | null
+  pursuit_stage_updated_by?: string | null
+  pursuit_stage_updated_at?: string | null
   platform_recommendation: OpportunityMatchRecommendation
   platform_score?: number | null
   platform_reasons: string[]
@@ -277,6 +298,18 @@ export interface OpportunityMatchResponse {
   active_pursuit_repreneur_email?: string | null
 }
 
+export interface OpportunityPursuitEvent {
+  id: string
+  match_id: string
+  opportunity_id: string
+  repreneur_id: string
+  stage: OpportunityPursuitStage
+  note?: string | null
+  created_by?: string | null
+  created_at: string
+  repreneur?: OpportunityMatchRepreneur | null
+}
+
 export interface RepreneurOpportunityProfile {
   id: string
   first_name: string
@@ -287,6 +320,8 @@ export interface RepreneurOpportunityProfile {
 export interface RepreneurOpportunityExposure {
   match_id: string
   match_status: OpportunityMatchStatus
+  pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_updated_at?: string | null
   opportunity_id: string
   public_title?: string | null
   anonymized_description?: string | null
@@ -318,4 +353,8 @@ export function getOpportunityMatchRecommendationLabel(recommendation: Opportuni
 
 export function getOpportunityMatchStatusLabel(status: OpportunityMatchStatus): string {
   return OPPORTUNITY_MATCH_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+}
+
+export function getOpportunityPursuitStageLabel(stage: OpportunityPursuitStage): string {
+  return OPPORTUNITY_PURSUIT_STAGE_OPTIONS.find((option) => option.value === stage)?.label ?? stage
 }

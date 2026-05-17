@@ -33,7 +33,7 @@
 - [x] **DEAL-01**: Staff can validate when a repreneur is actively pursuing an opportunity.
 - [x] **DEAL-02**: Multiple repreneurs can be exposed to the same opportunity before active pursuit is validated.
 - [x] **DEAL-03**: Once active pursuit is validated, the opportunity is not exposed to additional repreneurs unless the pursuit drops.
-- [ ] **DEAL-04**: Staff can track the stages: interest, intermediary meeting, seller meeting, LOI, dropped, closed.
+- [x] **DEAL-04**: Staff can track the stages: interest, intermediary meeting, seller meeting, LOI, dropped, closed.
 
 ### NDA and Documents
 
@@ -100,7 +100,7 @@
 | REP-05, REP-06 | Phase 2 | Complete |
 | REP-02, REP-03 | Phase 2 | Complete |
 | DEAL-01, DEAL-02, DEAL-03 | Phase 2 | Complete |
-| DEAL-04 | Phase 2 | Pending |
+| DEAL-04 | Phase 2 | Complete |
 | NDA-01, NDA-02, DOC-01 | Phase 2 | Pending |
 | FRESH-01, MNA-02 | Phase 3 | Pending |
 | KPI-01, KPI-02 | Phase 3 | Pending |
@@ -113,4 +113,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after Phase 2 validated pursuit lock*
+*Last updated: 2026-05-17 after Phase 2 deal stage tracking*

@@ -36,6 +36,8 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
   return {
     match_id: row.id,
     match_status: row.status,
+    pursuit_stage: row.pursuit_stage,
+    pursuit_stage_updated_at: row.pursuit_stage_updated_at,
     opportunity_id: opportunity.id,
     public_title: opportunity.public_title,
     anonymized_description: opportunity.anonymized_description,
@@ -113,6 +115,8 @@ export async function listMyRepreneurOpportunities(): Promise<{
       platform_score,
       platform_reasons,
       human_recommendation,
+      pursuit_stage,
+      pursuit_stage_updated_at,
       updated_at,
       opportunity:opportunities(
         id,
@@ -166,6 +170,8 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
       platform_score,
       platform_reasons,
       human_recommendation,
+      pursuit_stage,
+      pursuit_stage_updated_at,
       updated_at,
       opportunity:opportunities(
         id,

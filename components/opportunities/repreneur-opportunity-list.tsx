@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
+  getOpportunityPursuitStageLabel,
   type RepreneurOpportunityExposure,
   type RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
@@ -53,6 +54,7 @@ export function RepreneurOpportunityList({ repreneur, opportunities }: Repreneur
           <CardHeader className="gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
+              {opportunity.pursuit_stage && <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge>}
               <Badge variant="secondary">{getOpportunityMatchRecommendationLabel(opportunity.human_recommendation)}</Badge>
             </div>
             <div className="flex flex-col gap-1">
