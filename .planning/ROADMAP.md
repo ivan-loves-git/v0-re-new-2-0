@@ -38,21 +38,21 @@ Plans:
 
 ### Phase 01.1: Testing Environment and Release Protocol (INSERTED)
 
-**Goal:** Re-New can test Phase 1 safely in a separate Supabase test project, then push/merge/release only after UAT and rollback conditions are clear.
+**Goal:** Re-New can test Phase 1 in the approved current Supabase project with controlled migration rules, then push/merge/release only after UAT and rollback/cleanup conditions are clear.
 **Requirements**: ENV-01, ENV-02, TEST-01, REL-01, REL-02
 **Depends on:** Phase 1
 
 **Success Criteria** (what must be TRUE):
-1. Testing uses a separate Supabase test project.
-2. Codex/Claude can run the worktree app against the test database without touching the current/shared Supabase project by accident.
+1. Testing uses the approved current Supabase project because a separate project would add cost.
+2. Codex/Claude can run the worktree app against the approved database without committing secrets.
 3. Phase 1 has a concrete UAT checklist and result log.
-4. Push, PR, merge, deploy, and rollback responsibilities are written in simple language.
+4. Backup/rollback, UAT cleanup, push, PR, merge, and deploy responsibilities are written in simple language.
 
 **Plans:** 3 plans
 
 Plans:
-- [x] 01.1-01: Lock separate Supabase test project policy and local env rules.
-- [ ] 01.1-02: Configure the test project, apply Phase 1 migrations, and run the worktree app.
+- [x] 01.1-01: Lock same-project Supabase policy and local env rules.
+- [ ] 01.1-02: Confirm backup/rollback, apply Phase 1 migrations, and run the worktree app.
 - [ ] 01.1-03: Complete Phase 1 UAT, classify findings, and prepare PR/merge/release recommendation.
 
 ### Phase 2: Core Deal Workflow

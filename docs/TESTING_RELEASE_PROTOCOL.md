@@ -1,7 +1,7 @@
 # Re-New Testing and Release Protocol
 
 **Status:** Approved direction for Phase 1.1
-**Decision:** Option A selected - separate Supabase test project.
+**Decision:** Same Supabase project selected - controlled additive testing.
 **Owner:** Ivan approves product risk. Codex/Claude execute technical setup and testing.
 **Purpose:** Prevent Re-New from mixing product development, database changes, and release decisions in the same informal step.
 
@@ -17,33 +17,42 @@ Worktrees are for code isolation. They do not automatically isolate the database
 
 ## Locked Environment Policy
 
-### Selected Path: Separate Test Supabase
+### Selected Path: Same Supabase Project, Controlled Migration
 
-Use a dedicated Supabase project for fake data and migration testing.
+Use the current Re-New Supabase project for Phase 1.1 because creating another Supabase project would add cost.
 
 **Rules**
-- Phase 1 migrations are applied first to the test Supabase project only.
-- The current/shared Supabase database is not touched during Phase 1.1.
-- The worktree `.env.local` must point to the test Supabase project before the app is started for UAT.
+- Phase 1.1 is treated as a controlled production-style migration, not a disposable sandbox.
+- Only the reviewed additive Phase 1 migrations may be applied: `scripts/044_create_opportunities_foundation.sql` and `scripts/045_setup_opportunity_documents_storage.sql`.
+- No destructive SQL is allowed in Phase 1.1: no dropping existing tables, dropping existing columns, or deleting existing non-UAT data.
+- Before migration, the target Supabase project URL/ref must be confirmed and recorded without secrets.
+- Before migration, the available backup route must be confirmed. If no dashboard backup is available, create a manual logical dump with Supabase CLI/connection string where possible, or record the accepted risk before proceeding.
+- UAT data must be clearly marked with `UAT-` references and/or `imported_from = 'phase-1.1-uat'`.
+- UAT cleanup must be planned before fake records are created.
+- The worktree `.env.local` may point to the current Supabase project only because Ivan explicitly approved this on 2026-05-17.
 - Real secrets stay local and are never committed.
-- Test records can be fake, minimal, and disposable.
+- Phase 2 remains blocked until Phase 1.1 migration, UAT, and cleanup/release notes are complete.
 
 **Why this path**
-- It is the safest option.
-- We can create, edit, import, attach, and delete fake opportunities freely.
-- Mistakes do not touch real Re-New data.
-- It creates the professional habit we need before Phase 2 adds repreneur-facing workflow.
+- It avoids paying for another Supabase project.
+- It keeps the process simple enough to execute now.
+- The Phase 1 migrations are additive, so the risk is lower than a destructive schema change.
+- It still creates a professional release habit before Phase 2 adds repreneur-facing workflow.
 
 **Known tradeoff**
-- Setup takes longer than using the current database.
-- Test data may differ from production unless we deliberately copy safe samples.
-- We need one separate set of Supabase credentials for the test project.
+- This is not a true isolated test environment.
+- GitHub cannot undo database changes.
+- Backup/rollback and UAT cleanup matter more because the current/shared database is involved.
 
 ## Rejected Paths For Phase 1.1
 
-### Current Supabase With Manual Backup
+### Separate Supabase Test Project
 
-This is faster, but it can pollute or damage real/shared data. We are not using it for Phase 1.1.
+This is the cleanest professional setup, but it currently adds Supabase cost. We are not using it for Phase 1.1.
+
+### Local Docker Supabase
+
+This avoids touching the shared database, but it adds technical setup complexity. Ivan rejected this as overcomplicated for now.
 
 ### Local UI Only
 
@@ -107,11 +116,12 @@ This is useful for quick visual checks, but it is not enough because Phase 1 dep
 ### Gate 1: Test Environment Ready
 
 Pass when:
-- Test Supabase project exists.
-- `.env.local` in the worktree points to the test Supabase project.
-- `scripts/044_create_opportunities_foundation.sql` is applied to the test project.
-- `scripts/045_setup_opportunity_documents_storage.sql` is applied to the test project.
-- Worktree app can run on `http://localhost:3011` against the test project.
+- Ivan's same-project approval is recorded.
+- Target Supabase URL/ref is confirmed as the intended current Re-New project.
+- Backup/rollback route is recorded before migration.
+- `scripts/044_create_opportunities_foundation.sql` is applied to the approved Supabase project.
+- `scripts/045_setup_opportunity_documents_storage.sql` is applied to the approved Supabase project.
+- Worktree app can run on `http://localhost:3011` against the approved project.
 - `git status --short` confirms no secrets were committed.
 
 ### Gate 2: UAT Passed
@@ -120,6 +130,7 @@ Pass when:
 - UAT checklist is completed.
 - Issues are classified as blocker, fix-before-merge, or acceptable follow-up.
 - Any blocker is fixed and retested.
+- Fake UAT records are either cleaned up or intentionally kept with `UAT-` labels.
 
 ### Gate 3: Merge Ready
 
@@ -143,13 +154,14 @@ Do not start Phase 2 product features until Phase 1 has passed the test environm
 
 - Create/update the GSD plan.
 - Prepare local test configuration templates.
-- Apply migrations to the separate test Supabase project once credentials are available.
-- Start the worktree app against the test project.
+- Confirm the reviewed migrations are additive.
+- Apply migrations to the approved same Supabase project once the connection path is available.
+- Start the worktree app against the approved project.
 - Run technical checks and record UAT findings.
 
 ## What Requires Ivan Approval
 
-- Supplying or approving test Supabase credentials.
+- Supplying or approving current Supabase credentials/connection path.
 - Deciding whether UAT findings block merge or become follow-up tasks.
 - Approving push/PR/merge.
 - Approving any later production database migration.

@@ -52,8 +52,8 @@
 
 ### Test Environment and Release Protocol
 
-- [x] **ENV-01**: Re-New has a documented test environment policy selecting a separate Supabase test project for migrations, fake data, and UAT.
-- [ ] **ENV-02**: The Phase 1 opportunity migrations can be applied to the separate Supabase test project before any production/current database migration is considered.
+- [x] **ENV-01**: Re-New has a documented test environment policy selecting the same/current Supabase project for controlled Phase 1.1 migration, fake data, and UAT.
+- [ ] **ENV-02**: The Phase 1 opportunity migrations can be applied to the approved Supabase project after backup/rollback is recorded and additive-only scope is confirmed.
 - [x] **TEST-01**: Phase 1 has a written UAT checklist covering opportunity CRUD, import review, staff-only/repreneur-visible separation, source/contact handling, and documents.
 - [x] **REL-01**: The release protocol defines when Codex/Claude can push, open a PR, merge, and deploy, including who approves each step.
 - [ ] **REL-02**: GSD, Linear, and GitHub responsibilities are documented so project memory, team tracking, and code history stay aligned.

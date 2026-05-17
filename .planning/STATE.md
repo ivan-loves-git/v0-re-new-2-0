@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Locked Phase 1.1 separate Supabase test environment plan
+stopped_at: Replanned Phase 1.1 for same Supabase project controlled migration
 last_updated: "2026-05-17T06:25:00.000Z"
 last_activity: 2026-05-17
 progress:
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 Phase: 1.1 of 4 (Testing Environment and Release Protocol)
 Plan: 1 of 3 in current phase
-Status: Ready to execute 01.1-02 test Supabase setup
+Status: Ready to execute 01.1-02 same-project migration setup
 Last activity: 2026-05-17
 
 Progress: [███-------] 25%
@@ -53,15 +53,17 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Bertrand answered several original PDR questions but expanded the target product direction.
 - June V2 should be scoped tightly around core validation.
 - V3 can follow quickly once basics are validated.
-- Ivan selected Option 1 for Phase 1.1: a separate Supabase test project.
-- The current/shared Supabase database is not approved for Phase 1.1 testing.
+- Ivan initially selected a separate Supabase test project for Phase 1.1.
+- Ivan then approved same/current Supabase project testing on 2026-05-17 because another Supabase project adds cost.
+- Phase 1.1 is now a controlled same-project migration: additive SQL only, backup/rollback note first, marked UAT data, cleanup plan.
 
 ### Pending Todos
 
-- Create or identify the separate Supabase test project for Phase 1.1.
-- Configure the worktree `.env.local` with test Supabase credentials only.
-- Apply Phase 1 migrations to the test Supabase project only.
+- Confirm approved current Supabase URL/ref and backup/rollback route.
+- Configure the worktree `.env.local` with approved Supabase credentials only.
+- Apply Phase 1 additive migrations to the approved Supabase project only after backup/rollback is recorded.
 - Run Phase 1 UAT on `http://localhost:3011/opportunities`.
+- Record UAT data cleanup decision.
 - Mirror Phase 1.1 into Linear after the protocol is accepted.
 - Save the sent 2026-05-16 WhatsApp scope-boundary message in project communications.
 

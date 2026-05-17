@@ -1,29 +1,33 @@
 # Phase 1 UAT Results
 
 **Status:** Not started
-**Environment:** Separate Supabase test project
+**Environment:** Same Supabase project, controlled Phase 1.1 migration
 **Branch:** `codex/gsd-v2-phase1-20260516`
 **Worktree:** `_worktrees/renew-platform-gsd-v2-phase1`
 
 ## Environment Decision
 
-Approved by Ivan on 2026-05-17:
+Approved by Ivan on 2026-05-17 and superseding the earlier separate-project plan:
 
-- Use a separate Supabase test project.
-- Do not apply Phase 1 migrations to the current/shared Supabase database during Phase 1.1.
-- Use fake or sanitized opportunity data for UAT.
+- Use the same/current Re-New Supabase project for Phase 1.1 testing to avoid extra Supabase project cost.
+- Apply only reviewed additive migrations.
+- Do not run destructive SQL against existing schema or existing non-UAT data.
+- Use clearly marked fake or sanitized opportunity data for UAT.
 - Keep secrets local and uncommitted.
 
 ## Migration Checklist
 
-- [ ] Create or identify the Re-New test Supabase project.
-- [ ] Confirm worktree `.env.local` points to the test project.
-- [ ] Confirm no production/current Supabase credentials are used in the worktree.
+- [ ] Confirm target Supabase project URL/ref is the intended current Re-New project.
+- [ ] Confirm backup route: dashboard backup, manual logical dump, or explicitly accepted risk.
+- [ ] Confirm `scripts/044_create_opportunities_foundation.sql` is additive-only.
+- [ ] Confirm `scripts/045_setup_opportunity_documents_storage.sql` is additive-only for the opportunity documents bucket/policies.
+- [ ] Confirm worktree `.env.local` points to the approved project and remains uncommitted.
 - [ ] Apply `scripts/044_create_opportunities_foundation.sql`.
 - [ ] Apply `scripts/045_setup_opportunity_documents_storage.sql`.
-- [ ] Confirm app can connect to the test database.
-- [ ] Confirm app can use the test storage bucket for opportunity documents.
+- [ ] Confirm app can connect to the approved database.
+- [ ] Confirm app can use the opportunity documents storage bucket.
 - [ ] Confirm `git status --short` shows no committed secrets.
+- [ ] Prepare UAT cleanup route for records marked `UAT-` or `phase-1.1-uat`.
 
 ## UAT Checklist
 
@@ -65,7 +69,7 @@ Approved by Ivan on 2026-05-17:
 
 | Area | Result | Severity | Notes |
 |------|--------|----------|-------|
-| Environment | Not started | - | Separate test Supabase selected; setup pending. |
+| Environment | Not started | - | Same Supabase project selected; controlled migration plan pending execution. |
 
 ## Release Recommendation
 

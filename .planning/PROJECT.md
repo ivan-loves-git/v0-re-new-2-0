@@ -65,6 +65,7 @@ Re-New staff can manage opportunities and confidently connect the right repreneu
 | M&A firms have no portal in V2 | Keeps relationship management human and avoids a second external user group | Good for June |
 | Month/date added is enough freshness signal | Avoids unnecessary aging taxonomy | Good for June |
 | Platform recommendation plus human recommendation | Balances structure with human judgment while data model stabilizes | Pending implementation |
+| Same Supabase project for Phase 1.1 testing | Avoids extra Supabase project cost; acceptable because Phase 1 migrations are additive and UAT data will be marked | Approved with controlled migration guardrails |
 
 ---
-*Last updated: 2026-05-16 after Bertrand Notion review and GSD/Codex setup*
+*Last updated: 2026-05-17 after Phase 1.1 same-project Supabase decision*
