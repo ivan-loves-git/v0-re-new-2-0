@@ -49,8 +49,8 @@
 
 ### Reporting
 
-- [ ] **KPI-01**: Staff can see operational counts for active intermediaries, opportunities, introductions, seller meetings, LOIs, dropped deals, and closed deals.
-- [ ] **KPI-02**: Reporting is internal only for June.
+- [x] **KPI-01**: Staff can see operational counts for active intermediaries, opportunities, introductions, seller meetings, LOIs, dropped deals, and closed deals.
+- [x] **KPI-02**: Reporting is internal only for June.
 
 ### Test Environment and Release Protocol
 
@@ -103,7 +103,7 @@
 | DEAL-04 | Phase 2 | Complete |
 | NDA-01, NDA-02, DOC-01 | Phase 2 | Complete |
 | FRESH-01, MNA-02 | Phase 3 | Pending |
-| KPI-01, KPI-02 | Phase 3 | Pending |
+| KPI-01, KPI-02 | Phase 3 | Complete |
 | ENV-01, ENV-02, TEST-01, REL-01, REL-02 | Phase 1.1 | Complete |
 
 **Coverage:**
@@ -113,4 +113,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after Phase 2 NDA/document flow*
+*Last updated: 2026-05-17 after Phase 3 operational KPI dashboard*

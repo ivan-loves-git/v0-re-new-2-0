@@ -10,6 +10,7 @@ import { JourneyStageDistribution } from "@/components/dashboard/journey-stage-d
 import { TopTier1Repreneurs } from "@/components/dashboard/top-tier1-repreneurs"
 import { AssessmentStatus } from "@/components/dashboard/assessment-status"
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap"
+import { OpportunityKpiPanel } from "@/components/dashboard/opportunity-kpi-panel"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -19,6 +20,7 @@ import { calculateOverallScore } from "@/lib/scoring-utils"
 import { ArrowRight, Users, TrendingUp, Compass, TableProperties } from "lucide-react"
 import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
+import { getOpportunityKpiData } from "@/lib/actions/opportunity-analytics"
 
 // Cache page data for 30 seconds - prevents re-fetching on rapid navigation
 export const revalidate = 30
@@ -375,7 +377,9 @@ async function WavySuggestsRow() {
   }
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const opportunityKpiData = await getOpportunityKpiData()
+
   return (
     <div className="space-y-6">
       {/* Header - renders immediately */}
@@ -383,6 +387,9 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-semibold text-gray-900">Dashboard</h1>
         <p className="text-gray-600 mt-1">Overview of your repreneur pipeline</p>
       </div>
+
+      {/* Phase 3: internal deal-flow operating KPIs */}
+      <OpportunityKpiPanel data={opportunityKpiData} />
 
       {/* Row 1: Stats + Top Tiers - streams in */}
       <Suspense fallback={
