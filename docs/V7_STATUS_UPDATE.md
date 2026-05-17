@@ -73,6 +73,7 @@ This is the team's moment to propose, experiment, and have fun with it. Founders
 - Intermediary portal (M&A brokers browse qualified candidates)
 - Candidate self-service layer
 - Deal marketplace
+- Nice-to-have: team access management inside Wave (invite new users, approve access, and let people set their own password without Ivan creating temporary credentials)
 
 ---
 
