@@ -1,6 +1,6 @@
 # Phase 2 UAT Results
 
-**Status:** Plan 02-01 implemented; local worktree verification complete
+**Status:** Plans 02-01 and 02-02 implemented; local worktree verification complete
 **Environment:** Same Supabase project, controlled additive migration
 **Branch:** `codex/gsd-v2-phase2-20260517`
 **Worktree:** `_worktrees/renew-platform-gsd-v2-phase2`
@@ -26,13 +26,22 @@
 - [x] Dev server runs on `http://localhost:3012`.
 - [x] Authenticated HTTP page load confirms the opportunity detail renders the Recommendations tab.
 - [x] Database write path verified with a marked temporary match record.
+- [x] Authenticated repreneur HTTP page load confirms `/my-opportunities` renders only the proposed anonymized opportunity.
+- [x] Authenticated repreneur detail page confirms staff-only source label, raw description, and staff notes are absent.
+
+## Plan 02-02 Scope
+
+- Added login-email based repreneur access for June.
+- Added `/my-opportunities` and `/my-opportunities/[matchId]`.
+- Shows only active, non-staff-only opportunities where the match is `proposed`, `interested`, or `active_pursuit`.
+- Does not expose source/contact, staff notes, raw descriptions, documents, profile editing, interest/reject, or pursuit workflow.
 
 ## Temporary UAT Data
 
-Keep these temporarily while Phase 2 is being reviewed locally:
+Cleaned after verification:
 
-- Opportunity: `UAT-PHASE2-1779002850294`
-- Login: `uat.phase2.20260517@re-new.team`
-- One `opportunity_matches` row linking the UAT opportunity to a real repreneur record for display testing.
-
-Remove the temporary UAT opportunity, match, login, sessions, and account before Phase 2 is pushed/merged.
+- Deleted 2 marked Phase 2 UAT opportunities.
+- Deleted 2 marked Phase 2 UAT match rows.
+- Deleted 1 marked Phase 2 UAT repreneur profile.
+- Deleted 2 marked Phase 2 UAT users and their sessions/accounts.
+- Verified remaining marked Phase 2 UAT opportunities, repreneurs, and users: `0`.

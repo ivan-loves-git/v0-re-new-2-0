@@ -21,10 +21,10 @@
 
 ### Repreneur Access
 
-- [ ] **REP-01**: A repreneur can access anonymized opportunities through the platform.
+- [x] **REP-01**: A repreneur can access anonymized opportunities through the platform.
 - [ ] **REP-02**: A repreneur can express interest in an opportunity.
 - [ ] **REP-03**: A repreneur can reject or ignore an opportunity without creating staff ambiguity.
-- [ ] **REP-04**: June access does not imply full repreneur profile editing or advanced self-service.
+- [x] **REP-04**: June access does not imply full repreneur profile editing or advanced self-service.
 
 ### Deal Progress
 
@@ -94,7 +94,8 @@
 | OPP-01, OPP-02, OPP-03, OPP-04, OPP-05 | Phase 1 | Pending |
 | MNA-01 | Phase 1 | Complete |
 | MATCH-01, MATCH-02, MATCH-03 | Phase 2 | Complete |
-| REP-01, REP-02, REP-03, REP-04 | Phase 2 | Pending |
+| REP-01, REP-04 | Phase 2 | Complete |
+| REP-02, REP-03 | Phase 2 | Pending |
 | DEAL-01, DEAL-02, DEAL-03, DEAL-04 | Phase 2 | Pending |
 | NDA-01, NDA-02, DOC-01 | Phase 2 | Pending |
 | FRESH-01, MNA-02 | Phase 3 | Pending |
@@ -108,4 +109,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-17 after Phase 2 matching foundation*
+*Last updated: 2026-05-17 after Phase 2 repreneur opportunity access*

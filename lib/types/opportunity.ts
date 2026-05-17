@@ -257,6 +257,33 @@ export interface OpportunityMatch {
 
 export interface OpportunityMatchCandidate extends OpportunityMatchRepreneur {}
 
+export interface RepreneurOpportunityProfile {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+}
+
+export interface RepreneurOpportunityExposure {
+  match_id: string
+  match_status: OpportunityMatchStatus
+  opportunity_id: string
+  public_title?: string | null
+  anonymized_description?: string | null
+  sector?: string | null
+  activity?: string | null
+  location?: string | null
+  revenue_meur?: number | null
+  ebitda_keur?: number | null
+  headcount?: number | null
+  date_added?: string | null
+  platform_recommendation: OpportunityMatchRecommendation
+  platform_score?: number | null
+  platform_reasons: string[]
+  human_recommendation: OpportunityMatchRecommendation
+  updated_at: string
+}
+
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
   return OPPORTUNITY_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
 }
