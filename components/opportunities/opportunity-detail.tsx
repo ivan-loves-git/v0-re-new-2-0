@@ -3,11 +3,13 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MaSourcePanel } from "@/components/opportunities/ma-source-panel"
+import { OpportunityMaWorkflowPanel } from "@/components/opportunities/opportunity-ma-workflow-panel"
 import { OpportunityDocumentsPanel } from "@/components/opportunities/opportunity-documents-panel"
 import { OpportunityForm } from "@/components/opportunities/opportunity-form"
 import { OpportunityMatchesPanel } from "@/components/opportunities/opportunity-matches-panel"
 import { OpportunityPursuitPanel } from "@/components/opportunities/opportunity-pursuit-panel"
 import { OpportunityStatusBadge, OpportunityVisibilityBadge } from "@/components/opportunities/opportunity-status-badge"
+import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import type { OpportunityDocument, OpportunityMatch, OpportunityMatchCandidate, OpportunityPursuitEvent, OpportunityWithSource } from "@/lib/types/opportunity"
 
 interface OpportunityDetailProps {
@@ -16,7 +18,9 @@ interface OpportunityDetailProps {
   matches: OpportunityMatch[]
   matchCandidates: OpportunityMatchCandidate[]
   pursuitEvents: OpportunityPursuitEvent[]
+  maWorkflow: MaOpportunityWorkflow
   updateAction: (formData: FormData) => Promise<void>
+  sendMaAction: (formData: FormData) => Promise<{ success: boolean; message: string }>
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
@@ -38,7 +42,16 @@ function formatMonth(value: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date)
 }
 
-export function OpportunityDetail({ opportunity, documents, matches, matchCandidates, pursuitEvents, updateAction }: OpportunityDetailProps) {
+export function OpportunityDetail({
+  opportunity,
+  documents,
+  matches,
+  matchCandidates,
+  pursuitEvents,
+  maWorkflow,
+  updateAction,
+  sendMaAction,
+}: OpportunityDetailProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -73,6 +86,7 @@ export function OpportunityDetail({ opportunity, documents, matches, matchCandid
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
           <TabsTrigger value="pursuit">Pursuit</TabsTrigger>
+          <TabsTrigger value="ma">M&A</TabsTrigger>
           <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
@@ -158,6 +172,10 @@ export function OpportunityDetail({ opportunity, documents, matches, matchCandid
 
         <TabsContent value="pursuit">
           <OpportunityPursuitPanel opportunityId={opportunity.id} matches={matches} events={pursuitEvents} documents={documents} />
+        </TabsContent>
+
+        <TabsContent value="ma">
+          <OpportunityMaWorkflowPanel workflow={maWorkflow} sendAction={sendMaAction} />
         </TabsContent>
 
         <TabsContent value="edit">

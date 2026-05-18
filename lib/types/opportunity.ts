@@ -143,6 +143,23 @@ export interface MaSourceDirectoryEntry extends MaSource {
   latest_opportunity_title?: string | null
 }
 
+export interface MaSourceInteraction {
+  id: string
+  opportunity_id: string
+  source_id?: string | null
+  template_key: string
+  channel: "email" | string
+  direction: "outbound" | string
+  recipient_email: string
+  subject: string
+  body_markdown?: string | null
+  status: "sent" | "failed" | string
+  error_message?: string | null
+  sent_at?: string | null
+  created_by?: string | null
+  created_at: string
+}
+
 export interface Opportunity {
   id: string
   reference: string

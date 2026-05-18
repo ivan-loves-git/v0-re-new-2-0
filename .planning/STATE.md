@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: complete
-stopped_at: Phase 6 complete; ready for release review or next milestone selection
-last_updated: "2026-05-18T11:42:00Z"
+status: in_progress
+stopped_at: Phase 7 started; M&A workflow implementation slice complete, full UAT deferred
+last_updated: "2026-05-18T12:30:00Z"
 last_activity: 2026-05-18
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_plans: 33
+  completed_plans: 32
+  percent: 97
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 6 has added the M&A source directory and intermediary email template foundations.
+**Current focus:** Phase 7 is activating opportunity-specific M&A intermediary follow-up from the opportunity detail page.
 
 ## Current Position
 
-Phase: 6 complete
-Plan: 30 of 30 complete
-Status: Phase 6 complete; ready for release review or next milestone selection
+Phase: 7 in progress
+Plan: 32 of 33 complete
+Status: Phase 7 started; M&A workflow implementation slice complete, full UAT deferred
 Last activity: 2026-05-18
 
-Progress: [██████████] 100%
+Progress: [█████████░] 97%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 30
+- Total plans completed: 32
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -63,6 +63,7 @@ Progress: [██████████] 100%
 | 2026-05-18 | Opportunity Groups table polish | Split opportunity group tags into clearer colored columns and removed secondary fields from the dense Groups view to harmonize with the Repreneur Groups table. |
 | 2026-05-18 | Section page headers and navigation trim | Removed Opportunities Records from sidebar/dashboard promotion, restored plain page titles, and added green Repreneur / purple Opportunity icon headers across dashboard, analytics, groups, and find pages. |
 | 2026-05-18 | Phase 6 M&A source directory | Backfilled opportunity source labels into normalized `ma_sources`, added `/opportunities/ma`, created source/contact editing, and seeded four intermediary email templates in Email Tools. |
+| 2026-05-18 | Phase 7 M&A workflow activation | Added an opportunity-detail M&A tab that drafts, sends, and logs intermediary follow-up emails from linked source contacts and M&A templates. |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Progress: [██████████] 100%
 - Phase 4 added: Staff information architecture and dashboard separation.
 - Phase 5 added: Unified repreneur Find/Groups UX and equivalent opportunity Find/Groups work surfaces.
 - Phase 6 added: M&A source directory and intermediary email workflow foundations.
+- Phase 7 added: M&A workflow activation from opportunity details.
 
 ### Decisions
 
@@ -123,6 +125,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - The old `/opportunities` records route remains direct-link available, but staff navigation and operational dashboard links should promote `/opportunities/find` for item lookup and `/opportunities/groups` for bucket-level operations.
 - M&A intermediaries are now first-class source records in `/opportunities/ma`; V2 remains an internal staff tool, not a full M&A firm portal or large-scale CRM.
 - M&A email templates are tagged as opportunity/intermediary templates and are available for review/test in Email Tools, but normal manual sending remains repreneur-only until a dedicated intermediary send workflow is designed.
+- Phase 7 plan 07-01 completed: `ma_source_interactions` records intermediary follow-up history, and staff-only server actions can draft/send/log M&A emails from opportunity/source context.
+- Phase 7 plan 07-02 completed: opportunity detail pages now include an M&A tab with template selection, editable subject/body, source contact status, send feedback, and interaction history.
+- Phase 7 plan 07-03 remains pending: run the full browser workflow UAT and release review once the broader product check resumes.
 
 ### Pending Todos
 
@@ -131,7 +136,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-- June V2 plus Phase 4 IA cleanup is complete; next risk is release monitoring and disciplined V3 selection.
+- Phase 7 has started; the main remaining risk is browser/UAT validation of the new M&A workflow before relying on it in real intermediary communication.
 - Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.
 - Matching must avoid hidden AI scope until structured data is stable.
 - M&A CRM must remain basic source/contact tracking in June.
@@ -152,6 +157,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-18T11:42:00Z
-Stopped at: Phase 6 complete; ready for release review or next milestone selection
-Resume file: .planning/phases/06-ma-source-directory-and-intermediary-email-workflows/06-04-SUMMARY.md
+Last session: 2026-05-18T12:30:00Z
+Stopped at: Phase 7 started; M&A workflow implementation slice complete, full UAT deferred
+Resume file: .planning/phases/07-ma-intermediary-workflow-activation/07-02-SUMMARY.md
