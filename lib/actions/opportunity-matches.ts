@@ -348,19 +348,64 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
   }))
 }
 
-export async function listOpportunityMatchCandidates(): Promise<OpportunityMatchCandidate[]> {
+export async function listOpportunityMatchCandidates(opportunityId: string): Promise<OpportunityMatchCandidate[]> {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { data, error } = await supabase
-    .from("repreneurs")
-    .select("id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score")
-    .not("lifecycle_status", "in", "(rejected,declined)")
-    .order("updated_at", { ascending: false })
-    .limit(250)
+  const [{ data: opportunity, error: opportunityError }, { data, error }] = await Promise.all([
+    supabase
+      .from("opportunities")
+      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount")
+      .eq("id", opportunityId)
+      .maybeSingle(),
+    supabase
+      .from("repreneurs")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        lifecycle_status,
+        journey_stage,
+        recommendation,
+        who_score,
+        when_score,
+        scoring_flags,
+        q12_geo_zones,
+        q13_target_sectors_v2,
+        q14_deal_size,
+        q16_equity,
+        sector_preferences,
+        target_location,
+        target_acquisition_size,
+        investment_capacity
+      `)
+      .not("lifecycle_status", "in", "(rejected,declined)")
+      .order("updated_at", { ascending: false })
+      .limit(250),
+  ])
 
+  if (opportunityError) throw new Error(opportunityError.message)
   if (error) throw new Error(error.message)
-  return (data ?? []) as OpportunityMatchCandidate[]
+
+  return (data ?? []).map((candidate) => {
+    if (!opportunity) return candidate as OpportunityMatchCandidate
+    const platformMatch = calculateOpportunityMatchScore(candidate, opportunity)
+    return {
+      id: candidate.id,
+      first_name: candidate.first_name,
+      last_name: candidate.last_name,
+      email: candidate.email,
+      lifecycle_status: candidate.lifecycle_status,
+      journey_stage: candidate.journey_stage,
+      recommendation: candidate.recommendation,
+      who_score: candidate.who_score,
+      when_score: candidate.when_score,
+      platform_recommendation: platformMatch.recommendation,
+      platform_score: platformMatch.score,
+      platform_reasons: platformMatch.reasons,
+    } satisfies OpportunityMatchCandidate
+  })
 }
 
 export async function saveOpportunityMatch(formData: FormData): Promise<OpportunityMatchActionResult> {

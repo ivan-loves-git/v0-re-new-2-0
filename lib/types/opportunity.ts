@@ -304,7 +304,11 @@ export interface OpportunityMatch {
   repreneur?: OpportunityMatchRepreneur | null
 }
 
-export interface OpportunityMatchCandidate extends OpportunityMatchRepreneur {}
+export interface OpportunityMatchCandidate extends OpportunityMatchRepreneur {
+  platform_recommendation?: OpportunityMatchRecommendation
+  platform_score?: number | null
+  platform_reasons?: string[]
+}
 
 export interface OpportunityMatchResponse {
   id: string

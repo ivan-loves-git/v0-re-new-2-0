@@ -20,7 +20,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
   const [documents, matches, matchCandidates, pursuitEvents] = await Promise.all([
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
-    listOpportunityMatchCandidates(),
+    listOpportunityMatchCandidates(id),
     listOpportunityPursuitEvents(id),
   ])
 

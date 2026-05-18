@@ -136,7 +136,14 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [selectedRepreneurId, setSelectedRepreneurId] = useState("")
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
+  const selectedCandidate = candidates.find((candidate) => candidate.id === selectedRepreneurId)
+
+  function handleRepreneurChange(value: string) {
+    setSelectedRepreneurId(value)
+    clearFieldError("repreneur_id")
+  }
 
   function clearFieldError(field: string) {
     setFieldErrors((current) => {
@@ -328,7 +335,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                     example="Ivan Demo Repreneur - myworkmail4@gmail.com."
                   />
                 </Label>
-                <Select name="repreneur_id" disabled={candidates.length === 0} onValueChange={() => clearFieldError("repreneur_id")}>
+                <Select name="repreneur_id" value={selectedRepreneurId} disabled={candidates.length === 0} onValueChange={handleRepreneurChange}>
                   <SelectTrigger id="repreneur_id" className="w-full" aria-invalid={Boolean(fieldErrors.repreneur_id)}>
                     <SelectValue placeholder={candidates.length === 0 ? "No repreneurs available" : "Choose a repreneur, e.g. Ivan Demo Repreneur"} />
                   </SelectTrigger>
@@ -369,20 +376,40 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 </Select>
                 <FieldError message={fieldErrors.status} />
               </div>
-              <div className="rounded-md border bg-muted/40 p-4 lg:col-span-2">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Platform recommendation is automatic</p>
-                    <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                      On save, Wave calculates the platform recommendation, score, and reasons from WHO/WHEN readiness,
-                      sector fit, geography, deal size, and risk flags. This is the V2 base score and can be adjusted as
-                      real usage teaches us more.
-                    </p>
-                  </div>
-                  <Button asChild variant="outline" size="sm" className="w-fit shrink-0">
-                    <Link href="/guide/guidelines#platform-match-score">View guideline</Link>
-                  </Button>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="platform_recommendation_preview">
+                  Platform recommendation
+                  <FieldInfo
+                    label="Platform recommendation"
+                    description="Automatic, rule-based guidance calculated from the selected repreneur and this opportunity."
+                    example="Possible fit, 72/100, with sector and geography aligned but missing deal-size proof."
+                  />
+                </Label>
+                <div id="platform_recommendation_preview" className="min-h-[58px] rounded-md border bg-muted/40 px-3 py-2">
+                  {selectedCandidate?.platform_recommendation ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={recommendationVariant(selectedCandidate.platform_recommendation)}>
+                          {getOpportunityMatchRecommendationLabel(selectedCandidate.platform_recommendation)}
+                        </Badge>
+                        <span className="text-sm font-medium tabular-nums">
+                          {selectedCandidate.platform_score ?? "-"}
+                          <span className="text-xs text-muted-foreground">/100</span>
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                        {(selectedCandidate.platform_reasons ?? []).slice(0, 3).map((reason) => (
+                          <span key={reason}>{reason}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Select a repreneur to preview the automatic V2 score.</p>
+                  )}
                 </div>
+                <Button asChild variant="link" size="sm" className="h-auto w-fit px-0 py-0 text-xs">
+                  <Link href="/guide/guidelines#platform-match-score">View scoring guideline</Link>
+                </Button>
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="human_recommendation">
@@ -407,6 +434,15 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground lg:col-span-2">
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium text-foreground">Platform score is automatic and visible</p>
+                  <p>
+                    On save, Wave stores this platform recommendation, score, and rationale. Staff can add or override
+                    context in the human recommendation beside it.
+                  </p>
+                </div>
               </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
