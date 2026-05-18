@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { MaIntermediaryEmail } from "@/lib/email/templates/ma-intermediary"
+import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
 import type { EmailTemplateKey } from "@/lib/types/email"
@@ -99,6 +99,51 @@ function substituteTemplateVariables(value: string, variables: Record<string, st
   return value.replace(/\{(\w+)\}/g, (match, key) => {
     return Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : match
   })
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+function markdownToEmailHtml(body: string) {
+  return body
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br />")}</p>`)
+    .join("")
+}
+
+async function sendIntermediaryEmail({
+  to,
+  subject,
+  body,
+}: {
+  to: string
+  subject: string
+  body: string
+}): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.RESEND_API_KEY) {
+    return { success: false, error: "Email service not configured" }
+  }
+
+  const sendPromise = resend.emails.send({
+    from: `${FROM_NAME} <${FROM_EMAIL}>`,
+    to: [to],
+    subject,
+    html: markdownToEmailHtml(body),
+    text: body,
+  })
+
+  const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) => {
+    setTimeout(() => resolve({ error: { message: "Email provider timed out" } }), 15000)
+  })
+
+  const { error } = await Promise.race([sendPromise, timeoutPromise])
+  return error ? { success: false, error: error.message } : { success: true }
 }
 
 async function loadOpportunityContext(opportunityId: string) {
@@ -206,15 +251,10 @@ export async function sendMaSourceWorkflowEmail(
   const renderedSubject = substituteTemplateVariables(subject, variables)
   const renderedBody = substituteTemplateVariables(body, variables)
 
-  const { sendEmailDirect } = await import("@/lib/email/send-email")
-  const result = await sendEmailDirect({
+  const result = await sendIntermediaryEmail({
     to: recipientEmail,
     subject: renderedSubject,
-    react: MaIntermediaryEmail({
-      subject: renderedSubject,
-      body: renderedBody,
-      variables,
-    }),
+    body: renderedBody,
   })
 
   const status = result.success ? "sent" : "failed"
@@ -250,4 +290,3 @@ export async function sendMaSourceWorkflowEmail(
 
   return { success: true, message: `Email sent to ${recipientEmail}` }
 }
-
