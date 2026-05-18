@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { sendMaSourceWorkflowEmail, type MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
+import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 
 interface OpportunityMaWorkflowPanelProps {
   opportunityId: string
@@ -59,7 +59,16 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
 
     setIsSending(true)
     try {
-      const result = await sendMaSourceWorkflowEmail(opportunityId, formData)
+      const response = await fetch(`/api/opportunities/${opportunityId}/ma-workflow/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateKey: formData.get("template_key"),
+          subject: formData.get("subject"),
+          body: formData.get("body_markdown"),
+        }),
+      })
+      const result = (await response.json()) as { success: boolean; message: string }
       if (!result.success) {
         toast.error("M&A email not sent", { description: result.message })
         return

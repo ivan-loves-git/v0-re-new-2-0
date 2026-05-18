@@ -226,10 +226,27 @@ export async function sendMaSourceWorkflowEmail(
   opportunityId: string,
   formData: FormData,
 ): Promise<{ success: boolean; message: string }> {
-  const access = await requireStaffAccess()
   const templateKey = readString(formData, "template_key")
   const subject = readString(formData, "subject")
   const body = readString(formData, "body_markdown")
+
+  return sendMaSourceWorkflowEmailPayload(opportunityId, {
+    templateKey,
+    subject,
+    body,
+  })
+}
+
+export async function sendMaSourceWorkflowEmailPayload(
+  opportunityId: string,
+  payload: {
+    templateKey: string | null
+    subject: string | null
+    body: string | null
+  },
+): Promise<{ success: boolean; message: string }> {
+  const access = await requireStaffAccess()
+  const { templateKey, subject, body } = payload
 
   if (!templateKey || !isMaTemplateKey(templateKey)) {
     return { success: false, message: "Choose an M&A email template." }
