@@ -64,8 +64,22 @@ export default function RootLayout({
           position="bottom-right"
           richColors
           closeButton
+          expand
+          visibleToasts={4}
+          style={{ "--width": "520px" } as React.CSSProperties}
           toastOptions={{
-            duration: 4000,
+            duration: 4500,
+            classNames: {
+              toast: "min-h-16 rounded-lg border px-5 py-4 shadow-lg backdrop-blur-sm",
+              success: "border-emerald-200 bg-emerald-50 text-emerald-950 shadow-[0_18px_55px_rgba(22,163,74,0.16)]",
+              error: "border-red-200 bg-red-50 text-red-950 shadow-[0_18px_55px_rgba(239,68,68,0.14)]",
+              warning: "border-amber-200 bg-amber-50 text-amber-950 shadow-[0_18px_55px_rgba(217,119,6,0.14)]",
+              info: "border-blue-200 bg-blue-50 text-blue-950 shadow-[0_18px_55px_rgba(59,130,246,0.14)]",
+              title: "text-base font-semibold leading-6",
+              description: "text-sm leading-5 opacity-90",
+              icon: "mt-0.5",
+              closeButton: "border bg-background text-muted-foreground shadow-sm hover:bg-muted",
+            },
           }}
         />
         <Analytics />

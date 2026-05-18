@@ -156,13 +156,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
   }
 
   function showFeedback(message: FeedbackMessage) {
-    setFeedback(message)
-
     if (message.type === "success") {
+      setFeedback(null)
       toast.success(message.title, { description: message.description })
       return
     }
 
+    setFeedback(message)
     toast.error(message.title, { description: message.description })
   }
 

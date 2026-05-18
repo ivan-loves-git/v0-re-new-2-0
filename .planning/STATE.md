@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: complete
 stopped_at: Phase 5 complete; ready for release review or next milestone selection
-last_updated: "2026-05-18T10:07:31Z"
+last_updated: "2026-05-18T10:18:00Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 6
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | 2026-05-18 | Phase 5 UX validation | Created `05-UAT.md`; build and journey helper tests passed, route/browser checks passed, and manual pre-deploy smoke checks were recorded for typing/select/mobile interactions. |
 | 2026-05-18 | KPI metric system and visible rule-based match scoring | Kept one compact KPI tile system, accepted automatic platform match scoring as the V2 base, made the score visible to staff and repreneurs, added focused scoring tests, and cleaned temporary prototype noise. |
 | 2026-05-18 | Visible platform recommendation preview | Restored the Add recommendation form to show automatic platform recommendation, score, and top reasons beside the human recommendation field. |
+| 2026-05-18 | Save feedback toast standard | Made the green bottom-right save banner the shared success feedback pattern and removed duplicate inline success feedback from recommendation saves. |
 
 ## Accumulated Context
 
@@ -112,6 +113,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 5 plan 05-04 completed: UAT evidence recorded; implementation is ready for human smoke testing before deployment.
 - KPI and matching decision captured on 2026-05-18: simple KPIs should use one compact tile component, and the rule-based platform match score is visible to both staff and repreneurs during V2 while remaining tunable over time.
 - The recommendation form should show Platform recommendation as a read-only automatic preview on the left of Human recommendation; automatic must not mean invisible.
+- Successful saves should use the shared bottom-right green toast as the primary feedback surface across the platform; inline messages should be reserved for errors, validation, or persistent page state.
 
 ### Pending Todos
 
