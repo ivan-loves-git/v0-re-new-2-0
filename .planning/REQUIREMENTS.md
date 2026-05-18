@@ -67,7 +67,7 @@
 - [x] **UX-01**: Repreneur Groups and Find share a coherent visual table structure, filter bar, pagination behavior, color system, and tag style.
 - [x] **UX-02**: Shared UI patterns are reused or extracted where they reduce meaningful duplication across repreneur and opportunity work surfaces.
 - [x] **UX-03**: Find pages prioritize cross-record search and filtering; Groups pages prioritize operating buckets with paginated grouped tables.
-- [ ] **UX-04**: Desktop and mobile layouts are tested in browser for readable tables, non-overlapping filters, stable pagination, and clear row navigation.
+- [x] **UX-04**: Desktop and mobile layouts are tested in browser for readable tables, non-overlapping filters, stable pagination, and clear row navigation.
 - [x] **OPP-JOURNEY-01**: Opportunities expose a derived journey label from availability status, match status, and pursuit stage instead of storing a fourth manual status.
 - [x] **OPP-FIND-01**: Staff can search, filter, sort, and scan opportunities in a Find page that visually matches repreneur Find.
 - [x] **OPP-GROUPS-01**: Staff can view opportunities grouped by useful operating buckets, with journey-first tags and clear deal-flow columns.
@@ -128,7 +128,7 @@
 | STAFF-IA-01, DASH-RE-01, DASH-OP-01, ANALYTICS-RE-01, ANALYTICS-OP-01, ARCHIVE-01, REDIRECT-01 | Phase 4 | Complete |
 | UX-01 | Phase 5 | Complete |
 | UX-02, UX-03, OPP-FIND-01, OPP-GROUPS-01 | Phase 5 | Complete |
-| UX-04 | Phase 5 | Planned |
+| UX-04 | Phase 5 | Complete |
 | OPP-JOURNEY-01 | Phase 5 | Complete |
 
 **Coverage:**
@@ -138,4 +138,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-18 after Phase 5 plan 05-03*
+*Last updated: 2026-05-18 after Phase 5 validation*

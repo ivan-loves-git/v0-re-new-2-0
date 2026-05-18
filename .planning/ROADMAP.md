@@ -11,7 +11,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 2: Core Deal Workflow** - Build matching, separated repreneur portal access, interest/reject actions, validated pursuit, stages, NDA/document handling. (completed 2026-05-17)
 - [x] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness. (completed 2026-05-17)
 - [x] **Phase 4: Staff Information Architecture and Dashboard Separation** - Split internal staff navigation and dashboards into repreneur and opportunity work surfaces. (completed 2026-05-17)
-- [ ] **Phase 5: Unified Find and Groups Work Surfaces** - Make repreneur Find/Groups visually coherent and replicate that operating pattern for opportunities.
+- [x] **Phase 5: Unified Find and Groups Work Surfaces** - Make repreneur Find/Groups visually coherent and replicate that operating pattern for opportunities. (completed 2026-05-18)
 
 ## Phase Details
 
@@ -149,7 +149,7 @@ Plans:
 - [x] 05-01: Lock shared table, filter, pagination, and journey-label design contract.
 - [x] 05-02: Unify repreneur Groups and Find visual structure.
 - [x] 05-03: Build opportunity Find and Groups pages from the shared pattern.
-- [ ] 05-04: Validate UX consistency, responsiveness, and navigation.
+- [x] 05-04: Validate UX consistency, responsiveness, and navigation.
 
 ## Progress
 
@@ -163,4 +163,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5.
 | 2. Core Deal Workflow | 7/7 | Complete | 2026-05-17 |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 4/4 | Complete | 2026-05-17 |
 | 4. Staff Information Architecture and Dashboard Separation | 3/3 | Complete | 2026-05-17 |
-| 5. Unified Find and Groups Work Surfaces | 3/4 | In Progress | - |
+| 5. Unified Find and Groups Work Surfaces | 4/4 | Complete | 2026-05-18 |
