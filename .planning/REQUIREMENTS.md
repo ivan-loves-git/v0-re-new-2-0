@@ -60,7 +60,7 @@
 - [x] **MNA-WF-01**: Staff can open opportunity-specific M&A follow-up from the opportunity detail page.
 - [x] **MNA-WF-02**: Staff can select an intermediary email template and review a prefilled subject/body before sending.
 - [x] **MNA-WF-03**: Staff can send an intermediary email to the linked source contact and log the interaction against the opportunity/source.
-- [ ] **MNA-WF-04**: Full browser UAT validates template switching, no-email blocking, successful send feedback, and interaction history.
+- [x] **MNA-WF-04**: Full browser UAT validates template switching, no-email blocking, successful send feedback, and interaction history.
 
 ### Reporting
 
@@ -147,7 +147,7 @@
 | OPP-JOURNEY-01 | Phase 5 | Complete |
 | MNA-DIR-01, MNA-DIR-02, MNA-DIR-03, EMAIL-MA-01, EMAIL-MA-02 | Phase 6 | Complete |
 | MNA-WF-01, MNA-WF-02, MNA-WF-03 | Phase 7 | Complete |
-| MNA-WF-04 | Phase 7 | In Progress |
+| MNA-WF-04 | Phase 7 | Complete |
 
 **Coverage:**
 - June V2 requirements: 52 total
@@ -156,4 +156,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-18 after Phase 7 M&A intermediary workflow activation started*
+*Last updated: 2026-05-18 after Phase 7 M&A intermediary workflow activation UAT passed*

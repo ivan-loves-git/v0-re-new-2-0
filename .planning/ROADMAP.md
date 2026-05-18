@@ -13,7 +13,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 4: Staff Information Architecture and Dashboard Separation** - Split internal staff navigation and dashboards into repreneur and opportunity work surfaces. (completed 2026-05-17)
 - [x] **Phase 5: Unified Find and Groups Work Surfaces** - Make repreneur Find/Groups visually coherent and replicate that operating pattern for opportunities. (completed 2026-05-18)
 - [x] **Phase 6: M&A Source Directory and Intermediary Email Workflows** - Add an editable source/intermediary directory and broker-facing email template foundations. (completed 2026-05-18)
-- [ ] **Phase 7: M&A Intermediary Workflow Activation** - Start opportunity-specific intermediary follow-up from the M&A tab using source contacts, templates, sends, and interaction history.
+- [x] **Phase 7: M&A Intermediary Workflow Activation** - Start opportunity-specific intermediary follow-up from the M&A tab using source contacts, templates, sends, and interaction history. (completed 2026-05-18)
 
 ## Phase Details
 
@@ -190,14 +190,14 @@ Plans:
 2. Staff can select an M&A template and see it prefilled with source, opportunity, and repreneur context.
 3. Staff can edit the subject/body before sending to the intermediary contact.
 4. Sent intermediary messages are logged against the opportunity and source.
-5. The workflow blocks sending when no source email exists and leaves full browser UAT for the later release check.
+5. The workflow blocks sending when no source email exists and full browser UAT validates template switching, successful send feedback, and interaction history.
 
 **Plans**: 3 plans
 
 Plans:
 - [x] 07-01: Add intermediary interaction storage and server workflow actions.
 - [x] 07-02: Add opportunity-detail M&A workflow UI.
-- [ ] 07-03: Run full browser workflow UAT and release review.
+- [x] 07-03: Run full browser workflow UAT and release review.
 
 ## Progress
 
@@ -213,4 +213,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7.
 | 4. Staff Information Architecture and Dashboard Separation | 3/3 | Complete | 2026-05-17 |
 | 5. Unified Find and Groups Work Surfaces | 4/4 | Complete | 2026-05-18 |
 | 6. M&A Source Directory and Intermediary Email Workflows | 4/4 | Complete | 2026-05-18 |
-| 7. M&A Intermediary Workflow Activation | 2/3 | In Progress | - |
+| 7. M&A Intermediary Workflow Activation | 3/3 | Complete | 2026-05-18 |
