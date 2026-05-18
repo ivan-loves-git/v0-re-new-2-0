@@ -15,6 +15,8 @@ import type {
   Opportunity_Insert,
   Opportunity_Update,
   OpportunityWithSource,
+  OpportunityWorkSurfaceMatch,
+  OpportunityWorkSurfaceRecord,
 } from "@/lib/types/opportunity"
 
 function readString(formData: FormData, key: string): string | null {
@@ -52,6 +54,14 @@ function normalizeOpportunity(row: any): OpportunityWithSource {
     ...row,
     source: source ?? null,
   } as OpportunityWithSource
+}
+
+function normalizeWorkSurfaceMatch(row: any): OpportunityWorkSurfaceMatch {
+  const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
+  return {
+    ...row,
+    repreneur: repreneur ?? null,
+  } as OpportunityWorkSurfaceMatch
 }
 
 function hasSourceFormData(formData: FormData) {
@@ -130,6 +140,54 @@ export async function listOpportunities(): Promise<OpportunityWithSource[]> {
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(normalizeOpportunity)
+}
+
+export async function listOpportunityWorkSurfaceRecords(): Promise<OpportunityWorkSurfaceRecord[]> {
+  await requireUser()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunities")
+    .select("*, source:ma_sources(*)")
+    .order("date_added", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  const opportunities = (data ?? []).map(normalizeOpportunity)
+  const opportunityIds = opportunities.map((opportunity) => opportunity.id)
+
+  if (opportunityIds.length === 0) {
+    return opportunities.map((opportunity) => ({ ...opportunity, matches: [] }))
+  }
+
+  const { data: matchRows, error: matchError } = await supabase
+    .from("opportunity_matches")
+    .select(`
+      id,
+      opportunity_id,
+      status,
+      pursuit_stage,
+      updated_at,
+      repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)
+    `)
+    .in("opportunity_id", opportunityIds)
+    .order("updated_at", { ascending: false })
+
+  if (matchError) throw new Error(matchError.message)
+
+  const matchesByOpportunity = new Map<string, OpportunityWorkSurfaceMatch[]>()
+  for (const row of matchRows ?? []) {
+    const match = normalizeWorkSurfaceMatch(row)
+    const current = matchesByOpportunity.get(match.opportunity_id) ?? []
+    current.push(match)
+    matchesByOpportunity.set(match.opportunity_id, current)
+  }
+
+  return opportunities.map((opportunity) => ({
+    ...opportunity,
+    matches: matchesByOpportunity.get(opportunity.id) ?? [],
+  }))
 }
 
 export async function getOpportunity(id: string): Promise<OpportunityWithSource | null> {

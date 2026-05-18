@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Phase 5 plan 05-02 complete; 05-03 next
-last_updated: "2026-05-18T09:26:27Z"
+stopped_at: Phase 5 plan 05-03 complete; 05-04 next
+last_updated: "2026-05-18T09:35:34Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 26
-  completed_plans: 24
-  percent: 92
+  completed_plans: 25
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 5 in progress
-Plan: 24 of 26 complete
-Status: Phase 5 plan 05-02 complete; 05-03 next
+Plan: 25 of 26 complete
+Status: Phase 5 plan 05-03 complete; 05-04 next
 Last activity: 2026-05-18
 
-Progress: [█████████-] 92%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [█████████-] 92%
 | 2026-05-18 | Internal journey guidelines page | Added `/guide/guidelines` under Project navigation to explain repreneur lifecycle, repreneur readiness journey, opportunity layers, and the derived opportunity journey label. |
 | 2026-05-18 | Phase 5 work surface contract | Added the Find/Groups design contract and tested derived opportunity journey helper; KPI work remains separate in another local workstream. |
 | 2026-05-18 | Repreneur Find/Groups UX alignment | Aligned `/repreneurs` and `/repreneurs/explore` headers, filters, result counts, pagination reset behavior, and table overflow protection. |
+| 2026-05-18 | Opportunity Find/Groups work surfaces | Added `/opportunities/find` and `/opportunities/groups`, sidebar links, derived journey badges, opportunity filters, and grouped deal-flow buckets while preserving `/opportunities` as Records. |
 
 ## Accumulated Context
 
@@ -104,6 +105,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 5 should make Repreneur Find and Groups visually coherent first, then replicate that structure for Opportunities with journey-first tags and operating columns.
 - Phase 5 plan 05-01 completed: opportunity journey derivation is now implemented and tested in `lib/utils/opportunity-journey.ts`.
 - Phase 5 plan 05-02 completed: Repreneur Groups and Find now share the same page rhythm, filter shell, result count pattern, pagination reset behavior, and narrow-screen table protection.
+- Phase 5 plan 05-03 completed: Opportunities now have parallel Find and Groups work surfaces with journey-first tags, operating columns, and sidebar access.
 
 ### Pending Todos
 

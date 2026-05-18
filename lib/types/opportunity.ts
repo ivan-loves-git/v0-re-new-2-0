@@ -166,6 +166,19 @@ export interface OpportunityWithSource extends Opportunity {
   source?: MaSource | null
 }
 
+export interface OpportunityWorkSurfaceMatch {
+  id: string
+  opportunity_id: string
+  status: OpportunityMatchStatus
+  pursuit_stage?: OpportunityPursuitStage | null
+  updated_at: string
+  repreneur?: OpportunityMatchRepreneur | null
+}
+
+export interface OpportunityWorkSurfaceRecord extends OpportunityWithSource {
+  matches: OpportunityWorkSurfaceMatch[]
+}
+
 export interface Opportunity_Insert {
   reference: string
   status?: OpportunityStatus

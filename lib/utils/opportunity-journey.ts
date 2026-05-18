@@ -29,7 +29,7 @@ export type OpportunityJourneyInput = {
   matches?: OpportunityJourneyMatchInput[] | null
 }
 
-export const OPPORTUNITY_JOURNEY_OPTIONS: { value: OpportunityJourney; label: string }[] = [
+export const OPPORTUNITY_JOURNEY_OPTIONS: ReadonlyArray<{ value: OpportunityJourney; label: string }> = [
   { value: "draft", label: "Draft" },
   { value: "live_in_inventory", label: "Live in inventory" },
   { value: "matching", label: "Matching" },

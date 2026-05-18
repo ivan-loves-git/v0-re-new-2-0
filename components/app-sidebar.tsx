@@ -66,6 +66,8 @@ const repreneurNavigation: NavigationItem[] = [
 
 const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
+  { name: "Groups", href: "/opportunities/groups", icon: GitBranch },
+  { name: "Find", href: "/opportunities/find", icon: Search },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
   { name: "Records", href: "/opportunities", icon: Briefcase },
 ]
@@ -157,7 +159,17 @@ export function AppSidebar({
     if (href === "/dashboard_op") return pathname === "/dashboard_op"
     if (href === "/analytics_re") return pathname === "/analytics_re" || pathname === "/analytics"
     if (href === "/analytics_op") return pathname === "/analytics_op"
-    if (href === "/opportunities") return pathname === "/opportunities" || (pathname.startsWith("/opportunities/") && !pathname.startsWith("/opportunities/reviews"))
+    if (href === "/opportunities/groups") return pathname === "/opportunities/groups"
+    if (href === "/opportunities/find") return pathname === "/opportunities/find"
+    if (href === "/opportunities") {
+      return (
+        pathname === "/opportunities" ||
+        (pathname.startsWith("/opportunities/") &&
+          !pathname.startsWith("/opportunities/groups") &&
+          !pathname.startsWith("/opportunities/find") &&
+          !pathname.startsWith("/opportunities/reviews"))
+      )
+    }
     // "Groups" (/repreneurs) should not match /repreneurs/explore
     if (href === "/repreneurs") return pathname === "/repreneurs" || (pathname.startsWith("/repreneurs/") && !pathname.startsWith("/repreneurs/explore"))
     return pathname.startsWith(href)
