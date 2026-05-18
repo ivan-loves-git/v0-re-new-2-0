@@ -245,7 +245,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     body: string | null
   },
 ): Promise<{ success: boolean; message: string }> {
-  const access = await requireStaffAccess()
+  await requireStaffAccess()
   const { templateKey, subject, body } = payload
 
   if (!templateKey || !isMaTemplateKey(templateKey)) {
@@ -287,7 +287,6 @@ export async function sendMaSourceWorkflowEmailPayload(
     status,
     error_message: result.success ? null : result.error ?? "Email send failed",
     sent_at: result.success ? new Date().toISOString() : null,
-    created_by: access.user.id,
   })
 
   if (error) {
