@@ -11,11 +11,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
+import { sendMaSourceWorkflowEmail, type MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 
 interface OpportunityMaWorkflowPanelProps {
+  opportunityId: string
   workflow: MaOpportunityWorkflow
-  sendAction: (formData: FormData) => Promise<{ success: boolean; message: string }>
 }
 
 function formatDate(value: string | null | undefined) {
@@ -30,7 +30,7 @@ function formatDate(value: string | null | undefined) {
   }).format(date)
 }
 
-export function OpportunityMaWorkflowPanel({ workflow, sendAction }: OpportunityMaWorkflowPanelProps) {
+export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: OpportunityMaWorkflowPanelProps) {
   const router = useRouter()
   const firstDraft = workflow.drafts[0]
   const [templateKey, setTemplateKey] = useState(firstDraft?.templateKey ?? "")
@@ -59,7 +59,7 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
 
     setIsSending(true)
     try {
-      const result = await sendAction(formData)
+      const result = await sendMaSourceWorkflowEmail(opportunityId, formData)
       if (!result.success) {
         toast.error("M&A email not sent", { description: result.message })
         return

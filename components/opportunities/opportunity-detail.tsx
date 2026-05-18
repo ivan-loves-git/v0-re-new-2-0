@@ -20,7 +20,6 @@ interface OpportunityDetailProps {
   pursuitEvents: OpportunityPursuitEvent[]
   maWorkflow: MaOpportunityWorkflow
   updateAction: (formData: FormData) => Promise<void>
-  sendMaAction: (formData: FormData) => Promise<{ success: boolean; message: string }>
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
@@ -50,7 +49,6 @@ export function OpportunityDetail({
   pursuitEvents,
   maWorkflow,
   updateAction,
-  sendMaAction,
 }: OpportunityDetailProps) {
   return (
     <div className="space-y-6">
@@ -175,7 +173,7 @@ export function OpportunityDetail({
         </TabsContent>
 
         <TabsContent value="ma">
-          <OpportunityMaWorkflowPanel workflow={maWorkflow} sendAction={sendMaAction} />
+          <OpportunityMaWorkflowPanel opportunityId={opportunity.id} workflow={maWorkflow} />
         </TabsContent>
 
         <TabsContent value="edit">

@@ -3,7 +3,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { OpportunityDetail } from "@/components/opportunities/opportunity-detail"
-import { getMaOpportunityWorkflow, sendMaSourceWorkflowEmail } from "@/lib/actions/ma-workflows"
+import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
 import { listOpportunityMatchCandidates, listOpportunityMatches, listOpportunityPursuitEvents } from "@/lib/actions/opportunity-matches"
 import { getOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
@@ -31,11 +31,6 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
     await updateOpportunity(id, formData)
   }
 
-  async function sendMaAction(formData: FormData) {
-    "use server"
-    return sendMaSourceWorkflowEmail(id, formData)
-  }
-
   return (
     <div className="space-y-6">
       <Button asChild variant="ghost" size="sm">
@@ -53,7 +48,6 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
         pursuitEvents={pursuitEvents}
         maWorkflow={maWorkflow}
         updateAction={updateAction}
-        sendMaAction={sendMaAction}
       />
     </div>
   )
