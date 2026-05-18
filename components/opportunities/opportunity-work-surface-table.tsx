@@ -164,9 +164,77 @@ function pursuitSummary(item: PreparedOpportunity) {
   return "No pursuit"
 }
 
-function OpportunityRow({ item }: { item: PreparedOpportunity }) {
+function pursuitSignal(item: PreparedOpportunity) {
+  if (item.activeMatch) {
+    return {
+      label: "Active pursuit",
+      className: "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-100",
+    }
+  }
+  if (item.interestedCount > 0) {
+    return {
+      label: `${item.interestedCount} interested`,
+      className: "border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100",
+    }
+  }
+  if (item.proposedCount > 0) {
+    return {
+      label: `${item.proposedCount} proposed`,
+      className: "border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100",
+    }
+  }
+  if (item.opportunity.matches.length > 0) {
+    return {
+      label: `${item.opportunity.matches.length} in matching`,
+      className: "border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100",
+    }
+  }
+  return {
+    label: "No pursuit",
+    className: "border-transparent bg-slate-100 text-slate-600 hover:bg-slate-100",
+  }
+}
+
+function OpportunityPursuitBadge({ item }: { item: PreparedOpportunity }) {
+  const signal = pursuitSignal(item)
+  return <Badge className={signal.className}>{signal.label}</Badge>
+}
+
+function OpportunityRow({ item, variant = "full" }: { item: PreparedOpportunity; variant?: "full" | "group" }) {
   const router = useRouter()
   const { opportunity } = item
+
+  if (variant === "group") {
+    return (
+      <TableRow
+        className="cursor-pointer hover:bg-muted/50"
+        onClick={() => router.push(`/opportunities/${opportunity.id}`)}
+        onMouseEnter={() => router.prefetch(`/opportunities/${opportunity.id}`)}
+      >
+        <TableCell className="w-[27%]">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="truncate font-medium text-foreground">{opportunity.public_title ?? opportunity.reference}</span>
+            <span className="truncate text-xs text-muted-foreground">{opportunity.reference}</span>
+          </div>
+        </TableCell>
+        <TableCell className="w-[20%]">
+          <OpportunityJourneyBadge journey={item.journey} />
+        </TableCell>
+        <TableCell className="w-[10%]">
+          <OpportunityStatusBadge status={opportunity.status} />
+        </TableCell>
+        <TableCell className="w-[16%]">
+          <OpportunityVisibilityBadge visibility={opportunity.repreneur_visibility} />
+        </TableCell>
+        <TableCell className="w-[13%]">
+          <span className="block truncate text-sm">{opportunity.sector ?? "-"}</span>
+        </TableCell>
+        <TableCell className="w-[14%]">
+          <OpportunityPursuitBadge item={item} />
+        </TableCell>
+      </TableRow>
+    )
+  }
 
   return (
     <TableRow
@@ -214,7 +282,7 @@ function OpportunityRow({ item }: { item: PreparedOpportunity }) {
         </div>
       </TableCell>
       <TableCell>
-        <div className="max-w-[180px] truncate text-sm text-muted-foreground">{pursuitSummary(item)}</div>
+        <OpportunityPursuitBadge item={item} />
       </TableCell>
     </TableRow>
   )
@@ -521,22 +589,20 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
 
                 {!isCollapsed && (
                   <div className="overflow-x-auto rounded-b-lg bg-card">
-                    <Table className="min-w-[1080px]">
+                    <Table className="min-w-[720px] table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Reference</TableHead>
-                          <TableHead>Journey</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Sector / activity</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Size</TableHead>
-                          <TableHead>Added</TableHead>
-                          <TableHead>Pursuit signal</TableHead>
+                          <TableHead className="w-[27%]">Opportunity</TableHead>
+                          <TableHead className="w-[20%]">Journey</TableHead>
+                          <TableHead className="w-[10%]">Status</TableHead>
+                          <TableHead className="w-[16%]">Visibility</TableHead>
+                          <TableHead className="w-[13%]">Sector</TableHead>
+                          <TableHead className="w-[14%]">Pursuit</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {pageItems.map((item) => (
-                          <OpportunityRow key={item.opportunity.id} item={item} />
+                          <OpportunityRow key={item.opportunity.id} item={item} variant="group" />
                         ))}
                       </TableBody>
                     </Table>
