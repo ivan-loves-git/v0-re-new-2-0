@@ -9,6 +9,7 @@ type: quick
 ## Result
 
 - Removed `Records` from the Opportunities sidebar group while preserving `/opportunities` as a direct route.
+- Stopped promoting the old records route from the Opportunity dashboard cards and standard back links; operational links now point to Find or Groups.
 - Added a shared `SectionPageHeader` component with green Repreneur and purple Opportunity icon treatments.
 - Applied plain page titles and colored headers to dashboard, analytics, groups, and find pages.
 - Updated dashboard breadcrumb labels so flat staff routes no longer display `|| Repreneurs` or `|| Opportunities`.

@@ -157,18 +157,18 @@ export default async function OpportunityDashboardPage() {
     <div className="flex flex-col gap-6">
       <SectionPageHeader
         title="Dashboard"
-        subtitle="Daily operating view for opportunity records, response review, active pursuits, NDA gates, and stale follow-up."
+        subtitle="Daily operating view for opportunity follow-up, response review, active pursuits, NDA gates, and stale follow-up."
         icon={LayoutDashboard}
         tone="opportunity"
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <OperationalStatCard
-          title="Recent records"
+          title="Latest opportunities"
           value={recentOpportunities.length}
-          description="Latest opportunity records needing normal staff hygiene."
+          description="Newest opportunities needing staff hygiene and follow-up."
           icon={BriefcaseBusiness}
-          href="/opportunities"
+          href="/opportunities/find"
         />
         <OperationalStatCard
           title="Pending responses"
@@ -182,14 +182,14 @@ export default async function OpportunityDashboardPage() {
           value={activePursuits.length}
           description="Validated one-repreneur deal paths currently locked for execution."
           icon={Landmark}
-          href="/opportunities"
+          href="/opportunities/groups"
         />
         <OperationalStatCard
           title="NDA blocked"
           value={ndaBlockedPursuits.length}
           description="Active pursuits where document access still depends on NDA progress."
           icon={ShieldAlert}
-          href="/opportunities"
+          href="/opportunities/groups"
         />
       </div>
 
@@ -319,9 +319,9 @@ export default async function OpportunityDashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <FileCheck2 />
-            Recent opportunity records
+            Latest opportunities
           </CardTitle>
-          <CardDescription>Latest records for quick operational follow-up.</CardDescription>
+          <CardDescription>Newest opportunities for quick operational follow-up.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-hidden rounded-md border">

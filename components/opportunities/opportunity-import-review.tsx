@@ -101,7 +101,7 @@ export function OpportunityImportReview() {
   return (
     <div className="space-y-6">
       <Button asChild variant="ghost" size="sm">
-        <Link href="/opportunities">
+        <Link href="/opportunities/find">
           <ArrowLeft className="size-4" />
           Back to Opportunities
         </Link>
