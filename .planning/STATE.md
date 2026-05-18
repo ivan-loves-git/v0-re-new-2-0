@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: complete
 stopped_at: Phase 5 complete; ready for release review or next milestone selection
-last_updated: "2026-05-18T09:41:44Z"
+last_updated: "2026-05-18T09:53:37Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 6
@@ -57,6 +57,7 @@ Progress: [██████████] 100%
 | 2026-05-18 | Repreneur Find/Groups UX alignment | Aligned `/repreneurs` and `/repreneurs/explore` headers, filters, result counts, pagination reset behavior, and table overflow protection. |
 | 2026-05-18 | Opportunity Find/Groups work surfaces | Added `/opportunities/find` and `/opportunities/groups`, sidebar links, derived journey badges, opportunity filters, and grouped deal-flow buckets while preserving `/opportunities` as Records. |
 | 2026-05-18 | Phase 5 UX validation | Created `05-UAT.md`; build and journey helper tests passed, route/browser checks passed, and manual pre-deploy smoke checks were recorded for typing/select/mobile interactions. |
+| 2026-05-18 | KPI metric system and visible rule-based match scoring | Kept one compact KPI tile system, accepted automatic platform match scoring as the V2 base, made the score visible to staff and repreneurs, added focused scoring tests, and cleaned temporary prototype noise. |
 
 ## Accumulated Context
 
@@ -108,6 +109,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 5 plan 05-02 completed: Repreneur Groups and Find now share the same page rhythm, filter shell, result count pattern, pagination reset behavior, and narrow-screen table protection.
 - Phase 5 plan 05-03 completed: Opportunities now have parallel Find and Groups work surfaces with journey-first tags, operating columns, and sidebar access.
 - Phase 5 plan 05-04 completed: UAT evidence recorded; implementation is ready for human smoke testing before deployment.
+- KPI and matching decision captured on 2026-05-18: simple KPIs should use one compact tile component, and the rule-based platform match score is visible to both staff and repreneurs during V2 while remaining tunable over time.
 
 ### Pending Todos
 

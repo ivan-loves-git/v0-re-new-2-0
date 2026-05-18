@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import type {
   OpportunityNdaStatus,
   OpportunityMatch,
@@ -68,20 +69,6 @@ function readString(formData: FormData, key: string): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function readNumber(formData: FormData, key: string, label: string, min = 0, max = 100): number | null {
-  const value = readString(formData, key)
-  if (!value) return null
-  const normalized = value.replace(",", ".")
-  const parsed = Number(normalized)
-  if (!Number.isFinite(parsed)) {
-    throw formError(`${label} must be a number.`, key)
-  }
-  if (parsed < min || parsed > max) {
-    throw formError(`${label} must be between ${min} and ${max}.`, key)
-  }
-  return parsed
-}
-
 function readRecommendation(formData: FormData, key: string): OpportunityMatchRecommendation {
   const value = readString(formData, key) ?? "not_evaluated"
   if (!MATCH_RECOMMENDATION_VALUES.includes(value as OpportunityMatchRecommendation)) {
@@ -116,15 +103,6 @@ function readNdaStatus(formData: FormData): OpportunityNdaStatus {
   }
 
   return status
-}
-
-function readReasons(formData: FormData): string[] {
-  const value = readString(formData, "platform_reasons")
-  if (!value) return []
-  return value
-    .split(/\r?\n/)
-    .map((reason) => reason.trim())
-    .filter(Boolean)
 }
 
 function normalizeMatch(row: any): OpportunityMatch {
@@ -205,6 +183,43 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   if (data?.status === "active_pursuit") {
     throw formError("This repreneur is already the active pursuit. Drop the pursuit before changing this recommendation.", "repreneur_id")
   }
+}
+
+async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: string) {
+  const supabase = createAdminClient()
+
+  const [{ data: opportunity, error: opportunityError }, { data: repreneur, error: repreneurError }] = await Promise.all([
+    supabase
+      .from("opportunities")
+      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount")
+      .eq("id", opportunityId)
+      .maybeSingle(),
+    supabase
+      .from("repreneurs")
+      .select(`
+        id,
+        who_score,
+        when_score,
+        scoring_flags,
+        q12_geo_zones,
+        q13_target_sectors_v2,
+        q14_deal_size,
+        q16_equity,
+        sector_preferences,
+        target_location,
+        target_acquisition_size,
+        investment_capacity
+      `)
+      .eq("id", repreneurId)
+      .maybeSingle(),
+  ])
+
+  if (opportunityError) throw new Error(opportunityError.message)
+  if (repreneurError) throw new Error(repreneurError.message)
+  if (!opportunity) throw formError("Opportunity was not found.", "opportunity_id")
+  if (!repreneur) throw formError("Repreneur was not found.", "repreneur_id")
+
+  return calculateOpportunityMatchScore(repreneur, opportunity)
 }
 
 function revalidateMatchPaths(opportunityId: string, matchId?: string) {
@@ -366,6 +381,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     const humanRecommendation = readRecommendation(formData, "human_recommendation")
     const humanNotes = readString(formData, "human_notes")
     const hasHumanReview = humanRecommendation !== "not_evaluated" || Boolean(humanNotes)
+    const platformMatch = await calculateStoredPlatformMatch(opportunityId, repreneurId)
 
     const supabase = createAdminClient()
     const { error } = await supabase.from("opportunity_matches").upsert(
@@ -373,9 +389,9 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
         opportunity_id: opportunityId,
         repreneur_id: repreneurId,
         status,
-        platform_recommendation: readRecommendation(formData, "platform_recommendation"),
-        platform_score: readNumber(formData, "platform_score", "Platform score"),
-        platform_reasons: readReasons(formData),
+        platform_recommendation: platformMatch.recommendation,
+        platform_score: platformMatch.score,
+        platform_reasons: platformMatch.reasons,
         human_recommendation: humanRecommendation,
         human_notes: humanNotes,
         created_by: access.user.id,

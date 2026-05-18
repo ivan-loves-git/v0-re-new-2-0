@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -18,7 +19,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -90,7 +90,6 @@ function validateSaveForm(formData: FormData, activeMatch: OpportunityMatch | nu
   const errors: FieldErrors = {}
   const repreneurId = readFormString(formData, "repreneur_id")
   const status = readFormString(formData, "status") || "draft"
-  const score = readFormString(formData, "platform_score")
 
   if (!repreneurId) {
     errors.repreneur_id = "Select the repreneur this recommendation is for."
@@ -98,13 +97,6 @@ function validateSaveForm(formData: FormData, activeMatch: OpportunityMatch | nu
 
   if (activeMatch && REPRENEUR_EXPOSURE_STATUSES.has(status)) {
     errors.status = "This opportunity already has an active pursuit. Save as Draft or Shortlisted, or drop the active pursuit first."
-  }
-
-  if (score) {
-    const parsed = Number(score.replace(",", "."))
-    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
-      errors.platform_score = "Use a number from 0 to 100, for example 78."
-    }
   }
 
   return errors
@@ -303,7 +295,10 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             <UsersRound data-icon="inline-start" />
             Add recommendation
           </CardTitle>
-          <CardDescription>Store platform guidance and optional human review before showing anything to a repreneur.</CardDescription>
+          <CardDescription>
+            Store a match. The platform recommendation, score, and reasons are calculated automatically and stay visible
+            to staff and the repreneur portal once proposed; staff can add a human review.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleSave} noValidate className="flex flex-col gap-5">
@@ -374,50 +369,20 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 </Select>
                 <FieldError message={fieldErrors.status} />
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="platform_recommendation">
-                  Platform recommendation
-                  <FieldInfo
-                    label="Platform recommendation"
-                    description="Structured guidance from the platform before human review."
-                    example="Possible fit when sector and readiness are aligned but proof is incomplete."
-                  />
-                </Label>
-                <Select name="platform_recommendation" defaultValue="not_evaluated">
-                  <SelectTrigger id="platform_recommendation" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="platform_score">
-                  Platform score
-                  <FieldInfo
-                    label="Platform score"
-                    description="A 0-100 confidence score for the platform recommendation."
-                    example="78 means a good but not fully confirmed match."
-                  />
-                </Label>
-                <Input
-                  id="platform_score"
-                  name="platform_score"
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="Example: 78"
-                  aria-invalid={Boolean(fieldErrors.platform_score)}
-                  onChange={() => clearFieldError("platform_score")}
-                />
-                <FieldError message={fieldErrors.platform_score} />
+              <div className="rounded-md border bg-muted/40 p-4 lg:col-span-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Platform recommendation is automatic</p>
+                    <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                      On save, Wave calculates the platform recommendation, score, and reasons from WHO/WHEN readiness,
+                      sector fit, geography, deal size, and risk flags. This is the V2 base score and can be adjusted as
+                      real usage teaches us more.
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" size="sm" className="w-fit shrink-0">
+                    <Link href="/guide/guidelines#platform-match-score">View guideline</Link>
+                  </Button>
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="human_recommendation">
@@ -445,22 +410,6 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
               </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="platform_reasons">
-                  Platform reasons
-                  <FieldInfo
-                    label="Platform reasons"
-                    description="One reason per line, saved as structured rationale."
-                    example="Sector matches operator background; EBITDA is within target range."
-                  />
-                </Label>
-                <Textarea
-                  id="platform_reasons"
-                  name="platform_reasons"
-                  rows={4}
-                  placeholder={"Sector matches operator background\nEBITDA is within target range"}
-                />
-              </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="human_notes">
                   Human notes

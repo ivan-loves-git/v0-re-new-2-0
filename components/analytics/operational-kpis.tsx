@@ -1,6 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Timer, TrendingDown, CalendarCheck, Send, BarChart3, UserX, Ratio, Target } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Timer, TrendingDown, CalendarCheck, Send, BarChart3, UserX, Ratio, Target, type LucideIcon } from "lucide-react"
+import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
 
 interface OperationalKpisProps {
   data: {
@@ -17,82 +16,123 @@ interface OperationalKpisProps {
 }
 
 interface KpiCard {
-  label: string
+  title: string
   value: string
-  icon: React.ComponentType<{ className?: string }>
-  iconColor: string
-  iconBg: string
-  description?: string
+  icon: LucideIcon
+  tone: "email" | "repreneur" | "score" | "opportunity" | "attention" | "risk" | "neutral"
+  period: string
+  info: {
+    title: string
+    description: string
+    why?: string
+  }
 }
 
 export function OperationalKpis({ data }: OperationalKpisProps) {
   const speedCards: KpiCard[] = [
     {
-      label: "Time to First Meeting",
+      title: "Time to First Meeting",
       value: data.timeToFirstMeeting !== null ? `${data.timeToFirstMeeting}d` : "\u2014",
       icon: Timer,
-      iconColor: "text-orange-600",
-      iconBg: "bg-orange-50",
-      description: "median days",
+      tone: "attention",
+      period: "Median days",
+      info: {
+        title: "Time to First Meeting",
+        description: "Median time between application and first logged meeting.",
+        why: "Measures how quickly the team turns new interest into a real conversation.",
+      },
     },
     {
-      label: "Time to Qualification",
+      title: "Time to Qualification",
       value: data.timeToQualification !== null ? `${data.timeToQualification}d` : "\u2014",
       icon: TrendingDown,
-      iconColor: "text-purple-600",
-      iconBg: "bg-purple-50",
-      description: "median days",
+      tone: "score",
+      period: "Median days",
+      info: {
+        title: "Time to Qualification",
+        description: "Median time needed to move a repreneur into qualified status.",
+        why: "Shows whether the assessment process is moving quickly enough.",
+      },
     },
   ]
 
   const conversionCards: KpiCard[] = [
     {
-      label: "First Meeting Booking Rate",
+      title: "First Meeting Booking Rate",
       value: `${data.firstMeetingBookingRate}%`,
       icon: CalendarCheck,
-      iconColor: "text-teal-600",
-      iconBg: "bg-teal-50",
+      tone: "opportunity",
+      period: "Current rate",
+      info: {
+        title: "First Meeting Booking Rate",
+        description: "Share of profiles that have at least one interview or meeting logged.",
+        why: "Indicates whether leads are converting into live conversations.",
+      },
     },
     {
-      label: "Offer Submission Rate",
+      title: "Offer Submission Rate",
       value: `${data.offerSubmissionRate}%`,
       icon: Send,
-      iconColor: "text-blue-600",
-      iconBg: "bg-blue-50",
+      tone: "email",
+      period: "Current rate",
+      info: {
+        title: "Offer Submission Rate",
+        description: "Share of qualified-or-better repreneurs who received an offer.",
+        why: "Measures how often qualified repreneurs move into a commercial next step.",
+      },
     },
   ]
 
   const operationalCards: KpiCard[] = [
     {
-      label: "Interviews Held",
+      title: "Interviews Held",
       value: `${data.interviewsHeld}`,
       icon: BarChart3,
-      iconColor: "text-indigo-600",
-      iconBg: "bg-indigo-50",
+      tone: "score",
+      period: "All time",
+      info: {
+        title: "Interviews Held",
+        description: "Total interviews currently logged in the platform.",
+        why: "Shows the volume of direct assessment activity.",
+      },
     },
     {
-      label: "No-show Rate",
+      title: "No-show Rate",
       value: `${data.noShowRate}%`,
       icon: UserX,
-      iconColor: data.noShowRate > 20 ? "text-red-600" : "text-amber-600",
-      iconBg: data.noShowRate > 20 ? "bg-red-50" : "bg-amber-50",
+      tone: data.noShowRate > 20 ? "risk" : "attention",
+      period: "Current rate",
+      info: {
+        title: "No-show Rate",
+        description: "Share of scheduled meetings where the repreneur did not attend.",
+        why: "Highlights friction in the meeting process or weak commitment signals.",
+      },
     },
     {
-      label: "Meeting-to-Offer Ratio",
+      title: "Meeting-to-Offer Ratio",
       value: data.meetingToOfferRatio !== null ? `${data.meetingToOfferRatio}:1` : "\u2014",
       icon: Ratio,
-      iconColor: "text-cyan-600",
-      iconBg: "bg-cyan-50",
+      tone: "opportunity",
+      period: "Meetings per offer",
+      info: {
+        title: "Meeting-to-Offer Ratio",
+        description: "Number of interviews held for each offer sent.",
+        why: "Shows how efficiently meetings convert into commercial proposals.",
+      },
     },
     ...(data.accuracyStats.total > 0
       ? [
           {
-            label: "Scoring Accuracy",
+            title: "Scoring Accuracy",
             value: `${data.accuracyStats.whoAccurate}% / ${data.accuracyStats.whenAccurate}%`,
             icon: Target,
-            iconColor: "text-emerald-600",
-            iconBg: "bg-emerald-50",
-            description: "WHO / WHEN accurate",
+            tone: "score",
+            period: "WHO / WHEN",
+            info: {
+              title: "Scoring Accuracy",
+              description: "Share of reviewed scores considered accurate for WHO and WHEN.",
+              why: "Checks whether the scoring model is matching team judgment.",
+            },
           } satisfies KpiCard,
         ]
       : []),
@@ -111,26 +151,11 @@ export function OperationalKpis({ data }: OperationalKpisProps) {
           <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
             {section.title}
           </h4>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <KpiMetricGrid className="xl:grid-cols-4">
             {section.cards.map((card) => (
-              <Card key={card.label}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("rounded-lg p-2", card.iconBg)}>
-                      <card.icon className={cn("size-4", card.iconColor)} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground truncate">{card.label}</p>
-                      <p className="text-xl font-semibold tabular-nums">{card.value}</p>
-                      {card.description && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{card.description}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <KpiMetricTile key={card.title} {...card} />
             ))}
-          </div>
+          </KpiMetricGrid>
 
           {section.dropOff && section.dropOff.length > 0 && (
             <div className="mt-3 rounded-lg border bg-muted/30 p-3">

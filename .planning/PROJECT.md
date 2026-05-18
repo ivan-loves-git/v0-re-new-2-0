@@ -65,7 +65,8 @@ Re-New staff can manage opportunities and confidently connect the right repreneu
 | M&A firms have no portal in V2 | Keeps relationship management human and avoids a second external user group | Good for June |
 | Month/date added is enough freshness signal | Avoids unnecessary aging taxonomy | Good for June |
 | Platform recommendation plus human recommendation | Balances structure with human judgment while data model stabilizes | Implemented for June V2 |
+| Rule-based platform match score visible to staff and repreneurs | Keeps the workflow simple and transparent for V2; the team can mask it before external release if needed and tune weights over time | Accepted as the production base on 2026-05-18 |
 | Same Supabase project for Phase 1.1 testing | Avoids extra Supabase project cost; acceptable because Phase 1 migrations are additive and UAT data will be marked | Approved with controlled migration guardrails |
 
 ---
-*Last updated: 2026-05-17 after June V2 implementation completion*
+*Last updated: 2026-05-18 after KPI and platform match scoring decision*

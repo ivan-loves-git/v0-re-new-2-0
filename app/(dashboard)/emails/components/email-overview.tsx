@@ -1,8 +1,8 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Mail, MailOpen, MousePointerClick, AlertCircle, Info } from "lucide-react"
+import { Mail, MailOpen, MousePointerClick, AlertCircle } from "lucide-react"
+import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
 import type { EmailStats } from "@/lib/actions/emails"
 
 interface EmailOverviewProps {
@@ -27,29 +27,10 @@ const kpiInfo = {
     why: "Shows how compelling your email content is. Higher rates mean recipients are taking action. Industry average is 2-5%.",
   },
   bounced: {
-    title: "Bounces",
+    title: "Bounce Rate",
     description: "Emails that failed to deliver due to invalid addresses, full inboxes, or server issues. Bounce rate = (Bounced ÷ Sent) × 100.",
     why: "High bounce rates (>2%) can damage sender reputation. Clean your email list if bounces are high.",
   },
-}
-
-function InfoTooltip({ info }: { info: { title: string; description: string; why: string } }) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors ml-1">
-          <Info className="size-3.5 text-muted-foreground cursor-help" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="top" className="max-w-xs p-3">
-        <div className="space-y-2">
-          <p className="font-medium text-sm">{info.title}</p>
-          <p className="text-xs text-muted-foreground">{info.description}</p>
-          <p className="text-xs text-muted-foreground"><strong>Why it matters:</strong> {info.why}</p>
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
 }
 
 export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
@@ -58,69 +39,40 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Emails Sent
-              <InfoTooltip info={kpiInfo.sent} />
-            </CardTitle>
-            <Mail className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSent}</div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Open Rate
-              <InfoTooltip info={kpiInfo.openRate} />
-            </CardTitle>
-            <MailOpen className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.openRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalOpened} opened / {stats.totalDelivered} delivered
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Click Rate
-              <InfoTooltip info={kpiInfo.clickRate} />
-            </CardTitle>
-            <MousePointerClick className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.clickRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalClicked} clicked / {stats.totalOpened} opened
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Bounces
-              <InfoTooltip info={kpiInfo.bounced} />
-            </CardTitle>
-            <AlertCircle className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalBounced}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.bounceRate.toFixed(1)}% bounce rate
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <KpiMetricGrid className="xl:grid-cols-4">
+        <KpiMetricTile
+          title="Emails Sent"
+          value={stats.totalSent}
+          period="Last 30 days"
+          icon={Mail}
+          tone="email"
+          info={kpiInfo.sent}
+        />
+        <KpiMetricTile
+          title="Open Rate"
+          value={<>{stats.openRate.toFixed(1)}<span className="ml-0.5 text-xs font-medium text-muted-foreground">%</span></>}
+          period={`${stats.totalOpened} opened / ${stats.totalDelivered} delivered`}
+          icon={MailOpen}
+          tone="email"
+          info={kpiInfo.openRate}
+        />
+        <KpiMetricTile
+          title="Click Rate"
+          value={<>{stats.clickRate.toFixed(1)}<span className="ml-0.5 text-xs font-medium text-muted-foreground">%</span></>}
+          period={`${stats.totalClicked} clicked / ${stats.totalOpened} opened`}
+          icon={MousePointerClick}
+          tone="email"
+          info={kpiInfo.clickRate}
+        />
+        <KpiMetricTile
+          title="Bounce Rate"
+          value={<>{stats.bounceRate.toFixed(1)}<span className="ml-0.5 text-xs font-medium text-muted-foreground">%</span></>}
+          period={`${stats.totalBounced} bounced`}
+          icon={AlertCircle}
+          tone={stats.bounceRate > 2 ? "risk" : "attention"}
+          info={kpiInfo.bounced}
+        />
+      </KpiMetricGrid>
 
       {/* Simple Bar Chart */}
       <Card>

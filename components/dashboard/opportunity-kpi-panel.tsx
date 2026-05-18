@@ -10,10 +10,10 @@ import {
   ShieldAlert,
   Trophy,
   XCircle,
-  type LucideIcon,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -25,44 +25,6 @@ interface OpportunityKpiPanelProps {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value)
-}
-
-function KpiMetricCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  badge,
-}: {
-  title: string
-  value: number
-  description: string
-  icon: LucideIcon
-  badge?: string
-}) {
-  return (
-    <Card className="gap-3">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <CardDescription>{title}</CardDescription>
-            <CardTitle className="text-2xl">{formatNumber(value)}</CardTitle>
-          </div>
-          <div className="rounded-md border bg-muted p-2 text-muted-foreground">
-            <Icon />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">{description}</p>
-        {badge && (
-          <div>
-            <Badge variant="secondary">{badge}</Badge>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
 }
 
 function stageTone(stage: OpportunityKpiStageRow["stage"]): "default" | "destructive" | "secondary" | "outline" {
@@ -77,53 +39,98 @@ export function OpportunityKpiPanel({ data }: OpportunityKpiPanelProps) {
     {
       title: "Active intermediaries",
       value: data.activeIntermediaries,
-      description: "M&A firms or brokers linked to active opportunities.",
+      period: "Current count",
       icon: Building2,
+      tone: "opportunity" as const,
+      info: {
+        title: "Active intermediaries",
+        description: "M&A firms or brokers linked to active opportunities.",
+        why: "Shows whether the opportunity source base is active enough.",
+      },
     },
     {
       title: "Active opportunities",
       value: data.activeOpportunities,
-      description: "Live opportunities available in the internal deal-flow base.",
+      period: `${formatNumber(data.totalOpenOpportunities)} open total`,
       icon: BriefcaseBusiness,
-      badge: `${formatNumber(data.totalOpenOpportunities)} open total`,
+      tone: "opportunity" as const,
+      info: {
+        title: "Active opportunities",
+        description: "Live opportunities available in the internal deal-flow base.",
+        why: "Shows the current quantity of usable deal-flow.",
+      },
     },
     {
       title: "Introductions",
       value: data.introductions,
-      description: "Opportunities proposed to repreneurs or already answered.",
+      period: `${formatNumber(data.pendingReviews)} pending review`,
       icon: Handshake,
-      badge: `${formatNumber(data.pendingReviews)} pending review`,
+      tone: "opportunity" as const,
+      info: {
+        title: "Introductions",
+        description: "Opportunities proposed to repreneurs or already answered.",
+        why: "Measures how much deal-flow has reached repreneurs.",
+      },
     },
     {
       title: "Active pursuits",
       value: data.activePursuits,
-      description: "Validated one-repreneur pursuit paths currently locked.",
+      period: `${formatNumber(data.ndaBlockedPursuits)} NDA blocked`,
       icon: Landmark,
-      badge: `${formatNumber(data.ndaBlockedPursuits)} NDA blocked`,
+      tone: "opportunity" as const,
+      info: {
+        title: "Active pursuits",
+        description: "Validated one-repreneur pursuit paths currently locked.",
+        why: "Shows where the team is actively moving an opportunity forward with a repreneur.",
+      },
     },
     {
       title: "Seller meetings",
       value: data.sellerMeetings,
-      description: "Pursuits currently tracked at seller-meeting stage.",
+      period: "Current stage",
       icon: BadgeCheck,
+      tone: "opportunity" as const,
+      info: {
+        title: "Seller meetings",
+        description: "Pursuits currently tracked at seller-meeting stage.",
+        why: "Shows how many active pursuits reached direct seller interaction.",
+      },
     },
     {
       title: "LOIs",
       value: data.lois,
-      description: "Pursuits currently tracked at LOI stage.",
+      period: "Current stage",
       icon: FileSignature,
+      tone: "opportunity" as const,
+      info: {
+        title: "LOIs",
+        description: "Pursuits currently tracked at LOI stage.",
+        why: "Tracks how many deal paths reached formal intent.",
+      },
     },
     {
       title: "Dropped deals",
       value: data.droppedDeals,
-      description: "Pursuits dropped after validation.",
+      period: "After validation",
       icon: XCircle,
+      tone: "risk" as const,
+      info: {
+        title: "Dropped deals",
+        description: "Pursuits dropped after validation.",
+        why: "Highlights deal paths that did not continue and may need pattern review.",
+      },
     },
     {
       title: "Closed deals",
       value: data.closedDeals,
-      description: "Pursuits marked closed in the June workflow.",
+      period: "June workflow",
       icon: Trophy,
+      tone: "repreneur" as const,
+      info: {
+        title: "Closed deals",
+        description: "Pursuits marked closed in the June workflow.",
+        why: "Tracks completed acquisition outcomes.",
+      },
     },
   ]
 
@@ -142,11 +149,19 @@ export function OpportunityKpiPanel({ data }: OpportunityKpiPanelProps) {
         </Badge>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <KpiMetricGrid>
         {metricCards.map((card) => (
-          <KpiMetricCard key={card.title} {...card} />
+          <KpiMetricTile
+            key={card.title}
+            title={card.title}
+            value={formatNumber(card.value)}
+            period={card.period}
+            icon={card.icon}
+            tone={card.tone}
+            info={card.info}
+          />
         ))}
-      </div>
+      </KpiMetricGrid>
 
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>

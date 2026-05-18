@@ -211,7 +211,10 @@ export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunity
         <Card>
           <CardHeader>
             <CardTitle>Fit Signals</CardTitle>
-            <CardDescription>{getOpportunityMatchRecommendationLabel(opportunity.platform_recommendation)}</CardDescription>
+            <CardDescription>
+              {getOpportunityMatchRecommendationLabel(opportunity.platform_recommendation)} - rule-based V2 guidance that
+              Re-New may refine with human review.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
             {opportunity.platform_reasons.length === 0 ? (
