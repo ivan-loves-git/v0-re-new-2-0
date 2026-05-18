@@ -6,7 +6,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
-  Users,
+  FolderKanban,
   Search,
   GitBranch,
   Mail,
@@ -58,7 +58,7 @@ interface NavigationItem {
 
 const repreneurNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_re", icon: LayoutDashboard },
-  { name: "Groups", href: "/repreneurs", icon: Users },
+  { name: "Groups", href: "/repreneurs", icon: FolderKanban },
   { name: "Find", href: "/repreneurs/explore", icon: Search },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Analytics", href: "/analytics_re", icon: BarChart3 },
@@ -66,7 +66,7 @@ const repreneurNavigation: NavigationItem[] = [
 
 const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
-  { name: "Groups", href: "/opportunities/groups", icon: GitBranch },
+  { name: "Groups", href: "/opportunities/groups", icon: FolderKanban },
   { name: "Find", href: "/opportunities/find", icon: Search },
   { name: "M&A", href: "/opportunities/ma", icon: Handshake },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },

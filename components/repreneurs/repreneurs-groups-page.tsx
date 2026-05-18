@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import Link from "next/link"
-import { Download, Plus, Users } from "lucide-react"
+import { Download, FolderKanban, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { RepreneurTable, type RepreneurTableRef } from "./repreneur-table"
@@ -23,7 +23,7 @@ export function RepreneursGroupsPage({ repreneurs }: { repreneurs: RepreneurWith
       <SectionPageHeader
         title="Groups"
         subtitle="Repreneurs organized by lifecycle status"
-        icon={Users}
+        icon={FolderKanban}
         tone="repreneur"
         actions={
           <>

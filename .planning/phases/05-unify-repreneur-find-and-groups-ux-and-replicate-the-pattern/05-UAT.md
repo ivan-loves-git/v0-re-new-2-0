@@ -11,6 +11,7 @@
 - `/repreneurs/explore`
 - `/opportunities/groups`
 - `/opportunities/find`
+- `/opportunities/ma`
 - `/opportunities`
 - `/guide/guidelines`
 
@@ -23,11 +24,12 @@
 | Lint | Blocked | `pnpm run lint` cannot run because `eslint` is not installed in this checkout. |
 | Full TypeScript check | Baseline blocked | `pnpm exec tsc --noEmit --pretty false` still fails on existing archive/dashboard/email/intake baseline errors. It exposed one Phase 5 readonly typing issue, which was fixed. |
 | Staff-authenticated route render | Pass | In-app authenticated browser loaded all target routes without page-level error. |
-| Sidebar navigation | Pass | Opportunities now shows Dashboard, Groups, Find, Analytics, Records. Repreneurs still shows Dashboard, Groups, Find, Pipeline, Analytics. |
+| Sidebar navigation | Pass | Repreneurs shows Dashboard, Groups, Find, Pipeline, Analytics. Opportunities shows Dashboard, Groups, Find, M&A, Analytics. Project shows Roadmap and Guidelines. |
 | Opportunity Records preservation | Pass | `/opportunities` still renders the Records page and was not replaced by the new work surfaces. |
 | Opportunity journey labels | Pass | Guidelines page includes the implemented journey labels: Draft, Live in inventory, Matching, Proposed, Interest received, Active pursuit, Seller meeting, LOI, Closed, Dropped, Paused, Archived. |
 | Opportunity Groups | Pass | `/opportunities/groups` renders grouped buckets with counts, including Live inventory, Matching and proposed, and Meeting / LOI from current demo data. |
 | Opportunity Find | Pass | `/opportunities/find` renders a flat opportunity table with journey, status, sector/activity, location, size, added date, and pursuit signal columns. |
+| Opportunity M&A Directory | Pass | `/opportunities/ma` renders the aligned filter shell, intermediary source table, source type/contact coverage filters, Email Tools action, and Add source action. Search interaction was tested: filtering for `Batiment` reduced 15 sources to 1 result. |
 | Repreneur Groups | Pass | `/repreneurs` renders the aligned filter shell, lifecycle groups, counts, and paginated tables. |
 | Repreneur Find | Pass | `/repreneurs/explore` renders the aligned header/filter shell and flat table. |
 | Text-entry filter interaction | Limited | In-app browser automation could not type into fields because its virtual clipboard helper is not installed. Manual smoke testing of typing/select filters is recommended before deployment. |
@@ -40,6 +42,9 @@ Screenshots were captured in the Codex browser flow for:
 - Repreneur Groups
 - Repreneur Find
 - Opportunity Groups
+- Opportunity Find
+- Opportunity M&A Directory
+- Guidelines
 
 ## Follow-Up Before Deployment
 

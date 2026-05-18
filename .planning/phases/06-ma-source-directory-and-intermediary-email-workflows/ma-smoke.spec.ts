@@ -22,7 +22,9 @@ test("M&A source directory and email templates render", async ({ page }) => {
   }
 
   await expect(page.getByRole("heading", { name: "M&A" })).toBeVisible()
-  await expect(page.getByText("Intermediary directory")).toBeVisible()
+  await expect(page.getByPlaceholder("Search sources...")).toBeVisible()
+  await expect(page.getByRole("columnheader", { name: "Type" })).toBeVisible()
+  await expect(page.getByRole("columnheader", { name: "Coverage" })).toBeVisible()
   await expect(page.getByRole("link", { name: /M&A/ })).toBeVisible()
   await page.screenshot({
     path: ".planning/phases/06-ma-source-directory-and-intermediary-email-workflows/screenshots/ma-directory.png",

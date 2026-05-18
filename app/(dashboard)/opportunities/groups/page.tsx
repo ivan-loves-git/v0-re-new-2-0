@@ -1,4 +1,4 @@
-import { GitBranch } from "lucide-react"
+import { FolderKanban } from "lucide-react"
 import { OpportunityWorkSurfaceTable } from "@/components/opportunities/opportunity-work-surface-table"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { listOpportunityWorkSurfaceRecords } from "@/lib/actions/opportunities"
@@ -13,7 +13,7 @@ export default async function OpportunityGroupsPage() {
       <SectionPageHeader
         title="Groups"
         subtitle="Operate opportunity buckets from inventory through active pursuit and closed outcomes."
-        icon={GitBranch}
+        icon={FolderKanban}
         tone="opportunity"
       />
 

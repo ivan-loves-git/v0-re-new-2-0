@@ -5,20 +5,17 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
-  AlertTriangle,
-  Building2,
   CalendarClock,
+  ExternalLink,
   Mail,
   Pencil,
   Phone,
   Plus,
   Search,
-  Workflow,
-  type LucideIcon,
+  X,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -38,11 +35,12 @@ import {
   type MaSourceDirectoryEntry,
   type MaSourceType,
 } from "@/lib/types/opportunity"
-import { cn } from "@/lib/utils"
 
 interface MaSourceDirectoryProps {
   sources: MaSourceDirectoryEntry[]
 }
+
+type ContactCoverageFilter = "all" | "complete" | "missing_email" | "missing_phone"
 
 const sourceTypeLabels = Object.fromEntries(
   MA_SOURCE_TYPE_OPTIONS.map((option) => [option.value, option.label]),
@@ -54,13 +52,6 @@ const sourceTypeClasses: Record<MaSourceType, string> = {
   direct: "border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
   other: "border-transparent bg-slate-100 text-slate-700 hover:bg-slate-100",
 }
-
-const emailWorkflowLabels = [
-  "Validity check",
-  "More information",
-  "Repreneur feedback",
-  "Process follow-up",
-]
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "-"
@@ -77,42 +68,11 @@ function SourceTypeBadge({ sourceType }: { sourceType: MaSourceType }) {
   return <Badge className={sourceTypeClasses[sourceType]}>{sourceTypeLabels[sourceType]}</Badge>
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  tone = "neutral",
-}: {
-  icon: LucideIcon
-  label: string
-  value: number
-  tone?: "neutral" | "purple" | "amber" | "green"
-}) {
-  const iconClass = {
-    neutral: "bg-slate-100 text-slate-700",
-    purple: "bg-purple-100 text-purple-700",
-    amber: "bg-amber-100 text-amber-700",
-    green: "bg-emerald-100 text-emerald-700",
-  }[tone]
-
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className={cn("grid size-10 place-items-center rounded-lg", iconClass)}>
-          <Icon className="size-5" />
-        </div>
-        <div>
-          <p className="text-2xl font-semibold tracking-normal">{value}</p>
-          <p className="text-sm text-muted-foreground">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
   const router = useRouter()
   const [search, setSearch] = useState("")
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<MaSourceType | "all">("all")
+  const [contactCoverageFilter, setContactCoverageFilter] = useState<ContactCoverageFilter>("all")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingSource, setEditingSource] = useState<MaSourceDirectoryEntry | null>(null)
   const [sourceType, setSourceType] = useState<MaSourceType>("ma_firm")
@@ -120,10 +80,15 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
 
   const filteredSources = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return sources
 
-    return sources.filter((source) =>
-      [
+    return sources.filter((source) => {
+      if (sourceTypeFilter !== "all" && source.source_type !== sourceTypeFilter) return false
+      if (contactCoverageFilter === "complete" && (!source.contact_email || !source.contact_phone)) return false
+      if (contactCoverageFilter === "missing_email" && source.contact_email) return false
+      if (contactCoverageFilter === "missing_phone" && source.contact_phone) return false
+      if (!query) return true
+
+      return [
         source.firm_name,
         sourceTypeLabels[source.source_type],
         source.contact_name,
@@ -133,19 +98,17 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
         source.latest_opportunity_title,
       ]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(query)),
-    )
-  }, [search, sources])
+        .some((value) => String(value).toLowerCase().includes(query))
+    })
+  }, [contactCoverageFilter, search, sourceTypeFilter, sources])
 
-  const stats = useMemo(
-    () => ({
-      totalSources: sources.length,
-      sourcesWithEmail: sources.filter((source) => Boolean(source.contact_email)).length,
-      openOpportunities: sources.reduce((sum, source) => sum + source.open_opportunity_count, 0),
-      staleOpportunities: sources.reduce((sum, source) => sum + source.stale_opportunity_count, 0),
-    }),
-    [sources],
-  )
+  const hasActiveFilters = search || sourceTypeFilter !== "all" || contactCoverageFilter !== "all"
+
+  const clearFilters = () => {
+    setSearch("")
+    setSourceTypeFilter("all")
+    setContactCoverageFilter("all")
+  }
 
   const openCreateDialog = () => {
     setEditingSource(null)
@@ -181,163 +144,176 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-3 md:grid-cols-4">
-        <StatCard icon={Building2} label="Sources" value={stats.totalSources} tone="purple" />
-        <StatCard icon={Mail} label="With email" value={stats.sourcesWithEmail} tone="green" />
-        <StatCard icon={Workflow} label="Open opportunities" value={stats.openOpportunities} tone="neutral" />
-        <StatCard icon={AlertTriangle} label="Stale follow-ups" value={stats.staleOpportunities} tone="amber" />
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <CardTitle>Intermediary directory</CardTitle>
-            <CardDescription>
-              Keep broker and M&A firm contacts linked to the opportunities they send us.
-            </CardDescription>
-          </div>
-          <Button type="button" onClick={openCreateDialog}>
-            <Plus data-icon="inline-start" />
-            Add source
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full lg:max-w-sm">
+      <div className="rounded-lg border bg-card p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search firm, contact, email..."
+                placeholder="Search sources..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="pl-9"
+                className="h-9 pl-9"
               />
             </div>
-            <p className="text-sm text-muted-foreground">
-              {filteredSources.length} of {sources.length} sources
-            </p>
+
+            <Select value={sourceTypeFilter} onValueChange={(value) => setSourceTypeFilter(value as MaSourceType | "all")}>
+              <SelectTrigger className="h-9 w-full sm:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All source types</SelectItem>
+                  {MA_SOURCE_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={contactCoverageFilter}
+              onValueChange={(value) => setContactCoverageFilter(value as ContactCoverageFilter)}
+            >
+              <SelectTrigger className="h-9 w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">Any contact coverage</SelectItem>
+                  <SelectItem value="complete">Email and phone</SelectItem>
+                  <SelectItem value="missing_email">Missing email</SelectItem>
+                  <SelectItem value="missing_phone">Missing phone</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="overflow-hidden rounded-lg border">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[980px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Opportunities</TableHead>
-                    <TableHead>Latest</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSources.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                        No M&A sources match your search.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredSources.map((source) => (
-                      <TableRow key={source.id}>
-                        <TableCell>
-                          <div className="flex flex-col gap-2">
-                            <span className="font-medium text-foreground">{source.firm_name}</span>
-                            <SourceTypeBadge sourceType={source.source_type} />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex max-w-[240px] flex-col gap-1">
-                            <span className="truncate">{source.contact_name ?? "-"}</span>
-                            {source.contact_email ? (
-                              <a
-                                className="truncate text-sm text-muted-foreground hover:text-foreground"
-                                href={`mailto:${source.contact_email}`}
-                              >
-                                {source.contact_email}
-                              </a>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">No email</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {source.contact_phone ? (
-                            <a className="text-sm hover:text-foreground" href={`tel:${source.contact_phone}`}>
-                              {source.contact_phone}
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            <Badge variant="secondary">{source.opportunity_count} total</Badge>
-                            <Badge variant="outline">{source.open_opportunity_count} open</Badge>
-                            {source.stale_opportunity_count > 0 ? (
-                              <Badge className="border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                {source.stale_opportunity_count} stale
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex max-w-[220px] flex-col gap-1">
-                            <span className="truncate">{source.latest_opportunity_title ?? "-"}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(source.latest_opportunity_date)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <p className="max-w-[260px] truncate text-sm text-muted-foreground">
-                            {source.notes ?? "-"}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditDialog(source)}
-                            aria-label={`Edit ${source.firm_name}`}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {hasActiveFilters ? (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 w-full sm:w-auto">
+                <X data-icon="inline-start" />
+                Clear
+              </Button>
+            ) : null}
+            <Button asChild variant="outline" size="sm" className="h-9 w-full sm:w-auto">
+              <Link href="/emails">
+                <ExternalLink data-icon="inline-start" />
+                Email Tools
+              </Link>
+            </Button>
+            <Button type="button" size="sm" onClick={openCreateDialog} className="h-9 w-full sm:w-auto">
+              <Plus data-icon="inline-start" />
+              Add source
+            </Button>
+          </div>
+        </div>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          {filteredSources.length} source{filteredSources.length === 1 ? "" : "s"}
+          {hasActiveFilters ? ` filtered from ${sources.length}` : " in the intermediary directory"}
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[1080px] table-fixed">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[20%]">Source</TableHead>
+                <TableHead className="w-[8%]">Type</TableHead>
+                <TableHead className="w-[18%]">Contact</TableHead>
+                <TableHead className="w-[11%]">Phone</TableHead>
+                <TableHead className="w-[11%]">Coverage</TableHead>
+                <TableHead className="w-[16%]">Latest opportunity</TableHead>
+                <TableHead className="w-[12%]">Notes</TableHead>
+                <TableHead className="w-[4%]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSources.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    No M&A sources match your filters.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredSources.map((source) => (
+                  <TableRow key={source.id}>
+                    <TableCell>
+                      <span className="block truncate font-medium text-foreground">{source.firm_name}</span>
+                    </TableCell>
+                    <TableCell>
+                      <SourceTypeBadge sourceType={source.source_type} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <span className="truncate">{source.contact_name ?? "-"}</span>
+                        {source.contact_email ? (
+                          <a
+                            className="truncate text-sm text-muted-foreground hover:text-foreground"
+                            href={`mailto:${source.contact_email}`}
                           >
-                            <Pencil className="size-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <CardTitle>Intermediary email workflows</CardTitle>
-            <CardDescription>
-              Review and test M&A templates before using them for broker and seller-side follow-up.
-            </CardDescription>
-          </div>
-          <Button asChild variant="outline">
-            <Link href="/emails">Open Email Tools</Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {emailWorkflowLabels.map((label) => (
-              <Badge key={label} className="border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100">
-                {label}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                            {source.contact_email}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No email</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="truncate">
+                      {source.contact_phone ? (
+                        <a className="text-sm hover:text-foreground" href={`tel:${source.contact_phone}`}>
+                          {source.contact_phone}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="secondary">{source.opportunity_count} total</Badge>
+                        <Badge variant="outline">{source.open_opportunity_count} open</Badge>
+                        {source.stale_opportunity_count > 0 ? (
+                          <Badge className="border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100">
+                            {source.stale_opportunity_count} stale
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex max-w-[220px] flex-col gap-1">
+                        <span className="truncate">{source.latest_opportunity_title ?? "-"}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(source.latest_opportunity_date)}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="truncate text-sm text-muted-foreground">
+                        {source.notes ?? "-"}
+                      </p>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(source)}
+                        aria-label={`Edit ${source.firm_name}`}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
