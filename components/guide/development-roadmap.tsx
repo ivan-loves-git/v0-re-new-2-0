@@ -5,82 +5,82 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 // Comprehensive roadmap capturing the full Wave journey
-// Product outcomes, UX improvements, validation work, learnings, and features
+// Product outcomes, product work, UX improvements, validation work, learnings, and features
 const roadmapEvents = [
   {
     period: "May 18, 2026",
     version: "0.9.13",
-    title: "Email tool expanded toward opportunity use cases",
+    title: "Email cockpit extended for deal-flow communication",
     isCompleted: true,
     events: [
+      {
+        title: "Template manager shows audience context",
+        type: "feature",
+        description: "Email templates now show whether they serve repreneur communication. The same structure can host opportunity templates as deal-flow email use cases are added.",
+      },
+      {
+        title: "Manual-send flow prepared for opportunity messages",
+        type: "product",
+        description: "The existing send workflow can now grow toward opportunity-specific communication without rebuilding the email cockpit from scratch.",
+      },
       {
         title: "Email navigation clarified",
         type: "style",
         description: "Email now sits inside Tools beside Wavy, making it easier to find as a shared operations surface rather than a repreneur-only page.",
-      },
-      {
-        title: "Template audience tags",
-        type: "feature",
-        description: "Templates now show whether they serve repreneur communication. The same structure can host opportunity templates as the deal-flow email use cases are selected.",
-      },
-      {
-        title: "Opportunity email lane prepared",
-        type: "feature",
-        description: "The email cockpit is ready to add Opp templates and context-specific send flows, so future deal-flow messages can expand inside the same tool.",
       },
     ],
   },
   {
     period: "May 17, 2026",
     version: "0.9.12",
-    title: "Staff dashboards separated by work type",
+    title: "Product navigation and workspaces cleaned up",
     isCompleted: true,
     events: [
       {
-        title: "Sidebar split by operating area",
+        title: "Repreneur and opportunity areas separated",
         type: "style",
-        description: "Navigation now separates Repreneurs, Opportunities, Tools, and Project. Staff can move between people work and deal-flow work without mixed menus.",
+        description: "The sidebar now separates Repreneurs, Opportunities, Tools, and Project so the team can switch between people work and deal work without mixed menus.",
       },
       {
-        title: "Repreneur dashboards preserved",
+        title: "Repreneur dashboard made explicit",
+        type: "product",
+        description: "The existing dashboard and analytics views now clearly belong to repreneur pipeline health instead of acting as generic catch-all pages.",
+      },
+      {
+        title: "Opportunity operations workspace added",
         type: "feature",
-        description: "The existing dashboard and analytics views now live as repreneur-focused pages. Old dashboard and analytics links redirect cleanly.",
+        description: "A dedicated opportunity dashboard now focuses on stale follow-ups, pending responses, active pursuits, NDA blockers, and recent opportunity activity.",
       },
       {
-        title: "Opportunity dashboard added",
+        title: "Opportunity metrics page added",
         type: "feature",
-        description: "A new opportunity operations page focuses on stale follow-ups, pending response reviews, active pursuits, NDA blockers, and recent opportunities.",
+        description: "Deal-flow KPIs now have their own analytics page, separated from repreneur pipeline analytics.",
       },
       {
-        title: "Opportunity analytics added",
-        type: "feature",
-        description: "Deal-flow KPIs now have their own analytics page, separate from repreneur pipeline analytics.",
-      },
-      {
-        title: "Archived pages hidden from daily navigation",
+        title: "Daily navigation reduced",
         type: "style",
-        description: "Journey, Reviews, Mission, Instructions, and Offers no longer crowd the sidebar, but remain available by direct link when needed.",
+        description: "Lower-frequency pages no longer crowd the sidebar, while remaining available by direct link for reference and troubleshooting.",
       },
       {
-        title: "Access boundaries re-tested",
-        type: "testing",
-        description: "Staff and repreneur route separation was checked after the navigation split, including redirects and protected pages.",
+        title: "Navigation and access audit completed",
+        type: "audit",
+        description: "Staff and repreneur route separation was checked after the workspace split, including redirects, protected pages, and archived direct links.",
       },
     ],
   },
   {
     period: "May 17, 2026",
     version: "0.9.11",
-    title: "June V2 demo and launch package",
+    title: "Operational demo path and QA package",
     isCompleted: true,
     events: [
       {
-        title: "End-to-end demo path created",
-        type: "feature",
+        title: "Full opportunity journey assembled",
+        type: "product",
         description: "The demo data now shows the full V2 chain: sourced opportunity, repreneur match, active pursuit, seller meeting stage, signed NDA, and approved teaser document.",
       },
       {
-        title: "Operational deal-flow KPIs",
+        title: "Deal-flow KPI panel verified",
         type: "feature",
         description: "Staff can now see active intermediaries, active opportunities, introductions, active pursuits, seller meetings, LOIs, dropped deals, closed deals, approved documents, and NDA blockers.",
       },
@@ -90,35 +90,35 @@ const roadmapEvents = [
         description: "Opportunity list and detail pages show date/month added, and staff get a reminder when an open opportunity is older than 90 days with no active pursuit.",
       },
       {
-        title: "Launch checklist written",
-        type: "feature",
-        description: "The June V2 launch package defines what to demo, what to verify before release, what to check after deploy, and which limitations to state clearly.",
-      },
-      {
-        title: "V3 opportunity backlog captured",
-        type: "feature",
-        description: "PDF parsing, AI deal analysis, full M&A CRM, M&A firm portal, e-signature, and repreneur self-service were preserved as V3 options instead of leaking into June scope.",
-      },
-      {
-        title: "June V2 implementation packaged",
+        title: "Major end-to-end QA completed",
         type: "testing",
-        description: "After QA and launch packaging, the product has a clear release-monitoring path and a separate V3 selection path.",
+        description: "The product was tested across staff dashboard, opportunity list, opportunity detail, pursuit tab, documents tab, review page, redirects, and protected routes.",
+      },
+      {
+        title: "Demo checklist prepared",
+        type: "audit",
+        description: "The launch package now lists what to show, what to verify before release, what to monitor after deploy, and which known limitations to state clearly.",
+      },
+      {
+        title: "Release-readiness evidence collected",
+        type: "audit",
+        description: "Build results, browser checks, UAT records, demo data, and verification notes were gathered into one product handoff.",
       },
     ],
   },
   {
     period: "May 17, 2026",
     version: "0.9.10",
-    title: "Deal workflow hardened",
+    title: "Validated deal execution workflow",
     isCompleted: true,
     events: [
       {
-        title: "Active pursuit lock",
+        title: "One active pursuit per opportunity",
         type: "feature",
         description: "Staff can validate only one active repreneur pursuit per opportunity. If that pursuit is dropped, the opportunity can be reopened for another path.",
       },
       {
-        title: "Pursuit stage tracking",
+        title: "Deal stage history added",
         type: "feature",
         description: "Validated pursuits can move through interest, intermediary meeting, seller meeting, LOI, closed, or dropped, with internal history for the team.",
       },
@@ -128,12 +128,12 @@ const roadmapEvents = [
         description: "Staff can track NDA status and link documents. Repreneurs can download only the documents approved for them once the NDA state allows it.",
       },
       {
-        title: "Review findings resolved",
+        title: "Review queue behavior hardened",
         type: "fix",
         description: "Role rules, response states, legacy deal links, and recommendation/review table behavior were tightened before closing the workflow.",
       },
       {
-        title: "Workflow UAT passed",
+        title: "Deal workflow UAT passed",
         type: "testing",
         description: "The checks covered structured matching, staff review queue, portal privacy boundary, active-pursuit lock, stage tracking, document gate, and build health.",
       },
@@ -146,18 +146,18 @@ const roadmapEvents = [
     isCompleted: true,
     events: [
       {
-        title: "Separate repreneur portal",
+        title: "External deal portal opened",
         type: "feature",
         description: "Repreneurs now have their own portal for deals and profile view, outside the internal staff dashboard shell.",
       },
       {
-        title: "Read-only profile summary",
+        title: "Profile summary made visible to repreneurs",
         type: "feature",
         description: "The portal profile shows WHO/WHEN scores, journey progress, strengths, improvement points, target thesis, and visible milestones.",
       },
       {
-        title: "Demo repreneur access prepared",
-        type: "feature",
+        title: "Realistic demo account prepared",
+        type: "product",
         description: "A realistic demo repreneur profile was linked to portal credentials and populated with profile data, milestones, assessment data, and three visible opportunity matches.",
       },
       {
@@ -171,8 +171,8 @@ const roadmapEvents = [
         description: "Responses now land in an internal review queue so the team can decide whether to validate a pursuit.",
       },
       {
-        title: "Portal access follows the repreneur profile",
-        type: "feature",
+        title: "Portal access cleanup added",
+        type: "fix",
         description: "Repreneur credentials belong to actual repreneur records. If a repreneur is removed from the platform, their portal role and sessions are removed too.",
       },
     ],
@@ -184,7 +184,7 @@ const roadmapEvents = [
     isCompleted: true,
     events: [
       {
-        title: "Opportunity database foundation",
+        title: "Opportunity records foundation",
         type: "feature",
         description: "The platform now has a structured place for sourced opportunities, status, source/contact metadata, staff-only fields, and repreneur-visible fields.",
       },
@@ -204,27 +204,27 @@ const roadmapEvents = [
         description: "Opportunity documents are stored privately, with staff-controlled visibility for what a repreneur may later see.",
       },
       {
-        title: "Basic M&A source tracking",
-        type: "feature",
+        title: "M&A source context added",
+        type: "product",
         description: "Firm and contact details are captured for staff context without turning the June scope into a full M&A CRM.",
       },
       {
-        title: "Structured opportunity layer before automation",
-        type: "learning",
-        description: "The opportunity layer stays structured and reviewable first. Automatic teaser parsing and AI interpretation remain future work.",
+        title: "Opportunity field visibility separated",
+        type: "audit",
+        description: "Staff-only and repreneur-visible fields were split clearly so sensitive source and deal details stay on the right side of the product.",
       },
     ],
   },
   {
     period: "May 16, 2026",
     version: "0.9.7",
-    title: "June V2 scope lock and release protocol",
+    title: "Deal-flow build foundation and QA protocol",
     isCompleted: true,
     events: [
       {
-        title: "June V2 delivery scope captured",
-        type: "feature",
-        description: "The next build is the first usable deal-flow operating layer: opportunity data, matching, repreneur actions, pursuit tracking, document handling, and simple reporting.",
+        title: "Opportunity workflow translated into build slices",
+        type: "product",
+        description: "The deal-flow product work was broken into opportunity records, matching, repreneur actions, pursuit tracking, document access, and reporting.",
       },
       {
         title: "Same-database test protocol",
@@ -237,9 +237,9 @@ const roadmapEvents = [
         description: "The plan now includes backup, local testing, UAT, cleanup, push/merge, deploy checks, and monitoring responsibilities in plain language.",
       },
       {
-        title: "Scope boundaries protected",
-        type: "learning",
-        description: "High-complexity items were deliberately postponed so June can validate the core workflow before adding heavier automation.",
+        title: "Marked UAT data approach",
+        type: "testing",
+        description: "Test data is explicitly marked and cleaned up after validation, so product checks can use realistic records without polluting the live workflow.",
       },
     ],
   },
@@ -1307,9 +1307,11 @@ const roadmapEvents = [
 
 const typeConfig = {
   feature: { icon: Sparkles, color: "text-blue-600", bgColor: "bg-blue-50", label: "Feature" },
+  product: { icon: Zap, color: "text-sky-600", bgColor: "bg-sky-50", label: "Product work" },
   fix: { icon: Bug, color: "text-green-600", bgColor: "bg-green-50", label: "Fix" },
   style: { icon: Palette, color: "text-purple-600", bgColor: "bg-purple-50", label: "UX improvement" },
   testing: { icon: AlertTriangle, color: "text-indigo-600", bgColor: "bg-indigo-50", label: "Testing" },
+  audit: { icon: CheckCircle, color: "text-emerald-600", bgColor: "bg-emerald-50", label: "Audit" },
   refactor: { icon: RefreshCw, color: "text-amber-600", bgColor: "bg-amber-50", label: "Refactor" },
   direction: { icon: Target, color: "text-rose-600", bgColor: "bg-rose-50", label: "Product direction" },
   learning: { icon: Lightbulb, color: "text-yellow-600", bgColor: "bg-yellow-50", label: "Learning" },
@@ -1318,12 +1320,17 @@ const typeConfig = {
 export function DevelopmentRoadmap() {
   // Calculate stats
   const totalEvents = roadmapEvents.reduce((acc, period) => acc + period.events.length, 0)
+  const productWork = roadmapEvents.reduce((acc, period) =>
+    acc + period.events.filter(e => e.type === "product").length, 0)
   const uxImprovements = roadmapEvents.reduce((acc, period) =>
     acc + period.events.filter(e => e.type === "style").length, 0)
-  const learnings = roadmapEvents.reduce((acc, period) =>
-    acc + period.events.filter(e => e.type === "learning").length, 0)
+  const validationWork = roadmapEvents.reduce((acc, period) =>
+    acc + period.events.filter(e => e.type === "testing" || e.type === "audit").length, 0)
   const features = roadmapEvents.reduce((acc, period) =>
     acc + period.events.filter(e => e.type === "feature").length, 0)
+  const fixes = roadmapEvents.reduce((acc, period) =>
+    acc + period.events.filter(e => e.type === "fix").length, 0)
+  const productUpdates = features + productWork + fixes
 
   return (
     <div className="space-y-6">
@@ -1340,17 +1347,17 @@ export function DevelopmentRoadmap() {
           <div className="text-2xl font-bold text-gray-900">{roadmapEvents.length}</div>
           <div className="text-xs text-gray-500">Milestones</div>
         </div>
-        <div className="text-center p-3 bg-blue-50 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">{features}</div>
-          <div className="text-xs text-gray-500">Features</div>
+        <div className="text-center p-3 bg-sky-50 rounded-lg">
+          <div className="text-2xl font-bold text-sky-600">{productUpdates}</div>
+          <div className="text-xs text-gray-500">Product updates</div>
         </div>
         <div className="text-center p-3 bg-purple-50 rounded-lg">
           <div className="text-2xl font-bold text-purple-600">{uxImprovements}</div>
           <div className="text-xs text-gray-500">UX improvements</div>
         </div>
-        <div className="text-center p-3 bg-yellow-50 rounded-lg">
-          <div className="text-2xl font-bold text-yellow-600">{learnings}</div>
-          <div className="text-xs text-gray-500">Learnings</div>
+        <div className="text-center p-3 bg-emerald-50 rounded-lg">
+          <div className="text-2xl font-bold text-emerald-600">{validationWork}</div>
+          <div className="text-xs text-gray-500">QA / audits</div>
         </div>
       </div>
 
