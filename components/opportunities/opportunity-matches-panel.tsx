@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
+import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -155,13 +156,24 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setFeedback((current) => (current?.type === "error" ? null : current))
   }
 
+  function showFeedback(message: FeedbackMessage) {
+    setFeedback(message)
+
+    if (message.type === "success") {
+      toast.success(message.title, { description: message.description })
+      return
+    }
+
+    toast.error(message.title, { description: message.description })
+  }
+
   async function handleSave(formData: FormData) {
     const validationErrors = validateSaveForm(formData, activeMatch)
     setFieldErrors(validationErrors)
     setFeedback(null)
 
     if (Object.keys(validationErrors).length > 0) {
-      setFeedback({
+      showFeedback({
         type: "error",
         title: "Check the recommendation",
         description: "Fix the highlighted fields before saving.",
@@ -174,7 +186,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
       const result = await saveOpportunityMatch(formData)
       if (!result.ok) {
         setFieldErrors(result.field ? { [result.field]: result.message } : {})
-        setFeedback({
+        showFeedback({
           type: "error",
           title: "Recommendation not saved",
           description: result.message,
@@ -183,13 +195,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
       }
 
       setFieldErrors({})
-      setFeedback({
+      showFeedback({
         type: "success",
         title: "Recommendation saved",
         description: "The match record was updated without changing any active pursuit lock.",
       })
     } catch (error) {
-      setFeedback({
+      showFeedback({
         type: "error",
         title: "Recommendation not saved",
         description: getErrorMessage(error),
@@ -204,13 +216,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setFeedback(null)
     try {
       await removeOpportunityMatch(matchId, opportunityId)
-      setFeedback({
+      showFeedback({
         type: "success",
         title: "Recommendation removed",
         description: "The match was removed from this opportunity.",
       })
     } catch (error) {
-      setFeedback({
+      showFeedback({
         type: "error",
         title: "Recommendation not removed",
         description: getErrorMessage(error),
@@ -225,13 +237,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setFeedback(null)
     try {
       await validateOpportunityPursuit(matchId, opportunityId)
-      setFeedback({
+      showFeedback({
         type: "success",
         title: "Pursuit validated",
         description: "This repreneur is now the active pursuit for the opportunity.",
       })
     } catch (error) {
-      setFeedback({
+      showFeedback({
         type: "error",
         title: "Pursuit not validated",
         description: getErrorMessage(error),
@@ -246,13 +258,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setFeedback(null)
     try {
       await dropOpportunityPursuit(matchId, opportunityId)
-      setFeedback({
+      showFeedback({
         type: "success",
         title: "Pursuit dropped",
         description: "The opportunity is unlocked for another interested repreneur.",
       })
     } catch (error) {
-      setFeedback({
+      showFeedback({
         type: "error",
         title: "Pursuit not dropped",
         description: getErrorMessage(error),
@@ -267,13 +279,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setFeedback(null)
     try {
       await reopenDroppedOpportunityMatch(matchId, opportunityId)
-      setFeedback({
+      showFeedback({
         type: "success",
         title: "Recommendation reopened",
         description: "The dropped pursuit was moved back to Interested.",
       })
     } catch (error) {
-      setFeedback({
+      showFeedback({
         type: "error",
         title: "Recommendation not reopened",
         description: getErrorMessage(error),
@@ -297,7 +309,15 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
           <form action={handleSave} noValidate className="flex flex-col gap-5">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
             {feedback ? (
-              <Alert variant={feedback.type === "error" ? "destructive" : "default"}>
+              <Alert
+                role={feedback.type === "success" ? "status" : "alert"}
+                variant={feedback.type === "error" ? "destructive" : "default"}
+                className={
+                  feedback.type === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-950 shadow-sm [&>svg]:text-emerald-600 *:data-[slot=alert-description]:text-emerald-800"
+                    : undefined
+                }
+              >
                 {feedback.type === "error" ? <AlertCircle /> : <CheckCircle2 />}
                 <AlertTitle>{feedback.title}</AlertTitle>
                 <AlertDescription>{feedback.description}</AlertDescription>

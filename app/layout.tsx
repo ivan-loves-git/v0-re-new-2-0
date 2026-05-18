@@ -62,13 +62,10 @@ export default function RootLayout({
         {children}
         <Toaster
           position="bottom-right"
+          richColors
+          closeButton
           toastOptions={{
-            duration: 3000,
-            style: {
-              background: 'white',
-              border: '1px solid #e5e7eb',
-              padding: '12px 16px',
-            },
+            duration: 4000,
           }}
         />
         <Analytics />
