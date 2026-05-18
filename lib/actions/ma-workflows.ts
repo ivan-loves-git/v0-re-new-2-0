@@ -279,6 +279,8 @@ export async function sendMaSourceWorkflowEmailPayload(
     opportunity_id: opportunity.id,
     source_id: opportunity.source_id,
     template_key: templateKey,
+    channel: "email",
+    direction: "outbound",
     recipient_email: recipientEmail,
     subject: renderedSubject,
     body_markdown: renderedBody,
