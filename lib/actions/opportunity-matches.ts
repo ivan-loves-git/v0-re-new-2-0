@@ -13,6 +13,10 @@ import type {
   OpportunityMatchResponse,
   OpportunityMatchStatus,
 } from "@/lib/types/opportunity"
+import {
+  OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS,
+  OPPORTUNITY_MATCH_STATUS_OPTIONS,
+} from "@/lib/types/opportunity"
 
 const STAFF_EDITABLE_PURSUIT_STAGES: OpportunityPursuitStage[] = [
   "interest",
@@ -22,6 +26,40 @@ const STAFF_EDITABLE_PURSUIT_STAGES: OpportunityPursuitStage[] = [
   "closed",
 ]
 const STAFF_EDITABLE_NDA_STATUSES: OpportunityNdaStatus[] = ["not_required", "required", "sent", "signed", "waived"]
+const MATCH_RECOMMENDATION_VALUES = OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.map((option) => option.value)
+const STAFF_EDITABLE_MATCH_STATUS_VALUES = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter(
+  (option) => option.value !== "active_pursuit",
+).map((option) => option.value)
+
+export type OpportunityMatchActionResult =
+  | { ok: true }
+  | { ok: false; message: string; field?: string }
+
+class OpportunityMatchFormError extends Error {
+  field?: string
+
+  constructor(message: string, field?: string) {
+    super(message)
+    this.name = "OpportunityMatchFormError"
+    this.field = field
+  }
+}
+
+function formError(message: string, field?: string) {
+  return new OpportunityMatchFormError(message, field)
+}
+
+function actionFailure(error: unknown): OpportunityMatchActionResult {
+  if (error instanceof OpportunityMatchFormError) {
+    return { ok: false, message: error.message, field: error.field }
+  }
+
+  if (error instanceof Error) {
+    return { ok: false, message: error.message }
+  }
+
+  return { ok: false, message: "Opportunity match update failed." }
+}
 
 function readString(formData: FormData, key: string): string | null {
   const value = formData.get(key)
@@ -30,20 +68,36 @@ function readString(formData: FormData, key: string): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function readNumber(formData: FormData, key: string): number | null {
+function readNumber(formData: FormData, key: string, label: string, min = 0, max = 100): number | null {
   const value = readString(formData, key)
   if (!value) return null
   const normalized = value.replace(",", ".")
   const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : null
+  if (!Number.isFinite(parsed)) {
+    throw formError(`${label} must be a number.`, key)
+  }
+  if (parsed < min || parsed > max) {
+    throw formError(`${label} must be between ${min} and ${max}.`, key)
+  }
+  return parsed
 }
 
 function readRecommendation(formData: FormData, key: string): OpportunityMatchRecommendation {
-  return (readString(formData, key) as OpportunityMatchRecommendation | null) ?? "not_evaluated"
+  const value = readString(formData, key) ?? "not_evaluated"
+  if (!MATCH_RECOMMENDATION_VALUES.includes(value as OpportunityMatchRecommendation)) {
+    throw formError("Select a valid recommendation.", key)
+  }
+
+  return value as OpportunityMatchRecommendation
 }
 
 function readStatus(formData: FormData): OpportunityMatchStatus {
-  return (readString(formData, "status") as OpportunityMatchStatus | null) ?? "draft"
+  const status = readString(formData, "status") ?? "draft"
+  if (!STAFF_EDITABLE_MATCH_STATUS_VALUES.includes(status as OpportunityMatchStatus)) {
+    throw formError("Select a valid match status.", "status")
+  }
+
+  return status as OpportunityMatchStatus
 }
 
 function readPursuitStage(formData: FormData): OpportunityPursuitStage {
@@ -116,7 +170,7 @@ function lockedMatchError(error: { code?: string; message?: string }) {
 
 function ensureStaffMatchStatus(status: OpportunityMatchStatus) {
   if (status === "active_pursuit") {
-    throw new Error("Use Validate pursuit instead of manually saving Active pursuit.")
+    throw formError("Use Validate pursuit instead of manually saving Active pursuit.", "status")
   }
 }
 
@@ -134,7 +188,7 @@ async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, stat
 
   if (error) throw new Error(error.message)
   if (data) {
-    throw new Error("This opportunity already has an active pursuit. Drop it before exposing the opportunity to another repreneur.")
+    throw formError("This opportunity already has an active pursuit. Drop it before exposing the opportunity to another repreneur.", "status")
   }
 }
 
@@ -149,7 +203,7 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
 
   if (error) throw new Error(error.message)
   if (data?.status === "active_pursuit") {
-    throw new Error("This repreneur is already the active pursuit. Drop the pursuit before changing this recommendation.")
+    throw formError("This repreneur is already the active pursuit. Drop the pursuit before changing this recommendation.", "repreneur_id")
   }
 }
 
@@ -294,43 +348,49 @@ export async function listOpportunityMatchCandidates(): Promise<OpportunityMatch
   return (data ?? []) as OpportunityMatchCandidate[]
 }
 
-export async function saveOpportunityMatch(formData: FormData) {
+export async function saveOpportunityMatch(formData: FormData): Promise<OpportunityMatchActionResult> {
   const access = await requireStaffAccess()
-  const opportunityId = readString(formData, "opportunity_id")
-  const repreneurId = readString(formData, "repreneur_id")
 
-  if (!opportunityId) throw new Error("Opportunity is required")
-  if (!repreneurId) throw new Error("Repreneur is required")
+  try {
+    const opportunityId = readString(formData, "opportunity_id")
+    const repreneurId = readString(formData, "repreneur_id")
 
-  const status = readStatus(formData)
-  ensureStaffMatchStatus(status)
-  await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
-  await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
+    if (!opportunityId) throw formError("Opportunity is required.")
+    if (!repreneurId) throw formError("Select a repreneur before saving.", "repreneur_id")
 
-  const humanRecommendation = readRecommendation(formData, "human_recommendation")
-  const humanNotes = readString(formData, "human_notes")
-  const hasHumanReview = humanRecommendation !== "not_evaluated" || Boolean(humanNotes)
+    const status = readStatus(formData)
+    ensureStaffMatchStatus(status)
+    await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
+    await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 
-  const supabase = createAdminClient()
-  const { error } = await supabase.from("opportunity_matches").upsert(
-    {
-      opportunity_id: opportunityId,
-      repreneur_id: repreneurId,
-      status,
-      platform_recommendation: readRecommendation(formData, "platform_recommendation"),
-      platform_score: readNumber(formData, "platform_score"),
-      platform_reasons: readReasons(formData),
-      human_recommendation: humanRecommendation,
-      human_notes: humanNotes,
-      created_by: access.user.id,
-      reviewed_by: hasHumanReview ? access.user.id : null,
-      reviewed_at: hasHumanReview ? new Date().toISOString() : null,
-    },
-    { onConflict: "opportunity_id,repreneur_id" }
-  )
+    const humanRecommendation = readRecommendation(formData, "human_recommendation")
+    const humanNotes = readString(formData, "human_notes")
+    const hasHumanReview = humanRecommendation !== "not_evaluated" || Boolean(humanNotes)
 
-  if (error) throw new Error(error.message)
-  revalidatePath(`/opportunities/${opportunityId}`)
+    const supabase = createAdminClient()
+    const { error } = await supabase.from("opportunity_matches").upsert(
+      {
+        opportunity_id: opportunityId,
+        repreneur_id: repreneurId,
+        status,
+        platform_recommendation: readRecommendation(formData, "platform_recommendation"),
+        platform_score: readNumber(formData, "platform_score", "Platform score"),
+        platform_reasons: readReasons(formData),
+        human_recommendation: humanRecommendation,
+        human_notes: humanNotes,
+        created_by: access.user.id,
+        reviewed_by: hasHumanReview ? access.user.id : null,
+        reviewed_at: hasHumanReview ? new Date().toISOString() : null,
+      },
+      { onConflict: "opportunity_id,repreneur_id" },
+    )
+
+    if (error) throw lockedMatchError(error)
+    revalidatePath(`/opportunities/${opportunityId}`)
+    return { ok: true }
+  } catch (error) {
+    return actionFailure(error)
+  }
 }
 
 export async function removeOpportunityMatch(matchId: string, opportunityId: string) {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2, CircleSlash2, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
+import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   dropOpportunityPursuit,
   removeOpportunityMatch,
@@ -40,11 +41,26 @@ import {
 } from "@/lib/types/opportunity"
 
 const STAFF_EDITABLE_STATUS_OPTIONS = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter((option) => option.value !== "active_pursuit")
+const REPRENEUR_EXPOSURE_STATUSES = new Set(["proposed", "interested"])
 
 interface OpportunityMatchesPanelProps {
   opportunityId: string
   matches: OpportunityMatch[]
   candidates: OpportunityMatchCandidate[]
+}
+
+type FeedbackMessage = {
+  type: "success" | "error"
+  title: string
+  description: string
+}
+
+type FieldErrors = Record<string, string>
+
+interface FieldInfoProps {
+  label: string
+  description: string
+  example: string
 }
 
 function repreneurName(repreneur: OpportunityMatchCandidate | null | undefined) {
@@ -59,28 +75,167 @@ function recommendationVariant(recommendation: OpportunityMatchRecommendation): 
   return "outline"
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  return "The action could not be completed. Please try again."
+}
+
+function readFormString(formData: FormData, key: string) {
+  const value = formData.get(key)
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function validateSaveForm(formData: FormData, activeMatch: OpportunityMatch | null): FieldErrors {
+  const errors: FieldErrors = {}
+  const repreneurId = readFormString(formData, "repreneur_id")
+  const status = readFormString(formData, "status") || "draft"
+  const score = readFormString(formData, "platform_score")
+
+  if (!repreneurId) {
+    errors.repreneur_id = "Select the repreneur this recommendation is for."
+  }
+
+  if (activeMatch && REPRENEUR_EXPOSURE_STATUSES.has(status)) {
+    errors.status = "This opportunity already has an active pursuit. Save as Draft or Shortlisted, or drop the active pursuit first."
+  }
+
+  if (score) {
+    const parsed = Number(score.replace(",", "."))
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+      errors.platform_score = "Use a number from 0 to 100, for example 78."
+    }
+  }
+
+  return errors
+}
+
+function FieldInfo({ label, description, example }: FieldInfoProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="size-5 rounded-full text-muted-foreground"
+          aria-label={`About ${label}`}
+        >
+          <Info data-icon="inline-start" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-80 bg-popover text-popover-foreground shadow-md">
+        <span className="flex flex-col gap-1">
+          <span className="font-medium">{description}</span>
+          <span className="text-muted-foreground">Example: {example}</span>
+        </span>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null
+  return <p className="text-xs text-destructive">{message}</p>
+}
+
 export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: OpportunityMatchesPanelProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<FeedbackMessage | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
 
+  function clearFieldError(field: string) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+    setFeedback((current) => (current?.type === "error" ? null : current))
+  }
+
   async function handleSave(formData: FormData) {
+    const validationErrors = validateSaveForm(formData, activeMatch)
+    setFieldErrors(validationErrors)
+    setFeedback(null)
+
+    if (Object.keys(validationErrors).length > 0) {
+      setFeedback({
+        type: "error",
+        title: "Check the recommendation",
+        description: "Fix the highlighted fields before saving.",
+      })
+      return
+    }
+
     setIsSaving(true)
     try {
-      await saveOpportunityMatch(formData)
+      const result = await saveOpportunityMatch(formData)
+      if (!result.ok) {
+        setFieldErrors(result.field ? { [result.field]: result.message } : {})
+        setFeedback({
+          type: "error",
+          title: "Recommendation not saved",
+          description: result.message,
+        })
+        return
+      }
+
+      setFieldErrors({})
+      setFeedback({
+        type: "success",
+        title: "Recommendation saved",
+        description: "The match record was updated without changing any active pursuit lock.",
+      })
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Recommendation not saved",
+        description: getErrorMessage(error),
+      })
     } finally {
       setIsSaving(false)
     }
   }
 
   async function handleRemove(matchId: string) {
-    await removeOpportunityMatch(matchId, opportunityId)
+    setPendingActionId(matchId)
+    setFeedback(null)
+    try {
+      await removeOpportunityMatch(matchId, opportunityId)
+      setFeedback({
+        type: "success",
+        title: "Recommendation removed",
+        description: "The match was removed from this opportunity.",
+      })
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Recommendation not removed",
+        description: getErrorMessage(error),
+      })
+    } finally {
+      setPendingActionId(null)
+    }
   }
 
   async function handleValidate(matchId: string) {
     setPendingActionId(matchId)
+    setFeedback(null)
     try {
       await validateOpportunityPursuit(matchId, opportunityId)
+      setFeedback({
+        type: "success",
+        title: "Pursuit validated",
+        description: "This repreneur is now the active pursuit for the opportunity.",
+      })
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Pursuit not validated",
+        description: getErrorMessage(error),
+      })
     } finally {
       setPendingActionId(null)
     }
@@ -88,8 +243,20 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
 
   async function handleDrop(matchId: string) {
     setPendingActionId(matchId)
+    setFeedback(null)
     try {
       await dropOpportunityPursuit(matchId, opportunityId)
+      setFeedback({
+        type: "success",
+        title: "Pursuit dropped",
+        description: "The opportunity is unlocked for another interested repreneur.",
+      })
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Pursuit not dropped",
+        description: getErrorMessage(error),
+      })
     } finally {
       setPendingActionId(null)
     }
@@ -97,8 +264,20 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
 
   async function handleReopen(matchId: string) {
     setPendingActionId(matchId)
+    setFeedback(null)
     try {
       await reopenDroppedOpportunityMatch(matchId, opportunityId)
+      setFeedback({
+        type: "success",
+        title: "Recommendation reopened",
+        description: "The dropped pursuit was moved back to Interested.",
+      })
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Recommendation not reopened",
+        description: getErrorMessage(error),
+      })
     } finally {
       setPendingActionId(null)
     }
@@ -115,14 +294,28 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
           <CardDescription>Store platform guidance and optional human review before showing anything to a repreneur.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleSave} className="flex flex-col gap-5">
+          <form action={handleSave} noValidate className="flex flex-col gap-5">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
+            {feedback ? (
+              <Alert variant={feedback.type === "error" ? "destructive" : "default"}>
+                {feedback.type === "error" ? <AlertCircle /> : <CheckCircle2 />}
+                <AlertTitle>{feedback.title}</AlertTitle>
+                <AlertDescription>{feedback.description}</AlertDescription>
+              </Alert>
+            ) : null}
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="repreneur_id">Repreneur</Label>
-                <Select name="repreneur_id" disabled={candidates.length === 0}>
-                  <SelectTrigger id="repreneur_id" className="w-full">
-                    <SelectValue placeholder={candidates.length === 0 ? "No repreneurs available" : "Select repreneur"} />
+                <Label htmlFor="repreneur_id">
+                  Repreneur
+                  <FieldInfo
+                    label="Repreneur"
+                    description="The person who may receive this opportunity."
+                    example="Ivan Demo Repreneur - myworkmail4@gmail.com."
+                  />
+                </Label>
+                <Select name="repreneur_id" disabled={candidates.length === 0} onValueChange={() => clearFieldError("repreneur_id")}>
+                  <SelectTrigger id="repreneur_id" className="w-full" aria-invalid={Boolean(fieldErrors.repreneur_id)}>
+                    <SelectValue placeholder={candidates.length === 0 ? "No repreneurs available" : "Choose a repreneur, e.g. Ivan Demo Repreneur"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -134,11 +327,19 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                <FieldError message={fieldErrors.repreneur_id} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="match_status">Match status</Label>
-                <Select name="status" defaultValue="draft">
-                  <SelectTrigger id="match_status" className="w-full">
+                <Label htmlFor="match_status">
+                  Match status
+                  <FieldInfo
+                    label="Match status"
+                    description="Draft and Shortlisted stay internal. Proposed and Interested expose or record repreneur flow. Active pursuit is only created with Validate."
+                    example="Use Shortlisted while staff is still discussing; use Proposed when it should reach the repreneur portal."
+                  />
+                </Label>
+                <Select name="status" defaultValue="draft" onValueChange={() => clearFieldError("status")}>
+                  <SelectTrigger id="match_status" className="w-full" aria-invalid={Boolean(fieldErrors.status)}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -151,9 +352,17 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                <FieldError message={fieldErrors.status} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform_recommendation">Platform recommendation</Label>
+                <Label htmlFor="platform_recommendation">
+                  Platform recommendation
+                  <FieldInfo
+                    label="Platform recommendation"
+                    description="Structured guidance from the platform before human review."
+                    example="Possible fit when sector and readiness are aligned but proof is incomplete."
+                  />
+                </Label>
                 <Select name="platform_recommendation" defaultValue="not_evaluated">
                   <SelectTrigger id="platform_recommendation" className="w-full">
                     <SelectValue />
@@ -170,11 +379,35 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform_score">Platform score</Label>
-                <Input id="platform_score" name="platform_score" type="number" min="0" max="100" placeholder="0-100" />
+                <Label htmlFor="platform_score">
+                  Platform score
+                  <FieldInfo
+                    label="Platform score"
+                    description="A 0-100 confidence score for the platform recommendation."
+                    example="78 means a good but not fully confirmed match."
+                  />
+                </Label>
+                <Input
+                  id="platform_score"
+                  name="platform_score"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Example: 78"
+                  aria-invalid={Boolean(fieldErrors.platform_score)}
+                  onChange={() => clearFieldError("platform_score")}
+                />
+                <FieldError message={fieldErrors.platform_score} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="human_recommendation">Human recommendation</Label>
+                <Label htmlFor="human_recommendation">
+                  Human recommendation
+                  <FieldInfo
+                    label="Human recommendation"
+                    description="Staff confirmation, override, or caution after human review."
+                    example="Strong fit after Bertrand confirms strategic relevance."
+                  />
+                </Label>
                 <Select name="human_recommendation" defaultValue="not_evaluated">
                   <SelectTrigger id="human_recommendation" className="w-full">
                     <SelectValue />
@@ -193,12 +426,36 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform_reasons">Platform reasons</Label>
-                <Textarea id="platform_reasons" name="platform_reasons" rows={4} placeholder="One reason per line" />
+                <Label htmlFor="platform_reasons">
+                  Platform reasons
+                  <FieldInfo
+                    label="Platform reasons"
+                    description="One reason per line, saved as structured rationale."
+                    example="Sector matches operator background; EBITDA is within target range."
+                  />
+                </Label>
+                <Textarea
+                  id="platform_reasons"
+                  name="platform_reasons"
+                  rows={4}
+                  placeholder={"Sector matches operator background\nEBITDA is within target range"}
+                />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="human_notes">Human notes</Label>
-                <Textarea id="human_notes" name="human_notes" rows={4} placeholder="Optional staff context or override rationale" />
+                <Label htmlFor="human_notes">
+                  Human notes
+                  <FieldInfo
+                    label="Human notes"
+                    description="Internal staff rationale, caveats, or next-step context."
+                    example="Wait for updated teaser before proposing; Bertrand wants seller access confirmed."
+                  />
+                </Label>
+                <Textarea
+                  id="human_notes"
+                  name="human_notes"
+                  rows={4}
+                  placeholder="Wait for updated teaser before proposing; Bertrand wants seller access confirmed."
+                />
               </div>
             </div>
             <Button type="submit" disabled={isSaving || candidates.length === 0} className="w-fit">
@@ -346,6 +603,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                                 variant="ghost"
                                 size="icon"
                                 aria-label="Remove recommendation"
+                                disabled={isPending}
                                 onClick={() => void handleRemove(match.id)}
                               >
                                 <Trash2 data-icon="inline-start" />
