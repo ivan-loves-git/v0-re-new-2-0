@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: complete
-stopped_at: Phase 4 staff IA and dashboard separation complete
-last_updated: "2026-05-17T16:40:00Z"
-last_activity: 2026-05-17
+status: in_progress
+stopped_at: Phase 5 plan 05-01 complete; 05-02 next
+last_updated: "2026-05-18T09:20:00Z"
+last_activity: 2026-05-18
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
+  total_plans: 26
+  completed_plans: 23
+  percent: 88
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** June V2 plus Phase 4 staff IA cleanup complete; ready for release monitoring and V3 selection
+**Current focus:** Phase 5 is unifying the repreneur Find/Groups UX and replicating the same operating pattern for opportunities.
 
 ## Current Position
 
-Phase: 5 of 5 complete
-Plan: 22 of 22 complete
-Status: Phase 4 staff IA and dashboard separation complete
-Last activity: 2026-05-17
+Phase: 5 in progress
+Plan: 23 of 26 complete
+Status: Phase 5 plan 05-01 complete; 05-02 next
+Last activity: 2026-05-18
 
-Progress: [██████████] 100%
+Progress: [█████████-] 88%
 
 ## Performance Metrics
 
@@ -52,6 +52,8 @@ Progress: [██████████] 100%
 | 2026-05-17 | Phase 3 launch/demo checklist | Created launch/demo checklist and V3 deferred backlog; marked June V2 implementation complete. |
 | 2026-05-17 | Phase 4 staff IA and dashboard separation | Split staff navigation into Repreneurs and Opportunities, moved repreneur dashboards to `/dashboard_re` and `/analytics_re`, added `/dashboard_op` and `/analytics_op`, and kept archived pages direct-link accessible. |
 | 2026-05-18 | Email tools soft expansion | Moved Emails into Tools before Wavy and added `Rep`/future `Opp` template audience metadata to support incremental email automation expansion. |
+| 2026-05-18 | Internal journey guidelines page | Added `/guide/guidelines` under Project navigation to explain repreneur lifecycle, repreneur readiness journey, opportunity layers, and the derived opportunity journey label. |
+| 2026-05-18 | Phase 5 work surface contract | Added the Find/Groups design contract and tested derived opportunity journey helper; KPI work remains separate in another local workstream. |
 
 ## Accumulated Context
 
@@ -59,6 +61,7 @@ Progress: [██████████] 100%
 
 - Phase 1.1 inserted after Phase 1: Testing Environment and Release Protocol (URGENT)
 - Phase 4 added: Staff information architecture and dashboard separation.
+- Phase 5 added: Unified repreneur Find/Groups UX and equivalent opportunity Find/Groups work surfaces.
 
 ### Decisions
 
@@ -96,6 +99,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 3 plan 03-04 completed: launch/demo checklist and V3 deferred backlog are written, and the June V2 implementation is marked complete.
 - Phase 4 completed: staff navigation now separates repreneur and opportunity work; legacy `/dashboard` and `/analytics` redirect to repreneur pages; archived Journey, Reviews, Mission, and Instructions are hidden from sidebar but routes remain available.
 - Email should now be treated as a shared Tools surface. Current templates are tagged `Rep`; future opportunity automation should add `Opp` templates and context-specific send panels inside the existing `/emails` cockpit instead of creating a parallel page.
+- The opportunity journey should be a derived display layer, not a fourth manually edited status field. It summarizes opportunity availability, match status, and pursuit stage for staff scanning.
+- Phase 5 should make Repreneur Find and Groups visually coherent first, then replicate that structure for Opportunities with journey-first tags and operating columns.
+- Phase 5 plan 05-01 completed: opportunity journey derivation is now implemented and tested in `lib/utils/opportunity-journey.ts`.
 
 ### Pending Todos
 

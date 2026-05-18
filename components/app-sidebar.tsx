@@ -12,6 +12,7 @@ import {
   Mail,
   BarChart3,
   Briefcase,
+  BookOpenCheck,
   Map,
   ChevronsUpDown,
   LogOut,
@@ -76,6 +77,7 @@ const toolsNavigation: NavigationItem[] = [
 
 const projectNavigation: NavigationItem[] = [
   { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
+  { name: "Guidelines", href: "/guide/guidelines", icon: BookOpenCheck },
 ]
 
 // External users section removed - dead routes cleaned up

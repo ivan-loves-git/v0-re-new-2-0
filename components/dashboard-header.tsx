@@ -29,6 +29,7 @@ const pathNames: Record<string, string> = {
   guide: "Guide",
   instructions: "Instructions",
   roadmap: "Roadmap",
+  guidelines: "Guidelines",
   todo: "To Do",
   "learnings-test": "Learnings",
   intake: "Intake",

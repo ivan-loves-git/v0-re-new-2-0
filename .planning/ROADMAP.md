@@ -11,6 +11,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 2: Core Deal Workflow** - Build matching, separated repreneur portal access, interest/reject actions, validated pursuit, stages, NDA/document handling. (completed 2026-05-17)
 - [x] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness. (completed 2026-05-17)
 - [x] **Phase 4: Staff Information Architecture and Dashboard Separation** - Split internal staff navigation and dashboards into repreneur and opportunity work surfaces. (completed 2026-05-17)
+- [ ] **Phase 5: Unified Find and Groups Work Surfaces** - Make repreneur Find/Groups visually coherent and replicate that operating pattern for opportunities.
 
 ## Phase Details
 
@@ -126,10 +127,34 @@ Plans:
 - [x] 04-02: Separate repreneur and opportunity dashboard/analytics surfaces.
 - [x] 04-03: Update roadmap, requirements, GSD summaries, and verification evidence.
 
+### Phase 5: Unified Find and Groups Work Surfaces
+
+**Goal**: Staff can use visually consistent Find and Groups pages for both repreneurs and opportunities, with shared filtering, pagination, grouping, table structure, and journey-first tagging.
+
+**Depends on**: Phase 4.
+
+**Requirements**: UX-01, UX-02, UX-03, UX-04, OPP-JOURNEY-01, OPP-FIND-01, OPP-GROUPS-01
+
+**Success Criteria** (what must be TRUE):
+1. Repreneur Groups and Find use a coherent table shell, filter bar, colors, pagination, and tag system while preserving their different jobs.
+2. Opportunities gain equivalent Find and Groups pages using the same UX structure and visual language as repreneurs.
+3. The derived opportunity journey label is visible as a primary tag in opportunity tables.
+4. Opportunity columns are chosen for operating usefulness: reference, journey, source/status, sector/activity, location, size signals, date/freshness, and active pursuit context.
+5. Sidebar navigation and page naming make the two domains feel parallel without hiding existing Records or dashboard pages.
+6. Browser UAT validates desktop and mobile layouts, filter behavior, grouping, pagination, and row navigation for both domains.
+
+**Plans**: 4 plans
+
+Plans:
+- [x] 05-01: Lock shared table, filter, pagination, and journey-label design contract.
+- [ ] 05-02: Unify repreneur Groups and Find visual structure.
+- [ ] 05-03: Build opportunity Find and Groups pages from the shared pattern.
+- [ ] 05-04: Validate UX consistency, responsiveness, and navigation.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4.
+Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -138,3 +163,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4.
 | 2. Core Deal Workflow | 7/7 | Complete | 2026-05-17 |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 4/4 | Complete | 2026-05-17 |
 | 4. Staff Information Architecture and Dashboard Separation | 3/3 | Complete | 2026-05-17 |
+| 5. Unified Find and Groups Work Surfaces | 1/4 | In Progress | - |
