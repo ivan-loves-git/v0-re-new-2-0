@@ -5,28 +5,28 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 // Comprehensive roadmap capturing the full Wave journey
-// Strategic decisions, technical learnings, iterations, and features
+// Product outcomes, UX improvements, validation work, learnings, and features
 const roadmapEvents = [
   {
     period: "May 18, 2026",
     version: "0.9.13",
-    title: "Email Tools prepared for opportunity workflows",
+    title: "Email tool expanded toward opportunity use cases",
     isCompleted: true,
     events: [
       {
-        title: "Emails moved into Tools",
-        type: "feature",
-        description: "Email now sits with Wavy as a shared operations tool, not as a repreneur-only page. This keeps future communication work in one cockpit.",
+        title: "Email navigation clarified",
+        type: "style",
+        description: "Email now sits inside Tools beside Wavy, making it easier to find as a shared operations surface rather than a repreneur-only page.",
       },
       {
         title: "Template audience tags",
         type: "feature",
-        description: "Templates now carry a visible Rep tag, with room for future Opp templates. Staff will be able to distinguish repreneur messages from opportunity messages as automation expands.",
+        description: "Templates now show whether they serve repreneur communication. The same structure can host opportunity templates as the deal-flow email use cases are selected.",
       },
       {
-        title: "Decision: expand the existing cockpit",
-        type: "decision",
-        description: "Future opportunity email automation should grow inside Email Tools instead of creating a second parallel email page.",
+        title: "Opportunity email lane prepared",
+        type: "feature",
+        description: "The email cockpit is ready to add Opp templates and context-specific send flows, so future deal-flow messages can expand inside the same tool.",
       },
     ],
   },
@@ -38,7 +38,7 @@ const roadmapEvents = [
     events: [
       {
         title: "Sidebar split by operating area",
-        type: "feature",
+        type: "style",
         description: "Navigation now separates Repreneurs, Opportunities, Tools, and Project. Staff can move between people work and deal-flow work without mixed menus.",
       },
       {
@@ -58,12 +58,12 @@ const roadmapEvents = [
       },
       {
         title: "Archived pages hidden from daily navigation",
-        type: "decision",
+        type: "style",
         description: "Journey, Reviews, Mission, Instructions, and Offers no longer crowd the sidebar, but remain available by direct link when needed.",
       },
       {
         title: "Access boundaries re-tested",
-        type: "fix",
+        type: "testing",
         description: "Staff and repreneur route separation was checked after the navigation split, including redirects and protected pages.",
       },
     ],
@@ -95,14 +95,14 @@ const roadmapEvents = [
         description: "The June V2 launch package defines what to demo, what to verify before release, what to check after deploy, and which limitations to state clearly.",
       },
       {
-        title: "V3 backlog made explicit",
-        type: "decision",
+        title: "V3 opportunity backlog captured",
+        type: "feature",
         description: "PDF parsing, AI deal analysis, full M&A CRM, M&A firm portal, e-signature, and repreneur self-service were preserved as V3 options instead of leaking into June scope.",
       },
       {
-        title: "Decision: June V2 implementation complete",
-        type: "decision",
-        description: "After QA and launch packaging, the next work is release monitoring and V3 selection, not adding more June features.",
+        title: "June V2 implementation packaged",
+        type: "testing",
+        description: "After QA and launch packaging, the product has a clear release-monitoring path and a separate V3 selection path.",
       },
     ],
   },
@@ -134,7 +134,7 @@ const roadmapEvents = [
       },
       {
         title: "Workflow UAT passed",
-        type: "learning",
+        type: "testing",
         description: "The checks covered structured matching, staff review queue, portal privacy boundary, active-pursuit lock, stage tracking, document gate, and build health.",
       },
     ],
@@ -171,8 +171,8 @@ const roadmapEvents = [
         description: "Responses now land in an internal review queue so the team can decide whether to validate a pursuit.",
       },
       {
-        title: "Decision: portal access follows the repreneur profile",
-        type: "decision",
+        title: "Portal access follows the repreneur profile",
+        type: "feature",
         description: "Repreneur credentials belong to actual repreneur records. If a repreneur is removed from the platform, their portal role and sessions are removed too.",
       },
     ],
@@ -209,8 +209,8 @@ const roadmapEvents = [
         description: "Firm and contact details are captured for staff context without turning the June scope into a full M&A CRM.",
       },
       {
-        title: "Decision: no hidden AI or PDF parsing in June",
-        type: "decision",
+        title: "Structured opportunity layer before automation",
+        type: "learning",
         description: "The opportunity layer stays structured and reviewable first. Automatic teaser parsing and AI interpretation remain future work.",
       },
     ],
@@ -222,18 +222,18 @@ const roadmapEvents = [
     isCompleted: true,
     events: [
       {
-        title: "June V2 goal locked",
-        type: "decision",
+        title: "June V2 delivery scope captured",
+        type: "feature",
         description: "The next build is the first usable deal-flow operating layer: opportunity data, matching, repreneur actions, pursuit tracking, document handling, and simple reporting.",
       },
       {
         title: "Same-database test protocol",
-        type: "decision",
+        type: "testing",
         description: "Testing uses the current approved Supabase project to avoid extra cost, with additive migrations, marked UAT data, rollback notes, and cleanup before release.",
       },
       {
         title: "Release gates written before feature expansion",
-        type: "feature",
+        type: "testing",
         description: "The plan now includes backup, local testing, UAT, cleanup, push/merge, deploy checks, and monitoring responsibilities in plain language.",
       },
       {
@@ -315,7 +315,7 @@ const roadmapEvents = [
     events: [
       {
         title: "Qualified now means 'offer pending'",
-        type: "decision",
+        type: "direction",
         description: "Assigning an offer moves a repreneur to Qualified. Offer accepted → Client, offer rejected → Declined. Matches how Bertrand thinks about the pipeline.",
       },
       {
@@ -410,7 +410,7 @@ const roadmapEvents = [
       {
         title: "Declined vs Rejected distinction",
         type: "feature",
-        description: "New 'Declined' status for internal decisions, separate from rejection emails sent to candidates.",
+        description: "New 'Declined' status for internal qualification calls, separate from rejection emails sent to candidates.",
       },
       {
         title: "Declined column on pipeline",
@@ -536,7 +536,7 @@ const roadmapEvents = [
       },
       {
         title: "Database schema for Better Auth",
-        type: "decision",
+        type: "direction",
         description: "Created camelCase tables (user, session, account, verification) matching Better Auth's expected schema. Deployed via Supabase SQL Editor.",
       },
     ],
@@ -577,7 +577,7 @@ const roadmapEvents = [
     events: [
       {
         title: "Switched to Better Auth",
-        type: "decision",
+        type: "direction",
         description: "Migrated from Supabase Auth to Better Auth, a TypeScript-first, self-hosted authentication library. Gives full control over auth without Supabase lock-in.",
       },
       {
@@ -630,7 +630,7 @@ const roadmapEvents = [
       },
       {
         title: "Dogfooding approach",
-        type: "decision",
+        type: "direction",
         description: "Using the platform itself to track V1.0 launch tasks. Tests authentication and email systems while managing the project.",
       },
     ],
@@ -695,8 +695,8 @@ const roadmapEvents = [
         description: "Stage pipeline boxes now show milestone names instead of counts. Clear visibility into what's needed for each stage transition.",
       },
       {
-        title: "Decision: Milestone-based progression",
-        type: "decision",
+        title: "Milestone-based progression",
+        type: "direction",
         description: "Removed persona requirement for Serial Acquirer. Stage progression now purely based on completing milestones. 'First acquisition completed' is the key milestone for Serial status.",
       },
     ],
@@ -761,8 +761,8 @@ const roadmapEvents = [
         description: "Fixed critical bug where scoring algorithm ignored database criteria. Admin edits in /guide/evaluation now properly affect new intake scores. Uses DB values with hardcoded fallback.",
       },
       {
-        title: "Decision: In-place editing over wizard",
-        type: "decision",
+        title: "In-place editing over wizard",
+        type: "direction",
         description: "Replaced full-page questionnaire wizard for profile edits with compact inline editor. Faster for quick corrections while preserving step-by-step wizard for public intake.",
       },
     ],
@@ -812,8 +812,8 @@ const roadmapEvents = [
         description: "Added LDC document field for storing framing letters. Internal document, not included in public intake form.",
       },
       {
-        title: "Decision: PDF-only for intake",
-        type: "decision",
+        title: "PDF-only for intake",
+        type: "direction",
         description: "Intake form restricted to PDF uploads only for consistency. Profile page accepts both PDF and Word for flexibility.",
       },
       {
@@ -850,8 +850,8 @@ const roadmapEvents = [
         description: "Search by client name, email, or package. Filter by status (Active, Pending, Completed, Expired). Grouped display by status.",
       },
       {
-        title: "Decision: Daily use case focus",
-        type: "decision",
+        title: "Daily use case focus",
+        type: "direction",
         description: "Recognized that packages are created rarely (3 exist). The daily use case is tracking offer progress with clients, not managing packages. UI reorganized accordingly.",
       },
     ],
@@ -878,8 +878,8 @@ const roadmapEvents = [
         description: "Scoring criteria moved from hard-coded TypeScript to database table. Foundation for future Tier 2 and Tier 3 evaluation systems.",
       },
       {
-        title: "Decision: Frozen scores",
-        type: "decision",
+        title: "Frozen scores",
+        type: "direction",
         description: "When criteria change, existing repreneur scores remain unchanged. Only new questionnaire completions use updated criteria. Preserves historical integrity.",
       },
     ],
@@ -995,8 +995,8 @@ const roadmapEvents = [
         description: "GitHub-style 12-month heatmap showing daily activity (new repreneurs + logged activities). Visual proof of team engagement over time.",
       },
       {
-        title: "Decision: Streaming architecture",
-        type: "decision",
+        title: "Streaming architecture",
+        type: "direction",
         description: "Dashboard loads in 3 independent streaming sections. Parallel data fetches + 30-second cache. Page feels fast even with heavy data.",
       },
       {
@@ -1112,9 +1112,9 @@ const roadmapEvents = [
     isCompleted: true,
     events: [
       {
-        title: "Decision: Action-driven status",
-        type: "decision",
-        description: "Major architecture decision: No manual drag-drop status changes. Status derived from actions (set Tier 2 → Qualified, assign offer → Client). Prevents inconsistent data.",
+        title: "Action-driven status",
+        type: "direction",
+        description: "No manual drag-drop status changes. Status is derived from actions (set Tier 2 → Qualified, assign offer → Client), preventing inconsistent data.",
       },
       {
         title: "Two-tier scoring system",
@@ -1221,13 +1221,13 @@ const roadmapEvents = [
     isCompleted: true,
     events: [
       {
-        title: "Decision: V0 for rapid prototyping",
-        type: "decision",
+        title: "V0 for rapid prototyping",
+        type: "direction",
         description: "Chose to start in V0.dev for AI-assisted UI generation, then export to local for advanced features. Speed over full control initially.",
       },
       {
-        title: "Decision: Supabase over custom backend",
-        type: "decision",
+        title: "Supabase over custom backend",
+        type: "direction",
         description: "PostgreSQL + instant APIs + auth + storage in one platform. No separate backend needed. Team can manage DB through dashboard.",
       },
       {
@@ -1236,8 +1236,8 @@ const roadmapEvents = [
         description: "Defined Repreneur lifecycle, Offer structure, Note/Activity tracking. Considered Flatchr fields for migration compatibility.",
       },
       {
-        title: "Decision: No drag-drop Kanban",
-        type: "decision",
+        title: "No drag-drop Kanban",
+        type: "direction",
         description: "Rejected manual status changes via drag-drop. Status changes must be triggered by meaningful actions. Prevents 'status without substance' problem.",
       },
       {
@@ -1261,16 +1261,16 @@ const roadmapEvents = [
       {
         title: "Learning: CRM vs ATS mindset",
         type: "learning",
-        description: "Flatchr treated repreneurs as one-time candidates. Wave must treat them as long-term relationships. This shapes every feature decision.",
+        description: "Flatchr treated repreneurs as one-time candidates. Wave must treat them as long-term relationships. This shapes every product feature.",
       },
       {
         title: "Timeline scoped: 8-10 FTE days",
-        type: "decision",
+        type: "direction",
         description: "Aggressive but achievable timeline. Prioritized core pipeline over nice-to-haves. Deferred Flatchr import, advanced analytics, client portal.",
       },
       {
         title: "Tech stack confirmed",
-        type: "decision",
+        type: "direction",
         description: "Next.js 16 + Tailwind + shadcn/ui for frontend. Supabase for backend. Vercel for hosting. Modern, maintainable, well-documented.",
       },
     ],
@@ -1283,22 +1283,22 @@ const roadmapEvents = [
     events: [
       {
         title: "Problem identified: Flatchr limitations",
-        type: "decision",
+        type: "direction",
         description: "Current ATS designed for recruitment, not relationship management. Once candidate 'placed', the system forgets them. Repreneurs need ongoing support.",
       },
       {
         title: "Vision: Purpose-built repreneur CRM",
-        type: "decision",
+        type: "direction",
         description: "Single profile per repreneur tracking entire journey. Multiple offers over time. Activity history. Cost analytics eventually. Built for Re-New's specific workflow.",
       },
       {
         title: "Stakeholder alignment",
-        type: "decision",
+        type: "direction",
         description: "Bertrand (CEO) + 2 part-time team members as users. Simple access model: 3 equal users, no role hierarchy. Focus on usability over enterprise features.",
       },
       {
-        title: "Decision: Build custom vs buy",
-        type: "decision",
+        title: "Build custom vs buy",
+        type: "direction",
         description: "Evaluated off-the-shelf CRMs. None matched repreneur journey model with integrated scoring and offer tracking. Custom build justified by unique requirements.",
       },
     ],
@@ -1308,17 +1308,18 @@ const roadmapEvents = [
 const typeConfig = {
   feature: { icon: Sparkles, color: "text-blue-600", bgColor: "bg-blue-50", label: "Feature" },
   fix: { icon: Bug, color: "text-green-600", bgColor: "bg-green-50", label: "Fix" },
-  style: { icon: Palette, color: "text-purple-600", bgColor: "bg-purple-50", label: "Style" },
+  style: { icon: Palette, color: "text-purple-600", bgColor: "bg-purple-50", label: "UX improvement" },
+  testing: { icon: AlertTriangle, color: "text-indigo-600", bgColor: "bg-indigo-50", label: "Testing" },
   refactor: { icon: RefreshCw, color: "text-amber-600", bgColor: "bg-amber-50", label: "Refactor" },
-  decision: { icon: Target, color: "text-rose-600", bgColor: "bg-rose-50", label: "Decision" },
+  direction: { icon: Target, color: "text-rose-600", bgColor: "bg-rose-50", label: "Product direction" },
   learning: { icon: Lightbulb, color: "text-yellow-600", bgColor: "bg-yellow-50", label: "Learning" },
 }
 
 export function DevelopmentRoadmap() {
   // Calculate stats
   const totalEvents = roadmapEvents.reduce((acc, period) => acc + period.events.length, 0)
-  const decisions = roadmapEvents.reduce((acc, period) =>
-    acc + period.events.filter(e => e.type === "decision").length, 0)
+  const uxImprovements = roadmapEvents.reduce((acc, period) =>
+    acc + period.events.filter(e => e.type === "style").length, 0)
   const learnings = roadmapEvents.reduce((acc, period) =>
     acc + period.events.filter(e => e.type === "learning").length, 0)
   const features = roadmapEvents.reduce((acc, period) =>
@@ -1343,9 +1344,9 @@ export function DevelopmentRoadmap() {
           <div className="text-2xl font-bold text-blue-600">{features}</div>
           <div className="text-xs text-gray-500">Features</div>
         </div>
-        <div className="text-center p-3 bg-rose-50 rounded-lg">
-          <div className="text-2xl font-bold text-rose-600">{decisions}</div>
-          <div className="text-xs text-gray-500">Decisions</div>
+        <div className="text-center p-3 bg-purple-50 rounded-lg">
+          <div className="text-2xl font-bold text-purple-600">{uxImprovements}</div>
+          <div className="text-xs text-gray-500">UX improvements</div>
         </div>
         <div className="text-center p-3 bg-yellow-50 rounded-lg">
           <div className="text-2xl font-bold text-yellow-600">{learnings}</div>
