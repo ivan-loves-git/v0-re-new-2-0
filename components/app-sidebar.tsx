@@ -11,7 +11,6 @@ import {
   GitBranch,
   Mail,
   BarChart3,
-  Briefcase,
   BookOpenCheck,
   Map,
   ChevronsUpDown,
@@ -69,7 +68,6 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Groups", href: "/opportunities/groups", icon: GitBranch },
   { name: "Find", href: "/opportunities/find", icon: Search },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
-  { name: "Records", href: "/opportunities", icon: Briefcase },
 ]
 
 const toolsNavigation: NavigationItem[] = [
@@ -160,13 +158,14 @@ export function AppSidebar({
     if (href === "/analytics_re") return pathname === "/analytics_re" || pathname === "/analytics"
     if (href === "/analytics_op") return pathname === "/analytics_op"
     if (href === "/opportunities/groups") return pathname === "/opportunities/groups"
-    if (href === "/opportunities/find") return pathname === "/opportunities/find"
-    if (href === "/opportunities") {
+    if (href === "/opportunities/find") {
       return (
-        pathname === "/opportunities" ||
+        pathname === "/opportunities/find" ||
         (pathname.startsWith("/opportunities/") &&
           !pathname.startsWith("/opportunities/groups") &&
           !pathname.startsWith("/opportunities/find") &&
+          !pathname.startsWith("/opportunities/import") &&
+          !pathname.startsWith("/opportunities/new") &&
           !pathname.startsWith("/opportunities/reviews"))
       )
     }

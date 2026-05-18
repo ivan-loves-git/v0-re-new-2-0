@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { BarChart3 } from "lucide-react"
 import { getAnalyticsData, type AnalyticsData } from "@/lib/actions/analytics"
 import { KpiCards } from "@/components/analytics/kpi-cards"
 import { OperationalKpis } from "@/components/analytics/operational-kpis"
@@ -10,6 +11,7 @@ import { DeclineReasons } from "@/components/analytics/decline-reasons"
 import { OfferConversion } from "@/components/analytics/offer-conversion"
 import { PeriodSelector } from "@/components/analytics/period-selector"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export const revalidate = 60
@@ -127,10 +129,13 @@ export default async function RepreneurAnalyticsPage(
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Analytics || Repreneurs</h1>
-          <p className="text-gray-600 mt-1">Scores, conversions, and pipeline health</p>
-        </div>
+        <SectionPageHeader
+          title="Analytics"
+          subtitle="Scores, conversions, and pipeline health"
+          icon={BarChart3}
+          tone="repreneur"
+          className="flex-1"
+        />
         <PeriodSelector />
       </div>
 

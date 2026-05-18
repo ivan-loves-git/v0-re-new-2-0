@@ -13,10 +13,11 @@ import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 import Link from "next/link"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
 import { calculateOverallScore } from "@/lib/scoring-utils"
-import { ArrowRight, BarChart3, Users, TrendingUp, TableProperties } from "lucide-react"
+import { ArrowRight, BarChart3, LayoutDashboard, Users, TrendingUp, TableProperties } from "lucide-react"
 import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
 
@@ -378,11 +379,12 @@ async function WavySuggestsRow() {
 export default async function RepreneurDashboardPage() {
   return (
     <div className="space-y-6">
-      {/* Header - renders immediately */}
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Dashboard || Repreneurs</h1>
-        <p className="text-gray-600 mt-1">Overview of your repreneur pipeline</p>
-      </div>
+      <SectionPageHeader
+        title="Dashboard"
+        subtitle="Overview of your repreneur pipeline"
+        icon={LayoutDashboard}
+        tone="repreneur"
+      />
 
       {/* Row 1: Stats + Top Tiers - streams in */}
       <Suspense fallback={

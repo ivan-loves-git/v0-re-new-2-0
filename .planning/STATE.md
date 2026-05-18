@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: complete
 stopped_at: Phase 5 complete; ready for release review or next milestone selection
-last_updated: "2026-05-18T10:31:00Z"
+last_updated: "2026-05-18T10:40:06Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 6
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | 2026-05-18 | Visible platform recommendation preview | Restored the Add recommendation form to show automatic platform recommendation, score, and top reasons beside the human recommendation field. |
 | 2026-05-18 | Save feedback toast standard | Made the green bottom-right save banner the shared success feedback pattern and removed duplicate inline success feedback from recommendation saves. |
 | 2026-05-18 | Opportunity Groups table polish | Split opportunity group tags into clearer colored columns and removed secondary fields from the dense Groups view to harmonize with the Repreneur Groups table. |
+| 2026-05-18 | Section page headers and navigation trim | Removed Opportunities Records from sidebar navigation, restored plain page titles, and added green Repreneur / purple Opportunity icon headers across dashboard, analytics, groups, and find pages. |
 
 ## Accumulated Context
 
@@ -116,6 +117,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - The recommendation form should show Platform recommendation as a read-only automatic preview on the left of Human recommendation; automatic must not mean invisible.
 - Successful saves should use the shared bottom-right green toast as the primary feedback surface across the platform; inline messages should be reserved for errors, validation, or persistent page state.
 - Grouped work-surface tables should keep one tag concept per column where possible; secondary descriptive detail belongs in the detail page or Find view, not the denser Groups view.
+- Staff page titles should stay plain. Repreneur vs Opportunity context should be carried by the sidebar group and the colored section-header icon, not by title suffixes.
 
 ### Pending Todos
 

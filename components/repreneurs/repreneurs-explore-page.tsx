@@ -2,8 +2,9 @@
 
 import { useRef } from "react"
 import Link from "next/link"
-import { Plus, Download } from "lucide-react"
+import { Download, Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { RepreneurExploreTable, type RepreneurExploreTableRef } from "./repreneur-explore-table"
 import type { Repreneur } from "@/lib/types/repreneur"
 
@@ -12,14 +13,13 @@ export function RepreneursExplorePage({ repreneurs }: { repreneurs: Repreneur[] 
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-normal text-foreground">Find Repreneurs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Filter, sort, and find repreneurs across the full pipeline
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <SectionPageHeader
+        title="Find"
+        subtitle="Filter, sort, and find repreneurs across the full pipeline"
+        icon={Search}
+        tone="repreneur"
+        actions={
+          <>
           <Button
             variant="outline"
             size="icon"
@@ -35,8 +35,9 @@ export function RepreneursExplorePage({ repreneurs }: { repreneurs: Repreneur[] 
               Add Repreneur
             </Link>
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <RepreneurExploreTable ref={tableRef} repreneurs={repreneurs} />
     </div>

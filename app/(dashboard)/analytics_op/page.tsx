@@ -1,4 +1,6 @@
+import { BarChart3 } from "lucide-react"
 import { OpportunityKpiPanel } from "@/components/dashboard/opportunity-kpi-panel"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { getOpportunityKpiData } from "@/lib/actions/opportunity-analytics"
 
 export const revalidate = 60
@@ -8,12 +10,12 @@ export default async function OpportunityAnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-foreground">Analytics || Opportunities</h1>
-        <p className="mt-1 text-muted-foreground">
-          Internal deal-flow metrics across opportunities, introductions, pursuits, NDA status, and documents.
-        </p>
-      </div>
+      <SectionPageHeader
+        title="Analytics"
+        subtitle="Internal deal-flow metrics across opportunities, introductions, pursuits, NDA status, and documents."
+        icon={BarChart3}
+        tone="opportunity"
+      />
 
       <OpportunityKpiPanel data={data} />
     </div>

@@ -7,6 +7,7 @@ import {
   FileCheck2,
   Inbox,
   Landmark,
+  LayoutDashboard,
   type LucideIcon,
   ShieldAlert,
 } from "lucide-react"
@@ -16,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getOpportunityFreshnessData } from "@/lib/actions/opportunity-freshness"
 import { listOpportunityMatchResponses } from "@/lib/actions/opportunity-matches"
@@ -153,12 +155,12 @@ export default async function OpportunityDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-foreground">Dashboard || Opportunities</h1>
-        <p className="mt-1 text-muted-foreground">
-          Daily operating view for opportunity records, response review, active pursuits, NDA gates, and stale follow-up.
-        </p>
-      </div>
+      <SectionPageHeader
+        title="Dashboard"
+        subtitle="Daily operating view for opportunity records, response review, active pursuits, NDA gates, and stale follow-up."
+        icon={LayoutDashboard}
+        tone="opportunity"
+      />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <OperationalStatCard

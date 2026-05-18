@@ -1,4 +1,6 @@
+import { GitBranch } from "lucide-react"
 import { OpportunityWorkSurfaceTable } from "@/components/opportunities/opportunity-work-surface-table"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { listOpportunityWorkSurfaceRecords } from "@/lib/actions/opportunities"
 
 export const revalidate = 30
@@ -8,10 +10,12 @@ export default async function OpportunityGroupsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-normal text-foreground">Groups || Opportunities</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Operate opportunity buckets from inventory through active pursuit and closed outcomes.</p>
-      </div>
+      <SectionPageHeader
+        title="Groups"
+        subtitle="Operate opportunity buckets from inventory through active pursuit and closed outcomes."
+        icon={GitBranch}
+        tone="opportunity"
+      />
 
       <OpportunityWorkSurfaceTable opportunities={opportunities} mode="groups" />
     </div>

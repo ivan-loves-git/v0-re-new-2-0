@@ -1,4 +1,6 @@
+import { Search } from "lucide-react"
 import { OpportunityWorkSurfaceTable } from "@/components/opportunities/opportunity-work-surface-table"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { listOpportunityWorkSurfaceRecords } from "@/lib/actions/opportunities"
 
 export const revalidate = 30
@@ -8,10 +10,12 @@ export default async function OpportunityFindPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-normal text-foreground">Find Opportunities</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Search and filter the full opportunity base with journey-first deal-flow tags.</p>
-      </div>
+      <SectionPageHeader
+        title="Find"
+        subtitle="Search and filter the full opportunity base with journey-first deal-flow tags."
+        icon={Search}
+        tone="opportunity"
+      />
 
       <OpportunityWorkSurfaceTable opportunities={opportunities} mode="find" />
     </div>
