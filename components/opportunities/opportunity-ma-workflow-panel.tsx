@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { type FormEvent, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Mail, Send, UserRound } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +31,7 @@ function formatDate(value: string | null | undefined) {
 }
 
 export function OpportunityMaWorkflowPanel({ workflow, sendAction }: OpportunityMaWorkflowPanelProps) {
+  const router = useRouter()
   const firstDraft = workflow.drafts[0]
   const [templateKey, setTemplateKey] = useState(firstDraft?.templateKey ?? "")
   const selectedDraft = useMemo(
@@ -38,7 +40,7 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
   )
   const [subject, setSubject] = useState(selectedDraft?.subject ?? "")
   const [body, setBody] = useState(selectedDraft?.body ?? "")
-  const [isPending, startTransition] = useTransition()
+  const [isSending, setIsSending] = useState(false)
   const canSend = Boolean(workflow.recipientEmail && templateKey && subject.trim() && body.trim())
 
   useEffect(() => {
@@ -47,15 +49,27 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
     setBody(selectedDraft.body)
   }, [selectedDraft])
 
-  const handleSend = (formData: FormData) => {
-    startTransition(async () => {
+  const handleSend = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!canSend || isSending) return
+
+    setIsSending(true)
+    try {
+      const formData = new FormData(event.currentTarget)
       const result = await sendAction(formData)
       if (!result.success) {
         toast.error("M&A email not sent", { description: result.message })
         return
       }
       toast.success("M&A email sent", { description: result.message })
-    })
+      router.refresh()
+    } catch (error) {
+      toast.error("M&A email not sent", {
+        description: error instanceof Error ? error.message : "Unexpected error while sending the intermediary email.",
+      })
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -71,7 +85,7 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleSend} className="space-y-4">
+          <form onSubmit={handleSend} className="space-y-4">
             <input type="hidden" name="template_key" value={templateKey} />
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -135,9 +149,9 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
             ) : null}
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={!canSend || isPending}>
+              <Button type="submit" disabled={!canSend || isSending}>
                 <Send data-icon="inline-start" />
-                {isPending ? "Sending..." : "Send to source"}
+                {isSending ? "Sending..." : "Send to source"}
               </Button>
             </div>
           </form>
@@ -179,4 +193,3 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
     </div>
   )
 }
-
