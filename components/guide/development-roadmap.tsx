@@ -8,6 +8,242 @@ import { Badge } from "@/components/ui/badge"
 // Strategic decisions, technical learnings, iterations, and features
 const roadmapEvents = [
   {
+    period: "May 18, 2026",
+    version: "0.9.13",
+    title: "Email Tools prepared for opportunity workflows",
+    isCompleted: true,
+    events: [
+      {
+        title: "Emails moved into Tools",
+        type: "feature",
+        description: "Email now sits with Wavy as a shared operations tool, not as a repreneur-only page. This keeps future communication work in one cockpit.",
+      },
+      {
+        title: "Template audience tags",
+        type: "feature",
+        description: "Templates now carry a visible Rep tag, with room for future Opp templates. Staff will be able to distinguish repreneur messages from opportunity messages as automation expands.",
+      },
+      {
+        title: "Decision: expand the existing cockpit",
+        type: "decision",
+        description: "Future opportunity email automation should grow inside Email Tools instead of creating a second parallel email page.",
+      },
+    ],
+  },
+  {
+    period: "May 17, 2026",
+    version: "0.9.12",
+    title: "Staff dashboards separated by work type",
+    isCompleted: true,
+    events: [
+      {
+        title: "Sidebar split by operating area",
+        type: "feature",
+        description: "Navigation now separates Repreneurs, Opportunities, Tools, and Project. Staff can move between people work and deal-flow work without mixed menus.",
+      },
+      {
+        title: "Repreneur dashboards preserved",
+        type: "feature",
+        description: "The existing dashboard and analytics views now live as repreneur-focused pages. Old dashboard and analytics links redirect cleanly.",
+      },
+      {
+        title: "Opportunity dashboard added",
+        type: "feature",
+        description: "A new opportunity operations page focuses on stale follow-ups, pending response reviews, active pursuits, NDA blockers, and recent opportunities.",
+      },
+      {
+        title: "Opportunity analytics added",
+        type: "feature",
+        description: "Deal-flow KPIs now have their own analytics page, separate from repreneur pipeline analytics.",
+      },
+      {
+        title: "Archived pages hidden from daily navigation",
+        type: "decision",
+        description: "Journey, Reviews, Mission, Instructions, and Offers no longer crowd the sidebar, but remain available by direct link when needed.",
+      },
+      {
+        title: "Access boundaries re-tested",
+        type: "fix",
+        description: "Staff and repreneur route separation was checked after the navigation split, including redirects and protected pages.",
+      },
+    ],
+  },
+  {
+    period: "May 17, 2026",
+    version: "0.9.11",
+    title: "June V2 demo and launch package",
+    isCompleted: true,
+    events: [
+      {
+        title: "End-to-end demo path created",
+        type: "feature",
+        description: "The demo data now shows the full V2 chain: sourced opportunity, repreneur match, active pursuit, seller meeting stage, signed NDA, and approved teaser document.",
+      },
+      {
+        title: "Operational deal-flow KPIs",
+        type: "feature",
+        description: "Staff can now see active intermediaries, active opportunities, introductions, active pursuits, seller meetings, LOIs, dropped deals, closed deals, approved documents, and NDA blockers.",
+      },
+      {
+        title: "Opportunity freshness reminders",
+        type: "feature",
+        description: "Opportunity list and detail pages show date/month added, and staff get a reminder when an open opportunity is older than 90 days with no active pursuit.",
+      },
+      {
+        title: "Launch checklist written",
+        type: "feature",
+        description: "The June V2 launch package defines what to demo, what to verify before release, what to check after deploy, and which limitations to state clearly.",
+      },
+      {
+        title: "V3 backlog made explicit",
+        type: "decision",
+        description: "PDF parsing, AI deal analysis, full M&A CRM, M&A firm portal, e-signature, and repreneur self-service were preserved as V3 options instead of leaking into June scope.",
+      },
+      {
+        title: "Decision: June V2 implementation complete",
+        type: "decision",
+        description: "After QA and launch packaging, the next work is release monitoring and V3 selection, not adding more June features.",
+      },
+    ],
+  },
+  {
+    period: "May 17, 2026",
+    version: "0.9.10",
+    title: "Deal workflow hardened",
+    isCompleted: true,
+    events: [
+      {
+        title: "Active pursuit lock",
+        type: "feature",
+        description: "Staff can validate only one active repreneur pursuit per opportunity. If that pursuit is dropped, the opportunity can be reopened for another path.",
+      },
+      {
+        title: "Pursuit stage tracking",
+        type: "feature",
+        description: "Validated pursuits can move through interest, intermediary meeting, seller meeting, LOI, closed, or dropped, with internal history for the team.",
+      },
+      {
+        title: "NDA and document gate",
+        type: "feature",
+        description: "Staff can track NDA status and link documents. Repreneurs can download only the documents approved for them once the NDA state allows it.",
+      },
+      {
+        title: "Review findings resolved",
+        type: "fix",
+        description: "Role rules, response states, legacy deal links, and recommendation/review table behavior were tightened before closing the workflow.",
+      },
+      {
+        title: "Workflow UAT passed",
+        type: "learning",
+        description: "The checks covered structured matching, staff review queue, portal privacy boundary, active-pursuit lock, stage tracking, document gate, and build health.",
+      },
+    ],
+  },
+  {
+    period: "May 17, 2026",
+    version: "0.9.9",
+    title: "Repreneur portal and response loop",
+    isCompleted: true,
+    events: [
+      {
+        title: "Separate repreneur portal",
+        type: "feature",
+        description: "Repreneurs now have their own portal for deals and profile view, outside the internal staff dashboard shell.",
+      },
+      {
+        title: "Read-only profile summary",
+        type: "feature",
+        description: "The portal profile shows WHO/WHEN scores, journey progress, strengths, improvement points, target thesis, and visible milestones.",
+      },
+      {
+        title: "Demo repreneur access prepared",
+        type: "feature",
+        description: "A realistic demo repreneur profile was linked to portal credentials and populated with profile data, milestones, assessment data, and three visible opportunity matches.",
+      },
+      {
+        title: "Interested / Not a fit actions",
+        type: "feature",
+        description: "Repreneurs can respond to proposed opportunities from the portal. Interest creates a staff review signal, not an automatic active pursuit.",
+      },
+      {
+        title: "Staff review queue",
+        type: "feature",
+        description: "Responses now land in an internal review queue so the team can decide whether to validate a pursuit.",
+      },
+      {
+        title: "Decision: portal access follows the repreneur profile",
+        type: "decision",
+        description: "Repreneur credentials belong to actual repreneur records. If a repreneur is removed from the platform, their portal role and sessions are removed too.",
+      },
+    ],
+  },
+  {
+    period: "May 16, 2026",
+    version: "0.9.8",
+    title: "Opportunity operating layer",
+    isCompleted: true,
+    events: [
+      {
+        title: "Opportunity database foundation",
+        type: "feature",
+        description: "The platform now has a structured place for sourced opportunities, status, source/contact metadata, staff-only fields, and repreneur-visible fields.",
+      },
+      {
+        title: "Staff opportunity workspace",
+        type: "feature",
+        description: "Staff can list, create, edit, archive, and inspect opportunities from dedicated opportunity pages.",
+      },
+      {
+        title: "Review-first import",
+        type: "feature",
+        description: "Workbook rows can be pasted or imported for review. The system shows warnings and blockers before any approved valid rows are saved.",
+      },
+      {
+        title: "Private opportunity documents",
+        type: "feature",
+        description: "Opportunity documents are stored privately, with staff-controlled visibility for what a repreneur may later see.",
+      },
+      {
+        title: "Basic M&A source tracking",
+        type: "feature",
+        description: "Firm and contact details are captured for staff context without turning the June scope into a full M&A CRM.",
+      },
+      {
+        title: "Decision: no hidden AI or PDF parsing in June",
+        type: "decision",
+        description: "The opportunity layer stays structured and reviewable first. Automatic teaser parsing and AI interpretation remain future work.",
+      },
+    ],
+  },
+  {
+    period: "May 16, 2026",
+    version: "0.9.7",
+    title: "June V2 scope lock and release protocol",
+    isCompleted: true,
+    events: [
+      {
+        title: "June V2 goal locked",
+        type: "decision",
+        description: "The next build is the first usable deal-flow operating layer: opportunity data, matching, repreneur actions, pursuit tracking, document handling, and simple reporting.",
+      },
+      {
+        title: "Same-database test protocol",
+        type: "decision",
+        description: "Testing uses the current approved Supabase project to avoid extra cost, with additive migrations, marked UAT data, rollback notes, and cleanup before release.",
+      },
+      {
+        title: "Release gates written before feature expansion",
+        type: "feature",
+        description: "The plan now includes backup, local testing, UAT, cleanup, push/merge, deploy checks, and monitoring responsibilities in plain language.",
+      },
+      {
+        title: "Scope boundaries protected",
+        type: "learning",
+        description: "High-complexity items were deliberately postponed so June can validate the core workflow before adding heavier automation.",
+      },
+    ],
+  },
+  {
     period: "May 9, 2026",
     version: "0.9.6",
     title: "CSV export: application_date split from first_contact_at",
@@ -1196,7 +1432,7 @@ export function DevelopmentRoadmap() {
       <div className="text-center text-sm text-gray-500 pt-4 border-t">
         <p className="flex items-center justify-center gap-2">
           <Rocket className="size-4 text-blue-500" />
-          {totalEvents} milestones completed in 3 weeks
+          {totalEvents} roadmap updates captured from first idea to current June V2 build
         </p>
       </div>
     </div>

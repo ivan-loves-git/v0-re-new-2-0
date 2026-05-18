@@ -17,13 +17,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Eye, Loader2 } from "lucide-react"
-import { TEMPLATE_METADATA } from "@/lib/email/templates"
+import { TEMPLATE_AUDIENCE_LABELS, TEMPLATE_METADATA } from "@/lib/email/templates"
 import {
   toggleTemplateEnabled,
   getRenderedTemplate,
   updateTemplateSettings,
 } from "@/lib/actions/emails"
 import type { EmailTemplate, EmailTemplateKey } from "@/lib/types/email"
+import type { EmailTemplateAudience } from "@/lib/email/templates"
 
 interface EmailTemplatesProps {
   templates: EmailTemplate[]
@@ -163,7 +164,14 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
     },
     {} as Record<
       string,
-      Array<{ key: string; name: string; description: string; category: string; isEnabled: boolean }>
+      Array<{
+        key: string
+        name: string
+        description: string
+        category: string
+        audience: EmailTemplateAudience
+        isEnabled: boolean
+      }>
     >,
   )
 
@@ -189,6 +197,9 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h4 className="font-medium">{item.name}</h4>
+                      <Badge variant={item.audience === "opp" ? "outline" : "secondary"}>
+                        {TEMPLATE_AUDIENCE_LABELS[item.audience]}
+                      </Badge>
                       <code className="text-xs bg-gray-100 px-2 py-0.5 rounded">{item.key}</code>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">{item.description}</p>

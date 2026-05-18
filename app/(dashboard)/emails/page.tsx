@@ -19,8 +19,8 @@ export default async function EmailsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Email Cockpit</h1>
-        <p className="text-gray-600 mt-1">Monitor and manage email automation</p>
+        <h1 className="text-3xl font-semibold text-gray-900">Email Tools</h1>
+        <p className="text-gray-600 mt-1">Monitor, edit, and send automation templates across Re-New workflows</p>
       </div>
 
 

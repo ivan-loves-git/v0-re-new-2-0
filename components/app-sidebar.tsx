@@ -18,6 +18,7 @@ import {
   Settings,
   User,
   Waves,
+  type LucideIcon,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
@@ -46,26 +47,34 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-const repreneurNavigation = [
+interface NavigationItem {
+  name: string
+  href: string
+  icon: LucideIcon
+  badge?: string
+  showNotification?: boolean
+}
+
+const repreneurNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_re", icon: LayoutDashboard },
   { name: "Groups", href: "/repreneurs", icon: Users },
   { name: "Find", href: "/repreneurs/explore", icon: Search },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
-  { name: "Emails", href: "/emails", icon: Mail },
   { name: "Analytics", href: "/analytics_re", icon: BarChart3 },
 ]
 
-const opportunityNavigation = [
+const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
   { name: "Records", href: "/opportunities", icon: Briefcase },
 ]
 
-const toolsNavigation = [
+const toolsNavigation: NavigationItem[] = [
+  { name: "Emails", href: "/emails", icon: Mail },
   { name: "Wavy", href: "/tools/wavy", icon: Waves },
 ]
 
-const projectNavigation = [
+const projectNavigation: NavigationItem[] = [
   { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
 ]
 

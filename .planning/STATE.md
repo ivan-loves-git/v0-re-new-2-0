@@ -51,6 +51,7 @@ Progress: [██████████] 100%
 | 2026-05-17 | Phase 3 end-to-end QA | Created `03-UAT.md`; seeded one marked demo active-pursuit path with seller-meeting stage, signed NDA, approved teaser, and staff-only NDA document. |
 | 2026-05-17 | Phase 3 launch/demo checklist | Created launch/demo checklist and V3 deferred backlog; marked June V2 implementation complete. |
 | 2026-05-17 | Phase 4 staff IA and dashboard separation | Split staff navigation into Repreneurs and Opportunities, moved repreneur dashboards to `/dashboard_re` and `/analytics_re`, added `/dashboard_op` and `/analytics_op`, and kept archived pages direct-link accessible. |
+| 2026-05-18 | Email tools soft expansion | Moved Emails into Tools before Wavy and added `Rep`/future `Opp` template audience metadata to support incremental email automation expansion. |
 
 ## Accumulated Context
 
@@ -94,6 +95,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 3 plan 03-03 completed: UAT passes after adding a minimal marked demo path for one active pursuit, seller meeting, signed NDA, approved teaser, and staff-only NDA document.
 - Phase 3 plan 03-04 completed: launch/demo checklist and V3 deferred backlog are written, and the June V2 implementation is marked complete.
 - Phase 4 completed: staff navigation now separates repreneur and opportunity work; legacy `/dashboard` and `/analytics` redirect to repreneur pages; archived Journey, Reviews, Mission, and Instructions are hidden from sidebar but routes remain available.
+- Email should now be treated as a shared Tools surface. Current templates are tagged `Rep`; future opportunity automation should add `Opp` templates and context-specific send panels inside the existing `/emails` cockpit instead of creating a parallel page.
 
 ### Pending Todos
 

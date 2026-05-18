@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
-import { TEMPLATE_METADATA } from "@/lib/email/templates"
+import { Badge } from "@/components/ui/badge"
+import { TEMPLATE_AUDIENCE_LABELS, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getRepreneursForManualSend, sendManualEmail, sendTestEmail } from "@/lib/actions/emails"
 import type { EmailTemplateKey } from "@/lib/types/email"
 import { Send, CheckCircle, AlertCircle, Search, FlaskConical } from "lucide-react"
@@ -239,22 +240,28 @@ export function ManualSend() {
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-        {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
-          <SelectItem key={key} value={key}>
-            <div className="flex items-center gap-2">
-              <span>{meta.name}</span>
-              <span className="text-xs text-muted-foreground">({meta.category})</span>
-            </div>
-          </SelectItem>
-        ))}
+                {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
+                  <SelectItem key={key} value={key}>
+                    <div className="flex items-center gap-2">
+                      <span>{meta.name}</span>
+                      <Badge variant={meta.audience === "opp" ? "outline" : "secondary"} className="text-[10px]">
+                        {TEMPLATE_AUDIENCE_LABELS[meta.audience]}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">({meta.category})</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
 
           {selectedTemplate && (
-            <p className="text-sm text-muted-foreground">
-              {TEMPLATE_METADATA[selectedTemplate].description}
-            </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant={TEMPLATE_METADATA[selectedTemplate].audience === "opp" ? "outline" : "secondary"} className="text-[10px]">
+                {TEMPLATE_AUDIENCE_LABELS[TEMPLATE_METADATA[selectedTemplate].audience]}
+              </Badge>
+              <span>{TEMPLATE_METADATA[selectedTemplate].description}</span>
+            </div>
           )}
         </div>
 
