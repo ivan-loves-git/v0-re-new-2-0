@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { type FormEvent, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Mail, Send, UserRound } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -49,13 +49,16 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
     setBody(selectedDraft.body)
   }, [selectedDraft])
 
-  const handleSend = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleSend = async () => {
     if (!canSend || isSending) return
+
+    const formData = new FormData()
+    formData.set("template_key", templateKey)
+    formData.set("subject", subject)
+    formData.set("body_markdown", body)
 
     setIsSending(true)
     try {
-      const formData = new FormData(event.currentTarget)
       const result = await sendAction(formData)
       if (!result.success) {
         toast.error("M&A email not sent", { description: result.message })
@@ -85,9 +88,7 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSend} className="space-y-4">
-            <input type="hidden" name="template_key" value={templateKey} />
-
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Source</Label>
@@ -123,7 +124,6 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
               <Label htmlFor="ma_subject">Subject</Label>
               <Input
                 id="ma_subject"
-                name="subject"
                 value={subject}
                 onChange={(event) => setSubject(event.target.value)}
                 placeholder="Example: Opportunity still active?"
@@ -134,7 +134,6 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
               <Label htmlFor="ma_body">Message</Label>
               <Textarea
                 id="ma_body"
-                name="body_markdown"
                 rows={12}
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
@@ -149,12 +148,12 @@ export function OpportunityMaWorkflowPanel({ workflow, sendAction }: Opportunity
             ) : null}
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={!canSend || isSending}>
+              <Button type="button" onClick={handleSend} disabled={!canSend || isSending}>
                 <Send data-icon="inline-start" />
                 {isSending ? "Sending..." : "Send to source"}
               </Button>
             </div>
-          </form>
+          </div>
         </CardContent>
       </Card>
 
