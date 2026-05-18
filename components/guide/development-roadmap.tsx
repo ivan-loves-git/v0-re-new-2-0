@@ -9,6 +9,34 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "May 18, 2026",
+    version: "0.9.14",
+    title: "M&A source directory and intermediary email foundations",
+    isCompleted: true,
+    events: [
+      {
+        title: "M&A source directory added",
+        type: "feature",
+        description: "The Opportunities area now has an M&A page where staff can manage intermediary firms, source types, contact names, emails, phone numbers, notes, and linked opportunity coverage.",
+      },
+      {
+        title: "Opportunity sources normalized",
+        type: "fix",
+        description: "Existing opportunity source labels were backfilled into source records so contacts can be edited once and reused across the opportunity workflow.",
+      },
+      {
+        title: "Intermediary email templates seeded",
+        type: "feature",
+        description: "Email Tools now include broker-facing templates for opportunity validity checks, missing information, repreneur interest feedback, and process follow-up.",
+      },
+      {
+        title: "Safe email boundary kept",
+        type: "audit",
+        description: "M&A templates are reviewable and testable, but they stay out of the normal repreneur manual-send flow until a dedicated intermediary send workflow is designed.",
+      },
+    ],
+  },
+  {
+    period: "May 18, 2026",
     version: "0.9.13",
     title: "Email cockpit extended for deal-flow communication",
     isCompleted: true,

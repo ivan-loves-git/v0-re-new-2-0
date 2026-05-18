@@ -47,6 +47,14 @@
 - [x] **MNA-01**: Staff can record basic M&A source/contact information needed for the opportunity.
 - [x] **MNA-02**: Staff get a simple stale-opportunity reminder after 3 months when nobody is actively pursuing the opportunity.
 
+### M&A Source Directory and Intermediary Emails
+
+- [x] **MNA-DIR-01**: Staff can view M&A sources/intermediaries in a dedicated Opportunities page.
+- [x] **MNA-DIR-02**: Staff can create and edit source firm name, source type, contact name, email, phone, and notes.
+- [x] **MNA-DIR-03**: Existing opportunity source labels are linked to normalized M&A source records.
+- [x] **EMAIL-MA-01**: Email Tools include M&A/intermediary templates for validity checks, information requests, repreneur interest feedback, and process follow-up.
+- [x] **EMAIL-MA-02**: M&A/intermediary templates are reviewable and testable without being mixed into repreneur manual sends.
+
 ### Reporting
 
 - [x] **KPI-01**: Staff can see operational counts for active intermediaries, opportunities, introductions, seller meetings, LOIs, dropped deals, and closed deals.
@@ -130,12 +138,13 @@
 | UX-02, UX-03, OPP-FIND-01, OPP-GROUPS-01 | Phase 5 | Complete |
 | UX-04 | Phase 5 | Complete |
 | OPP-JOURNEY-01 | Phase 5 | Complete |
+| MNA-DIR-01, MNA-DIR-02, MNA-DIR-03, EMAIL-MA-01, EMAIL-MA-02 | Phase 6 | Complete |
 
 **Coverage:**
-- June V2 requirements: 43 total
-- Mapped to phases: 43
+- June V2 requirements: 48 total
+- Mapped to phases: 48
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-18 after Phase 5 validation*
+*Last updated: 2026-05-18 after Phase 6 M&A source directory and email workflow implementation*

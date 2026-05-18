@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email"
 import { revalidatePath } from "next/cache"
 import { render } from "@react-email/render"
 import type { EmailTemplateKey } from "@/lib/types/email"
+import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
 
 // Import all email templates
 import { WelcomeEmail } from "@/lib/email/templates/welcome"
@@ -19,6 +20,29 @@ import { OfferActivatedEmail } from "@/lib/email/templates/offer-activated"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
+import { MaIntermediaryEmail } from "@/lib/email/templates/ma-intermediary"
+
+const MA_SAMPLE_VARIABLES = {
+  firstName: "Camille",
+  firmName: "Cabinet Atlantique M&A",
+  opportunityTitle: "PME industrielle en region Ouest",
+  repreneurName: "Sophie Martin",
+  nextStep: "un premier echange cette semaine",
+}
+
+function isMaTemplateKey(templateKey: EmailTemplateKey) {
+  return TEMPLATE_METADATA[templateKey]?.category === "ma"
+}
+
+function substituteTemplateVariables(value: string, variables: Record<string, string>) {
+  return value.replace(/\{(\w+)\}/g, (match, key) => {
+    return Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : match
+  })
+}
+
+function getMaTemplateBody(templateKey: EmailTemplateKey, bodyMarkdown?: string | null) {
+  return bodyMarkdown?.trim() || MA_TEMPLATE_DEFAULT_BODIES[templateKey] || ""
+}
 
 export interface EmailStats {
   totalSent: number
@@ -266,9 +290,10 @@ export async function getRenderedTemplate(
     .select("subject, body_markdown, body_editable")
     .eq("template_key", templateKey)
     .single()
-  const subject = row?.subject || ""
+  const subject = row?.subject || TEMPLATE_METADATA[templateKey]?.name || ""
   const bodyEditable = !!row?.body_editable
-  const bodyMarkdown: string | null = bodyEditable && row?.body_markdown ? row.body_markdown : null
+  const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
+  const bodyMarkdown: string | null = bodyEditable ? (row?.body_markdown?.trim() || fallbackBody) : null
   const bodyOverride = bodyMarkdown ?? undefined
 
   const sampleRepreneur = {
@@ -339,6 +364,16 @@ export async function getRenderedTemplate(
     case "booking_reminder":
       element = BookingReminderEmail({ repreneur: sampleRepreneur, bodyOverride })
       break
+    case "ma_opportunity_validity_check":
+    case "ma_request_more_information":
+    case "ma_repreneur_interest_feedback":
+    case "ma_process_follow_up":
+      element = MaIntermediaryEmail({
+        subject: substituteTemplateVariables(subject, MA_SAMPLE_VARIABLES),
+        body: getMaTemplateBody(templateKey, bodyMarkdown),
+        variables: MA_SAMPLE_VARIABLES,
+      })
+      break
     default:
       throw new Error(`Unknown template: ${templateKey}`)
   }
@@ -385,6 +420,13 @@ export async function sendManualEmail(
   templateKey: EmailTemplateKey,
   metadata?: Record<string, unknown>
 ) {
+  if (TEMPLATE_METADATA[templateKey]?.audience !== "rep") {
+    return {
+      success: false,
+      message: "This template is for M&A/intermediary workflows and is only available in test mode for now.",
+    }
+  }
+
   const supabase = createAdminClient()
 
   // Get repreneur data
@@ -450,6 +492,22 @@ export async function sendManualEmail(
       template = RejectionEmail({ repreneur: emailData })
       subject = "Suite à la revue de votre dossier repreneur"
       break
+    case "interview_reminder":
+      template = InterviewReminderEmail({
+        repreneur: emailData,
+        metadata: {
+          interviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        },
+      })
+      subject = "Rappel de votre entretien Re-New"
+      break
+    case "booking_reminder":
+      template = BookingReminderEmail({
+        repreneur: emailData,
+        bodyOverride: await getTemplateBody(templateKey),
+      })
+      subject = "Planifiez votre entretien Re-New"
+      break
     default:
       throw new Error(`Unknown template: ${templateKey}`)
   }
@@ -508,6 +566,32 @@ export async function sendTestEmail(
   let template: React.ReactElement
   let subject: string
 
+  if (isMaTemplateKey(templateKey)) {
+    const variables = {
+      ...MA_SAMPLE_VARIABLES,
+      firstName: firstName || MA_SAMPLE_VARIABLES.firstName,
+    }
+    const baseSubject = await getTemplateSubject(templateKey, TEMPLATE_METADATA[templateKey].name)
+    const body = getMaTemplateBody(templateKey, await getTemplateBody(templateKey))
+    const renderedSubject = substituteTemplateVariables(baseSubject, variables)
+    const { sendEmailDirect } = await import("@/lib/email/send-email")
+    const result = await sendEmailDirect({
+      to: email,
+      subject: `[TEST] ${renderedSubject}`,
+      react: MaIntermediaryEmail({
+        subject: renderedSubject,
+        body,
+        variables,
+      }),
+    })
+
+    if (!result.success) {
+      return { success: false, message: result.error || "Failed to send email" }
+    }
+
+    return { success: true, message: `Test email sent to ${email}` }
+  }
+
   switch (templateKey) {
     case "welcome":
       template = WelcomeEmail({ repreneur: emailData })
@@ -548,6 +632,20 @@ export async function sendTestEmail(
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
       subject = "[TEST] Suite à la revue de votre dossier repreneur"
+      break
+    case "interview_reminder":
+      template = InterviewReminderEmail({
+        repreneur: emailData,
+        metadata: { interviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
+      })
+      subject = "[TEST] Rappel de votre entretien Re-New"
+      break
+    case "booking_reminder":
+      template = BookingReminderEmail({
+        repreneur: emailData,
+        bodyOverride: await getTemplateBody(templateKey),
+      })
+      subject = "[TEST] Planifiez votre entretien Re-New"
       break
     default:
       return { success: false, message: `Unknown template: ${templateKey}` }

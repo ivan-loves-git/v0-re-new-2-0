@@ -22,6 +22,7 @@ const pathNames: Record<string, string> = {
   analytics_op: "Analytics",
   repreneurs: "Repreneurs",
   opportunities: "Opportunities",
+  ma: "M&A",
   pipeline: "Pipeline",
   emails: "Emails",
   journey: "Journey",

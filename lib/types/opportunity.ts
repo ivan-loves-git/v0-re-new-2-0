@@ -135,6 +135,14 @@ export interface MaSource_Update {
   notes?: string | null
 }
 
+export interface MaSourceDirectoryEntry extends MaSource {
+  opportunity_count: number
+  open_opportunity_count: number
+  stale_opportunity_count: number
+  latest_opportunity_date?: string | null
+  latest_opportunity_title?: string | null
+}
+
 export interface Opportunity {
   id: string
   reference: string

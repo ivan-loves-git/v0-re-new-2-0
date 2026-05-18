@@ -15,6 +15,7 @@ import * as React from "react"
 interface BaseLayoutProps {
   previewText: string
   children: React.ReactNode
+  footerText?: string
 }
 
 // Re-New brand colors (from re-new.team website)
@@ -29,7 +30,7 @@ const colors = {
 
 const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif'
 
-export function BaseLayout({ previewText, children }: BaseLayoutProps) {
+export function BaseLayout({ previewText, children, footerText: customFooterText }: BaseLayoutProps) {
   return (
     <Html>
       <Head />
@@ -54,7 +55,7 @@ export function BaseLayout({ previewText, children }: BaseLayoutProps) {
           <Hr style={hr} />
           <Section style={footer}>
             <Text style={footerText}>
-              Vous recevez cet email car vous vous etes inscrit sur Re-New.
+              {customFooterText ?? "Vous recevez cet email car vous vous etes inscrit sur Re-New."}
             </Text>
             <Text style={footerText}>
               <Link href="https://re-new.team" style={footerLink}>

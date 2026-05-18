@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: complete
-stopped_at: Phase 5 complete; ready for release review or next milestone selection
-last_updated: "2026-05-18T10:43:30Z"
+stopped_at: Phase 6 complete; ready for release review or next milestone selection
+last_updated: "2026-05-18T11:42:00Z"
 last_activity: 2026-05-18
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 26
-  completed_plans: 26
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 30
+  completed_plans: 30
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 5 is unifying the repreneur Find/Groups UX and replicating the same operating pattern for opportunities.
+**Current focus:** Phase 6 has added the M&A source directory and intermediary email template foundations.
 
 ## Current Position
 
-Phase: 5 complete
-Plan: 26 of 26 complete
-Status: Phase 5 complete; ready for release review or next milestone selection
+Phase: 6 complete
+Plan: 30 of 30 complete
+Status: Phase 6 complete; ready for release review or next milestone selection
 Last activity: 2026-05-18
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 22
+- Total plans completed: 30
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | 2026-05-18 | Save feedback toast standard | Made the green bottom-right save banner the shared success feedback pattern and removed duplicate inline success feedback from recommendation saves. |
 | 2026-05-18 | Opportunity Groups table polish | Split opportunity group tags into clearer colored columns and removed secondary fields from the dense Groups view to harmonize with the Repreneur Groups table. |
 | 2026-05-18 | Section page headers and navigation trim | Removed Opportunities Records from sidebar/dashboard promotion, restored plain page titles, and added green Repreneur / purple Opportunity icon headers across dashboard, analytics, groups, and find pages. |
+| 2026-05-18 | Phase 6 M&A source directory | Backfilled opportunity source labels into normalized `ma_sources`, added `/opportunities/ma`, created source/contact editing, and seeded four intermediary email templates in Email Tools. |
 
 ## Accumulated Context
 
@@ -70,6 +71,7 @@ Progress: [██████████] 100%
 - Phase 1.1 inserted after Phase 1: Testing Environment and Release Protocol (URGENT)
 - Phase 4 added: Staff information architecture and dashboard separation.
 - Phase 5 added: Unified repreneur Find/Groups UX and equivalent opportunity Find/Groups work surfaces.
+- Phase 6 added: M&A source directory and intermediary email workflow foundations.
 
 ### Decisions
 
@@ -119,6 +121,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Grouped work-surface tables should keep one tag concept per column where possible; secondary descriptive detail belongs in the detail page or Find view, not the denser Groups view.
 - Staff page titles should stay plain. Repreneur vs Opportunity context should be carried by the sidebar group and the colored section-header icon, not by title suffixes.
 - The old `/opportunities` records route remains direct-link available, but staff navigation and operational dashboard links should promote `/opportunities/find` for item lookup and `/opportunities/groups` for bucket-level operations.
+- M&A intermediaries are now first-class source records in `/opportunities/ma`; V2 remains an internal staff tool, not a full M&A firm portal or large-scale CRM.
+- M&A email templates are tagged as opportunity/intermediary templates and are available for review/test in Email Tools, but normal manual sending remains repreneur-only until a dedicated intermediary send workflow is designed.
 
 ### Pending Todos
 
@@ -144,9 +148,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 | AI | AI matching and sector interpretation | Deferred to V3 | 2026-05-16 |
 | Legal workflow | E-signature | Deferred to V3 | 2026-05-16 |
 | Portal | M&A firm portal | Out of V2 | 2026-05-16 |
+| CRM | Full intermediary activity timeline and bulk contact management | Deferred to V3 | 2026-05-18 |
 
 ## Session Continuity
 
-Last session: 2026-05-18T09:41:44Z
-Stopped at: Phase 5 complete; ready for release review or next milestone selection
-Resume file: .planning/phases/05-unify-repreneur-find-and-groups-ux-and-replicate-the-pattern/05-UAT.md
+Last session: 2026-05-18T11:42:00Z
+Stopped at: Phase 6 complete; ready for release review or next milestone selection
+Resume file: .planning/phases/06-ma-source-directory-and-intermediary-email-workflows/06-04-SUMMARY.md

@@ -13,6 +13,7 @@ import {
   BarChart3,
   BookOpenCheck,
   Map,
+  Handshake,
   ChevronsUpDown,
   LogOut,
   Settings,
@@ -67,6 +68,7 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
   { name: "Groups", href: "/opportunities/groups", icon: GitBranch },
   { name: "Find", href: "/opportunities/find", icon: Search },
+  { name: "M&A", href: "/opportunities/ma", icon: Handshake },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
 ]
 
@@ -158,12 +160,14 @@ export function AppSidebar({
     if (href === "/analytics_re") return pathname === "/analytics_re" || pathname === "/analytics"
     if (href === "/analytics_op") return pathname === "/analytics_op"
     if (href === "/opportunities/groups") return pathname === "/opportunities/groups"
+    if (href === "/opportunities/ma") return pathname === "/opportunities/ma"
     if (href === "/opportunities/find") {
       return (
         pathname === "/opportunities/find" ||
         (pathname.startsWith("/opportunities/") &&
           !pathname.startsWith("/opportunities/groups") &&
           !pathname.startsWith("/opportunities/find") &&
+          !pathname.startsWith("/opportunities/ma") &&
           !pathname.startsWith("/opportunities/import") &&
           !pathname.startsWith("/opportunities/new") &&
           !pathname.startsWith("/opportunities/reviews"))
@@ -205,6 +209,7 @@ export function AppSidebar({
                 width={96}
                 height={32}
                 className={`h-auto transition-transform logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
+                style={{ width: "auto" }}
                 priority
               />
             </SidebarMenuButton>

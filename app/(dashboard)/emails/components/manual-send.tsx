@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,6 +33,10 @@ export function ManualSend() {
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
+  const availableTemplates = useMemo(
+    () => Object.entries(TEMPLATE_METADATA).filter(([, meta]) => testMode || meta.audience === "rep"),
+    [testMode],
+  )
 
   useEffect(() => {
     const searchRepreneurs = async () => {
@@ -50,6 +54,12 @@ export function ManualSend() {
     const debounce = setTimeout(searchRepreneurs, 300)
     return () => clearTimeout(debounce)
   }, [search])
+
+  useEffect(() => {
+    if (selectedTemplate && !testMode && TEMPLATE_METADATA[selectedTemplate].audience !== "rep") {
+      setSelectedTemplate(null)
+    }
+  }, [selectedTemplate, testMode])
 
   const handleSend = async () => {
     if (testMode) {
@@ -240,7 +250,7 @@ export function ManualSend() {
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                {Object.entries(TEMPLATE_METADATA).map(([key, meta]) => (
+                {availableTemplates.map(([key, meta]) => (
                   <SelectItem key={key} value={key}>
                     <div className="flex items-center gap-2">
                       <span>{meta.name}</span>

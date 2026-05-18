@@ -27,7 +27,7 @@ export function PortalShell({ children, userEmail, userName }: PortalShellProps)
       <header className="border-b bg-background/95">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
           <div className="flex items-center gap-3">
-            <Image src="/wave-logo.png" alt="Re-New" width={120} height={40} className="h-auto" priority />
+            <Image src="/wave-logo.png" alt="Re-New" width={120} height={40} className="h-auto" style={{ width: "auto" }} priority />
             <div className="hidden flex-col md:flex">
               <span className="text-sm font-medium">Repreneur portal</span>
               <span className="text-xs text-muted-foreground">{userName || userEmail || "Your Re-New space"}</span>

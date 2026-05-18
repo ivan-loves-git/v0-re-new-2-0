@@ -12,6 +12,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 3: Reporting, Reminders, QA, and Launch Hardening** - Add operational KPIs, stale reminders, end-to-end testing, and launch readiness. (completed 2026-05-17)
 - [x] **Phase 4: Staff Information Architecture and Dashboard Separation** - Split internal staff navigation and dashboards into repreneur and opportunity work surfaces. (completed 2026-05-17)
 - [x] **Phase 5: Unified Find and Groups Work Surfaces** - Make repreneur Find/Groups visually coherent and replicate that operating pattern for opportunities. (completed 2026-05-18)
+- [x] **Phase 6: M&A Source Directory and Intermediary Email Workflows** - Add an editable source/intermediary directory and broker-facing email template foundations. (completed 2026-05-18)
 
 ## Phase Details
 
@@ -151,10 +152,34 @@ Plans:
 - [x] 05-03: Build opportunity Find and Groups pages from the shared pattern.
 - [x] 05-04: Validate UX consistency, responsiveness, and navigation.
 
+### Phase 6: M&A Source Directory and Intermediary Email Workflows
+
+**Goal**: Staff can manage intermediary contacts as first-class opportunity sources and review/test M&A-focused email templates before using them in follow-up workflows.
+
+**Depends on**: Phase 5.
+
+**Requirements**: MNA-DIR-01, MNA-DIR-02, MNA-DIR-03, EMAIL-MA-01, EMAIL-MA-02
+
+**Success Criteria** (what must be TRUE):
+1. Staff can open `/opportunities/ma` from the Opportunities sidebar group.
+2. The M&A page lists source firms, source type, contact name, email, phone, notes, linked opportunity counts, and stale follow-up signals.
+3. Staff can create and edit source/contact records without leaving the page.
+4. Existing opportunity `source_label` values are linked to normalized `ma_sources`.
+5. Email Tools include reviewable/testable M&A templates for validity checks, missing information, repreneur interest feedback, and process follow-up.
+6. M&A templates do not appear in the normal repreneur manual-send flow.
+
+**Plans**: 4 plans
+
+Plans:
+- [x] 06-01: Normalize M&A source data and backfill opportunity links.
+- [x] 06-02: Build the M&A source directory UI and navigation.
+- [x] 06-03: Add intermediary email templates and template review/test support.
+- [x] 06-04: Validate build, database state, browser smoke, and documentation.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5.
+Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -164,3 +189,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5.
 | 3. Reporting, Reminders, QA, and Launch Hardening | 4/4 | Complete | 2026-05-17 |
 | 4. Staff Information Architecture and Dashboard Separation | 3/3 | Complete | 2026-05-17 |
 | 5. Unified Find and Groups Work Surfaces | 4/4 | Complete | 2026-05-18 |
+| 6. M&A Source Directory and Intermediary Email Workflows | 4/4 | Complete | 2026-05-18 |

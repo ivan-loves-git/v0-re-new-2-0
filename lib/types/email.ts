@@ -22,6 +22,10 @@ export type EmailTemplateKey =
   | "rejection"
   | "interview_reminder"
   | "booking_reminder"
+  | "ma_opportunity_validity_check"
+  | "ma_request_more_information"
+  | "ma_repreneur_interest_feedback"
+  | "ma_process_follow_up"
 
 export interface EmailTemplate {
   id: string

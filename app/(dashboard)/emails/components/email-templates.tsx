@@ -34,12 +34,14 @@ const categoryColors: Record<string, string> = {
   intake: "bg-blue-100 text-blue-800",
   offer: "bg-green-100 text-green-800",
   status: "bg-purple-100 text-purple-800",
+  ma: "bg-violet-100 text-violet-800",
 }
 
 const categoryLabels: Record<string, string> = {
   intake: "Inscription",
   offer: "Offres",
   status: "Statut",
+  ma: "M&A",
 }
 
 interface PreviewState {
@@ -236,7 +238,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
             <DialogTitle>{preview?.templateName ?? ""}</DialogTitle>
             <DialogDescription>
               {preview?.bodyEditable
-                ? "Sujet et corps du message modifiables. L'aperçu utilise des données fictives. Utilisez {firstName} pour insérer le prénom du destinataire."
+                ? "Sujet et corps du message modifiables. L'aperçu utilise des données fictives. Variables utiles : {firstName}, {opportunityTitle}, {repreneurName}, {nextStep}."
                 : "Aperçu avec données fictives. Sujet modifiable. Le corps de ce template est défini dans le code (variables dynamiques)."}
             </DialogDescription>
           </DialogHeader>
@@ -269,7 +271,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                     className="font-mono text-sm"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Une ligne vide sépare les paragraphes. Les variables disponibles sont indiquées dans le texte ({"{firstName}"}).
+                    Une ligne vide sépare les paragraphes. Les variables disponibles sont indiquées dans le texte du template.
                   </p>
                 </div>
               )}
