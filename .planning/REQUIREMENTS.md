@@ -64,7 +64,7 @@
 
 ### Unified Work Surfaces
 
-- [ ] **UX-01**: Repreneur Groups and Find share a coherent visual table structure, filter bar, pagination behavior, color system, and tag style.
+- [x] **UX-01**: Repreneur Groups and Find share a coherent visual table structure, filter bar, pagination behavior, color system, and tag style.
 - [ ] **UX-02**: Shared UI patterns are reused or extracted where they reduce meaningful duplication across repreneur and opportunity work surfaces.
 - [ ] **UX-03**: Find pages prioritize cross-record search and filtering; Groups pages prioritize operating buckets with paginated grouped tables.
 - [ ] **UX-04**: Desktop and mobile layouts are tested in browser for readable tables, non-overlapping filters, stable pagination, and clear row navigation.
@@ -126,7 +126,8 @@
 | KPI-01, KPI-02 | Phase 3 | Complete |
 | ENV-01, ENV-02, TEST-01, REL-01, REL-02 | Phase 1.1 | Complete |
 | STAFF-IA-01, DASH-RE-01, DASH-OP-01, ANALYTICS-RE-01, ANALYTICS-OP-01, ARCHIVE-01, REDIRECT-01 | Phase 4 | Complete |
-| UX-01, UX-02, UX-03, UX-04, OPP-FIND-01, OPP-GROUPS-01 | Phase 5 | Planned |
+| UX-01 | Phase 5 | Complete |
+| UX-02, UX-03, UX-04, OPP-FIND-01, OPP-GROUPS-01 | Phase 5 | Planned |
 | OPP-JOURNEY-01 | Phase 5 | Complete |
 
 **Coverage:**
@@ -136,4 +137,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-18 after Phase 5 unified work surfaces planning*
+*Last updated: 2026-05-18 after Phase 5 plan 05-02*

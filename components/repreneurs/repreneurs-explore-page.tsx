@@ -11,28 +11,30 @@ export function RepreneursExplorePage({ repreneurs }: { repreneurs: Repreneur[] 
   const tableRef = useRef<RepreneurExploreTableRef>(null)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Find Repreneurs</h1>
-          <p className="text-gray-600 mt-1">Filter, sort, and find repreneurs across your entire pipeline</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-normal text-foreground">Find Repreneurs</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Filter, sort, and find repreneurs across the full pipeline
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="icon"
-            className="size-9"
             onClick={() => tableRef.current?.triggerExport()}
             title="Export CSV"
+            aria-label="Export repreneurs CSV"
           >
-            <Download className="size-4" />
+            <Download data-icon="inline-start" />
           </Button>
-          <Link href="/repreneurs/new">
-            <Button>
-              <Plus className="size-4 mr-2" />
+          <Button asChild>
+            <Link href="/repreneurs/new">
+              <Plus data-icon="inline-start" />
               Add Repreneur
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 

@@ -147,7 +147,7 @@ Plans:
 
 Plans:
 - [x] 05-01: Lock shared table, filter, pagination, and journey-label design contract.
-- [ ] 05-02: Unify repreneur Groups and Find visual structure.
+- [x] 05-02: Unify repreneur Groups and Find visual structure.
 - [ ] 05-03: Build opportunity Find and Groups pages from the shared pattern.
 - [ ] 05-04: Validate UX consistency, responsiveness, and navigation.
 
@@ -163,4 +163,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5.
 | 2. Core Deal Workflow | 7/7 | Complete | 2026-05-17 |
 | 3. Reporting, Reminders, QA, and Launch Hardening | 4/4 | Complete | 2026-05-17 |
 | 4. Staff Information Architecture and Dashboard Separation | 3/3 | Complete | 2026-05-17 |
-| 5. Unified Find and Groups Work Surfaces | 1/4 | In Progress | - |
+| 5. Unified Find and Groups Work Surfaces | 2/4 | In Progress | - |
