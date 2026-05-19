@@ -48,7 +48,7 @@ export function PortalShell({ children, userEmail, userName }: PortalShellProps)
               )
             })}
             <Button asChild variant="outline" size="sm">
-              <Link href="/auth/logout">
+              <Link href="/auth/logout" prefetch={false}>
                 <LogOut data-icon="inline-start" />
                 Sign out
               </Link>
