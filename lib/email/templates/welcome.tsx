@@ -47,7 +47,7 @@ export function WelcomeEmail({ repreneur, bodyOverride }: WelcomeEmailProps) {
 
       {!bodyOverride && (
         <>
-          <Text style={heading} as="h2">Prochaines &eacute;tapes</Text>
+          <Text style={heading}>Prochaines &eacute;tapes</Text>
 
           <Text style={paragraph}>
             Un membre de notre &eacute;quipe vous contactera sous 24 &agrave; 48h

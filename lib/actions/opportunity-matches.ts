@@ -28,9 +28,9 @@ const STAFF_EDITABLE_PURSUIT_STAGES: OpportunityPursuitStage[] = [
 ]
 const STAFF_EDITABLE_NDA_STATUSES: OpportunityNdaStatus[] = ["not_required", "required", "sent", "signed", "waived"]
 const MATCH_RECOMMENDATION_VALUES = OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.map((option) => option.value)
-const STAFF_EDITABLE_MATCH_STATUS_VALUES = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter(
+const STAFF_EDITABLE_MATCH_STATUS_VALUES: OpportunityMatchStatus[] = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter(
   (option) => option.value !== "active_pursuit",
-).map((option) => option.value)
+).map((option) => option.value as OpportunityMatchStatus)
 
 export type OpportunityMatchActionResult =
   | { ok: true }

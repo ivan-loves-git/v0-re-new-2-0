@@ -16,6 +16,8 @@ const MA_TEMPLATE_KEYS = [
   "ma_process_follow_up",
 ] as const satisfies readonly EmailTemplateKey[]
 
+type MaTemplateKey = (typeof MA_TEMPLATE_KEYS)[number]
+
 interface OpportunityWorkflowRow {
   id: string
   reference: string
@@ -45,7 +47,7 @@ interface MatchRow {
 }
 
 export interface MaWorkflowDraft {
-  templateKey: EmailTemplateKey
+  templateKey: MaTemplateKey
   name: string
   description: string
   subject: string
@@ -60,8 +62,8 @@ export interface MaOpportunityWorkflow {
   interactions: MaSourceInteraction[]
 }
 
-function isMaTemplateKey(value: string): value is EmailTemplateKey {
-  return MA_TEMPLATE_KEYS.includes(value as EmailTemplateKey)
+function isMaTemplateKey(value: string): value is MaTemplateKey {
+  return MA_TEMPLATE_KEYS.includes(value as MaTemplateKey)
 }
 
 function readString(formData: FormData, key: string): string | null {

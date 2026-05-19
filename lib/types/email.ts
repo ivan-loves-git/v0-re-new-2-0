@@ -114,26 +114,26 @@ export interface EmailTemplateProps {
 export interface WelcomeEmailProps extends EmailTemplateProps {}
 
 export interface FormStepCompleteEmailProps extends EmailTemplateProps {
-  metadata: {
-    stepCompleted: number
+  metadata?: Record<string, unknown> & {
+    stepCompleted?: number
   }
 }
 
 export interface AbandonedReminderEmailProps extends EmailTemplateProps {
-  metadata: {
+  metadata?: Record<string, unknown> & {
     /** Last completed step (1-6) */
-    lastStep: number
+    lastStep?: number
     /** Total steps in form */
-    totalSteps: number
+    totalSteps?: number
     /** Days since last activity */
-    daysAgo: number
+    daysAgo?: number
     /** Step names for context */
     stepNames?: string[]
   }
 }
 
 export interface ThankYouEmailProps extends EmailTemplateProps {
-  metadata: {
+  metadata?: Record<string, unknown> & {
     /** @deprecated Use whoScore + whenScore for v2 */
     tier1Score?: number
     /** WHO score (0-100) - profile quality */
@@ -146,57 +146,57 @@ export interface ThankYouEmailProps extends EmailTemplateProps {
 }
 
 export interface HighScoreAlertEmailProps extends EmailTemplateProps {
-  metadata: {
+  metadata?: Record<string, unknown> & {
     /** @deprecated Use whoScore + whenScore for v2 */
     tier1Score?: number
     /** WHO score (0-100) - profile quality */
-    whoScore: number
+    whoScore?: number
     /** WHEN score (0-100) - project maturity */
-    whenScore: number
+    whenScore?: number
     /** Recommended action: deal_flow | priority_interview | interview | starter_pack */
-    recommendation: string
+    recommendation?: string
     /** Warning flags if any */
     flags?: string[]
   }
 }
 
 export interface OfferReceivedEmailProps extends EmailTemplateProps {
-  metadata: {
-    offerName: string
-    offerPrice: number
+  metadata?: Record<string, unknown> & {
+    offerName?: string
+    offerPrice?: number
   }
 }
 
 export interface InterviewReminderEmailProps extends EmailTemplateProps {
-  metadata: {
+  metadata?: Record<string, unknown> & {
     /**
      * Interview date. Normally `YYYY-MM-DD` because `activities.event_date` is a
      * DATE column (no time). Full ISO-8601 timestamps also accepted — the email
      * template formats with time only when one is present.
      */
-    interviewAt: string
+    interviewAt?: string
     /** Optional notes logged with the interview activity (may contain a Calendly link). */
     notes?: string
   }
 }
 
 export interface MilestoneCompletedEmailProps extends EmailTemplateProps {
-  metadata: {
-    milestoneTitle: string
-    offerName: string
+  metadata?: Record<string, unknown> & {
+    milestoneTitle?: string
+    offerName?: string
   }
 }
 
 export interface OfferAcceptedEmailProps extends EmailTemplateProps {
-  metadata: {
-    offerName: string
+  metadata?: Record<string, unknown> & {
+    offerName?: string
   }
 }
 
 export interface OfferActivatedEmailProps extends EmailTemplateProps {
-  metadata: {
-    offerName: string
-    startDate: string
+  metadata?: Record<string, unknown> & {
+    offerName?: string
+    startDate?: string
   }
 }
 

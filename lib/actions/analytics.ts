@@ -239,7 +239,8 @@ export async function getAnalyticsData(period: string = "all"): Promise<Analytic
   // Group by offer name
   const byOffer = new Map<string, { sent: number; accepted: number }>()
   for (const a of assignments) {
-    const offerName = (a.offer as { name: string } | null)?.name || "Unknown"
+    const offerRow = Array.isArray(a.offer) ? a.offer[0] : a.offer
+    const offerName = (offerRow as { name: string } | null)?.name || "Unknown"
     const entry = byOffer.get(offerName) || { sent: 0, accepted: 0 }
     entry.sent++
     if (["accepted", "completed"].includes(a.status)) {

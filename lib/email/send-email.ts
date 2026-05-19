@@ -40,28 +40,26 @@ async function incrementDailyCount(): Promise<void> {
   const supabase = createAdminClient()
   const today = new Date().toISOString().split("T")[0]
 
-  // Upsert: insert or increment
-  await supabase.rpc("increment_email_count", { target_date: today })
-    .then(() => {})
-    .catch(async () => {
-      // Fallback if RPC doesn't exist: manual upsert
-      const { data: existing } = await supabase
-        .from("email_daily_counts")
-        .select("count")
-        .eq("date", today)
-        .single()
+  const { error } = await supabase.rpc("increment_email_count", { target_date: today })
+  if (!error) return
 
-      if (existing) {
-        await supabase
-          .from("email_daily_counts")
-          .update({ count: existing.count + 1 })
-          .eq("date", today)
-      } else {
-        await supabase
-          .from("email_daily_counts")
-          .insert({ date: today, count: 1 })
-      }
-    })
+  // Fallback if RPC doesn't exist: manual upsert.
+  const { data: existing } = await supabase
+    .from("email_daily_counts")
+    .select("count")
+    .eq("date", today)
+    .single()
+
+  if (existing) {
+    await supabase
+      .from("email_daily_counts")
+      .update({ count: existing.count + 1 })
+      .eq("date", today)
+  } else {
+    await supabase
+      .from("email_daily_counts")
+      .insert({ date: today, count: 1 })
+  }
 }
 
 /**

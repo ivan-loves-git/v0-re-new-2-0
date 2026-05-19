@@ -75,7 +75,8 @@ export async function GET(request: Request) {
     // Empty abandoned-forms list is fine — still fall through to the
     // interview-reminder sub-job below (they share the same daily cron slot).
     for (const form of abandonedForms || []) {
-      const repreneur = form.repreneurs as {
+      const repreneurRow = Array.isArray(form.repreneurs) ? form.repreneurs[0] : form.repreneurs
+      const repreneur = repreneurRow as {
         id: string
         first_name: string
         last_name: string
@@ -120,6 +121,7 @@ export async function GET(request: Request) {
             },
             metadata: {
               lastStep: form.last_step_completed || 1,
+              totalSteps: 6,
               daysAgo: daysAgo,
             },
           }),

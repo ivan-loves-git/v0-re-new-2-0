@@ -183,7 +183,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
                 </div>
                 <RecommendationBadge recommendation={previewScore.recommendation} size="sm" />
                 {previewScore.flags.flags.length > 0 && (
-                  <FlagBadges flags={previewScore.flags.flags} size="sm" />
+                  <FlagBadges flags={previewScore.flags.flags} compact />
                 )}
               </div>
             </div>

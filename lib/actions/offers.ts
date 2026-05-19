@@ -199,7 +199,8 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
     ])
 
     if (repreneurData && offerInfo?.offer) {
-      const offerName = (offerInfo.offer as { name: string }).name
+      const offerRow = Array.isArray(offerInfo.offer) ? offerInfo.offer[0] : offerInfo.offer
+      const offerName = (offerRow as { name: string }).name
       const emailData = {
         id: repreneurId,
         firstName: repreneurData.first_name,
@@ -311,7 +312,13 @@ export async function toggleMilestoneComplete(
       .single()
 
     if (repreneurData && milestoneData) {
-      const offerName = (milestoneData.repreneur_offer as { offer: { name: string } })?.offer?.name || "votre accompagnement"
+      const repreneurOfferRow = Array.isArray(milestoneData.repreneur_offer)
+        ? milestoneData.repreneur_offer[0]
+        : milestoneData.repreneur_offer
+      const offerRow = Array.isArray(repreneurOfferRow?.offer)
+        ? repreneurOfferRow.offer[0]
+        : repreneurOfferRow?.offer
+      const offerName = (offerRow as { name: string } | undefined)?.name || "votre accompagnement"
 
       sendEmail({
         to: repreneurData.email,
@@ -326,7 +333,7 @@ export async function toggleMilestoneComplete(
             email: repreneurData.email,
           },
           metadata: {
-            milestoneName: milestoneData.title,
+            milestoneTitle: milestoneData.title,
             offerName,
           },
         }),

@@ -6,6 +6,7 @@ import { ManualSend } from "./components/manual-send"
 import { AiDraftTest } from "./components/ai-draft-test"
 import { getEmailStats, getEmailLogs, getTemplateSettings, getDailyEmailCounts } from "@/lib/actions/emails"
 
+export const dynamic = "force-dynamic"
 export const revalidate = 60
 
 export default async function EmailsPage() {

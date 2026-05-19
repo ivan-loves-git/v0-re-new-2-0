@@ -109,7 +109,10 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
     )
   }
 
-  const renderMultiSelect = (questionId: string, question: typeof WHEN_QUESTIONS.q12) => {
+  const renderMultiSelect = (
+    questionId: keyof Pick<typeof WHEN_QUESTIONS, 'q12' | 'q13' | 'q14' | 'q15'>,
+    question: (typeof WHEN_QUESTIONS)[keyof Pick<typeof WHEN_QUESTIONS, 'q12' | 'q13' | 'q14' | 'q15'>],
+  ) => {
     const selectedValues = (data[question.field as keyof typeof data] as string[]) || []
     const translationMap = WHEN_TRANSLATION_MAP[questionId]
 

@@ -33,7 +33,7 @@ function formatDate(value: string | null | undefined) {
 export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: OpportunityMaWorkflowPanelProps) {
   const router = useRouter()
   const firstDraft = workflow.drafts[0]
-  const [templateKey, setTemplateKey] = useState(firstDraft?.templateKey ?? "")
+  const [templateKey, setTemplateKey] = useState<string>(firstDraft?.templateKey ?? "")
   const selectedDraft = useMemo(
     () => workflow.drafts.find((draft) => draft.templateKey === templateKey) ?? firstDraft,
     [firstDraft, templateKey, workflow.drafts],
@@ -109,7 +109,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
 
               <div className="space-y-2">
                 <Label htmlFor="ma_template">Template</Label>
-                <Select value={templateKey} onValueChange={setTemplateKey}>
+                <Select value={templateKey} onValueChange={(value) => setTemplateKey(value)}>
                   <SelectTrigger id="ma_template">
                     <SelectValue placeholder="Choose template" />
                   </SelectTrigger>

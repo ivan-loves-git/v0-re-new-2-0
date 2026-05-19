@@ -22,6 +22,7 @@ import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
 
 // Cache page data for 30 seconds - prevents re-fetching on rapid navigation
+export const dynamic = "force-dynamic"
 export const revalidate = 30
 
 // Skeleton components for Suspense fallbacks

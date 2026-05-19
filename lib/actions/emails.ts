@@ -159,7 +159,8 @@ export async function getEmailLogs(options: {
   }
 
   const logs = data?.map((log) => {
-    const repreneur = log.repreneurs as { email: string; first_name: string; last_name: string }
+    const repreneurRow = Array.isArray(log.repreneurs) ? log.repreneurs[0] : log.repreneurs
+    const repreneur = repreneurRow as { email: string; first_name: string; last_name: string }
     return {
       id: log.id,
       repreneur_id: log.repreneur_id,
@@ -554,13 +555,21 @@ export async function sendTestEmail(
 
   // Sample metadata for templates that need it
   const metadata = {
+    stepCompleted: 2,
+    lastStep: 2,
     stepNumber: 2,
-    totalSteps: 4,
+    totalSteps: 6,
+    daysAgo: 1,
     stepName: "Motivations",
     tier1Score: 85,
+    whoScore: 82,
+    whenScore: 76,
+    recommendation: "deal_flow",
     offerName: "Starter Pack",
-    offerPrice: "€2,500",
+    offerPrice: 2500,
+    milestoneTitle: "Profile Complete",
     milestoneName: "Profile Complete",
+    startDate: new Date().toISOString(),
   }
 
   let template: React.ReactElement

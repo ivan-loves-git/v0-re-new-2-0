@@ -92,15 +92,15 @@ export async function createIntakeDraft(data: {
     })
 
     // Create abandonment tracking record
-    supabase
-      .from("intake_abandonment_tracking")
-      .insert({
-        repreneur_id: repreneur.id,
-        last_step_completed: 1,
-        last_activity_at: new Date().toISOString(),
-      })
-      .then(() => {})
-      .catch((err) => {
+    void (async () => {
+      await supabase
+        .from("intake_abandonment_tracking")
+        .insert({
+          repreneur_id: repreneur.id,
+          last_step_completed: 1,
+          last_activity_at: new Date().toISOString(),
+        })
+    })().catch((err: unknown) => {
         console.error("Failed to create abandonment tracking:", err)
       })
 
@@ -144,15 +144,15 @@ export async function updateIntakeBackground(
     }
 
     // Update abandonment tracking
-    supabase
-      .from("intake_abandonment_tracking")
-      .update({
-        last_step_completed: 2,
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq("repreneur_id", id)
-      .then(() => {})
-      .catch((err) => {
+    void (async () => {
+      await supabase
+        .from("intake_abandonment_tracking")
+        .update({
+          last_step_completed: 2,
+          last_activity_at: new Date().toISOString(),
+        })
+        .eq("repreneur_id", id)
+    })().catch((err: unknown) => {
         console.error("Failed to update abandonment tracking:", err)
       })
 
@@ -194,15 +194,15 @@ export async function updateIntakeMAExperience(
     }
 
     // Update abandonment tracking
-    supabase
-      .from("intake_abandonment_tracking")
-      .update({
-        last_step_completed: 3,
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq("repreneur_id", id)
-      .then(() => {})
-      .catch((err) => {
+    void (async () => {
+      await supabase
+        .from("intake_abandonment_tracking")
+        .update({
+          last_step_completed: 3,
+          last_activity_at: new Date().toISOString(),
+        })
+        .eq("repreneur_id", id)
+    })().catch((err: unknown) => {
         console.error("Failed to update abandonment tracking:", err)
       })
 
@@ -249,15 +249,15 @@ export async function updateIntakeGoals(
     }
 
     // Update abandonment tracking
-    supabase
-      .from("intake_abandonment_tracking")
-      .update({
-        last_step_completed: 4,
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq("repreneur_id", id)
-      .then(() => {})
-      .catch((err) => {
+    void (async () => {
+      await supabase
+        .from("intake_abandonment_tracking")
+        .update({
+          last_step_completed: 4,
+          last_activity_at: new Date().toISOString(),
+        })
+        .eq("repreneur_id", id)
+    })().catch((err: unknown) => {
         console.error("Failed to update abandonment tracking:", err)
       })
 
@@ -407,16 +407,16 @@ export async function completeIntake(
     }
 
     // Mark abandonment tracking as completed
-    supabase
-      .from("intake_abandonment_tracking")
-      .update({
-        is_completed: true,
-        last_step_completed: 5,
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq("repreneur_id", id)
-      .then(() => {})
-      .catch((err) => {
+    void (async () => {
+      await supabase
+        .from("intake_abandonment_tracking")
+        .update({
+          is_completed: true,
+          last_step_completed: 5,
+          last_activity_at: new Date().toISOString(),
+        })
+        .eq("repreneur_id", id)
+    })().catch((err: unknown) => {
         console.error("Failed to mark abandonment tracking as completed:", err)
       })
 

@@ -54,7 +54,7 @@ export function ThankYouEmail({ repreneur, metadata }: ThankYouEmailProps) {
         opportunités correspondant à vos critères.
       </Text>
 
-      <Text style={heading} as="h2">Prochaines étapes</Text>
+      <Text style={heading}>Prochaines étapes</Text>
 
       <Text style={paragraph}>
         1. Analyse de votre dossier par notre équipe

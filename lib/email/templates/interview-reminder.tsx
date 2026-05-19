@@ -11,7 +11,7 @@ import type { InterviewReminderEmailProps } from "@/lib/types/email"
  */
 export function InterviewReminderEmail({ repreneur, metadata }: InterviewReminderEmailProps) {
   const { firstName } = repreneur
-  const { interviewAt, notes } = metadata
+  const { interviewAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), notes } = metadata ?? {}
 
   // `interviewAt` can be either a date-only string (YYYY-MM-DD, from activities.event_date)
   // or a full ISO timestamp. Only include the time component if it looks precise.

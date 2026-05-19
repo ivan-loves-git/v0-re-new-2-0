@@ -99,7 +99,11 @@ async function listActivePursuits(): Promise<ActivePursuitRow[]> {
     .limit(8)
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as ActivePursuitRow[]
+  return (data ?? []).map((row) => ({
+    ...row,
+    opportunity: Array.isArray(row.opportunity) ? row.opportunity[0] ?? null : row.opportunity ?? null,
+    repreneur: Array.isArray(row.repreneur) ? row.repreneur[0] ?? null : row.repreneur ?? null,
+  })) as ActivePursuitRow[]
 }
 
 function OperationalStatCard({

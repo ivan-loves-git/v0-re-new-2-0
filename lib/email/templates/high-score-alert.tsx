@@ -75,7 +75,7 @@ export function HighScoreAlertEmail({ repreneur, metadata }: HighScoreAlertEmail
         préparé(e) pour votre projet de reprise d&apos;entreprise.
       </Text>
 
-      <Text style={heading} as="h2">Ce que cela signifie pour vous</Text>
+      <Text style={heading}>Ce que cela signifie pour vous</Text>
 
       <Text style={paragraph}>
         • Accès prioritaire aux nouvelles opportunités

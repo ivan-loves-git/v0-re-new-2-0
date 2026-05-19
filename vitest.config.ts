@@ -4,8 +4,14 @@ import path from 'path'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['**/__tests__/**/*.test.ts', '**/*.test.ts'],
-    exclude: ['node_modules', '.next', 'scripts/e2e-tests/**'],
+    include: ['lib/**/__tests__/**/*.test.ts', 'lib/**/*.test.ts'],
+    exclude: [
+      'node_modules/**',
+      '.next/**',
+      '.claude/**',
+      '_archive/**',
+      'scripts/e2e-tests/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

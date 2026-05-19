@@ -7,14 +7,15 @@ import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { StatusBadge } from "@/components/repreneurs/status-badge"
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
+import type { JourneyStage, LifecycleStatus } from "@/lib/types/repreneur"
 
 interface RecentRepreneur {
   id: string
   first_name: string
   last_name: string
   email: string
-  lifecycle_status: string
-  journey_stage: string | null
+  lifecycle_status: LifecycleStatus
+  journey_stage: JourneyStage | null
   created_at: string
   tier1_score?: number | null
   who_score?: number | null
