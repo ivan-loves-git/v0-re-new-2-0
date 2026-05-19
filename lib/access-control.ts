@@ -14,7 +14,9 @@ export interface CurrentUserAccess {
 
 interface RoleRow {
   role: AppUserRole
+  user_id?: string | null
   email?: string | null
+  repreneur_id?: string | null
 }
 
 interface RepreneurAccessRow {
@@ -41,12 +43,12 @@ function hasPortalAccess(access: CurrentUserAccess | null) {
   return Boolean(access?.role === "repreneur" && access.repreneurId)
 }
 
-async function findRoleByEmail(email: string, userId: string): Promise<AppUserRole | null> {
+async function findRole(email: string, userId: string): Promise<RoleRow | null> {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("app_user_roles")
-    .select("role, email")
-    .ilike("email", email)
+    .select("role, email, user_id, repreneur_id")
+    .or(`email.ilike.${email},user_id.eq.${userId}`)
     .limit(20)
 
   if (error) {
@@ -54,26 +56,23 @@ async function findRoleByEmail(email: string, userId: string): Promise<AppUserRo
     throw new Error(error.message)
   }
 
-  const role = ((data as RoleRow[] | null) ?? []).find((row) => sameNormalizedEmail(row.email, email))?.role ?? null
-  if (role) return role
+  const roles = ((data as RoleRow[] | null) ?? []).filter(
+    (row) => sameNormalizedEmail(row.email, email) || row.user_id === userId
+  )
+  const staffRole = roles.find((row) => row.role === "staff")
+  if (staffRole) return staffRole
 
-  const { data: userRole, error: userRoleError } = await supabase
-    .from("app_user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle()
-
-  if (userRoleError) {
-    if (userRoleError.code === "42P01") return null
-    throw new Error(userRoleError.message)
-  }
-
-  return (userRole as RoleRow | null)?.role ?? null
+  const repreneurRole =
+    roles.find((row) => row.role === "repreneur" && row.user_id === userId) ??
+    roles.find((row) => row.role === "repreneur" && sameNormalizedEmail(row.email, email)) ??
+    null
+  return repreneurRole
 }
 
-async function findRepreneurByEmail(email: string): Promise<RepreneurAccessRow | null> {
-  const supabase = createAdminClient()
+async function findRepreneurByEmail(
+  email: string,
+  supabase = createAdminClient()
+): Promise<RepreneurAccessRow | null> {
   const { data, error } = await supabase
     .from("repreneurs")
     .select("id, first_name, last_name, email")
@@ -82,6 +81,27 @@ async function findRepreneurByEmail(email: string): Promise<RepreneurAccessRow |
 
   if (error) throw new Error(error.message)
   return ((data as RepreneurAccessRow[] | null) ?? []).find((row) => sameNormalizedEmail(row.email, email)) ?? null
+}
+
+async function findRepreneurById(id: string, supabase = createAdminClient()): Promise<RepreneurAccessRow | null> {
+  const { data, error } = await supabase
+    .from("repreneurs")
+    .select("id, first_name, last_name, email")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return (data as RepreneurAccessRow | null) ?? null
+}
+
+async function findRepreneurForRole(role: RoleRow, fallbackEmail: string): Promise<RepreneurAccessRow | null> {
+  const supabase = createAdminClient()
+  if (role.repreneur_id) {
+    const linkedRepreneur = await findRepreneurById(role.repreneur_id, supabase)
+    if (linkedRepreneur) return linkedRepreneur
+  }
+
+  return findRepreneurByEmail(fallbackEmail, supabase)
 }
 
 export async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> {
@@ -98,18 +118,32 @@ export async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> 
     }
   }
 
-  const [explicitRole, repreneur] = await Promise.all([
-    findRoleByEmail(email, user.id),
-    findRepreneurByEmail(email),
-  ])
-  // Explicit platform roles are the source of truth; staff wins over a repreneur email match.
-  const role: CurrentUserRole = explicitRole ?? (repreneur ? "repreneur" : "unassigned")
+  const explicitRole = await findRole(email, user.id)
+
+  if (explicitRole?.role === "staff") {
+    return {
+      user,
+      role: "staff",
+      repreneurId: null,
+      repreneurName: null,
+    }
+  }
+
+  if (explicitRole?.role === "repreneur") {
+    const repreneur = await findRepreneurForRole(explicitRole, email)
+    return {
+      user,
+      role: "repreneur",
+      repreneurId: repreneur?.id ?? null,
+      repreneurName: displayName(repreneur),
+    }
+  }
 
   return {
     user,
-    role,
-    repreneurId: repreneur?.id ?? null,
-    repreneurName: displayName(repreneur),
+    role: "unassigned",
+    repreneurId: null,
+    repreneurName: null,
   }
 }
 

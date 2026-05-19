@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
-import { requireUser } from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   OpportunityMatchStatus,
@@ -14,10 +13,6 @@ import type {
 
 const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined"]
-
-function normalizeEmail(email: string | null | undefined) {
-  return email?.trim().toLowerCase() || null
-}
 
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
   return {
@@ -118,19 +113,17 @@ function isVisibleUnderActiveLock(
 }
 
 async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile | null> {
-  const user = await requireUser()
-  const email = normalizeEmail(user.email)
-  if (!email) return null
+  const access = await requirePortalAccess()
+  if (!access.repreneurId) return null
 
   const supabase = createAdminClient()
-  const { data, error } = await supabase
+  const { data: profile, error } = await supabase
     .from("repreneurs")
     .select("id, first_name, last_name, email")
-    .ilike("email", email)
-    .limit(20)
+    .eq("id", access.repreneurId)
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
-  const profile = (data ?? []).find((row) => normalizeEmail(row.email) === email)
   return profile ? normalizeProfile(profile) : null
 }
 

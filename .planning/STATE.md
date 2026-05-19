@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Phase 7 complete; ready to choose the next product slice
-last_updated: "2026-05-18T19:35:00Z"
-last_activity: 2026-05-18
+stopped_at: Repreneur-facing portal recovery in progress
+last_updated: "2026-05-19T00:00:00Z"
+last_activity: 2026-05-19
 progress:
   total_phases: 8
   completed_phases: 8
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 7 is complete; choose the next product slice from the remaining deferred backlog or product review findings.
+**Current focus:** Repreneur-facing portal recovery: explicit staff-managed access, linked portal identity, and production UAT as the repreneur user.
 
 ## Current Position
 
-Phase: 7 complete
+Phase: Repreneur Portal Recovery
 Plan: 33 of 33 complete
-Status: Phase 7 complete; ready to choose the next product slice
-Last activity: 2026-05-18
+Status: Recovery implementation and verification in progress
+Last activity: 2026-05-19
 
 Progress: [██████████] 100%
 
@@ -65,6 +65,7 @@ Progress: [██████████] 100%
 | 2026-05-18 | Phase 6 M&A source directory | Backfilled opportunity source labels into normalized `ma_sources`, added `/opportunities/ma`, created source/contact editing, and seeded four intermediary email templates in Email Tools. |
 | 2026-05-18 | Phase 7 M&A workflow activation | Added an opportunity-detail M&A tab that drafts, sends, and logs intermediary follow-up emails from linked source contacts and M&A templates. |
 | 2026-05-18 | Phase 7 M&A workflow UAT | Browser-tested template switching, no-email blocking, live send feedback, interaction history refresh, DB logging, and UAT cleanup on production build `10.aec5a6f`. |
+| 2026-05-19 | Repreneur-facing portal recovery | Reproduced the production repreneur login with the tester account, added explicit `repreneur_id` linkage for portal roles, added staff-managed enable/resend/disable portal access, and promoted repreneur production UAT to a mandatory release gate. |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 7 plan 07-01 completed: `ma_source_interactions` records intermediary follow-up history, and staff-only server actions can draft/send/log M&A emails from opportunity/source context.
 - Phase 7 plan 07-02 completed: opportunity detail pages now include an M&A tab with template selection, editable subject/body, source contact status, send feedback, and interaction history.
 - Phase 7 plan 07-03 completed: production browser UAT passed after fixing the client send transport, required interaction metadata, and Better Auth/Supabase Auth `created_by` mismatch for the M&A interaction log.
+- Repreneur portal recovery decision on 2026-05-19: portal entry must require an explicit `app_user_roles` repreneur role linked to `repreneur_id`; matching a repreneur email alone is no longer sufficient.
+- Repreneur portal recovery decision on 2026-05-19: staff/admin QA cannot be counted as external portal QA. Any release touching access, routing, matches, profile, or documents needs production UAT as a real repreneur user.
 
 ### Pending Todos
 
@@ -137,6 +140,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
+- Repreneur production UAT must be re-run after the recovery deploy. The previous Phase 3 note that route/data checks were enough for repreneur behavior is superseded.
 - Phase 7 browser UAT passed; the remaining M&A risk is product/process scope, not the basic send-and-log workflow.
 - Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.
 - Matching must avoid hidden AI scope until structured data is stable.
@@ -158,6 +162,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-18T12:30:00Z
-Stopped at: Phase 7 complete; ready to choose the next product slice
-Resume file: .planning/phases/07-ma-intermediary-workflow-activation/07-03-SUMMARY.md
+Last session: 2026-05-19T00:00:00Z
+Stopped at: Repreneur-facing portal recovery in progress
+Resume file: .planning/STATE.md

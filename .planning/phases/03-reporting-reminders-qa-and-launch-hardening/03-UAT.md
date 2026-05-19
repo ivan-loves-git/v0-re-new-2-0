@@ -75,6 +75,24 @@ Read-only Supabase verification after dataset correction:
 - The data model and route checks confirm the repreneur portal has the required active pursuit, signed NDA, and approved document data available.
 - The local build is green, but Vercel should still be monitored after merge because the platform build previously surfaced production-only route errors.
 
+## 2026-05-19 Correction: Repreneur QA Gap
+
+The residual risk above was too soft. Staff/admin QA did not cover the external repreneur portal behavior, and route/data checks were not an acceptable substitute for logging in as a repreneur and using the production portal.
+
+Corrected release gate:
+
+- Repreneur-facing changes require production browser UAT with an actual repreneur account.
+- The UAT must cover login, `/portal/deals`, proposed deal detail, response actions on a safe proposed match, active pursuit detail, NDA/document gate, approved document download, `/portal/profile`, and staff-to-portal redirect behavior.
+- Staff-only source/contact fields and staff-only documents must be checked from the repreneur side, not inferred from staff screens.
+- Staff/admin panel UAT remains required, but it does not count as coverage for external portal access, routing, profile, deal response, or document behavior.
+
+Initial recovery reproduction on 2026-05-19:
+
+- `myworkmail4@gmail.com` successfully logged into production and landed on `/portal/deals`.
+- The portal showed the external navigation only: Deals, Profile, Sign out.
+- The account saw three expected portal records: one active pursuit with signed NDA state and two proposed deals.
+- The remaining recovery work is to harden identity linkage, add staff-managed portal access, and re-run the full repreneur UAT after deployment.
+
 ## Executive Summary
 
 Phase 3 QA now has a realistic end-to-end demo path: sourced opportunity, repreneur match, active pursuit, seller meeting stage, signed NDA, and approved document. This is enough to demonstrate the June V2 operating workflow.

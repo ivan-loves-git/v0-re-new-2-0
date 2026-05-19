@@ -49,19 +49,31 @@ Recommended demo record:
 - [ ] Open `/portal/profile`.
 - [ ] Show read-only profile, strengths, scores, improvement points, and calls to action.
 
+## Portal Access Staff Flow
+
+- [ ] Open the staff repreneur profile for the demo repreneur.
+- [ ] Confirm the Portal Access card shows current role, Better Auth user, password-login state, active sessions, and last access email.
+- [ ] Confirm staff can enable portal access for a repreneur with a valid email.
+- [ ] Confirm staff can resend the setup/reset link without changing the repreneur profile.
+- [ ] Confirm staff can disable portal access and active sessions are revoked.
+- [ ] Re-enable demo repreneur access after any disable test unless Ivan explicitly wants the demo account left disabled.
+
 ## Access and Boundary Checks
 
 - [ ] Unauthenticated `/opportunities` redirects to `/auth/login`.
 - [ ] Unauthenticated `/portal/deals` redirects to `/auth/login`.
-- [ ] Staff users are sent away from `/portal/deals` to `/dashboard`.
+- [ ] Staff users are sent away from `/portal/deals` to `/dashboard_re`.
 - [ ] Legacy `/my-opportunities` routes to the portal path and then respects the user role.
 - [ ] Repreneur users do not see internal staff navigation.
 - [ ] Staff-only source/contact information is not visible in repreneur portal screens.
 - [ ] Staff-only documents are not downloadable from the repreneur portal.
+- [ ] Any release touching access, routing, matches, profile, or documents includes production browser UAT as the repreneur user. Staff/admin checks do not satisfy this gate.
 
 ## Pre-Merge Release Checks
 
-- [x] `pnpm run build` passes locally.
+- [x] `npm run build` passes locally.
+- [ ] `npm run lint` passes locally, or any failures are documented as baseline issues outside the release scope.
+- [ ] Focused TypeScript check for changed access, portal, and action files passes locally.
 - [ ] Confirm no secrets are staged in git.
 - [ ] Confirm `.env.local`, database passwords, and Supabase service role keys are not committed.
 - [ ] Confirm GSD roadmap/state are updated.
@@ -98,11 +110,11 @@ Recommended demo record:
 - E-signature is not in June V2.
 - Full repreneur self-service/profile editing is not in June V2.
 - Investor-style reporting is not in June V2.
-- Lint cannot run until `eslint` is added or the script is changed.
-- Full typecheck has existing baseline errors outside this V2 work.
+- Lint must be run for each release; if it fails, record whether the failures are baseline or caused by the current change.
+- Full typecheck has existing baseline errors outside this V2 work, so focused checks may be used to isolate changed files.
 
 ## Executive Summary
 
-June V2 is ready to demo as an operating workflow, not as a polished external product suite. The strongest story is one opportunity moving through sourcing, recommendation, repreneur response, active pursuit, seller meeting, NDA, documents, and operating KPIs.
+June V2 is ready to demo as an operating workflow, not as a polished external product suite. The strongest story is one opportunity moving through sourcing, recommendation, repreneur response, active pursuit, seller meeting, NDA, documents, portal access, and operating KPIs.
 
 The launch boundary is strict: what is not in the checklist should not be improvised into the demo as a June commitment. Those ideas belong in the V3 backlog.

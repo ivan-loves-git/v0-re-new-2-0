@@ -46,14 +46,23 @@ Identity resolution uses this order:
 
 1. Authenticated user email is normalized by trimming and lowercasing.
 2. `app_user_roles` is checked first, with case-insensitive email matching and `user_id` fallback.
-3. `repreneurs.email` is checked second, with case-insensitive email matching.
-4. Explicit role wins over inferred profile access.
+3. `staff` roles always win over repreneur matches.
+4. `repreneur` roles resolve the portal identity from `app_user_roles.repreneur_id` first, then fall back to email matching only for legacy repair compatibility.
+5. A `repreneurs.email` match without an explicit `repreneur` role is not enough to enter the portal.
 
 Conflict rule:
 
-- If a user has a `staff` role and also matches a repreneur email, staff wins. Post-login routing sends them to `/dashboard`, and `/portal/*` sends them back to the staff dashboard.
-- If a user has no explicit role but matches an active repreneur profile email, they are treated as a repreneur and routed to `/portal/deals`.
-- If a user has neither a role nor a repreneur email match, they are logged out rather than shown staff or portal data.
+- If a user has a `staff` role and also matches a repreneur email, staff wins. Post-login routing sends them to `/dashboard_re`, and `/portal/*` sends them back to the staff dashboard.
+- If a user has an explicit `repreneur` role linked to a repreneur record, they are routed to `/portal/deals`.
+- If a user has neither a staff role nor a linked repreneur role, they are logged out rather than shown staff or portal data.
+
+Staff portal-access rule:
+
+- Staff manage repreneur portal access from the repreneur profile page.
+- Enabling access creates or links the Better Auth user, assigns a `repreneur` role, links `app_user_roles.repreneur_id`, and sends a password setup/reset link.
+- Resending access sends a fresh setup/reset link without changing the password.
+- Disabling access removes the `repreneur` role and revokes active sessions for the linked user.
+- Staff/admin browser checks are not evidence that the repreneur portal works. Repreneur portal releases require a separate production browser UAT with an actual repreneur login.
 
 Legacy route rule:
 
@@ -64,4 +73,4 @@ Legacy route rule:
 
 Phase 02 now has one written source for the deal-match states and access precedence. This keeps later work from inventing different meanings for `interested`, `active_pursuit`, or staff/repreneur routing.
 
-The rule is deliberately strict: staff decides when a deal becomes an active pursuit, and explicit staff access wins over inferred repreneur access.
+The rule is deliberately strict: staff decides when a deal becomes an active pursuit, staff controls who gets portal access, and explicit staff access wins over repreneur access.

@@ -1,28 +1,22 @@
 "use server"
 
-import { requireUser } from "@/lib/auth-server"
+import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { Repreneur } from "@/lib/types/repreneur"
 import type { LeadershipAssessment } from "@/lib/types/leadership-assessment"
-
-function normalizeEmail(email: string | null | undefined) {
-  return email?.trim().toLowerCase() || null
-}
 
 export async function getMyRepreneurProfile(): Promise<{
   repreneur: Repreneur | null
   leadershipAssessment: LeadershipAssessment | null
 }> {
-  const user = await requireUser()
-  const email = normalizeEmail(user.email)
-  if (!email) return { repreneur: null, leadershipAssessment: null }
+  const access = await requirePortalAccess()
+  if (!access.repreneurId) return { repreneur: null, leadershipAssessment: null }
 
   const supabase = createAdminClient()
   const { data: repreneur, error } = await supabase
     .from("repreneurs")
     .select("*")
-    .eq("email", email)
-    .limit(1)
+    .eq("id", access.repreneurId)
     .maybeSingle()
 
   if (error) throw new Error(error.message)

@@ -318,6 +318,16 @@ export async function deleteRepreneur(id: string) {
       throw new Error(roleByEmailError.message)
     }
 
+    const { error: roleByRepreneurError } = await supabase
+      .from("app_user_roles")
+      .delete()
+      .eq("repreneur_id", id)
+      .eq("role", "repreneur")
+
+    if (roleByRepreneurError && roleByRepreneurError.code !== "42P01" && roleByRepreneurError.code !== "42703") {
+      throw new Error(roleByRepreneurError.message)
+    }
+
     if (userIds.length > 0) {
       const { error: roleByUserError } = await supabase
         .from("app_user_roles")

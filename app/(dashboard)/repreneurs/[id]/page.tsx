@@ -25,7 +25,9 @@ import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { LeadershipResultsCard } from "@/components/repreneurs/leadership-results-card"
+import { PortalAccessCard } from "@/components/repreneurs/portal-access-card"
 import { getLatestAssessment, getPendingAssessment } from "@/lib/actions/leadership-assessment"
+import { getRepreneurPortalAccessStatus } from "@/lib/actions/portal-access"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { ScoringAccuracy } from "@/components/repreneurs/scoring-accuracy"
@@ -204,9 +206,10 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   }
 
   // Fetch leadership assessment data
-  const [leadershipAssessment, pendingAssessment] = await Promise.all([
+  const [leadershipAssessment, pendingAssessment, portalAccessStatus] = await Promise.all([
     getLatestAssessment(id),
     getPendingAssessment(id),
+    getRepreneurPortalAccessStatus(id),
   ])
 
   // Build user email map
@@ -344,6 +347,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </div>
         </div>
       </div>
+
+      <PortalAccessCard
+        repreneurId={repreneur.id}
+        status={portalAccessStatus}
+      />
 
       {/* Profile Overview Row: Scores & Profile | Leadership Assessment (2-col span) */}
       <div className="grid gap-6 md:grid-cols-3">

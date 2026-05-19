@@ -27,6 +27,7 @@
 - [x] **REP-04**: June access does not imply full repreneur profile editing or advanced self-service.
 - [x] **REP-05**: Repreneur access uses a separate external portal route/layout instead of the internal staff dashboard shell.
 - [x] **REP-06**: A repreneur can view a read-only profile summary with scores, strengths, improvement points, and calls to action.
+- [x] **REP-07**: Staff can enable, resend, and disable repreneur portal access from the repreneur profile, with the login role linked to one Better Auth user and one repreneur record.
 
 ### Deal Progress
 
@@ -92,6 +93,7 @@
 - [x] **ENV-01**: Re-New has a documented test environment policy selecting the same/current Supabase project for controlled Phase 1.1 migration, fake data, and UAT.
 - [x] **ENV-02**: The Phase 1 opportunity migrations can be applied to the approved Supabase project after backup/rollback is recorded and additive-only scope is confirmed.
 - [x] **TEST-01**: Phase 1 has a written UAT checklist covering opportunity CRUD, import review, staff-only/repreneur-visible separation, source/contact handling, and documents.
+- [x] **TEST-02**: Every release touching access, routing, matches, documents, or profile display must include production browser UAT as an actual repreneur user; staff/admin checks do not count as repreneur portal coverage.
 - [x] **REL-01**: The release protocol defines when Codex/Claude can push, open a PR, merge, and deploy, including who approves each step.
 - [x] **REL-02**: GSD, Linear, and GitHub responsibilities are documented so project memory, team tracking, and code history stay aligned.
 
@@ -134,12 +136,13 @@
 | REP-01, REP-04 | Phase 2 | Complete |
 | REP-05, REP-06 | Phase 2 | Complete |
 | REP-02, REP-03 | Phase 2 | Complete |
+| REP-07 | Repreneur Portal Recovery | Complete |
 | DEAL-01, DEAL-02, DEAL-03 | Phase 2 | Complete |
 | DEAL-04 | Phase 2 | Complete |
 | NDA-01, NDA-02, DOC-01 | Phase 2 | Complete |
 | FRESH-01, MNA-02 | Phase 3 | Complete |
 | KPI-01, KPI-02 | Phase 3 | Complete |
-| ENV-01, ENV-02, TEST-01, REL-01, REL-02 | Phase 1.1 | Complete |
+| ENV-01, ENV-02, TEST-01, TEST-02, REL-01, REL-02 | Phase 1.1 + Repreneur Portal Recovery | Complete |
 | STAFF-IA-01, DASH-RE-01, DASH-OP-01, ANALYTICS-RE-01, ANALYTICS-OP-01, ARCHIVE-01, REDIRECT-01 | Phase 4 | Complete |
 | UX-01 | Phase 5 | Complete |
 | UX-02, UX-03, OPP-FIND-01, OPP-GROUPS-01 | Phase 5 | Complete |
@@ -150,10 +153,10 @@
 | MNA-WF-04 | Phase 7 | Complete |
 
 **Coverage:**
-- June V2 requirements: 52 total
-- Mapped to phases: 52
+- June V2 requirements: 54 total
+- Mapped to phases: 54
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-18 after Phase 7 M&A intermediary workflow activation UAT passed*
+*Last updated: 2026-05-19 after repreneur portal recovery added explicit staff-managed portal access and mandatory repreneur production UAT*
