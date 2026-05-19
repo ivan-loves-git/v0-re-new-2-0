@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { RepreneurOpportunityDetail } from "@/components/opportunities/repreneur-opportunity-detail"
 import { getMyRepreneurOpportunity } from "@/lib/actions/repreneur-opportunities"
 
-export const revalidate = 30
+export const dynamic = "force-dynamic"
 
 export default async function PortalDealDetailPage({ params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params

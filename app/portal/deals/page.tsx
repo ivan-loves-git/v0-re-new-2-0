@@ -1,7 +1,7 @@
 import { RepreneurOpportunityList } from "@/components/opportunities/repreneur-opportunity-list"
 import { listMyRepreneurOpportunities } from "@/lib/actions/repreneur-opportunities"
 
-export const revalidate = 30
+export const dynamic = "force-dynamic"
 
 export default async function PortalDealsPage() {
   const { repreneur, opportunities } = await listMyRepreneurOpportunities()
