@@ -385,6 +385,14 @@ export default async function RepreneurDashboardPage() {
         subtitle="Overview of your repreneur pipeline"
         icon={LayoutDashboard}
         tone="repreneur"
+        actions={
+          <Button asChild>
+            <Link href="/portal-preview">
+              <Eye data-icon="inline-start" />
+              Portal Preview
+            </Link>
+          </Button>
+        }
       />
 
       {/* Row 1: Stats + Top Tiers - streams in */}
