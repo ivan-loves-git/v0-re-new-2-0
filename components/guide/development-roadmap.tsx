@@ -8,6 +8,87 @@ import { Badge } from "@/components/ui/badge"
 // Product outcomes, product work, UX improvements, validation work, learnings, and features
 const roadmapEvents = [
   {
+    period: "May 19, 2026",
+    version: "0.9.17",
+    title: "Staff portal preview added",
+    isCompleted: true,
+    events: [
+      {
+        title: "Staff-only portal preview opened",
+        type: "feature",
+        description: "Staff now have a Portal Preview page where they can choose a repreneur and see the portal using that repreneur's real production data.",
+      },
+      {
+        title: "Preview access surfaced in daily work",
+        type: "style",
+        description: "A Portal Preview button was added to the staff dashboard header, with a supporting dashboard card for easier discovery during review and support work.",
+      },
+      {
+        title: "Real visibility rules reused",
+        type: "product",
+        description: "The preview uses the same deal list, deal detail, profile, document visibility, NDA, and active-pursuit rules that a repreneur would see.",
+      },
+      {
+        title: "No impersonation boundary protected",
+        type: "audit",
+        description: "Staff stay logged in as staff. They can inspect what a repreneur would see, but response actions are disabled so they cannot accidentally mark a deal as interested or not a fit.",
+      },
+      {
+        title: "Production preview verified",
+        type: "testing",
+        description: "The live build was checked through the header preview entry point and verified on production as build 10.5471815.",
+      },
+    ],
+  },
+  {
+    period: "May 19, 2026",
+    version: "0.9.16",
+    title: "Repreneur portal recovered and access management strengthened",
+    isCompleted: true,
+    events: [
+      {
+        title: "Repreneur login path recovered",
+        type: "fix",
+        description: "Repreneur users now land correctly on the portal after login, while staff and repreneur routes redirect back to the right workspace when someone tries to enter the wrong area.",
+      },
+      {
+        title: "Portal identity made reliable",
+        type: "product",
+        description: "The app now resolves the linked repreneur record once and uses it consistently across portal deals, profile, deal responses, document downloads, and post-login routing.",
+      },
+      {
+        title: "Staff-controlled portal access added",
+        type: "feature",
+        description: "Each repreneur profile now shows portal access status and linked account status, with staff actions to enable access, resend setup links, or disable access.",
+      },
+      {
+        title: "Repreneur deal experience restored",
+        type: "product",
+        description: "Repreneurs can see curated opportunities, open deal details, respond interested or not a fit, and view active-pursuit stage, NDA state, and approved documents when allowed.",
+      },
+      {
+        title: "Document privacy boundary verified",
+        type: "audit",
+        description: "Only documents approved for repreneurs are visible or downloadable, staff-only files stay blocked, and NDA status is respected before document access opens.",
+      },
+      {
+        title: "Portal freshness and session fixes",
+        type: "fix",
+        description: "Portal pages now render fresh per request, avoiding stale or cross-user cached data, and a logout prefetch issue that silently killed repreneur sessions was fixed.",
+      },
+      {
+        title: "Repreneur-side production UAT completed",
+        type: "testing",
+        description: "Production UAT covered login, portal navigation, proposed and active-pursuit deals, signed NDA state, approved document opening, staff-document blocking, profile access, and route protection both ways.",
+      },
+      {
+        title: "Repreneur UAT made a release gate",
+        type: "audit",
+        description: "Project memory now records that staff/admin checks are not enough: repreneur-facing production UAT is mandatory before external portal behavior is considered covered.",
+      },
+    ],
+  },
+  {
     period: "May 18-19, 2026",
     version: "0.9.15",
     title: "Intermediary follow-up workflow activated",
