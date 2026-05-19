@@ -11,11 +11,14 @@ import {
   getOpportunityMatchStatusLabel,
   getOpportunityNdaStatusLabel,
   getOpportunityPursuitStageLabel,
+  type RepreneurOpportunityDocument,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
 
 interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityExposure
+  readOnly?: boolean
+  documentHrefForDocument?: (document: RepreneurOpportunityDocument) => string | null
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityExposure) {
@@ -42,7 +45,11 @@ function canRespond(status: RepreneurOpportunityExposure["match_status"]) {
   return status === "proposed" || status === "interested" || status === "declined"
 }
 
-export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunityDetailProps) {
+export function RepreneurOpportunityDetail({
+  opportunity,
+  readOnly = false,
+  documentHrefForDocument,
+}: RepreneurOpportunityDetailProps) {
   const interestAction = markMyOpportunityInterested.bind(null, opportunity.match_id)
   const declineAction = declineMyOpportunity.bind(null, opportunity.match_id)
   const documentsAllowed = canDownloadOpportunityDocuments(opportunity.nda_status ?? "not_required")
@@ -78,8 +85,12 @@ export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunity
 
       <Card>
         <CardHeader>
-          <CardTitle>Your response</CardTitle>
-          <CardDescription>Tell Re-New whether this opportunity should be explored further.</CardDescription>
+          <CardTitle>{readOnly ? "Response" : "Your response"}</CardTitle>
+          <CardDescription>
+            {readOnly
+              ? "Current repreneur-facing status for this opportunity."
+              : "Tell Re-New whether this opportunity should be explored further."}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {opportunity.match_status === "interested" && (
@@ -109,7 +120,15 @@ export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunity
             </Alert>
           )}
 
-          {canRespond(opportunity.match_status) && (
+          {readOnly && canRespond(opportunity.match_status) && (
+            <Alert>
+              <ShieldCheck />
+              <AlertTitle>Staff preview</AlertTitle>
+              <AlertDescription>Response buttons are disabled in preview.</AlertDescription>
+            </Alert>
+          )}
+
+          {!readOnly && canRespond(opportunity.match_status) && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <form action={interestAction}>
                 <Button type="submit" disabled={opportunity.match_status === "interested"}>
@@ -151,22 +170,35 @@ export function RepreneurOpportunityDetail({ opportunity }: RepreneurOpportunity
             )}
 
             {documentsAllowed &&
-              opportunity.visible_documents.map((document) => (
-                <div key={document.id} className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium">{document.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {document.document_type.replaceAll("_", " ")} · {formatBytes(document.size_bytes)}
-                    </p>
+              opportunity.visible_documents.map((document) => {
+                const documentHref =
+                  documentHrefForDocument?.(document) ??
+                  `/portal/deals/${opportunity.match_id}/documents/${document.id}`
+
+                return (
+                  <div key={document.id} className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium">{document.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {document.document_type.replaceAll("_", " ")} · {formatBytes(document.size_bytes)}
+                      </p>
+                    </div>
+                    {documentHref ? (
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={documentHref}>
+                          <Download data-icon="inline-start" />
+                          Download
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled>
+                        <Download data-icon="inline-start" />
+                        Download
+                      </Button>
+                    )}
                   </div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/portal/deals/${opportunity.match_id}/documents/${document.id}`}>
-                      <Download data-icon="inline-start" />
-                      Download
-                    </Link>
-                  </Button>
-                </div>
-              ))}
+                )
+              })}
           </CardContent>
         </Card>
       )}

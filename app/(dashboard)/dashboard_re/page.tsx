@@ -17,7 +17,7 @@ import { SectionPageHeader } from "@/components/ui/section-page-header"
 import Link from "next/link"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
 import { calculateOverallScore } from "@/lib/scoring-utils"
-import { ArrowRight, BarChart3, LayoutDashboard, Users, TrendingUp, TableProperties } from "lucide-react"
+import { ArrowRight, BarChart3, Eye, LayoutDashboard, Users, TrendingUp, TableProperties } from "lucide-react"
 import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
 
@@ -428,7 +428,7 @@ export default async function RepreneurDashboardPage() {
       </Suspense>
 
       {/* Quick Navigation - renders immediately (no data) */}
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -477,6 +477,24 @@ export default async function RepreneurDashboardPage() {
             <Link href="/repreneurs">
               <Button className="w-full">
                 View Groups
+                <ArrowRight className="ml-2 size-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="size-5" />
+              Portal Preview
+            </CardTitle>
+            <CardDescription>Open the external repreneur view with a staff-controlled selector</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/portal-preview">
+              <Button className="w-full">
+                Preview Portal
                 <ArrowRight className="ml-2 size-4" />
               </Button>
             </Link>

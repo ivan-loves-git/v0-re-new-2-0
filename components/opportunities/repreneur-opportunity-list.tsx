@@ -16,6 +16,8 @@ import {
 interface RepreneurOpportunityListProps {
   repreneur: RepreneurOpportunityProfile | null
   opportunities: RepreneurOpportunityExposure[]
+  detailHrefForOpportunity?: (opportunity: RepreneurOpportunityExposure) => string
+  detailLabel?: string
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityExposure) {
@@ -27,7 +29,12 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
 }
 
-export function RepreneurOpportunityList({ repreneur, opportunities }: RepreneurOpportunityListProps) {
+export function RepreneurOpportunityList({
+  repreneur,
+  opportunities,
+  detailHrefForOpportunity,
+  detailLabel = "View detail",
+}: RepreneurOpportunityListProps) {
   if (!repreneur) {
     return (
       <Alert>
@@ -88,8 +95,8 @@ export function RepreneurOpportunityList({ repreneur, opportunities }: Repreneur
               </div>
             </div>
             <Button asChild variant="outline" className="w-fit">
-              <Link href={`/portal/deals/${opportunity.match_id}`}>
-                View detail
+              <Link href={detailHrefForOpportunity?.(opportunity) ?? `/portal/deals/${opportunity.match_id}`}>
+                {detailLabel}
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>

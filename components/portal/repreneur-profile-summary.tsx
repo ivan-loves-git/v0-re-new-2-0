@@ -23,6 +23,8 @@ import type { Repreneur } from "@/lib/types/repreneur"
 interface RepreneurProfileSummaryProps {
   repreneur: Repreneur | null
   leadershipAssessment: LeadershipAssessment | null
+  dealsHref?: string
+  showContactAction?: boolean
 }
 
 function formatScore(value: number | null | undefined) {
@@ -113,7 +115,12 @@ function targetDescription(repreneur: Repreneur) {
   }
 }
 
-export function RepreneurProfileSummary({ repreneur, leadershipAssessment }: RepreneurProfileSummaryProps) {
+export function RepreneurProfileSummary({
+  repreneur,
+  leadershipAssessment,
+  dealsHref = "/portal/deals",
+  showContactAction = true,
+}: RepreneurProfileSummaryProps) {
   if (!repreneur) {
     return (
       <Alert>
@@ -160,17 +167,19 @@ export function RepreneurProfileSummary({ repreneur, leadershipAssessment }: Rep
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild>
-            <Link href="/portal/deals">
+            <Link href={dealsHref}>
               View proposed deals
               <ArrowRight data-icon="inline-end" />
             </Link>
           </Button>
-          <Button asChild variant="outline">
-            <a href="mailto:contact@re-new.team?subject=Profile refinement call">
-              <Mail data-icon="inline-start" />
-              Ask for a profile call
-            </a>
-          </Button>
+          {showContactAction && (
+            <Button asChild variant="outline">
+              <a href="mailto:contact@re-new.team?subject=Profile refinement call">
+                <Mail data-icon="inline-start" />
+                Ask for a profile call
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
