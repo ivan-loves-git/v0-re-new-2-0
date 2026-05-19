@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw, Lightbulb, Target, AlertTriangle, Zap, GitBranch, Rocket } from "lucide-react"
+import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw, Lightbulb, Target, AlertTriangle, Zap, Rocket } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
@@ -8,11 +8,79 @@ import { Badge } from "@/components/ui/badge"
 // Product outcomes, product work, UX improvements, validation work, learnings, and features
 const roadmapEvents = [
   {
-    period: "May 18, 2026",
-    version: "0.9.14",
-    title: "M&A source directory and intermediary email foundations",
+    period: "May 18-19, 2026",
+    version: "0.9.15",
+    title: "Intermediary follow-up workflow activated",
     isCompleted: true,
     events: [
+      {
+        title: "M&A tab added to opportunity detail",
+        type: "feature",
+        description: "Each linked-source opportunity now has an M&A tab where staff can see the source contact, choose a broker email template, and work from the opportunity context.",
+      },
+      {
+        title: "Broker messages sent from the deal page",
+        type: "product",
+        description: "Staff can review, edit, and send an intermediary follow-up without leaving the opportunity. This turns the earlier template foundation into a real operating workflow.",
+      },
+      {
+        title: "Interaction history logged",
+        type: "feature",
+        description: "Sent intermediary emails are recorded on the opportunity, with status, recipient, subject, timestamp, and any send error visible for follow-up.",
+      },
+      {
+        title: "Missing-email guard added",
+        type: "fix",
+        description: "If the linked M&A source has no email address, the send action stays disabled and the page explains what must be added before staff can contact the source.",
+      },
+      {
+        title: "Production send path hardened",
+        type: "fix",
+        description: "The workflow was tightened through live UAT fixes: protected API sending, required email metadata, reliable logging, and Better Auth / Supabase ownership mismatch handling.",
+      },
+      {
+        title: "Production UAT completed",
+        type: "testing",
+        description: "The live app was checked with a linked-source opportunity, template switching, blocked no-email send, successful outbound email, refreshed history, database evidence, and cleanup of marked UAT records.",
+      },
+    ],
+  },
+  {
+    period: "May 18, 2026",
+    version: "0.9.14",
+    title: "Staff work surfaces, KPI system, and M&A source foundation",
+    isCompleted: true,
+    events: [
+      {
+        title: "Repreneur Find and Groups aligned",
+        type: "style",
+        description: "Repreneur Groups and Find now share the same header, filter shell, result counts, pagination behavior, and table safety for dense staff review work.",
+      },
+      {
+        title: "Opportunity Find and Groups added",
+        type: "feature",
+        description: "Opportunities now have the same operating split as repreneurs: Find for full-list search and Groups for bucket-based daily work, while Records remains available.",
+      },
+      {
+        title: "Opportunity journey labels made scannable",
+        type: "product",
+        description: "Opportunity tables now show derived journey labels such as Live inventory, Matching, Interest received, Active pursuit, Seller meeting, LOI, Closed, Dropped, Paused, and Archived.",
+      },
+      {
+        title: "KPI tiles and match scoring standardized",
+        type: "product",
+        description: "Dashboard KPIs and recommendation scores now use a locked metric system, shared visual tiles, and centralized scoring logic so product signals stay consistent across pages.",
+      },
+      {
+        title: "Recommendation preview restored",
+        type: "fix",
+        description: "The platform recommendation preview was repaired and the recommendation form now returns clearer feedback when staff save or adjust opportunity matches.",
+      },
+      {
+        title: "Save feedback standardized",
+        type: "style",
+        description: "Staff actions now use a consistent toast feedback pattern, making successful saves and blocked actions easier to understand across the product.",
+      },
       {
         title: "M&A source directory added",
         type: "feature",
@@ -29,9 +97,9 @@ const roadmapEvents = [
         description: "Email Tools now include broker-facing templates for opportunity validity checks, missing information, repreneur interest feedback, and process follow-up.",
       },
       {
-        title: "Safe email boundary kept",
-        type: "audit",
-        description: "M&A templates are reviewable and testable, but they stay out of the normal repreneur manual-send flow until a dedicated intermediary send workflow is designed.",
+        title: "Work-surface validation completed",
+        type: "testing",
+        description: "Build, route rendering, journey helper tests, authenticated browser checks, M&A directory smoke checks, and template visibility checks were captured before closing the phase.",
       },
     ],
   },
