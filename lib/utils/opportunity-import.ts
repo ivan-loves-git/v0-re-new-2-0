@@ -60,10 +60,13 @@ function asNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function asInteger(value: unknown) {
-  const parsed = asNumber(value)
-  if (parsed === null) return null
-  return Math.trunc(parsed)
+function asHeadcountApproximation(value: unknown) {
+  const stringValue = asString(value)
+  if (!stringValue) return null
+  const match = stringValue.replace(",", ".").match(/\d+(\.\d+)?/)
+  if (!match) return null
+  const parsed = Number(match[0])
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : null
 }
 
 function asDate(value: unknown) {
@@ -97,7 +100,8 @@ export function normalizeOpportunityRows(rows: OpportunityImportRawRow[]): Oppor
     const description = asString(getValue(row, FIELD_ALIASES.description))
     const revenue = asNumber(getValue(row, FIELD_ALIASES.revenue))
     const ebitda = asNumber(getValue(row, FIELD_ALIASES.ebitda))
-    const headcount = asInteger(getValue(row, FIELD_ALIASES.headcount))
+    const headcountRaw = asString(getValue(row, FIELD_ALIASES.headcount))
+    const headcount = asHeadcountApproximation(headcountRaw)
     const dateAdded = asDate(getValue(row, FIELD_ALIASES.dateAdded))
 
     if (!reference) {
@@ -126,7 +130,6 @@ export function normalizeOpportunityRows(rows: OpportunityImportRawRow[]): Oppor
       reference: reference ?? `import-row-${index + 1}`,
       status: "draft",
       source_label: source,
-      source_visibility: "staff_only",
       sector,
       activity: sector,
       location,
@@ -134,10 +137,11 @@ export function normalizeOpportunityRows(rows: OpportunityImportRawRow[]): Oppor
       revenue_meur: revenue,
       ebitda_keur: ebitda,
       headcount,
+      headcount_range: headcountRaw,
       date_added: dateAdded,
-      repreneur_visibility: "anonymized",
+      repreneur_exposure: "anonymized",
       public_title: sector && location ? `${sector} - ${location}` : sector,
-      anonymized_description: description,
+      teaser_summary: description,
       imported_from: "Bertrand Excel review",
       imported_at: new Date().toISOString(),
     }

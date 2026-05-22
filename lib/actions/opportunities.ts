@@ -11,6 +11,7 @@ import type {
   MaSource_Insert,
   MaSource_Update,
   Opportunity,
+  OpportunityActionResult,
   OpportunityStatus,
   OpportunityVisibility,
   Opportunity_Insert,
@@ -19,6 +20,14 @@ import type {
   OpportunityWorkSurfaceMatch,
   OpportunityWorkSurfaceRecord,
 } from "@/lib/types/opportunity"
+
+type OpportunitySourceRow = Record<string, unknown> & {
+  source?: MaSource | MaSource[] | null
+}
+
+type OpportunityWorkSurfaceMatchRow = Record<string, unknown> & {
+  repreneur?: OpportunityWorkSurfaceMatch["repreneur"] | OpportunityWorkSurfaceMatch["repreneur"][] | null
+}
 
 function readString(formData: FormData, key: string): string | null {
   const value = formData.get(key)
@@ -30,15 +39,23 @@ function readString(formData: FormData, key: string): string | null {
 function readNumber(formData: FormData, key: string): number | null {
   const value = readString(formData, key)
   if (!value) return null
-  const normalized = value.replace(",", ".")
+  const normalized = value
+    .replace(/\s/g, "")
+    .replace(",", ".")
+    .replace(/m€|meur|m€/gi, "")
+    .replace(/k€|keur|k€/gi, "")
+    .replace(/[€]/g, "")
   const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function readInteger(formData: FormData, key: string): number | null {
-  const value = readNumber(formData, key)
-  if (value === null) return null
-  return Math.trunc(value)
+function readHeadcountApproximation(formData: FormData): number | null {
+  const value = readString(formData, "headcount_range")
+  if (!value) return null
+  const match = value.replace(",", ".").match(/\d+(\.\d+)?/)
+  if (!match) return null
+  const parsed = Number(match[0])
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : null
 }
 
 function readStatus(formData: FormData): OpportunityStatus {
@@ -49,7 +66,7 @@ function readVisibility(formData: FormData, key: string, fallback: OpportunityVi
   return (readString(formData, key) as OpportunityVisibility | null) ?? fallback
 }
 
-function normalizeOpportunity(row: any): OpportunityWithSource {
+function normalizeOpportunity(row: OpportunitySourceRow): OpportunityWithSource {
   const source = Array.isArray(row.source) ? row.source[0] : row.source
   return {
     ...row,
@@ -57,7 +74,7 @@ function normalizeOpportunity(row: any): OpportunityWithSource {
   } as OpportunityWithSource
 }
 
-function normalizeWorkSurfaceMatch(row: any): OpportunityWorkSurfaceMatch {
+function normalizeWorkSurfaceMatch(row: OpportunityWorkSurfaceMatchRow): OpportunityWorkSurfaceMatch {
   const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
   return {
     ...row,
@@ -71,8 +88,61 @@ function hasSourceFormData(formData: FormData) {
     readString(formData, "source_contact_name") ||
     readString(formData, "source_contact_email") ||
     readString(formData, "source_contact_phone") ||
-    readString(formData, "source_notes")
+    readString(formData, "source_internal_notes")
   )
+}
+
+function isValidEmail(email: string | null) {
+  return Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+}
+
+function validateOpportunityForm(formData: FormData): OpportunityActionResult | null {
+  const fieldErrors: Record<string, string> = {}
+
+  const requiredTextFields: Array<[string, string]> = [
+    ["reference", "Ref. Mandat is required."],
+    ["source_firm_name", "Source is required."],
+    ["source_contact_name", "M&A contact name is required."],
+    ["location", "Localisation is required."],
+    ["sector", "Secteur is required."],
+    ["description", "Description is required."],
+    ["headcount_range", "Effectif is required."],
+    ["date_added", "Date ajout is required."],
+    ["teaser_summary", "Teaser summary is required."],
+  ]
+
+  for (const [field, message] of requiredTextFields) {
+    if (!readString(formData, field)) fieldErrors[field] = message
+  }
+
+  const sourceEmail = readString(formData, "source_contact_email")
+  if (!sourceEmail) {
+    fieldErrors.source_contact_email = "M&A contact email is required."
+  } else if (!isValidEmail(sourceEmail)) {
+    fieldErrors.source_contact_email = "M&A contact email must be valid."
+  }
+
+  const revenue = readNumber(formData, "revenue_meur")
+  if (readString(formData, "revenue_meur") === null) {
+    fieldErrors.revenue_meur = "CA M€ is required."
+  } else if (revenue === null) {
+    fieldErrors.revenue_meur = "CA M€ must be a number."
+  }
+
+  const ebitda = readNumber(formData, "ebitda_keur")
+  if (readString(formData, "ebitda_keur") === null) {
+    fieldErrors.ebitda_keur = "EBE K€ is required."
+  } else if (ebitda === null) {
+    fieldErrors.ebitda_keur = "EBE K€ must be a number."
+  }
+
+  if (Object.keys(fieldErrors).length === 0) return null
+
+  return {
+    success: false,
+    message: "Complete the required Excel fields before saving.",
+    fieldErrors,
+  }
 }
 
 async function upsertSourceFromForm(formData: FormData, createdBy: string): Promise<string | null> {
@@ -88,7 +158,7 @@ async function upsertSourceFromForm(formData: FormData, createdBy: string): Prom
     contact_name: readString(formData, "source_contact_name"),
     contact_email: readString(formData, "source_contact_email"),
     contact_phone: readString(formData, "source_contact_phone"),
-    notes: readString(formData, "source_notes"),
+    internal_notes: readString(formData, "source_internal_notes"),
   }
 
   if (sourceId) {
@@ -113,19 +183,19 @@ function buildOpportunityPayload(formData: FormData, sourceId: string | null): O
     status: readStatus(formData),
     source_id: sourceId,
     source_label: readString(formData, "source_label") ?? readString(formData, "source_firm_name"),
-    source_visibility: readVisibility(formData, "source_visibility", "staff_only"),
     sector: readString(formData, "sector"),
     activity: readString(formData, "activity"),
     location: readString(formData, "location"),
     description: readString(formData, "description"),
     revenue_meur: readNumber(formData, "revenue_meur"),
     ebitda_keur: readNumber(formData, "ebitda_keur"),
-    headcount: readInteger(formData, "headcount"),
+    headcount: readHeadcountApproximation(formData),
+    headcount_range: readString(formData, "headcount_range"),
     date_added: readString(formData, "date_added"),
-    repreneur_visibility: readVisibility(formData, "repreneur_visibility", "anonymized"),
+    repreneur_exposure: readVisibility(formData, "repreneur_exposure", "anonymized"),
     public_title: readString(formData, "public_title"),
-    anonymized_description: readString(formData, "anonymized_description"),
-    staff_notes: readString(formData, "staff_notes"),
+    teaser_summary: readString(formData, "teaser_summary"),
+    internal_notes: readString(formData, "internal_notes"),
   }
 }
 
@@ -211,8 +281,17 @@ export async function getOpportunity(id: string): Promise<OpportunityWithSource 
 
 export async function createOpportunity(formData: FormData) {
   const user = await requireUser()
+  const validation = validateOpportunityForm(formData)
+  if (validation) return validation
+
   const reference = readString(formData, "reference")
-  if (!reference) throw new Error("Reference is required")
+  if (!reference) {
+    return {
+      success: false,
+      message: "Ref. Mandat is required.",
+      fieldErrors: { reference: "Ref. Mandat is required." },
+    } satisfies OpportunityActionResult
+  }
 
   const sourceId = await upsertSourceFromForm(formData, user.id)
   const payload: Opportunity_Insert = {
@@ -238,8 +317,7 @@ export async function createOpportunityFromDraft(draft: Opportunity_Insert): Pro
     .from("opportunities")
     .insert({
       ...draft,
-      source_visibility: draft.source_visibility ?? "staff_only",
-      repreneur_visibility: draft.repreneur_visibility ?? "anonymized",
+      repreneur_exposure: draft.repreneur_exposure ?? "anonymized",
       created_by: draft.created_by ?? user.id,
     })
     .select()
@@ -253,8 +331,17 @@ export async function createOpportunityFromDraft(draft: Opportunity_Insert): Pro
 
 export async function updateOpportunity(id: string, formData: FormData) {
   const user = await requireUser()
+  const validation = validateOpportunityForm(formData)
+  if (validation) return validation
+
   const reference = readString(formData, "reference")
-  if (!reference) throw new Error("Reference is required")
+  if (!reference) {
+    return {
+      success: false,
+      message: "Ref. Mandat is required.",
+      fieldErrors: { reference: "Ref. Mandat is required." },
+    } satisfies OpportunityActionResult
+  }
 
   const sourceId = await upsertSourceFromForm(formData, user.id)
   const payload = buildOpportunityPayload(formData, sourceId)
@@ -266,6 +353,7 @@ export async function updateOpportunity(id: string, formData: FormData) {
   revalidatePath("/opportunities")
   revalidatePath(`/opportunities/${id}`)
   revalidateOpportunityDashboardTags()
+  return { success: true, message: "Opportunity saved." } satisfies OpportunityActionResult
 }
 
 export async function archiveOpportunity(id: string) {

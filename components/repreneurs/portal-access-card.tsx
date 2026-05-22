@@ -3,7 +3,7 @@
 import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { KeyRound, Mail, Power, RefreshCw, ShieldCheck, ShieldOff } from "lucide-react"
+import { AlertCircle, KeyRound, Mail, Power, RefreshCw, ShieldCheck, ShieldOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,18 +30,32 @@ function formatDate(value: string | null) {
   }).format(new Date(value))
 }
 
+function getPortalRecoveryMessage(status: RepreneurPortalAccessStatus) {
+  if (status.enabled) return null
+
+  if (!status.repreneurEmail) {
+    return "Add an email address before enabling portal access."
+  }
+
+  if (status.roleId || status.hasAuthUser || status.hasCredentialAccount) {
+    return "Portal setup is incomplete. Use Repair portal access to relink the account and send a fresh setup email."
+  }
+
+  return null
+}
+
 export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  function runAction(action: () => Promise<unknown>, successMessage: string) {
+  function runAction(action: () => Promise<unknown>, successMessage: string, fallbackErrorMessage: string) {
     startTransition(async () => {
       try {
         await action()
         toast.success(successMessage)
         router.refresh()
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Portal access action failed."
+        const message = error instanceof Error ? error.message : fallbackErrorMessage
         toast.error(message)
       }
     })
@@ -49,6 +63,8 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
 
   const canEnable = Boolean(status.repreneurEmail) && !status.enabled
   const canResend = Boolean(status.repreneurEmail) && status.enabled
+  const recoveryMessage = getPortalRecoveryMessage(status)
+  const enableButtonLabel = status.roleId || status.hasAuthUser || status.hasCredentialAccount ? "Repair portal access" : "Enable portal access"
 
   return (
     <Card>
@@ -96,15 +112,10 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
           </div>
         </div>
 
-        {!status.repreneurEmail && (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            Add an email address before enabling portal access.
-          </p>
-        )}
-
-        {status.roleId && !status.enabled && (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            A portal role exists but is not fully linked to this repreneur. Enable access to repair the linkage and send a fresh setup link.
+        {recoveryMessage && (
+          <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            {recoveryMessage}
           </p>
         )}
 
@@ -112,16 +123,28 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
           <Button
             type="button"
             disabled={!canEnable || isPending}
-            onClick={() => runAction(() => enableRepreneurPortalAccess(repreneurId), "Portal access enabled and setup link sent.")}
+            onClick={() =>
+              runAction(
+                () => enableRepreneurPortalAccess(repreneurId),
+                "Portal access enabled and setup link sent.",
+                "Portal access could not be enabled. Check the repreneur email and retry."
+              )
+            }
           >
             <Power data-icon="inline-start" />
-            Enable portal access
+            {enableButtonLabel}
           </Button>
           <Button
             type="button"
             variant="outline"
             disabled={!canResend || isPending}
-            onClick={() => runAction(() => resendRepreneurPortalAccessLink(repreneurId), "Portal access link sent.")}
+            onClick={() =>
+              runAction(
+                () => resendRepreneurPortalAccessLink(repreneurId),
+                "Portal access link sent.",
+                "The access link could not be sent. Retry after checking the repreneur email."
+              )
+            }
           >
             {isPending ? <RefreshCw data-icon="inline-start" className="animate-spin" /> : <Mail data-icon="inline-start" />}
             Resend access link
@@ -130,7 +153,13 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
             type="button"
             variant="outline"
             disabled={!status.enabled || isPending}
-            onClick={() => runAction(() => disableRepreneurPortalAccess(repreneurId), "Portal access disabled and sessions revoked.")}
+            onClick={() =>
+              runAction(
+                () => disableRepreneurPortalAccess(repreneurId),
+                "Portal access disabled and sessions revoked.",
+                "Portal access could not be disabled. Refresh the page and retry."
+              )
+            }
           >
             <ShieldOff data-icon="inline-start" />
             Disable portal access

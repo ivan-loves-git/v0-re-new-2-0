@@ -27,6 +27,7 @@ const MA_SAMPLE_VARIABLES = {
   firmName: "Cabinet Atlantique M&A",
   opportunityTitle: "PME industrielle en region Ouest",
   repreneurName: "Sophie Martin",
+  repreneurProfile: "- Nom: Sophie Martin\n- Email: sophie.martin@example.com\n- Score profil: 82\n- Score projet: 76",
   nextStep: "un premier echange cette semaine",
 }
 
@@ -368,6 +369,7 @@ export async function getRenderedTemplate(
     case "ma_opportunity_validity_check":
     case "ma_request_more_information":
     case "ma_repreneur_interest_feedback":
+    case "ma_nda_info_memo_request":
     case "ma_process_follow_up":
       element = MaIntermediaryEmail({
         subject: substituteTemplateVariables(subject, MA_SAMPLE_VARIABLES),

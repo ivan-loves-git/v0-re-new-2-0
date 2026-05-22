@@ -112,6 +112,27 @@ L'equipe Re-New$body$,
     TRUE
   ),
   (
+    'ma_nda_info_memo_request',
+    'Demande NDA et info memo - {opportunityTitle}',
+    'M&A intermediary follow-up: request the firm NDA and info memo after a pursuit is validated.',
+    FALSE,
+    $body$Bonjour {firstName},
+
+Nous validons l'interet de {repreneurName} pour {opportunityTitle}.
+
+Pouvez-vous nous transmettre votre NDA, ou le lien de signature, afin que le candidat le signe selon votre processus ? Une fois le NDA signe, pourriez-vous egalement nous partager l'info memo disponible ?
+
+Contexte fiche de cadrage :
+{repreneurProfile}
+
+Pour clarifier le cadre : Re-New ne remplace pas votre NDA par un NDA generique. Nous suivons le document et le processus requis par votre cabinet.
+
+Merci beaucoup,
+
+L'equipe Re-New$body$,
+    TRUE
+  ),
+  (
     'ma_process_follow_up',
     'Suivi de process - {opportunityTitle}',
     'M&A intermediary follow-up: clarify process stage and next step.',

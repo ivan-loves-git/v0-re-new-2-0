@@ -77,7 +77,7 @@ export function RepreneurOpportunityDetail({
             </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-4" />
-              {opportunity.headcount ?? "-"} people
+              {opportunity.headcount_range ?? opportunity.headcount ?? "-"} people
             </span>
           </div>
         </div>
@@ -235,7 +235,7 @@ export function RepreneurOpportunityDetail({
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-sm leading-6">
-              {opportunity.anonymized_description || "Anonymized opportunity details are being prepared."}
+              {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
             </p>
           </CardContent>
         </Card>

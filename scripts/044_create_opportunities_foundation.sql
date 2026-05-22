@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS public.ma_sources (
   contact_name TEXT,
   contact_email TEXT,
   contact_phone TEXT,
-  notes TEXT,
+  internal_notes TEXT,
   created_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.ma_sources (
 
 COMMENT ON TABLE public.ma_sources IS
   'Minimal staff-only M&A source/contact data for V2 opportunities. Not a full CRM.';
-COMMENT ON COLUMN public.ma_sources.notes IS
+COMMENT ON COLUMN public.ma_sources.internal_notes IS
   'Staff-only source context. Do not expose to repreneurs.';
 
 CREATE TABLE IF NOT EXISTS public.opportunities (
@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS public.opportunities (
   status opportunity_status NOT NULL DEFAULT 'draft',
   source_id UUID REFERENCES public.ma_sources(id) ON DELETE SET NULL,
   source_label TEXT,
-  source_visibility opportunity_visibility NOT NULL DEFAULT 'staff_only',
 
   sector TEXT,
   activity TEXT,
@@ -67,12 +66,13 @@ CREATE TABLE IF NOT EXISTS public.opportunities (
   revenue_meur NUMERIC(12, 2),
   ebitda_keur NUMERIC(12, 2),
   headcount INTEGER,
+  headcount_range TEXT,
   date_added DATE,
 
-  repreneur_visibility opportunity_visibility NOT NULL DEFAULT 'anonymized',
+  repreneur_exposure opportunity_visibility NOT NULL DEFAULT 'anonymized',
   public_title TEXT,
-  anonymized_description TEXT,
-  staff_notes TEXT,
+  teaser_summary TEXT,
+  internal_notes TEXT,
   imported_from TEXT,
   imported_at TIMESTAMPTZ,
   archived_at TIMESTAMPTZ,
@@ -83,14 +83,12 @@ CREATE TABLE IF NOT EXISTS public.opportunities (
 
 COMMENT ON TABLE public.opportunities IS
   'Staff-managed opportunity records for V2 deal-flow validation.';
-COMMENT ON COLUMN public.opportunities.source_visibility IS
-  'Source data is staff_only by default. Repreneur exposure must be explicit.';
-COMMENT ON COLUMN public.opportunities.repreneur_visibility IS
+COMMENT ON COLUMN public.opportunities.repreneur_exposure IS
   'Controls whether the opportunity can be shown to repreneurs and at what disclosure level.';
-COMMENT ON COLUMN public.opportunities.staff_notes IS
+COMMENT ON COLUMN public.opportunities.internal_notes IS
   'Internal staff-only notes. Never included in repreneur-visible summaries.';
-COMMENT ON COLUMN public.opportunities.anonymized_description IS
-  'Optional redacted description for repreneur-facing matching. No PDF parsing or AI inference in V2.';
+COMMENT ON COLUMN public.opportunities.teaser_summary IS
+  'Entrepreneur-visible opportunity summary based on the teaser-level Excel/deal-flow information.';
 
 CREATE TABLE IF NOT EXISTS public.opportunity_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -120,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_opportunities_date_added ON public.opportunities(
 CREATE INDEX IF NOT EXISTS idx_opportunities_sector ON public.opportunities(sector);
 CREATE INDEX IF NOT EXISTS idx_opportunities_location ON public.opportunities(location);
 CREATE INDEX IF NOT EXISTS idx_opportunities_source_id ON public.opportunities(source_id);
-CREATE INDEX IF NOT EXISTS idx_opportunities_repreneur_visibility ON public.opportunities(repreneur_visibility);
+CREATE INDEX IF NOT EXISTS idx_opportunities_repreneur_exposure ON public.opportunities(repreneur_exposure);
 CREATE INDEX IF NOT EXISTS idx_ma_sources_firm_name ON public.ma_sources(firm_name);
 CREATE INDEX IF NOT EXISTS idx_opportunity_documents_opportunity_id ON public.opportunity_documents(opportunity_id);
 CREATE INDEX IF NOT EXISTS idx_opportunity_documents_visibility ON public.opportunity_documents(visibility);

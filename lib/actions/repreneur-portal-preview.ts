@@ -30,15 +30,16 @@ interface PreviewRepreneurRow {
 interface PreviewOpportunityRow {
   id: string
   status: string | null
-  repreneur_visibility: string | null
+  repreneur_exposure: string | null
   public_title: string | null
-  anonymized_description: string | null
+  teaser_summary: string | null
   sector: string | null
   activity: string | null
   location: string | null
   revenue_meur: number | null
   ebitda_keur: number | null
   headcount: number | null
+  headcount_range: string | null
   date_added: string | null
 }
 
@@ -87,7 +88,7 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
   if (opportunity.status !== "active") return null
-  if (opportunity.repreneur_visibility === "staff_only") return null
+  if (opportunity.repreneur_exposure === "staff_only") return null
 
   return {
     match_id: row.id,
@@ -99,13 +100,14 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     visible_documents: [],
     opportunity_id: opportunity.id,
     public_title: opportunity.public_title,
-    anonymized_description: opportunity.anonymized_description,
+    teaser_summary: opportunity.teaser_summary,
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
     revenue_meur: opportunity.revenue_meur,
     ebitda_keur: opportunity.ebitda_keur,
     headcount: opportunity.headcount,
+    headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
     platform_recommendation: row.platform_recommendation,
     platform_score: row.platform_score,
@@ -208,15 +210,16 @@ async function listVisibleOpportunitiesForRepreneur(
       opportunity:opportunities(
         id,
         status,
-        repreneur_visibility,
+        repreneur_exposure,
         public_title,
-        anonymized_description,
+        teaser_summary,
         sector,
         activity,
         location,
         revenue_meur,
         ebitda_keur,
         headcount,
+        headcount_range,
         date_added
       )
     `)

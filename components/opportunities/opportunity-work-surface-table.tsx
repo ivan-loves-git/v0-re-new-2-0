@@ -105,7 +105,8 @@ function formatDealSize(opportunity: OpportunityWorkSurfaceRecord) {
     opportunity.ebitda_keur === null || opportunity.ebitda_keur === undefined
       ? "EBITDA -"
       : `EBITDA ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(opportunity.ebitda_keur)}K`
-  const headcount = opportunity.headcount === null || opportunity.headcount === undefined ? "HC -" : `HC ${opportunity.headcount}`
+  const headcountValue = opportunity.headcount_range ?? opportunity.headcount
+  const headcount = headcountValue === null || headcountValue === undefined ? "HC -" : `HC ${headcountValue}`
   return [revenue, ebitda, headcount]
 }
 
@@ -224,7 +225,7 @@ function OpportunityRow({ item, variant = "full" }: { item: PreparedOpportunity;
           <OpportunityStatusBadge status={opportunity.status} />
         </TableCell>
         <TableCell className="w-[16%]">
-          <OpportunityVisibilityBadge visibility={opportunity.repreneur_visibility} />
+          <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
         </TableCell>
         <TableCell className="w-[13%]">
           <span className="block truncate text-sm">{opportunity.sector ?? "-"}</span>
@@ -254,7 +255,7 @@ function OpportunityRow({ item, variant = "full" }: { item: PreparedOpportunity;
       <TableCell>
         <div className="flex flex-wrap gap-1">
           <OpportunityStatusBadge status={opportunity.status} />
-          <OpportunityVisibilityBadge visibility={opportunity.repreneur_visibility} />
+          <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
         </div>
       </TableCell>
       <TableCell>
@@ -341,7 +342,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
       const { opportunity } = item
       if (journeyFilter !== "all" && item.journey !== journeyFilter) return false
       if (statusFilter !== "all" && opportunity.status !== statusFilter) return false
-      if (visibilityFilter !== "all" && opportunity.repreneur_visibility !== visibilityFilter) return false
+      if (visibilityFilter !== "all" && opportunity.repreneur_exposure !== visibilityFilter) return false
       if (sectorFilter !== "all" && opportunity.sector !== sectorFilter) return false
       if (locationFilter !== "all" && opportunity.location !== locationFilter) return false
       if (sourceTypeFilter !== "all" && opportunity.source?.source_type !== sourceTypeFilter) return false

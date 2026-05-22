@@ -39,6 +39,11 @@ describe("deriveOpportunityJourney", () => {
       expected: "intermediary_meeting",
     },
     {
+      name: "active pursuit with info memo received",
+      input: { status: "active", matches: [{ status: "active_pursuit", pursuit_stage: "info_memo_received" }] },
+      expected: "info_memo_received",
+    },
+    {
       name: "active pursuit at seller meeting",
       input: { status: "active", matches: [{ status: "active_pursuit", pursuit_stage: "seller_meeting" }] },
       expected: "seller_meeting",
@@ -74,6 +79,7 @@ describe("getOpportunityJourneyLabel", () => {
   it("returns readable labels", () => {
     expect(getOpportunityJourneyLabel("live_in_inventory")).toBe("Live in inventory")
     expect(getOpportunityJourneyLabel("interest_received")).toBe("Interest received")
+    expect(getOpportunityJourneyLabel("info_memo_received")).toBe("Info memo received")
     expect(getOpportunityJourneyLabel("loi")).toBe("LOI")
   })
 })

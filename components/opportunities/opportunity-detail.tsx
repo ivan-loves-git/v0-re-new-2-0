@@ -1,5 +1,7 @@
+import Link from "next/link"
 import { CalendarDays, MapPin, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MaSourcePanel } from "@/components/opportunities/ma-source-panel"
@@ -10,7 +12,21 @@ import { OpportunityMatchesPanel } from "@/components/opportunities/opportunity-
 import { OpportunityPursuitPanel } from "@/components/opportunities/opportunity-pursuit-panel"
 import { OpportunityStatusBadge, OpportunityVisibilityBadge } from "@/components/opportunities/opportunity-status-badge"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
-import type { OpportunityDocument, OpportunityMatch, OpportunityMatchCandidate, OpportunityPursuitEvent, OpportunityWithSource } from "@/lib/types/opportunity"
+import type {
+  OpportunityActionResult,
+  OpportunityDocument,
+  OpportunityMatch,
+  OpportunityMatchCandidate,
+  OpportunityPursuitEvent,
+  OpportunityWithSource,
+} from "@/lib/types/opportunity"
+import {
+  getOpportunityMatchRecommendationLabel,
+  getOpportunityMatchStatusLabel,
+  getOpportunityPursuitStageLabel,
+} from "@/lib/types/opportunity"
+
+const OPPORTUNITY_DETAIL_TABS = new Set(["overview", "recommendations", "pursuit", "ma", "edit", "documents"])
 
 interface OpportunityDetailProps {
   opportunity: OpportunityWithSource
@@ -19,7 +35,8 @@ interface OpportunityDetailProps {
   matchCandidates: OpportunityMatchCandidate[]
   pursuitEvents: OpportunityPursuitEvent[]
   maWorkflow: MaOpportunityWorkflow
-  updateAction: (formData: FormData) => Promise<void>
+  updateAction: (formData: FormData) => Promise<OpportunityActionResult | void>
+  defaultTab?: string
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
@@ -41,6 +58,25 @@ function formatMonth(value: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date)
 }
 
+function formatScore(value: number | null | undefined) {
+  if (value === null || value === undefined) return "-"
+  return `${Math.round(value)}%`
+}
+
+function matchPriority(match: OpportunityMatch) {
+  if (match.status === "active_pursuit") return 0
+  if (match.status === "interested") return 1
+  if (match.status === "proposed") return 2
+  if (match.status === "shortlisted") return 3
+  return 4
+}
+
+function repreneurDisplayName(match: OpportunityMatch) {
+  const repreneur = match.repreneur
+  if (!repreneur) return "Unknown repreneur"
+  return [repreneur.first_name, repreneur.last_name].filter(Boolean).join(" ") || repreneur.email
+}
+
 export function OpportunityDetail({
   opportunity,
   documents,
@@ -49,14 +85,24 @@ export function OpportunityDetail({
   pursuitEvents,
   maWorkflow,
   updateAction,
+  defaultTab,
 }: OpportunityDetailProps) {
+  const initialTab = defaultTab && OPPORTUNITY_DETAIL_TABS.has(defaultTab) ? defaultTab : "overview"
+  const topMatches = [...matches]
+    .sort((left, right) => {
+      const priorityDelta = matchPriority(left) - matchPriority(right)
+      if (priorityDelta !== 0) return priorityDelta
+      return (right.platform_score ?? -1) - (left.platform_score ?? -1)
+    })
+    .slice(0, 4)
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <OpportunityStatusBadge status={opportunity.status} />
-            <OpportunityVisibilityBadge visibility={opportunity.repreneur_visibility} />
+            <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
           </div>
           <div>
             <p className="text-sm text-muted-foreground">{opportunity.reference}</p>
@@ -73,13 +119,13 @@ export function OpportunityDetail({
             </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-4" />
-              {opportunity.headcount ?? "-"} people
+              {opportunity.headcount_range ?? opportunity.headcount ?? "-"} people
             </span>
           </div>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue={initialTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
@@ -106,7 +152,7 @@ export function OpportunityDetail({
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Headcount</CardDescription>
-                <CardTitle>{opportunity.headcount ?? "-"}</CardTitle>
+                <CardTitle>{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</CardTitle>
               </CardHeader>
             </Card>
           </div>
@@ -128,8 +174,8 @@ export function OpportunityDetail({
                     <p className="whitespace-pre-wrap text-sm">{opportunity.description || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Staff notes</p>
-                    <p className="whitespace-pre-wrap text-sm">{opportunity.staff_notes || "-"}</p>
+                    <p className="text-xs text-muted-foreground">Internal notes</p>
+                    <p className="whitespace-pre-wrap text-sm">{opportunity.internal_notes || "-"}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -141,7 +187,7 @@ export function OpportunityDetail({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <OpportunityVisibilityBadge visibility={opportunity.repreneur_visibility} />
+                    <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
                     <Badge variant="outline">Source hidden unless approved</Badge>
                   </div>
                   <div>
@@ -149,9 +195,48 @@ export function OpportunityDetail({
                     <p className="font-medium">{opportunity.public_title || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Anonymized description</p>
-                    <p className="whitespace-pre-wrap text-sm">{opportunity.anonymized_description || "-"}</p>
+                    <p className="text-xs text-muted-foreground">Teaser summary</p>
+                    <p className="whitespace-pre-wrap text-sm">{opportunity.teaser_summary || "-"}</p>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle>Recommended Repreneurs</CardTitle>
+                    <CardDescription>Top match context for this opportunity.</CardDescription>
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/opportunities/${opportunity.id}?tab=recommendations`}>
+                      Open recommendations
+                    </Link>
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {topMatches.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No repreneur recommendations have been saved yet.</p>
+                  ) : (
+                    <div className="divide-y rounded-md border">
+                      {topMatches.map((match) => (
+                        <div key={match.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0 space-y-1">
+                            <Link href={`/repreneurs/${match.repreneur_id}`} className="font-medium hover:underline">
+                              {repreneurDisplayName(match)}
+                            </Link>
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              <span>{getOpportunityMatchRecommendationLabel(match.human_recommendation)}</span>
+                              <span>Platform {formatScore(match.platform_score)}</span>
+                              {match.pursuit_stage ? (
+                                <span>{getOpportunityPursuitStageLabel(match.pursuit_stage)}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -159,7 +244,6 @@ export function OpportunityDetail({
             <MaSourcePanel
               source={opportunity.source}
               sourceLabel={opportunity.source_label}
-              sourceVisibility={opportunity.source_visibility}
             />
           </div>
         </TabsContent>

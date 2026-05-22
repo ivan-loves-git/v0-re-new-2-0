@@ -4,6 +4,7 @@
 DO $$ BEGIN
   CREATE TYPE opportunity_pursuit_stage AS ENUM (
     'interest',
+    'info_memo_received',
     'intermediary_meeting',
     'seller_meeting',
     'loi',

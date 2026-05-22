@@ -11,6 +11,7 @@ import type {
   OpportunityMatchCandidate,
   OpportunityPursuitEvent,
   OpportunityPursuitStage,
+  RepreneurOpportunityMatch,
   OpportunityMatchRecommendation,
   OpportunityMatchResponse,
   OpportunityMatchStatus,
@@ -22,6 +23,7 @@ import {
 
 const STAFF_EDITABLE_PURSUIT_STAGES: OpportunityPursuitStage[] = [
   "interest",
+  "info_memo_received",
   "intermediary_meeting",
   "seller_meeting",
   "loi",
@@ -123,6 +125,15 @@ function normalizeResponse(row: any): OpportunityMatchResponse {
     opportunity: opportunity ?? null,
     repreneur: repreneur ?? null,
   } as OpportunityMatchResponse
+}
+
+function normalizeRepreneurMatch(row: Record<string, unknown>): RepreneurOpportunityMatch {
+  const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
+  return {
+    ...row,
+    opportunity: opportunity ?? null,
+    platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
+  } as RepreneurOpportunityMatch
 }
 
 function normalizePursuitEvent(row: any): OpportunityPursuitEvent {
@@ -271,6 +282,47 @@ export async function listOpportunityMatches(opportunityId: string): Promise<Opp
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(normalizeMatch)
+}
+
+export async function listOpportunityMatchesForRepreneur(repreneurId: string): Promise<RepreneurOpportunityMatch[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select(`
+      id,
+      opportunity_id,
+      repreneur_id,
+      status,
+      pursuit_stage,
+      pursuit_stage_updated_at,
+      platform_recommendation,
+      platform_score,
+      platform_reasons,
+      human_recommendation,
+      human_notes,
+      reviewed_at,
+      created_at,
+      updated_at,
+      opportunity:opportunities(
+        id,
+        reference,
+        public_title,
+        sector,
+        activity,
+        location,
+        repreneur_exposure,
+        teaser_summary,
+        headcount_range,
+        internal_notes
+      )
+    `)
+    .eq("repreneur_id", repreneurId)
+    .order("updated_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(normalizeRepreneurMatch)
 }
 
 export async function listOpportunityPursuitEvents(opportunityId: string): Promise<OpportunityPursuitEvent[]> {

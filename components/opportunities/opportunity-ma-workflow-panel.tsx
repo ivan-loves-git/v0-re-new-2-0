@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { Mail, Send, UserRound } from "lucide-react"
+import { AlertTriangle, Mail, Send, UserRound } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +34,7 @@ function formatDate(value: string | null | undefined) {
 export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: OpportunityMaWorkflowPanelProps) {
   const router = useRouter()
   const firstDraft = workflow.drafts[0]
-  const [templateKey, setTemplateKey] = useState<string>(firstDraft?.templateKey ?? "")
+  const [templateKey, setTemplateKey] = useState<string>(workflow.recommendedTemplateKey ?? firstDraft?.templateKey ?? "")
   const selectedDraft = useMemo(
     () => workflow.drafts.find((draft) => draft.templateKey === templateKey) ?? firstDraft,
     [firstDraft, templateKey, workflow.drafts],
@@ -98,6 +99,23 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {workflow.stalledReminder ? (
+              <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+                <AlertTriangle />
+                <AlertTitle>{workflow.stalledReminder.title}</AlertTitle>
+                <AlertDescription>{workflow.stalledReminder.message}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {workflow.activePursuitName ? (
+              <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <p className="font-medium">Active pursuit: {workflow.activePursuitName}</p>
+                <p className="text-muted-foreground">
+                  The next expected M&A action is to request the firm's NDA and info memo using their process.
+                </p>
+              </div>
+            ) : null}
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Source</Label>

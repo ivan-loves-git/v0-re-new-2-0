@@ -53,7 +53,7 @@ function parseSourcePayload(formData: FormData): MaSource_Insert & MaSource_Upda
     contact_name: readString(formData, "contact_name"),
     contact_email: contactEmail,
     contact_phone: readString(formData, "contact_phone"),
-    notes: readString(formData, "notes"),
+    internal_notes: readString(formData, "internal_notes"),
   }
 }
 

@@ -27,7 +27,7 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
   if (opportunity.status !== "active") return null
-  if (opportunity.repreneur_visibility === "staff_only") return null
+  if (opportunity.repreneur_exposure === "staff_only") return null
 
   return {
     match_id: row.id,
@@ -39,13 +39,14 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     visible_documents: [],
     opportunity_id: opportunity.id,
     public_title: opportunity.public_title,
-    anonymized_description: opportunity.anonymized_description,
+    teaser_summary: opportunity.teaser_summary,
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
     revenue_meur: opportunity.revenue_meur,
     ebitda_keur: opportunity.ebitda_keur,
     headcount: opportunity.headcount,
+    headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
     platform_recommendation: row.platform_recommendation,
     platform_score: row.platform_score,
@@ -152,15 +153,16 @@ export async function listMyRepreneurOpportunities(): Promise<{
       opportunity:opportunities(
         id,
         status,
-        repreneur_visibility,
+        repreneur_exposure,
         public_title,
-        anonymized_description,
+        teaser_summary,
         sector,
         activity,
         location,
         revenue_meur,
         ebitda_keur,
         headcount,
+        headcount_range,
         date_added
       )
     `)
@@ -217,15 +219,16 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
       opportunity:opportunities(
         id,
         status,
-        repreneur_visibility,
+        repreneur_exposure,
         public_title,
-        anonymized_description,
+        teaser_summary,
         sector,
         activity,
         location,
         revenue_meur,
         ebitda_keur,
         headcount,
+        headcount_range,
         date_added
       )
     `)

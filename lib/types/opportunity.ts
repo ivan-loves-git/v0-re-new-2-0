@@ -26,6 +26,7 @@ export type OpportunityMatchStatus =
 
 export type OpportunityPursuitStage =
   | "interest"
+  | "info_memo_received"
   | "intermediary_meeting"
   | "seller_meeting"
   | "loi"
@@ -88,6 +89,7 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
 
 export const OPPORTUNITY_PURSUIT_STAGE_OPTIONS = [
   { value: "interest", label: "Interest" },
+  { value: "info_memo_received", label: "Info memo received" },
   { value: "intermediary_meeting", label: "Intermediary meeting" },
   { value: "seller_meeting", label: "Seller meeting" },
   { value: "loi", label: "LOI" },
@@ -110,7 +112,7 @@ export interface MaSource {
   contact_name?: string | null
   contact_email?: string | null
   contact_phone?: string | null
-  notes?: string | null
+  internal_notes?: string | null
   created_by?: string | null
   created_at: string
   updated_at: string
@@ -122,7 +124,7 @@ export interface MaSource_Insert {
   contact_name?: string | null
   contact_email?: string | null
   contact_phone?: string | null
-  notes?: string | null
+  internal_notes?: string | null
   created_by?: string | null
 }
 
@@ -132,7 +134,7 @@ export interface MaSource_Update {
   contact_name?: string | null
   contact_email?: string | null
   contact_phone?: string | null
-  notes?: string | null
+  internal_notes?: string | null
 }
 
 export interface MaSourceDirectoryEntry extends MaSource {
@@ -166,7 +168,6 @@ export interface Opportunity {
   status: OpportunityStatus
   source_id?: string | null
   source_label?: string | null
-  source_visibility: OpportunityVisibility
   sector?: string | null
   activity?: string | null
   location?: string | null
@@ -174,11 +175,12 @@ export interface Opportunity {
   revenue_meur?: number | null
   ebitda_keur?: number | null
   headcount?: number | null
+  headcount_range?: string | null
   date_added?: string | null
-  repreneur_visibility: OpportunityVisibility
+  repreneur_exposure: OpportunityVisibility
   public_title?: string | null
-  anonymized_description?: string | null
-  staff_notes?: string | null
+  teaser_summary?: string | null
+  internal_notes?: string | null
   imported_from?: string | null
   imported_at?: string | null
   archived_at?: string | null
@@ -189,6 +191,12 @@ export interface Opportunity {
 
 export interface OpportunityWithSource extends Opportunity {
   source?: MaSource | null
+}
+
+export interface OpportunityActionResult {
+  success: boolean
+  message: string
+  fieldErrors?: Record<string, string>
 }
 
 export interface OpportunityWorkSurfaceMatch {
@@ -209,7 +217,6 @@ export interface Opportunity_Insert {
   status?: OpportunityStatus
   source_id?: string | null
   source_label?: string | null
-  source_visibility?: OpportunityVisibility
   sector?: string | null
   activity?: string | null
   location?: string | null
@@ -217,11 +224,12 @@ export interface Opportunity_Insert {
   revenue_meur?: number | null
   ebitda_keur?: number | null
   headcount?: number | null
+  headcount_range?: string | null
   date_added?: string | null
-  repreneur_visibility?: OpportunityVisibility
+  repreneur_exposure?: OpportunityVisibility
   public_title?: string | null
-  anonymized_description?: string | null
-  staff_notes?: string | null
+  teaser_summary?: string | null
+  internal_notes?: string | null
   imported_from?: string | null
   imported_at?: string | null
   created_by?: string | null
@@ -232,7 +240,6 @@ export interface Opportunity_Update {
   status?: OpportunityStatus
   source_id?: string | null
   source_label?: string | null
-  source_visibility?: OpportunityVisibility
   sector?: string | null
   activity?: string | null
   location?: string | null
@@ -240,11 +247,12 @@ export interface Opportunity_Update {
   revenue_meur?: number | null
   ebitda_keur?: number | null
   headcount?: number | null
+  headcount_range?: string | null
   date_added?: string | null
-  repreneur_visibility?: OpportunityVisibility
+  repreneur_exposure?: OpportunityVisibility
   public_title?: string | null
-  anonymized_description?: string | null
-  staff_notes?: string | null
+  teaser_summary?: string | null
+  internal_notes?: string | null
   archived_at?: string | null
 }
 
@@ -329,6 +337,22 @@ export interface OpportunityMatch {
   repreneur?: OpportunityMatchRepreneur | null
 }
 
+export interface RepreneurOpportunityMatch extends OpportunityMatch {
+  opportunity?: Pick<
+    Opportunity,
+    | "id"
+    | "reference"
+    | "public_title"
+    | "sector"
+    | "activity"
+    | "location"
+    | "repreneur_exposure"
+    | "teaser_summary"
+    | "headcount_range"
+    | "internal_notes"
+  > | null
+}
+
 export interface OpportunityMatchCandidate extends OpportunityMatchRepreneur {
   platform_recommendation?: OpportunityMatchRecommendation
   platform_score?: number | null
@@ -393,13 +417,14 @@ export interface RepreneurOpportunityExposure {
   visible_documents: RepreneurOpportunityDocument[]
   opportunity_id: string
   public_title?: string | null
-  anonymized_description?: string | null
+  teaser_summary?: string | null
   sector?: string | null
   activity?: string | null
   location?: string | null
   revenue_meur?: number | null
   ebitda_keur?: number | null
   headcount?: number | null
+  headcount_range?: string | null
   date_added?: string | null
   platform_recommendation: OpportunityMatchRecommendation
   platform_score?: number | null

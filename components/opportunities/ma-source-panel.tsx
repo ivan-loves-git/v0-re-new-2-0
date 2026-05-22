@@ -1,16 +1,14 @@
 import { Building2, Mail, Phone, ShieldCheck, UserRound } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { MaSource, OpportunityVisibility } from "@/lib/types/opportunity"
-import { OpportunityVisibilityBadge } from "@/components/opportunities/opportunity-status-badge"
+import type { MaSource } from "@/lib/types/opportunity"
 
 interface MaSourcePanelProps {
   source?: MaSource | null
   sourceLabel?: string | null
-  sourceVisibility?: OpportunityVisibility
 }
 
-export function MaSourcePanel({ source, sourceLabel, sourceVisibility = "staff_only" }: MaSourcePanelProps) {
+export function MaSourcePanel({ source, sourceLabel }: MaSourcePanelProps) {
   return (
     <Card>
       <CardHeader>
@@ -22,10 +20,9 @@ export function MaSourcePanel({ source, sourceLabel, sourceVisibility = "staff_o
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <OpportunityVisibilityBadge visibility={sourceVisibility} />
           <Badge variant="outline">
             <ShieldCheck className="size-3" />
-            Staff-only by default
+            Staff-only source
           </Badge>
         </div>
 
@@ -53,10 +50,10 @@ export function MaSourcePanel({ source, sourceLabel, sourceVisibility = "staff_o
                 <span>{source.contact_phone}</span>
               </div>
             )}
-            {source?.notes && (
+            {source?.internal_notes && (
               <div>
                 <p className="text-xs text-muted-foreground">Internal notes</p>
-                <p className="text-muted-foreground">{source.notes}</p>
+                <p className="text-muted-foreground">{source.internal_notes}</p>
               </div>
             )}
           </div>

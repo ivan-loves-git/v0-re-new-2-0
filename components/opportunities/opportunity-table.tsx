@@ -130,7 +130,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
               <TableHead>Location</TableHead>
               <TableHead className="text-right">Revenue</TableHead>
               <TableHead className="text-right">EBITDA</TableHead>
-              <TableHead className="text-right">Headcount</TableHead>
+                  <TableHead className="text-right">Effectif</TableHead>
               <TableHead>Added</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Visibility</TableHead>
@@ -162,7 +162,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                   <TableCell>{opportunity.location ?? "-"}</TableCell>
                   <TableCell className="text-right">{formatNumber(opportunity.revenue_meur, "M")}</TableCell>
                   <TableCell className="text-right">{formatNumber(opportunity.ebitda_keur, "K")}</TableCell>
-                  <TableCell className="text-right">{opportunity.headcount ?? "-"}</TableCell>
+                  <TableCell className="text-right">{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <span>{formatExactDate(opportunity.date_added)}</span>
@@ -173,7 +173,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                     <OpportunityStatusBadge status={opportunity.status} />
                   </TableCell>
                   <TableCell>
-                    <OpportunityVisibilityBadge visibility={opportunity.repreneur_visibility} />
+                    <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

@@ -9,7 +9,7 @@ WITH source_mapping (
   contact_name,
   contact_email,
   contact_phone,
-  notes
+  internal_notes
 ) AS (
   VALUES
     (
@@ -155,7 +155,7 @@ updated_sources AS (
       contact_name = m.contact_name,
       contact_email = m.contact_email,
       contact_phone = m.contact_phone,
-      notes = m.notes,
+      internal_notes = m.internal_notes,
       updated_at = NOW()
   FROM source_mapping m
   WHERE s.firm_name = m.old_firm_name

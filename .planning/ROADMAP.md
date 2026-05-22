@@ -14,7 +14,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 5: Unified Find and Groups Work Surfaces** - Make repreneur Find/Groups visually coherent and replicate that operating pattern for opportunities. (completed 2026-05-18)
 - [x] **Phase 6: M&A Source Directory and Intermediary Email Workflows** - Add an editable source/intermediary directory and broker-facing email template foundations. (completed 2026-05-18)
 - [x] **Phase 7: M&A Intermediary Workflow Activation** - Start opportunity-specific intermediary follow-up from the M&A tab using source contacts, templates, sends, and interaction history. (completed 2026-05-18)
-- [ ] **Phase 8: Post-demo workflow MVP** - Convert founder demo feedback into a usable workflow for real opportunity creation, matching, and NDA/info memo follow-up.
+- [x] **Phase 8: Post-demo workflow MVP** - Convert founder demo feedback into a usable workflow for real opportunity creation, matching, and NDA/info memo follow-up. (completed locally 2026-05-22)
 
 ## Phase Details
 
@@ -212,11 +212,13 @@ Plans:
 **Phase 8 Performance Guardrail:** New workflow pages must not reintroduce broad repeated Supabase reads or route remount wrappers. If they need shared dashboard/list data, use purpose-built cached loaders and invalidate the relevant cache tag after writes.
 
 Plans:
-- [ ] 08-01: Stabilize demo blockers and searchable selectors.
-- [ ] 08-02: Tighten opportunity creation, validation, teaser copy, and confusing field cleanup.
-- [ ] 08-03: Add reverse match visibility and opportunity overview recommendation summary.
-- [ ] 08-04: Add info memo stage and NDA/info memo M&A request flow.
-- [ ] 08-05: Complete browser UAT, release readiness, and backlog cleanup.
+- [x] 08-01: Stabilize demo blockers and searchable selectors.
+- [x] 08-02: Tighten opportunity creation, validation, teaser copy, and confusing field cleanup.
+- [x] 08-03: Add reverse match visibility and opportunity overview recommendation summary.
+- [x] 08-04: Add info memo stage and NDA/info memo M&A request flow.
+- [x] 08-05: Complete browser UAT, release readiness, and backlog cleanup.
+
+**Verification:** Local production browser UAT passed on 2026-05-22; evidence is recorded in `.planning/phases/08-post-demo-workflow-mvp/08-UAT.md`. Production verification remains required after deployment.
 
 ## Progress
 

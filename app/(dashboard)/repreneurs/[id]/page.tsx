@@ -26,7 +26,9 @@ import { ActivityHistory } from "@/components/repreneurs/activity-history"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { LeadershipResultsCard } from "@/components/repreneurs/leadership-results-card"
 import { PortalAccessCard } from "@/components/repreneurs/portal-access-card"
+import { RepreneurOpportunityMatchesCard } from "@/components/repreneurs/repreneur-opportunity-matches-card"
 import { getLatestAssessment, getPendingAssessment } from "@/lib/actions/leadership-assessment"
+import { listOpportunityMatchesForRepreneur } from "@/lib/actions/opportunity-matches"
 import { getRepreneurPortalAccessStatus } from "@/lib/actions/portal-access"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
@@ -205,10 +207,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   }
 
   // Fetch leadership assessment data
-  const [leadershipAssessment, pendingAssessment, portalAccessStatus] = await Promise.all([
+  const [leadershipAssessment, pendingAssessment, portalAccessStatus, opportunityMatches] = await Promise.all([
     getLatestAssessment(id),
     getPendingAssessment(id),
     getRepreneurPortalAccessStatus(id),
+    listOpportunityMatchesForRepreneur(id),
   ])
 
   // Build user email map
@@ -540,6 +543,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           />
         </div>
       </div>
+
+      <RepreneurOpportunityMatchesCard matches={opportunityMatches} />
 
       {/* Milestones & Documents Row */}
       <div className="grid gap-6 md:grid-cols-3">

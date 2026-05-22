@@ -65,12 +65,12 @@
 
 ### Post-demo Workflow MVP
 
-- [ ] **POSTDEMO-01**: Staff can complete the demo-observed workflows without obvious portal access, selector search, save feedback, or loading blockers.
-- [ ] **POSTDEMO-02**: Staff can create a real opportunity with mandatory fields from the Excel structure, reliable M&A contact data, and entrepreneur-visible teaser context.
-- [ ] **POSTDEMO-03**: Staff can understand matching from both directions: opportunity to repreneur and repreneur to opportunity.
-- [ ] **POSTDEMO-04**: Staff can move from interested repreneur to M&A firm NDA/info memo request with less manual coordination and a tracked info memo stage.
-- [ ] **POSTDEMO-05**: Opportunity detail/edit fields are cleaned up so confusing visibility/anonymization/source-note concepts are removed, renamed, or hidden.
-- [ ] **POSTDEMO-06**: The phase is verified with build, lint, and browser UAT across the real staff workflows affected by the founder demo feedback.
+- [x] **POSTDEMO-01**: Staff can complete the demo-observed workflows without obvious portal access, selector search, save feedback, or loading blockers.
+- [x] **POSTDEMO-02**: Staff can create a real opportunity with mandatory fields from the Excel structure, reliable M&A contact data, and entrepreneur-visible teaser context.
+- [x] **POSTDEMO-03**: Staff can understand matching from both directions: opportunity to repreneur and repreneur to opportunity.
+- [x] **POSTDEMO-04**: Staff can move from interested repreneur to M&A firm NDA/info memo request with less manual coordination and a tracked info memo stage.
+- [x] **POSTDEMO-05**: Opportunity detail/edit fields are cleaned up so confusing visibility/anonymization/source-note concepts are removed, renamed, or hidden.
+- [x] **POSTDEMO-06**: The phase is verified with build, lint, and browser UAT across the real staff workflows affected by the founder demo feedback.
 
 ### Reporting
 
@@ -160,7 +160,7 @@
 | MNA-DIR-01, MNA-DIR-02, MNA-DIR-03, EMAIL-MA-01, EMAIL-MA-02 | Phase 6 | Complete |
 | MNA-WF-01, MNA-WF-02, MNA-WF-03 | Phase 7 | Complete |
 | MNA-WF-04 | Phase 7 | Complete |
-| POSTDEMO-01, POSTDEMO-02, POSTDEMO-03, POSTDEMO-04, POSTDEMO-05, POSTDEMO-06 | Phase 8 | Planned |
+| POSTDEMO-01, POSTDEMO-02, POSTDEMO-03, POSTDEMO-04, POSTDEMO-05, POSTDEMO-06 | Phase 8 | Complete |
 
 **Coverage:**
 - June V2 requirements: 60 total
@@ -169,4 +169,4 @@
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-22 after founder demo feedback was approved for Phase 8 planning*
+*Last updated: 2026-05-22 after Phase 8 local build, lint, unit, and browser UAT passed*

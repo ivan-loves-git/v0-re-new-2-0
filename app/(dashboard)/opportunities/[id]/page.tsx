@@ -10,16 +10,29 @@ import { listOpportunityMatchCandidates, listOpportunityMatches, listOpportunity
 import { getOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
 
 
-export default function OpportunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function OpportunityDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
+}) {
   return (
     <Suspense fallback={null}>
-      <OpportunityDetailContent params={params} />
+      <OpportunityDetailContent params={params} searchParams={searchParams} />
     </Suspense>
   )
 }
 
-async function OpportunityDetailContent({ params }: { params: Promise<{ id: string }> }) {
+async function OpportunityDetailContent({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
+}) {
   const { id } = await params
+  const { tab } = await searchParams
   const opportunity = await getOpportunity(id)
 
   if (!opportunity) {
@@ -36,7 +49,7 @@ async function OpportunityDetailContent({ params }: { params: Promise<{ id: stri
 
   async function updateAction(formData: FormData) {
     "use server"
-    await updateOpportunity(id, formData)
+    return updateOpportunity(id, formData)
   }
 
   return (
@@ -56,6 +69,7 @@ async function OpportunityDetailContent({ params }: { params: Promise<{ id: stri
         pursuitEvents={pursuitEvents}
         maWorkflow={maWorkflow}
         updateAction={updateAction}
+        defaultTab={tab}
       />
     </div>
   )

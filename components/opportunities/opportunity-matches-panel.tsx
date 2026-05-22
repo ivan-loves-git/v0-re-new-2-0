@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { StaffRepreneurCombobox } from "@/components/repreneurs/staff-repreneur-combobox"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
@@ -335,20 +336,16 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                     example="Ivan Demo Repreneur - myworkmail4@gmail.com."
                   />
                 </Label>
-                <Select name="repreneur_id" value={selectedRepreneurId} disabled={candidates.length === 0} onValueChange={handleRepreneurChange}>
-                  <SelectTrigger id="repreneur_id" className="w-full" aria-invalid={Boolean(fieldErrors.repreneur_id)}>
-                    <SelectValue placeholder={candidates.length === 0 ? "No repreneurs available" : "Choose a repreneur, e.g. Ivan Demo Repreneur"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {candidates.map((candidate) => (
-                        <SelectItem key={candidate.id} value={candidate.id}>
-                          {repreneurName(candidate)} - {candidate.email}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <StaffRepreneurCombobox
+                  id="repreneur_id"
+                  name="repreneur_id"
+                  options={candidates}
+                  value={selectedRepreneurId}
+                  onValueChange={handleRepreneurChange}
+                  placeholder={candidates.length === 0 ? "No repreneurs available" : "Choose a repreneur, e.g. Ivan Demo Repreneur"}
+                  disabled={candidates.length === 0}
+                  aria-invalid={Boolean(fieldErrors.repreneur_id)}
+                />
                 <FieldError message={fieldErrors.repreneur_id} />
               </div>
               <div className="flex flex-col gap-2">

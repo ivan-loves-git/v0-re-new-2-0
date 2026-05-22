@@ -78,7 +78,7 @@ export function RepreneurOpportunityList({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="line-clamp-3 text-sm text-muted-foreground">
-              {opportunity.anonymized_description || "Anonymized opportunity details are being prepared."}
+              {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
             </p>
             <div className="grid gap-3 text-sm sm:grid-cols-3">
               <div className="flex flex-col gap-1">
@@ -91,7 +91,7 @@ export function RepreneurOpportunityList({
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">Team</span>
-                <span className="font-medium">{opportunity.headcount ?? "-"}</span>
+                <span className="font-medium">{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</span>
               </div>
             </div>
             <Button asChild variant="outline" className="w-fit">

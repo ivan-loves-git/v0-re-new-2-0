@@ -94,7 +94,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
         source.contact_name,
         source.contact_email,
         source.contact_phone,
-        source.notes,
+        source.internal_notes,
         source.latest_opportunity_title,
       ]
         .filter(Boolean)
@@ -293,7 +293,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
                     </TableCell>
                     <TableCell>
                       <p className="truncate text-sm text-muted-foreground">
-                        {source.notes ?? "-"}
+                        {source.internal_notes ?? "-"}
                       </p>
                     </TableCell>
                     <TableCell className="text-right">
@@ -400,12 +400,12 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="internal_notes">Internal notes</Label>
               <Textarea
-                id="notes"
-                name="notes"
+                id="internal_notes"
+                name="internal_notes"
                 rows={4}
-                defaultValue={editingSource?.notes ?? ""}
+                defaultValue={editingSource?.internal_notes ?? ""}
                 placeholder="Example: Good source for small regional industrial deals. Ask for teaser refresh before proposing candidates."
               />
             </div>

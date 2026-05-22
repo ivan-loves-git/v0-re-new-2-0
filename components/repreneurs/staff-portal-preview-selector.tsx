@@ -1,23 +1,12 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { StaffRepreneurCombobox } from "@/components/repreneurs/staff-repreneur-combobox"
 import type { StaffPortalPreviewOption } from "@/lib/actions/repreneur-portal-preview"
 
 interface StaffPortalPreviewSelectorProps {
   options: StaffPortalPreviewOption[]
   selectedRepreneurId: string | null
-}
-
-function optionLabel(option: StaffPortalPreviewOption) {
-  const name = option.name || "Unnamed repreneur"
-  return option.email ? `${name} - ${option.email}` : name
 }
 
 export function StaffPortalPreviewSelector({
@@ -35,17 +24,13 @@ export function StaffPortalPreviewSelector({
   }
 
   return (
-    <Select value={selectedRepreneurId ?? undefined} onValueChange={handleValueChange} disabled={options.length === 0}>
-      <SelectTrigger className="w-full min-w-0 md:w-[420px]">
-        <SelectValue placeholder="Select a repreneur" />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.id} value={option.id}>
-            {optionLabel(option)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <StaffRepreneurCombobox
+      options={options}
+      value={selectedRepreneurId}
+      onValueChange={handleValueChange}
+      placeholder={options.length === 0 ? "No repreneurs available" : "Select a repreneur"}
+      disabled={options.length === 0}
+      className="min-w-0 md:w-[420px]"
+    />
   )
 }

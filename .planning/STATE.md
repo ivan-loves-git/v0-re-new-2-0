@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-stopped_at: Phase 8 in progress; navigation performance stabilization completed locally and ready for branch review/deploy
-last_updated: "2026-05-22T17:14:33+08:00"
+status: ready_for_production_verification
+stopped_at: Phase 8 completed locally; production deploy verification remains pending
+last_updated: "2026-05-22T18:35:00+08:00"
 last_activity: 2026-05-22
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 38
-  completed_plans: 33
-  percent: 87
+  completed_plans: 38
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 8 post-demo workflow MVP: stabilize founder-demo blockers, tighten real opportunity creation, improve match visibility, and add the NDA/info memo follow-up stage.
+**Current focus:** Phase 8 post-demo workflow MVP is complete locally. Next focus is production deployment/verification and any follow-up cleanup from the existing typecheck baseline.
 
 ## Current Position
 
 Phase: 8 - Post-demo workflow MVP
-Plan: 0 of 5 complete, plus navigation performance stabilization completed as cross-cutting Phase 8 hardening
-Status: In progress
+Plan: 5 of 5 complete, plus navigation performance stabilization completed as cross-cutting Phase 8 hardening
+Status: Complete locally; production verification pending
 Last activity: 2026-05-22
 
-Progress: [████████░░] 87%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 33
+- Total plans completed: 38
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -68,6 +68,7 @@ Progress: [████████░░] 87%
 | 2026-05-19 | Repreneur-facing portal recovery | Reproduced the production repreneur login with the tester account, added explicit `repreneur_id` linkage for portal roles, added staff-managed enable/resend/disable portal access, and promoted repreneur production UAT to a mandatory release gate. |
 | 2026-05-22 | Phase 8 post-demo planning | Added Phase 8 requirements, PRD brief, codebase research, pattern map, five executable plans, and a plan check for founder-demo workflow feedback. |
 | 2026-05-22 | Dashboard navigation performance stabilization | Removed dashboard route remount patterns, enabled Cache Components, added cached dashboard snapshots, narrowed data loaders, added loading boundaries and index migrations, measured six authenticated routes, and saved the before/after chart. |
+| 2026-05-22 | Phase 8 post-demo workflow MVP | Fixed portal access reliability, added searchable repreneur selectors, enforced Excel-backed opportunity fields, cleaned confusing opportunity/source field names, added bidirectional matching visibility, added info memo pursuit stage, added NDA/info memo M&A request workflow, applied additive database migrations, and passed local production browser UAT. |
 
 ## Accumulated Context
 
@@ -78,7 +79,7 @@ Progress: [████████░░] 87%
 - Phase 5 added: Unified repreneur Find/Groups UX and equivalent opportunity Find/Groups work surfaces.
 - Phase 6 added: M&A source directory and intermediary email workflow foundations.
 - Phase 7 added: M&A workflow activation from opportunity details.
-- Phase 8 added: Post-demo workflow MVP from founder demo feedback, focused on real opportunity creation, matching visibility, NDA/info memo follow-up, and confusing field cleanup.
+- Phase 8 added and completed locally: Post-demo workflow MVP from founder demo feedback, focused on real opportunity creation, matching visibility, NDA/info memo follow-up, and confusing field cleanup.
 - Phase 8 navigation stabilization completed before feature execution so the staff app does not add new workflow surface area on top of slow route architecture.
 
 ### Decisions
@@ -137,6 +138,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Repreneur portal recovery decision on 2026-05-19: portal entry must require an explicit `app_user_roles` repreneur role linked to `repreneur_id`; matching a repreneur email alone is no longer sufficient.
 - Repreneur portal recovery decision on 2026-05-19: staff/admin QA cannot be counted as external portal QA. Any release touching access, routing, matches, profile, or documents needs production UAT as a real repreneur user.
 - Navigation performance decision on 2026-05-22: dashboard routes should keep a stable shell, use cached server snapshots and narrow loaders, stream or show loading states for dynamic sections, and invalidate cache tags after writes. Do not bring back dashboard route remount wrappers or repeated broad Supabase reads.
+- Phase 8 deployment decision on 2026-05-22: opportunity field cleanup uses additive/backfilled canonical columns first and keeps legacy confusing columns as temporary compatibility shims. Drop the legacy columns only after the new production app is live and stable.
+- Phase 8 workflow decision on 2026-05-22: `info_memo_received` is a real pursuit stage between interest and intermediary meeting, not an info memo document-storage feature.
 
 ### Pending Todos
 
@@ -146,9 +149,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ### Blockers/Concerns
 
 - Repreneur production UAT must be re-run after the recovery deploy. The previous Phase 3 note that route/data checks were enough for repreneur behavior is superseded.
-- Phase 8 execution must work around a dirty tree with many unrelated code changes. Executors must inspect diffs before editing and must not revert user or other-agent work.
-- Navigation performance branch still needs production verification after deploy; local production browser timing passed, but database index SQL may need manual application if migrations are not automatic.
-- `npx tsc --noEmit` stalled locally during the navigation session and should be retried before a final release gate if the environment allows it.
+- Phase 8 still needs production verification after deploy; local production browser UAT passed on `http://localhost:3012`, but production footer build-number verification remains pending.
+- Navigation performance branch still needs production verification after deploy; local production browser timing passed.
+- `npx tsc --noEmit --pretty false` now runs but fails on pre-existing unrelated baseline issues in `dashboard_re`, `routing`, and `dashboard-snapshots`.
 - Phase 8 should not add PDF-to-opportunity AI ingestion or JSON import automation unless the scope is explicitly reopened.
 - Phase 7 browser UAT passed; the remaining M&A risk is product/process scope, not the basic send-and-log workflow.
 - Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.

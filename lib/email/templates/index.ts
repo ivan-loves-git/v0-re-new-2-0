@@ -59,6 +59,20 @@ Pouvez-vous nous indiquer si vous souhaitez recevoir un court profil anonymise, 
 Merci beaucoup,
 
 L'equipe Re-New`,
+  ma_nda_info_memo_request: `Bonjour {firstName},
+
+Nous validons l'interet de {repreneurName} pour {opportunityTitle}.
+
+Pouvez-vous nous transmettre votre NDA, ou le lien de signature, afin que le candidat le signe selon votre processus ? Une fois le NDA signe, pourriez-vous egalement nous partager l'info memo disponible ?
+
+Contexte fiche de cadrage :
+{repreneurProfile}
+
+Pour clarifier le cadre : Re-New ne remplace pas votre NDA par un NDA generique. Nous suivons le document et le processus requis par votre cabinet.
+
+Merci beaucoup,
+
+L'equipe Re-New`,
   ma_process_follow_up: `Bonjour {firstName},
 
 Je reviens vers vous concernant {opportunityTitle}.
@@ -169,6 +183,12 @@ export const TEMPLATE_METADATA: Record<
   ma_repreneur_interest_feedback: {
     name: "M&A Repreneur Interest",
     description: "Share qualified repreneur interest and ask for feedback",
+    category: "ma",
+    audience: "opp",
+  },
+  ma_nda_info_memo_request: {
+    name: "M&A NDA / Info Memo Request",
+    description: "Request the M&A firm's NDA and info memo after a pursuit is validated",
     category: "ma",
     audience: "opp",
   },

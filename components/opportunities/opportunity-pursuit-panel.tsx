@@ -1,6 +1,8 @@
+import Link from "next/link"
 import { CalendarClock, CircleDot, FileText, History, LockKeyhole, ShieldCheck } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -64,6 +66,9 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
   const updateNdaAction = activeMatch ? updateOpportunityPursuitNda.bind(null, activeMatch.id, opportunityId) : null
   const ndaDocuments = documents.filter((document) => document.document_type === "nda")
   const linkedNdaDocument = ndaDocuments.find((document) => document.id === activeMatch?.nda_document_id) ?? null
+  const showInfoMemoNextAction = Boolean(
+    activeMatch && (!activeMatch.pursuit_stage || activeMatch.pursuit_stage === "interest"),
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,6 +86,19 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
               <CircleDot />
               <AlertTitle>No active pursuit yet</AlertTitle>
               <AlertDescription>Validate an interested repreneur before tracking deal stages.</AlertDescription>
+            </Alert>
+          )}
+
+          {showInfoMemoNextAction && (
+            <Alert>
+              <FileText />
+              <AlertTitle>Next action: request NDA and info memo</AlertTitle>
+              <AlertDescription>
+                Use the M&A workflow to ask the intermediary for its NDA and the info memo. Re-New still follows the M&A firm's NDA process.
+                <Button asChild variant="outline" size="sm" className="mt-3">
+                  <Link href={`/opportunities/${opportunityId}?tab=ma`}>Prepare request</Link>
+                </Button>
+              </AlertDescription>
             </Alert>
           )}
 

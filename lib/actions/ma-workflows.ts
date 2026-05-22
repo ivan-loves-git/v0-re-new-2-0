@@ -8,16 +8,18 @@ import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
 import type { EmailTemplateKey } from "@/lib/types/email"
-import type { MaSourceInteraction, OpportunityMatchStatus } from "@/lib/types/opportunity"
+import type { MaSourceInteraction, OpportunityMatchStatus, OpportunityPursuitStage } from "@/lib/types/opportunity"
 
 const MA_TEMPLATE_KEYS = [
   "ma_opportunity_validity_check",
   "ma_request_more_information",
   "ma_repreneur_interest_feedback",
+  "ma_nda_info_memo_request",
   "ma_process_follow_up",
 ] as const satisfies readonly EmailTemplateKey[]
 
 type MaTemplateKey = (typeof MA_TEMPLATE_KEYS)[number]
+const INFO_MEMO_REMINDER_DAYS = 7
 
 interface OpportunityWorkflowRow {
   id: string
@@ -38,12 +40,24 @@ interface OpportunityWorkflowRow {
 }
 
 interface MatchRow {
+  id: string
   status: OpportunityMatchStatus
+  pursuit_stage: OpportunityPursuitStage | null
+  pursuit_stage_updated_at: string | null
   updated_at: string
   repreneur?: {
     first_name: string | null
     last_name: string | null
     email: string | null
+    lifecycle_status?: string | null
+    journey_stage?: string | null
+    recommendation?: string | null
+    who_score?: number | null
+    when_score?: number | null
+    q12_geo_zones?: unknown
+    q13_target_sectors_v2?: unknown
+    q14_deal_size?: unknown
+    q16_equity?: string | null
   } | null
 }
 
@@ -59,6 +73,12 @@ export interface MaOpportunityWorkflow {
   recipientEmail: string | null
   sourceName: string
   contactName: string | null
+  recommendedTemplateKey: MaTemplateKey | null
+  activePursuitName: string | null
+  stalledReminder: {
+    title: string
+    message: string
+  } | null
   drafts: MaWorkflowDraft[]
   interactions: MaSourceInteraction[]
 }
@@ -85,6 +105,40 @@ function repreneurName(match: MatchRow | null) {
   return name || repreneur?.email || "un repreneur qualifie"
 }
 
+function asList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).filter(Boolean)
+  }
+  if (typeof value === "string" && value.trim()) return [value.trim()]
+  return []
+}
+
+function compactLine(label: string, value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return null
+  return `- ${label}: ${value}`
+}
+
+function formatRepreneurProfile(match: MatchRow | null) {
+  const repreneur = match?.repreneur
+  if (!repreneur) return "Profil repreneur a completer dans Re-New."
+
+  const lines = [
+    compactLine("Nom", repreneurName(match)),
+    compactLine("Email", repreneur.email),
+    compactLine("Statut", repreneur.lifecycle_status),
+    compactLine("Etape", repreneur.journey_stage),
+    compactLine("Recommendation Re-New", repreneur.recommendation),
+    compactLine("Score profil", repreneur.who_score),
+    compactLine("Score projet", repreneur.when_score),
+    compactLine("Zones ciblees", asList(repreneur.q12_geo_zones).join(", ")),
+    compactLine("Secteurs cibles", asList(repreneur.q13_target_sectors_v2).join(", ")),
+    compactLine("Taille de deal ciblee", asList(repreneur.q14_deal_size).join(", ")),
+    compactLine("Apport personnel", repreneur.q16_equity),
+  ].filter(Boolean)
+
+  return lines.length > 0 ? lines.join("\n") : "Profil repreneur a completer dans Re-New."
+}
+
 function bestMatch(matches: MatchRow[]) {
   const priority: OpportunityMatchStatus[] = ["active_pursuit", "interested", "proposed", "shortlisted", "draft"]
   return [...matches].sort((a, b) => {
@@ -92,6 +146,10 @@ function bestMatch(matches: MatchRow[]) {
     if (priorityDiff !== 0) return priorityDiff
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
   })[0] ?? null
+}
+
+function activePursuit(matches: MatchRow[]) {
+  return matches.find((match) => match.status === "active_pursuit") ?? null
 }
 
 function opportunityTitle(opportunity: OpportunityWorkflowRow) {
@@ -159,7 +217,27 @@ async function loadOpportunityContext(opportunityId: string) {
       .single(),
     supabase
       .from("opportunity_matches")
-      .select("status, updated_at, repreneur:repreneurs(first_name, last_name, email)")
+      .select(`
+        id,
+        status,
+        pursuit_stage,
+        pursuit_stage_updated_at,
+        updated_at,
+        repreneur:repreneurs(
+          first_name,
+          last_name,
+          email,
+          lifecycle_status,
+          journey_stage,
+          recommendation,
+          who_score,
+          when_score,
+          q12_geo_zones,
+          q13_target_sectors_v2,
+          q14_deal_size,
+          q16_equity
+        )
+      `)
       .eq("opportunity_id", opportunityId)
       .order("updated_at", { ascending: false }),
   ])
@@ -174,23 +252,55 @@ async function loadOpportunityContext(opportunityId: string) {
   })) as MatchRow[]
 
   const match = bestMatch(matches)
+  const activeMatch = activePursuit(matches)
+  const profileMatch = activeMatch ?? match
   const variables = {
     firstName: opportunity.source?.contact_name?.split(/\s+/)[0] || "Bonjour",
     firmName: opportunity.source?.firm_name || opportunity.source_label || "votre cabinet",
     opportunityTitle: opportunityTitle(opportunity),
-    repreneurName: repreneurName(match),
+    repreneurName: repreneurName(profileMatch),
+    repreneurProfile: formatRepreneurProfile(profileMatch),
     nextStep: match?.status === "active_pursuit" ? "un echange avec le vendeur" : "un premier echange de qualification",
     sector: opportunity.sector || "secteur non precise",
     location: opportunity.location || "localisation non precise",
   }
 
-  return { opportunity, variables }
+  return { opportunity, variables, activeMatch }
+}
+
+function daysSince(value: string | null | undefined) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function deriveStalledReminder(activeMatch: MatchRow | null, interactions: MaSourceInteraction[]) {
+  if (!activeMatch || activeMatch.pursuit_stage === "info_memo_received") return null
+  if (activeMatch.pursuit_stage && activeMatch.pursuit_stage !== "interest") return null
+
+  const ndaRequest = interactions.find((interaction) => interaction.template_key === "ma_nda_info_memo_request")
+  const referenceDate = ndaRequest?.sent_at ?? ndaRequest?.created_at ?? activeMatch.pursuit_stage_updated_at ?? activeMatch.updated_at
+  const stalledDays = daysSince(referenceDate)
+  if (stalledDays === null || stalledDays < INFO_MEMO_REMINDER_DAYS) return null
+
+  if (ndaRequest) {
+    return {
+      title: "NDA/info memo follow-up due",
+      message: `The NDA/info memo request was sent ${stalledDays} days ago and the pursuit is still before info memo received.`,
+    }
+  }
+
+  return {
+    title: "NDA/info memo request due",
+    message: `This pursuit has been active for ${stalledDays} days without a logged NDA/info memo request.`,
+  }
 }
 
 export async function getMaOpportunityWorkflow(opportunityId: string): Promise<MaOpportunityWorkflow> {
   await requireStaffAccess()
   const supabase = createAdminClient()
-  const { opportunity, variables } = await loadOpportunityContext(opportunityId)
+  const { opportunity, variables, activeMatch } = await loadOpportunityContext(opportunityId)
 
   const drafts = await Promise.all(
     MA_TEMPLATE_KEYS.map(async (templateKey) => {
@@ -215,13 +325,17 @@ export async function getMaOpportunityWorkflow(opportunityId: string): Promise<M
     .limit(8)
 
   if (error && error.code !== "42P01") throw new Error(error.message)
+  const interactions = ((data ?? []) as MaSourceInteraction[])
 
   return {
     recipientEmail: opportunity.source?.contact_email ?? null,
     sourceName: opportunity.source?.firm_name || opportunity.source_label || "No source",
     contactName: opportunity.source?.contact_name ?? null,
+    recommendedTemplateKey: activeMatch ? "ma_nda_info_memo_request" : null,
+    activePursuitName: repreneurName(activeMatch),
+    stalledReminder: deriveStalledReminder(activeMatch, interactions),
     drafts,
-    interactions: ((data ?? []) as MaSourceInteraction[]),
+    interactions,
   }
 }
 
@@ -258,8 +372,12 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (!body) return { success: false, message: "Message body is required." }
 
   const supabase = createAdminClient()
-  const { opportunity, variables } = await loadOpportunityContext(opportunityId)
+  const { opportunity, variables, activeMatch } = await loadOpportunityContext(opportunityId)
   const recipientEmail = opportunity.source?.contact_email
+
+  if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
+    return { success: false, message: "Validate a repreneur pursuit before requesting the M&A firm's NDA/info memo." }
+  }
 
   if (!opportunity.source_id || !opportunity.source) {
     return { success: false, message: "This opportunity is not linked to an M&A source yet." }
