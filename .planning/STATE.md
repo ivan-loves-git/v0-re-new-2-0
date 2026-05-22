@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Repreneur-facing portal recovery in progress
-last_updated: "2026-05-19T00:00:00Z"
-last_activity: 2026-05-19
+stopped_at: Phase 8 planned; ready for execution
+last_updated: "2026-05-22T16:02:44+08:00"
+last_activity: 2026-05-22
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 8
-  total_plans: 33
+  total_plans: 38
   completed_plans: 33
-  percent: 100
+  percent: 87
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Repreneur-facing portal recovery: explicit staff-managed access, linked portal identity, and production UAT as the repreneur user.
+**Current focus:** Phase 8 post-demo workflow MVP: stabilize founder-demo blockers, tighten real opportunity creation, improve match visibility, and add the NDA/info memo follow-up stage.
 
 ## Current Position
 
-Phase: Repreneur Portal Recovery
-Plan: 33 of 33 complete
-Status: Recovery implementation and verification in progress
-Last activity: 2026-05-19
+Phase: 8 - Post-demo workflow MVP
+Plan: 0 of 5 complete
+Status: Planned and ready for execution
+Last activity: 2026-05-22
 
-Progress: [██████████] 100%
+Progress: [████████░░] 87%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | 2026-05-18 | Phase 7 M&A workflow activation | Added an opportunity-detail M&A tab that drafts, sends, and logs intermediary follow-up emails from linked source contacts and M&A templates. |
 | 2026-05-18 | Phase 7 M&A workflow UAT | Browser-tested template switching, no-email blocking, live send feedback, interaction history refresh, DB logging, and UAT cleanup on production build `10.aec5a6f`. |
 | 2026-05-19 | Repreneur-facing portal recovery | Reproduced the production repreneur login with the tester account, added explicit `repreneur_id` linkage for portal roles, added staff-managed enable/resend/disable portal access, and promoted repreneur production UAT to a mandatory release gate. |
+| 2026-05-22 | Phase 8 post-demo planning | Added Phase 8 requirements, PRD brief, codebase research, pattern map, five executable plans, and a plan check for founder-demo workflow feedback. |
 
 ## Accumulated Context
 
@@ -76,6 +77,7 @@ Progress: [██████████] 100%
 - Phase 5 added: Unified repreneur Find/Groups UX and equivalent opportunity Find/Groups work surfaces.
 - Phase 6 added: M&A source directory and intermediary email workflow foundations.
 - Phase 7 added: M&A workflow activation from opportunity details.
+- Phase 8 added: Post-demo workflow MVP from founder demo feedback, focused on real opportunity creation, matching visibility, NDA/info memo follow-up, and confusing field cleanup.
 
 ### Decisions
 
@@ -141,6 +143,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ### Blockers/Concerns
 
 - Repreneur production UAT must be re-run after the recovery deploy. The previous Phase 3 note that route/data checks were enough for repreneur behavior is superseded.
+- Phase 8 execution must work around a dirty tree with many unrelated code changes. Executors must inspect diffs before editing and must not revert user or other-agent work.
+- Phase 8 should not add PDF-to-opportunity AI ingestion or JSON import automation unless the scope is explicitly reopened.
 - Phase 7 browser UAT passed; the remaining M&A risk is product/process scope, not the basic send-and-log workflow.
 - Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.
 - Matching must avoid hidden AI scope until structured data is stable.
@@ -159,9 +163,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 | Legal workflow | E-signature | Deferred to V3 | 2026-05-16 |
 | Portal | M&A firm portal | Out of V2 | 2026-05-16 |
 | CRM | Full intermediary activity timeline and bulk contact management | Deferred to V3 | 2026-05-18 |
+| Automation | ChatGPT JSON opportunity import path | Deferred to V4/backlog | 2026-05-22 |
+| Automation | Full PDF-to-opportunity AI ingestion | Deferred beyond Phase 8 | 2026-05-22 |
 
 ## Session Continuity
 
-Last session: 2026-05-19T00:00:00Z
-Stopped at: Repreneur-facing portal recovery in progress
+Last session: 2026-05-22T16:02:44+08:00
+Stopped at: Phase 8 planned; ready for execution
 Resume file: .planning/STATE.md

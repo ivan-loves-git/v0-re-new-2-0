@@ -14,6 +14,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 5: Unified Find and Groups Work Surfaces** - Make repreneur Find/Groups visually coherent and replicate that operating pattern for opportunities. (completed 2026-05-18)
 - [x] **Phase 6: M&A Source Directory and Intermediary Email Workflows** - Add an editable source/intermediary directory and broker-facing email template foundations. (completed 2026-05-18)
 - [x] **Phase 7: M&A Intermediary Workflow Activation** - Start opportunity-specific intermediary follow-up from the M&A tab using source contacts, templates, sends, and interaction history. (completed 2026-05-18)
+- [ ] **Phase 8: Post-demo workflow MVP** - Convert founder demo feedback into a usable workflow for real opportunity creation, matching, and NDA/info memo follow-up.
 
 ## Phase Details
 
@@ -199,10 +200,24 @@ Plans:
 - [x] 07-02: Add opportunity-detail M&A workflow UI.
 - [x] 07-03: Run full browser workflow UAT and release review.
 
+### Phase 8: Post-demo workflow MVP
+
+**Goal:** Re-New staff can create real opportunities, match them to repreneurs, and trigger the NDA/info memo request workflow with less manual coordination.
+**Requirements**: POSTDEMO-01, POSTDEMO-02, POSTDEMO-03, POSTDEMO-04, POSTDEMO-05, POSTDEMO-06
+**Depends on:** Phase 7
+**Plans:** 5 plans
+
+Plans:
+- [ ] 08-01: Stabilize demo blockers and searchable selectors.
+- [ ] 08-02: Tighten opportunity creation, validation, teaser copy, and confusing field cleanup.
+- [ ] 08-03: Add reverse match visibility and opportunity overview recommendation summary.
+- [ ] 08-04: Add info memo stage and NDA/info memo M&A request flow.
+- [ ] 08-05: Complete browser UAT, release readiness, and backlog cleanup.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7.
+Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -214,3 +229,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7.
 | 5. Unified Find and Groups Work Surfaces | 4/4 | Complete | 2026-05-18 |
 | 6. M&A Source Directory and Intermediary Email Workflows | 4/4 | Complete | 2026-05-18 |
 | 7. M&A Intermediary Workflow Activation | 3/3 | Complete | 2026-05-18 |
+| 8. Post-demo workflow MVP | 0/5 | Planned | |
