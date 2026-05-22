@@ -1,11 +1,14 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { connection } from "next/server"
 import { ArrowLeft } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { OfferForm } from "@/components/offers/offer-form"
 
 export default async function EditOfferPage({ params }: { params: Promise<{ id: string }> }) {
+  await connection()
+
   const { id } = await params
   const supabase = await createServerClient()
 

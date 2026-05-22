@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { connection } from "next/server"
 import Link from "next/link"
 import { DollarSign, Star, Info, Mail, Phone, Compass, Map, Flag, Rocket, Crown, AlertTriangle } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
@@ -130,6 +131,8 @@ function formatV2Array(
 }
 
 export default async function RepreneurDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await connection()
+
   const { id } = await params
   const supabase = await createServerClient()
 

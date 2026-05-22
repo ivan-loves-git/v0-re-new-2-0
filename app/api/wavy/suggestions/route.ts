@@ -1,10 +1,12 @@
-import { NextResponse } from "next/server"
+import { connection, NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 const STALE_DAYS = 14 // Repreneurs with no activity in 14+ days
 
 export async function GET() {
+  await connection()
+
   // Check authentication
   const user = await getCurrentUser()
   if (!user) {

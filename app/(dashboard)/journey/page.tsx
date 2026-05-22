@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { connection } from "next/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Compass, Map, Flag, Rocket, Crown, ChevronRight } from "lucide-react"
@@ -85,6 +86,8 @@ function getDerivedStage(repreneur: Repreneur): JourneyStage {
 }
 
 export default async function JourneyPage() {
+  await connection()
+
   const supabase = await createClient()
 
   // Exclude inactive states from the journey funnel: rejected (we said no),

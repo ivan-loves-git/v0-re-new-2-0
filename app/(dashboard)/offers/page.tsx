@@ -1,10 +1,13 @@
 import { createServerClient } from "@/lib/supabase/server"
+import { connection } from "next/server"
 import { OffersTimeline } from "@/components/offers/offers-timeline"
 import { PackageManagementSheet } from "@/components/offers/package-management-sheet"
 
 // Cache for 30 seconds - prevents re-fetching on rapid navigation
 
 export default async function OffersPage() {
+  await connection()
+
   const supabase = await createServerClient()
 
   // Fetch all client offers with their relationships

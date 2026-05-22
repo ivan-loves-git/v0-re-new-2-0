@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { connection } from "next/server"
 import {
   AlertTriangle,
   ArrowRight,
@@ -145,6 +146,8 @@ function OperationalStatCard({
 }
 
 export default async function OpportunityDashboardPage() {
+  await connection()
+
   const [freshnessData, opportunities, responses, activePursuits] = await Promise.all([
     getOpportunityFreshnessData(),
     listOpportunities(),
