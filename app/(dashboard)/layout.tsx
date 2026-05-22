@@ -1,51 +1,70 @@
 import type React from "react"
-import { cookies } from "next/headers"
+import { Suspense } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { FloatingNav } from "@/components/floating-nav"
 import { requireStaffAccess } from "@/lib/access-control"
+import { Skeleton } from "@/components/ui/skeleton"
+import { connection } from "next/server"
 
-export default async function DashboardLayout({
+async function StaffDashboardGate({ children }: { children: React.ReactNode }) {
+  await connection()
+  await requireStaffAccess()
+  return <>{children}</>
+}
+
+async function DashboardSidebar() {
+  await connection()
+  const access = await requireStaffAccess()
+  return (
+    <AppSidebar
+      userEmail={access.user.email}
+      userName={access.user.name ?? undefined}
+      userAvatar={access.user.image ?? undefined}
+    />
+  )
+}
+
+function DashboardContentFallback() {
+  return (
+    <div className="flex flex-col gap-6" aria-label="Loading page">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Skeleton className="h-28 rounded-lg" />
+        <Skeleton className="h-28 rounded-lg" />
+        <Skeleton className="h-28 rounded-lg" />
+        <Skeleton className="h-28 rounded-lg" />
+      </div>
+      <Skeleton className="h-80 rounded-lg" />
+    </div>
+  )
+}
+
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  await requireStaffAccess()
-
-  // Get sidebar state from cookies
-  const cookieStore = await cookies()
-  const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false"
-
-  // Get user info from Better Auth session cookie (faster than API call)
-  // The session_data cookie contains cached user info
-  const sessionDataCookie =
-    cookieStore.get("__Secure-better-auth.session_data") ||
-    cookieStore.get("better-auth.session_data")
-
-  let userEmail = "preview@renew.com"
-  let userName: string | undefined
-
-  if (sessionDataCookie?.value) {
-    try {
-      const decoded = JSON.parse(
-        Buffer.from(sessionDataCookie.value, "base64").toString("utf-8")
-      )
-      userEmail = decoded?.session?.user?.email || "unknown@renew.com"
-      userName = decoded?.session?.user?.name
-    } catch {
-      // Fallback if cookie parsing fails
-      userEmail = "unknown@renew.com"
-    }
-  }
-
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar userEmail={userEmail} userName={userName} />
+    <SidebarProvider defaultOpen>
+      <Suspense fallback={null}>
+        <DashboardSidebar />
+      </Suspense>
       <SidebarInset>
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 md:p-6">
-            <FloatingNav />
-            {children}
+            <Suspense fallback={null}>
+              <FloatingNav />
+            </Suspense>
+            <Suspense fallback={<DashboardContentFallback />}>
+              <StaffDashboardGate>{children}</StaffDashboardGate>
+            </Suspense>
           </div>
         </main>
       </SidebarInset>

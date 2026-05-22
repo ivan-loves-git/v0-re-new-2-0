@@ -8,6 +8,44 @@ import { Badge } from "@/components/ui/badge"
 // Product outcomes, product work, UX improvements, validation work, learnings, and features
 const roadmapEvents = [
   {
+    period: "May 22, 2026",
+    version: "0.9.18",
+    title: "Staff navigation made faster",
+    isCompleted: true,
+    events: [
+      {
+        title: "Dashboard page switching stabilized",
+        type: "fix",
+        description: "Staff navigation now keeps the dashboard frame responsive instead of making each page switch feel like a fresh rebuild.",
+      },
+      {
+        title: "Common staff data kept warm",
+        type: "product",
+        description: "Repreneur lists, pipeline views, analytics, and opportunity work surfaces now reuse short-lived dashboard snapshots so staff do not wait on the same data repeatedly.",
+      },
+      {
+        title: "Pages load what they need",
+        type: "refactor",
+        description: "The main staff pages now ask for smaller, purpose-built data sets instead of repeatedly pulling broad records that were not needed for the current screen.",
+      },
+      {
+        title: "Edits still refresh correctly",
+        type: "product",
+        description: "When staff change repreneurs, opportunities, matches, activities, or related workflow data, the affected dashboard snapshots are refreshed immediately.",
+      },
+      {
+        title: "Database indexes prepared",
+        type: "refactor",
+        description: "The release includes index migrations for the filters and date ordering used by daily staff dashboard work.",
+      },
+      {
+        title: "Before and after timing captured",
+        type: "testing",
+        description: "Six authenticated staff routes were measured against the previous committed build. The biggest waits were removed on Opportunities Find and repreneur detail navigation.",
+      },
+    ],
+  },
+  {
     period: "May 19, 2026",
     version: "0.9.17",
     title: "Staff portal preview added",

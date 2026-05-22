@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
@@ -8,9 +9,16 @@ import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
 import { listOpportunityMatchCandidates, listOpportunityMatches, listOpportunityPursuitEvents } from "@/lib/actions/opportunity-matches"
 import { getOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
 
-export const revalidate = 30
 
-export default async function OpportunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function OpportunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={null}>
+      <OpportunityDetailContent params={params} />
+    </Suspense>
+  )
+}
+
+async function OpportunityDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const opportunity = await getOpportunity(id)
 

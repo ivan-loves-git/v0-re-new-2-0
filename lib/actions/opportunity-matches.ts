@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
+import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import type {
@@ -227,6 +228,7 @@ function revalidateMatchPaths(opportunityId: string, matchId?: string) {
   revalidatePath(`/opportunities/${opportunityId}`)
   revalidatePath("/portal/deals")
   if (matchId) revalidatePath(`/portal/deals/${matchId}`)
+  revalidateOpportunityDashboardTags()
 }
 
 async function createPursuitEvent({

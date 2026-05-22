@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { requireUser } from "@/lib/auth-server"
+import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
   normalizeOpportunityRows,
@@ -76,6 +77,7 @@ export async function commitOpportunityImport(formData: FormData): Promise<Oppor
   }
 
   revalidatePath("/opportunities")
+  revalidateOpportunityDashboardTags()
 
   return {
     created: creatable.length,

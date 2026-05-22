@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { headers } from "next/headers"
 import { unstable_rethrow } from "next/navigation"
 import { auth } from "@/lib/auth"
@@ -8,10 +9,12 @@ import { auth } from "@/lib/auth"
  *
  * @returns The current user or null if not authenticated
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
+  const requestHeaders = await headers()
+
   try {
     const session = await auth.api.getSession({
-      headers: await headers(),
+      headers: requestHeaders,
     })
 
     if (!session?.user) {
@@ -24,7 +27,7 @@ export async function getCurrentUser() {
     console.error("Error getting current user:", error)
     return null
   }
-}
+})
 
 /**
  * Get the current authenticated user, throwing if not authenticated.
@@ -33,7 +36,7 @@ export async function getCurrentUser() {
  * @throws Error if not authenticated
  * @returns The current user
  */
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const user = await getCurrentUser()
 
   if (!user) {
@@ -41,4 +44,4 @@ export async function requireUser() {
   }
 
   return user
-}
+})

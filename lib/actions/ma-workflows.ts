@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
+import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
@@ -303,6 +304,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   revalidatePath(`/opportunities/${opportunityId}`)
   revalidatePath("/opportunities/ma")
   revalidatePath("/emails")
+  revalidateOpportunityDashboardTags()
 
   if (!result.success) {
     return { success: false, message: result.error || "Email failed." }

@@ -42,7 +42,6 @@ import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
 import type { RepreneurOffer, Offer, OfferMilestone } from "@/lib/types/offer"
 
 // Cache for 30 seconds
-export const revalidate = 30
 
 // Source options for dropdown
 const SOURCE_OPTIONS = [

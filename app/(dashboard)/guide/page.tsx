@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { KeyPrinciples } from "@/components/guide"
 import { Target, Rocket, Users, TrendingUp, Heart } from "lucide-react"
 
-export const revalidate = 3600 // Cache for 1 hour
 
 export default function MissionPage() {
   return (

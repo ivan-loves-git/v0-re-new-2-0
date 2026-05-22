@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
+import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   MaSource,
@@ -77,6 +78,7 @@ function revalidateMaSourceSurfaces() {
   revalidatePath("/opportunities/groups")
   revalidatePath("/dashboard_op")
   revalidatePath("/opportunities")
+  revalidateOpportunityDashboardTags()
 }
 
 export async function listMaSourceDirectory(): Promise<MaSourceDirectoryEntry[]> {

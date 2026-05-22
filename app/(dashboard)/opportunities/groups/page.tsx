@@ -3,7 +3,6 @@ import { OpportunityWorkSurfaceTable } from "@/components/opportunities/opportun
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { listOpportunityWorkSurfaceRecords } from "@/lib/actions/opportunities"
 
-export const revalidate = 30
 
 export default async function OpportunityGroupsPage() {
   const opportunities = await listOpportunityWorkSurfaceRecords()

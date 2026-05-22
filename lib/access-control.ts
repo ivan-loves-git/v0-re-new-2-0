@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { redirect } from "next/navigation"
 import { getCurrentUser, requireUser } from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -30,7 +31,10 @@ function normalizeEmail(email: string | null | undefined) {
   return email?.trim().toLowerCase() || null
 }
 
-function sameNormalizedEmail(candidate: string | null | undefined, email: string) {
+function sameNormalizedEmail(
+  candidate: string | null | undefined,
+  email: string,
+) {
   return normalizeEmail(candidate) === email
 }
 
@@ -43,7 +47,10 @@ function hasPortalAccess(access: CurrentUserAccess | null) {
   return Boolean(access?.role === "repreneur" && access.repreneurId)
 }
 
-async function findRole(email: string, userId: string): Promise<RoleRow | null> {
+async function findRole(
+  email: string,
+  userId: string,
+): Promise<RoleRow | null> {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("app_user_roles")
@@ -57,21 +64,24 @@ async function findRole(email: string, userId: string): Promise<RoleRow | null> 
   }
 
   const roles = ((data as RoleRow[] | null) ?? []).filter(
-    (row) => sameNormalizedEmail(row.email, email) || row.user_id === userId
+    (row) => sameNormalizedEmail(row.email, email) || row.user_id === userId,
   )
   const staffRole = roles.find((row) => row.role === "staff")
   if (staffRole) return staffRole
 
   const repreneurRole =
     roles.find((row) => row.role === "repreneur" && row.user_id === userId) ??
-    roles.find((row) => row.role === "repreneur" && sameNormalizedEmail(row.email, email)) ??
+    roles.find(
+      (row) =>
+        row.role === "repreneur" && sameNormalizedEmail(row.email, email),
+    ) ??
     null
   return repreneurRole
 }
 
 async function findRepreneurByEmail(
   email: string,
-  supabase = createAdminClient()
+  supabase = createAdminClient(),
 ): Promise<RepreneurAccessRow | null> {
   const { data, error } = await supabase
     .from("repreneurs")
@@ -80,10 +90,17 @@ async function findRepreneurByEmail(
     .limit(20)
 
   if (error) throw new Error(error.message)
-  return ((data as RepreneurAccessRow[] | null) ?? []).find((row) => sameNormalizedEmail(row.email, email)) ?? null
+  return (
+    ((data as RepreneurAccessRow[] | null) ?? []).find((row) =>
+      sameNormalizedEmail(row.email, email),
+    ) ?? null
+  )
 }
 
-async function findRepreneurById(id: string, supabase = createAdminClient()): Promise<RepreneurAccessRow | null> {
+async function findRepreneurById(
+  id: string,
+  supabase = createAdminClient(),
+): Promise<RepreneurAccessRow | null> {
   const { data, error } = await supabase
     .from("repreneurs")
     .select("id, first_name, last_name, email")
@@ -94,7 +111,10 @@ async function findRepreneurById(id: string, supabase = createAdminClient()): Pr
   return (data as RepreneurAccessRow | null) ?? null
 }
 
-async function findRepreneurForRole(role: RoleRow, fallbackEmail: string): Promise<RepreneurAccessRow | null> {
+async function findRepreneurForRole(
+  role: RoleRow,
+  fallbackEmail: string,
+): Promise<RepreneurAccessRow | null> {
   const supabase = createAdminClient()
   if (role.repreneur_id) {
     const linkedRepreneur = await findRepreneurById(role.repreneur_id, supabase)
@@ -104,48 +124,50 @@ async function findRepreneurForRole(role: RoleRow, fallbackEmail: string): Promi
   return findRepreneurByEmail(fallbackEmail, supabase)
 }
 
-export async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> {
-  const user = await getCurrentUser()
-  if (!user) return null
+export const getCurrentUserAccess = cache(
+  async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> {
+    const user = await getCurrentUser()
+    if (!user) return null
 
-  const email = normalizeEmail(user.email)
-  if (!email) {
+    const email = normalizeEmail(user.email)
+    if (!email) {
+      return {
+        user,
+        role: "unassigned",
+        repreneurId: null,
+        repreneurName: null,
+      }
+    }
+
+    const explicitRole = await findRole(email, user.id)
+
+    if (explicitRole?.role === "staff") {
+      return {
+        user,
+        role: "staff",
+        repreneurId: null,
+        repreneurName: null,
+      }
+    }
+
+    if (explicitRole?.role === "repreneur") {
+      const repreneur = await findRepreneurForRole(explicitRole, email)
+      return {
+        user,
+        role: "repreneur",
+        repreneurId: repreneur?.id ?? null,
+        repreneurName: displayName(repreneur),
+      }
+    }
+
     return {
       user,
       role: "unassigned",
       repreneurId: null,
       repreneurName: null,
     }
-  }
-
-  const explicitRole = await findRole(email, user.id)
-
-  if (explicitRole?.role === "staff") {
-    return {
-      user,
-      role: "staff",
-      repreneurId: null,
-      repreneurName: null,
-    }
-  }
-
-  if (explicitRole?.role === "repreneur") {
-    const repreneur = await findRepreneurForRole(explicitRole, email)
-    return {
-      user,
-      role: "repreneur",
-      repreneurId: repreneur?.id ?? null,
-      repreneurName: displayName(repreneur),
-    }
-  }
-
-  return {
-    user,
-    role: "unassigned",
-    repreneurId: null,
-    repreneurName: null,
-  }
-}
+  },
+)
 
 export async function getPostLoginDestination() {
   const access = await getCurrentUserAccess()
@@ -158,7 +180,8 @@ export async function getPostLoginDestination() {
 export async function requireStaffAccess() {
   const access = await getCurrentUserAccess()
   if (!access) redirect("/auth/login")
-  if (access.role === "repreneur" && access.repreneurId) redirect("/portal/deals")
+  if (access.role === "repreneur" && access.repreneurId)
+    redirect("/portal/deals")
   if (access.role !== "staff") redirect("/auth/logout")
   return access
 }

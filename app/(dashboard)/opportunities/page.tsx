@@ -1,7 +1,6 @@
 import { OpportunityTable } from "@/components/opportunities/opportunity-table"
 import { listOpportunities } from "@/lib/actions/opportunities"
 
-export const revalidate = 30
 
 export default async function OpportunitiesPage() {
   const opportunities = await listOpportunities()

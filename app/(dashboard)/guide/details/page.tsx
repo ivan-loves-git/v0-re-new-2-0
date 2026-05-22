@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Lightbulb, AlertCircle, CheckCircle2, Workflow } from "lucide-react"
 
-export const revalidate = 3600 // Cache for 1 hour
 
 const workflows = [
   {

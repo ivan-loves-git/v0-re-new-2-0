@@ -3,7 +3,6 @@ import { OffersTimeline } from "@/components/offers/offers-timeline"
 import { PackageManagementSheet } from "@/components/offers/package-management-sheet"
 
 // Cache for 30 seconds - prevents re-fetching on rapid navigation
-export const revalidate = 30
 
 export default async function OffersPage() {
   const supabase = await createServerClient()

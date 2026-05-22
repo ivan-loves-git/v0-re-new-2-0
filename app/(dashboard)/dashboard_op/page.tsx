@@ -32,7 +32,6 @@ import {
   type OpportunityPursuitStage,
 } from "@/lib/types/opportunity"
 
-export const revalidate = 30
 
 interface ActivePursuitRow {
   id: string

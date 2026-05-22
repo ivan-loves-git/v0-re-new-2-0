@@ -1,6 +1,5 @@
 import { DevelopmentRoadmap } from "@/components/guide"
 
-export const revalidate = 3600 // Cache for 1 hour
 
 export default function RoadmapPage() {
   return (

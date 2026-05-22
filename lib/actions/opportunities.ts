@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requireUser } from "@/lib/auth-server"
+import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   MaSource,
@@ -225,6 +226,7 @@ export async function createOpportunity(formData: FormData) {
   if (error) throw new Error(error.message)
 
   revalidatePath("/opportunities")
+  revalidateOpportunityDashboardTags()
   redirect(`/opportunities/${(data as Opportunity).id}`)
 }
 
@@ -245,6 +247,7 @@ export async function createOpportunityFromDraft(draft: Opportunity_Insert): Pro
 
   if (error) throw new Error(error.message)
   revalidatePath("/opportunities")
+  revalidateOpportunityDashboardTags()
   return data as Opportunity
 }
 
@@ -262,6 +265,7 @@ export async function updateOpportunity(id: string, formData: FormData) {
 
   revalidatePath("/opportunities")
   revalidatePath(`/opportunities/${id}`)
+  revalidateOpportunityDashboardTags()
 }
 
 export async function archiveOpportunity(id: string) {
@@ -277,4 +281,5 @@ export async function archiveOpportunity(id: string) {
 
   revalidatePath("/opportunities")
   revalidatePath(`/opportunities/${id}`)
+  revalidateOpportunityDashboardTags()
 }

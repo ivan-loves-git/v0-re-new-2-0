@@ -207,6 +207,10 @@ Plans:
 **Depends on:** Phase 7
 **Plans:** 5 plans
 
+**Cross-cutting stabilization completed 2026-05-22:** Dashboard navigation performance was handled before deeper Phase 8 workflow work. The app now uses a stable dashboard shell, cached server snapshots, targeted data loaders, loading boundaries, cache invalidation after writes, and justified database index migrations. The measured before/after record lives in `.planning/phases/08-post-demo-workflow-mvp/08-NAVIGATION-PERFORMANCE.md`; the visual chart lives in `docs/solutions/navigation-performance-before-after.svg`.
+
+**Phase 8 Performance Guardrail:** New workflow pages must not reintroduce broad repeated Supabase reads or route remount wrappers. If they need shared dashboard/list data, use purpose-built cached loaders and invalidate the relevant cache tag after writes.
+
 Plans:
 - [ ] 08-01: Stabilize demo blockers and searchable selectors.
 - [ ] 08-02: Tighten opportunity creation, validation, teaser copy, and confusing field cleanup.
@@ -229,4 +233,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8.
 | 5. Unified Find and Groups Work Surfaces | 4/4 | Complete | 2026-05-18 |
 | 6. M&A Source Directory and Intermediary Email Workflows | 4/4 | Complete | 2026-05-18 |
 | 7. M&A Intermediary Workflow Activation | 3/3 | Complete | 2026-05-18 |
-| 8. Post-demo workflow MVP | 0/5 | Planned | |
+| 8. Post-demo workflow MVP | 0/5 | In progress | |

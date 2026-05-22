@@ -1,12 +1,28 @@
+import { Suspense } from "react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
+import { connection } from "next/server"
 import { CopyButton } from "./copy-button"
 
-export default async function ClipboardPage({
+export default function ClipboardPage({
   params,
 }: {
   params: Promise<{ slug: string }>
 }) {
+  return (
+    <Suspense fallback={null}>
+      <ClipboardContent params={params} />
+    </Suspense>
+  )
+}
+
+async function ClipboardContent({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  await connection()
+
   const { slug } = await params
   const supabase = createAdminClient()
 

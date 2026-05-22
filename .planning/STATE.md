@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Phase 8 planned; ready for execution
-last_updated: "2026-05-22T16:02:44+08:00"
+stopped_at: Phase 8 in progress; navigation performance stabilization completed locally and ready for branch review/deploy
+last_updated: "2026-05-22T17:14:33+08:00"
 last_activity: 2026-05-22
 progress:
   total_phases: 9
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 8 - Post-demo workflow MVP
-Plan: 0 of 5 complete
-Status: Planned and ready for execution
+Plan: 0 of 5 complete, plus navigation performance stabilization completed as cross-cutting Phase 8 hardening
+Status: In progress
 Last activity: 2026-05-22
 
 Progress: [████████░░] 87%
@@ -67,6 +67,7 @@ Progress: [████████░░] 87%
 | 2026-05-18 | Phase 7 M&A workflow UAT | Browser-tested template switching, no-email blocking, live send feedback, interaction history refresh, DB logging, and UAT cleanup on production build `10.aec5a6f`. |
 | 2026-05-19 | Repreneur-facing portal recovery | Reproduced the production repreneur login with the tester account, added explicit `repreneur_id` linkage for portal roles, added staff-managed enable/resend/disable portal access, and promoted repreneur production UAT to a mandatory release gate. |
 | 2026-05-22 | Phase 8 post-demo planning | Added Phase 8 requirements, PRD brief, codebase research, pattern map, five executable plans, and a plan check for founder-demo workflow feedback. |
+| 2026-05-22 | Dashboard navigation performance stabilization | Removed dashboard route remount patterns, enabled Cache Components, added cached dashboard snapshots, narrowed data loaders, added loading boundaries and index migrations, measured six authenticated routes, and saved the before/after chart. |
 
 ## Accumulated Context
 
@@ -78,6 +79,7 @@ Progress: [████████░░] 87%
 - Phase 6 added: M&A source directory and intermediary email workflow foundations.
 - Phase 7 added: M&A workflow activation from opportunity details.
 - Phase 8 added: Post-demo workflow MVP from founder demo feedback, focused on real opportunity creation, matching visibility, NDA/info memo follow-up, and confusing field cleanup.
+- Phase 8 navigation stabilization completed before feature execution so the staff app does not add new workflow surface area on top of slow route architecture.
 
 ### Decisions
 
@@ -134,6 +136,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 7 plan 07-03 completed: production browser UAT passed after fixing the client send transport, required interaction metadata, and Better Auth/Supabase Auth `created_by` mismatch for the M&A interaction log.
 - Repreneur portal recovery decision on 2026-05-19: portal entry must require an explicit `app_user_roles` repreneur role linked to `repreneur_id`; matching a repreneur email alone is no longer sufficient.
 - Repreneur portal recovery decision on 2026-05-19: staff/admin QA cannot be counted as external portal QA. Any release touching access, routing, matches, profile, or documents needs production UAT as a real repreneur user.
+- Navigation performance decision on 2026-05-22: dashboard routes should keep a stable shell, use cached server snapshots and narrow loaders, stream or show loading states for dynamic sections, and invalidate cache tags after writes. Do not bring back dashboard route remount wrappers or repeated broad Supabase reads.
 
 ### Pending Todos
 
@@ -144,6 +147,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 - Repreneur production UAT must be re-run after the recovery deploy. The previous Phase 3 note that route/data checks were enough for repreneur behavior is superseded.
 - Phase 8 execution must work around a dirty tree with many unrelated code changes. Executors must inspect diffs before editing and must not revert user or other-agent work.
+- Navigation performance branch still needs production verification after deploy; local production browser timing passed, but database index SQL may need manual application if migrations are not automatic.
+- `npx tsc --noEmit` stalled locally during the navigation session and should be retried before a final release gate if the environment allows it.
 - Phase 8 should not add PDF-to-opportunity AI ingestion or JSON import automation unless the scope is explicitly reopened.
 - Phase 7 browser UAT passed; the remaining M&A risk is product/process scope, not the basic send-and-log workflow.
 - Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.
@@ -168,6 +173,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-22T16:02:44+08:00
-Stopped at: Phase 8 planned; ready for execution
+Last session: 2026-05-22T17:14:33+08:00
+Stopped at: Phase 8 in progress; navigation performance stabilization completed locally and ready for branch review/deploy
 Resume file: .planning/STATE.md

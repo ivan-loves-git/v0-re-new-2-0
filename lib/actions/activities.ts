@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import type { ActivityType, Activity_Insert } from "@/lib/types/repreneur"
 import { updateRepreneurOfferStatus } from "./offers"
 
@@ -66,6 +67,7 @@ export async function createActivity(
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
+  revalidateRepreneurDashboardTags()
 }
 
 export async function getActivities(repreneurId: string) {
@@ -101,4 +103,5 @@ export async function deleteActivity(activityId: string, repreneurId: string) {
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
+  revalidateRepreneurDashboardTags()
 }

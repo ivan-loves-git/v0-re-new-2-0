@@ -1,9 +1,10 @@
+import { connection } from "next/server"
 import { RepreneurOpportunityList } from "@/components/opportunities/repreneur-opportunity-list"
 import { listMyRepreneurOpportunities } from "@/lib/actions/repreneur-opportunities"
 
-export const dynamic = "force-dynamic"
 
 export default async function PortalDealsPage() {
+  await connection()
   const { repreneur, opportunities } = await listMyRepreneurOpportunities()
 
   return (

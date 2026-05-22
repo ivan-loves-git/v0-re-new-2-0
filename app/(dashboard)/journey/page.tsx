@@ -9,7 +9,6 @@ import { MILESTONES, STAGE_GROUPS } from "@/lib/constants/tier-config"
 import { cn } from "@/lib/utils"
 
 // Cache for 30 seconds
-export const revalidate = 30
 
 const stages: JourneyStage[] = ["explorer", "learner", "ready", "execution", "post_acquisition"]
 

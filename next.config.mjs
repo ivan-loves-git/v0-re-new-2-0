@@ -1,28 +1,38 @@
-import { execSync } from 'child_process'
+import { execFileSync } from "child_process"
 
 // Get git info at build time
-let gitCommitCount = '0'
-let gitCommitHash = 'dev'
+let gitCommitCount = "0"
+let gitCommitHash = "dev"
 
 try {
-  gitCommitCount = execSync('git rev-list --count HEAD').toString().trim()
-  gitCommitHash = execSync('git rev-parse --short=7 HEAD').toString().trim()
+  const gitOptions = { timeout: 300, encoding: "utf8" }
+  gitCommitCount = execFileSync(
+    "git",
+    ["rev-list", "--count", "HEAD"],
+    gitOptions,
+  ).trim()
+  gitCommitHash = execFileSync(
+    "git",
+    ["rev-parse", "--short=7", "HEAD"],
+    gitOptions,
+  ).trim()
 } catch (e) {
   // Fallback for environments without git
-  console.warn('Could not get git info:', e.message)
+  console.warn("Could not get git info:", e.message)
 }
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  cacheComponents: true,
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '*.supabase.co',
-        pathname: '/storage/v1/object/public/**',
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
     ],
   },
@@ -33,15 +43,15 @@ const nextConfig = {
   // Allow file uploads up to 10MB (default is 1MB)
   experimental: {
     serverActions: {
-      bodySizeLimit: '10mb',
+      bodySizeLimit: "10mb",
     },
   },
   // Redirect old intake form to v2
   async redirects() {
     return [
       {
-        source: '/intake',
-        destination: '/intake-v2',
+        source: "/intake",
+        destination: "/intake-v2",
         permanent: false, // Temporary until v2 is stable
       },
     ]

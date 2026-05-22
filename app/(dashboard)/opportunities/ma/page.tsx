@@ -3,7 +3,6 @@ import { MaSourceDirectory } from "@/components/opportunities/ma-source-director
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { listMaSourceDirectory } from "@/lib/actions/ma-sources"
 
-export const revalidate = 30
 
 export default async function MaSourcesPage() {
   const sources = await listMaSourceDirectory()

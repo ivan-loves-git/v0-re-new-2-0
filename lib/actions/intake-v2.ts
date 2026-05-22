@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { calculateDualScore } from "@/lib/utils/scoring-v2"
 import { sendEmail } from "@/lib/email"
 import { getTemplateSubject, getTemplateBody } from "@/lib/actions/emails"
@@ -134,6 +135,7 @@ export async function submitIntakeV2(
     revalidatePath("/repreneurs")
     revalidatePath("/pipeline")
     revalidatePath("/dashboard_re")
+    revalidateRepreneurDashboardTags()
 
     // Send the welcome email. Transactional (no consent gate). Failure here
     // must not block the submission flow — log and continue.

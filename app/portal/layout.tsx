@@ -1,10 +1,9 @@
 import type React from "react"
+import { Suspense } from "react"
 import { requirePortalAccess } from "@/lib/access-control"
 import { PortalShell } from "@/components/portal/portal-shell"
 
-export const dynamic = "force-dynamic"
-
-export default async function PortalLayout({
+async function PortalGate({
   children,
 }: {
   children: React.ReactNode
@@ -16,4 +15,12 @@ export default async function PortalLayout({
       {children}
     </PortalShell>
   )
+}
+
+export default function PortalLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return <Suspense fallback={null}><PortalGate>{children}</PortalGate></Suspense>
 }

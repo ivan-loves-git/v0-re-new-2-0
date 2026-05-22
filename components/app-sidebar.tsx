@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   FolderKanban,
@@ -78,7 +78,12 @@ const toolsNavigation: NavigationItem[] = [
 ]
 
 const projectNavigation: NavigationItem[] = [
-  { name: "Roadmap", href: "/guide/roadmap", icon: Map, showNotification: true },
+  {
+    name: "Roadmap",
+    href: "/guide/roadmap",
+    icon: Map,
+    showNotification: true,
+  },
   { name: "Guidelines", href: "/guide/guidelines", icon: BookOpenCheck },
 ]
 
@@ -95,12 +100,15 @@ export function AppSidebar({
   userName,
   userAvatar,
 }: AppSidebarProps) {
+  const router = useRouter()
   const pathname = usePathname()
+  const [pendingHref, setPendingHref] = React.useState<string | null>(null)
   const [isTouchActive, setIsTouchActive] = React.useState(false)
   const [isHovering, setIsHovering] = React.useState(false)
   const [emojiIndex, setEmojiIndex] = React.useState(0)
   const touchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const [supportsHover, setSupportsHover] = React.useState(false)
+  const [hasMounted, setHasMounted] = React.useState(false)
   const hasNewRoadmap = hasRecentRoadmapUpdates()
 
   const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
@@ -108,9 +116,14 @@ export function AppSidebar({
   // Whether animation is active (touch on mobile, hover on desktop)
   const isAnimating = isTouchActive || isHovering
 
+  React.useEffect(() => {
+    setPendingHref(null)
+  }, [pathname])
+
   // Detect hover capability on mount (client-side only)
   React.useEffect(() => {
-    setSupportsHover(window.matchMedia('(hover: hover)').matches)
+    setHasMounted(true)
+    setSupportsHover(window.matchMedia("(hover: hover)").matches)
   }, [])
 
   // Cycle through emojis when animating
@@ -155,11 +168,14 @@ export function AppSidebar({
 
   // Check if current path is active
   const getIsActive = (href: string) => {
-    if (href === "/dashboard_re") return pathname === "/dashboard_re" || pathname === "/dashboard"
+    if (href === "/dashboard_re")
+      return pathname === "/dashboard_re" || pathname === "/dashboard"
     if (href === "/dashboard_op") return pathname === "/dashboard_op"
-    if (href === "/analytics_re") return pathname === "/analytics_re" || pathname === "/analytics"
+    if (href === "/analytics_re")
+      return pathname === "/analytics_re" || pathname === "/analytics"
     if (href === "/analytics_op") return pathname === "/analytics_op"
-    if (href === "/opportunities/groups") return pathname === "/opportunities/groups"
+    if (href === "/opportunities/groups")
+      return pathname === "/opportunities/groups"
     if (href === "/opportunities/ma") return pathname === "/opportunities/ma"
     if (href === "/opportunities/find") {
       return (
@@ -174,13 +190,45 @@ export function AppSidebar({
       )
     }
     // "Groups" (/repreneurs) should not match /repreneurs/explore
-    if (href === "/repreneurs") return pathname === "/repreneurs" || (pathname.startsWith("/repreneurs/") && !pathname.startsWith("/repreneurs/explore"))
+    if (href === "/repreneurs")
+      return (
+        pathname === "/repreneurs" ||
+        (pathname.startsWith("/repreneurs/") &&
+          !pathname.startsWith("/repreneurs/explore"))
+      )
     return pathname.startsWith(href)
   }
 
+  const warmRoute = React.useCallback(
+    (href: string) => {
+      router.prefetch(href)
+    },
+    [router],
+  )
+
+  const startNavigation = (href: string) => {
+    if (!getIsActive(href)) {
+      setPendingHref(href)
+    }
+    warmRoute(href)
+  }
+
+  const linkWarmupProps = (href: string) => ({
+    prefetch: true,
+    onFocus: () => warmRoute(href),
+    onPointerEnter: () => warmRoute(href),
+    onPointerDown: () => warmRoute(href),
+    onClick: () => startNavigation(href),
+  })
+
   // Get user initials for avatar fallback
   const userInitials = userName
-    ? userName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    ? userName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
     : userEmail.slice(0, 2).toUpperCase()
 
   // Display name
@@ -208,8 +256,8 @@ export function AppSidebar({
                 alt="Wave - the repreneur CRM"
                 width={96}
                 height={32}
-                className={`h-auto transition-transform logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
-                style={{ width: "auto" }}
+                className={`transition-transform logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
+                style={{ width: "auto", height: "32px" }}
                 priority
               />
             </SidebarMenuButton>
@@ -228,10 +276,12 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
-                    isActive={getIsActive(item.href)}
+                    isActive={
+                      getIsActive(item.href) || pendingHref === item.href
+                    }
                     tooltip={item.name}
                   >
-                    <Link href={item.href}>
+                    <Link href={item.href} {...linkWarmupProps(item.href)}>
                       <item.icon />
                       <span>{item.name}</span>
                       {item.badge && (
@@ -258,10 +308,12 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
-                    isActive={getIsActive(item.href)}
+                    isActive={
+                      getIsActive(item.href) || pendingHref === item.href
+                    }
                     tooltip={item.name}
                   >
-                    <Link href={item.href}>
+                    <Link href={item.href} {...linkWarmupProps(item.href)}>
                       <item.icon />
                       <span>{item.name}</span>
                       {item.badge && (
@@ -288,10 +340,12 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
-                    isActive={getIsActive(item.href)}
+                    isActive={
+                      getIsActive(item.href) || pendingHref === item.href
+                    }
                     tooltip={item.name}
                   >
-                    <Link href={item.href}>
+                    <Link href={item.href} {...linkWarmupProps(item.href)}>
                       <item.icon />
                       <span>{item.name}</span>
                     </Link>
@@ -315,10 +369,12 @@ export function AppSidebar({
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton
                       asChild
-                      isActive={getIsActive(item.href)}
+                      isActive={
+                        getIsActive(item.href) || pendingHref === item.href
+                      }
                       tooltip={item.name}
                     >
-                      <Link href={item.href}>
+                      <Link href={item.href} {...linkWarmupProps(item.href)}>
                         <span className="relative inline-flex">
                           <item.icon className="size-4" />
                           {showRedDot && (
@@ -334,7 +390,6 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
       </SidebarContent>
 
       {/* Footer with User Account */}
@@ -347,8 +402,83 @@ export function AppSidebar({
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            {hasMounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <Avatar className="size-8 rounded-lg">
+                      <AvatarImage src={userAvatar} alt={displayName} />
+                      <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">
+                        {displayName}
+                      </span>
+                      <span className="truncate text-xs opacity-60">
+                        {userEmail}
+                      </span>
+                    </div>
+                    <ChevronsUpDown className="ml-auto size-4 opacity-50" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
+                >
+                  <DropdownMenuLabel className="p-0 font-normal">
+                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                      <Avatar className="size-8 rounded-lg">
+                        <AvatarImage src={userAvatar} alt={displayName} />
+                        <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+                          {userInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">
+                          {displayName}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {userEmail}
+                        </span>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account" {...linkWarmupProps("/account")}>
+                        <User className="mr-2 size-4" />
+                        Account
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings" {...linkWarmupProps("/settings")}>
+                        <Settings className="mr-2 size-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/auth/logout"
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <LogOut className="mr-2 size-4" />
+                      Log out
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div aria-hidden="true">
                 <SidebarMenuButton
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
@@ -360,56 +490,17 @@ export function AppSidebar({
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{displayName}</span>
-                    <span className="truncate text-xs opacity-60">{userEmail}</span>
+                    <span className="truncate font-semibold">
+                      {displayName}
+                    </span>
+                    <span className="truncate text-xs opacity-60">
+                      {userEmail}
+                    </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4 opacity-50" />
                 </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="bottom"
-                align="end"
-                sideOffset={4}
-              >
-                <DropdownMenuLabel className="p-0 font-normal">
-                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                    <Avatar className="size-8 rounded-lg">
-                      <AvatarImage src={userAvatar} alt={displayName} />
-                      <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
-                        {userInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{displayName}</span>
-                      <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <Link href="/account">
-                      <User className="mr-2 size-4" />
-                      Account
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">
-                      <Settings className="mr-2 size-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <a href="/auth/logout" className="text-red-600 focus:text-red-600">
-                    <LogOut className="mr-2 size-4" />
-                    Log out
-                  </a>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

@@ -1,11 +1,23 @@
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { ScrapbookHtmlPage } from "../../scrapbook-html-page"
 
-export const dynamic = "force-dynamic"
 
 const VALID_SLOTS = new Set(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
 
-export default async function Page({
+export default function Page({
+  params,
+}: {
+  params: Promise<{ slot: string }>
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ScrapbookHtmlSlot params={params} />
+    </Suspense>
+  )
+}
+
+async function ScrapbookHtmlSlot({
   params,
 }: {
   params: Promise<{ slot: string }>

@@ -3,7 +3,6 @@ import { OpportunityKpiPanel } from "@/components/dashboard/opportunity-kpi-pane
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { getOpportunityKpiData } from "@/lib/actions/opportunity-analytics"
 
-export const revalidate = 60
 
 export default async function OpportunityAnalyticsPage() {
   const data = await getOpportunityKpiData()

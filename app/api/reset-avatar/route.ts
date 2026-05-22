@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { createServerClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/auth-server"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
     revalidatePath("/repreneurs")
     revalidatePath(`/repreneurs/${repreneurId}`)
     revalidatePath("/pipeline")
+    revalidateRepreneurDashboardTags()
 
     return NextResponse.json({ success: true })
   } catch (error) {

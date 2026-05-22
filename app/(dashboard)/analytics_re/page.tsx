@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export const revalidate = 60
 
 function KpiSkeleton() {
   return (

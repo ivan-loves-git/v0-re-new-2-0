@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
 import { revalidatePath } from "next/cache"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { redirect } from "next/navigation"
 import type { Offer_Insert, OfferStatus, MilestoneType } from "@/lib/types/offer"
 import { sendEmail } from "@/lib/email"
@@ -35,6 +36,7 @@ export async function createOffer(formData: FormData) {
   }
 
   revalidatePath("/offers")
+  revalidateRepreneurDashboardTags()
   redirect("/offers")
 }
 
@@ -63,6 +65,7 @@ export async function updateOffer(id: string, formData: FormData) {
   }
 
   revalidatePath("/offers")
+  revalidateRepreneurDashboardTags()
 }
 
 export async function toggleOfferActive(id: string, isActive: boolean) {
@@ -75,6 +78,7 @@ export async function toggleOfferActive(id: string, isActive: boolean) {
   }
 
   revalidatePath("/offers")
+  revalidateRepreneurDashboardTags()
 }
 
 export async function assignOfferToRepreneur(repreneurId: string, offerId: string) {
@@ -146,6 +150,7 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
   revalidatePath("/offers")
   revalidatePath("/repreneurs")
   revalidatePath("/pipeline")
+  revalidateRepreneurDashboardTags()
 }
 
 export async function updateRepreneurOfferStatus(repreneurOfferId: string, newStatus: OfferStatus, repreneurId: string) {
@@ -225,6 +230,7 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
 
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/offers")
+  revalidateRepreneurDashboardTags()
 }
 
 export async function deleteRepreneurOffer(repreneurOfferId: string, repreneurId: string) {
@@ -238,6 +244,7 @@ export async function deleteRepreneurOffer(repreneurOfferId: string, repreneurId
 
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/offers")
+  revalidateRepreneurDashboardTags()
 }
 
 // === Milestone Actions ===

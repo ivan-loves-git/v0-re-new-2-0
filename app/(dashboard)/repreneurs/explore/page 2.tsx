@@ -2,8 +2,6 @@ import { createServerClient } from "@/lib/supabase/server"
 import { RepreneurExploreTable } from "@/components/repreneurs/repreneur-explore-table"
 import type { Repreneur } from "@/lib/types/repreneur"
 
-export const revalidate = 30
-
 export default async function RepreneurExplorePage() {
   const supabase = await createServerClient()
 

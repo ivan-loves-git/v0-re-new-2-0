@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 
-export const revalidate = 3600
 
 const repreneurLifecycle = [
   { label: "Lead", note: "New or early relationship" },

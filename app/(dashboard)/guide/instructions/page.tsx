@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageInstructions, CoreConcepts } from "@/components/guide"
 import { ArrowRight, Workflow, HelpCircle } from "lucide-react"
 
-export const revalidate = 3600 // Cache for 1 hour
 
 export default function InstructionsPage() {
   return (

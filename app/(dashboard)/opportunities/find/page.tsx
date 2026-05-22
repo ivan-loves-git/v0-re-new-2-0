@@ -1,12 +1,10 @@
 import { Search } from "lucide-react"
 import { OpportunityWorkSurfaceTable } from "@/components/opportunities/opportunity-work-surface-table"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
-import { listOpportunityWorkSurfaceRecords } from "@/lib/actions/opportunities"
-
-export const revalidate = 30
+import { getOpportunityWorkSurfaceSnapshot } from "@/lib/data/dashboard-snapshots"
 
 export default async function OpportunityFindPage() {
-  const opportunities = await listOpportunityWorkSurfaceRecords()
+  const opportunities = await getOpportunityWorkSurfaceSnapshot()
 
   return (
     <div className="flex flex-col gap-6">

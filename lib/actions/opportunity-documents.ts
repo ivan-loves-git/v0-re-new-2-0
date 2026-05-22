@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { requireUser } from "@/lib/auth-server"
+import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   OpportunityDocument,
@@ -100,6 +101,7 @@ export async function registerOpportunityDocument(formData: FormData) {
   if (error) throw new Error(error.message)
 
   revalidatePath(`/opportunities/${opportunityId}`)
+  revalidateOpportunityDashboardTags()
 }
 
 export async function updateOpportunityDocumentVisibility(
@@ -117,6 +119,7 @@ export async function updateOpportunityDocumentVisibility(
 
   if (error) throw new Error(error.message)
   revalidatePath(`/opportunities/${opportunityId}`)
+  revalidateOpportunityDashboardTags()
 }
 
 export async function removeOpportunityDocument(documentId: string, opportunityId: string) {
@@ -144,4 +147,5 @@ export async function removeOpportunityDocument(documentId: string, opportunityI
   if (error) throw new Error(error.message)
 
   revalidatePath(`/opportunities/${opportunityId}`)
+  revalidateOpportunityDashboardTags()
 }

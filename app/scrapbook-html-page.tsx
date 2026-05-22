@@ -1,9 +1,36 @@
+import { Suspense } from "react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { DownloadButton, HtmlPreview } from "./scrapbook-html-download-button"
+import { connection } from "next/server"
 
-export const dynamic = "force-dynamic"
 
-export async function ScrapbookHtmlPage({ slot }: { slot: number }) {
+export function ScrapbookHtmlPage({ slot }: { slot: number }) {
+  return (
+    <Suspense fallback={<ScrapbookHtmlFallback />}>
+      <ScrapbookHtmlContent slot={slot} />
+    </Suspense>
+  )
+}
+
+function ScrapbookHtmlFallback() {
+  return (
+    <div
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        margin: 0,
+        padding: "16px 20px 20px",
+        boxSizing: "border-box",
+        fontFamily: "system-ui, sans-serif",
+        background: "#f8fafc",
+      }}
+    />
+  )
+}
+
+async function ScrapbookHtmlContent({ slot }: { slot: number }) {
+  await connection()
+
   const supabase = createAdminClient()
   const slug = `scrapbook-html-${slot}`
 

@@ -42,3 +42,4 @@ Thumbs.db
 # Task files
 # tasks.json
 # tasks/
+.gstack/

@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { scoreLeadershipAssessment } from "@/lib/utils/leadership-scoring"
 import type { LeadershipFormData, LeadershipAssessment } from "@/lib/types/leadership-assessment"
 
@@ -56,6 +57,7 @@ export async function createAssessment(
     }
 
     revalidatePath(`/repreneurs/${repreneurId}`)
+    revalidateRepreneurDashboardTags()
     return { success: true, token }
   } catch (error) {
     console.error("Error in createAssessment:", error)
@@ -195,6 +197,7 @@ export async function submitAssessment(
     }
 
     revalidatePath(`/repreneurs/${assessment.repreneur_id}`)
+    revalidateRepreneurDashboardTags()
     return { success: true }
   } catch (error) {
     console.error("Error in submitAssessment:", error)

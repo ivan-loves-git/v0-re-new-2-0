@@ -16,7 +16,6 @@ import {
   listStaffPortalPreviewOptions,
 } from "@/lib/actions/repreneur-portal-preview"
 
-export const dynamic = "force-dynamic"
 
 interface StaffPortalPreviewPageProps {
   searchParams: Promise<{

@@ -1,7 +1,6 @@
 import { OpportunityResponseReviewTable } from "@/components/opportunities/opportunity-response-review-table"
 import { listOpportunityMatchResponses } from "@/lib/actions/opportunity-matches"
 
-export const revalidate = 30
 
 export default async function OpportunityReviewsPage() {
   const responses = await listOpportunityMatchResponses()

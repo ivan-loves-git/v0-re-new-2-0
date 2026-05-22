@@ -5,11 +5,12 @@ import { EmailTemplates } from "./components/email-templates"
 import { ManualSend } from "./components/manual-send"
 import { AiDraftTest } from "./components/ai-draft-test"
 import { getEmailStats, getEmailLogs, getTemplateSettings, getDailyEmailCounts } from "@/lib/actions/emails"
+import { connection } from "next/server"
 
-export const dynamic = "force-dynamic"
-export const revalidate = 60
 
 export default async function EmailsPage() {
+  await connection()
+
   const [stats, logsData, templates, dailyCounts] = await Promise.all([
     getEmailStats(30),
     getEmailLogs({ limit: 50 }),

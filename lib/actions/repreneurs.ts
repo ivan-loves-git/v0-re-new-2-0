@@ -11,6 +11,7 @@ import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-s
 import { calculateDualScore } from "@/lib/utils/scoring-v2"
 import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 
@@ -96,6 +97,7 @@ export async function createRepreneur(formData: FormData) {
   }
 
   revalidatePath("/repreneurs")
+  revalidateRepreneurDashboardTags()
   redirect(`/repreneurs/${data.id}`)
 }
 
@@ -184,6 +186,7 @@ export async function updateRepreneur(id: string, formData: FormData) {
 
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
+  revalidateRepreneurDashboardTags()
 }
 
 export async function updateRepreneurStatus(id: string, status: LifecycleStatus) {
@@ -198,6 +201,7 @@ export async function updateRepreneurStatus(id: string, status: LifecycleStatus)
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
   revalidatePath("/pipeline")
+  revalidateRepreneurDashboardTags()
 }
 
 export async function updateRepreneurJourneyStage(id: string, stage: string | null) {
@@ -212,6 +216,7 @@ export async function updateRepreneurJourneyStage(id: string, stage: string | nu
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
   revalidatePath("/journey")
+  revalidateRepreneurDashboardTags()
 }
 
 export async function updateRepreneurField(id: string, field: string, value: string | string[] | null) {
@@ -233,6 +238,7 @@ export async function updateRepreneurField(id: string, field: string, value: str
     revalidatePath(`/repreneurs/${id}`)
     revalidatePath("/pipeline")
     revalidatePath("/journey")
+    revalidateRepreneurDashboardTags()
     console.log(`[updateRepreneurField] Revalidation complete`)
   } catch (revalidateError) {
     console.error(`[updateRepreneurField] Revalidation error:`, revalidateError)

@@ -23,7 +23,8 @@ The phase is not a broad V3 expansion. It must stay close to the workflows obser
 - Fix the portal access enablement error before expanding the portal workflow.
 - Add search to repreneur selectors where staff need to pick or preview a repreneur, especially portal preview and opportunity recommendation screens.
 - Fix opportunity edit save feedback so successful saves do not leave the UI looking stuck.
-- Investigate slow dashboard and opportunity edit loading; improve where low-risk or record a concrete follow-up if the root cause is larger.
+- Slow dashboard navigation was handled as a separate architecture stabilization session on 2026-05-22. Keep the Cache Components, cached dashboard snapshot loaders, route loading boundaries, and targeted index pattern; do not reintroduce dashboard route remount wrappers or broad repeated Supabase reads.
+- Future Phase 8 screens should reuse the cached snapshot/data-loader pattern when they need dashboard/list data, and should invalidate the matching cache tag after writes.
 
 ### Opportunity Creation and Intake
 
@@ -61,6 +62,7 @@ The phase is not a broad V3 expansion. It must stay close to the workflows obser
 ### Verification
 
 - Build and lint must pass after implementation.
+- For navigation-sensitive work, record measured browser timings rather than relying on perceived lag alone. The 2026-05-22 navigation session records its before/after data in `08-NAVIGATION-PERFORMANCE.md` and `docs/solutions/navigation-performance-before-after.svg`.
 - Browser UAT must cover portal access enablement, opportunity creation/editing, search selectors, repreneur reverse match view, opportunity overview recommendations, and NDA/info memo request flow.
 - Production or production-like testing should use the stored Re-New test credentials from `AGENTS.md`.
 - Deferred items must be recorded in roadmap/backlog rather than left as hidden assumptions.

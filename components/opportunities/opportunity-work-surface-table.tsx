@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronDown, ChevronRight, Search, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -301,6 +301,11 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
   const [currentPage, setCurrentPage] = useState(1)
   const [groupPages, setGroupPages] = useState<Record<OpportunityGroupKey, number>>(GROUP_PAGE_DEFAULTS)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<OpportunityGroupKey>>(() => new Set(["closed"]))
+  const [filtersMounted, setFiltersMounted] = useState(false)
+
+  useEffect(() => {
+    setFiltersMounted(true)
+  }, [])
 
   const prepared = useMemo(() => opportunities.map(prepareOpportunity), [opportunities])
 
@@ -402,6 +407,133 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
     })
   }
 
+  const renderFilterSelects = () => (
+    <>
+      <Select value={journeyFilter} onValueChange={(value) => { setJourneyFilter(value as OpportunityJourney | "all"); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-48">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All journeys</SelectItem>
+            {OPPORTUNITY_JOURNEY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value as OpportunityStatus | "all"); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All status</SelectItem>
+            {OPPORTUNITY_STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select value={visibilityFilter} onValueChange={(value) => { setVisibilityFilter(value as OpportunityVisibility | "all"); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All visibility</SelectItem>
+            {OPPORTUNITY_VISIBILITY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select value={sectorFilter} onValueChange={(value) => { setSectorFilter(value); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All sectors</SelectItem>
+            {sectors.map((sector) => (
+              <SelectItem key={sector} value={sector}>
+                {sector}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select value={locationFilter} onValueChange={(value) => { setLocationFilter(value); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All locations</SelectItem>
+            {locations.map((location) => (
+              <SelectItem key={location} value={location}>
+                {location}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select value={sourceTypeFilter} onValueChange={(value) => { setSourceTypeFilter(value as MaSourceType | "all"); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All sources</SelectItem>
+            {MA_SOURCE_TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select value={freshnessFilter} onValueChange={(value) => { setFreshnessFilter(value as FreshnessFilter); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">Any freshness</SelectItem>
+            <SelectItem value="fresh">Fresh</SelectItem>
+            <SelectItem value="stale">Stale</SelectItem>
+            <SelectItem value="no_date">No date</SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select value={activePursuitFilter} onValueChange={(value) => { setActivePursuitFilter(value as ActivePursuitFilter); resetPages() }}>
+        <SelectTrigger className="h-9 w-full sm:w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">Any pursuit</SelectItem>
+            <SelectItem value="active">Active pursuit</SelectItem>
+            <SelectItem value="none">No active pursuit</SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </>
+  )
+
   const filterBar = (
     <div className="rounded-lg border bg-card p-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -419,128 +551,22 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
             />
           </div>
 
-          <Select value={journeyFilter} onValueChange={(value) => { setJourneyFilter(value as OpportunityJourney | "all"); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All journeys</SelectItem>
-                {OPPORTUNITY_JOURNEY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value as OpportunityStatus | "all"); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All status</SelectItem>
-                {OPPORTUNITY_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select value={visibilityFilter} onValueChange={(value) => { setVisibilityFilter(value as OpportunityVisibility | "all"); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All visibility</SelectItem>
-                {OPPORTUNITY_VISIBILITY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select value={sectorFilter} onValueChange={(value) => { setSectorFilter(value); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All sectors</SelectItem>
-                {sectors.map((sector) => (
-                  <SelectItem key={sector} value={sector}>
-                    {sector}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select value={locationFilter} onValueChange={(value) => { setLocationFilter(value); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All locations</SelectItem>
-                {locations.map((location) => (
-                  <SelectItem key={location} value={location}>
-                    {location}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select value={sourceTypeFilter} onValueChange={(value) => { setSourceTypeFilter(value as MaSourceType | "all"); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All sources</SelectItem>
-                {MA_SOURCE_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select value={freshnessFilter} onValueChange={(value) => { setFreshnessFilter(value as FreshnessFilter); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">Any freshness</SelectItem>
-                <SelectItem value="fresh">Fresh</SelectItem>
-                <SelectItem value="stale">Stale</SelectItem>
-                <SelectItem value="no_date">No date</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select value={activePursuitFilter} onValueChange={(value) => { setActivePursuitFilter(value as ActivePursuitFilter); resetPages() }}>
-            <SelectTrigger className="h-9 w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">Any pursuit</SelectItem>
-                <SelectItem value="active">Active pursuit</SelectItem>
-                <SelectItem value="none">No active pursuit</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          {filtersMounted && (
+            <>
+              <div className="hidden flex-wrap items-center gap-2 sm:flex">
+                {renderFilterSelects()}
+              </div>
+              <details className="group w-full rounded-md border bg-background sm:hidden">
+                <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-sm font-medium">
+                  Filters
+                  <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="grid gap-2 border-t p-2">
+                  {renderFilterSelects()}
+                </div>
+              </details>
+            </>
+          )}
         </div>
 
         {hasActiveFilters && (

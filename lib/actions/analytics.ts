@@ -1,5 +1,7 @@
-"use server"
-
+import { cacheLife, cacheTag } from "next/cache"
+import { connection } from "next/server"
+import { requireStaffAccess } from "@/lib/access-control"
+import { DASHBOARD_CACHE_TAGS } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export interface OfferConversionData {
@@ -102,7 +104,25 @@ function median(values: number[]): number | null {
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
 }
 
-export async function getAnalyticsData(period: string = "all"): Promise<AnalyticsData> {
+export async function getAnalyticsData(
+  period: string = "all",
+): Promise<AnalyticsData> {
+  await connection()
+  await requireStaffAccess()
+  return getCachedAnalyticsData(period)
+}
+
+async function getCachedAnalyticsData(
+  period: string = "all",
+): Promise<AnalyticsData> {
+  "use cache"
+  cacheLife({ stale: 60, revalidate: 60, expire: 300 })
+  cacheTag(
+    DASHBOARD_CACHE_TAGS.analytics,
+    DASHBOARD_CACHE_TAGS.repreneurs,
+    DASHBOARD_CACHE_TAGS.offers,
+  )
+
   const supabase = createAdminClient()
   const { from, to, prevFrom, prevTo } = getDateRange(period)
 

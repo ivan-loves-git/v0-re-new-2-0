@@ -1,5 +1,4 @@
 import { Suspense } from "react"
-import { createServerClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/auth-server"
 import { StatsColumn } from "@/components/dashboard/stats-column"
 import { GlobalActivityStream } from "@/components/dashboard/global-activity-stream"
@@ -15,15 +14,13 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import Link from "next/link"
+import { connection } from "next/server"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
 import { calculateOverallScore } from "@/lib/scoring-utils"
 import { ArrowRight, BarChart3, Eye, LayoutDashboard, Users, TrendingUp, TableProperties } from "lucide-react"
 import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
-
-// Cache page data for 30 seconds - prevents re-fetching on rapid navigation
-export const dynamic = "force-dynamic"
-export const revalidate = 30
+import { getRepreneurDashboardSnapshot } from "@/lib/data/dashboard-snapshots"
 
 // Skeleton components for Suspense fallbacks
 function StatsColumnSkeleton() {
@@ -99,22 +96,8 @@ function ChartSkeleton() {
 
 // Server component for Stats + Top Tiers row
 async function StatsAndTiersRow() {
-  const supabase = await createServerClient()
-
-  // Fetch repreneurs + assessments in parallel
-  const [repreneursResult, assessmentsResult] = await Promise.all([
-    supabase
-      .from("repreneurs")
-      .select("*")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("leadership_assessments")
-      .select("id, repreneur_id, decision, completed_at")
-      .order("completed_at", { ascending: false })
-  ])
-
-  const repreneurs = repreneursResult.data || []
-  const assessmentsRaw = assessmentsResult.data || []
+  const { repreneurs, assessments: assessmentsRaw } =
+    await getRepreneurDashboardSnapshot()
 
   // Calculate lifecycle stats
   const totalRepreneurs = repreneurs.length
@@ -192,38 +175,11 @@ async function StatsAndTiersRow() {
 
 // Server component for Funnel + Journey + Activity + Recent row
 async function MiddleRow() {
-  const supabase = await createServerClient()
+  const { repreneurs, activities } = await getRepreneurDashboardSnapshot()
 
   // Get current user from Better Auth
   const user = await getCurrentUser()
-
-  // Parallel fetch - all queries run simultaneously
-  const [repreneursResult, activitiesResult] = await Promise.all([
-    supabase
-      .from("repreneurs")
-      .select("*")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("activities")
-      .select(`
-        id,
-        activity_type,
-        notes,
-        duration_minutes,
-        created_at,
-        created_by,
-        repreneur_id,
-        repreneurs (
-          first_name,
-          last_name
-        )
-      `)
-      .order("created_at", { ascending: false })
-      .limit(20)
-  ])
-
-  const repreneurs = repreneursResult.data || []
-  const allActivities = activitiesResult.data || []
+  const allActivities = activities || []
 
   // Build user email map
   const userEmailMap: Record<string, string> = {}
@@ -301,22 +257,10 @@ async function MiddleRow() {
 
 // Server component for Charts row
 async function ChartsRow() {
-  const supabase = await createServerClient()
-
-  // Parallel fetch
-  const [repreneursResult, activitiesResult] = await Promise.all([
-    supabase
-      .from("repreneurs")
-      .select("id, created_at")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("activities")
-      .select("id, created_at")
-      .order("created_at", { ascending: false })
-  ])
-
-  const repreneurs = repreneursResult.data || []
-  const allActivities = activitiesResult.data || []
+  const { chartRepreneurs, chartActivities } =
+    await getRepreneurDashboardSnapshot()
+  const repreneurs = chartRepreneurs
+  const allActivities = chartActivities
 
   // Chart data
   const repreneursForChart = repreneurs.map(r => ({ created_at: r.created_at }))
@@ -364,17 +308,22 @@ async function ChartsRow() {
 
 // Server component for Wavy suggestions
 async function WavySuggestsRow() {
+  await connection()
+
+  let data: Awaited<ReturnType<typeof getWavySuggestions>>
   try {
-    const data = await getWavySuggestions()
-    if (data.totalCount === 0) {
-      return null
-    }
-    return <WavySuggestsWidget suggestions={data.suggestions} totalCount={data.totalCount} />
+    data = await getWavySuggestions()
   } catch (error) {
     // Silently fail if wavy_templates table doesn't exist yet
     console.error("Failed to fetch Wavy suggestions:", error)
     return null
   }
+
+  if (data.totalCount === 0) {
+    return null
+  }
+
+  return <WavySuggestsWidget suggestions={data.suggestions} totalCount={data.totalCount} />
 }
 
 export default async function RepreneurDashboardPage() {

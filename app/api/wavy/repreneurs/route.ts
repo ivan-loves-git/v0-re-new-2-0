@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { connection, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentUser } from "@/lib/auth-server"
 
@@ -7,6 +7,8 @@ import { getCurrentUser } from "@/lib/auth-server"
  * Returns list of non-rejected repreneurs for the Wavy tool
  */
 export async function GET() {
+  await connection()
+
   try {
     // Check authentication
     const user = await getCurrentUser()

@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation"
+import { connection } from "next/server"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RepreneurOpportunityDetail } from "@/components/opportunities/repreneur-opportunity-detail"
 import { getMyRepreneurOpportunity } from "@/lib/actions/repreneur-opportunities"
 
-export const dynamic = "force-dynamic"
 
 export default async function PortalDealDetailPage({ params }: { params: Promise<{ matchId: string }> }) {
+  await connection()
   const { matchId } = await params
   const opportunity = await getMyRepreneurOpportunity(matchId)
 

@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { calculateTier1Score, type Tier1ScoringInput } from "@/lib/utils/tier1-scoring"
 import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { sendEmail, wasEmailSent } from "@/lib/email"
@@ -359,6 +360,7 @@ export async function completeIntake(
     revalidatePath("/repreneurs")
     revalidatePath("/pipeline")
     revalidatePath("/dashboard_re")
+    revalidateRepreneurDashboardTags()
 
     // Get repreneur info for emails
     const { data: repreneurData } = await supabase

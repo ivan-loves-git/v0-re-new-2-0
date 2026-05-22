@@ -1,9 +1,20 @@
+import { Suspense } from "react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { CopyButton } from "../c/[slug]/copy-button"
+import { connection } from "next/server"
 
-export const dynamic = "force-dynamic"
 
-export default async function ScrapbookPage() {
+export default function ScrapbookPage() {
+  return (
+    <Suspense fallback={null}>
+      <ScrapbookContent />
+    </Suspense>
+  )
+}
+
+async function ScrapbookContent() {
+  await connection()
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase

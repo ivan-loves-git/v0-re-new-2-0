@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="720" viewBox="0 0 1180 720" role="img" aria-labelledby="title desc">
+  <title id="title">Renew Platform measured navigation performance before and after</title>
+  <desc id="desc">Grouped bar chart comparing measured route shell response times from the last committed baseline against the current implementation.</desc>
+  <rect width="1180" height="720" fill="#ffffff"/>
+
+  <text x="90" y="42" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700" fill="#111827">Measured navigation response time by route</text>
+  <text x="90" y="70" font-family="Inter, Arial, sans-serif" font-size="14" fill="#4b5563">Red = measured baseline from commit b2d87fe. Blue = measured current implementation. Metric: click to route URL/shell response, local production build.</text>
+
+  <g font-family="Inter, Arial, sans-serif" font-size="12" fill="#6b7280">
+    <line x1="90" y1="520" x2="1080" y2="520" stroke="#111827" stroke-width="1.5"/>
+    <line x1="90" y1="100" x2="90" y2="520" stroke="#111827" stroke-width="1.5"/>
+
+    <g stroke="#e5e7eb" stroke-width="1">
+      <line x1="90" y1="520" x2="1080" y2="520"/>
+      <line x1="90" y1="436" x2="1080" y2="436"/>
+      <line x1="90" y1="352" x2="1080" y2="352"/>
+      <line x1="90" y1="268" x2="1080" y2="268"/>
+      <line x1="90" y1="184" x2="1080" y2="184"/>
+      <line x1="90" y1="100" x2="1080" y2="100"/>
+    </g>
+
+    <text x="80" y="524" text-anchor="end">0</text>
+    <text x="80" y="440" text-anchor="end">1000</text>
+    <text x="80" y="356" text-anchor="end">2000</text>
+    <text x="80" y="272" text-anchor="end">3000</text>
+    <text x="80" y="188" text-anchor="end">4000</text>
+    <text x="80" y="104" text-anchor="end">5000</text>
+    <text x="36" y="320" text-anchor="middle" transform="rotate(-90 36 320)">milliseconds</text>
+  </g>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="124" y="512.9" width="34" height="7.1" rx="3" fill="#ef4444"/>
+    <rect x="166" y="509.9" width="34" height="10.1" rx="3" fill="#2563eb"/>
+    <text x="141" y="501" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">85</text>
+    <text x="183" y="489" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">120</text>
+    <text x="162" y="560" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">Repreneurs</text>
+
+    <rect x="284" y="514.1" width="34" height="5.9" rx="3" fill="#ef4444"/>
+    <rect x="326" y="513.9" width="34" height="6.1" rx="3" fill="#2563eb"/>
+    <text x="301" y="501" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">70</text>
+    <text x="343" y="489" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">73</text>
+    <text x="322" y="560" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">Pipeline</text>
+
+    <rect x="444" y="512.5" width="34" height="7.5" rx="3" fill="#ef4444"/>
+    <rect x="486" y="514.2" width="34" height="5.8" rx="3" fill="#2563eb"/>
+    <text x="461" y="501" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">89</text>
+    <text x="503" y="489" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">69</text>
+    <text x="482" y="560" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">Analytics</text>
+
+    <rect x="604" y="379.6" width="34" height="140.4" rx="4" fill="#ef4444"/>
+    <rect x="646" y="513.1" width="34" height="6.9" rx="3" fill="#2563eb"/>
+    <text x="621" y="369" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">1671</text>
+    <text x="663" y="489" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">82</text>
+    <text x="642" y="560" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">Opp. Find</text>
+
+    <rect x="764" y="513.0" width="34" height="7.0" rx="3" fill="#ef4444"/>
+    <rect x="806" y="511.1" width="34" height="8.9" rx="3" fill="#2563eb"/>
+    <text x="781" y="501" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">83</text>
+    <text x="823" y="489" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">106</text>
+    <text x="802" y="560" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">Dashboard</text>
+
+    <rect x="924" y="109.0" width="34" height="411.0" rx="4" fill="#ef4444"/>
+    <rect x="966" y="513.7" width="34" height="6.3" rx="3" fill="#2563eb"/>
+    <text x="941" y="99" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">4893</text>
+    <text x="983" y="489" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">75</text>
+    <text x="962" y="560" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">Detail</text>
+  </g>
+
+  <g font-family="Inter, Arial, sans-serif" font-size="13" fill="#374151">
+    <rect x="90" y="610" width="14" height="14" rx="3" fill="#ef4444"/>
+    <text x="112" y="622">Before: measured baseline from last committed code</text>
+    <rect x="430" y="610" width="14" height="14" rx="3" fill="#2563eb"/>
+    <text x="452" y="622">After: measured current implementation</text>
+  </g>
+
+  <text x="90" y="652" font-family="Inter, Arial, sans-serif" font-size="12" fill="#6b7280">Measured before / after in ms: Repreneurs 85 / 120, Pipeline 70 / 73, Analytics 89 / 69, Opportunities Find 1671 / 82, Dashboard 83 / 106, Repreneur detail 4893 / 75.</text>
+  <text x="90" y="674" font-family="Inter, Arial, sans-serif" font-size="12" fill="#6b7280">Note: baseline is reconstructed from commit b2d87fe, not a live production recording from before the work. Local static assets missing from the temporary baseline copy only caused image 404s, not route timing failures.</text>
+</svg>
