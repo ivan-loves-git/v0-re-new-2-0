@@ -26,6 +26,7 @@ output/
 # Editor directories and files
 .idea
 .vscode
+.claude/worktrees/
 *.suo
 *.ntvs*
 *.njsproj
