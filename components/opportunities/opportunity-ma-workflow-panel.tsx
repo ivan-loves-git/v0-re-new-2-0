@@ -111,7 +111,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
               <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
                 <p className="font-medium">Active pursuit: {workflow.activePursuitName}</p>
                 <p className="text-muted-foreground">
-                  The next expected M&A action is to request the firm's NDA and info memo using their process.
+                  Use the recommended M&A template to move the source process forward while following the firm's NDA process.
                 </p>
               </div>
             ) : null}

@@ -61,9 +61,11 @@ Merci beaucoup,
 L'equipe Re-New`,
   ma_nda_info_memo_request: `Bonjour {firstName},
 
-Nous validons l'interet de {repreneurName} pour {opportunityTitle}.
+Nous avons qualifie l'interet de {repreneurName} pour {opportunityTitle}.
 
-Pouvez-vous nous transmettre votre NDA, ou le lien de signature, afin que le candidat le signe selon votre processus ? Une fois le NDA signe, pourriez-vous egalement nous partager l'info memo disponible ?
+Pouvez-vous nous indiquer le bon processus NDA pour avancer, ou nous transmettre votre lien/document de signature ?
+
+Une fois le NDA signe, pourriez-vous egalement nous partager l'info memo ou les elements de presentation disponibles ?
 
 Contexte fiche de cadrage :
 {repreneurProfile}
@@ -77,7 +79,7 @@ L'equipe Re-New`,
 
 Je reviens vers vous concernant {opportunityTitle}.
 
-Pouvez-vous nous confirmer ou en est le process, les prochaines etapes prevues, et s'il existe une date limite pour manifester un interet qualifie ?
+Pouvez-vous nous confirmer ou en est le processus vendeur, les prochaines etapes prevues, et s'il existe une date limite pour manifester un interet qualifie ?
 
 Cela nous aidera a cadrer le bon niveau d'effort cote Re-New et a eviter de pousser un profil hors timing.
 
@@ -187,14 +189,14 @@ export const TEMPLATE_METADATA: Record<
     audience: "opp",
   },
   ma_nda_info_memo_request: {
-    name: "M&A NDA / Info Memo Request",
-    description: "Request the M&A firm's NDA and info memo after a pursuit is validated",
+    name: "Request NDA and info memo",
+    description: "Ask for the intermediary's NDA process and info memo after a pursuit is validated",
     category: "ma",
     audience: "opp",
   },
   ma_process_follow_up: {
-    name: "M&A Process Follow-up",
-    description: "Clarify process stage, timing, and next step",
+    name: "Process follow-up",
+    description: "Clarify seller process stage, timing, and next step",
     category: "ma",
     audience: "opp",
   },

@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
+import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
 import type { EmailTemplateKey } from "@/lib/types/email"
 import type { MaSourceInteraction, OpportunityMatchStatus, OpportunityPursuitStage } from "@/lib/types/opportunity"
 
@@ -19,15 +20,18 @@ const MA_TEMPLATE_KEYS = [
 ] as const satisfies readonly EmailTemplateKey[]
 
 type MaTemplateKey = (typeof MA_TEMPLATE_KEYS)[number]
-const INFO_MEMO_REMINDER_DAYS = 7
 
 interface OpportunityWorkflowRow {
   id: string
   reference: string
+  status: string
   public_title: string | null
   sector: string | null
   activity: string | null
   location: string | null
+  date_added: string | null
+  created_at: string
+  updated_at: string
   source_id: string | null
   source_label: string | null
   source?: {
@@ -212,7 +216,7 @@ async function loadOpportunityContext(opportunityId: string) {
   const [{ data: opportunityRow, error: opportunityError }, { data: matchRows, error: matchError }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, reference, public_title, sector, activity, location, source_id, source_label, source:ma_sources(id, firm_name, contact_name, contact_email, contact_phone)")
+      .select("id, reference, status, public_title, sector, activity, location, date_added, created_at, updated_at, source_id, source_label, source:ma_sources(id, firm_name, contact_name, contact_email, contact_phone)")
       .eq("id", opportunityId)
       .single(),
     supabase
@@ -268,35 +272,6 @@ async function loadOpportunityContext(opportunityId: string) {
   return { opportunity, variables, activeMatch }
 }
 
-function daysSince(value: string | null | undefined) {
-  if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
-}
-
-function deriveStalledReminder(activeMatch: MatchRow | null, interactions: MaSourceInteraction[]) {
-  if (!activeMatch || activeMatch.pursuit_stage === "info_memo_received") return null
-  if (activeMatch.pursuit_stage && activeMatch.pursuit_stage !== "interest") return null
-
-  const ndaRequest = interactions.find((interaction) => interaction.template_key === "ma_nda_info_memo_request")
-  const referenceDate = ndaRequest?.sent_at ?? ndaRequest?.created_at ?? activeMatch.pursuit_stage_updated_at ?? activeMatch.updated_at
-  const stalledDays = daysSince(referenceDate)
-  if (stalledDays === null || stalledDays < INFO_MEMO_REMINDER_DAYS) return null
-
-  if (ndaRequest) {
-    return {
-      title: "NDA/info memo follow-up due",
-      message: `The NDA/info memo request was sent ${stalledDays} days ago and the pursuit is still before info memo received.`,
-    }
-  }
-
-  return {
-    title: "NDA/info memo request due",
-    message: `This pursuit has been active for ${stalledDays} days without a logged NDA/info memo request.`,
-  }
-}
-
 export async function getMaOpportunityWorkflow(opportunityId: string): Promise<MaOpportunityWorkflow> {
   await requireStaffAccess()
   const supabase = createAdminClient()
@@ -326,14 +301,20 @@ export async function getMaOpportunityWorkflow(opportunityId: string): Promise<M
 
   if (error && error.code !== "42P01") throw new Error(error.message)
   const interactions = ((data ?? []) as MaSourceInteraction[])
+  const recommendation = deriveMaWorkflowRecommendation({ opportunity, activeMatch, interactions })
 
   return {
     recipientEmail: opportunity.source?.contact_email ?? null,
     sourceName: opportunity.source?.firm_name || opportunity.source_label || "No source",
     contactName: opportunity.source?.contact_name ?? null,
-    recommendedTemplateKey: activeMatch ? "ma_nda_info_memo_request" : null,
-    activePursuitName: repreneurName(activeMatch),
-    stalledReminder: deriveStalledReminder(activeMatch, interactions),
+    recommendedTemplateKey: recommendation?.templateKey ?? null,
+    activePursuitName: activeMatch ? repreneurName(activeMatch) : null,
+    stalledReminder: recommendation
+      ? {
+          title: recommendation.title,
+          message: recommendation.message,
+        }
+      : null,
     drafts,
     interactions,
   }
