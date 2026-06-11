@@ -1,0 +1,58 @@
+{
+  "status": "partial",
+  "total": 7,
+  "complete": 5,
+  "failed": 2,
+  "pending": 0,
+  "results": [
+    {
+      "id": "readiness-radar-tablet",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation failed with TooManyRequests.",
+      "caveats": ""
+    },
+    {
+      "id": "structured-methodology-wall",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/253be02da44cba4b/cefa9f02b8e0e592068c96a765f65f6f.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "opportunity-matching-glass",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation returned an image but did not expose a saveable local PNG path in this runtime.",
+      "caveats": ""
+    },
+    {
+      "id": "founder-profile-dossier",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/253be02da44cba4b/ed88e66292c2c9886f887e31f74d7875.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "journey-progress-objects",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/253be02da44cba4b/4720194f09587f3a2d3698e10f0d3dea.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "product-scene-intake-to-insight",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/253be02da44cba4b/6f4562d7b0d169a2fabe3b5f20c66dad.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "seller-trust-handoff",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/253be02da44cba4b/a7d8f8b98c2a92975a41adb8f71355c3.png",
+      "error": null,
+      "caveats": ""
+    }
+  ]
+}

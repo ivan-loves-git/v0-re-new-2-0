@@ -1,0 +1,7 @@
+{
+  "id": "product-scene-intake-to-insight",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation returned an image in-chat, but no writable file artifact/path was exposed to save image.png.",
+  "caveats": ""
+}

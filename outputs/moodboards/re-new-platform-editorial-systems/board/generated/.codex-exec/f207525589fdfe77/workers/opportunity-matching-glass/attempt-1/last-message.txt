@@ -1,0 +1,1 @@
+Done. Native image generation ran, but it did not expose a savable local file path or binary handle, so I wrote `result.json` with `"status": "failed"` as requested.

@@ -1,0 +1,7 @@
+{
+  "id": "opportunity-matching-glass",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation produced an image but did not provide a filesystem path or PNG bytes that could be saved in this runtime.",
+  "caveats": ""
+}

@@ -1,0 +1,1 @@
+Generated the image with `image_gen.imagegen`, but the runtime did not expose a saveable PNG path. I wrote the required `failed` result JSON at the requested location.

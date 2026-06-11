@@ -1,0 +1,1 @@
+Native image generation ran, but the PNG was not exposed as a savable local file in this runtime. I wrote the required failed `result.json` at the requested path with a concise error.

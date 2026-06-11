@@ -1,0 +1,4 @@
+Native image generation was rate-limited, so no PNG was saved.
+
+I wrote the required failed result JSON here:
+`generated/.codex-exec/f207525589fdfe77/workers/readiness-radar-tablet/attempt-1/result.json`

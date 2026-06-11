@@ -1,0 +1,3 @@
+Native image generation failed due to `TooManyRequests`, so no PNG was produced.
+
+I wrote the required failed `result.json` at the requested path.

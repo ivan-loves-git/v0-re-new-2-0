@@ -1,0 +1,5 @@
+Failed to save the generated PNG because `image_gen.imagegen` did not expose a filesystem path or PNG bytes in this runtime.
+
+I wrote the required failure JSON here:
+
+`generated/.codex-exec/f207525589fdfe77/workers/opportunity-matching-glass/attempt-2/result.json`

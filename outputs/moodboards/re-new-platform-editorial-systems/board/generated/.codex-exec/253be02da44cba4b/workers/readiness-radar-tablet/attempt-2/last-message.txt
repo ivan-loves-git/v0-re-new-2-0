@@ -1,0 +1,4 @@
+Native image generation failed with `TooManyRequests`.
+
+Wrote the required failed result JSON to:
+`generated/.codex-exec/253be02da44cba4b/workers/readiness-radar-tablet/attempt-2/result.json`

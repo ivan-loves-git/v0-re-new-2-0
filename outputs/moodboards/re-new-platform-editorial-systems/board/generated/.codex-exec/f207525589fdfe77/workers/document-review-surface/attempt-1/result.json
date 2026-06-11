@@ -1,0 +1,7 @@
+{
+  "id": "document-review-surface",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation returned an image in chat, but this runtime did not expose a downloadable PNG file handle to save at the requested path.",
+  "caveats": ""
+}

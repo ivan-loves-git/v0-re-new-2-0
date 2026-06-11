@@ -1,0 +1,8 @@
+{
+  "id": "readiness-radar-tablet",
+  "status": "failed",
+  "attempt": 2,
+  "pid": 13401,
+  "startedAt": "2026-06-05T09:54:42.456529+00:00",
+  "lastHeartbeatAt": "2026-06-05T09:56:22.367070+00:00"
+}

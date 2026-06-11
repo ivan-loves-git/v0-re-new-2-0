@@ -1,0 +1,3 @@
+Failed to save the generated PNG to the requested filesystem path because the native image tool returned the image in-chat without an accessible local artifact path.
+
+Wrote the required failed `result.json` at the requested location.

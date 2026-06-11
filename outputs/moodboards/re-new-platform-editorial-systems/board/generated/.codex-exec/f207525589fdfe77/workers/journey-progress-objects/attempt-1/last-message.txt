@@ -1,0 +1,1 @@
+Native image generation did not return a savable PNG file, so I wrote the required `failed` result JSON at the requested path.

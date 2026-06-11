@@ -1,0 +1,5 @@
+Generated the image with `image_gen.imagegen`, but the runtime did not expose a local PNG file path I could copy to the requested destination.
+
+I wrote the required failed `result.json` here:
+
+`generated/.codex-exec/253be02da44cba4b/workers/opportunity-matching-glass/attempt-1/result.json`

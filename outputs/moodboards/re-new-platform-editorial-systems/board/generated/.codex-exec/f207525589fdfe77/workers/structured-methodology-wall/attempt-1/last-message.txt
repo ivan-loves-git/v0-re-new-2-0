@@ -1,0 +1,3 @@
+Native image generation failed due to `TooManyRequests`, so no PNG was saved.
+
+I wrote the required failed worker result JSON to `result.json` with `image_path: null`.

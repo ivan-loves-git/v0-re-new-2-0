@@ -19,6 +19,12 @@ interface PortalAccessCardProps {
   status: RepreneurPortalAccessStatus
 }
 
+interface PortalAccessActionResponse {
+  success?: boolean
+  emailSent?: boolean
+  message?: string
+}
+
 function formatDate(value: string | null) {
   if (!value) return "Never"
   return new Intl.DateTimeFormat("en-GB", {
@@ -48,11 +54,17 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  function runAction(action: () => Promise<unknown>, successMessage: string, fallbackErrorMessage: string) {
+  function runAction(action: () => Promise<PortalAccessActionResponse | unknown>, successMessage: string, fallbackErrorMessage: string) {
     startTransition(async () => {
       try {
-        await action()
-        toast.success(successMessage)
+        const result = await action()
+        const actionResult = result && typeof result === "object" ? (result as PortalAccessActionResponse) : null
+        const message = actionResult?.message ?? successMessage
+        if (actionResult?.emailSent === false) {
+          toast.warning(message)
+        } else {
+          toast.success(message)
+        }
         router.refresh()
       } catch (error) {
         const message = error instanceof Error ? error.message : fallbackErrorMessage

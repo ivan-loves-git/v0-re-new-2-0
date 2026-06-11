@@ -3,8 +3,9 @@ import { CalendarDays, MapPin, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MaSourcePanel } from "@/components/opportunities/ma-source-panel"
+import { OpportunityDetailTabs } from "@/components/opportunities/opportunity-detail-tabs"
 import { OpportunityMaWorkflowPanel } from "@/components/opportunities/opportunity-ma-workflow-panel"
 import { OpportunityDocumentsPanel } from "@/components/opportunities/opportunity-documents-panel"
 import { OpportunityForm } from "@/components/opportunities/opportunity-form"
@@ -26,7 +27,8 @@ import {
   getOpportunityPursuitStageLabel,
 } from "@/lib/types/opportunity"
 
-const OPPORTUNITY_DETAIL_TABS = new Set(["overview", "recommendations", "pursuit", "ma", "edit", "documents"])
+const OPPORTUNITY_DETAIL_TAB_VALUES = ["overview", "recommendations", "pursuit", "ma", "edit", "documents"]
+const OPPORTUNITY_DETAIL_TABS = new Set(OPPORTUNITY_DETAIL_TAB_VALUES)
 
 interface OpportunityDetailProps {
   opportunity: OpportunityWithSource
@@ -77,6 +79,17 @@ function repreneurDisplayName(match: OpportunityMatch) {
   return [repreneur.first_name, repreneur.last_name].filter(Boolean).join(" ") || repreneur.email
 }
 
+function candidateDisplayName(candidate: OpportunityMatchCandidate) {
+  return [candidate.first_name, candidate.last_name].filter(Boolean).join(" ") || candidate.email
+}
+
+function recommendationVariant(recommendation: OpportunityMatchCandidate["platform_recommendation"]): "default" | "destructive" | "secondary" | "outline" {
+  if (recommendation === "strong_fit") return "default"
+  if (recommendation === "not_fit") return "destructive"
+  if (recommendation === "possible_fit") return "secondary"
+  return "outline"
+}
+
 export function OpportunityDetail({
   opportunity,
   documents,
@@ -94,6 +107,11 @@ export function OpportunityDetail({
       if (priorityDelta !== 0) return priorityDelta
       return (right.platform_score ?? -1) - (left.platform_score ?? -1)
     })
+    .slice(0, 4)
+  const savedRepreneurIds = new Set(matches.map((match) => match.repreneur_id))
+  const topCandidates = [...matchCandidates]
+    .filter((candidate) => !savedRepreneurIds.has(candidate.id))
+    .sort((left, right) => (right.platform_score ?? -1) - (left.platform_score ?? -1))
     .slice(0, 4)
 
   return (
@@ -125,7 +143,7 @@ export function OpportunityDetail({
         </div>
       </div>
 
-      <Tabs defaultValue={initialTab} className="space-y-4">
+      <OpportunityDetailTabs defaultValue={initialTab} validTabs={OPPORTUNITY_DETAIL_TAB_VALUES}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
@@ -213,10 +231,8 @@ export function OpportunityDetail({
                     </Link>
                   </Button>
                 </CardHeader>
-                <CardContent>
-                  {topMatches.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No repreneur recommendations have been saved yet.</p>
-                  ) : (
+                <CardContent className="space-y-4">
+                  {topMatches.length > 0 ? (
                     <div className="divide-y rounded-md border">
                       {topMatches.map((match) => (
                         <div key={match.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -236,7 +252,41 @@ export function OpportunityDetail({
                         </div>
                       ))}
                     </div>
-                  )}
+                  ) : null}
+
+                  {topCandidates.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
+                        Platform suggestions not saved yet
+                      </p>
+                      <div className="divide-y rounded-md border border-dashed">
+                        {topCandidates.map((candidate) => (
+                          <div key={candidate.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0 space-y-1">
+                              <Link href={`/repreneurs/${candidate.id}`} className="font-medium hover:underline">
+                                {candidateDisplayName(candidate)}
+                              </Link>
+                              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                <span>Platform {formatScore(candidate.platform_score)}</span>
+                                {(candidate.platform_reasons ?? []).slice(0, 1).map((reason) => (
+                                  <span key={reason}>{reason}</span>
+                                ))}
+                              </div>
+                            </div>
+                            <Badge variant={recommendationVariant(candidate.platform_recommendation)}>
+                              {candidate.platform_recommendation
+                                ? getOpportunityMatchRecommendationLabel(candidate.platform_recommendation)
+                                : "Not evaluated"}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {topMatches.length === 0 && topCandidates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No repreneur recommendations or platform suggestions are available yet.</p>
+                  ) : null}
                 </CardContent>
               </Card>
             </div>
@@ -267,7 +317,7 @@ export function OpportunityDetail({
         <TabsContent value="documents">
           <OpportunityDocumentsPanel opportunityId={opportunity.id} documents={documents} />
         </TabsContent>
-      </Tabs>
+      </OpportunityDetailTabs>
     </div>
   )
 }

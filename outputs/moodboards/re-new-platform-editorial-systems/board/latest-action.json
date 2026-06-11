@@ -1,0 +1,9 @@
+{
+  "action": "repair-previews",
+  "status": "partial",
+  "itemCount": 10,
+  "missingItems": [
+    "readiness-radar-tablet",
+    "opportunity-matching-glass"
+  ]
+}

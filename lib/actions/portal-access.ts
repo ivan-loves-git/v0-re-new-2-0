@@ -141,6 +141,11 @@ async function countActiveSessions(userIds: string[]) {
 }
 
 async function sendAccessEmail(email: string, failureMessage: string) {
+  const result = await trySendAccessEmail(email)
+  if (!result.success) throw new Error(failureMessage)
+}
+
+async function trySendAccessEmail(email: string): Promise<{ success: true } | { success: false; message: string }> {
   try {
     await auth.api.requestPasswordReset({
       body: {
@@ -148,9 +153,10 @@ async function sendAccessEmail(email: string, failureMessage: string) {
         redirectTo: "/auth/reset-password",
       },
     })
+    return { success: true }
   } catch (error) {
     console.error("Failed to send repreneur portal access email", error)
-    throw new Error(failureMessage)
+    return { success: false, message: "Portal access is enabled, but the setup email could not be sent. Use Resend access link after checking email configuration." }
   }
 }
 
@@ -230,8 +236,6 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
     roles.find((row) => row.role === "repreneur" && row.user_id === authUser.id) ??
     null
 
-  await sendAccessEmail(email, "Portal access was not enabled because the setup email could not be sent. Please retry in a moment.")
-
   const now = new Date().toISOString()
   const rolePayload = {
     user_id: authUser.id,
@@ -239,7 +243,6 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
     role: "repreneur",
     repreneur_id: repreneurId,
     access_enabled_at: now,
-    last_access_email_sent_at: now,
   }
 
   const roleWrite = existingRepreneurRole
@@ -247,7 +250,27 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
     : await supabase.from("app_user_roles").insert(rolePayload)
 
   if (roleWrite.error) {
-    throw new Error(`The setup email was sent, but portal access could not be linked: ${roleWrite.error.message}`)
+    throw new Error(`Portal access could not be linked: ${roleWrite.error.message}`)
+  }
+
+  const emailResult = await trySendAccessEmail(email)
+
+  if (emailResult.success) {
+    const timestampWrite = existingRepreneurRole
+      ? await supabase
+          .from("app_user_roles")
+          .update({ last_access_email_sent_at: now })
+          .eq("id", existingRepreneurRole.id)
+      : await supabase
+          .from("app_user_roles")
+          .update({ last_access_email_sent_at: now })
+          .eq("role", "repreneur")
+          .eq("repreneur_id", repreneurId)
+          .eq("user_id", authUser.id)
+
+    if (timestampWrite.error) {
+      console.error("Failed to save repreneur portal access email timestamp", timestampWrite.error)
+    }
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
@@ -255,7 +278,11 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
   revalidatePath("/portal/deals")
   revalidatePath("/portal/profile")
 
-  return { success: true }
+  if (!emailResult.success) {
+    return { success: true, emailSent: false, message: emailResult.message }
+  }
+
+  return { success: true, emailSent: true, message: "Portal access enabled and setup link sent." }
 }
 
 export async function resendRepreneurPortalAccessLink(repreneurId: string) {

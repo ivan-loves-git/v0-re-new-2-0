@@ -1,64 +1,412 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-17T10:59:07Z",
-  "source": "codex-gsd",
+  "timestamp": "2026-06-02T03:19:12.268Z",
+  "source": "auto-postool",
   "partial": false,
-  "phase": "02",
-  "phase_name": "Core Deal Workflow",
-  "phase_dir": ".planning/phases/02-core-deal-workflow",
-  "plan": "02-05",
-  "task": "Validated pursuit, active-pursuit lock, and reopen logic",
-  "total_tasks": 7,
-  "status": "plan-complete",
-  "completed_tasks": [
-    "Added database lock for one active pursuit per opportunity",
-    "Added staff validate, drop, and reopen actions",
-    "Added staff review and recommendations UI controls",
-    "Hid non-active portal matches when another repreneur owns the active pursuit",
-    "Applied and verified the additive Supabase migration",
-    "Browser-verified validate, drop, and reopen with demo data"
-  ],
+  "phase": "8",
+  "phase_name": "Post-demo workflow MVP",
+  "phase_dir": ".planning/phases/08-post-demo-workflow-mvp",
+  "plan": "5",
+  "task": null,
+  "total_tasks": 5,
+  "status": "auto-checkpoint",
+  "completed_tasks": [],
   "remaining_tasks": [
-    "02-06 deal stage tracking from interest to closed/dropped",
-    "02-07 per-opportunity NDA and repreneur document download flow",
-    "Phase 3 reporting, stale reminders, QA, and launch hardening"
+    {
+      "id": "01",
+      "name": "Phase 8.1: Stabilize Demo Blockers and Searchable Selectors",
+      "status": "not_started"
+    },
+    {
+      "id": "02",
+      "name": "Phase 8.2: Opportunity Creation, Validation, and Field Cleanup",
+      "status": "not_started"
+    },
+    {
+      "id": "03",
+      "name": "Phase 8.3: Matching Visibility in Both Directions",
+      "status": "not_started"
+    },
+    {
+      "id": "04",
+      "name": "Phase 8.4: Info Memo Stage and NDA Request Workflow",
+      "status": "not_started"
+    },
+    {
+      "id": "05",
+      "name": "Phase 8.5: Verification, Release Readiness, and Backlog Cleanup",
+      "status": "not_started"
+    }
   ],
   "blockers": [
     {
-      "description": "Deal stage tracking must stay lightweight and avoid becoming a full CRM in June.",
-      "type": "scope",
-      "workaround": "Use explicit stage fields/statuses only; defer rich activity history."
+      "description": "Repreneur production UAT must be re-run after the recovery deploy. The previous Phase 3 note that route/data checks were enough for repreneur behavior is superseded.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 8 still needs production verification after deploy; local production browser UAT passed on `http://localhost:3012`, but production footer build-number verification remains pending.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Navigation performance branch still needs production verification after deploy; local production browser timing passed.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "`npx tsc --noEmit --pretty false` now runs but fails on pre-existing unrelated baseline issues in `dashboard_re`, `routing`, and `dashboard-snapshots`.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 8 should not add PDF-to-opportunity AI ingestion or JSON import automation unless the scope is explicitly reopened.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 7 browser UAT passed; the remaining M&A risk is product/process scope, not the basic send-and-log workflow.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.",
+      "type": "technical",
+      "workaround": ""
     },
     {
       "description": "Matching must avoid hidden AI scope until structured data is stable.",
-      "type": "scope",
-      "workaround": "Keep platform recommendation values structured/manual for V2."
+      "type": "technical",
+      "workaround": ""
     },
     {
-      "description": "NDA/document access remains unbuilt until 02-07.",
-      "type": "product",
-      "workaround": "Keep document metadata staff-controlled for now."
+      "description": "M&A CRM must remain basic source/contact tracking in June.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 2 review remediation completed: email matching is case-insensitive, role precedence is documented, the match status state machine is documented, legacy `/my-opportunities` URLs redirect to `/portal/deals`, and the staff review/recommendation tables received focused UI fixes.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 3 Reporting, Reminders, QA, and Launch Hardening is complete under the Phase 1.1 release protocol.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 4 was a navigation and route refactor only; no database migration was introduced.",
+      "type": "technical",
+      "workaround": ""
     }
   ],
   "human_actions_pending": [],
   "decisions": [
     {
-      "decision": "Interest does not automatically create an active pursuit.",
-      "rationale": "Staff must remain the decision gate.",
-      "phase": "02"
+      "decision": "Bertrand answered several original PDR questions but expanded the target product direction.",
+      "rationale": "",
+      "phase": "8"
     },
     {
-      "decision": "Only one active pursuit is allowed per opportunity.",
-      "rationale": "Prevents multiple repreneurs being treated as the live deal path at the same time.",
-      "phase": "02"
+      "decision": "June V2 should be scoped tightly around core validation.",
+      "rationale": "",
+      "phase": "8"
     },
     {
-      "decision": "Dropping the active pursuit reopens the opportunity.",
-      "rationale": "The team can recover if the live path fails without losing prior matching history.",
-      "phase": "02"
+      "decision": "V3 can follow quickly once basics are validated.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Ivan initially selected a separate Supabase test project for Phase 1.1.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Ivan then approved same/current Supabase project testing on 2026-05-17 because another Supabase project adds cost.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 1.1 is now a controlled same-project migration: additive SQL only, backup/rollback note first, marked UAT data, cleanup plan.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 1.1 plan 02 completed: opportunity tables applied, private opportunity document bucket created, app runs on port 3011, authenticated `/opportunities` renders marked UAT data.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Middleware now protects `/opportunities` so unauthenticated requests redirect to login instead of returning 500.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 1.1 plan 03 completed: browser UAT passed for create, edit, archive, import review, and document visibility/removal using marked UAT records.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Release recommendation: ready to push/merge after Ivan's acceptance; note existing typecheck baseline risk.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Ivan accepted the local UAT result on 2026-05-17 and approved push/merge.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Marked Phase 1.1 UAT opportunities, temporary UAT users/sessions, and UAT document storage file were removed before push/merge.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 work continues in a fresh worktree branched from merged `origin/main`.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-01 completed: `opportunity_matches` stores structured platform recommendation, optional human recommendation, match status, score, and reasons between an opportunity and a repreneur.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Matching remains structured/manual for June; no hidden AI interpretation was introduced.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-02 completed: logged-in repreneurs can access `/my-opportunities` and anonymized opportunity detail only for active non-staff-only opportunities explicitly proposed to their matching repreneur profile.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 UAT data for 02-01 and 02-02 was cleaned after verification.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-03 inserted after Ivan clarified that repreneur access must not live inside the staff dashboard shell.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-03 completed: repreneur deal access moved to `/portal/deals`, a read-only `/portal/profile` was added, post-login routing now splits staff vs repreneur users, and staff dashboard layout blocks repreneur-role access.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Quick task completed: `myworkmail4@gmail.com` is a linked demo repreneur login with a populated portal, and deleting a repreneur now removes their repreneur portal role and active sessions.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-04 completed: repreneurs can mark a proposed opportunity as interested or not a fit, and staff can review those responses at `/opportunities/reviews` without creating active pursuit yet.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-05 completed: staff can validate one interested match into active pursuit, the database blocks a second active pursuit, dropping the active pursuit releases the lock, and dropped matches can be reopened into review.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Active pursuit also hides non-active matches for the same opportunity from other repreneurs in the portal until the pursuit is dropped.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-06 completed: staff can track the active pursuit stage from interest through intermediary meeting, seller meeting, LOI, closed, or dropped, with internal history and safe portal-stage display.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 plan 02-07 completed: staff can track pursuit-level NDA status, link an NDA document, and active repreneurs can download only approved documents once NDA status allows access.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 2 GSD UAT gate completed on 2026-05-17: no blockers found; Phase 2 is safe to use as the base for Phase 3, but the full June V2 milestone should not be closed until Phase 3 QA and launch readiness are complete.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 3 plan 03-01 completed: staff dashboard now has an internal deal-flow operating view for active intermediaries, active opportunities, introductions, active pursuits, seller meetings, LOIs, dropped deals, closed deals, current stages, approved documents, and NDA-blocked pursuits.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 3 plan 03-02 completed: opportunity list/detail now show exact date added and month added, and staff dashboard flags open opportunities older than 90 days when no active pursuit exists.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 3 plan 03-03 completed: UAT passes after adding a minimal marked demo path for one active pursuit, seller meeting, signed NDA, approved teaser, and staff-only NDA document.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 3 plan 03-04 completed: launch/demo checklist and V3 deferred backlog are written, and the June V2 implementation is marked complete.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 4 completed: staff navigation now separates repreneur and opportunity work; legacy `/dashboard` and `/analytics` redirect to repreneur pages; archived Journey, Reviews, Mission, and Instructions are hidden from sidebar but routes remain available.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Email should now be treated as a shared Tools surface. Current templates are tagged `Rep`; future opportunity automation should add `Opp` templates and context-specific send panels inside the existing `/emails` cockpit instead of creating a parallel page.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "The opportunity journey should be a derived display layer, not a fourth manually edited status field. It summarizes opportunity availability, match status, and pursuit stage for staff scanning.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 5 should make Repreneur Find and Groups visually coherent first, then replicate that structure for Opportunities with journey-first tags and operating columns.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 5 plan 05-01 completed: opportunity journey derivation is now implemented and tested in `lib/utils/opportunity-journey.ts`.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 5 plan 05-02 completed: Repreneur Groups and Find now share the same page rhythm, filter shell, result count pattern, pagination reset behavior, and narrow-screen table protection.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 5 plan 05-03 completed: Opportunities now have parallel Find and Groups work surfaces with journey-first tags, operating columns, and sidebar access.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 5 plan 05-04 completed: UAT evidence recorded; implementation is ready for human smoke testing before deployment.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "KPI and matching decision captured on 2026-05-18: simple KPIs should use one compact tile component, and the rule-based platform match score is visible to both staff and repreneurs during V2 while remaining tunable over time.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "The recommendation form should show Platform recommendation as a read-only automatic preview on the left of Human recommendation; automatic must not mean invisible.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Successful saves should use the shared bottom-right green toast as the primary feedback surface across the platform; inline messages should be reserved for errors, validation, or persistent page state.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Grouped work-surface tables should keep one tag concept per column where possible; secondary descriptive detail belongs in the detail page or Find view, not the denser Groups view.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Staff page titles should stay plain. Repreneur vs Opportunity context should be carried by the sidebar group and the colored section-header icon, not by title suffixes.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "The old `/opportunities` records route remains direct-link available, but staff navigation and operational dashboard links should promote `/opportunities/find` for item lookup and `/opportunities/groups` for bucket-level operations.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "M&A intermediaries are now first-class source records in `/opportunities/ma`; V2 remains an internal staff tool, not a full M&A firm portal or large-scale CRM.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "M&A email templates are tagged as opportunity/intermediary templates and are available for review/test in Email Tools, but normal manual sending remains repreneur-only until a dedicated intermediary send workflow is designed.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 7 plan 07-01 completed: `ma_source_interactions` records intermediary follow-up history, and staff-only server actions can draft/send/log M&A emails from opportunity/source context.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 7 plan 07-02 completed: opportunity detail pages now include an M&A tab with template selection, editable subject/body, source contact status, send feedback, and interaction history.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 7 plan 07-03 completed: production browser UAT passed after fixing the client send transport, required interaction metadata, and Better Auth/Supabase Auth `created_by` mismatch for the M&A interaction log.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Repreneur portal recovery decision on 2026-05-19: portal entry must require an explicit `app_user_roles` repreneur role linked to `repreneur_id`; matching a repreneur email alone is no longer sufficient.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Repreneur portal recovery decision on 2026-05-19: staff/admin QA cannot be counted as external portal QA. Any release touching access, routing, matches, profile, or documents needs production UAT as a real repreneur user.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Navigation performance decision on 2026-05-22: dashboard routes should keep a stable shell, use cached server snapshots and narrow loaders, stream or show loading states for dynamic sections, and invalidate cache tags after writes. Do not bring back dashboard route remount wrappers or repeated broad Supabase reads.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 8 deployment decision on 2026-05-22: opportunity field cleanup uses additive/backfilled canonical columns first and keeps legacy confusing columns as temporary compatibility shims. Drop the legacy columns only after the new production app is live and stable.",
+      "rationale": "",
+      "phase": "8"
+    },
+    {
+      "decision": "Phase 8 workflow decision on 2026-05-22: `info_memo_received` is a real pursuit stage between interest and intermediary meeting, not an info memo document-storage feature.",
+      "rationale": "",
+      "phase": "8"
     }
   ],
-  "uncommitted_files": [],
-  "next_action": "Plan and execute 02-06 deal stage tracking",
-  "context_notes": "Phase 2 is 5/7 complete. Demo opportunity DEMO-OPP-20260517-01 is restored to interested and remains visible in /opportunities/reviews for Ivan to test."
+  "uncommitted_files": [
+    {
+      "status": "M",
+      "path": ".planning/HANDOFF.json"
+    },
+    {
+      "status": "M",
+      "path": "AGENTS.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/project-status.md"
+    },
+    {
+      "status": "??",
+      "path": "\".planning/debug/page-navigation-lag 2.md\""
+    },
+    {
+      "status": "??",
+      "path": "\"docs/project-status 2.md\""
+    },
+    {
+      "status": "??",
+      "path": "\"docs/solutions/navigation-performance-before-after 2.svg\""
+    },
+    {
+      "status": "??",
+      "path": "\"scripts/056_phase8_opportunity_field_cleanup 2.sql\""
+    },
+    {
+      "status": "??",
+      "path": "\"supabase/migrations/20260522_phase8_opportunity_field_cleanup 2.sql\""
+    }
+  ],
+  "next_action": "Complete locally; production verification pending",
+  "context_notes": "Status: Complete locally; production verification pending\n\nStopped at: Phase 8 completed locally; production deploy verification remains pending\n\nRecent commits:\ndca83d9 fix(scrapbook-html): add allow-scripts to iframe sandbox so uploaded interactive HTML runs\n517552b chore: stop tracking claude worktrees\nbec9533 fix: prevent build-time dashboard data access\n6892e9c feat(phase-8): complete post-demo workflow MVP\n69df26a spec(phase-8): add SPEC.md for post-demo-workflow-mvp - 10 requirements (#2213)"
 }

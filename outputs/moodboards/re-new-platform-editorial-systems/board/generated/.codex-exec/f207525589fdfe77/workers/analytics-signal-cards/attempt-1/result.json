@@ -1,0 +1,7 @@
+{
+  "id": "analytics-signal-cards",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation failed with TooManyRequests; no PNG was produced.",
+  "caveats": ""
+}

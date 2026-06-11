@@ -1,0 +1,93 @@
+{
+  "status": "partial",
+  "total": 12,
+  "complete": 5,
+  "failed": 7,
+  "pending": 0,
+  "results": [
+    {
+      "id": "executive-pipeline-work-surface",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/f207525589fdfe77/320bdd593a1341ce6516acb159b4c40c.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "readiness-radar-tablet",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation returned an image but did not expose a savable PNG file path in this runtime.",
+      "caveats": ""
+    },
+    {
+      "id": "structured-methodology-wall",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation returned an image in-chat, but no writable file artifact was exposed to save as PNG.",
+      "caveats": ""
+    },
+    {
+      "id": "opportunity-matching-glass",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation produced an image but did not provide a filesystem path or PNG bytes that could be saved in this runtime.",
+      "caveats": ""
+    },
+    {
+      "id": "advisor-team-review",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/f207525589fdfe77/d17beaad952f432ff9daafe5b88e8b8a.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "document-review-surface",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/f207525589fdfe77/0e45749857414c745c62bec4b95dd6de.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "founder-profile-dossier",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation returned an image in-chat, but no filesystem artifact path was available to save the PNG exactly at the requested location.",
+      "caveats": ""
+    },
+    {
+      "id": "futurist-minimal-command-center",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/f207525589fdfe77/579e084615a3748ff6f3938731a748a7.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "journey-progress-objects",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation returned an image in-chat but did not expose a savable PNG file path in this runtime.",
+      "caveats": ""
+    },
+    {
+      "id": "product-scene-intake-to-insight",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation did not expose a savable PNG file path or binary handle in this runtime.",
+      "caveats": ""
+    },
+    {
+      "id": "seller-trust-handoff",
+      "status": "failed",
+      "image_path": null,
+      "error": "Native image generation failed with TooManyRequests.",
+      "caveats": ""
+    },
+    {
+      "id": "analytics-signal-cards",
+      "status": "complete",
+      "image_path": "/Users/ivanpaudice/Library/Mobile Documents/com~apple~CloudDocs/Progetti/07-mba--escp/projects/renew-platform/outputs/moodboards/re-new-platform-editorial-systems/board/generated/.codex-exec/f207525589fdfe77/d77ef7309b329d79f5bc50b49cb78016.png",
+      "error": null,
+      "caveats": ""
+    }
+  ]
+}

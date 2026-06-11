@@ -1,0 +1,7 @@
+{
+  "id": "structured-methodology-wall",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation failed with TooManyRequests rate limit.",
+  "caveats": ""
+}

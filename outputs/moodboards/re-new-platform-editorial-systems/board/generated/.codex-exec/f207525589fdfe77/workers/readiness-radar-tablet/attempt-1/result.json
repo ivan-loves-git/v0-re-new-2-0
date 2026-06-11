@@ -1,0 +1,7 @@
+{
+  "id": "readiness-radar-tablet",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation was unavailable due to rate limiting.",
+  "caveats": ""
+}

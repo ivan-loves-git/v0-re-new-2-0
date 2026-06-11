@@ -1,0 +1,7 @@
+{
+  "id": "readiness-radar-tablet",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation produced an image, but this runtime did not expose PNG bytes or a local file path to save.",
+  "caveats": ""
+}

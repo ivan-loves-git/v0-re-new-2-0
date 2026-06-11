@@ -1,0 +1,3 @@
+Generated exactly one image with `image_gen.imagegen`, but the tool did not expose a writable PNG file path/artifact I could copy to the requested location.
+
+I wrote the required failed `result.json` at the requested path with a concise error.

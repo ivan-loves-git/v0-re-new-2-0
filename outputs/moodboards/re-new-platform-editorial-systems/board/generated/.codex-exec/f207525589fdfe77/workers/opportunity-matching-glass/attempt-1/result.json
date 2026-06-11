@@ -1,0 +1,7 @@
+{
+  "id": "opportunity-matching-glass",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation returned an in-chat image but no savable local file path or binary handle.",
+  "caveats": ""
+}

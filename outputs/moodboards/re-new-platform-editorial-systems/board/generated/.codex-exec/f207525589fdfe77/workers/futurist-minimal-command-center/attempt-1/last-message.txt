@@ -1,0 +1,5 @@
+Failed to save the PNG because the native `image_gen.imagegen` tool returned an image but did not expose a saveable file handle in this environment.
+
+I wrote the required failed worker JSON to:
+
+`generated/.codex-exec/f207525589fdfe77/workers/futurist-minimal-command-center/attempt-1/result.json`

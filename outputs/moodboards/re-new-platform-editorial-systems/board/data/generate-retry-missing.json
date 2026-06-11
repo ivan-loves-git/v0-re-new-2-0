@@ -1,0 +1,804 @@
+{
+  "images": [
+    {
+      "id": "readiness-radar-tablet",
+      "title": "Readiness Radar Tablet",
+      "caption": "The assessment methodology made visible as a premium product object.",
+      "source": "WHO/WHEN scoring and readiness radar",
+      "tone": "executive trust, structured clarity",
+      "motif": "tablet, radar geometry, score signals, blank dossier",
+      "palette": "white, steel grey, blue, soft green",
+      "prompt": "Single close-up editorial product photograph of a tablet on a clean white work surface showing an abstract readiness radar chart and simple score shapes, all fictional and without readable text. Beside it are blank profile pages, a graphite pen, and a small green status marker. The image should feel like a trusted acquisition readiness system, sharp editorial, futurist minimal, calm confidence, premium but practical. No readable text, no logos, no real names, no private data, no collage, no grid, no split panels. Single coherent frame, one composed scene or object detail, not a collage, not a grid, not a contact sheet, not a scrapbook, not a mood board layout.",
+      "remixSuggestions": {
+        "style": [
+          {
+            "label": "Clinical Precision",
+            "description": "Make the radar feel more analytical and exact",
+            "promptHint": "cleaner geometry, tighter lighting, more precise shadows"
+          },
+          {
+            "label": "Human Advisory",
+            "description": "Make the scene feel more consultative",
+            "promptHint": "add warm paper texture and one hand pointing near the tablet"
+          },
+          {
+            "label": "Dramatic Tablet",
+            "description": "Richer blacks, sharper highlights, and more cinematic emphasis",
+            "promptHint": "Apply high-contrast cinematic treatment to Readiness Radar Tablet; keep The assessment methodology made visible as a premium product object recognizable but alter camera angle..."
+          }
+        ],
+        "palette": [
+          {
+            "label": "Blue Signal",
+            "description": "Lean into Re-New's restrained blue",
+            "promptHint": "white and grey scene with refined blue radar accents"
+          },
+          {
+            "label": "Steel Green",
+            "description": "Add subtle progress and validation cues",
+            "promptHint": "steel grey palette with small green verification accents"
+          },
+          {
+            "label": "Monochrome Tablet",
+            "description": "A narrower near-monochrome treatment that lets one cue around Readiness Radar Tablet stand out",
+            "promptHint": "Reduce the palette around Readiness Radar Tablet to tonal restraint plus one preserved cue from The assessment methodology made visible as a premium product object"
+          }
+        ],
+        "scene": [
+          {
+            "label": "Interview Table",
+            "description": "Place the assessment in a founder interview moment",
+            "promptHint": "tablet between two seated people, faces out of frame"
+          },
+          {
+            "label": "Quiet Desk",
+            "description": "Keep it as a clean solo product scene",
+            "promptHint": "minimal desk, no people, strong negative space"
+          },
+          {
+            "label": "Tablet Studio",
+            "description": "A cleaner controlled studio setting that keeps Readiness Radar Tablet dominant",
+            "promptHint": "Move Readiness Radar Tablet into a cleaner studio-hero setting while preserving The assessment methodology made visible as a premium product object"
+          }
+        ],
+        "props": [
+          {
+            "label": "Blank Dossier",
+            "description": "Add repreneur profile materials without data",
+            "promptHint": "blank structured dossier sheets, no readable words"
+          },
+          {
+            "label": "Milestone Markers",
+            "description": "Add progression without gamification",
+            "promptHint": "small geometric milestone markers near the tablet"
+          },
+          {
+            "label": "Minimal Support",
+            "description": "Reduce surrounding objects so Readiness Radar Tablet carries more weight",
+            "promptHint": "Remove nonessential props and keep Readiness Radar Tablet as the dominant read"
+          }
+        ],
+        "character": [
+          {
+            "label": "Advisor Gesture",
+            "description": "One expert gesture, no faces",
+            "promptHint": "advisor hand holding pen near radar chart"
+          },
+          {
+            "label": "Product Only",
+            "description": "No person, just the system",
+            "promptHint": "only tablet and documents"
+          },
+          {
+            "label": "No Human",
+            "description": "Let the object, place, or composition carry the frame",
+            "promptHint": "Remove visible people and let Readiness Radar Tablet carry the image"
+          }
+        ],
+        "format": [
+          {
+            "label": "Deck Crop",
+            "description": "A polished slide visual",
+            "promptHint": "landscape composition with room for headline area"
+          },
+          {
+            "label": "Detail Crop",
+            "description": "A close product-system detail",
+            "promptHint": "tight close-up on tablet and radar geometry"
+          },
+          {
+            "label": "Square Tablet",
+            "description": "A balanced square crop for gallery or feed review",
+            "promptHint": "Recompose Readiness Radar Tablet as a square frame with a changed focal balance and the core cue intact"
+          }
+        ]
+      }
+    },
+    {
+      "id": "structured-methodology-wall",
+      "title": "Structured Methodology Wall",
+      "caption": "A physical visual system for journey stages, milestones, and decisions.",
+      "source": "13-phase acquisition lifecycle and journey milestones",
+      "tone": "calm confidence, clear momentum",
+      "motif": "modular wall, cards, threads, progress structure",
+      "palette": "white, pale grey, charcoal, blue pins",
+      "prompt": "Single editorial photograph of a minimal strategy wall in a modern advisory office: modular blank cards arranged in a structured acquisition journey, thin connecting lines, small blue pins, a few charcoal markers, and precise spacing. The wall suggests milestones and progression without readable text. Sharp editorial lighting, futurist minimal, calm operational trust, sophisticated work surface atmosphere. No readable text, no logos, no brand names, no collage, no grid-style mood board, no split panels. Single coherent frame, one composed scene or object detail, not a collage, not a grid, not a contact sheet, not a scrapbook, not a mood board layout.",
+      "remixSuggestions": {
+        "style": [
+          {
+            "label": "Architectural",
+            "description": "Make it more spatial and premium",
+            "promptHint": "larger room, architectural lines, clean white walls"
+          },
+          {
+            "label": "Workshop Editorial",
+            "description": "Make the system feel in active use",
+            "promptHint": "subtle traces of workshop activity, pens and paper nearby"
+          },
+          {
+            "label": "Minimal Wall",
+            "description": "Quieter hierarchy, more negative space, and stricter restraint around Structured Methodology Wall",
+            "promptHint": "Strip Structured Methodology Wall down to a minimal premium frame; keep A physical visual system for journey stages, milestones, and decisions legible but change the..."
+          }
+        ],
+        "palette": [
+          {
+            "label": "Soft Grey",
+            "description": "More neutral and calm",
+            "promptHint": "white and pale grey with minimal blue marks"
+          },
+          {
+            "label": "Ink Contrast",
+            "description": "More decisive, editorial contrast",
+            "promptHint": "charcoal cards and deep shadows against white wall"
+          },
+          {
+            "label": "Accent Wall",
+            "description": "A stronger accent color against quieter supporting surfaces",
+            "promptHint": "Add a controlled accent palette to Structured Methodology Wall without changing the main subject"
+          }
+        ],
+        "scene": [
+          {
+            "label": "Advisory Office",
+            "description": "Place it in a serious consulting space",
+            "promptHint": "quiet advisory office, no people, premium wall system"
+          },
+          {
+            "label": "Team Session",
+            "description": "Add team presence without stock-photo energy",
+            "promptHint": "two people partly visible from behind, reviewing the wall"
+          },
+          {
+            "label": "Wall Detail",
+            "description": "A tighter scene focused on material, craft, or product detail",
+            "promptHint": "Create a close-detail scene for Structured Methodology Wall, keeping the most important source cue visible"
+          }
+        ],
+        "props": [
+          {
+            "label": "Thread Lines",
+            "description": "Emphasize connected process",
+            "promptHint": "thin thread or line connections between blank cards"
+          },
+          {
+            "label": "Progress Markers",
+            "description": "Add subtle milestone cues",
+            "promptHint": "small blue and green geometric markers"
+          },
+          {
+            "label": "Premium Finish",
+            "description": "Sharper materials, cleaner surfaces, and more elevated detail",
+            "promptHint": "Add premium material cues around Structured Methodology Wall; preserve the source image's composition"
+          }
+        ],
+        "character": [
+          {
+            "label": "No People",
+            "description": "Focus on system design",
+            "promptHint": "empty room, methodology wall only"
+          },
+          {
+            "label": "Quiet Team",
+            "description": "Add restrained human scale",
+            "promptHint": "people out of focus, backs turned, no faces"
+          },
+          {
+            "label": "Passing Figure",
+            "description": "A partial human presence that adds scale and motion without taking over Structured Methodology Wall",
+            "promptHint": "Add a cropped passing figure or gesture around Structured Methodology Wall; keep identity nonspecific and preserve A physical visual system for journey stages, milestones, and..."
+          }
+        ],
+        "format": [
+          {
+            "label": "Wide Wall",
+            "description": "Useful for a hero or deck opener",
+            "promptHint": "wide horizontal wall composition"
+          },
+          {
+            "label": "Vertical Crop",
+            "description": "Tall editorial crop for social or sidebar",
+            "promptHint": "vertical composition with cards rising upward"
+          },
+          {
+            "label": "Square Wall",
+            "description": "A balanced square crop for gallery or feed review",
+            "promptHint": "Recompose Structured Methodology Wall as a square frame with a changed focal balance and the core cue intact"
+          }
+        ]
+      }
+    },
+    {
+      "id": "opportunity-matching-glass",
+      "title": "Opportunity Matching Glass",
+      "caption": "Repreneurs and opportunities meeting inside a clean decision system.",
+      "source": "Opportunity matching and M&A workflow",
+      "tone": "executive trust, futurist minimal",
+      "motif": "glass panels, matching lines, abstract profiles",
+      "palette": "cool glass, white, charcoal, restrained blue",
+      "prompt": "Single visual reference image of a refined futurist minimal workspace with transparent glass screens showing abstract profile tiles and opportunity cards connected by fine blue lines. All interface content is fictional and unreadable, like blurred shapes and simple geometry. The composition should feel like premium M&A opportunity matching, calm, trustworthy, and structured. White room, cool glass, charcoal accents, sharp editorial lighting. No readable text, no logos, no real people names, no private data, no collage, no grid, no split panels. Single coherent frame, one composed scene or object detail, not a collage, not a grid, not a contact sheet, not a scrapbook, not a mood board layout.",
+      "remixSuggestions": {
+        "style": [
+          {
+            "label": "More Futurist",
+            "description": "Push the glass-interface feeling",
+            "promptHint": "more transparent panels, light reflections, minimal futuristic system"
+          },
+          {
+            "label": "More Editorial",
+            "description": "Ground it as a photographed product scene",
+            "promptHint": "less sci-fi, more real office lighting and physical screens"
+          },
+          {
+            "label": "Material Glass",
+            "description": "A closer tactile read of surface, temperature, and finish around Opportunity Matching Glass",
+            "promptHint": "Rebuild Opportunity Matching Glass as a tactile material study inspired by Repreneurs and opportunities meeting inside a clean decision system, with a visibly different crop..."
+          }
+        ],
+        "palette": [
+          {
+            "label": "Cool Glass",
+            "description": "Make the scene cleaner and more translucent",
+            "promptHint": "cool glass, white, pale grey, blue light lines"
+          },
+          {
+            "label": "Charcoal Frame",
+            "description": "Add executive weight",
+            "promptHint": "charcoal frames and deeper shadows around glass screens"
+          },
+          {
+            "label": "Unexpected Glass",
+            "description": "A more surprising secondary color relationship around Opportunity Matching Glass",
+            "promptHint": "Keep the subject recognizable, but introduce one unexpected supporting color that extends Repreneurs and opportunities meeting inside a clean decision system"
+          }
+        ],
+        "scene": [
+          {
+            "label": "Command Room",
+            "description": "Show the matching system at room scale",
+            "promptHint": "larger strategy room with multiple glass screens"
+          },
+          {
+            "label": "Desk Screen",
+            "description": "Make it a close product scene",
+            "promptHint": "single glass monitor on a premium desk"
+          },
+          {
+            "label": "Glass Detail",
+            "description": "A tighter scene focused on material, craft, or product detail",
+            "promptHint": "Create a close-detail scene for Opportunity Matching Glass, keeping the most important source cue visible"
+          }
+        ],
+        "props": [
+          {
+            "label": "Matching Lines",
+            "description": "Strengthen the connection motif",
+            "promptHint": "fine blue connection lines between abstract cards"
+          },
+          {
+            "label": "Decision Tokens",
+            "description": "Add physical markers for choices",
+            "promptHint": "small geometric decision tokens on the table"
+          },
+          {
+            "label": "Premium Finish",
+            "description": "Sharper materials, cleaner surfaces, and more elevated detail",
+            "promptHint": "Add premium material cues around Opportunity Matching Glass; preserve the source image's composition"
+          }
+        ],
+        "character": [
+          {
+            "label": "Advisor Silhouette",
+            "description": "Add one executive observer",
+            "promptHint": "single blurred advisor silhouette, no face detail"
+          },
+          {
+            "label": "System Only",
+            "description": "Keep it pure and minimal",
+            "promptHint": "no people, just the glass interface"
+          },
+          {
+            "label": "No Human",
+            "description": "Let the object, place, or composition carry the frame",
+            "promptHint": "Remove visible people and let Opportunity Matching Glass carry the image"
+          }
+        ],
+        "format": [
+          {
+            "label": "Cinematic Wide",
+            "description": "More room and atmosphere",
+            "promptHint": "wide cinematic composition"
+          },
+          {
+            "label": "Tight Product",
+            "description": "Focus on the matching interface",
+            "promptHint": "tight crop on glass screen and connection geometry"
+          },
+          {
+            "label": "Glass Crop",
+            "description": "Closer inspection of the material, surface, or focal subject",
+            "promptHint": "Create a closer detail crop of Opportunity Matching Glass; keep Repreneurs and opportunities meeting inside a clean decision system legible"
+          }
+        ]
+      }
+    },
+    {
+      "id": "founder-profile-dossier",
+      "title": "Founder Profile Dossier",
+      "caption": "A repreneur profile that feels credible, structured, and human.",
+      "source": "Repreneur profiles and seller-facing credibility",
+      "tone": "executive trust, human readiness",
+      "motif": "portrait silhouette, profile cards, readiness marks",
+      "palette": "white, charcoal, muted skin tones, blue",
+      "prompt": "Single editorial product scene of a premium fictional repreneur profile dossier on a clean desk: an abstract portrait silhouette on a tablet, structured unreadable profile cards, subtle readiness marks, and blank supporting documents. It should feel credible to sellers and intermediaries, human but confidential, sharp editorial, futurist minimal. White, charcoal, muted natural tones, restrained blue accents. No readable text, no real face identity, no logos, no names, no private data, no collage, no grid, no split panels. Single coherent frame, one composed scene or object detail, not a collage, not a grid, not a contact sheet, not a scrapbook, not a mood board layout.",
+      "remixSuggestions": {
+        "style": [
+          {
+            "label": "More Human",
+            "description": "Give the profile more warmth",
+            "promptHint": "warmer tones, softer portrait silhouette, subtle paper texture"
+          },
+          {
+            "label": "More Verified",
+            "description": "Make credibility feel more formal",
+            "promptHint": "clean verification markers, stricter layout shapes, cooler lighting"
+          },
+          {
+            "label": "Candid Dossier",
+            "description": "More natural texture and believable lived-in detail for Founder Profile Dossier",
+            "promptHint": "Shift Founder Profile Dossier toward documentary realism while preserving A repreneur profile that feels credible, structured, and human; make lighting and staging feel newly..."
+          }
+        ],
+        "palette": [
+          {
+            "label": "Natural Neutral",
+            "description": "Warmer person-centered palette",
+            "promptHint": "white, charcoal, muted skin tones, soft blue"
+          },
+          {
+            "label": "Executive Mono",
+            "description": "More restrained and formal",
+            "promptHint": "black, white, grey, minimal blue"
+          },
+          {
+            "label": "Warm Dossier",
+            "description": "Warmer neutrals and tactile highlights around Founder Profile Dossier",
+            "promptHint": "Shift the palette warmer while preserving the subject and composition of Founder Profile Dossier"
+          }
+        ],
+        "scene": [
+          {
+            "label": "Seller Packet",
+            "description": "Feels ready to share with an intermediary",
+            "promptHint": "dossier packet prepared on boardroom table"
+          },
+          {
+            "label": "Portal View",
+            "description": "More digital profile experience",
+            "promptHint": "tablet-focused scene with abstract profile UI"
+          },
+          {
+            "label": "Dossier Backstage",
+            "description": "A behind-the-scenes environment that adds process and atmosphere around Founder Profile Dossier",
+            "promptHint": "Reframe Founder Profile Dossier as a backstage or preparation moment; keep A repreneur profile that feels credible, structured, and human recognizable"
+          }
+        ],
+        "props": [
+          {
+            "label": "Readiness Marks",
+            "description": "Show validated progress",
+            "promptHint": "small abstract verification marks, no readable text"
+          },
+          {
+            "label": "Profile Stack",
+            "description": "Show multiple structured sections",
+            "promptHint": "stack of blank profile section cards"
+          },
+          {
+            "label": "Process Cues",
+            "description": "Tools, traces, or handling details that make Founder Profile Dossier feel actively used",
+            "promptHint": "Add restrained process cues around Founder Profile Dossier; preserve the strongest visual idea from A repreneur profile that feels credible, structured, and human"
+          }
+        ],
+        "character": [
+          {
+            "label": "Anonymous Portrait",
+            "description": "Keep it human but privacy-safe",
+            "promptHint": "abstract anonymous portrait silhouette only"
+          },
+          {
+            "label": "No Portrait",
+            "description": "Make it fully system-led",
+            "promptHint": "remove portrait, focus on structured profile objects"
+          },
+          {
+            "label": "No Human",
+            "description": "Let the object, place, or composition carry the frame",
+            "promptHint": "Remove visible people and let Founder Profile Dossier carry the image"
+          }
+        ],
+        "format": [
+          {
+            "label": "Portrait Crop",
+            "description": "Use as a profile-story image",
+            "promptHint": "vertical editorial composition"
+          },
+          {
+            "label": "Landscape Crop",
+            "description": "Use as deck or web image",
+            "promptHint": "landscape composition with negative space"
+          },
+          {
+            "label": "Wide Dossier",
+            "description": "Broader horizontal composition for landing-page or banner use",
+            "promptHint": "Adapt Founder Profile Dossier to a wide hero composition with room for layout"
+          }
+        ]
+      }
+    },
+    {
+      "id": "journey-progress-objects",
+      "title": "Journey Progress Objects",
+      "caption": "Progress as a tactile system, not gamification.",
+      "source": "Journey stages, milestones, and certification signals",
+      "tone": "clear momentum, calm confidence",
+      "motif": "linear objects, milestones, progress path",
+      "palette": "warm white, pale grey, blue, soft green",
+      "prompt": "Single editorial studio photograph of a tactile acquisition journey represented as minimal physical objects on a white work surface: a sequence of small blank cards, geometric milestones, a few blue and green markers, and one clear forward path. It should feel like structured progress and certification without game-like decoration. Sharp editorial, futurist minimal, premium practical, calm confidence. No readable text, no logos, no icons with words, no collage, no grid, no split panels. Single coherent frame, one composed scene or object detail, not a collage, not a grid, not a contact sheet, not a scrapbook, not a mood board layout.",
+      "remixSuggestions": {
+        "style": [
+          {
+            "label": "More Tactile",
+            "description": "Use richer physical materials",
+            "promptHint": "thicker cards, matte paper, subtle material texture"
+          },
+          {
+            "label": "More Futurist",
+            "description": "Make the progression more abstract",
+            "promptHint": "sleeker geometric markers, cooler light, glass surface"
+          },
+          {
+            "label": "Candid Objects",
+            "description": "More natural texture and believable lived-in detail for Journey Progress Objects",
+            "promptHint": "Shift Journey Progress Objects toward documentary realism while preserving Progress as a tactile system, not gamification; make lighting and staging feel newly observed"
+          }
+        ],
+        "palette": [
+          {
+            "label": "Soft Progress",
+            "description": "Gentle and confident",
+            "promptHint": "warm white, pale grey, soft green, restrained blue"
+          },
+          {
+            "label": "Sharp Signal",
+            "description": "More editorial contrast",
+            "promptHint": "white surface, charcoal shadows, crisp blue markers"
+          },
+          {
+            "label": "Unexpected Objects",
+            "description": "A more surprising secondary color relationship around Journey Progress Objects",
+            "promptHint": "Keep the subject recognizable, but introduce one unexpected supporting color that extends Progress as a tactile system, not gamification"
+          }
+        ],
+        "scene": [
+          {
+            "label": "Studio Surface",
+            "description": "Abstract and reusable",
+            "promptHint": "controlled studio tabletop with negative space"
+          },
+          {
+            "label": "Advisor Desk",
+            "description": "More connected to real work",
+            "promptHint": "premium desk with notebook and laptop edge"
+          },
+          {
+            "label": "Objects Studio",
+            "description": "A cleaner controlled studio setting that keeps Journey Progress Objects dominant",
+            "promptHint": "Move Journey Progress Objects into a cleaner studio-hero setting while preserving Progress as a tactile system, not gamification"
+          }
+        ],
+        "props": [
+          {
+            "label": "Certification Tokens",
+            "description": "Add validation cues",
+            "promptHint": "small minimal certification tokens, no symbols or words"
+          },
+          {
+            "label": "Path Line",
+            "description": "Emphasize forward momentum",
+            "promptHint": "single clean line connecting progress objects"
+          },
+          {
+            "label": "Minimal Support",
+            "description": "Reduce surrounding objects so Journey Progress Objects carries more weight",
+            "promptHint": "Remove nonessential props and keep Journey Progress Objects as the dominant read"
+          }
+        ],
+        "character": [
+          {
+            "label": "No People",
+            "description": "Keep it abstract and clean",
+            "promptHint": "no people"
+          },
+          {
+            "label": "Hand Moves Marker",
+            "description": "Add action and momentum",
+            "promptHint": "one hand moving a small marker forward"
+          },
+          {
+            "label": "Collector Persona",
+            "description": "A more intentional, taste-driven persona interacting with Journey Progress Objects",
+            "promptHint": "Introduce a collector or tastemaker presence around Journey Progress Objects while changing wardrobe, gesture, or posture"
+          }
+        ],
+        "format": [
+          {
+            "label": "Wide Path",
+            "description": "Best for journey storytelling",
+            "promptHint": "wide horizontal progression"
+          },
+          {
+            "label": "Square Objects",
+            "description": "Best as a modular visual tile",
+            "promptHint": "square composition, objects centered"
+          },
+          {
+            "label": "Wide Objects",
+            "description": "Broader horizontal composition for landing-page or banner use",
+            "promptHint": "Adapt Journey Progress Objects to a wide hero composition with room for layout"
+          }
+        ]
+      }
+    },
+    {
+      "id": "product-scene-intake-to-insight",
+      "title": "Intake To Insight",
+      "caption": "The questionnaire transformed into structured intelligence.",
+      "source": "Public intake, automatic scoring, personalized insight",
+      "tone": "calm confidence, clear momentum",
+      "motif": "form surface, insight card, transformation",
+      "palette": "white, graphite, blue, light grey",
+      "prompt": "Single editorial product photograph showing a laptop and tablet on a clean white desk: the laptop displays an abstract multi-step intake form with no readable text, while the tablet beside it shows a simplified insight card and radar-like shapes, also unreadable. The scene should communicate transformation from questionnaire to useful intelligence, sharp editorial SaaS product scene, calm confidence, futurist minimal. White surface, graphite device frames, restrained blue accents, soft daylight. No readable text, no logos, no real user data, no collage, no grid, no split panels. Single coherent frame, one composed scene or object detail, not a collage, not a grid, not a contact sheet, not a scrapbook, not a mood board layout.",
+      "remixSuggestions": {
+        "style": [
+          {
+            "label": "More Product",
+            "description": "Make devices and interface cues clearer",
+            "promptHint": "larger screens, crisper abstract UI shapes"
+          },
+          {
+            "label": "More Editorial",
+            "description": "Make it less literal and more atmospheric",
+            "promptHint": "more negative space, refined lighting, fewer visible UI elements"
+          },
+          {
+            "label": "Motion Insight",
+            "description": "More kinetic gesture, blur, or environmental energy around Intake To Insight",
+            "promptHint": "Introduce controlled motion to Intake To Insight while preserving the campaign cue: The questionnaire transformed into structured intelligence"
+          }
+        ],
+        "palette": [
+          {
+            "label": "Blue Thread",
+            "description": "Use blue as the conversion path",
+            "promptHint": "thin blue line visually connecting laptop and tablet"
+          },
+          {
+            "label": "Neutral Calm",
+            "description": "Subdue color for executive trust",
+            "promptHint": "mostly white and grey with very small blue accents"
+          },
+          {
+            "label": "Cool Insight",
+            "description": "Crisper whites, cooler shadows, and restrained technical contrast",
+            "promptHint": "Use cooler minimal accents around Intake To Insight; keep The questionnaire transformed into structured intelligence intact"
+          }
+        ],
+        "scene": [
+          {
+            "label": "Desk Pairing",
+            "description": "Two-device transformation scene",
+            "promptHint": "laptop and tablet side by side on desk"
+          },
+          {
+            "label": "Single Screen",
+            "description": "Simplify to one product proof object",
+            "promptHint": "single laptop with abstract intake-to-insight interface"
+          },
+          {
+            "label": "Insight In Use",
+            "description": "A more believable real-world context for Intake To Insight",
+            "promptHint": "Place Intake To Insight into a realistic usage context; preserve the source image's core cue: The questionnaire transformed into structured intelligence"
+          }
+        ],
+        "props": [
+          {
+            "label": "Notebook",
+            "description": "Add advisory work context",
+            "promptHint": "blank notebook and pen near devices"
+          },
+          {
+            "label": "Profile Sheet",
+            "description": "Add repreneur profile cue",
+            "promptHint": "blank profile sheet partly visible"
+          },
+          {
+            "label": "Insight Cues",
+            "description": "Add restrained supporting objects that clarify the context of Intake To Insight",
+            "promptHint": "Add a few contextual props that reinforce The questionnaire transformed into structured intelligence without distracting from Intake To Insight"
+          }
+        ],
+        "character": [
+          {
+            "label": "No People",
+            "description": "Clean product focus",
+            "promptHint": "no people, product scene only"
+          },
+          {
+            "label": "User Hand",
+            "description": "One light interaction cue",
+            "promptHint": "one hand near trackpad, no face"
+          },
+          {
+            "label": "No Human",
+            "description": "Let the object, place, or composition carry the frame",
+            "promptHint": "Remove visible people and let Intake To Insight carry the image"
+          }
+        ],
+        "format": [
+          {
+            "label": "Website Crop",
+            "description": "Ready for web imagery",
+            "promptHint": "wide horizontal crop with clean right-side negative space"
+          },
+          {
+            "label": "Close Crop",
+            "description": "Good for product update visuals",
+            "promptHint": "tighter crop on devices and abstract insight shapes"
+          },
+          {
+            "label": "Portrait Insight",
+            "description": "Tighter vertical crop for social or story placement",
+            "promptHint": "Adapt Intake To Insight to a portrait social crop while preserving the key visual read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "seller-trust-handoff",
+      "title": "Seller Trust Handoff",
+      "caption": "A serious buyer profile made credible at the table.",
+      "source": "Seller/intermediary-facing certified repreneur concept",
+      "tone": "executive trust, calm confidence",
+      "motif": "meeting table, profile dossier, handshake implied",
+      "palette": "warm white, charcoal, muted steel, blue",
+      "prompt": "Single editorial photograph of a premium meeting table where a fictional buyer readiness profile is being reviewed by an intermediary and seller. Show hands, a tablet with abstract unreadable profile geometry, blank documents, and a calm professional posture; no handshake cliche, no visible faces as identity focus. The image should feel like trust made visible, serious but not cold, sharp editorial, premium practical. Warm white table, charcoal suits, muted steel, restrained blue accents. No readable text, no logos, no real names, no private data, no collage, no grid, no split panels. Single coherent frame, one composed scene or object detail, not a collage, not a grid, not a contact sheet, not a scrapbook, not a mood board layout.",
+      "remixSuggestions": {
+        "style": [
+          {
+            "label": "More Trust",
+            "description": "Make the human moment warmer",
+            "promptHint": "warmer lighting, more natural hands and posture"
+          },
+          {
+            "label": "More Executive",
+            "description": "Make it sharper and more formal",
+            "promptHint": "cooler boardroom light, stricter composition, charcoal details"
+          },
+          {
+            "label": "Dramatic Handoff",
+            "description": "Richer blacks, sharper highlights, and more cinematic emphasis",
+            "promptHint": "Apply high-contrast cinematic treatment to Seller Trust Handoff; keep A serious buyer profile made credible at the table recognizable but alter camera angle or staging"
+          }
+        ],
+        "palette": [
+          {
+            "label": "Warm Boardroom",
+            "description": "Approachable but serious",
+            "promptHint": "warm white, natural skin tones, charcoal, subtle blue"
+          },
+          {
+            "label": "Cool Intermediary",
+            "description": "More M&A and advisory tone",
+            "promptHint": "steel grey, charcoal, cool blue reflections"
+          },
+          {
+            "label": "Warm Handoff",
+            "description": "Warmer neutrals and tactile highlights around Seller Trust Handoff",
+            "promptHint": "Shift the palette warmer while preserving the subject and composition of Seller Trust Handoff"
+          }
+        ],
+        "scene": [
+          {
+            "label": "Three-Person Review",
+            "description": "Seller, intermediary, buyer context",
+            "promptHint": "three people partially visible around table, no faces prominent"
+          },
+          {
+            "label": "Dossier Close-Up",
+            "description": "Focus only on the credibility artifact",
+            "promptHint": "close-up of tablet and blank dossier on meeting table"
+          },
+          {
+            "label": "Handoff Studio",
+            "description": "A cleaner controlled studio setting that keeps Seller Trust Handoff dominant",
+            "promptHint": "Move Seller Trust Handoff into a cleaner studio-hero setting while preserving A serious buyer profile made credible at the table"
+          }
+        ],
+        "props": [
+          {
+            "label": "Profile Tablet",
+            "description": "Make the readiness profile central",
+            "promptHint": "tablet with abstract radar and profile cards, unreadable"
+          },
+          {
+            "label": "Deal Folder",
+            "description": "Add M&A seriousness",
+            "promptHint": "minimal charcoal deal folder, no labels"
+          },
+          {
+            "label": "Minimal Support",
+            "description": "Reduce surrounding objects so Seller Trust Handoff carries more weight",
+            "promptHint": "Remove nonessential props and keep Seller Trust Handoff as the dominant read"
+          }
+        ],
+        "character": [
+          {
+            "label": "Hands Only",
+            "description": "Privacy-safe business moment",
+            "promptHint": "hands only, no faces"
+          },
+          {
+            "label": "Blurred Figures",
+            "description": "Add body language and scale",
+            "promptHint": "blurred seated figures, faces indistinct"
+          },
+          {
+            "label": "Everyday Use",
+            "description": "More approachable human presence while preserving the mood",
+            "promptHint": "Show Seller Trust Handoff in an everyday user context without losing A serious buyer profile made credible at the table"
+          }
+        ],
+        "format": [
+          {
+            "label": "Cinematic Table",
+            "description": "Useful for a story moment",
+            "promptHint": "wide cinematic table scene"
+          },
+          {
+            "label": "Close Trust Cue",
+            "description": "Useful as an asset detail",
+            "promptHint": "close crop on tablet, documents, hands"
+          },
+          {
+            "label": "Split-Depth Handoff",
+            "description": "Foreground detail and background atmosphere in one composed frame",
+            "promptHint": "Create a single-frame split-depth composition for Seller Trust Handoff; do not make a collage or panel layout"
+          }
+        ]
+      }
+    }
+  ],
+  "confirmGenerate": true,
+  "idempotencyKey": "renew-editorial-systems-missing-v1"
+}

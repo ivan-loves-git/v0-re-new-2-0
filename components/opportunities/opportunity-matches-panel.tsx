@@ -140,6 +140,11 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
   const [selectedRepreneurId, setSelectedRepreneurId] = useState("")
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
   const selectedCandidate = candidates.find((candidate) => candidate.id === selectedRepreneurId)
+  const savedRepreneurIds = new Set(matches.map((match) => match.repreneur_id))
+  const topCandidateSuggestions = [...candidates]
+    .filter((candidate) => !savedRepreneurIds.has(candidate.id))
+    .sort((left, right) => (right.platform_score ?? -1) - (left.platform_score ?? -1))
+    .slice(0, 5)
 
   function handleRepreneurChange(value: string) {
     setSelectedRepreneurId(value)
@@ -308,7 +313,34 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             to staff and the repreneur portal once proposed; staff can add a human review.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
+          {topCandidateSuggestions.length > 0 ? (
+            <div className="rounded-md border border-dashed p-3">
+              <div className="mb-3 flex flex-col gap-1">
+                <p className="text-sm font-medium">Top platform suggestions</p>
+                <p className="text-xs text-muted-foreground">Use one to prefill the recommendation form, then choose the staff status and notes.</p>
+              </div>
+              <div className="grid gap-2 lg:grid-cols-2">
+                {topCandidateSuggestions.map((candidate) => (
+                  <div key={candidate.id} className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{repreneurName(candidate)}</p>
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span>{candidate.platform_score ?? "-"}/100</span>
+                        {candidate.platform_recommendation ? (
+                          <span>{getOpportunityMatchRecommendationLabel(candidate.platform_recommendation)}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => handleRepreneurChange(candidate.id)}>
+                      Use
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <form action={handleSave} noValidate className="flex flex-col gap-5">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
             {feedback ? (

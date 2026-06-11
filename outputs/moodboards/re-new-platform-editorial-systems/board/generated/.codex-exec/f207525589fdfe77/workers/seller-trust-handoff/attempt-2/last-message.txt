@@ -1,0 +1,1 @@
+Native image generation failed with `TooManyRequests`, so I wrote the required failed result JSON at the requested path.

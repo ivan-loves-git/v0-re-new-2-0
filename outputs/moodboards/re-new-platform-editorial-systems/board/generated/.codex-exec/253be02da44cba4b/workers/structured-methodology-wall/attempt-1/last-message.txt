@@ -1,0 +1,3 @@
+Failed due to native `image_gen.imagegen` rate limiting. I wrote the required failure JSON here:
+
+`generated/.codex-exec/253be02da44cba4b/workers/structured-methodology-wall/attempt-1/result.json`

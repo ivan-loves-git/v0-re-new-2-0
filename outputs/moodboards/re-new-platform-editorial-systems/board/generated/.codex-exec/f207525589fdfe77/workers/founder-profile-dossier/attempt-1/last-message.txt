@@ -1,0 +1,1 @@
+Generated exactly one image with `image_gen.imagegen`, but the tool did not provide a savable PNG path or binary handle, so I wrote the required `failed` result JSON at the requested location.

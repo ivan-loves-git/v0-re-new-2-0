@@ -1,0 +1,5 @@
+Failed to save the generated PNG because `image_gen.imagegen` did not expose a savable file path in this runtime.
+
+Wrote the required failure JSON to:
+
+`generated/.codex-exec/f207525589fdfe77/workers/readiness-radar-tablet/attempt-2/result.json`

@@ -87,6 +87,19 @@ To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true
 
 Per-project work → `TASKS.md` in this folder. Cross-session items Ivan is tracking → `/to-COS`. Never use Codex's native Codex native task tools (retired 2026-04-23).
 
+## Notion Boundary and Product Progress
+
+Use Notion only for the Re-New product pipeline:
+- Product updates.
+- Product requests.
+- Testing asks and feedback.
+- Development progress that changes the product.
+- Product decisions, blockers, parking-lot scope, and status tracking.
+
+Do not use Notion for meta notes, AI instructions, generic memory, internal process explanations, or personal reminders. If project progress needs to be saved outside code, update local project files such as `docs/project-status.md`, `.planning/STATE.md`, or the relevant GSD phase files.
+
+For Re-New work, check `claude_mem` when available for existing project memory before making product or Notion changes. If `claude_mem` write access is unavailable in the current runtime, say so and persist the durable rule or progress update in local project files instead.
+
 ## GSD and Linear
 
 GSD is the shared execution system for Claude Code and Codex. Use the repo `.planning/` folder as the common GSD memory: requirements, roadmap, phases, decisions, state, verification notes.

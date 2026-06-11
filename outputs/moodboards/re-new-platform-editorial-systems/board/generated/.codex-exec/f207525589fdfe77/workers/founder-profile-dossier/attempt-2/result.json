@@ -1,0 +1,7 @@
+{
+  "id": "founder-profile-dossier",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation returned an image in-chat, but no filesystem artifact path was available to save the PNG exactly at the requested location.",
+  "caveats": ""
+}

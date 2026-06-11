@@ -1,0 +1,1 @@
+Done. PNG and `result.json` were written to the requested worker folder.

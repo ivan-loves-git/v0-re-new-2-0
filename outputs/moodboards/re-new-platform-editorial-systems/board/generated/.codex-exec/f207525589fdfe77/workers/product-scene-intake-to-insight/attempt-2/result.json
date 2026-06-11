@@ -1,0 +1,7 @@
+{
+  "id": "product-scene-intake-to-insight",
+  "status": "failed",
+  "image_path": null,
+  "error": "Native image generation did not expose a savable PNG file path or binary handle in this runtime.",
+  "caveats": ""
+}
