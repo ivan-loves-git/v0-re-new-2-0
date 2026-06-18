@@ -87,6 +87,13 @@
 - [x] **ARCHIVE-01**: Journey, opportunity reviews, mission, and instructions are hidden from sidebar navigation while remaining available by direct URL.
 - [x] **REDIRECT-01**: Legacy `/dashboard` and `/analytics` routes redirect to the repreneur dashboard and analytics pages.
 
+### Repreneur Profile Detail IA
+
+- [x] **REP-PROFILE-IA-01**: Staff can navigate a repreneur detail page through Overview, Qualification, Readiness, Opportunities, Engagement, and Timeline tabs using the same grey tab pattern as opportunity details.
+- [x] **REP-PROFILE-IA-02**: Overview acts as a dense command view with next action, relationship state, qualification snapshot, project summary, open opportunities, readiness progress, recent history, and documents/access status.
+- [x] **REP-PROFILE-IA-03**: Qualification visibly contains WHO/WHEN, Tier 1/Tier 2 context, leadership assessment, and radar/pentagram-style graphs.
+- [x] **REP-PROFILE-IA-04**: Existing profile actions remain available after the IA refactor, including portal access, offers, documents, milestones, opportunity matches, activity history, and notes.
+
 ### Unified Work Surfaces
 
 - [x] **UX-01**: Repreneur Groups and Find share a coherent visual table structure, filter bar, pagination behavior, color system, and tag style.
@@ -161,12 +168,13 @@
 | MNA-WF-01, MNA-WF-02, MNA-WF-03 | Phase 7 | Complete |
 | MNA-WF-04 | Phase 7 | Complete |
 | POSTDEMO-01, POSTDEMO-02, POSTDEMO-03, POSTDEMO-04, POSTDEMO-05, POSTDEMO-06 | Phase 8 | Complete |
+| REP-PROFILE-IA-01, REP-PROFILE-IA-02, REP-PROFILE-IA-03, REP-PROFILE-IA-04 | Phase 9 | Complete locally |
 
 **Coverage:**
-- June V2 requirements: 60 total
-- Mapped to phases: 60
+- June V2 requirements: 64 total
+- Mapped to phases: 64
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-22 after Phase 8 local build, lint, unit, and browser UAT passed*
+*Last updated: 2026-06-18 after completing Phase 9 repreneur profile IA refactor locally*

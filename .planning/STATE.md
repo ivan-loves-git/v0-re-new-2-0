@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_for_production_verification
-stopped_at: Phase 8 completed locally; production deploy verification remains pending
-last_updated: "2026-05-22T18:35:00+08:00"
-last_activity: 2026-05-22
+status: in_progress
+stopped_at: Phase 9 repreneur profile detail IA refactor completed locally; production verification pending
+last_updated: "2026-06-18T00:00:00+02:00"
+last_activity: 2026-06-18
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 38
-  completed_plans: 38
+  total_phases: 10
+  completed_phases: 10
+  total_plans: 39
+  completed_plans: 39
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** Re-New staff can manage opportunities and confidently connect the right repreneurs to the right deals without Bertrand holding the whole matrix manually.
-**Current focus:** Phase 8 post-demo workflow MVP is complete locally. Next focus is production deployment/verification and any follow-up cleanup from the existing typecheck baseline.
+**Current focus:** Phase 9 repreneur profile detail IA refactor is complete locally. Production deployment verification remains the next release concern.
 
 ## Current Position
 
-Phase: 8 - Post-demo workflow MVP
-Plan: 5 of 5 complete, plus navigation performance stabilization completed as cross-cutting Phase 8 hardening
-Status: Complete locally; production verification pending
-Last activity: 2026-05-22
+Phase: 9 - Repreneur Profile Detail IA Refactor
+Plan: 1 of 1 complete locally
+Status: Complete locally
+Last activity: 2026-06-18
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 38
+- Total plans completed: 39
 - Average duration: n/a
 - Total execution time: 0 hours
 
@@ -70,6 +70,7 @@ Progress: [██████████] 100%
 | 2026-05-22 | Dashboard navigation performance stabilization | Removed dashboard route remount patterns, enabled Cache Components, added cached dashboard snapshots, narrowed data loaders, added loading boundaries and index migrations, measured six authenticated routes, and saved the before/after chart. |
 | 2026-05-22 | Phase 8 post-demo workflow MVP | Fixed portal access reliability, added searchable repreneur selectors, enforced Excel-backed opportunity fields, cleaned confusing opportunity/source field names, added bidirectional matching visibility, added info memo pursuit stage, added NDA/info memo M&A request workflow, applied additive database migrations, and passed local production browser UAT. |
 | 2026-06-18 | Production QA persona matrix | Added owned QA accounts for staff, populated repreneur, empty repreneur, and unassigned/no-role access; production browser validation passed for login routing, empty portal state, populated portal list, and staff/repreneur boundary redirects. |
+| 2026-06-18 | Phase 9 repreneur profile IA refactor | Refactored the staff repreneur profile into a URL-backed six-tab command surface, restored visible qualification radar graphs, preserved legacy questionnaire tab links, and passed local staff browser QA. |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Progress: [██████████] 100%
 - Phase 7 added: M&A workflow activation from opportunity details.
 - Phase 8 added and completed locally: Post-demo workflow MVP from founder demo feedback, focused on real opportunity creation, matching visibility, NDA/info memo follow-up, and confusing field cleanup.
 - Phase 8 navigation stabilization completed before feature execution so the staff app does not add new workflow surface area on top of slow route architecture.
+- Phase 9 added: Repreneur profile detail IA refactor, focused on turning the long staff profile page into a tabbed command surface with visible qualification graphs.
+- Phase 9 completed locally: staff profile detail now uses Overview, Qualification, Readiness, Opportunities, Engagement, and Timeline tabs with the radar graphs restored in Qualification.
 
 ### Decisions
 
@@ -141,6 +144,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Navigation performance decision on 2026-05-22: dashboard routes should keep a stable shell, use cached server snapshots and narrow loaders, stream or show loading states for dynamic sections, and invalidate cache tags after writes. Do not bring back dashboard route remount wrappers or repeated broad Supabase reads.
 - Phase 8 deployment decision on 2026-05-22: opportunity field cleanup uses additive/backfilled canonical columns first and keeps legacy confusing columns as temporary compatibility shims. Drop the legacy columns only after the new production app is live and stable.
 - Phase 8 workflow decision on 2026-05-22: `info_memo_received` is a real pursuit stage between interest and intermediary meeting, not an info memo document-storage feature.
+- Phase 9 IA decision on 2026-06-18: profile tabs use staff workflow buckets rather than acquisition journey stages. Journey remains a header badge/progress signal.
+- Phase 9 IA decision on 2026-06-18: Overview must be a dense command view; Qualification owns WHO/WHEN, Tier 1/Tier 2, leadership assessment, and radar/pentagram-style graphs.
+- Phase 9 execution decision on 2026-06-18: legacy `?tab=questionnaire` links resolve to Qualification so old profile links keep working.
+- Phase 9 visual QA decision on 2026-06-18: scoring accuracy controls stack vertically inside the narrow Qualification score card to avoid label collision.
 
 ### Pending Todos
 
@@ -151,6 +158,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 - Repreneur production UAT must be re-run after the recovery deploy. The previous Phase 3 note that route/data checks were enough for repreneur behavior is superseded.
 - Phase 8 still needs production verification after deploy; local production browser UAT passed on `http://localhost:3012`, but production footer build-number verification remains pending.
+- Phase 9 still needs production verification after deploy; local staff browser QA passed on `http://localhost:3012`, but production footer build-number verification remains pending.
 - Navigation performance branch still needs production verification after deploy; local production browser timing passed.
 - `npx tsc --noEmit --pretty false` now runs but fails on pre-existing unrelated baseline issues in `dashboard_re`, `routing`, and `dashboard-snapshots`.
 - Phase 8 should not add PDF-to-opportunity AI ingestion or JSON import automation unless the scope is explicitly reopened.

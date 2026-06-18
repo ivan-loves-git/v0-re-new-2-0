@@ -15,6 +15,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 6: M&A Source Directory and Intermediary Email Workflows** - Add an editable source/intermediary directory and broker-facing email template foundations. (completed 2026-05-18)
 - [x] **Phase 7: M&A Intermediary Workflow Activation** - Start opportunity-specific intermediary follow-up from the M&A tab using source contacts, templates, sends, and interaction history. (completed 2026-05-18)
 - [x] **Phase 8: Post-demo workflow MVP** - Convert founder demo feedback into a usable workflow for real opportunity creation, matching, and NDA/info memo follow-up. (completed locally 2026-05-22)
+- [x] **Phase 9: Repreneur Profile Detail IA Refactor** - Organize the repreneur profile into a tabbed staff command surface with visible qualification graphs and clearer workflow grouping. (completed locally 2026-06-18)
 
 ## Phase Details
 
@@ -220,6 +221,26 @@ Plans:
 
 **Verification:** Local production browser UAT passed on 2026-05-22; evidence is recorded in `.planning/phases/08-post-demo-workflow-mvp/08-UAT.md`. Production verification remains required after deployment.
 
+### Phase 9: Repreneur Profile Detail IA Refactor
+
+**Goal:** Staff can open a repreneur profile and quickly understand the person, current action, qualification, readiness, opportunities, engagement, and history without scanning one long mixed page.
+
+**Depends on:** Phase 8
+
+**Requirements:** REP-PROFILE-IA-01, REP-PROFILE-IA-02, REP-PROFILE-IA-03, REP-PROFILE-IA-04
+
+**Success Criteria** (what must be TRUE):
+1. Repreneur detail uses the existing small grey tab pattern from opportunity details.
+2. Overview is a dense command view with next action, relationship state, qualification snapshot, project summary, open opportunities, readiness progress, recent history, and documents/access status.
+3. Qualification visibly contains WHO/WHEN, Tier 1/Tier 2 context, leadership assessment, and the radar/pentagram-style graphs.
+4. Readiness, Opportunities, Engagement, and Timeline each hold their own workflow content without removing existing actions.
+5. Staff browser QA confirms tab switching, legacy questionnaire tab compatibility, and visible graphs.
+
+**Plans:** 1 plan
+
+Plans:
+- [x] 09-01: Refactor repreneur detail into tabbed command surface.
+
 ## Progress
 
 **Execution Order:**
@@ -235,4 +256,5 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8.
 | 5. Unified Find and Groups Work Surfaces | 4/4 | Complete | 2026-05-18 |
 | 6. M&A Source Directory and Intermediary Email Workflows | 4/4 | Complete | 2026-05-18 |
 | 7. M&A Intermediary Workflow Activation | 3/3 | Complete | 2026-05-18 |
-| 8. Post-demo workflow MVP | 0/5 | In progress | |
+| 8. Post-demo workflow MVP | 5/5 | Complete locally | 2026-05-22 |
+| 9. Repreneur Profile Detail IA Refactor | 1/1 | Complete locally | 2026-06-18 |

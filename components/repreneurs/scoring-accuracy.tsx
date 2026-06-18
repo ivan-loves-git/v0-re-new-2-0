@@ -62,21 +62,21 @@ export function ScoringAccuracy({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">WHO accuracy</Label>
           <ToggleGroup
             type="single"
             value={who}
             onValueChange={(v) => v && setWho(v)}
-            className="justify-start gap-1"
+            className="grid grid-cols-3 gap-1"
           >
             {SCORING_ACCURACY_OPTIONS.map((opt) => (
               <ToggleGroupItem
                 key={opt.value}
                 value={opt.value}
                 size="sm"
-                className="h-7 px-2 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                className="h-7 w-full px-1 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
               >
                 {opt.label}
               </ToggleGroupItem>
@@ -90,14 +90,14 @@ export function ScoringAccuracy({
             type="single"
             value={when}
             onValueChange={(v) => v && setWhen(v)}
-            className="justify-start gap-1"
+            className="grid grid-cols-3 gap-1"
           >
             {SCORING_ACCURACY_OPTIONS.map((opt) => (
               <ToggleGroupItem
                 key={opt.value}
                 value={opt.value}
                 size="sm"
-                className="h-7 px-2 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                className="h-7 w-full px-1 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
               >
                 {opt.label}
               </ToggleGroupItem>
