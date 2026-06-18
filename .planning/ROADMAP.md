@@ -15,7 +15,7 @@ June V2 should ship the first usable deal-flow operating layer: opportunity data
 - [x] **Phase 6: M&A Source Directory and Intermediary Email Workflows** - Add an editable source/intermediary directory and broker-facing email template foundations. (completed 2026-05-18)
 - [x] **Phase 7: M&A Intermediary Workflow Activation** - Start opportunity-specific intermediary follow-up from the M&A tab using source contacts, templates, sends, and interaction history. (completed 2026-05-18)
 - [x] **Phase 8: Post-demo workflow MVP** - Convert founder demo feedback into a usable workflow for real opportunity creation, matching, and NDA/info memo follow-up. (completed locally 2026-05-22)
-- [x] **Phase 9: Repreneur Profile Detail IA Refactor** - Organize the repreneur profile into a tabbed staff command surface with visible qualification graphs and clearer workflow grouping. (completed locally 2026-06-18)
+- [x] **Phase 9: Repreneur Profile Detail IA Refactor** - Organize the repreneur profile into a tabbed staff command surface with visible qualification graphs and clearer workflow grouping. (completed 2026-06-18)
 
 ## Phase Details
 
@@ -257,4 +257,4 @@ Phases execute in numeric order: 1 -> 1.1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8.
 | 6. M&A Source Directory and Intermediary Email Workflows | 4/4 | Complete | 2026-05-18 |
 | 7. M&A Intermediary Workflow Activation | 3/3 | Complete | 2026-05-18 |
 | 8. Post-demo workflow MVP | 5/5 | Complete locally | 2026-05-22 |
-| 9. Repreneur Profile Detail IA Refactor | 1/1 | Complete locally | 2026-06-18 |
+| 9. Repreneur Profile Detail IA Refactor | 1/1 | Complete | 2026-06-18 |

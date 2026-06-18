@@ -37,6 +37,11 @@ execution_mode: "GSD inline execution; gsd agents unavailable in this runtime"
   - Confirmed Qualification contains `Profile Overview` radar graphs.
   - Confirmed Overview contains next best action, open opportunities, and readiness progress.
   - Checked desktop and 390px-wide viewport behavior; mobile page width remains contained and the tab row is horizontally scrollable.
+- Production staff browser QA passed on `https://app.re-new.team` with `qa.staff@re-new.team`:
+  - Confirmed footer build `build 10.17cd739`.
+  - Confirmed all six tabs render on the populated `Ivan Demo Repreneur` profile.
+  - Confirmed `?tab=questionnaire` selects Qualification.
+  - Rechecked direct `?tab=qualification` and confirmed `Profile Overview` radar graphs are visible.
 
 ## Known Unrelated Baseline Issues
 
@@ -48,4 +53,4 @@ execution_mode: "GSD inline execution; gsd agents unavailable in this runtime"
 
 ## Outcome
 
-Phase 9 plan 09-01 is complete locally. Production verification is still required after the change is deployed.
+Phase 9 plan 09-01 is complete and production-verified.

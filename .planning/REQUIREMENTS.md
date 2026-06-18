@@ -168,7 +168,7 @@
 | MNA-WF-01, MNA-WF-02, MNA-WF-03 | Phase 7 | Complete |
 | MNA-WF-04 | Phase 7 | Complete |
 | POSTDEMO-01, POSTDEMO-02, POSTDEMO-03, POSTDEMO-04, POSTDEMO-05, POSTDEMO-06 | Phase 8 | Complete |
-| REP-PROFILE-IA-01, REP-PROFILE-IA-02, REP-PROFILE-IA-03, REP-PROFILE-IA-04 | Phase 9 | Complete locally |
+| REP-PROFILE-IA-01, REP-PROFILE-IA-02, REP-PROFILE-IA-03, REP-PROFILE-IA-04 | Phase 9 | Complete |
 
 **Coverage:**
 - June V2 requirements: 64 total
