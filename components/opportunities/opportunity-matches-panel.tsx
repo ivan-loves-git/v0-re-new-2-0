@@ -90,7 +90,7 @@ function readFormString(formData: FormData, key: string) {
 function validateSaveForm(formData: FormData, activeMatch: OpportunityMatch | null): FieldErrors {
   const errors: FieldErrors = {}
   const repreneurId = readFormString(formData, "repreneur_id")
-  const status = readFormString(formData, "status") || "draft"
+  const status = readFormString(formData, "status") || "proposed"
 
   if (!repreneurId) {
     errors.repreneur_id = "Select the repreneur this recommendation is for."
@@ -309,8 +309,8 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             Add recommendation
           </CardTitle>
           <CardDescription>
-            Store a match. The platform recommendation, score, and reasons are calculated automatically and stay visible
-            to staff and the repreneur portal once proposed; staff can add a human review.
+            Store a match. New assignments default to Proposed so they appear in the repreneur portal; Draft and
+            Shortlisted remain available for internal-only staging.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -385,11 +385,11 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                   Match status
                   <FieldInfo
                     label="Match status"
-                    description="Draft and Shortlisted stay internal. Proposed and Interested expose or record repreneur flow. Active pursuit is only created with Validate."
+                    description="Proposed appears in the repreneur portal. Draft and Shortlisted stay internal. Interested records the repreneur flow. Active pursuit is only created with Validate."
                     example="Use Shortlisted while staff is still discussing; use Proposed when it should reach the repreneur portal."
                   />
                 </Label>
-                <Select name="status" defaultValue="draft" onValueChange={() => clearFieldError("status")}>
+                <Select name="status" defaultValue="proposed" onValueChange={() => clearFieldError("status")}>
                   <SelectTrigger id="match_status" className="w-full" aria-invalid={Boolean(fieldErrors.status)}>
                     <SelectValue />
                   </SelectTrigger>
