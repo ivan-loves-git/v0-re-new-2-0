@@ -69,6 +69,7 @@ Progress: [██████████] 100%
 | 2026-05-22 | Phase 8 post-demo planning | Added Phase 8 requirements, PRD brief, codebase research, pattern map, five executable plans, and a plan check for founder-demo workflow feedback. |
 | 2026-05-22 | Dashboard navigation performance stabilization | Removed dashboard route remount patterns, enabled Cache Components, added cached dashboard snapshots, narrowed data loaders, added loading boundaries and index migrations, measured six authenticated routes, and saved the before/after chart. |
 | 2026-05-22 | Phase 8 post-demo workflow MVP | Fixed portal access reliability, added searchable repreneur selectors, enforced Excel-backed opportunity fields, cleaned confusing opportunity/source field names, added bidirectional matching visibility, added info memo pursuit stage, added NDA/info memo M&A request workflow, applied additive database migrations, and passed local production browser UAT. |
+| 2026-06-18 | Production QA persona matrix | Added owned QA accounts for staff, populated repreneur, empty repreneur, and unassigned/no-role access; production browser validation passed for login routing, empty portal state, populated portal list, and staff/repreneur boundary redirects. |
 
 ## Accumulated Context
 
