@@ -16,6 +16,27 @@ export async function GET(request: NextRequest) {
     console.error("Logout error:", error)
   }
 
-  // Redirect to login page after logout
-  return NextResponse.redirect(new URL("/auth/login", origin))
+  // Redirect to login page after logout and defensively expire auth cookies.
+  const response = NextResponse.redirect(new URL("/auth/login", origin))
+  const cookieNames = [
+    "better-auth.session_token",
+    "__Secure-better-auth.session_token",
+    "better-auth.session_data",
+    "__Secure-better-auth.session_data",
+    "better-auth.account_data",
+    "__Secure-better-auth.account_data",
+  ]
+
+  for (const name of cookieNames) {
+    response.cookies.set(name, "", {
+      expires: new Date(0),
+      httpOnly: true,
+      maxAge: 0,
+      path: "/",
+      sameSite: "lax",
+      secure: name.startsWith("__Secure-"),
+    })
+  }
+
+  return response
 }
