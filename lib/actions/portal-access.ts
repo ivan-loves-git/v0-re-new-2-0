@@ -57,7 +57,10 @@ function normalizeEmail(email: string | null | undefined) {
   return email?.trim().toLowerCase() || null
 }
 
-function fullName(firstName: string | null | undefined, lastName: string | null | undefined) {
+function fullName(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+) {
   return [firstName, lastName].filter(Boolean).join(" ").trim() || "Repreneur"
 }
 
@@ -75,13 +78,18 @@ async function getRepreneur(repreneurId: string) {
 
   if (error) throw new Error(error.message)
   if (!data) throw new Error("Repreneur not found")
-  return data as { id: string; first_name: string | null; last_name: string | null; email: string | null }
+  return data as {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    email: string | null
+  }
 }
 
 async function findAuthUserByEmail(email: string): Promise<AuthUserRow | null> {
   const { rows } = await getPool().query<AuthUserRow>(
     'SELECT id, email, name FROM "user" WHERE LOWER(email) = LOWER($1) LIMIT 1',
-    [email]
+    [email],
   )
   return rows[0] ?? null
 }
@@ -89,7 +97,7 @@ async function findAuthUserByEmail(email: string): Promise<AuthUserRow | null> {
 async function findAuthUserById(userId: string): Promise<AuthUserRow | null> {
   const { rows } = await getPool().query<AuthUserRow>(
     'SELECT id, email, name FROM "user" WHERE id = $1 LIMIT 1',
-    [userId]
+    [userId],
   )
   return rows[0] ?? null
 }
@@ -97,7 +105,7 @@ async function findAuthUserById(userId: string): Promise<AuthUserRow | null> {
 async function ensureCredentialAccount(userId: string) {
   const { rows } = await getPool().query<{ id: string }>(
     'SELECT id FROM "account" WHERE "userId" = $1 AND "providerId" = $2 LIMIT 1',
-    [userId, "credential"]
+    [userId, "credential"],
   )
   if (rows[0]) return true
 
@@ -106,17 +114,20 @@ async function ensureCredentialAccount(userId: string) {
   await getPool().query(
     `INSERT INTO "account" (id, "userId", "accountId", "providerId", password, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, 'credential', $4, NOW(), NOW())`,
-    [randomId(), userId, userId, passwordHash]
+    [randomId(), userId, userId, passwordHash],
   )
   return true
 }
 
-async function createAuthUser(email: string, name: string): Promise<AuthUserRow> {
+async function createAuthUser(
+  email: string,
+  name: string,
+): Promise<AuthUserRow> {
   const id = randomId()
   await getPool().query(
     `INSERT INTO "user" (id, email, name, "emailVerified", "createdAt", "updatedAt")
      VALUES ($1, $2, $3, TRUE, NOW(), NOW())`,
-    [id, email, name]
+    [id, email, name],
   )
   await ensureCredentialAccount(id)
   return { id, email, name }
@@ -126,7 +137,7 @@ async function getCredentialAccountState(userId: string | null) {
   if (!userId) return false
   const { rows } = await getPool().query<{ has_password: boolean }>(
     'SELECT password IS NOT NULL AS has_password FROM "account" WHERE "userId" = $1 AND "providerId" = $2 LIMIT 1',
-    [userId, "credential"]
+    [userId, "credential"],
   )
   return Boolean(rows[0]?.has_password)
 }
@@ -135,7 +146,7 @@ async function countActiveSessions(userIds: string[]) {
   if (userIds.length === 0) return 0
   const { rows } = await getPool().query<{ count: string }>(
     'SELECT COUNT(*)::text AS count FROM "session" WHERE "userId" = ANY($1::text[]) AND "expiresAt" > NOW()',
-    [userIds]
+    [userIds],
   )
   return Number(rows[0]?.count ?? 0)
 }
@@ -145,22 +156,30 @@ async function sendAccessEmail(email: string, failureMessage: string) {
   if (!result.success) throw new Error(failureMessage)
 }
 
-async function trySendAccessEmail(email: string): Promise<{ success: true } | { success: false; message: string }> {
+async function trySendAccessEmail(
+  email: string,
+): Promise<{ success: true } | { success: false; message: string }> {
   try {
     await auth.api.requestPasswordReset({
       body: {
         email,
-        redirectTo: "/auth/reset-password",
+        redirectTo: "/auth/reset-password?intent=portal",
       },
     })
     return { success: true }
   } catch (error) {
     console.error("Failed to send repreneur portal access email", error)
-    return { success: false, message: "Portal access is enabled, but the setup email could not be sent. Use Resend access link after checking email configuration." }
+    return {
+      success: false,
+      message:
+        "Portal access is enabled, but the setup email could not be sent. Use Resend access link after checking email configuration.",
+    }
   }
 }
 
-export async function getRepreneurPortalAccessStatus(repreneurId: string): Promise<RepreneurPortalAccessStatus> {
+export async function getRepreneurPortalAccessStatus(
+  repreneurId: string,
+): Promise<RepreneurPortalAccessStatus> {
   await requireStaffAccess()
 
   const repreneur = await getRepreneur(repreneurId)
@@ -169,28 +188,51 @@ export async function getRepreneurPortalAccessStatus(repreneurId: string): Promi
 
   const { data: roleRows, error: roleError } = await supabase
     .from("app_user_roles")
-    .select("id, user_id, email, role, repreneur_id, access_enabled_at, last_access_email_sent_at")
-    .or(`repreneur_id.eq.${repreneurId}${normalizedEmail ? `,email.ilike.${normalizedEmail}` : ""}`)
+    .select(
+      "id, user_id, email, role, repreneur_id, access_enabled_at, last_access_email_sent_at",
+    )
+    .or(
+      `repreneur_id.eq.${repreneurId}${normalizedEmail ? `,email.ilike.${normalizedEmail}` : ""}`,
+    )
     .limit(20)
 
-  if (roleError && roleError.code !== "42P01") throw new Error(roleError.message)
+  if (roleError && roleError.code !== "42P01")
+    throw new Error(roleError.message)
 
   const roles = (roleRows as PortalRoleRow[] | null) ?? []
   const role =
-    roles.find((row) => row.role === "repreneur" && row.repreneur_id === repreneurId) ??
-    roles.find((row) => row.role === "repreneur" && normalizeEmail(row.email) === normalizedEmail) ??
+    roles.find(
+      (row) => row.role === "repreneur" && row.repreneur_id === repreneurId,
+    ) ??
+    roles.find(
+      (row) =>
+        row.role === "repreneur" &&
+        normalizeEmail(row.email) === normalizedEmail,
+    ) ??
     null
 
-  const authUser =
-    role?.user_id ? await findAuthUserById(role.user_id) : normalizedEmail ? await findAuthUserByEmail(normalizedEmail) : null
-  const hasCredentialAccount = await getCredentialAccountState(authUser?.id ?? null)
-  const activeSessionCount = authUser?.id ? await countActiveSessions([authUser.id]) : 0
+  const authUser = role?.user_id
+    ? await findAuthUserById(role.user_id)
+    : normalizedEmail
+      ? await findAuthUserByEmail(normalizedEmail)
+      : null
+  const hasCredentialAccount = await getCredentialAccountState(
+    authUser?.id ?? null,
+  )
+  const activeSessionCount = authUser?.id
+    ? await countActiveSessions([authUser.id])
+    : 0
 
   return {
     repreneurId,
     repreneurEmail: normalizedEmail,
     repreneurName: fullName(repreneur.first_name, repreneur.last_name),
-    enabled: Boolean(role && authUser && hasCredentialAccount && role.repreneur_id === repreneurId),
+    enabled: Boolean(
+      role &&
+      authUser &&
+      hasCredentialAccount &&
+      role.repreneur_id === repreneurId,
+    ),
     hasAuthUser: Boolean(authUser),
     hasCredentialAccount,
     linkedUserId: authUser?.id ?? role?.user_id ?? null,
@@ -208,32 +250,46 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
 
   const repreneur = await getRepreneur(repreneurId)
   const email = normalizeEmail(repreneur.email)
-  if (!email) throw new Error("This repreneur needs an email before portal access can be enabled.")
+  if (!email)
+    throw new Error(
+      "This repreneur needs an email before portal access can be enabled.",
+    )
 
   const name = fullName(repreneur.first_name, repreneur.last_name)
   const existingUser = await findAuthUserByEmail(email)
-  const authUser = existingUser ?? await createAuthUser(email, name)
+  const authUser = existingUser ?? (await createAuthUser(email, name))
   await ensureCredentialAccount(authUser.id)
 
   const supabase = createAdminClient()
   const { data: existingRoles, error: roleLookupError } = await supabase
     .from("app_user_roles")
     .select("id, user_id, email, role, repreneur_id")
-    .or(`email.ilike.${email},user_id.eq.${authUser.id},repreneur_id.eq.${repreneurId}`)
+    .or(
+      `email.ilike.${email},user_id.eq.${authUser.id},repreneur_id.eq.${repreneurId}`,
+    )
     .limit(20)
 
-  if (roleLookupError && roleLookupError.code !== "42P01") throw new Error(roleLookupError.message)
+  if (roleLookupError && roleLookupError.code !== "42P01")
+    throw new Error(roleLookupError.message)
 
   const roles = (existingRoles as PortalRoleRow[] | null) ?? []
   const staffRole = roles.find((row) => row.role === "staff")
   if (staffRole) {
-    throw new Error("This email is already assigned to staff access. Staff emails cannot be enabled as repreneur portal users.")
+    throw new Error(
+      "This email is already assigned to staff access. Staff emails cannot be enabled as repreneur portal users.",
+    )
   }
 
   const existingRepreneurRole =
-    roles.find((row) => row.role === "repreneur" && normalizeEmail(row.email) === email) ??
-    roles.find((row) => row.role === "repreneur" && row.repreneur_id === repreneurId) ??
-    roles.find((row) => row.role === "repreneur" && row.user_id === authUser.id) ??
+    roles.find(
+      (row) => row.role === "repreneur" && normalizeEmail(row.email) === email,
+    ) ??
+    roles.find(
+      (row) => row.role === "repreneur" && row.repreneur_id === repreneurId,
+    ) ??
+    roles.find(
+      (row) => row.role === "repreneur" && row.user_id === authUser.id,
+    ) ??
     null
 
   const now = new Date().toISOString()
@@ -246,11 +302,16 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
   }
 
   const roleWrite = existingRepreneurRole
-    ? await supabase.from("app_user_roles").update(rolePayload).eq("id", existingRepreneurRole.id)
+    ? await supabase
+        .from("app_user_roles")
+        .update(rolePayload)
+        .eq("id", existingRepreneurRole.id)
     : await supabase.from("app_user_roles").insert(rolePayload)
 
   if (roleWrite.error) {
-    throw new Error(`Portal access could not be linked: ${roleWrite.error.message}`)
+    throw new Error(
+      `Portal access could not be linked: ${roleWrite.error.message}`,
+    )
   }
 
   const emailResult = await trySendAccessEmail(email)
@@ -269,7 +330,10 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
           .eq("user_id", authUser.id)
 
     if (timestampWrite.error) {
-      console.error("Failed to save repreneur portal access email timestamp", timestampWrite.error)
+      console.error(
+        "Failed to save repreneur portal access email timestamp",
+        timestampWrite.error,
+      )
     }
   }
 
@@ -282,7 +346,11 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
     return { success: true, emailSent: false, message: emailResult.message }
   }
 
-  return { success: true, emailSent: true, message: "Portal access enabled and setup link sent." }
+  return {
+    success: true,
+    emailSent: true,
+    message: "Portal access enabled and setup link sent.",
+  }
 }
 
 export async function resendRepreneurPortalAccessLink(repreneurId: string) {
@@ -290,12 +358,18 @@ export async function resendRepreneurPortalAccessLink(repreneurId: string) {
 
   const status = await getRepreneurPortalAccessStatus(repreneurId)
   const email = normalizeEmail(status.repreneurEmail)
-  if (!email) throw new Error("This repreneur needs an email before a portal access link can be sent.")
+  if (!email)
+    throw new Error(
+      "This repreneur needs an email before a portal access link can be sent.",
+    )
   if (!status.linkedUserId || !status.enabled) {
     throw new Error("Enable portal access before resending an access link.")
   }
 
-  await sendAccessEmail(email, "The access link could not be sent. Please retry in a moment.")
+  await sendAccessEmail(
+    email,
+    "The access link could not be sent. Please retry in a moment.",
+  )
 
   const supabase = createAdminClient()
   const { error } = await supabase
@@ -306,7 +380,9 @@ export async function resendRepreneurPortalAccessLink(repreneurId: string) {
     .eq("id", status.roleId)
 
   if (error) {
-    throw new Error(`The access email was sent, but the sent timestamp could not be saved: ${error.message}`)
+    throw new Error(
+      `The access email was sent, but the sent timestamp could not be saved: ${error.message}`,
+    )
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)
@@ -324,12 +400,17 @@ export async function disableRepreneurPortalAccess(repreneurId: string) {
     .from("app_user_roles")
     .delete()
     .eq("role", "repreneur")
-    .or(`repreneur_id.eq.${repreneurId}${status.repreneurEmail ? `,email.ilike.${status.repreneurEmail}` : ""}`)
+    .or(
+      `repreneur_id.eq.${repreneurId}${status.repreneurEmail ? `,email.ilike.${status.repreneurEmail}` : ""}`,
+    )
 
   if (error && error.code !== "42P01") throw new Error(error.message)
 
   if (userIds.length > 0) {
-    await getPool().query('DELETE FROM "session" WHERE "userId" = ANY($1::text[])', [userIds])
+    await getPool().query(
+      'DELETE FROM "session" WHERE "userId" = ANY($1::text[])',
+      [userIds],
+    )
   }
 
   revalidatePath(`/repreneurs/${repreneurId}`)

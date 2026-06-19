@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
-import { resend, FROM_EMAIL, FROM_NAME } from "@/lib/email/resend-client"
+import { resend } from "@/lib/email/resend-client"
 
 /**
  * Database connection pool singleton
@@ -20,6 +20,67 @@ function getPool(): Pool {
     })
   }
   return pool
+}
+
+function isPortalAccessSetupUrl(url: string) {
+  try {
+    const callbackURL = new URL(url).searchParams.get("callbackURL")
+    if (!callbackURL) return false
+    const callback = new URL(
+      callbackURL,
+      process.env.BETTER_AUTH_URL || "https://app.re-new.team",
+    )
+    return callback.searchParams.get("intent") === "portal"
+  } catch {
+    return false
+  }
+}
+
+function renderPortalAccessSetupEmail(
+  name: string | null | undefined,
+  url: string,
+) {
+  const displayName = name?.trim() || "Bonjour"
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937; line-height: 1.5;">
+      <h2 style="color: #111827; margin-bottom: 16px;">Bienvenue sur la plateforme Re-New</h2>
+      <p>Bonjour ${displayName},</p>
+      <p>L'equipe Re-New vous a ouvert un acces a la plateforme.</p>
+      <p>Pour finaliser votre acces, cliquez sur le bouton ci-dessous et creez votre mot de passe.</p>
+      <p style="margin: 28px 0;">
+        <a href="${url}" style="background: #111827; color: white; padding: 12px 22px; border-radius: 8px; text-decoration: none; display: inline-block; font-weight: 600;">
+          Creer mon mot de passe
+        </a>
+      </p>
+      <p style="color: #4b5563; font-size: 14px;">Ce lien expire dans 1 heure. Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet email.</p>
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+      <p style="color: #6b7280; font-size: 12px;">Re-New Platform</p>
+    </div>
+  `
+}
+
+function renderPasswordResetEmail(
+  name: string | null | undefined,
+  url: string,
+) {
+  const displayName = name?.trim() || "there"
+
+  return `
+    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
+      <h2 style="color: #3b82f6;">Reset Your Password</h2>
+      <p>Hi ${displayName},</p>
+      <p>We received a request to reset your password. Click the button below to choose a new password:</p>
+      <p style="margin: 24px 0;">
+        <a href="${url}" style="background: #3b82f6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">
+          Reset Password
+        </a>
+      </p>
+      <p style="color: #666; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+      <p style="color: #999; font-size: 12px;">Re-New Platform</p>
+    </div>
+  `
 }
 
 /**
@@ -42,25 +103,16 @@ export const auth = betterAuth({
       try {
         console.log("[auth] Sending password reset email to:", user.email)
         console.log("[auth] RESEND_API_KEY set:", !!process.env.RESEND_API_KEY)
+        const isPortalAccessSetup = isPortalAccessSetupUrl(url)
         const { data, error } = await resend.emails.send({
           from: "Re-New <notifications@news.re-new.team>",
           to: user.email,
-          subject: "Reset your password",
-          html: `
-            <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
-              <h2 style="color: #3b82f6;">Reset Your Password</h2>
-              <p>Hi ${user.name || "there"},</p>
-              <p>We received a request to reset your password. Click the button below to choose a new password:</p>
-              <p style="margin: 24px 0;">
-                <a href="${url}" style="background: #3b82f6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">
-                  Reset Password
-                </a>
-              </p>
-              <p style="color: #666; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-              <p style="color: #999; font-size: 12px;">Re-New Platform</p>
-            </div>
-          `,
+          subject: isPortalAccessSetup
+            ? "Bienvenue sur la plateforme Re-New"
+            : "Reset your password",
+          html: isPortalAccessSetup
+            ? renderPortalAccessSetupEmail(user.name, url)
+            : renderPasswordResetEmail(user.name, url),
         })
         if (error) {
           console.error("[auth] Resend error:", JSON.stringify(error))
@@ -111,8 +163,10 @@ export const auth = betterAuth({
     if (origin) {
       if (
         origin.endsWith(".vercel.app") ||
-        origin.endsWith(".v0.dev") || origin === "https://v0.dev" ||
-        origin.endsWith(".v0.app") || origin === "https://v0.app"
+        origin.endsWith(".v0.dev") ||
+        origin === "https://v0.dev" ||
+        origin.endsWith(".v0.app") ||
+        origin === "https://v0.app"
       ) {
         origins.push(origin)
       }

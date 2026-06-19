@@ -20,6 +20,7 @@ function ResetPasswordContent() {
   const [tokenError, setTokenError] = useState(false)
 
   const token = searchParams.get("token")
+  const isPortalSetup = searchParams.get("intent") === "portal"
 
   useEffect(() => {
     if (!token) {
@@ -70,7 +71,9 @@ function ResetPasswordContent() {
             <div className="size-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircle className="size-8 text-destructive" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">Invalid link</h1>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Invalid link
+            </h1>
             <p className="text-muted-foreground mb-6">
               This password reset link is invalid or has expired.
             </p>
@@ -95,28 +98,38 @@ function ResetPasswordContent() {
               <div className="size-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="size-8 text-success" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">Password reset</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-2">
+                {isPortalSetup ? "Mot de passe cree" : "Password reset"}
+              </h1>
               <p className="text-muted-foreground mb-6">
-                Your password has been successfully reset.
+                {isPortalSetup
+                  ? "Votre acces est pret. Vous pouvez maintenant vous connecter a la plateforme Re-New."
+                  : "Your password has been successfully reset."}
               </p>
               <Link
                 href="/auth/login"
                 className="inline-flex items-center justify-center w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md"
               >
-                Sign in
+                {isPortalSetup ? "Se connecter" : "Sign in"}
               </Link>
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-foreground mb-2">Set new password</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-2">
+                {isPortalSetup
+                  ? "Creer votre mot de passe"
+                  : "Set new password"}
+              </h1>
               <p className="text-muted-foreground mb-6">
-                Enter your new password below.
+                {isPortalSetup
+                  ? "Choisissez le mot de passe qui vous permettra d'acceder a la plateforme Re-New."
+                  : "Enter your new password below."}
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-foreground">
-                    New password
+                    {isPortalSetup ? "Mot de passe" : "New password"}
                   </Label>
                   <Input
                     id="password"
@@ -132,7 +145,9 @@ function ResetPasswordContent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-foreground">
-                    Confirm password
+                    {isPortalSetup
+                      ? "Confirmer le mot de passe"
+                      : "Confirm password"}
                   </Label>
                   <Input
                     id="confirmPassword"
@@ -157,7 +172,13 @@ function ResetPasswordContent() {
                   className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
                   disabled={loading}
                 >
-                  {loading ? "Resetting..." : "Reset password"}
+                  {loading
+                    ? isPortalSetup
+                      ? "Enregistrement..."
+                      : "Resetting..."
+                    : isPortalSetup
+                      ? "Creer mon mot de passe"
+                      : "Reset password"}
                 </Button>
               </form>
             </>
