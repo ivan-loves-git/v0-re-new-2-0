@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
 import { getWavySystemPrompt, getTemplateContext, BUILT_IN_TEMPLATES, getTemplateAudience } from "@/lib/prompts/wavy-system"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
@@ -23,10 +23,12 @@ interface GenerateRequest {
 }
 
 export async function POST(request: Request) {
-  // Check authentication
-  const user = await getCurrentUser()
-  if (!user) {
+  const access = await getCurrentUserAccess()
+  if (!access) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  if (access.role !== "staff") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   // Check API key

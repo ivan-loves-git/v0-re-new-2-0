@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { createServerClient } from "@/lib/supabase/server"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 
 // Security: Whitelist of allowed image extensions
@@ -26,10 +26,12 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    // Check authentication using Better Auth
-    const user = await getCurrentUser()
-    if (!user) {
+    const access = await getCurrentUserAccess()
+    if (!access) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (access.role !== "staff") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const formData = await request.formData()

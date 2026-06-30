@@ -1,7 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { calculateTier1Score } from "@/lib/utils/tier1-scoring"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
 
 const TEST_REPRENEURS = [
   {
@@ -408,12 +408,17 @@ const ACTIVITY_TEMPLATES: { type: "welcome_email" | "interview" | "offer_submitt
 export async function POST() {
   const supabase = await createServerClient()
 
-  // Get current user for created_by field using Better Auth
-  const user = await getCurrentUser()
+  const access = await getCurrentUserAccess()
 
-  if (!user) {
+  if (!access) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
+
+  if (access.role !== "staff") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
+  const createdBy = access.user.id
 
   try {
     // Calculate tier1 scores for all repreneurs
@@ -441,7 +446,7 @@ export async function POST() {
         tier1_score: scoreBreakdown.total,
         tier1_score_breakdown: scoreBreakdown,
         questionnaire_completed_at: new Date().toISOString(),
-        created_by: user.id,
+        created_by: createdBy,
       }
     })
 
@@ -493,7 +498,7 @@ export async function POST() {
         notesToInsert.push({
           repreneur_id: repreneur.id,
           content: NOTE_TEMPLATES[noteIndex],
-          created_by: user.id,
+          created_by: createdBy,
           created_at: createdAt.toISOString(),
         })
       }
@@ -522,7 +527,7 @@ export async function POST() {
         activity_type: welcomeActivity.type,
         notes: welcomeActivity.notes,
         duration_minutes: welcomeActivity.duration || null,
-        created_by: user.id,
+        created_by: createdBy,
         created_at: welcomeDate.toISOString(),
       })
       usedActivities.add(0) // Mark welcome email as used
@@ -546,7 +551,7 @@ export async function POST() {
           activity_type: activity.type,
           notes: activity.notes,
           duration_minutes: activity.duration || null,
-          created_by: user.id,
+          created_by: createdBy,
           created_at: createdAt.toISOString(),
         })
       }
@@ -579,7 +584,7 @@ export async function POST() {
           offered_at: now.toISOString(),
           accepted_at: now.toISOString(),
           expires_at: expiresAt.toISOString(),
-          created_by: user.id,
+          created_by: createdBy,
         })
       }
     }
@@ -594,7 +599,7 @@ export async function POST() {
           offer_id: offer.id,
           status: "offered",
           offered_at: new Date().toISOString(),
-          created_by: user.id,
+          created_by: createdBy,
         })
       }
     }

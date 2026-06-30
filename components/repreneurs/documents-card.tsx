@@ -4,9 +4,7 @@ import { useState, useRef } from "react"
 import { FileText, Upload, Trash2, Loader2, ExternalLink, FolderOpen } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { updateRepreneurField } from "@/lib/actions/repreneurs"
 
 interface DocumentsCardProps {
   repreneurId: string
@@ -56,8 +54,8 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
         throw new Error(error.error || "Upload failed")
       }
 
-      const { url: newUrl } = await response.json()
-      await updateRepreneurField(repreneurId, field, newUrl)
+      const { path } = await response.json()
+      const newUrl = path || null
       setCurrentUrl(newUrl)
       toast.success(`${label} uploaded successfully`)
     } catch (error) {
@@ -77,7 +75,11 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       const response = await fetch("/api/upload-cv", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repreneurId, cvUrl: currentUrl }),
+        body: JSON.stringify({
+          repreneurId,
+          cvUrl: currentUrl,
+          documentType: field === "ldc_url" ? "ldc" : "cv",
+        }),
       })
 
       if (!response.ok) {
@@ -85,7 +87,6 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
         throw new Error(error.error || "Delete failed")
       }
 
-      await updateRepreneurField(repreneurId, field, null)
       setCurrentUrl(null)
       toast.success(`${label} deleted`)
     } catch (error) {
@@ -126,7 +127,12 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
               variant="outline"
               size="sm"
               className="h-8 gap-1.5"
-              onClick={() => window.open(currentUrl, "_blank")}
+              onClick={() =>
+                window.open(
+                  `/api/repreneurs/${encodeURIComponent(repreneurId)}/documents/${field === "ldc_url" ? "ldc" : "cv"}`,
+                  "_blank",
+                )
+              }
             >
               <ExternalLink className="size-3.5" />
               <span className="hidden sm:inline">View</span>

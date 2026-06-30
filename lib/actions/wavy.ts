@@ -1,7 +1,7 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
-import { requireUser } from "@/lib/auth-server"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
 
 export interface WavyTemplate {
@@ -17,7 +17,7 @@ export interface WavyTemplate {
  * Get all custom Wavy templates
  */
 export async function getWavyTemplates(): Promise<WavyTemplate[]> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -41,7 +41,7 @@ export async function createWavyTemplate(params: {
   description: string
   channel: "email" | "whatsapp"
 }): Promise<{ success: boolean; error?: string; template?: WavyTemplate }> {
-  const user = await requireUser()
+  const access = await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -50,7 +50,7 @@ export async function createWavyTemplate(params: {
       name: params.name,
       description: params.description,
       channel: params.channel,
-      created_by: user.email,
+      created_by: access.user.email,
     })
     .select()
     .single()
@@ -70,7 +70,7 @@ export async function createWavyTemplate(params: {
 export async function deleteWavyTemplate(
   templateId: string
 ): Promise<{ success: boolean; error?: string }> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -102,7 +102,7 @@ export async function getRepreneursForWavy(): Promise<
     journeyStage: string | null
   }>
 > {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -144,7 +144,7 @@ export async function getWavySuggestions(): Promise<{
   }>
   totalCount: number
 }> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const staleDays = 14

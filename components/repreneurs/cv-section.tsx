@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { FileText, Upload, Trash2, Download, Loader2, ExternalLink } from "lucide-react"
+import { FileText, Upload, Trash2, Loader2, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { updateRepreneurField } from "@/lib/actions/repreneurs"
 
 interface CVSectionProps {
   repreneurId: string
@@ -53,9 +52,8 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
         throw new Error(error.error || "Upload failed")
       }
 
-      const { url } = await response.json()
-      await updateRepreneurField(repreneurId, "cv_url", url)
-      setCurrentCvUrl(url)
+      const { path } = await response.json()
+      setCurrentCvUrl(path || null)
       toast.success("CV uploaded successfully")
     } catch (error) {
       console.error("CV upload error:", error)
@@ -74,7 +72,7 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
       const response = await fetch("/api/upload-cv", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repreneurId, cvUrl: currentCvUrl }),
+        body: JSON.stringify({ repreneurId, cvUrl: currentCvUrl, documentType: "cv" }),
       })
 
       if (!response.ok) {
@@ -123,7 +121,12 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
           <Button
             variant="outline"
             className="h-10 gap-2 px-3"
-            onClick={() => window.open(currentCvUrl, "_blank")}
+            onClick={() =>
+              window.open(
+                `/api/repreneurs/${encodeURIComponent(repreneurId)}/documents/cv`,
+                "_blank",
+              )
+            }
           >
             <FileText className="size-4" />
             <span className="hidden sm:inline">View CV</span>

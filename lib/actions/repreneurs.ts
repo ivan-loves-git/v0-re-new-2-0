@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth-server"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import type { Repreneur_Insert, LifecycleStatus, PersonaType, Tier2Dimensions, MilestoneKey } from "@/lib/types/repreneur"
@@ -219,7 +220,22 @@ export async function updateRepreneurJourneyStage(id: string, stage: string | nu
   revalidateRepreneurDashboardTags()
 }
 
+const ALLOWED_REPRENEUR_FIELD_UPDATES = new Set([
+  "first_name",
+  "last_name",
+  "email",
+  "phone",
+  "sector_preferences",
+  "cv_url",
+  "ldc_url",
+])
+
 export async function updateRepreneurField(id: string, field: string, value: string | string[] | null) {
+  await requireStaffAccess()
+  if (!ALLOWED_REPRENEUR_FIELD_UPDATES.has(field)) {
+    throw new Error("Field is not editable from this action")
+  }
+
   const supabase = createAdminClient()
 
   console.log(`[updateRepreneurField] Updating ${field} for ${id}`)

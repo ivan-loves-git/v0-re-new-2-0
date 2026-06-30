@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
 import { resend, FROM_EMAIL, FROM_NAME } from "@/lib/email/resend-client"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -12,10 +12,12 @@ interface SendRequest {
 }
 
 export async function POST(request: Request) {
-  // Check authentication
-  const user = await getCurrentUser()
-  if (!user) {
+  const access = await getCurrentUserAccess()
+  if (!access) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  if (access.role !== "staff") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
   </style>
 </head>
 <body>
-  ${emailBody.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('\n  ')}
+  ${emailBody.split('\n\n').map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('\n  ')}
 </body>
 </html>
 `
@@ -103,7 +105,7 @@ export async function POST(request: Request) {
           to,
           subject,
           resend_id: data?.id,
-          sent_by: user.email,
+          sent_by: access.user.email,
         },
       })
 
@@ -111,7 +113,7 @@ export async function POST(request: Request) {
       await supabase.from("notes").insert({
         repreneur_id: repreneurId,
         content: `[Email envoyé via Wavy]\n\nSujet: ${subject}\n\n${emailBody.substring(0, 500)}${emailBody.length > 500 ? '...' : ''}`,
-        created_by: user.email,
+        created_by: access.user.email,
         note_type: "email",
       })
     }
@@ -127,4 +129,13 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
 }

@@ -1,6 +1,6 @@
 import { connection, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
 
 /**
  * GET /api/wavy/repreneurs
@@ -10,14 +10,16 @@ export async function GET() {
   await connection()
 
   try {
-    // Check authentication
-    const user = await getCurrentUser()
-    if (!user) {
+    const access = await getCurrentUserAccess()
+    if (!access) {
       console.log("[wavy/repreneurs] No authenticated user")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    if (access.role !== "staff") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
 
-    console.log("[wavy/repreneurs] Authenticated user:", user.email)
+    console.log("[wavy/repreneurs] Authenticated user:", access.user.email)
 
     const supabase = createAdminClient()
 

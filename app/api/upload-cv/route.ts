@@ -1,94 +1,139 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase/server"
+import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { updateRepreneurField } from "@/lib/actions/repreneurs"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
+import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 
-// Allowed document file types
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]
+const DOCUMENT_FIELDS = {
+  cv: "cv_url",
+  ldc: "ldc_url",
+} as const
 
-const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"]
+type DocumentType = keyof typeof DOCUMENT_FIELDS
 
-// Document types we support
-type DocumentType = "cv" | "ldc"
+const MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+const MAGIC_BYTES: Record<string, number[]> = {
+  pdf: [0x25, 0x50, 0x44, 0x46],
+  doc: [0xd0, 0xcf, 0x11, 0xe0],
+  docx: [0x50, 0x4b, 0x03, 0x04],
+}
+
+function normalizeDocumentType(value: FormDataEntryValue | null): DocumentType {
+  return value === "ldc" ? "ldc" : "cv"
+}
+
+function safeStorageOwnerId(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 96)
+}
+
+function verifyFileContent(bytes: Uint8Array, extension: string) {
+  const expected = MAGIC_BYTES[extension]
+  return Boolean(expected && expected.every((byte, index) => bytes[index] === byte))
+}
+
+function extractCvsStoragePath(value: string) {
+  if (value.startsWith("cvs/")) return value
+
+  try {
+    const url = new URL(value)
+    const marker = "/cvs/"
+    const markerIndex = url.pathname.indexOf(marker)
+    if (markerIndex >= 0) {
+      return `cvs/${decodeURIComponent(url.pathname.slice(markerIndex + marker.length))}`
+    }
+  } catch {
+    // Fall through to invalid path response.
+  }
+
+  return null
+}
+
+function documentDownloadUrl(repreneurId: string, documentType: DocumentType) {
+  return `/api/repreneurs/${encodeURIComponent(repreneurId)}/documents/${documentType}`
+}
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const file = formData.get("file") as File
-    const repreneurId = formData.get("repreneurId") as string
-    const documentType = (formData.get("documentType") as DocumentType) || "cv"
+    const file = formData.get("file") as File | null
+    const repreneurId = formData.get("repreneurId") as string | null
+    const documentType = normalizeDocumentType(formData.get("documentType"))
 
     if (!file) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 })
     }
 
-    // Generate temp ID for public intake (when repreneurId not provided)
-    const actualRepreneurId = repreneurId || `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-    // For authenticated users, use their client; for public intake, use admin
-    const supabase = await createServerClient()
-    const user = await getCurrentUser()
-
-    // Use admin client for storage operations (needed for public intake form)
-    const adminClient = createAdminClient()
-
-    // Validate repreneurId exists only when explicitly provided (for authenticated uploads)
-    if (repreneurId && !user) {
-      const { data: repreneur } = await adminClient
-        .from("repreneurs")
-        .select("id")
-        .eq("id", repreneurId)
-        .single()
-
-      if (!repreneur) {
-        return NextResponse.json({ error: "Invalid repreneur" }, { status: 400 })
-      }
+    if (repreneurId) {
+      const access = await getCurrentUserAccess()
+      if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Validate file type
     const fileExt = file.name.split(".").pop()?.toLowerCase()
-    if (!ALLOWED_TYPES.includes(file.type) && (!fileExt || !ALLOWED_EXTENSIONS.includes(fileExt))) {
+    if (!fileExt || !(fileExt in MIME_BY_EXTENSION)) {
       return NextResponse.json({ error: "File must be a PDF or Word document" }, { status: 400 })
     }
 
-    // Validate file size (max 10MB for documents)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 })
     }
 
-    // Generate unique filename with document type prefix
-    const typePrefix = documentType === "ldc" ? "ldc" : "cv"
-    const fileName = `${actualRepreneurId}-${typePrefix}-${Date.now()}.${fileExt}`
-    const filePath = `cvs/${fileName}`
+    const headerBytes = new Uint8Array(await file.slice(0, 8).arrayBuffer())
+    if (!verifyFileContent(headerBytes, fileExt)) {
+      return NextResponse.json(
+        { error: "File content does not match the file extension" },
+        { status: 400 },
+      )
+    }
 
-    // Convert file to buffer
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const ownerId = safeStorageOwnerId(
+      repreneurId || `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    )
+    const filePath = `cvs/${ownerId}-${documentType}-${Date.now()}.${fileExt}`
 
-    // Upload to Supabase Storage using admin client
-    const { error } = await adminClient.storage
+    const adminClient = createAdminClient()
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    const { error: uploadError } = await adminClient.storage
       .from("cvs")
       .upload(filePath, buffer, {
-        contentType: file.type,
+        contentType: MIME_BY_EXTENSION[fileExt],
         upsert: true,
       })
 
-    if (error) {
-      console.error("Storage upload error:", error)
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError)
       return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = adminClient.storage
-      .from("cvs")
-      .getPublicUrl(filePath)
+    if (repreneurId) {
+      const field = DOCUMENT_FIELDS[documentType]
+      const { error: updateError } = await adminClient
+        .from("repreneurs")
+        .update({ [field]: filePath })
+        .eq("id", repreneurId)
 
-    return NextResponse.json({ url: publicUrl })
+      if (updateError) {
+        console.error("Document profile update error:", updateError)
+        return NextResponse.json({ error: "Failed to attach document" }, { status: 500 })
+      }
+
+      revalidatePath("/repreneurs")
+      revalidatePath(`/repreneurs/${repreneurId}`)
+      revalidateRepreneurDashboardTags()
+
+      return NextResponse.json({
+        path: filePath,
+        url: documentDownloadUrl(repreneurId, documentType),
+      })
+    }
+
+    return NextResponse.json({ path: filePath, url: filePath })
   } catch (error) {
     console.error("Upload error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -97,29 +142,41 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const access = await getCurrentUserAccess()
+    if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-    // Check authentication using Better Auth
-    const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { repreneurId, cvUrl } = await request.json()
+    const { repreneurId, cvUrl, documentType: requestedType } = await request.json()
+    const documentType: DocumentType = requestedType === "ldc" ? "ldc" : "cv"
+    const field = DOCUMENT_FIELDS[documentType]
 
     if (!repreneurId || !cvUrl) {
-      return NextResponse.json({ error: "Missing repreneurId or cvUrl" }, { status: 400 })
+      return NextResponse.json({ error: "Missing repreneurId or document URL" }, { status: 400 })
     }
 
-    // Extract file path from URL
-    const urlParts = cvUrl.split("/cvs/")
-    if (urlParts.length < 2) {
-      return NextResponse.json({ error: "Invalid CV URL" }, { status: 400 })
-    }
-    const filePath = `cvs/${urlParts[1]}`
+    const adminClient = createAdminClient()
+    const { data: repreneur, error: fetchError } = await adminClient
+      .from("repreneurs")
+      .select("cv_url, ldc_url")
+      .eq("id", repreneurId)
+      .maybeSingle()
 
-    // Delete from Supabase Storage
-    const { error: deleteError } = await supabase.storage
+    if (fetchError) {
+      console.error("Document owner fetch error:", fetchError)
+      return NextResponse.json({ error: "Failed to load document owner" }, { status: 500 })
+    }
+
+    const storedValue = repreneur?.[field as keyof typeof repreneur]
+    if (!storedValue || storedValue !== cvUrl) {
+      return NextResponse.json({ error: "Document does not belong to this repreneur" }, { status: 403 })
+    }
+
+    const filePath = extractCvsStoragePath(storedValue)
+    if (!filePath) {
+      return NextResponse.json({ error: "Invalid document path" }, { status: 400 })
+    }
+
+    const { error: deleteError } = await adminClient.storage
       .from("cvs")
       .remove([filePath])
 
@@ -128,8 +185,19 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Failed to delete file" }, { status: 500 })
     }
 
-    // Clear cv_url in database
-    await updateRepreneurField(repreneurId, "cv_url", null)
+    const { error: updateError } = await adminClient
+      .from("repreneurs")
+      .update({ [field]: null })
+      .eq("id", repreneurId)
+
+    if (updateError) {
+      console.error("Document profile clear error:", updateError)
+      return NextResponse.json({ error: "Failed to clear document" }, { status: 500 })
+    }
+
+    revalidatePath("/repreneurs")
+    revalidatePath(`/repreneurs/${repreneurId}`)
+    revalidateRepreneurDashboardTags()
 
     return NextResponse.json({ success: true })
   } catch (error) {

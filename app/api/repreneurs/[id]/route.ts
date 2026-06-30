@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
 
 export async function GET(
   request: Request,
@@ -9,10 +9,12 @@ export async function GET(
   const { id } = await params
   const supabase = createAdminClient()
 
-  // Check authentication using Better Auth
-  const user = await getCurrentUser()
-  if (!user) {
+  const access = await getCurrentUserAccess()
+  if (!access) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  if (access.role !== "staff") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const { data, error } = await supabase
