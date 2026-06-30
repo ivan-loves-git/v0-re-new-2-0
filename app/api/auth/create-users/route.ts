@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { env } from "@/lib/env"
 
 /**
  * API route to create initial users in Better Auth
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
   try {
     // Security: Check for admin secret in production
     const adminSecret = request.headers.get("x-admin-secret")
-    const expectedSecret = process.env.BETTER_AUTH_SECRET
+    const expectedSecret = env.BETTER_AUTH_SECRET
 
     if (process.env.NODE_ENV === "production" && adminSecret !== expectedSecret) {
       return NextResponse.json(

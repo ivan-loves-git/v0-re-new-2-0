@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { env } from "@/lib/env"
 
 export interface RepreneurPortalAccessStatus {
   repreneurId: string
@@ -45,7 +46,7 @@ let pool: Pool | null = null
 function getPool() {
   if (!pool) {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       max: 3,
     })

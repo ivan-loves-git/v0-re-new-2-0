@@ -15,7 +15,7 @@ interface RecentRepreneur {
   last_name: string
   email: string
   lifecycle_status: LifecycleStatus
-  journey_stage: JourneyStage | null
+  journey_stage?: JourneyStage | null
   created_at: string
   tier1_score?: number | null
   who_score?: number | null

@@ -18,14 +18,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Check API key
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json(
-      { error: "Email service not configured" },
-      { status: 500 }
-    )
-  }
-
   try {
     const body: SendRequest = await request.json()
     const { to, subject, body: emailBody, repreneurId, testRecipient } = body

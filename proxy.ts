@@ -37,6 +37,7 @@ export async function proxy(request: NextRequest) {
     "/routing",
     "/account",
     "/settings",
+    "/scrapbook",
     "/tasks",
   ]
   const isProtectedPath = protectedPaths.some((path) =>

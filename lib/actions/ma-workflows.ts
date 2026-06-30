@@ -191,10 +191,6 @@ async function sendIntermediaryEmail({
   subject: string
   body: string
 }): Promise<{ success: boolean; error?: string }> {
-  if (!process.env.RESEND_API_KEY) {
-    return { success: false, error: "Email service not configured" }
-  }
-
   const sendPromise = resend.emails.send({
     from: `${FROM_NAME} <${FROM_EMAIL}>`,
     to: [to],

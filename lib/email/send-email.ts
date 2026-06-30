@@ -154,12 +154,6 @@ async function updateEmailLogStatus(
 export async function sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
   const { to, subject, repreneurId, templateKey, react, metadata = {}, bcc } = params
 
-  // Check API key at runtime
-  if (!process.env.RESEND_API_KEY) {
-    console.error("RESEND_API_KEY is not set. Email sending disabled.")
-    return { success: false, error: "Email service not configured" }
-  }
-
   try {
     // 1. Check if template is active
     const templateActive = await isTemplateActive(templateKey)
@@ -248,11 +242,6 @@ export async function sendEmailDirect(params: {
   react: ReactElement
 }): Promise<{ success: boolean; error?: string }> {
   const { to, subject, react } = params
-
-  if (!process.env.RESEND_API_KEY) {
-    console.error("RESEND_API_KEY is not set. Email sending disabled.")
-    return { success: false, error: "Email service not configured" }
-  }
 
   try {
     const { error } = await resend.emails.send({

@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
 import { resend } from "@/lib/email/resend-client"
+import { env } from "@/lib/env"
 
 /**
  * Database connection pool singleton
@@ -12,7 +13,7 @@ let pool: Pool | null = null
 function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: env.DATABASE_URL,
       ssl: {
         rejectUnauthorized: false, // Required for Supabase
       },
@@ -28,7 +29,7 @@ function isPortalAccessSetupUrl(url: string) {
     if (!callbackURL) return false
     const callback = new URL(
       callbackURL,
-      process.env.BETTER_AUTH_URL || "https://app.re-new.team",
+      env.BETTER_AUTH_URL,
     )
     return callback.searchParams.get("intent") === "portal"
   } catch {
@@ -102,7 +103,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       try {
         console.log("[auth] Sending password reset email to:", user.email)
-        console.log("[auth] RESEND_API_KEY set:", !!process.env.RESEND_API_KEY)
+        console.log("[auth] RESEND_API_KEY set:", !!env.RESEND_API_KEY)
         const isPortalAccessSetup = isPortalAccessSetupUrl(url)
         const { data, error } = await resend.emails.send({
           from: "Re-New <notifications@news.re-new.team>",
@@ -155,7 +156,7 @@ export const auth = betterAuth({
   // Better Auth 1.4.14: function receives Request (can be undefined), must return string[]
   trustedOrigins: async (request: Request | undefined) => {
     const origins = [
-      process.env.BETTER_AUTH_URL || "http://localhost:3000",
+      env.BETTER_AUTH_URL,
       "https://app.re-new.team",
     ]
     // Dynamically allow Vercel preview deployments and V0 app builder

@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { CopyButton } from "../c/[slug]/copy-button"
 import { connection } from "next/server"
+import { requireAuthenticatedAccess } from "@/lib/access-control"
 
 
 export default function ScrapbookPage() {
@@ -14,6 +15,7 @@ export default function ScrapbookPage() {
 
 async function ScrapbookContent() {
   await connection()
+  await requireAuthenticatedAccess()
 
   const supabase = createAdminClient()
 

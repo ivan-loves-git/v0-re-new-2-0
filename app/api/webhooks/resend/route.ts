@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { env } from "@/lib/env"
 import crypto from "crypto"
 
 // Resend webhook event types
@@ -44,7 +45,7 @@ function verifyWebhookSignature(
 
 export async function POST(request: Request) {
   try {
-    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET
+    const webhookSecret = env.RESEND_WEBHOOK_SECRET
 
     // Signature verification is mandatory
     if (!webhookSecret) {

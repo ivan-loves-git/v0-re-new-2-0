@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 async function RoutingGate() {
   await connection()
   redirect(await getPostLoginDestination())
+  return null
 }
 
 export default function RoutingPage() {

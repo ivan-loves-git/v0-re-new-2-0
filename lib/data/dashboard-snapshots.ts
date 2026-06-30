@@ -64,6 +64,7 @@ const REPRENEUR_LIST_FIELDS = `
   ms_closing,
   ms_plan_100_days,
   ms_plan_3_years,
+  created_by,
   repreneur_offers(
     status,
     offer:offers(name)
@@ -82,7 +83,8 @@ const REPRENEUR_DASHBOARD_FIELDS = `
   tier1_score,
   tier1_score_breakdown,
   who_score,
-  when_score
+  when_score,
+  created_by
 `
 
 const OPPORTUNITY_LIST_FIELDS = `
@@ -152,12 +154,23 @@ export interface RepreneurDashboardSnapshot {
       last_name: string | null
     } | null
   }>
-  chartRepreneurs: Array<{ id: string; created_at: string }>
+  chartRepreneurs: Array<{ id: string; created_at: string; lifecycle_status?: string | null }>
   chartActivities: Array<{ id: string; created_at: string }>
 }
 
 interface RepreneurListQueryRow extends Repreneur {
-  repreneur_offers?: Array<{ offer?: { name?: string | null } | null }> | null
+  repreneur_offers?: Array<{
+    offer?: { name?: string | null } | Array<{ name?: string | null }> | null
+  }> | null
+}
+
+type DashboardActivity = RepreneurDashboardSnapshot["activities"][number]
+
+type DashboardActivityQueryRow = Omit<DashboardActivity, "repreneurs"> & {
+  repreneurs?:
+    | DashboardActivity["repreneurs"]
+    | DashboardActivity["repreneurs"][]
+    | null
 }
 
 type OpportunityQueryRow = Omit<OpportunityWithSource, "source"> & {
@@ -218,8 +231,8 @@ function normalizeRepreneurListRows(
       ...repreneur,
       offer_names:
         repreneur.repreneur_offers
-          ?.map((offerRow) => offerRow.offer?.name)
-          .filter(Boolean) ?? [],
+          ?.map((offerRow) => getOfferName(offerRow.offer))
+          .filter((name): name is string => Boolean(name)) ?? [],
       assessment_decision: assessment?.decision ?? null,
       assessment_pending: assessment ? !assessment.completed : false,
       has_scheduled_interview: interviewRepreneurIds.has(repreneur.id),
@@ -243,6 +256,30 @@ function normalizeWorkSurfaceMatch(
     ...row,
     repreneur: repreneur ?? null,
   } as OpportunityWorkSurfaceMatch
+}
+
+function normalizeDashboardActivity(
+  row: DashboardActivityQueryRow,
+): DashboardActivity {
+  const repreneur = Array.isArray(row.repreneurs)
+    ? row.repreneurs[0]
+    : row.repreneurs
+
+  return {
+    ...row,
+    repreneurs: repreneur ?? null,
+  }
+}
+
+function getOfferName(
+  offer:
+    | { name?: string | null }
+    | Array<{ name?: string | null }>
+    | null
+    | undefined,
+) {
+  const offerRow = Array.isArray(offer) ? offer[0] : offer
+  return offerRow?.name
 }
 
 async function getCachedRepreneurListSnapshot() {
@@ -319,7 +356,7 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
       Promise.all([
         supabase
           .from("repreneurs")
-          .select("id, created_at")
+          .select("id, created_at, lifecycle_status")
           .order("created_at", { ascending: false }),
         supabase
           .from("activities")
@@ -343,7 +380,8 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
   return {
     repreneurs: (repreneursResult.data ?? []) as Repreneur[],
     assessments: assessmentsResult.data ?? [],
-    activities: (activitiesResult.data ?? []) as RepreneurDashboardSnapshot["activities"],
+    activities: ((activitiesResult.data ?? []) as DashboardActivityQueryRow[])
+      .map(normalizeDashboardActivity),
     chartRepreneurs: chartRepreneursResult.data ?? [],
     chartActivities: chartActivitiesResult.data ?? [],
   }

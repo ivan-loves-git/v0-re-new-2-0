@@ -1,8 +1,13 @@
 import { connection, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getCurrentUser } from "@/lib/auth-server"
 
 export async function GET() {
   await connection()
+  const user = await getCurrentUser()
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
 
   const supabase = createAdminClient()
 

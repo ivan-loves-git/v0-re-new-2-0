@@ -5,34 +5,31 @@ import { getTemplateSubject, getTemplateBody } from "@/lib/actions/emails"
 import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
+import { env } from "@/lib/env"
 
-// Vercel Cron: runs every hour
-// cron: 0 * * * *
+export const maxDuration = 60
+
+// Vercel Cron: runs daily via vercel.json
+// cron: 0 9 * * *
 
 const ABANDONMENT_HOURS = 24 // Send reminder after 24 hours
 const MAX_REMINDERS_PER_REPRENEUR = 2
 
 // Bertrand is BCC'd on every interview reminder so he has a paper trail.
 // Override with CC_ON_INTERVIEW_REMINDER env var if the address changes.
-const INTERVIEW_REMINDER_BCC = process.env.CC_ON_INTERVIEW_REMINDER || "bertrand.galas@edu.escp.eu"
+const INTERVIEW_REMINDER_BCC = env.CC_ON_INTERVIEW_REMINDER || "bertrand.galas@edu.escp.eu"
 
 export async function GET(request: Request) {
   // Verify the request is from Vercel Cron.
-  // Primary: bearer token matching CRON_SECRET (Vercel auto-injects this when
-  // the env var is set on the project). Fallback: Vercel auto-stamps every
-  // cron request with a "vercel-cron/1.0" user-agent — accept that too so
-  // the cron still runs if CRON_SECRET is missing on prod (otherwise the job
-  // silently fails for days).
+  // Vercel sends Authorization: Bearer $CRON_SECRET when CRON_SECRET is set.
   const authHeader = request.headers.get("authorization")
-  const userAgent = request.headers.get("user-agent") || ""
-  const secret = process.env.CRON_SECRET
+  const secret = env.CRON_SECRET
   const bearerOk = !!secret && authHeader === `Bearer ${secret}`
-  const vercelCronOk = userAgent.toLowerCase().includes("vercel-cron")
-  if (!bearerOk && !vercelCronOk) {
+  if (!bearerOk) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  console.log(`[cron/abandoned-forms] firing — auth=${bearerOk ? "bearer" : "vercel-cron"} ua="${userAgent}"`)
+  console.log("[cron/abandoned-forms] firing")
 
   try {
     const supabase = createAdminClient()

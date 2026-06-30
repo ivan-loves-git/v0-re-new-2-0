@@ -3,10 +3,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { getCurrentUser } from "@/lib/auth-server"
 import { getWavySystemPrompt, getTemplateContext, BUILT_IN_TEMPLATES, getTemplateAudience } from "@/lib/prompts/wavy-system"
 import { createAdminClient } from "@/lib/supabase/admin"
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+import { env } from "@/lib/env"
 
 interface GenerateRequest {
   channel: "email" | "whatsapp"
@@ -33,12 +30,16 @@ export async function POST(request: Request) {
   }
 
   // Check API key
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "Anthropic API key not configured" },
       { status: 500 }
     )
   }
+
+  const anthropic = new Anthropic({
+    apiKey: env.ANTHROPIC_API_KEY,
+  })
 
   try {
     const requestBody: GenerateRequest = await request.json()
