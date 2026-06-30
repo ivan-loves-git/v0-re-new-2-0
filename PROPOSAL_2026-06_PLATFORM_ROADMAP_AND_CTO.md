@@ -1,37 +1,31 @@
 # Re-New Platform: State, Roadmap, and a Proposal
 
-**From Ivan, for Bertrand. June 2026. One page, then we talk.**
+
 
 ## 1. WAVE is already the operating system of Re-New
 
-The arc so far: a website, then a campaign tool, then the relationship system Re-New runs on since the January switch. Roughly 3,000 historical records migrated into one source of truth. The first clean operating month counted 56 new repreneurs with zero manual reconciliation. Product-market fit went from a feeling to a measured number, because the funnel is instrumented end to end and the KPIs feed your weekly steering.
+The arc so far is simple: a website, then a campaign tool, then the relationship system Re-New has run on since the January switch. Around 3,000 records now sit in one source of truth, the first clean month counted 56 new repreneurs with zero manual reconciliation, and product-market fit stopped being a feeling and became a number we can read. The direction is already mapped: the ICP closed with a clear pipeline for WAVE that keeps human judgement at the centre.
 
-The point: the product direction is mapped, not improvised. The ICP closed with a clear pipeline for WAVE: coordinate intermediary pilots, keep candidate readiness fresh over time, and scale matching decisions while keeping human judgement central. That mapping is the strategic asset on the table. The bug list from your testing round is routine hardening, already in triage. It is not the story.
+The foundation is there, and it points somewhere obvious. The entrepreneur side moved into the platform in January; the same move now has to happen for the M&A firms and the opportunities. The numbers say it better than I can: 17 paying customers, 120 live opportunities, 400 intermediaries, a 120 by 400 matrix still matched by hand, the engine living in your head. It works, but it does not scale, and it is hard to show an investor a process nobody else can see.
 
-## 2. The next build: the opportunities side
+What I see from here is less a roadmap to approve than a path already in front of us. Opportunities would enter the platform once and structured instead of by email; the 400 intermediaries would get their own way in, so supply grows without you in the middle; NDA and deal flow would live inside WAVE, GDPR by design. Matching would close the loop with AI that records your judgement rather than replacing it, and the moment a match becomes a deal would be visible, because a visible deal is a billable one. Remember Helsinki: you matched it from memory, three days early, for one client; WAVE makes that same move across 120 opportunities and every client, every day. Put together, that is the difference between a service the team runs and a platform the market leans on, and it compounds. I am not writing this to be handed tickets one at a time; I see it clearly, and I would like to own it.
 
-You said it yourself: the entrepreneur side moved into the platform in January, and the same move now has to happen for M&A firms and opportunities. Your numbers make the case better than I can: 17 paying customers, 120 live opportunities, 400 intermediaries. That is a 120 by 400 matching matrix. Today the matching engine is your head. It does not scale, it does not sleep, and it cannot be shown to an investor.
+## 2. The resourcing question
 
-The build: opportunity ingestion, intermediary access, NDA flow inside the platform, and AI-assisted matching in a closed loop, GDPR by design. Not to replace your judgement: to encode it, so it becomes faster, documented, and independent of your calendar. This is not a feature. It is the asset that makes Re-New fundable.
+A junior developer at 2,200 euro per month gives you hands without direction. They need days to learn the codebase and weeks to really own the business dynamics. Likely you’ll have to play the CTO above them to decide what to build.
 
-## 3. The resourcing question
+I already built the junior: the Notion intake you are filling right now feeds an AI pipeline that ingests requests, executes, and reports back. What you need is the person who designs and runs that system, and who wrote every line of the platform.
 
-A junior developer at 2,200 euro per month gives you hands without direction. They need months to learn the codebase and a CTO above them to decide what to build. You would pay for output and still own none of the thinking.
+## 3. What I propose
 
-Here is the alternative. I already built the junior: the Notion intake you are filling right now feeds an AI pipeline that ingests requests, executes, and reports back. What you need is not another pair of hands. It is the person who designs and runs that system, and who wrote every line of the platform.
+Two documents, one structure, within the budget you had:
 
-## 4. What I propose
+- **Services.** Re-New contracts PUSHAPP S.R.L. for product and platform development: 1,500 euro per month, roughly 10 hours per week, monthly invoicing, 30 days notice either way. Around 300 to 500 euro per month of the remaining budget goes to AI tooling, which is the dev. Total: 1,800 to 2,000 euro per month, inside the 2,200 you had in budget. Everything built under this contract is assigned to Re-New as each invoice is paid.
+- **Upside.** My rate for this role would be 3,000 euro per month: I bill half and invest the other half in Re-New, for up to 8 percent equity on today's fully diluted capital, vesting monthly from July to December if we pass the September 30 check-in. It converts only if a qualified financing happens: at least 100,000 euro of new outside money, friends-and-family top-ups excluded. If the raise comes within 18 months after the term, the vested part still converts; if it never comes, it lapses and we shake hands as friends.
+- **Term.** July 1 to December 31, with a no-fault check-in on September 30. If either of us is not happy at that point, we stop cleanly: Re-New keeps the work already paid for, I keep the invoices already paid, and the equity side lapses entirely. No drama, no debt, no awkward tail. If we both decide to continue after September 30, the equity keeps vesting monthly until December 31 under the same qualified-financing condition.
 
-Two documents, one structure, within the budget you already allocated:
+Why this shape: you pay less cash than the junior would cost, and the rest of my compensation exists only if we made Re-New fundable together.
 
-- **Services.** Re-New contracts PUSHAPP S.R.L. for product and platform development: 1,500 euro per month, roughly 10 hours per week, monthly invoicing, 30 days notice either way. Around 300 to 500 euro per month of the remaining budget goes to AI tooling, which is the dev. Total: 1,800 to 2,000 euro per month, inside the 2,200 you had in budget.
-- **Upside.** I take the fractional CTO role and invest the other half of my rate in Re-New: 10 percent equity, measured on today's fully diluted capital, vesting monthly from July to December, converting only if a qualified financing happens. Qualified financing means new outside money of at least 100,000 euro in a single round; friends-and-family top-ups do not trigger conversion. If Re-New raises within 18 months after the term ends, the vested part still converts. If no raise comes, it lapses and we shake hands as friends. The platform itself is already yours, delivered through the ICP: what we are pricing is the next six months of turning it into the asset an investor pays for.
-- **Term.** July 1 to December 31, with a no-fault check-in on September 30. If either of us is not happy, we stop there with zero hard feelings.
+## 4. First 90 days
 
-Why this shape: you pay less cash than the junior would cost, and the rest of my compensation only ever exists in the world where we made Re-New fundable together.
-
-## 5. First 90 days
-
-July: bug backlog closed through a repeatable test and fix process; infrastructure hardened; repositories, hosting and database accounts moved under Re-New organization accounts with clean access control. August: opportunities side MVP, ingestion plus first matching loop. September: AI matching v1 on real deal flow, KPI v2, and our September 30 check-in.
-
-Let's talk when you have read this. I am in.
+The first months have a clear shape. July makes the ground solid: the bug backlog cleared through a repeatable test-and-fix loop, the infrastructure hardened, and the repositories, hosting and database moved under Re-New's own accounts. August turns to the opportunities side, a first MVP with ingestion and the first matching loop. By September, AI matching runs on real deal flow with a second cut of the KPIs, in time for our September 30 check-in. Inside this you would get roughly five times the delivery bandwidth I gave during the ICP, and the mindset to match it: I spot what is worth doing, then propose, test and validate it, always in alignment with you and never needing to be handheld.

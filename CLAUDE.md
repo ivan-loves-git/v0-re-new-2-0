@@ -23,7 +23,17 @@ Ivan is a business/product person, NOT a developer. Claude must:
 - Email: `ivanpaudice@icloud.com`
 - Password: `Ciaociao01`
 
+**Production QA personas (owned test accounts):**
+| Coverage | Email | Password | Expected behavior |
+| --- | --- | --- | --- |
+| Staff/admin access | `qa.staff@re-new.team` | `Stromboli.1` | Routes to `/dashboard_re`; redirects away from `/portal/*`. |
+| Repreneur portal with demo deals | `myworkmail4@gmail.com` | `Stromboli.1` | Routes to `/portal/deals`; shows populated proposed and active pursuit cards. |
+| Repreneur portal empty state | `qa.repreneur.empty@re-new.team` | `Stromboli.1` | Routes to `/portal/deals`; shows the no-opportunities state. |
+| Authenticated but no app role | `qa.unassigned@re-new.team` | `Stromboli.1` | Is rejected by `/routing` and returns to `/auth/login`. |
+
 **Rule:** When verifying any change to this platform, log in with these credentials and click through the actual UI. **Never report "I don't have credentials" or stop at the login wall** — Ivan has explicitly approved storing them in plain text in this file. Wasting his time by halting at login is the #1 anti-pattern in this project.
+
+**Role QA rule:** Routine regression testing must use the owned QA personas above before touching real team/client accounts. Real accounts such as Bertrand's are for final user confirmation only, not the primary test harness.
 
 **Where to test:**
 - Default: production app at `app.re-new.team` via the `claude-in-chrome` MCP (`mcp__Claude_in_Chrome__*` tools — load via `ToolSearch` if deferred). Real data, the live deploy.
@@ -36,6 +46,9 @@ After Vercel auto-deploys a push to `main` (typically 1–3 min), test on produc
 - **Timeline:** 8-10 FTE working days
 - **Client:** Re-New (Bertrand + 2 part-time team members)
 - **Ivan's role:** Product owner, non-technical
+
+## Deal Context (June 2026)
+Ivan is negotiating fractional-CTO terms with Bertrand. The sent proposal is `PROPOSAL_2026-06_PLATFORM_ROADMAP_AND_CTO.md` (V5; earlier versions in `_archive/`). A local-only monetary logic and negotiation note may exist at `docs/BERTRAND_PROPOSAL_2026-06_MONETARY_LOGIC.md`; if present, read it before any session touching the Bertrand relationship, pricing, or contracts. Keep that note out of git and do not surface its contents in Bertrand-facing material.
 
 ## Tech Stack
 - **Frontend:** Next.js 16 + Tailwind + shadcn/ui

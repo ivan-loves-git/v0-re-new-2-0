@@ -8,6 +8,7 @@ dev-debug.log
 
 # Dependency directories
 node_modules/
+.pnpm-store/
 
 # Environment variables
 .env
@@ -44,3 +45,14 @@ Thumbs.db
 # tasks.json
 # tasks/
 .gstack/
+
+# Local agent/session config
+.codex/config.toml
+
+# Generated QA and sharing artifacts
+outputs/playwright/
+sharing to founders/
+/*.pdf
+
+# Private negotiation notes kept local
+docs/BERTRAND_PROPOSAL_2026-06_MONETARY_LOGIC.md
