@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
   getOpportunityNdaStatusLabel,
   getOpportunityPursuitStageLabel,
@@ -66,7 +65,7 @@ export function RepreneurOpportunityList({
               {opportunity.match_status === "active_pursuit" && (
                 <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge>
               )}
-              <Badge variant="secondary">{getOpportunityMatchRecommendationLabel(opportunity.human_recommendation)}</Badge>
+              <Badge variant="secondary">Selected by Re-New</Badge>
             </div>
             <div className="flex flex-col gap-1">
               <CardTitle>{opportunityTitle(opportunity)}</CardTitle>

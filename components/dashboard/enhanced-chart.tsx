@@ -30,23 +30,22 @@ interface ChartDataPoint {
   weekEnd: Date
   newRepreneurs: number
   cumulativeRepreneurs: number
-  activities: number
+  cumulativeClients: number
 }
 
 interface EnhancedChartProps {
-  repreneursData: Array<{ created_at: string }>
-  activitiesData: Array<{ created_at: string }>
+  repreneursData: Array<{ created_at: string; lifecycle_status?: string | null }>
 }
 
 const kpiInfo = {
   pipelineTrends: {
-    title: "Pipeline & Activity Trends",
-    description: "Weekly view combining cumulative repreneur growth (blue area) with activity volume (orange line). Navigate with arrows or select custom date range.",
-    why: "Correlate activity with growth. Weeks with high activity should drive future growth. If activity is high but growth is flat, investigate lead quality or conversion issues.",
+    title: "Pipeline & Client Trends",
+    description: "Weekly view combining cumulative repreneur growth (blue area) with cumulative clients (orange line). Navigate with arrows or select custom date range.",
+    why: "Track whether the repreneur base is converting into clients. If repreneurs grow but clients stay flat, review qualification, offer timing, and follow-up.",
   },
 }
 
-export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartProps) {
+export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
   // Default to last 8 weeks
   const [endDate, setEndDate] = useState<Date>(endOfWeek(new Date(), { weekStartsOn: 1 }))
   const [startDate, setStartDate] = useState<Date>(startOfWeek(subWeeks(new Date(), 7), { weekStartsOn: 1 }))
@@ -73,6 +72,10 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
       const created = new Date(r.created_at)
       return isBefore(created, currentWeekStart)
     }).length
+    let cumulativeClientCount = repreneursData.filter(r => {
+      const created = new Date(r.created_at)
+      return r.lifecycle_status === "client" && isBefore(created, currentWeekStart)
+    }).length
 
     while (currentWeekStart <= endDate) {
       const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
@@ -83,13 +86,13 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
         return isWithinInterval(created, { start: currentWeekStart, end: currentWeekEnd })
       }).length
 
-      // Count activities this week
-      const activitiesThisWeek = activitiesData.filter(a => {
-        const created = new Date(a.created_at)
-        return isWithinInterval(created, { start: currentWeekStart, end: currentWeekEnd })
+      const newClientsThisWeek = repreneursData.filter(r => {
+        const created = new Date(r.created_at)
+        return r.lifecycle_status === "client" && isWithinInterval(created, { start: currentWeekStart, end: currentWeekEnd })
       }).length
 
       cumulativeCount += newThisWeek
+      cumulativeClientCount += newClientsThisWeek
 
       weeks.push({
         week: format(currentWeekStart, "MMM d"),
@@ -97,14 +100,14 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
         weekEnd: currentWeekEnd,
         newRepreneurs: newThisWeek,
         cumulativeRepreneurs: cumulativeCount,
-        activities: activitiesThisWeek,
+        cumulativeClients: cumulativeClientCount,
       })
 
       currentWeekStart = addWeeks(currentWeekStart, 1)
     }
 
     return weeks
-  }, [repreneursData, activitiesData, startDate, endDate])
+  }, [repreneursData, startDate, endDate])
 
   // Check if we can navigate further (prevent going into the future)
   const canNavigateRight = !isAfter(addWeeks(endDate, 1), endOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -115,7 +118,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <TrendingUp className="size-5 text-gray-900" />
-            <span className="hidden sm:inline">Pipeline & Activity Trends</span>
+            <span className="hidden sm:inline">Pipeline & Client Trends</span>
             <span className="sm:hidden">Trends</span>
             <CardInfoButton info={kpiInfo.pipelineTrends} />
           </CardTitle>
@@ -228,7 +231,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
                   style: { fill: '#3b82f6', fontSize: 11 }
                 }}
               />
-              {/* Right Y-axis for Activities */}
+              {/* Right Y-axis for Clients */}
               <YAxis
                 yAxisId="right"
                 orientation="right"
@@ -237,7 +240,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
                 axisLine={{ stroke: "#f97316" }}
                 allowDecimals={false}
                 label={{
-                  value: 'Activities',
+                  value: 'Clients',
                   angle: 90,
                   position: 'insideRight',
                   style: { fill: '#f97316', fontSize: 11 }
@@ -253,7 +256,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
                 formatter={(value: number, name: string) => {
                   const labels: Record<string, string> = {
                     cumulativeRepreneurs: "Total Repreneurs",
-                    activities: "Activities",
+                    cumulativeClients: "Clients",
                   }
                   return [value, labels[name] || name]
                 }}
@@ -264,7 +267,7 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
                 formatter={(value) => {
                   const labels: Record<string, string> = {
                     cumulativeRepreneurs: "Repreneurs",
-                    activities: "Activities",
+                    cumulativeClients: "Clients",
                   }
                   return labels[value] || value
                 }}
@@ -279,11 +282,11 @@ export function EnhancedChart({ repreneursData, activitiesData }: EnhancedChartP
                 fill="url(#colorRepreneurs)"
                 strokeWidth={2}
               />
-              {/* Activities line chart */}
+              {/* Clients line chart */}
               <Line
                 yAxisId="right"
                 type="monotone"
-                dataKey="activities"
+                dataKey="cumulativeClients"
                 stroke="#f97316"
                 strokeWidth={2}
                 dot={{ fill: "#f97316", strokeWidth: 0, r: 4 }}

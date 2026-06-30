@@ -263,8 +263,7 @@ async function ChartsRow() {
   const allActivities = chartActivities
 
   // Chart data
-  const repreneursForChart = repreneurs.map(r => ({ created_at: r.created_at }))
-  const activitiesForChart = allActivities.map(a => ({ created_at: a.created_at }))
+  const repreneursForChart = repreneurs.map(r => ({ created_at: r.created_at, lifecycle_status: r.lifecycle_status }))
 
   // Heatmap data
   const twelveMonthsAgo = subMonths(new Date(), 12)
@@ -300,7 +299,6 @@ async function ChartsRow() {
       <ActivityHeatmap activityData={heatmapData} />
       <EnhancedChart
         repreneursData={repreneursForChart}
-        activitiesData={activitiesForChart}
       />
     </div>
   )

@@ -4,6 +4,7 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { LeadershipAssessment } from "@/lib/types/leadership-assessment"
 import type {
+  OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
   RepreneurOpportunityDocument,
   RepreneurOpportunityExposure,
@@ -12,6 +13,13 @@ import type {
 import type { Repreneur } from "@/lib/types/repreneur"
 
 const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
+const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
+  "geography",
+  "sector",
+  "size_metrics",
+  "business_model",
+  "other",
+])
 
 interface PortalRoleRow {
   role: string
@@ -50,6 +58,8 @@ interface PreviewOpportunityMatchRow {
   platform_score: number | null
   platform_reasons: unknown
   human_recommendation: RepreneurOpportunityExposure["human_recommendation"]
+  decline_reason_categories: unknown
+  decline_reason_text: string | null
   pursuit_stage: RepreneurOpportunityExposure["pursuit_stage"]
   pursuit_stage_updated_at: string | null
   nda_status: RepreneurOpportunityExposure["nda_status"]
@@ -113,6 +123,12 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     platform_score: row.platform_score,
     platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
     human_recommendation: row.human_recommendation,
+    decline_reason_categories: Array.isArray(row.decline_reason_categories)
+      ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
+          typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
+        )
+      : [],
+    decline_reason_text: row.decline_reason_text,
     updated_at: row.updated_at,
   }
 }
@@ -202,6 +218,8 @@ async function listVisibleOpportunitiesForRepreneur(
       platform_score,
       platform_reasons,
       human_recommendation,
+      decline_reason_categories,
+      decline_reason_text,
       pursuit_stage,
       pursuit_stage_updated_at,
       nda_status,

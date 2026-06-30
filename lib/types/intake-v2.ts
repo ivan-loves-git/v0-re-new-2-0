@@ -40,6 +40,12 @@ export interface IntakeV2FormData {
   q14_deal_size: string[]           // Multi-select: ['1-3M', '3-5M', '>5M']
   q15_structure: string[]           // Multi-select: capital structure options
   q16_equity: string                // Single: 'tbd' | '151-250' | '251-350' | '351-450' | '>450'
+  target_revenue_min_meur: number | null
+  target_revenue_max_meur: number | null
+  target_ebitda_margin_min_pct: number | null
+  target_ebitda_margin_max_pct: number | null
+  target_staff_size_min: number | null
+  target_staff_size_max: number | null
 
   // Step 5: Needs Assessment (Q17-Q18)
   q17_current_needs: string[]       // Multi-select: need categories
@@ -72,6 +78,12 @@ export const EMPTY_INTAKE_FORM: IntakeV2FormData = {
   q14_deal_size: [],
   q15_structure: [],
   q16_equity: '',
+  target_revenue_min_meur: null,
+  target_revenue_max_meur: null,
+  target_ebitda_margin_min_pct: null,
+  target_ebitda_margin_max_pct: null,
+  target_staff_size_min: null,
+  target_staff_size_max: null,
   q17_current_needs: [],
   q18_investment_thesis_url: null,
   marketing_consent: false

@@ -251,6 +251,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
   const [sourceFilter, setSourceFilter] = useState("")
+  const [offerFilter, setOfferFilter] = useState("")
   const [dateRange, setDateRange] = useState("all")
   const [minScore, setMinScore] = useState("all")
   const [journeyFilter, setJourneyFilter] = useState<JourneyStage | "all">("all")
@@ -304,10 +305,21 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     return Array.from(uniqueSources).sort()
   }, [repreneurs])
 
+  const offers = useMemo(() => {
+    const uniqueOffers = new Set<string>()
+    repreneurs.forEach((r) => {
+      r.offer_names?.forEach((offerName) => {
+        if (offerName) uniqueOffers.add(offerName)
+      })
+    })
+    return Array.from(uniqueOffers).sort()
+  }, [repreneurs])
+
   const hasActiveFilters =
     search ||
     statusFilter !== "all" ||
     sourceFilter ||
+    offerFilter ||
     dateRange !== "all" ||
     minScore !== "all" ||
     journeyFilter !== "all" ||
@@ -319,6 +331,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     setSearch("")
     setStatusFilter("all")
     setSourceFilter("")
+    setOfferFilter("")
     setDateRange("all")
     setMinScore("all")
     setJourneyFilter("all")
@@ -337,6 +350,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     const matchesStatus = statusFilter === "all" || r.lifecycle_status === statusFilter
 
     const matchesSource = !sourceFilter || r.source === sourceFilter
+    const matchesOffer = !offerFilter || Boolean(r.offer_names?.includes(offerFilter))
 
     let matchesDate = true
     if (dateRange !== "all") {
@@ -370,6 +384,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       matchesSearch &&
       matchesStatus &&
       matchesSource &&
+      matchesOffer &&
       matchesDate &&
       matchesScore &&
       matchesJourney &&
@@ -788,6 +803,29 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                     {sources.map((source) => (
                       <SelectItem key={source} value={source}>
                         {source}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            )}
+            {offers.length > 0 && (
+              <Select
+                value={offerFilter || "all"}
+                onValueChange={(value) => {
+                  setOfferFilter(value === "all" ? "" : value)
+                  resetGroupPages()
+                }}
+              >
+                <SelectTrigger className="h-9 w-full sm:w-44">
+                  <SelectValue placeholder="All offers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All offers</SelectItem>
+                    {offers.map((offerName) => (
+                      <SelectItem key={offerName} value={offerName}>
+                        {offerName}
                       </SelectItem>
                     ))}
                   </SelectGroup>

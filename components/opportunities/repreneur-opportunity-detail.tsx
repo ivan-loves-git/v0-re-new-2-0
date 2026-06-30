@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { CalendarDays, CheckCircle2, Download, FileText, Gauge, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
+import { CalendarDays, CheckCircle2, Download, FileText, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { declineMyOpportunity, markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunities"
 import {
   canDownloadOpportunityDocuments,
-  getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
   getOpportunityNdaStatusLabel,
   getOpportunityPursuitStageLabel,
+  OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type RepreneurOpportunityDocument,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
@@ -53,6 +53,7 @@ export function RepreneurOpportunityDetail({
   const interestAction = markMyOpportunityInterested.bind(null, opportunity.match_id)
   const declineAction = declineMyOpportunity.bind(null, opportunity.match_id)
   const documentsAllowed = canDownloadOpportunityDocuments(opportunity.nda_status ?? "not_required")
+  const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,7 +63,7 @@ export function RepreneurOpportunityDetail({
           {opportunity.match_status === "active_pursuit" && (
             <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge>
           )}
-          <Badge variant="secondary">{getOpportunityMatchRecommendationLabel(opportunity.human_recommendation)}</Badge>
+          <Badge variant="secondary">Selected by Re-New</Badge>
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-normal">{opportunityTitle(opportunity)}</h1>
@@ -105,7 +106,19 @@ export function RepreneurOpportunityDetail({
             <Alert>
               <XCircle />
               <AlertTitle>Marked as not a fit</AlertTitle>
-              <AlertDescription>This response is visible to Re-New for review.</AlertDescription>
+              <AlertDescription>
+                This response is visible to Re-New for review.
+                {opportunity.decline_reason_categories && opportunity.decline_reason_categories.length > 0 ? (
+                  <>
+                    {" "}
+                    Reasons:{" "}
+                    {opportunity.decline_reason_categories
+                      .map((reason) => OPPORTUNITY_DECLINE_REASON_OPTIONS.find((option) => option.value === reason)?.label ?? reason)
+                      .join(", ")}
+                    .
+                  </>
+                ) : null}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -136,13 +149,46 @@ export function RepreneurOpportunityDetail({
                   {opportunity.match_status === "interested" ? "Interest sent" : "I'm interested"}
                 </Button>
               </form>
-              <form action={declineAction}>
-                <Button type="submit" variant="outline" disabled={opportunity.match_status === "declined"}>
-                  <XCircle data-icon="inline-start" />
-                  {opportunity.match_status === "declined" ? "Not a fit sent" : "Not a fit"}
-                </Button>
-              </form>
             </div>
+          )}
+
+          {!readOnly && opportunity.match_status !== "declined" && canRespond(opportunity.match_status) && (
+            <form action={declineAction} className="rounded-md border p-4">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="text-sm font-medium">Not a fit?</p>
+                  <p className="text-sm text-muted-foreground">Select the reason(s) so Re-New can improve future recommendations.</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {OPPORTUNITY_DECLINE_REASON_OPTIONS.map((option) => (
+                    <label key={option.value} className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="decline_reason_categories"
+                        value={option.value}
+                        defaultChecked={selectedDeclineReasons.has(option.value)}
+                        className="mt-1 size-4 rounded border-border"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <label className="flex flex-col gap-2 text-sm">
+                  <span className="font-medium">Details if useful</span>
+                  <textarea
+                    name="decline_reason_text"
+                    defaultValue={opportunity.decline_reason_text ?? ""}
+                    rows={3}
+                    className="min-h-20 rounded-md border bg-background px-3 py-2 text-sm"
+                    placeholder="Add context if you selected Other or want to clarify the reason."
+                  />
+                </label>
+                <Button type="submit" variant="outline" className="w-fit">
+                  <XCircle data-icon="inline-start" />
+                  Not a fit
+                </Button>
+              </div>
+            </form>
           )}
         </CardContent>
       </Card>
@@ -218,49 +264,23 @@ export function RepreneurOpportunityDetail({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Platform score</CardDescription>
-            <CardTitle className="inline-flex items-center gap-2">
-              <Gauge className="size-5" />
-              {opportunity.platform_score ?? "-"}
-            </CardTitle>
+            <CardDescription>Team</CardDescription>
+            <CardTitle>{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</CardTitle>
           </CardHeader>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Opportunity</CardTitle>
-            <CardDescription>{[opportunity.sector, opportunity.activity].filter(Boolean).join(" / ") || "Sector to confirm"}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm leading-6">
-              {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Fit Signals</CardTitle>
-            <CardDescription>
-              {getOpportunityMatchRecommendationLabel(opportunity.platform_recommendation)} - rule-based V2 guidance that
-              Re-New may refine with human review.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm">
-            {opportunity.platform_reasons.length === 0 ? (
-              <span className="text-muted-foreground">No structured signals recorded yet.</span>
-            ) : (
-              opportunity.platform_reasons.map((reason) => (
-                <div key={reason} className="rounded-md border px-3 py-2">
-                  {reason}
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Opportunity</CardTitle>
+          <CardDescription>{[opportunity.sector, opportunity.activity].filter(Boolean).join(" / ") || "Sector to confirm"}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="whitespace-pre-wrap text-sm leading-6">
+            {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }

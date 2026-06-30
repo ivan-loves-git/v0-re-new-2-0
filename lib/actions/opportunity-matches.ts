@@ -15,6 +15,7 @@ import type {
   OpportunityMatchRecommendation,
   OpportunityMatchResponse,
   OpportunityMatchStatus,
+  RepreneurOpportunityCandidate,
 } from "@/lib/types/opportunity"
 import {
   OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS,
@@ -355,6 +356,8 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
       platform_score,
       human_recommendation,
       human_notes,
+      decline_reason_categories,
+      decline_reason_text,
       reviewed_by,
       reviewed_at,
       updated_at,
@@ -462,6 +465,69 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
   })
 }
 
+export async function listOpportunityCandidatesForRepreneur(repreneurId: string): Promise<RepreneurOpportunityCandidate[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const [{ data: repreneur, error: repreneurError }, { data: opportunities, error: opportunitiesError }, { data: existingMatches, error: matchesError }] =
+    await Promise.all([
+      supabase
+        .from("repreneurs")
+        .select(`
+          id,
+          who_score,
+          when_score,
+          scoring_flags,
+          q12_geo_zones,
+          q13_target_sectors_v2,
+          q14_deal_size,
+          q16_equity,
+          sector_preferences,
+          target_location,
+          target_acquisition_size,
+          investment_capacity
+        `)
+        .eq("id", repreneurId)
+        .maybeSingle(),
+      supabase
+        .from("opportunities")
+        .select("id, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, status, repreneur_exposure")
+        .eq("status", "active")
+        .neq("repreneur_exposure", "staff_only")
+        .order("updated_at", { ascending: false })
+        .limit(250),
+      supabase
+        .from("opportunity_matches")
+        .select("opportunity_id")
+        .eq("repreneur_id", repreneurId),
+    ])
+
+  if (repreneurError) throw new Error(repreneurError.message)
+  if (opportunitiesError) throw new Error(opportunitiesError.message)
+  if (matchesError) throw new Error(matchesError.message)
+  if (!repreneur) return []
+
+  const existingOpportunityIds = new Set((existingMatches ?? []).map((match) => match.opportunity_id))
+
+  return (opportunities ?? [])
+    .filter((opportunity) => !existingOpportunityIds.has(opportunity.id))
+    .map((opportunity) => {
+      const platformMatch = calculateOpportunityMatchScore(repreneur, opportunity)
+      return {
+        id: opportunity.id,
+        reference: opportunity.reference,
+        public_title: opportunity.public_title,
+        sector: opportunity.sector,
+        activity: opportunity.activity,
+        location: opportunity.location,
+        platform_recommendation: platformMatch.recommendation,
+        platform_score: platformMatch.score,
+        platform_reasons: platformMatch.reasons,
+      } satisfies RepreneurOpportunityCandidate
+    })
+    .sort((a, b) => b.platform_score - a.platform_score)
+}
+
 export async function saveOpportunityMatch(formData: FormData): Promise<OpportunityMatchActionResult> {
   const access = await requireStaffAccess()
 
@@ -502,6 +568,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
 
     if (error) throw lockedMatchError(error)
     revalidatePath(`/opportunities/${opportunityId}`)
+    revalidatePath(`/repreneurs/${repreneurId}`)
     return { ok: true }
   } catch (error) {
     return actionFailure(error)

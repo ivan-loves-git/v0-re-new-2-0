@@ -10,6 +10,7 @@ import {
   Search,
   GitBranch,
   Mail,
+  Package,
   BarChart3,
   BookOpenCheck,
   Map,
@@ -61,6 +62,7 @@ const repreneurNavigation: NavigationItem[] = [
   { name: "Groups", href: "/repreneurs", icon: FolderKanban },
   { name: "Find", href: "/repreneurs/explore", icon: Search },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
+  { name: "Offers", href: "/offers", icon: Package },
   { name: "Analytics", href: "/analytics_re", icon: BarChart3 },
 ]
 

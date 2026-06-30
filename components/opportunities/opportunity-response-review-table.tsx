@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
 import { markOpportunityMatchReviewed, validateOpportunityPursuit } from "@/lib/actions/opportunity-matches"
 import {
+  OPPORTUNITY_DECLINE_REASON_OPTIONS,
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
   type OpportunityMatchResponse,
@@ -41,6 +42,11 @@ function formatDateTime(value: string | null | undefined) {
 
 function responseVariant(status: OpportunityMatchResponse["status"]): "default" | "secondary" {
   return status === "interested" ? "default" : "secondary"
+}
+
+function declineReasonLabels(response: OpportunityMatchResponse) {
+  return (response.decline_reason_categories ?? [])
+    .map((reason) => OPPORTUNITY_DECLINE_REASON_OPTIONS.find((option) => option.value === reason)?.label ?? reason)
 }
 
 export function OpportunityResponseReviewTable({ responses }: OpportunityResponseReviewTableProps) {
@@ -90,6 +96,12 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                         <Badge variant={responseVariant(response.status)} className="w-fit">
                           {getOpportunityMatchStatusLabel(response.status)}
                         </Badge>
+                        {response.status === "declined" && (
+                          <div className="max-w-52 text-xs text-muted-foreground">
+                            {declineReasonLabels(response).length > 0 ? declineReasonLabels(response).join(", ") : "No reason captured"}
+                            {response.decline_reason_text ? ` - ${response.decline_reason_text}` : ""}
+                          </div>
+                        )}
                         {!response.reviewed_at && (
                           <Badge variant="outline" className="w-fit">
                             New response

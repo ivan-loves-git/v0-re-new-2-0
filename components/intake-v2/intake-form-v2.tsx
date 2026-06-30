@@ -181,6 +181,12 @@ export function IntakeFormV2() {
         q14_deal_size: ['1-3M', '3-5M'],
         q15_structure: ['majority_without_fund'],
         q16_equity: '251-350',
+        target_revenue_min_meur: 1.5,
+        target_revenue_max_meur: 5,
+        target_ebitda_margin_min_pct: 10,
+        target_ebitda_margin_max_pct: 25,
+        target_staff_size_min: 10,
+        target_staff_size_max: 80,
       },
       5: {
         q17_current_needs: ['project_launch', 'deal_access', 'financing'],

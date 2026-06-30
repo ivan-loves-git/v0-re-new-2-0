@@ -35,6 +35,13 @@ export type OpportunityPursuitStage =
 
 export type OpportunityNdaStatus = "not_required" | "required" | "sent" | "signed" | "waived"
 
+export type OpportunityDeclineReasonCategory =
+  | "geography"
+  | "sector"
+  | "size_metrics"
+  | "business_model"
+  | "other"
+
 export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
@@ -104,6 +111,14 @@ export const OPPORTUNITY_NDA_STATUS_OPTIONS = [
   { value: "signed", label: "Signed" },
   { value: "waived", label: "Waived" },
 ] as const
+
+export const OPPORTUNITY_DECLINE_REASON_OPTIONS = [
+  { value: "geography", label: "Geography" },
+  { value: "sector", label: "Industry / sector" },
+  { value: "size_metrics", label: "Size / metrics" },
+  { value: "business_model", label: "Business model" },
+  { value: "other", label: "Other" },
+] as const satisfies ReadonlyArray<{ value: OpportunityDeclineReasonCategory; label: string }>
 
 export interface MaSource {
   id: string
@@ -329,6 +344,8 @@ export interface OpportunityMatch {
   platform_reasons: string[]
   human_recommendation: OpportunityMatchRecommendation
   human_notes?: string | null
+  decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
+  decline_reason_text?: string | null
   created_by?: string | null
   reviewed_by?: string | null
   reviewed_at?: string | null
@@ -359,6 +376,18 @@ export interface OpportunityMatchCandidate extends OpportunityMatchRepreneur {
   platform_reasons?: string[]
 }
 
+export interface RepreneurOpportunityCandidate {
+  id: string
+  reference: string
+  public_title?: string | null
+  sector?: string | null
+  activity?: string | null
+  location?: string | null
+  platform_recommendation: OpportunityMatchRecommendation
+  platform_score: number
+  platform_reasons: string[]
+}
+
 export interface OpportunityMatchResponse {
   id: string
   opportunity_id: string
@@ -368,6 +397,8 @@ export interface OpportunityMatchResponse {
   platform_score?: number | null
   human_recommendation: OpportunityMatchRecommendation
   human_notes?: string | null
+  decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
+  decline_reason_text?: string | null
   reviewed_by?: string | null
   reviewed_at?: string | null
   updated_at: string
@@ -430,6 +461,8 @@ export interface RepreneurOpportunityExposure {
   platform_score?: number | null
   platform_reasons: string[]
   human_recommendation: OpportunityMatchRecommendation
+  decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
+  decline_reason_text?: string | null
   updated_at: string
 }
 

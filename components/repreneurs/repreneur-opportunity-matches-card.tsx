@@ -4,16 +4,20 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { saveOpportunityMatch } from "@/lib/actions/opportunity-matches"
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
   getOpportunityPursuitStageLabel,
   type OpportunityMatchRecommendation,
   type RepreneurOpportunityMatch,
+  type RepreneurOpportunityCandidate,
 } from "@/lib/types/opportunity"
 
 interface RepreneurOpportunityMatchesCardProps {
+  repreneurId: string
   matches: RepreneurOpportunityMatch[]
+  candidates: RepreneurOpportunityCandidate[]
 }
 
 function formatDate(value: string | null | undefined) {
@@ -43,7 +47,12 @@ function opportunityTitle(match: RepreneurOpportunityMatch) {
   return match.opportunity?.public_title || match.opportunity?.activity || "Untitled opportunity"
 }
 
-export function RepreneurOpportunityMatchesCard({ matches }: RepreneurOpportunityMatchesCardProps) {
+export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidates }: RepreneurOpportunityMatchesCardProps) {
+  async function recommendOpportunity(formData: FormData) {
+    "use server"
+    await saveOpportunityMatch(formData)
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -53,7 +62,31 @@ export function RepreneurOpportunityMatchesCard({ matches }: RepreneurOpportunit
         </CardTitle>
         <CardDescription>Deals connected to this repreneur through matching or pursuit review.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {candidates.length > 0 && (
+          <form action={recommendOpportunity} className="rounded-md border p-4">
+            <input type="hidden" name="repreneur_id" value={repreneurId} />
+            <input type="hidden" name="status" value="proposed" />
+            <input type="hidden" name="human_recommendation" value="possible_fit" />
+            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+              <label className="flex flex-col gap-2 text-sm">
+                <span className="font-medium">Recommend an opportunity</span>
+                <select name="opportunity_id" required className="h-9 rounded-md border bg-background px-3 text-sm">
+                  <option value="">Select opportunity...</option>
+                  {candidates.slice(0, 50).map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.reference} - {candidate.public_title || candidate.activity || candidate.sector || "Untitled"} ({candidate.platform_score}%)
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button type="submit">Push to portal</Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              New recommendations are saved as Proposed, so they appear in the repreneur portal when the opportunity is repreneur-visible.
+            </p>
+          </form>
+        )}
         {matches.length === 0 ? (
           <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
             No opportunity matches are connected to this repreneur yet.

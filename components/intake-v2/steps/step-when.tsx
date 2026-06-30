@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -83,7 +84,11 @@ const WHEN_TRANSLATION_MAP: Record<string, { label: string; helpText?: string; o
  * Project maturity assessment - mix of multi-select and single select
  */
 export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: IntakeV2StepProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+
+  const updateOptionalNumber = (field: keyof IntakeV2StepProps["data"], value: string) => {
+    onChange({ [field]: value === '' ? null : Number(value) })
+  }
 
   const toggleMultiSelect = (field: string, value: string) => {
     const current = (data[field as keyof typeof data] as string[]) || []
@@ -252,6 +257,37 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
         {errors.q16_equity && (
           <p className="text-sm text-red-500">{errors.q16_equity}</p>
         )}
+      </div>
+
+      {/* Optional matching criteria */}
+      <div className="flex flex-col gap-4 rounded-lg border p-4">
+        <div>
+          <Label className="text-base font-medium">
+            {language === 'fr' ? 'Parametres financiers cibles (optionnel)' : 'Target financial criteria (optional)'}
+          </Label>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {language === 'fr'
+              ? 'Ces reponses ameliorent le matching avec les opportunites. Elles ne sont pas scorees.'
+              : 'These answers improve opportunity matching. They are not scored.'}
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Label className="col-span-2 text-sm">{language === 'fr' ? 'CA cible (M EUR)' : 'Target revenue (M EUR)'}</Label>
+            <Input type="number" min="0" step="0.1" placeholder="Min" value={data.target_revenue_min_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_min_meur', e.target.value)} />
+            <Input type="number" min="0" step="0.1" placeholder="Max" value={data.target_revenue_max_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_max_meur', e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Label className="col-span-2 text-sm">{language === 'fr' ? 'Marge EBITDA cible (%)' : 'Target EBITDA margin (%)'}</Label>
+            <Input type="number" min="0" max="100" step="0.1" placeholder="Min" value={data.target_ebitda_margin_min_pct ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_margin_min_pct', e.target.value)} />
+            <Input type="number" min="0" max="100" step="0.1" placeholder="Max" value={data.target_ebitda_margin_max_pct ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_margin_max_pct', e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Label className="col-span-2 text-sm">{language === 'fr' ? 'Effectif cible' : 'Target staff size'}</Label>
+            <Input type="number" min="0" step="1" placeholder="Min" value={data.target_staff_size_min ?? ''} onChange={(e) => updateOptionalNumber('target_staff_size_min', e.target.value)} />
+            <Input type="number" min="0" step="1" placeholder="Max" value={data.target_staff_size_max ?? ''} onChange={(e) => updateOptionalNumber('target_staff_size_max', e.target.value)} />
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}

@@ -50,7 +50,7 @@ import { RepreneurOpportunityMatchesCard } from "@/components/repreneurs/reprene
 import { RepreneurDetailTabs } from "@/components/repreneurs/repreneur-detail-tabs"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { getLatestAssessment, getPendingAssessment } from "@/lib/actions/leadership-assessment"
-import { listOpportunityMatchesForRepreneur } from "@/lib/actions/opportunity-matches"
+import { listOpportunityCandidatesForRepreneur, listOpportunityMatchesForRepreneur } from "@/lib/actions/opportunity-matches"
 import { getRepreneurPortalAccessStatus } from "@/lib/actions/portal-access"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
@@ -311,11 +311,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   }
 
   // Fetch leadership assessment data
-  const [leadershipAssessment, pendingAssessment, portalAccessStatus, opportunityMatches] = await Promise.all([
+  const [leadershipAssessment, pendingAssessment, portalAccessStatus, opportunityMatches, opportunityCandidates] = await Promise.all([
     getLatestAssessment(id),
     getPendingAssessment(id),
     getRepreneurPortalAccessStatus(id),
     listOpportunityMatchesForRepreneur(id),
+    listOpportunityCandidatesForRepreneur(id),
   ])
 
   // Build user email map
@@ -956,7 +957,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
         </TabsContent>
 
         <TabsContent value="opportunities" className="space-y-6">
-          <RepreneurOpportunityMatchesCard matches={opportunityMatches} />
+          <RepreneurOpportunityMatchesCard repreneurId={id} matches={opportunityMatches} candidates={opportunityCandidates} />
         </TabsContent>
 
         <TabsContent value="engagement" className="space-y-6">

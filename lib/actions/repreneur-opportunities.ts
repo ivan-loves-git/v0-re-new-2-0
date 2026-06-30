@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
+  OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
   RepreneurOpportunityDocument,
   RepreneurOpportunityExposure,
@@ -13,6 +14,13 @@ import type {
 
 const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined"]
+const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
+  "geography",
+  "sector",
+  "size_metrics",
+  "business_model",
+  "other",
+])
 
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
   return {
@@ -52,8 +60,31 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     platform_score: row.platform_score,
     platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
     human_recommendation: row.human_recommendation,
+    decline_reason_categories: Array.isArray(row.decline_reason_categories)
+      ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
+          typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
+        )
+      : [],
+    decline_reason_text: row.decline_reason_text,
     updated_at: row.updated_at,
   }
+}
+
+function readDeclineReasonCategories(formData?: FormData): OpportunityDeclineReasonCategory[] {
+  if (!formData) return []
+  return formData
+    .getAll("decline_reason_categories")
+    .filter((value): value is OpportunityDeclineReasonCategory =>
+      typeof value === "string" && DECLINE_REASON_CATEGORIES.has(value as OpportunityDeclineReasonCategory)
+    )
+}
+
+function readDeclineReasonText(formData?: FormData) {
+  if (!formData) return null
+  const value = formData.get("decline_reason_text")
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 async function listApprovedDocumentsByOpportunity(
@@ -145,6 +176,8 @@ export async function listMyRepreneurOpportunities(): Promise<{
       platform_score,
       platform_reasons,
       human_recommendation,
+      decline_reason_categories,
+      decline_reason_text,
       pursuit_stage,
       pursuit_stage_updated_at,
       nda_status,
@@ -211,6 +244,8 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
       platform_score,
       platform_reasons,
       human_recommendation,
+      decline_reason_categories,
+      decline_reason_text,
       pursuit_stage,
       pursuit_stage_updated_at,
       nda_status,
@@ -252,7 +287,7 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
   }
 }
 
-async function updateMyOpportunityResponse(matchId: string, status: "interested" | "declined") {
+async function updateMyOpportunityResponse(matchId: string, status: "interested" | "declined", formData?: FormData) {
   const access = await requirePortalAccess()
   if (!access.repreneurId) throw new Error("No linked repreneur profile")
 
@@ -270,10 +305,23 @@ async function updateMyOpportunityResponse(matchId: string, status: "interested"
     throw new Error("This opportunity response can no longer be changed")
   }
 
+  const declineReasonCategories = status === "declined" ? readDeclineReasonCategories(formData) : []
+  const declineReasonText = status === "declined" ? readDeclineReasonText(formData) : null
+
+  if (status === "declined" && declineReasonCategories.length === 0) {
+    throw new Error("Choose at least one reason before marking this opportunity as not a fit.")
+  }
+
+  if (status === "declined" && declineReasonCategories.includes("other") && !declineReasonText) {
+    throw new Error("Add details when selecting Other.")
+  }
+
   const { error } = await supabase
     .from("opportunity_matches")
     .update({
       status,
+      decline_reason_categories: status === "declined" ? declineReasonCategories : null,
+      decline_reason_text: status === "declined" ? declineReasonText : null,
       reviewed_by: null,
       reviewed_at: null,
     })
@@ -293,6 +341,6 @@ export async function markMyOpportunityInterested(matchId: string) {
   await updateMyOpportunityResponse(matchId, "interested")
 }
 
-export async function declineMyOpportunity(matchId: string) {
-  await updateMyOpportunityResponse(matchId, "declined")
+export async function declineMyOpportunity(matchId: string, formData: FormData) {
+  await updateMyOpportunityResponse(matchId, "declined", formData)
 }
