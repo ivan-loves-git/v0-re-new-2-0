@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-22T16:15:11.539Z",
+  "timestamp": "2026-07-04T09:08:36.229Z",
   "source": "auto-postool",
   "partial": false,
   "phase": "9",
@@ -18,7 +18,68 @@
     }
   ],
   "remaining_tasks": [],
-  "blockers": [],
+  "blockers": [
+    {
+      "description": "Repreneur production UAT must be re-run after the recovery deploy. The previous Phase 3 note that route/data checks were enough for repreneur behavior is superseded.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 8 still needs production verification after deploy; local production browser UAT passed on `http://localhost:3012`, but production footer build-number verification remains pending.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Navigation performance branch still needs production verification after deploy; local production browser timing passed.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "`npx tsc --noEmit --pretty false` now runs but fails on pre-existing unrelated baseline issues in `dashboard_re`, `routing`, and `dashboard-snapshots`.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 8 should not add PDF-to-opportunity AI ingestion or JSON import automation unless the scope is explicitly reopened.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 7 browser UAT passed; the remaining M&A risk is product/process scope, not the basic send-and-log workflow.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 3 focused on operating confidence: KPIs, stale reminders, end-to-end QA, and launch/demo readiness.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Matching must avoid hidden AI scope until structured data is stable.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "M&A CRM must remain basic source/contact tracking in June.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 2 review remediation completed: email matching is case-insensitive, role precedence is documented, the match status state machine is documented, legacy `/my-opportunities` URLs redirect to `/portal/deals`, and the staff review/recommendation tables received focused UI fixes.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 3 Reporting, Reminders, QA, and Launch Hardening is complete under the Phase 1.1 release protocol.",
+      "type": "technical",
+      "workaround": ""
+    },
+    {
+      "description": "Phase 4 was a navigation and route refactor only; no database migration was introduced.",
+      "type": "technical",
+      "workaround": ""
+    }
+  ],
   "human_actions_pending": [],
   "decisions": [
     {
@@ -315,41 +376,13 @@
   "uncommitted_files": [
     {
       "status": "M",
-      "path": ".gitignore"
-    },
-    {
-      "status": "M",
       "path": ".planning/HANDOFF.json"
     },
     {
-      "status": "M",
-      "path": "CLAUDE.md"
-    },
-    {
-      "status": "M",
-      "path": "PROPOSAL_2026-06_PLATFORM_ROADMAP_AND_CTO.md"
-    },
-    {
-      "status": "M",
-      "path": "TASKS.md"
-    },
-    {
       "status": "??",
-      "path": "PROPOSAL_2026-06_PLATFORM_ROADMAP_AND_CTO_OPTION_B.md"
-    },
-    {
-      "status": "??",
-      "path": "_archive/PROPOSAL_2026-06_PLATFORM_ROADMAP_AND_CTO_v3_pre-review.md"
-    },
-    {
-      "status": "??",
-      "path": "_archive/PROPOSAL_2026-06_PLATFORM_ROADMAP_AND_CTO_v4.md"
-    },
-    {
-      "status": "??",
-      "path": "docs/task-backlog-2026-06-21.md"
+      "path": "package-lock.json"
     }
   ],
   "next_action": "Complete",
-  "context_notes": "Status: Complete\n\nStopped at: Phase 9 repreneur profile detail IA refactor completed and production-verified\n\nRecent commits:\n71815a8 scrapbook-html: render stored HTML full-screen, remove download button + title chrome\ncf2c572 fix: polish portal invite and opportunity import\nb74c294 fix: default new opportunity matches to proposed\ne94fa9b docs: record phase 9 production verification\n17cd739 refactor: organize repreneur profile detail tabs"
+  "context_notes": "Status: Complete\n\nStopped at: Phase 9 repreneur profile detail IA refactor completed and production-verified\n\nRecent commits:\n1bbbeec fix: harden security-sensitive CRM routes\n6bd07c4 Improve repreneur opportunity workflow\n5d6325a fix: harden vercel deployment safety\neda0a26 chore: clean project workspace state\n71815a8 scrapbook-html: render stored HTML full-screen, remove download button + title chrome"
 }
