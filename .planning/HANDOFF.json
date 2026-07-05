@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-04T09:08:36.229Z",
+  "timestamp": "2026-07-05T16:23:00.546Z",
   "source": "auto-postool",
   "partial": false,
   "phase": "9",
@@ -380,9 +380,13 @@
     },
     {
       "status": "??",
+      "path": "\"app/api/upload-cv/route 2.ts\""
+    },
+    {
+      "status": "??",
       "path": "package-lock.json"
     }
   ],
   "next_action": "Complete",
-  "context_notes": "Status: Complete\n\nStopped at: Phase 9 repreneur profile detail IA refactor completed and production-verified\n\nRecent commits:\n1bbbeec fix: harden security-sensitive CRM routes\n6bd07c4 Improve repreneur opportunity workflow\n5d6325a fix: harden vercel deployment safety\neda0a26 chore: clean project workspace state\n71815a8 scrapbook-html: render stored HTML full-screen, remove download button + title chrome"
+  "context_notes": "Status: Complete\n\nStopped at: Phase 9 repreneur profile detail IA refactor completed and production-verified\n\nRecent commits:\nac1f2f2 chore: update GSD handoff state after repo relocation\n1bbbeec fix: harden security-sensitive CRM routes\n6bd07c4 Improve repreneur opportunity workflow\n5d6325a fix: harden vercel deployment safety\neda0a26 chore: clean project workspace state"
 }
