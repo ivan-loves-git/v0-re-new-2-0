@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-06T09:11:42.349Z",
+  "timestamp": "2026-07-06T12:34:15.883Z",
   "source": "auto-postool",
   "partial": false,
   "phase": "9",
@@ -377,36 +377,8 @@
     {
       "status": "M",
       "path": ".planning/HANDOFF.json"
-    },
-    {
-      "status": "D",
-      "path": "\".planning/debug/page-navigation-lag 2.md\""
-    },
-    {
-      "status": "D",
-      "path": "\"app/(dashboard)/repreneurs/explore/page 2.tsx\""
-    },
-    {
-      "status": "D",
-      "path": "\"components/repreneurs/repreneur-explore-table 2.tsx\""
-    },
-    {
-      "status": "D",
-      "path": "\"docs/project-status 2.md\""
-    },
-    {
-      "status": "D",
-      "path": "\"docs/solutions/navigation-performance-before-after 2.svg\""
-    },
-    {
-      "status": "D",
-      "path": "\"scripts/056_phase8_opportunity_field_cleanup 2.sql\""
-    },
-    {
-      "status": "D",
-      "path": "\"supabase/migrations/20260522_phase8_opportunity_field_cleanup 2.sql\""
     }
   ],
   "next_action": "Complete",
-  "context_notes": "Status: Complete\n\nStopped at: Phase 9 repreneur profile detail IA refactor completed and production-verified\n\nRecent commits:\n01d4f2b chore: update GSD handoff state\nac1f2f2 chore: update GSD handoff state after repo relocation\n1bbbeec fix: harden security-sensitive CRM routes\n6bd07c4 Improve repreneur opportunity workflow\n5d6325a fix: harden vercel deployment safety"
+  "context_notes": "Status: Complete\n\nStopped at: Phase 9 repreneur profile detail IA refactor completed and production-verified\n\nRecent commits:\n2535b58 chore: update planning handoff state\n805245b chore: remove iCloud sync-conflict duplicate files\n01d4f2b chore: update GSD handoff state\nac1f2f2 chore: update GSD handoff state after repo relocation\n1bbbeec fix: harden security-sensitive CRM routes"
 }
