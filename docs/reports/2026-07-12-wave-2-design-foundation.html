@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wave 2.0 Design Foundation | Founder Brief</title>
+    <style>
+      :root {
+        --ink: #172033;
+        --muted: #64748b;
+        --line: #dfe6ef;
+        --paper: #ffffff;
+        --wash: #f6f8fb;
+        --blue: #2563eb;
+        --teal: #0f766e;
+        --amber: #d97706;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--wash);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      .report {
+        width: min(1180px, calc(100% - 40px));
+        margin: 32px auto 56px;
+      }
+
+      .hero,
+      .section {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+      }
+
+      .hero {
+        padding: 42px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        width: 330px;
+        height: 330px;
+        right: -100px;
+        top: -160px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(37, 99, 235, .13), rgba(37, 99, 235, 0));
+      }
+
+      .eyebrow {
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { font-size: clamp(30px, 4.4vw, 52px); line-height: 1.05; letter-spacing: -.04em; margin: 12px 0 16px; max-width: 720px; }
+      h2 { font-size: 23px; letter-spacing: -.02em; margin-bottom: 10px; }
+      h3 { font-size: 15px; margin-bottom: 7px; }
+      .lede { max-width: 720px; color: #42516a; font-size: 18px; }
+      .meta { color: var(--muted); font-size: 14px; margin-top: 24px; }
+
+      .section { margin-top: 20px; padding: 30px; }
+      .section-intro { color: var(--muted); max-width: 780px; }
+
+      .logic {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .logic article {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px;
+      }
+
+      .number {
+        color: var(--blue);
+        display: block;
+        font-size: 13px;
+        font-weight: 750;
+        margin-bottom: 16px;
+      }
+
+      .logic p, .outcomes p { color: var(--muted); font-size: 14px; margin-bottom: 0; }
+
+      .comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-top: 22px;
+      }
+
+      figure { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+      figure img { display: block; width: 100%; height: auto; }
+      figcaption { border-top: 1px solid var(--line); padding: 14px 16px; color: var(--muted); font-size: 13px; }
+      figcaption strong { color: var(--ink); display: block; margin-bottom: 2px; }
+
+      .outcomes {
+        display: grid;
+        grid-template-columns: 1.25fr .75fr;
+        gap: 18px;
+        margin-top: 22px;
+      }
+
+      .outcomes > div { border-radius: 12px; padding: 20px; }
+      .outcomes .main { background: #eef5ff; }
+      .outcomes .watch { background: #fff8eb; }
+      .outcomes ul { margin: 12px 0 0; padding-left: 18px; color: #42516a; font-size: 14px; }
+      .outcomes li + li { margin-top: 7px; }
+
+      .footer { color: var(--muted); font-size: 12px; padding: 18px 2px; text-align: center; }
+
+      @media (max-width: 760px) {
+        .report { width: min(100% - 24px, 1180px); margin-top: 12px; }
+        .hero, .section { border-radius: 12px; padding: 24px; }
+        .logic, .comparison, .outcomes { grid-template-columns: 1fr; }
+        .lede { font-size: 16px; }
+      }
+
+      @media print {
+        body { background: #fff; }
+        .report { width: 100%; margin: 0; }
+        .hero, .section, figure { break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="report">
+      <header class="hero">
+        <div class="eyebrow">Founder brief · July 2026</div>
+        <h1>Wave 2.0 now has a product design foundation.</h1>
+        <p class="lede">
+          We tightened the operating interface so daily work feels calmer, more deliberate, and easier to extend. This is not a visual reskin: it gives Wave shared rules for filters, charts, and reusable product components.
+        </p>
+        <p class="meta">Released as Wave build 506 · available to the staff team</p>
+      </header>
+
+      <section class="section">
+        <div class="eyebrow">Executive summary</div>
+        <h2>Why this matters now</h2>
+        <p class="section-intro">
+          Wave has grown feature by feature. That was right for getting operational, but it left similar pages with slightly different controls and visual choices. The new foundation preserves the speed of our existing shadcn setup while giving the product a clear Re-New layer above it: trusted guidance, visible flow, and mature operational density.
+        </p>
+
+        <div class="logic">
+          <article>
+            <span class="number">01 · Less visual noise</span>
+            <h3>Show only what the task needs</h3>
+            <p>Large directories no longer expose every possible filter by default. Search remains immediate; additional criteria are added only when useful.</p>
+          </article>
+          <article>
+            <span class="number">02 · More consistent decisions</span>
+            <h3>One language across the product</h3>
+            <p>Common headings, KPI tiles, filters, and charts now follow shared rules rather than being redesigned screen by screen.</p>
+          </article>
+          <article>
+            <span class="number">03 · Safer future acceleration</span>
+            <h3>AI and team work have guardrails</h3>
+            <p>Future work draws from a written contract and reusable components, which makes changes faster while reducing accidental variation.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="eyebrow">In practice</div>
+        <h2>The new filtering pattern</h2>
+        <p class="section-intro">
+          The first rollout is on Repreneur Find, Opportunity Find and Groups, and the M&amp;A directory. It follows the useful behaviour of Primer: progressive filters that can be added, edited, or removed without turning the page into a control panel.
+        </p>
+
+        <div class="comparison">
+          <figure>
+            <img src="assets/wave-2-filtering-before.png" alt="Previous Repreneur Find screen with seven permanent filter dropdowns" />
+            <figcaption>
+              <strong>Before</strong>
+              Seven filter controls were permanently visible, including criteria that many staff sessions did not need.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="assets/wave-2-filtering-after.png" alt="Updated Repreneur Find screen with a search field, Add filter control, and Status Qualified filter chip" />
+            <figcaption>
+              <strong>After</strong>
+              Search stays visible. Staff add a filter only when needed, then see it as a clear, editable chip. In this live example, Status: Qualified reduces 252 repreneurs to 15.
+            </figcaption>
+          </figure>
+        </div>
+
+        <div class="outcomes">
+          <div class="main">
+            <h3>What changes for founders and staff</h3>
+            <ul>
+              <li>Useful views can be shared or reopened because search and filter choices are part of the page link.</li>
+              <li>On desktop, filters open in a compact picker; on mobile, the same choice becomes a simple bottom sheet.</li>
+              <li>Charts now use one Re-New-owned layer built on EvilCharts, with a consistent palette and accessible data alternatives.</li>
+              <li>A live Design System page makes the approved components visible inside Wave, rather than hiding the rules in technical documentation.</li>
+            </ul>
+          </div>
+          <div class="watch">
+            <h3>What we will watch</h3>
+            <p>The next signal is simple: whether the new filters shorten the time needed to reach useful working lists in weekly operations. The foundation is intentionally flexible, so we can improve the patterns from real use without reopening the overall visual system.</p>
+          </div>
+        </div>
+      </section>
+
+      <p class="footer">Wave 2.0 Design Foundation · internal founder brief</p>
+    </main>
+  </body>
+</html>
