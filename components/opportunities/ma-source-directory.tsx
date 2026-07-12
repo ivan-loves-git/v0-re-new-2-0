@@ -11,8 +11,6 @@ import {
   Pencil,
   Phone,
   Plus,
-  Search,
-  X,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,6 +33,9 @@ import {
   type MaSourceDirectoryEntry,
   type MaSourceType,
 } from "@/lib/types/opportunity"
+import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
+import { useCollectionFilters } from "@/hooks/use-collection-filters"
+import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
 
 interface MaSourceDirectoryProps {
   sources: MaSourceDirectoryEntry[]
@@ -53,6 +54,15 @@ const sourceTypeClasses: Record<MaSourceType, string> = {
   other: "border-transparent bg-slate-100 text-slate-700 hover:bg-slate-100",
 }
 
+const FILTER_DEFINITIONS: CollectionFilterDefinition[] = [
+  { key: "sourceType", label: "Source type", options: MA_SOURCE_TYPE_OPTIONS },
+  { key: "coverage", label: "Contact coverage", options: [
+    { value: "complete", label: "Email and phone" },
+    { value: "missing_email", label: "Missing email" },
+    { value: "missing_phone", label: "Missing phone" },
+  ] },
+]
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-"
   const date = new Date(value)
@@ -70,9 +80,10 @@ function SourceTypeBadge({ sourceType }: { sourceType: MaSourceType }) {
 
 export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
   const router = useRouter()
-  const [search, setSearch] = useState("")
-  const [sourceTypeFilter, setSourceTypeFilter] = useState<MaSourceType | "all">("all")
-  const [contactCoverageFilter, setContactCoverageFilter] = useState<ContactCoverageFilter>("all")
+  const filters = useCollectionFilters({ definitions: FILTER_DEFINITIONS })
+  const search = filters.search
+  const sourceTypeFilter = (filters.values.sourceType || "all") as MaSourceType | "all"
+  const contactCoverageFilter = (filters.values.coverage || "all") as ContactCoverageFilter
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingSource, setEditingSource] = useState<MaSourceDirectoryEntry | null>(null)
   const [sourceType, setSourceType] = useState<MaSourceType>("ma_firm")
@@ -101,14 +112,6 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
         .some((value) => String(value).toLowerCase().includes(query))
     })
   }, [contactCoverageFilter, search, sourceTypeFilter, sources])
-
-  const hasActiveFilters = search || sourceTypeFilter !== "all" || contactCoverageFilter !== "all"
-
-  const clearFilters = () => {
-    setSearch("")
-    setSourceTypeFilter("all")
-    setContactCoverageFilter("all")
-  }
 
   const openCreateDialog = () => {
     setEditingSource(null)
@@ -144,78 +147,34 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-lg border bg-card p-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search sources..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="h-9 pl-9"
-              />
-            </div>
-
-            <Select value={sourceTypeFilter} onValueChange={(value) => setSourceTypeFilter(value as MaSourceType | "all")}>
-              <SelectTrigger className="h-9 w-full sm:w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">All source types</SelectItem>
-                  {MA_SOURCE_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={contactCoverageFilter}
-              onValueChange={(value) => setContactCoverageFilter(value as ContactCoverageFilter)}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">Any contact coverage</SelectItem>
-                  <SelectItem value="complete">Email and phone</SelectItem>
-                  <SelectItem value="missing_email">Missing email</SelectItem>
-                  <SelectItem value="missing_phone">Missing phone</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {hasActiveFilters ? (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 w-full sm:w-auto">
-                <X data-icon="inline-start" />
-                Clear
-              </Button>
-            ) : null}
-            <Button asChild variant="outline" size="sm" className="h-9 w-full sm:w-auto">
+      <CollectionFilterBar
+        search={filters.search}
+        onSearchChange={filters.setSearch}
+        searchPlaceholder="Search sources..."
+        definitions={FILTER_DEFINITIONS}
+        values={filters.values}
+        onFilterChange={filters.setFilter}
+        onFilterRemove={filters.removeFilter}
+        onClearFilters={filters.clearFilters}
+        onReset={filters.reset}
+        resultCount={filteredSources.length}
+        totalCount={sources.length}
+        resultLabel="source"
+        actions={
+          <>
+            <Button asChild variant="outline" size="sm" className="h-9">
               <Link href="/emails">
                 <ExternalLink data-icon="inline-start" />
                 Email Tools
               </Link>
             </Button>
-            <Button type="button" size="sm" onClick={openCreateDialog} className="h-9 w-full sm:w-auto">
+            <Button type="button" size="sm" onClick={openCreateDialog} className="h-9">
               <Plus data-icon="inline-start" />
               Add source
             </Button>
-          </div>
-        </div>
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {filteredSources.length} source{filteredSources.length === 1 ? "" : "s"}
-          {hasActiveFilters ? ` filtered from ${sources.length}` : " in the intermediary directory"}
-        </p>
-      </div>
+          </>
+        }
+      />
 
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="overflow-x-auto">

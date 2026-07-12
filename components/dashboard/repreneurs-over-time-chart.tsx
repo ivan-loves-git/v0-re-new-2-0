@@ -1,9 +1,9 @@
 "use client"
 
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp } from "lucide-react"
 import { CardInfoButton } from "./card-info-button"
+import { WaveAreaChart } from "@/components/wave/charts"
 
 interface ChartDataPoint {
   date: string
@@ -18,51 +18,13 @@ interface RepreneursOverTimeChartProps {
 
 export function RepreneursOverTimeChart({ data, showCard = true }: RepreneursOverTimeChartProps) {
   const chartContent = (
-    <div className="h-[300px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis
-            dataKey="date"
-            tick={{ fill: "#6b7280", fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: "#e5e7eb" }}
-          />
-          <YAxis
-            tick={{ fill: "#6b7280", fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: "#e5e7eb" }}
-            allowDecimals={false}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "white",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-            }}
-            formatter={(value: number, name: string) => [
-              value,
-              name === "cumulative" ? "Total Repreneurs" : "New This Period",
-            ]}
-          />
-          <Area
-            type="monotone"
-            dataKey="cumulative"
-            stroke="#3b82f6"
-            fillOpacity={1}
-            fill="url(#colorCount)"
-            strokeWidth={2}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+    <WaveAreaChart
+      data={data}
+      label="Repreneurs over time"
+      xKey="date"
+      series={[{ key: "cumulative", label: "Total repreneurs", color: "var(--chart-1)" }]}
+      className="h-[300px]"
+    />
   )
 
   if (!showCard) {

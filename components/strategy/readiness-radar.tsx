@@ -1,56 +1,10 @@
 "use client"
 
-import { lazy, Suspense, useMemo } from "react"
+import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Radar as RadarIcon } from "lucide-react"
 import { DIMENSIONS } from "@/lib/data/strategy-data"
-
-const LazyRadarChart = lazy(() =>
-  import("recharts").then((mod) => ({
-    default: function RadarChartInner({ scores }: { scores: number[] }) {
-      const { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, Tooltip } = mod
-      const data = DIMENSIONS.map((dim, i) => ({
-        dimension: dim,
-        shortLabel: dim.split(" ")[0],
-        score: scores[i],
-        fullMark: 9,
-      }))
-
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-            <PolarGrid stroke="#e5e7eb" />
-            <PolarAngleAxis
-              dataKey="shortLabel"
-              tick={{ fill: "#6b7280", fontSize: 10 }}
-            />
-            <Radar
-              dataKey="score"
-              stroke="#10b981"
-              fill="#10b981"
-              fillOpacity={0.25}
-              strokeWidth={2}
-            />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload && payload.length) {
-                  const d = payload[0].payload
-                  return (
-                    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-                      <p className="font-medium text-gray-900 text-sm">{d.dimension}</p>
-                      <p className="text-lg font-bold text-emerald-600">{Math.round(d.score)}/9</p>
-                    </div>
-                  )
-                }
-                return null
-              }}
-            />
-          </RadarChart>
-        </ResponsiveContainer>
-      )
-    },
-  }))
-)
+import { WaveRadarChart } from "@/components/wave/charts"
 
 interface ReadinessRadarProps {
   scores: number[]
@@ -59,6 +13,11 @@ interface ReadinessRadarProps {
 
 export function ReadinessRadar({ scores, onScoreChange }: ReadinessRadarProps) {
   const roundedScores = useMemo(() => scores.map((s) => Math.round(s)), [scores])
+  const radarData = useMemo(() => DIMENSIONS.map((dimension, index) => ({
+    dimension,
+    shortLabel: dimension.split(" ")[0],
+    score: roundedScores[index],
+  })), [roundedScores])
 
   return (
     <Card>
@@ -71,15 +30,14 @@ export function ReadinessRadar({ scores, onScoreChange }: ReadinessRadarProps) {
       <CardContent className="space-y-4">
         {/* Radar Chart */}
         <div className="aspect-square w-full">
-          <Suspense
-            fallback={
-              <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
-                Loading chart...
-              </div>
-            }
-          >
-            <LazyRadarChart scores={scores} />
-          </Suspense>
+          <WaveRadarChart
+            data={radarData}
+            label="Acquisition readiness radar"
+            categoryKey="shortLabel"
+            series={[{ key: "score", label: "Readiness", color: "var(--chart-2)" }]}
+            maxValue={9}
+            className="h-full"
+          />
         </div>
 
         {/* Sliders */}

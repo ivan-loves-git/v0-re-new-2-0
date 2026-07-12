@@ -1,6 +1,5 @@
 "use client"
 
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, Tooltip } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Radar as RadarIcon } from "lucide-react"
 import type { Repreneur } from "@/lib/types/repreneur"
@@ -16,6 +15,7 @@ import {
 } from "@/lib/scoring-utils"
 import { TIER2_DIMENSIONS } from "@/lib/constants/tier-config"
 import { extractTier2Dimensions } from "@/lib/utils/tier2-scoring"
+import { WaveRadarChart } from "@/components/wave/charts"
 
 interface RepreneurRadarChartProps {
   repreneur: Repreneur
@@ -198,50 +198,13 @@ export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
           <div>
             <p className="text-xs text-center text-blue-600 font-medium mb-1">T1: Skills</p>
             {hasTier1Data ? (
-              <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="65%" data={tier1Data}>
-                    <PolarGrid stroke="#e5e7eb" />
-                    <PolarAngleAxis
-                      dataKey="shortLabel"
-                      tick={{ fill: "#6b7280", fontSize: 9 }}
-                    />
-                    <Radar
-                      dataKey="score"
-                      stroke="#3b82f6"
-                      fill="#3b82f6"
-                      fillOpacity={0.4}
-                      strokeWidth={1.5}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const d = payload[0].payload as Tier1DataPoint
-                          return (
-                            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-[240px]">
-                              <p className="font-medium text-gray-900">{d.dimension}</p>
-                              <div className="flex items-baseline gap-2 mt-1">
-                                <p className="text-lg font-bold text-blue-600">{d.score}%</p>
-                                <p className="text-sm text-gray-500">
-                                  ({d.rawScore}/{d.maxScore} pts)
-                                </p>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1 mb-2">{d.questionDetails}</p>
-                              <div className="border-t pt-2 space-y-0.5">
-                                <p className="text-xs font-medium text-gray-600">Contributing questions:</p>
-                                {d.questions.map((q, i) => (
-                                  <p key={i} className="text-xs text-gray-500">{q}</p>
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        }
-                        return null
-                      }}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
+              <WaveRadarChart
+                data={tier1Data}
+                label="Tier 1 skills profile"
+                categoryKey="shortLabel"
+                series={[{ key: "score", label: "Skills", color: "var(--chart-1)" }]}
+                className="h-[180px]"
+              />
             ) : (
               <div className="h-[180px] flex items-center justify-center text-xs text-muted-foreground border border-dashed rounded-lg">
                 Complete questionnaire
@@ -253,43 +216,13 @@ export function RepreneurRadarChart({ repreneur }: RepreneurRadarChartProps) {
           <div>
             <p className="text-xs text-center text-amber-600 font-medium mb-1">T2: Competencies</p>
             {hasTier2Data ? (
-              <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="65%" data={tier2Data}>
-                    <PolarGrid stroke="#e5e7eb" />
-                    <PolarAngleAxis
-                      dataKey="shortLabel"
-                      tick={{ fill: "#6b7280", fontSize: 9 }}
-                    />
-                    <Radar
-                      dataKey="score"
-                      stroke="#f59e0b"
-                      fill="#f59e0b"
-                      fillOpacity={0.4}
-                      strokeWidth={1.5}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const d = payload[0].payload as Tier2DataPoint
-                          return (
-                            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-[240px]">
-                              <p className="font-medium text-gray-900">{d.dimension}</p>
-                              <div className="flex items-baseline gap-2 mt-1">
-                                <p className="text-lg font-bold text-amber-600">{d.stars}/5</p>
-                                <span className="text-amber-500">{"★".repeat(d.stars)}{"☆".repeat(5 - d.stars)}</span>
-                              </div>
-                              <p className="text-xs text-gray-400 mt-0.5">Weight: {d.weight}x</p>
-                              <p className="text-xs text-gray-500 mt-2">{d.description}</p>
-                            </div>
-                          )
-                        }
-                        return null
-                      }}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
+              <WaveRadarChart
+                data={tier2Data}
+                label="Tier 2 competency profile"
+                categoryKey="shortLabel"
+                series={[{ key: "score", label: "Competencies", color: "var(--chart-3)" }]}
+                className="h-[180px]"
+              />
             ) : (
               <div className="h-[180px] flex items-center justify-center text-xs text-muted-foreground border border-dashed rounded-lg">
                 Rate competencies

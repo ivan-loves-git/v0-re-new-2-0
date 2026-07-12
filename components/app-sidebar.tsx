@@ -20,6 +20,7 @@ import {
   Settings,
   User,
   Waves,
+  Palette,
   type LucideIcon,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
@@ -87,6 +88,7 @@ const projectNavigation: NavigationItem[] = [
     showNotification: true,
   },
   { name: "Guidelines", href: "/guide/guidelines", icon: BookOpenCheck },
+  { name: "Design system", href: "/guide/design-system", icon: Palette },
 ]
 
 // External users section removed - dead routes cleaned up

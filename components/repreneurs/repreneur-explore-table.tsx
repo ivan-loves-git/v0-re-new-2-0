@@ -2,12 +2,10 @@
 
 import { useState, useMemo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react"
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { subDays } from "date-fns"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Pagination,
@@ -26,6 +24,9 @@ import type { Repreneur, LifecycleStatus, JourneyStage, PersonaType } from "@/li
 import { exportRepreneursToCSV, type EnrichedRepreneur } from "@/lib/utils/csv-export"
 import { getExportEnrichmentData } from "@/lib/actions/repreneurs"
 import { DECLINE_REASON_OPTIONS } from "@/lib/types/repreneur"
+import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
+import { useCollectionFilters } from "@/hooks/use-collection-filters"
+import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
 
 const ITEMS_PER_PAGE = 20
 
@@ -94,16 +95,6 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
   function RepreneurExploreTable({ repreneurs }, ref) {
     const router = useRouter()
 
-    // Filter state
-    const [search, setSearch] = useState("")
-    const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
-    const [sourceFilter, setSourceFilter] = useState("")
-    const [dateRange, setDateRange] = useState("all")
-    const [minScore, setMinScore] = useState("all")
-    const [journeyFilter, setJourneyFilter] = useState<JourneyStage | "all">("all")
-    const [personaFilter, setPersonaFilter] = useState<PersonaType | "all">("all")
-    const [recommendationFilter, setRecommendationFilter] = useState("")
-
     // Sort state
     const [sortField, setSortField] = useState<SortField>("created_at")
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -120,27 +111,32 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
       return Array.from(uniqueSources).sort()
     }, [repreneurs])
 
-    const hasActiveFilters =
-      search ||
-      statusFilter !== "all" ||
-      sourceFilter ||
-      dateRange !== "all" ||
-      minScore !== "all" ||
-      journeyFilter !== "all" ||
-      personaFilter !== "all" ||
-      recommendationFilter
+    const filterDefinitions = useMemo<CollectionFilterDefinition[]>(() => [
+      { key: "status", label: "Status", options: [
+        { value: "lead", label: "Lead" },
+        { value: "qualified", label: "Qualified" },
+        { value: "client", label: "Client" },
+        { value: "to_reactivate", label: "To be reactivated" },
+        { value: "declined", label: "Declined" },
+        { value: "rejected", label: "Rejected" },
+      ] },
+      { key: "source", label: "Source", options: sources.map((source) => ({ value: source, label: source })) },
+      { key: "added", label: "Added", options: DATE_RANGES.filter((option) => option.value !== "all") },
+      { key: "score", label: "Minimum score", options: SCORE_RANGES.filter((option) => option.value !== "all") },
+      { key: "journey", label: "Journey", options: JOURNEY_OPTIONS },
+      { key: "persona", label: "Persona", options: PERSONA_OPTIONS },
+      { key: "recommendation", label: "Recommendation", options: RECOMMENDATION_OPTIONS },
+    ], [sources])
 
-    const clearFilters = () => {
-      setSearch("")
-      setStatusFilter("all")
-      setSourceFilter("")
-      setDateRange("all")
-      setMinScore("all")
-      setJourneyFilter("all")
-      setPersonaFilter("all")
-      setRecommendationFilter("")
-      setCurrentPage(1)
-    }
+    const filters = useCollectionFilters({ definitions: filterDefinitions, onChange: () => setCurrentPage(1) })
+    const search = filters.search
+    const statusFilter = (filters.values.status || "all") as LifecycleStatus | "all"
+    const sourceFilter = filters.values.source || ""
+    const dateRange = filters.values.added || "all"
+    const minScore = filters.values.score || "all"
+    const journeyFilter = (filters.values.journey || "all") as JourneyStage | "all"
+    const personaFilter = (filters.values.persona || "all") as PersonaType | "all"
+    const recommendationFilter = filters.values.recommendation || ""
 
     // Filtered data
     const filtered = useMemo(() => {
@@ -301,191 +297,20 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="rounded-lg border bg-card p-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 flex-wrap items-center gap-2">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search repreneurs..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value)
-                    setCurrentPage(1)
-                  }}
-                  className="h-9 pl-9"
-                />
-              </div>
-
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => {
-                  setStatusFilter(v as LifecycleStatus | "all")
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">All status</SelectItem>
-                    <SelectItem value="lead">Lead</SelectItem>
-                    <SelectItem value="qualified">Qualified</SelectItem>
-                    <SelectItem value="client">Client</SelectItem>
-                    <SelectItem value="to_reactivate">To be reactivated</SelectItem>
-                    <SelectItem value="declined">Declined</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-
-              {sources.length > 0 && (
-                <Select
-                  value={sourceFilter || "all"}
-                  onValueChange={(v) => {
-                    setSourceFilter(v === "all" ? "" : v)
-                    setCurrentPage(1)
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-full sm:w-40">
-                    <SelectValue placeholder="All sources" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="all">All sources</SelectItem>
-                      {sources.map((source) => (
-                        <SelectItem key={source} value={source}>
-                          {source}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Select
-                value={dateRange}
-                onValueChange={(v) => {
-                  setDateRange(v)
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {DATE_RANGES.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={minScore}
-                onValueChange={(v) => {
-                  setMinScore(v)
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {SCORE_RANGES.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={journeyFilter}
-                onValueChange={(v) => {
-                  setJourneyFilter(v as JourneyStage | "all")
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">All journeys</SelectItem>
-                    {JOURNEY_OPTIONS.map((j) => (
-                      <SelectItem key={j.value} value={j.value}>
-                        {j.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={personaFilter}
-                onValueChange={(v) => {
-                  setPersonaFilter(v as PersonaType | "all")
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">All personas</SelectItem>
-                    {PERSONA_OPTIONS.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>
-                        {p.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={recommendationFilter || "all"}
-                onValueChange={(v) => {
-                  setRecommendationFilter(v === "all" ? "" : v)
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-48">
-                  <SelectValue placeholder="All recommendations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">All recommendations</SelectItem>
-                    {RECOMMENDATION_OPTIONS.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 w-full sm:w-auto">
-                <X data-icon="inline-start" />
-                Clear
-              </Button>
-            )}
-          </div>
-
-          <p className="mt-3 text-xs text-muted-foreground">
-            {sorted.length} repreneur{sorted.length !== 1 ? "s" : ""}
-            {hasActiveFilters ? ` filtered from ${repreneurs.length}` : " in the full list"}
-          </p>
-        </div>
+        <CollectionFilterBar
+          search={filters.search}
+          onSearchChange={filters.setSearch}
+          searchPlaceholder="Search repreneurs..."
+          definitions={filterDefinitions}
+          values={filters.values}
+          onFilterChange={filters.setFilter}
+          onFilterRemove={filters.removeFilter}
+          onClearFilters={filters.clearFilters}
+          onReset={filters.reset}
+          resultCount={sorted.length}
+          totalCount={repreneurs.length}
+          resultLabel="repreneur"
+        />
 
         {/* Table */}
         <div className="overflow-hidden rounded-lg border bg-card">

@@ -8,6 +8,34 @@ import { Badge } from "@/components/ui/badge"
 // Product outcomes, product work, UX improvements, validation work, learnings, and features
 const roadmapEvents = [
   {
+    period: "Jul 12, 2026",
+    version: "0.9.19",
+    title: "Wave 2.0 design foundation introduced",
+    isCompleted: true,
+    events: [
+      {
+        title: "Cleaner filters for large directories",
+        type: "feature",
+        description: "Repreneur Find, Opportunity Find and Groups, and the M&A directory now keep search visible while letting staff add, edit, and remove only the filters they need.",
+      },
+      {
+        title: "Filtered views can be shared",
+        type: "product",
+        description: "Search and filter choices are stored in the page link, so a useful operational view can be bookmarked or sent to a colleague.",
+      },
+      {
+        title: "One chart language across Wave",
+        type: "decision",
+        description: "All product charts now pass through a Re-New-owned layer built on EvilCharts, with a restrained palette, accessible data alternatives, and consistent behavior.",
+      },
+      {
+        title: "Design choices made reusable",
+        type: "style",
+        description: "A staff-visible design system page and written product UI contract now define the components and visual rules future work should reuse.",
+      },
+    ],
+  },
+  {
     period: "May 22, 2026",
     version: "0.9.18",
     title: "Staff navigation made faster",

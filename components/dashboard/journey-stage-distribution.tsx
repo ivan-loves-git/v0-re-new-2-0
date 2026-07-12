@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Map } from "lucide-react"
 import { CardInfoButton } from "./card-info-button"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import { WaveDonutChart } from "@/components/wave/charts"
 
 interface JourneyStageDistributionProps {
   explorerCount: number
@@ -48,8 +48,6 @@ export function JourneyStageDistribution({
     { name: "Not Set", value: noStageCount, color: COLORS.no_stage },
   ].filter(d => d.value > 0)
 
-  const total = explorerCount + learnerCount + readyCount + executionCount + postAcquisitionCount + noStageCount
-
   return (
     <Card className="h-full overflow-hidden gap-0">
       <CardHeader className="pb-2">
@@ -62,39 +60,14 @@ export function JourneyStageDistribution({
       <CardContent className="pt-0 overflow-hidden">
         <div className="flex items-center gap-3">
           <div className="size-24 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={20}
-                  outerRadius={40}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const item = payload[0].payload
-                      return (
-                        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50">
-                          <p className="text-sm font-medium">{item.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {item.value} ({total > 0 ? Math.round((item.value / total) * 100) : 0}%)
-                          </p>
-                        </div>
-                      )
-                    }
-                    return null
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <WaveDonutChart
+              data={data}
+              label="Journey stage distribution"
+              nameKey="name"
+              valueKey="value"
+              colors={data.map((item) => item.color)}
+              className="h-24"
+            />
           </div>
           <div className="flex-1 space-y-1 min-w-0 overflow-hidden">
             {data.map((item) => (

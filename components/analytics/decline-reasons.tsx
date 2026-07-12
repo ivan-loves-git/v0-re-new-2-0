@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingDown } from "lucide-react"
 import { DECLINE_REASON_OPTIONS } from "@/lib/types/repreneur"
+import { WaveBarChart } from "@/components/wave/charts"
 
 interface DeclineReasonsProps {
   breakdown: { category: string; count: number }[]
@@ -15,6 +16,10 @@ const LABEL_BY_VALUE: Record<string, string> = {
 
 export function DeclineReasons({ breakdown }: DeclineReasonsProps) {
   const total = breakdown.reduce((sum, b) => sum + b.count, 0)
+  const chartData = breakdown.map(({ category, count }) => ({
+    reason: LABEL_BY_VALUE[category] || category,
+    count,
+  }))
 
   return (
     <Card className="h-full">
@@ -33,27 +38,7 @@ export function DeclineReasons({ breakdown }: DeclineReasonsProps) {
             <p className="text-sm text-muted-foreground">No declined offers yet</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {breakdown.map(({ category, count }) => {
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0
-              return (
-                <div key={category} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground">{LABEL_BY_VALUE[category] || category}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {count} · {pct}%
-                    </span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-amber-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <WaveBarChart data={chartData} label="Decline reasons" xKey="reason" series={[{ key: "count", label: "Declined", color: "var(--chart-3)" }]} className="h-[240px]" />
         )}
       </CardContent>
     </Card>

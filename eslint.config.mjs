@@ -27,11 +27,29 @@ const prototypeRules = {
   },
 }
 
+const waveDesignBoundaries = {
+  files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
+  ignores: ['components/evilcharts/**', 'components/wave/charts/**'],
+  rules: {
+    'no-restricted-imports': ['error', {
+      paths: [{
+        name: 'recharts',
+        message: 'Feature code must use the Re-New chart facade at @/components/wave/charts.',
+      }],
+      patterns: [{
+        group: ['@/components/evilcharts/**'],
+        message: 'Import EvilCharts only through @/components/wave/charts so Re-New defaults stay consistent.',
+      }],
+    }],
+  },
+}
+
 const eslintConfig = [
   localIgnores,
   ...nextCoreWebVitals,
   ...nextTypescript,
   prototypeRules,
+  waveDesignBoundaries,
 ]
 
 export default eslintConfig

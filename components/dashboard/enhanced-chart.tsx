@@ -1,17 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  Line,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { format, subWeeks, addWeeks, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, parseISO } from "date-fns"
+import { WaveAreaChart } from "@/components/wave/charts"
 
 interface ChartDataPoint {
   week: string
@@ -201,100 +191,16 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[240px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorRepreneurs" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="week"
-                tick={{ fill: "#6b7280", fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: "#e5e7eb" }}
-              />
-              {/* Left Y-axis for Repreneurs */}
-              <YAxis
-                yAxisId="left"
-                tick={{ fill: "#3b82f6", fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: "#3b82f6" }}
-                allowDecimals={false}
-                label={{
-                  value: 'Repreneurs',
-                  angle: -90,
-                  position: 'insideLeft',
-                  style: { fill: '#3b82f6', fontSize: 11 }
-                }}
-              />
-              {/* Right Y-axis for Clients */}
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fill: "#f97316", fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: "#f97316" }}
-                allowDecimals={false}
-                label={{
-                  value: 'Clients',
-                  angle: 90,
-                  position: 'insideRight',
-                  style: { fill: '#f97316', fontSize: 11 }
-                }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                }}
-                formatter={(value: number, name: string) => {
-                  const labels: Record<string, string> = {
-                    cumulativeRepreneurs: "Total Repreneurs",
-                    cumulativeClients: "Clients",
-                  }
-                  return [value, labels[name] || name]
-                }}
-              />
-              <Legend
-                verticalAlign="top"
-                height={36}
-                formatter={(value) => {
-                  const labels: Record<string, string> = {
-                    cumulativeRepreneurs: "Repreneurs",
-                    cumulativeClients: "Clients",
-                  }
-                  return labels[value] || value
-                }}
-              />
-              {/* Repreneurs area chart */}
-              <Area
-                yAxisId="left"
-                type="monotone"
-                dataKey="cumulativeRepreneurs"
-                stroke="#3b82f6"
-                fillOpacity={1}
-                fill="url(#colorRepreneurs)"
-                strokeWidth={2}
-              />
-              {/* Clients line chart */}
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="cumulativeClients"
-                stroke="#f97316"
-                strokeWidth={2}
-                dot={{ fill: "#f97316", strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
+        <WaveAreaChart
+          data={chartData}
+          label="Pipeline and client trends"
+          xKey="week"
+          series={[
+            { key: "cumulativeRepreneurs", label: "Repreneurs", color: "var(--chart-1)" },
+            { key: "cumulativeClients", label: "Clients", color: "var(--chart-4)" },
+          ]}
+          className="h-[240px]"
+        />
       </CardContent>
     </Card>
   )

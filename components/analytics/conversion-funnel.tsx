@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { WaveBarChart } from "@/components/wave/charts"
 
 interface ConversionFunnelProps {
   leadCount: number
@@ -18,34 +19,10 @@ export function ConversionFunnelAnalytics({
   qualifiedToClientRate,
   leadToClientRate,
 }: ConversionFunnelProps) {
-  const total = leadCount + qualifiedCount + clientCount
-  const maxWidth = 100
-
   const stages = [
-    {
-      label: "Leads",
-      count: leadCount,
-      color: "bg-blue-500",
-      textColor: "text-blue-700",
-      bgColor: "bg-blue-50",
-      width: total > 0 ? Math.max((leadCount / total) * maxWidth, 20) : maxWidth,
-    },
-    {
-      label: "Qualified",
-      count: qualifiedCount,
-      color: "bg-amber-500",
-      textColor: "text-amber-700",
-      bgColor: "bg-amber-50",
-      width: total > 0 ? Math.max((qualifiedCount / total) * maxWidth, 15) : 60,
-    },
-    {
-      label: "Clients",
-      count: clientCount,
-      color: "bg-green-500",
-      textColor: "text-green-700",
-      bgColor: "bg-green-50",
-      width: total > 0 ? Math.max((clientCount / total) * maxWidth, 10) : 30,
-    },
+    { stage: "Leads", count: leadCount },
+    { stage: "Qualified", count: qualifiedCount },
+    { stage: "Clients", count: clientCount },
   ]
 
   const conversions = [
@@ -60,24 +37,7 @@ export function ConversionFunnelAnalytics({
         <CardTitle className="text-sm font-medium">Conversion Funnel</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Visual funnel */}
-        <div className="space-y-2">
-          {stages.map((stage) => (
-            <div key={stage.label} className="flex items-center gap-3">
-              <div className="w-16 text-xs text-muted-foreground text-right shrink-0">
-                {stage.label}
-              </div>
-              <div className="flex-1 relative">
-                <div
-                  className={cn("h-8 rounded-md flex items-center justify-center transition-all", stage.color)}
-                  style={{ width: `${stage.width}%` }}
-                >
-                  <span className="text-xs font-semibold text-white">{stage.count}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <WaveBarChart data={stages} label="Conversion funnel stage counts" xKey="stage" series={[{ key: "count", label: "Repreneurs" }]} className="h-[220px]" />
 
         {/* Conversion rates */}
         <div className="border-t pt-3 space-y-2">

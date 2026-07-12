@@ -11,13 +11,7 @@ import { createAssessment } from "@/lib/actions/leadership-assessment"
 import { getDecisionDisplay } from "@/lib/utils/leadership-scoring"
 import type { LeadershipAssessment } from "@/lib/types/leadership-assessment"
 import { LeadershipAnswersDialog } from "./leadership-answers-dialog"
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  Radar,
-  ResponsiveContainer,
-} from "recharts"
+import { WaveRadarChart } from "@/components/wave/charts"
 
 interface LeadershipResultsCardProps {
   repreneurId: string
@@ -183,20 +177,13 @@ export function LeadershipResultsCard({
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
               Leadership Profile
             </p>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#e5e7eb" />
-                  <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10 }} />
-                  <Radar
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.2}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
+            <WaveRadarChart
+              data={radarData}
+              label="Leadership profile"
+              categoryKey="axis"
+              series={[{ key: "value", label: "Leadership", color: "var(--chart-1)" }]}
+              className="h-48"
+            />
           </div>
         )}
 

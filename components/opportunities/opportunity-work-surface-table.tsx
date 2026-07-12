@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, ChevronRight, Search, X } from "lucide-react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Pagination,
   PaginationContent,
@@ -15,7 +14,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   MA_SOURCE_TYPE_OPTIONS,
@@ -38,6 +36,9 @@ import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
+import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
+import { useCollectionFilters } from "@/hooks/use-collection-filters"
+import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
 
 type WorkSurfaceMode = "find" | "groups"
 type FreshnessFilter = "all" | "fresh" | "stale" | "no_date"
@@ -290,23 +291,9 @@ function OpportunityRow({ item, variant = "full" }: { item: PreparedOpportunity;
 }
 
 export function OpportunityWorkSurfaceTable({ opportunities, mode }: OpportunityWorkSurfaceTableProps) {
-  const [search, setSearch] = useState("")
-  const [journeyFilter, setJourneyFilter] = useState<OpportunityJourney | "all">("all")
-  const [statusFilter, setStatusFilter] = useState<OpportunityStatus | "all">("all")
-  const [visibilityFilter, setVisibilityFilter] = useState<OpportunityVisibility | "all">("all")
-  const [sectorFilter, setSectorFilter] = useState("all")
-  const [locationFilter, setLocationFilter] = useState("all")
-  const [sourceTypeFilter, setSourceTypeFilter] = useState<MaSourceType | "all">("all")
-  const [freshnessFilter, setFreshnessFilter] = useState<FreshnessFilter>("all")
-  const [activePursuitFilter, setActivePursuitFilter] = useState<ActivePursuitFilter>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [groupPages, setGroupPages] = useState<Record<OpportunityGroupKey, number>>(GROUP_PAGE_DEFAULTS)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<OpportunityGroupKey>>(() => new Set(["closed"]))
-  const [filtersMounted, setFiltersMounted] = useState(false)
-
-  useEffect(() => {
-    setFiltersMounted(true)
-  }, [])
 
   const prepared = useMemo(() => opportunities.map(prepareOpportunity), [opportunities])
 
@@ -324,16 +311,34 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
     setGroupPages(GROUP_PAGE_DEFAULTS)
   }
 
-  const hasActiveFilters =
-    search ||
-    journeyFilter !== "all" ||
-    statusFilter !== "all" ||
-    visibilityFilter !== "all" ||
-    sectorFilter !== "all" ||
-    locationFilter !== "all" ||
-    sourceTypeFilter !== "all" ||
-    freshnessFilter !== "all" ||
-    activePursuitFilter !== "all"
+  const filterDefinitions = useMemo<CollectionFilterDefinition[]>(() => [
+    { key: "journey", label: "Journey", options: OPPORTUNITY_JOURNEY_OPTIONS },
+    { key: "status", label: "Status", options: OPPORTUNITY_STATUS_OPTIONS },
+    { key: "visibility", label: "Visibility", options: OPPORTUNITY_VISIBILITY_OPTIONS },
+    { key: "sector", label: "Sector", options: sectors.map((sector) => ({ value: sector, label: sector })) },
+    { key: "location", label: "Location", options: locations.map((location) => ({ value: location, label: location })) },
+    { key: "sourceType", label: "Source", options: MA_SOURCE_TYPE_OPTIONS },
+    { key: "freshness", label: "Freshness", options: [
+      { value: "fresh", label: "Fresh" },
+      { value: "stale", label: "Stale" },
+      { value: "no_date", label: "No date" },
+    ] },
+    { key: "pursuit", label: "Pursuit", options: [
+      { value: "active", label: "Active pursuit" },
+      { value: "none", label: "No active pursuit" },
+    ] },
+  ], [locations, sectors])
+
+  const filters = useCollectionFilters({ definitions: filterDefinitions, onChange: resetPages })
+  const search = filters.search
+  const journeyFilter = (filters.values.journey || "all") as OpportunityJourney | "all"
+  const statusFilter = (filters.values.status || "all") as OpportunityStatus | "all"
+  const visibilityFilter = (filters.values.visibility || "all") as OpportunityVisibility | "all"
+  const sectorFilter = filters.values.sector || "all"
+  const locationFilter = filters.values.location || "all"
+  const sourceTypeFilter = (filters.values.sourceType || "all") as MaSourceType | "all"
+  const freshnessFilter = (filters.values.freshness || "all") as FreshnessFilter
+  const activePursuitFilter = (filters.values.pursuit || "all") as ActivePursuitFilter
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim()
@@ -378,19 +383,6 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
     visibilityFilter,
   ])
 
-  const clearFilters = () => {
-    setSearch("")
-    setJourneyFilter("all")
-    setStatusFilter("all")
-    setVisibilityFilter("all")
-    setSectorFilter("all")
-    setLocationFilter("all")
-    setSourceTypeFilter("all")
-    setFreshnessFilter("all")
-    setActivePursuitFilter("all")
-    resetPages()
-  }
-
   const pageStart = (currentPage - 1) * FIND_ITEMS_PER_PAGE
   const totalPages = Math.ceil(filtered.length / FIND_ITEMS_PER_PAGE)
   const paginated = filtered.slice(pageStart, pageStart + FIND_ITEMS_PER_PAGE)
@@ -408,181 +400,21 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
     })
   }
 
-  const renderFilterSelects = () => (
-    <>
-      <Select value={journeyFilter} onValueChange={(value) => { setJourneyFilter(value as OpportunityJourney | "all"); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All journeys</SelectItem>
-            {OPPORTUNITY_JOURNEY_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value as OpportunityStatus | "all"); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All status</SelectItem>
-            {OPPORTUNITY_STATUS_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={visibilityFilter} onValueChange={(value) => { setVisibilityFilter(value as OpportunityVisibility | "all"); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All visibility</SelectItem>
-            {OPPORTUNITY_VISIBILITY_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={sectorFilter} onValueChange={(value) => { setSectorFilter(value); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All sectors</SelectItem>
-            {sectors.map((sector) => (
-              <SelectItem key={sector} value={sector}>
-                {sector}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={locationFilter} onValueChange={(value) => { setLocationFilter(value); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All locations</SelectItem>
-            {locations.map((location) => (
-              <SelectItem key={location} value={location}>
-                {location}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={sourceTypeFilter} onValueChange={(value) => { setSourceTypeFilter(value as MaSourceType | "all"); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All sources</SelectItem>
-            {MA_SOURCE_TYPE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={freshnessFilter} onValueChange={(value) => { setFreshnessFilter(value as FreshnessFilter); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">Any freshness</SelectItem>
-            <SelectItem value="fresh">Fresh</SelectItem>
-            <SelectItem value="stale">Stale</SelectItem>
-            <SelectItem value="no_date">No date</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={activePursuitFilter} onValueChange={(value) => { setActivePursuitFilter(value as ActivePursuitFilter); resetPages() }}>
-        <SelectTrigger className="h-9 w-full sm:w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">Any pursuit</SelectItem>
-            <SelectItem value="active">Active pursuit</SelectItem>
-            <SelectItem value="none">No active pursuit</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </>
-  )
-
   const filterBar = (
-    <div className="rounded-lg border bg-card p-3">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search opportunities..."
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value)
-                resetPages()
-              }}
-              className="h-9 pl-9"
-            />
-          </div>
-
-          {filtersMounted && (
-            <>
-              <div className="hidden flex-wrap items-center gap-2 sm:flex">
-                {renderFilterSelects()}
-              </div>
-              <details className="group w-full rounded-md border bg-background sm:hidden">
-                <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-sm font-medium">
-                  Filters
-                  <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
-                </summary>
-                <div className="grid gap-2 border-t p-2">
-                  {renderFilterSelects()}
-                </div>
-              </details>
-            </>
-          )}
-        </div>
-
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 w-full sm:w-auto">
-            <X data-icon="inline-start" />
-            Clear
-          </Button>
-        )}
-      </div>
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        {filtered.length} opportunit{filtered.length === 1 ? "y" : "ies"}
-        {hasActiveFilters ? ` filtered from ${opportunities.length}` : mode === "groups" ? " across opportunity groups" : " in the full list"}
-      </p>
-    </div>
+    <CollectionFilterBar
+      search={filters.search}
+      onSearchChange={filters.setSearch}
+      searchPlaceholder="Search opportunities..."
+      definitions={filterDefinitions}
+      values={filters.values}
+      onFilterChange={filters.setFilter}
+      onFilterRemove={filters.removeFilter}
+      onClearFilters={filters.clearFilters}
+      onReset={filters.reset}
+      resultCount={filtered.length}
+      totalCount={opportunities.length}
+      resultLabel="opportunity"
+    />
   )
 
   if (mode === "groups") {
