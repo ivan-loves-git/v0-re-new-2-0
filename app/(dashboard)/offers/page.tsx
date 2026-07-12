@@ -2,6 +2,8 @@ import { createServerClient } from "@/lib/supabase/server"
 import { connection } from "next/server"
 import { OffersTimeline } from "@/components/offers/offers-timeline"
 import { PackageManagementSheet } from "@/components/offers/package-management-sheet"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
+import { Package } from "lucide-react"
 
 // Cache for 30 seconds - prevents re-fetching on rapid navigation
 
@@ -28,16 +30,14 @@ export default async function OffersPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Client Offers</h1>
-          <p className="text-gray-600 mt-1">
-            Track and manage offers assigned to your clients
-          </p>
-        </div>
-        <PackageManagementSheet packages={packages || []} />
-      </div>
+    <div className="flex flex-col gap-6">
+      <SectionPageHeader
+        title="Offers"
+        subtitle="Track active client engagements, package status, and delivery milestones."
+        icon={Package}
+        tone="repreneur"
+        actions={<PackageManagementSheet packages={packages || []} />}
+      />
 
       <OffersTimeline clientOffers={clientOffers || []} />
     </div>

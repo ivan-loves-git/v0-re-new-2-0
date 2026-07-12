@@ -196,7 +196,7 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="size-6 p-0 text-gray-400 hover:text-gray-600"
+          className="size-6 p-0 text-muted-foreground hover:text-muted-foreground"
         >
           <Pencil className="size-3.5" />
         </Button>
@@ -209,9 +209,9 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
           {QUESTIONS.map((q) => (
             <div
               key={q.key}
-              className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-100 last:border-0"
+              className="flex items-center justify-between gap-3 py-1.5 border-b border-border/60 last:border-0"
             >
-              <span className="text-xs text-gray-600 flex-shrink-0 w-36 truncate" title={q.label}>
+              <span className="text-xs text-muted-foreground flex-shrink-0 w-36 truncate" title={q.label}>
                 {q.label}
               </span>
               <div className="flex-1 flex justify-end">
@@ -353,7 +353,7 @@ function MultiSelectField({
                       "mr-2 flex size-3.5 items-center justify-center rounded-sm border",
                       value.includes(opt.value)
                         ? "bg-primary border-primary text-primary-foreground"
-                        : "border-gray-300"
+                        : "border-input"
                     )}
                   >
                     {value.includes(opt.value) && <Check className="size-2.5" />}
@@ -379,13 +379,13 @@ function BooleanField({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-400">No</span>
+      <span className="text-xs text-muted-foreground">No</span>
       <Switch
         checked={value === true}
         onCheckedChange={onChange}
         className="h-4 w-7"
       />
-      <span className="text-xs text-gray-400">Yes</span>
+      <span className="text-xs text-muted-foreground">Yes</span>
     </div>
   )
 }

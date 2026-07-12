@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { WaveBarChart } from "@/components/wave/charts"
 
@@ -32,11 +32,12 @@ export function ConversionFunnelAnalytics({
   ]
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Conversion Funnel</CardTitle>
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="border-b py-3">
+        <CardTitle>Conversion funnel</CardTitle>
+        <CardDescription>Current lifecycle mix with the recorded progression rates.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 py-4">
         <WaveBarChart data={stages} label="Conversion funnel stage counts" xKey="stage" series={[{ key: "count", label: "Repreneurs" }]} className="h-[220px]" />
 
         {/* Conversion rates */}
@@ -48,7 +49,7 @@ export function ConversionFunnelAnalytics({
               </span>
               <span className={cn(
                 "font-semibold tabular-nums",
-                c.rate >= 50 ? "text-green-600" : c.rate >= 25 ? "text-amber-600" : "text-gray-600"
+                c.rate >= 50 ? "text-success" : c.rate >= 25 ? "text-warning" : "text-muted-foreground"
               )}>
                 {c.rate}%
               </span>

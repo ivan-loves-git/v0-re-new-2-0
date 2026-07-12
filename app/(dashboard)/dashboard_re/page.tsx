@@ -7,37 +7,32 @@ import { EnhancedChart } from "@/components/dashboard/enhanced-chart"
 import { ConversionFunnel } from "@/components/dashboard/conversion-funnel"
 import { JourneyStageDistribution } from "@/components/dashboard/journey-stage-distribution"
 import { TopTier1Repreneurs } from "@/components/dashboard/top-tier1-repreneurs"
-import { AssessmentStatus } from "@/components/dashboard/assessment-status"
+import { AssessmentStatus, RecentAssessmentResults } from "@/components/dashboard/assessment-status"
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import Link from "next/link"
 import { connection } from "next/server"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
-import { calculateOverallScore } from "@/lib/scoring-utils"
-import { ArrowRight, BarChart3, Eye, LayoutDashboard, Users, TrendingUp, TableProperties } from "lucide-react"
+import { Eye, LayoutDashboard } from "lucide-react"
 import { getWavySuggestions } from "@/lib/actions/wavy"
 import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
 import { getRepreneurDashboardSnapshot } from "@/lib/data/dashboard-snapshots"
 
 // Skeleton components for Suspense fallbacks
-function StatsColumnSkeleton() {
+function KpiRailSkeleton() {
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
-        <Skeleton className="h-5 w-32" />
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-8 w-12" />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+    <div className="grid overflow-hidden rounded-lg border bg-card sm:grid-cols-3 xl:grid-cols-5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="min-h-[118px] border-b border-r p-4">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="mt-5 h-7 w-14" />
+          <Skeleton className="mt-2 h-3 w-20" />
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -112,22 +107,22 @@ async function StatsAndTiersRow() {
   const repreneursLastWeek = repreneurs.filter((r) => new Date(r.created_at) <= lastWeekEnd)
 
   const lastWeekTotal = repreneursLastWeek.length
-  const lastWeekLeads = repreneursLastWeek.filter((r) => r.lifecycle_status === "lead").length
-  const lastWeekQualified = repreneursLastWeek.filter((r) => r.lifecycle_status === "qualified").length
-  const lastWeekClients = repreneursLastWeek.filter((r) => r.lifecycle_status === "client").length
-
-  // Top Tier 1 repreneurs
+  // Rank by the same combined WHO + WHEN score shown in the UI.
   const topTier1Repreneurs = repreneurs
-    .map((r) => ({
-      id: r.id,
-      first_name: r.first_name,
-      last_name: r.last_name,
-      lifecycle_status: r.lifecycle_status,
-      tier1_score: calculateOverallScore(r),
-      who_score: r.who_score ?? null,
-      when_score: r.when_score ?? null,
-      created_at: r.created_at,
-    }))
+    .map((r) => {
+      const whoScore = r.who_score ?? r.tier1_score ?? 0
+      const whenScore = r.when_score ?? 0
+      return {
+        id: r.id,
+        first_name: r.first_name,
+        last_name: r.last_name,
+        lifecycle_status: r.lifecycle_status,
+        tier1_score: whoScore + whenScore,
+        who_score: whoScore,
+        when_score: whenScore,
+        created_at: r.created_at,
+      }
+    })
     .filter(c => c.tier1_score > 0)
     .sort((a, b) => (b.tier1_score || 0) - (a.tier1_score || 0))
 
@@ -155,7 +150,7 @@ async function StatsAndTiersRow() {
   })
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="space-y-4">
       <StatsColumn
         totalRepreneurs={totalRepreneurs}
         leadCount={leadCount}
@@ -163,12 +158,12 @@ async function StatsAndTiersRow() {
         clientCount={clientCount}
         toReactivateCount={toReactivateCount}
         lastWeekTotal={lastWeekTotal}
-        lastWeekLeads={lastWeekLeads}
-        lastWeekQualified={lastWeekQualified}
-        lastWeekClients={lastWeekClients}
       />
-      <TopTier1Repreneurs repreneurs={topTier1Repreneurs} itemsPerPage={5} />
-      <AssessmentStatus assessments={assessmentEntries} totalRepreneurs={totalRepreneurs} />
+      <div className="grid gap-4 xl:grid-cols-3">
+        <TopTier1Repreneurs repreneurs={topTier1Repreneurs} itemsPerPage={5} />
+        <AssessmentStatus assessments={assessmentEntries} totalRepreneurs={totalRepreneurs} />
+        <RecentAssessmentResults assessments={assessmentEntries} />
+      </div>
     </div>
   )
 }
@@ -191,7 +186,6 @@ async function MiddleRow() {
   const leadCount = repreneurs.filter((r) => r.lifecycle_status === "lead").length
   const qualifiedCount = repreneurs.filter((r) => r.lifecycle_status === "qualified").length
   const clientCount = repreneurs.filter((r) => r.lifecycle_status === "client").length
-  const toReactivateCount = repreneurs.filter((r) => r.lifecycle_status === "to_reactivate").length
 
   // Journey stage distribution
   const explorerCount = repreneurs.filter((r) => r.journey_stage === "explorer").length
@@ -215,7 +209,7 @@ async function MiddleRow() {
     meeting: "Meeting",
   }
 
-  const activityItems = allActivities.map((a: any) => ({
+  const activityItems = allActivities.map((a) => ({
     id: a.id,
     type: a.activity_type,
     title: activityTypeLabels[a.activity_type] || a.activity_type,
@@ -224,33 +218,29 @@ async function MiddleRow() {
     created_at: a.created_at,
     repreneur_id: a.repreneur_id,
     repreneur_name: `${a.repreneurs?.first_name || ""} ${a.repreneurs?.last_name || ""}`.trim() || "Unknown",
-    owner: userEmailMap[a.created_by] || "Team",
+    owner: a.created_by ? userEmailMap[a.created_by] || "Team" : "Team",
   }))
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="flex flex-col gap-4">
-        <div className="flex-shrink-0">
-          <ConversionFunnel
-            leadCount={leadCount}
-            qualifiedCount={qualifiedCount}
-            clientCount={clientCount}
-            compact
-          />
-        </div>
-        <div className="flex-1 min-h-0">
-          <JourneyStageDistribution
-            explorerCount={explorerCount}
-            learnerCount={learnerCount}
-            readyCount={readyCount}
-            executionCount={executionCount}
-            postAcquisitionCount={postAcquisitionCount}
-            noStageCount={noStageCount}
-          />
-        </div>
+    <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-3">
+        <ConversionFunnel
+          leadCount={leadCount}
+          qualifiedCount={qualifiedCount}
+          clientCount={clientCount}
+          compact
+        />
+        <JourneyStageDistribution
+          explorerCount={explorerCount}
+          learnerCount={learnerCount}
+          readyCount={readyCount}
+          executionCount={executionCount}
+          postAcquisitionCount={postAcquisitionCount}
+          noStageCount={noStageCount}
+        />
+        <GlobalActivityStream activities={activityItems} maxHeight="260px" />
       </div>
-      <GlobalActivityStream activities={activityItems} maxHeight="380px" />
-      <RecentlyAddedRepreneurs repreneurs={recentRepreneurs} maxHeight="380px" />
+      <RecentlyAddedRepreneurs repreneurs={recentRepreneurs} maxHeight="420px" />
     </div>
   )
 }
@@ -295,7 +285,7 @@ async function ChartsRow() {
   }))
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-4 xl:grid-cols-2">
       <ActivityHeatmap activityData={heatmapData} />
       <EnhancedChart
         repreneursData={repreneursForChart}
@@ -326,7 +316,7 @@ async function WavySuggestsRow() {
 
 export default async function RepreneurDashboardPage() {
   return (
-    <div className="space-y-6">
+    <div className="wave-page space-y-5">
       <SectionPageHeader
         title="Dashboard"
         subtitle="Overview of your repreneur pipeline"
@@ -344,10 +334,13 @@ export default async function RepreneurDashboardPage() {
 
       {/* Row 1: Stats + Top Tiers - streams in */}
       <Suspense fallback={
-        <div className="grid gap-6 lg:grid-cols-3">
-          <StatsColumnSkeleton />
-          <TopRepreneursSkeleton />
-          <TopRepreneursSkeleton />
+        <div className="space-y-4">
+          <KpiRailSkeleton />
+          <div className="grid gap-4 xl:grid-cols-3">
+            <TopRepreneursSkeleton />
+            <TopRepreneursSkeleton />
+            <TopRepreneursSkeleton />
+          </div>
         </div>
       }>
         <StatsAndTiersRow />
@@ -355,13 +348,13 @@ export default async function RepreneurDashboardPage() {
 
       {/* Row 2: Funnel + Journey + Activity + Recent - streams in */}
       <Suspense fallback={
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="flex flex-col gap-4">
+        <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-3">
             <ChartSkeleton />
             <ChartSkeleton />
+            <ActivityStreamSkeleton />
           </div>
-          <ActivityStreamSkeleton />
-          <ActivityStreamSkeleton />
+          <ChartSkeleton />
         </div>
       }>
         <MiddleRow />
@@ -369,7 +362,7 @@ export default async function RepreneurDashboardPage() {
 
       {/* Row 3: Charts - streams in */}
       <Suspense fallback={
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2">
           <ChartSkeleton />
           <ChartSkeleton />
         </div>
@@ -382,98 +375,6 @@ export default async function RepreneurDashboardPage() {
         <WavySuggestsRow />
       </Suspense>
 
-      {/* Quick Navigation - renders immediately (no data) */}
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="size-5" />
-              Pipeline View
-            </CardTitle>
-            <CardDescription>Visualize your repreneur pipeline in a kanban board</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/pipeline">
-              <Button className="w-full">
-                Go to Pipeline
-                <ArrowRight className="ml-2 size-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TableProperties className="size-5" />
-              Find Repreneurs
-            </CardTitle>
-            <CardDescription>Filter, sort, and find repreneurs in one searchable table</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/repreneurs/explore">
-              <Button className="w-full">
-                Find
-                <ArrowRight className="ml-2 size-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="size-5" />
-              Groups
-            </CardTitle>
-            <CardDescription>View repreneurs organized by lifecycle status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/repreneurs">
-              <Button className="w-full">
-                View Groups
-                <ArrowRight className="ml-2 size-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="size-5" />
-              Portal Preview
-            </CardTitle>
-            <CardDescription>Open the external repreneur view with a staff-controlled selector</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/portal-preview">
-              <Button className="w-full">
-                Preview Portal
-                <ArrowRight className="ml-2 size-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="size-5" />
-              Analytics
-            </CardTitle>
-            <CardDescription>Review repreneur scores, conversions, and pipeline health</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/analytics_re">
-              <Button className="w-full">
-                View Analytics
-                <ArrowRight className="ml-2 size-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }

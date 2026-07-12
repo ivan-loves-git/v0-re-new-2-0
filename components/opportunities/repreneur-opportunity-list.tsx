@@ -55,9 +55,9 @@ export function RepreneurOpportunityList({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-3">
       {opportunities.map((opportunity) => (
-        <Card key={opportunity.match_id}>
+        <Card key={opportunity.match_id} className="gap-0 py-0 md:grid md:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
           <CardHeader className="gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
@@ -75,7 +75,7 @@ export function RepreneurOpportunityList({
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col justify-between gap-4 border-t py-5 md:border-l md:border-t-0">
             <p className="line-clamp-3 text-sm text-muted-foreground">
               {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
             </p>

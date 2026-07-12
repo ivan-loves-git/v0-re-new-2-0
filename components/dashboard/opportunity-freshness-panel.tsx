@@ -4,7 +4,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { OpportunityStatusBadge } from "@/components/opportunities/opportunity-status-badge"
 import type { OpportunityFreshnessData } from "@/lib/actions/opportunity-freshness"
@@ -21,42 +20,40 @@ function titleForReminder(reminder: OpportunityFreshnessData["staleOpportunities
   return reminder.publicTitle || reminder.sector || reminder.reference
 }
 
+function formatAge(days: number | null) {
+  if (days === null) return "-"
+  if (days > 3_650) return "Legacy date"
+  return `${formatNumber(days)} days`
+}
+
 export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelProps) {
-  const staleCount = data.staleOpportunities.length
+  const staleCount = data.staleTotal
+  const visibleReminders = data.staleOpportunities.slice(0, 6)
   const hasStaleOpportunities = staleCount > 0
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-normal">Opportunity freshness</h2>
-          <p className="text-sm text-muted-foreground">
-            Internal reminder for open opportunities older than {data.staleThresholdDays} days without active pursuit.
-          </p>
-        </div>
-        <Badge variant={hasStaleOpportunities ? "destructive" : "outline"}>
-          <CalendarClock data-icon="inline-start" />
-          {formatNumber(staleCount)} stale
-        </Badge>
-      </div>
-
-      <Card>
-        <CardHeader>
+    <section aria-labelledby="opportunity-freshness-title">
+      <Card className="gap-0 py-0">
+        <CardHeader className="border-b py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex flex-col gap-2">
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle id="opportunity-freshness-title" className="flex items-center gap-2">
                 {hasStaleOpportunities ? <AlertTriangle /> : <CheckCircle2 />}
-                Stale opportunity follow-up
+                Opportunity freshness
               </CardTitle>
               <CardDescription>
-                A lightweight staff check, not automated CRM outreach.
+                Open opportunities older than {data.staleThresholdDays} days without an active pursuit.
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className={hasStaleOpportunities ? "border-amber-300 bg-amber-50 text-amber-800" : undefined}>
+                <CalendarClock data-icon="inline-start" />
+                {formatNumber(staleCount)} stale
+              </Badge>
               {data.oldestOpenDays !== null && (
                 <Badge variant="secondary">
                   <Clock3 data-icon="inline-start" />
-                  Oldest open: {formatNumber(data.oldestOpenDays)} days
+                  Oldest open: {data.oldestOpenDays > 3_650 ? "legacy import" : `${formatNumber(data.oldestOpenDays)} days`}
                 </Badge>
               )}
               {data.openWithoutDate > 0 && (
@@ -65,18 +62,20 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-4 py-4">
           {hasStaleOpportunities ? (
             <>
-              <Alert variant="destructive">
-                <AlertTriangle />
-                <AlertTitle>{formatNumber(staleCount)} opportunity needs a freshness decision</AlertTitle>
+              <Alert className="border-amber-300 bg-amber-50/70 text-amber-950 [&>svg]:text-amber-700">
+                <AlertTriangle className="text-amber-700" />
+                <AlertTitle>
+                  {formatNumber(staleCount)} {staleCount === 1 ? "opportunity needs" : "opportunities need"} a freshness decision
+                </AlertTitle>
                 <AlertDescription>
                   Confirm whether to follow up with the source, pause the opportunity, archive it, or move a repreneur into active pursuit.
                 </AlertDescription>
               </Alert>
 
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-hidden rounded-md border border-border/70">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -89,7 +88,7 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.staleOpportunities.map((reminder) => (
+                    {visibleReminders.map((reminder) => (
                       <TableRow key={reminder.id}>
                         <TableCell className="min-w-[220px] whitespace-normal">
                           <Link href={`/opportunities/${reminder.id}`} className="font-medium hover:underline">
@@ -107,7 +106,7 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
                           </div>
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {reminder.daysOpen !== null ? `${formatNumber(reminder.daysOpen)} days` : "-"}
+                          {formatAge(reminder.daysOpen)}
                         </TableCell>
                         <TableCell>
                           <OpportunityStatusBadge status={reminder.status} />
@@ -124,6 +123,14 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
                   </TableBody>
                 </Table>
               </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Showing the {visibleReminders.length} oldest of {formatNumber(staleCount)} stale opportunities.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/opportunities/find">Review opportunity inventory</Link>
+                </Button>
+              </div>
             </>
           ) : (
             <Alert>
@@ -135,8 +142,7 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
             </Alert>
           )}
 
-          <Separator />
-          <p className="text-xs text-muted-foreground">
+          <p className="border-t pt-3 text-xs text-muted-foreground">
             June rule: stale means active, paused, or draft opportunity older than {data.staleThresholdDays} days with no active pursuit.
           </p>
         </CardContent>

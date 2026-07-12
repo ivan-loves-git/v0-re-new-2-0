@@ -108,22 +108,22 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
 
   return (
     <>
-    <Card className="h-full flex flex-col gap-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Activity className="size-5 text-gray-900" />
-          Activity Stream
+    <Card className="flex h-full flex-col gap-0 py-0">
+      <CardHeader className="flex flex-row items-center justify-between border-b py-3">
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="size-4 text-muted-foreground" />
+          Activity stream
         </CardTitle>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="size-4" />
-              Log Activity
+            <Button size="sm">
+              <Plus className="size-4" data-icon="inline-start" />
+              Log activity
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Log Activity</DialogTitle>
+              <DialogTitle>Log activity</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -185,16 +185,16 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                 Cancel
               </Button>
               <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Activity"}
+                {isSubmitting ? "Saving..." : "Save activity"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3 overflow-y-auto pr-2" style={{ maxHeight: "380px" }}>
+      <CardContent className="py-2">
+        <div className="overflow-y-auto" style={{ maxHeight: "380px" }}>
           {activities.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               No activities logged yet. Click "Log Activity" to add one.
             </p>
           ) : (
@@ -204,28 +204,28 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
               return (
                 <div
                   key={activity.id}
-                  className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
+                  className="flex items-start gap-3 border-b py-3 first:pt-1 last:border-0 last:pb-1"
                 >
-                  <div className="p-2 rounded-full bg-blue-50 text-blue-600 shrink-0">
+                  <div className="shrink-0 rounded-md border bg-muted/60 p-2 text-muted-foreground">
                     <IconComponent className="size-4" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{config.label}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-foreground">{config.label}</span>
                       {activity.duration_minutes && (
-                        <span className="text-xs text-gray-400">{activity.duration_minutes} min</span>
+                        <span className="text-xs text-muted-foreground">{activity.duration_minutes} min</span>
                       )}
                     </div>
                     {activity.notes && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{activity.notes}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{activity.notes}</p>
                     )}
                     {activity.event_date && (
-                      <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                      <p className="mt-1 flex items-center gap-1 text-xs font-medium text-primary">
                         <Calendar className="size-3" />
                         {format(new Date(activity.event_date), "MMM d, yyyy")}
                       </p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="mt-1 text-xs text-muted-foreground/80">
                       {format(new Date(activity.created_at), "MMM d 'at' HH:mm")} ({formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })})
                       {activity.created_by_email && <span> · by {activity.created_by_email}</span>}
                     </p>
@@ -234,23 +234,24 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="size-8 flex-shrink-0"
+                        size="icon-sm"
+                        className="flex-shrink-0"
                         disabled={deletingId === activity.id}
+                        aria-label={`Actions for ${config.label}`}
                       >
                         <MoreHorizontal className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setViewingActivity(activity)}>
-                        <Eye className="size-4 mr-2" />
+                        <Eye className="size-4" data-icon="inline-start" />
                         View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDelete(activity.id)}
-                        className="text-red-600"
+                        className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="size-4 mr-2" />
+                        <Trash2 className="size-4" data-icon="inline-start" />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -284,9 +285,9 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
         </DialogHeader>
         <div className="py-4">
           {viewingActivity?.notes ? (
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingActivity.notes}</p>
+            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{viewingActivity.notes}</p>
           ) : (
-            <p className="text-sm text-gray-400 italic">No notes recorded for this activity.</p>
+            <p className="text-sm italic text-muted-foreground">No notes recorded for this activity.</p>
           )}
         </div>
         <DialogFooter>

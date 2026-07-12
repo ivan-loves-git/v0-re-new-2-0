@@ -131,7 +131,7 @@ export function RepreneurAvatar({
   }
 
   const avatarImage = (
-    <div className={cn("relative rounded-full overflow-hidden bg-gray-200 border border-gray-200", sizeClasses[size], className)}>
+    <div className={cn("relative rounded-full overflow-hidden bg-gray-200 border border-border", sizeClasses[size], className)}>
       <Image
         src={imageSrc}
         alt={`${firstName} ${lastName}`}
@@ -152,11 +152,11 @@ export function RepreneurAvatar({
         <button className="relative group cursor-pointer">
           {avatarImage}
           <div className={cn(
-            "absolute bg-white rounded-full shadow-md border border-gray-200 flex items-center justify-center",
-            "group-hover:bg-gray-100 transition-colors",
+            "absolute bg-white rounded-full shadow-md border border-border flex items-center justify-center",
+            "group-hover:bg-muted transition-colors",
             pencilSizeClasses[size]
           )}>
-            <Pencil className="h-3 w-3 text-gray-600" />
+            <Pencil className="h-3 w-3 text-muted-foreground" />
           </div>
         </button>
       </DialogTrigger>
@@ -167,7 +167,7 @@ export function RepreneurAvatar({
         <div className="space-y-4">
           {/* Current avatar preview */}
           <div className="flex justify-center">
-            <div className="relative h-32 w-32 rounded-full overflow-hidden bg-gray-200 border border-gray-200">
+            <div className="relative h-32 w-32 rounded-full overflow-hidden bg-gray-200 border border-border">
               <Image
                 src={imageSrc}
                 alt="Current avatar"
@@ -217,7 +217,7 @@ export function RepreneurAvatar({
           </div>
 
           {currentAvatarUrl && (
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Click the trash icon to reset to a default avatar
             </p>
           )}

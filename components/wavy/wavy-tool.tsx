@@ -204,13 +204,13 @@ export function WavyTool({
   const canSend = channel === "email" && selectedRepreneur?.email && subject && body
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]">
       {/* Left: Configuration */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Waves className="size-5 text-blue-500" />
-            Configure Message
+            <Waves className="size-5 text-teal-700" />
+            Configure message
           </CardTitle>
           <CardDescription>
             Choose who to write to and what kind of message
@@ -232,15 +232,15 @@ export function WavyTool({
               onSelect={setSelectedRepreneur}
             />
             {selectedRepreneur && (
-              <div className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">
+              <div className="mt-2 rounded-lg border bg-muted/30 p-3 text-sm">
                 <div className="flex flex-wrap gap-2">
                   {selectedRepreneur.t1Score && (
-                    <span className="rounded bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    <span className="rounded border bg-card px-2 py-0.5 text-[11px] font-semibold text-foreground">
                       T1: {selectedRepreneur.t1Score}
                     </span>
                   )}
                   {selectedRepreneur.whenScore && (
-                    <span className="rounded bg-purple-100 px-2 py-0.5 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                    <span className="rounded border bg-card px-2 py-0.5 text-[11px] font-semibold text-foreground">
                       WHEN: {selectedRepreneur.whenScore}
                     </span>
                   )}
@@ -255,7 +255,7 @@ export function WavyTool({
 
           {/* Template Selection */}
           <div className="flex flex-col gap-2">
-            <Label>Template (optional)</Label>
+            <Label>Template <span className="font-normal text-muted-foreground">optional</span></Label>
             <TemplateSelector
               channel={channel}
               value={templateId}
@@ -268,7 +268,7 @@ export function WavyTool({
 
           {/* Custom Instructions */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="instructions">Additional Instructions (optional)</Label>
+            <Label htmlFor="instructions">Additional instructions <span className="font-normal text-muted-foreground">optional</span></Label>
             <Textarea
               id="instructions"
               placeholder="e.g., Mention the upcoming workshop on March 15th..."
@@ -357,7 +357,7 @@ export function WavyTool({
               ) : (
                 <>
                   <Copy className="size-4" />
-                  Copy to Clipboard
+                Copy
                 </>
               )}
             </Button>
@@ -369,7 +369,7 @@ export function WavyTool({
                 className="flex-1"
               >
                 <Send className="size-4" />
-                Send Email
+                Send email
               </Button>
             )}
           </div>

@@ -18,7 +18,7 @@ const statusConfig: Record<OfferStatus, { label: string; className: string }> = 
   },
   completed: {
     label: "Completed",
-    className: "bg-gray-100 text-gray-800",
+    className: "bg-muted text-foreground",
   },
   declined: {
     label: "Declined",

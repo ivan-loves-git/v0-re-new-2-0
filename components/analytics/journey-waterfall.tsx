@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { WaveBarChart } from "@/components/wave/charts"
 
 interface JourneyWaterfallProps {
@@ -20,11 +20,12 @@ export function JourneyWaterfall({ stageDistribution }: JourneyWaterfallProps) {
   }))
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Journey Stages</CardTitle>
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="border-b py-3">
+        <CardTitle>Journey distribution</CardTitle>
+        <CardDescription>Repreneurs by their current acquisition journey stage.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="py-4">
         <WaveBarChart data={chartData} label="Journey stage counts" xKey="stage" series={[{ key: "count", label: "Repreneurs", color: "var(--chart-2)" }]} className="h-[240px]" />
       </CardContent>
     </Card>

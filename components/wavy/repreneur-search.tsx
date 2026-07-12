@@ -93,7 +93,7 @@ export function RepreneurSearch({
                     </div>
                     {repreneur.t1Score && (
                       <div className="flex gap-1.5 text-xs">
-                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        <span className="rounded border bg-muted px-1.5 py-0.5 font-semibold text-foreground">
                           T1: {repreneur.t1Score}
                         </span>
                       </div>

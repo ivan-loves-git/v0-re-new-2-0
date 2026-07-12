@@ -12,7 +12,7 @@ interface PersonaSelectorProps {
 }
 
 const TAG_STYLES: Record<Persona["tagColor"], string> = {
-  gray: "bg-gray-100 text-gray-600 border-gray-200",
+  gray: "bg-muted text-muted-foreground border-border",
   blue: "bg-blue-50 text-blue-600 border-blue-200",
   amber: "bg-amber-50 text-amber-600 border-amber-200",
 }
@@ -29,7 +29,7 @@ export function PersonaSelector({ personas, selectedIndex, onSelect }: PersonaSe
               "cursor-pointer transition-all duration-200 hover:shadow-md py-4",
               isActive
                 ? "ring-2 ring-emerald-500 bg-emerald-50/50"
-                : "hover:border-gray-300"
+                : "hover:border-input"
             )}
             onClick={() => onSelect(index)}
           >

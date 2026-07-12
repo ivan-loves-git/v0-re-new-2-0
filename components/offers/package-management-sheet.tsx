@@ -82,7 +82,7 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
           {/* Active packages */}
           {activePackages.length > 0 && (
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">Active Packages</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.055em] text-muted-foreground">Active packages</h4>
               <div className="space-y-2">
                 {activePackages.map((pkg) => (
                   <PackageItem
@@ -101,7 +101,7 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
           {/* Inactive packages */}
           {inactivePackages.length > 0 && (
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-gray-400">Inactive Packages</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.055em] text-muted-foreground/70">Inactive packages</h4>
               <div className="space-y-2">
                 {inactivePackages.map((pkg) => (
                   <PackageItem
@@ -118,8 +118,8 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
           )}
 
           {packages.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <Package className="size-12 mx-auto mb-3 text-gray-300" />
+            <div className="py-8 text-center text-muted-foreground">
+              <Package className="mx-auto mb-3 size-10 text-muted-foreground/40" />
               <p>No packages created yet.</p>
               <p className="text-sm">Create your first package to start assigning offers.</p>
             </div>
@@ -140,46 +140,46 @@ interface PackageItemProps {
 
 function PackageItem({ package: pkg, onEdit, onToggle, isToggling, formatPrice }: PackageItemProps) {
   return (
-    <div className={`p-3 rounded-lg border ${pkg.is_active ? "bg-white" : "bg-gray-50"}`}>
+    <div className={`rounded-md border p-3 ${pkg.is_active ? "bg-card" : "bg-muted/30"}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`font-medium ${pkg.is_active ? "text-gray-900" : "text-gray-500"}`}>
+            <span className={`font-semibold ${pkg.is_active ? "text-foreground" : "text-muted-foreground"}`}>
               {pkg.name}
             </span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-              pkg.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+              pkg.is_active ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"
             }`}>
               {pkg.is_active ? "Active" : "Inactive"}
             </span>
           </div>
-          <div className="text-sm text-gray-500 mt-0.5">
+          <div className="mt-0.5 text-xs text-muted-foreground">
             {formatPrice(pkg.price)} · {pkg.duration_days} days
             {pkg.includes_hours && ` · ${pkg.includes_hours}h`}
           </div>
           {pkg.description && (
-            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{pkg.description}</p>
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/80">{pkg.description}</p>
           )}
         </div>
 
         <div className="flex items-center gap-1 ml-2">
           <Button
             variant="ghost"
-            size="icon"
-            className="size-8"
+            size="icon-sm"
             onClick={onEdit}
+            aria-label={`Edit ${pkg.name}`}
           >
             <Pencil className="size-4" />
           </Button>
           <Button
             variant="ghost"
-            size="icon"
-            className="size-8"
+            size="icon-sm"
             onClick={onToggle}
             disabled={isToggling}
+            aria-label={`${pkg.is_active ? "Deactivate" : "Activate"} ${pkg.name}`}
           >
             {pkg.is_active ? (
-              <PowerOff className="size-4 text-gray-400" />
+              <PowerOff className="size-4 text-muted-foreground" />
             ) : (
               <Power className="size-4 text-green-500" />
             )}

@@ -29,6 +29,11 @@ const STEP_TITLES: Record<number, { fr: string; en: string }> = {
   6: { fr: 'Vérification', en: 'Review' },
 }
 
+function scrollToTop() {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+}
+
 /**
  * Multi-step intake form orchestrator
  * Manages state, navigation, validation, and submission
@@ -63,7 +68,7 @@ export function IntakeFormV2() {
       currentStep: Math.min(prev.currentStep + 1, INTAKE_STEPS.length)
     }))
     // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollToTop()
   }, [])
 
   // Navigate to previous step
@@ -72,7 +77,7 @@ export function IntakeFormV2() {
       ...prev,
       currentStep: Math.max(prev.currentStep - 1, 1)
     }))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollToTop()
   }, [])
 
   // Navigate to specific step (for editing from review)
@@ -81,7 +86,7 @@ export function IntakeFormV2() {
       ...prev,
       currentStep: stepNumber
     }))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollToTop()
   }, [])
 
   // Submit the form
@@ -283,7 +288,7 @@ export function IntakeFormV2() {
       )}
 
       {/* Current step content */}
-      <div className="bg-card border rounded-lg p-6 shadow-sm">
+      <div className="rounded-lg border bg-card p-6">
         {renderStep()}
       </div>
 

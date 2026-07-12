@@ -1,15 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bell, Palette, Shield } from "lucide-react"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage your preferences</p>
-      </div>
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <SectionPageHeader title="Settings" subtitle="Workspace preferences, notifications, appearance, and access" icon={Shield} tone="neutral" />
 
-      <div className="max-w-2xl space-y-4">
+      <div className="grid gap-4 md:grid-cols-3">
         {/* Notifications Card */}
         <Card>
           <CardHeader>
@@ -20,7 +18,7 @@ export default function SettingsPage() {
             <CardDescription>Configure how you receive updates</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm leading-5 text-muted-foreground">
               Notification settings coming soon. You will be able to configure email alerts for new intake forms,
               follow-up reminders, and team activity.
             </p>
@@ -37,7 +35,7 @@ export default function SettingsPage() {
             <CardDescription>Customize the look and feel</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm leading-5 text-muted-foreground">
               Appearance settings coming soon. You will be able to toggle dark mode and adjust
               display preferences.
             </p>
@@ -54,7 +52,7 @@ export default function SettingsPage() {
             <CardDescription>Account security options</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm leading-5 text-muted-foreground">
               To change your password or update security settings, please contact your administrator.
             </p>
           </CardContent>

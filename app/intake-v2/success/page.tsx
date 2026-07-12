@@ -41,7 +41,7 @@ export default function IntakeSuccessPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-16 px-4">
+    <main id="main-content" className="min-h-svh bg-background px-4 py-16">
       <div className="max-w-lg mx-auto">
         {/* Language toggle */}
         <div className="flex justify-end mb-6">
@@ -51,13 +51,13 @@ export default function IntakeSuccessPage() {
         <div className="text-center">
           {/* Success icon */}
           <div className="flex justify-center mb-6">
-            <div className="size-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
+            <div className="flex size-16 items-center justify-center rounded-full border bg-teal-50">
+              <CheckCircle2 className="size-8 text-teal-700" />
             </div>
           </div>
 
           {/* Heading */}
-          <h1 className="text-3xl font-bold tracking-tight mb-4">
+          <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.03em]">
             {content.title}
           </h1>
 

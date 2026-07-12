@@ -138,14 +138,14 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-2 -m-2 hover:bg-gray-50 transition-colors"
+        className="w-full text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-2 -m-2 hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold">
               {displayOverall !== null ? displayOverall.toFixed(1) : "—"}
             </span>
-            <span className="text-sm text-gray-500">/5 overall</span>
+            <span className="text-sm text-muted-foreground">/5 overall</span>
             <div className="flex items-center gap-0.5 ml-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
@@ -168,13 +168,13 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
               </Badge>
             )}
             {isExpanded ? (
-              <ChevronUp className="size-4 text-gray-400" />
+              <ChevronUp className="size-4 text-muted-foreground" />
             ) : (
-              <ChevronDown className="size-4 text-gray-400" />
+              <ChevronDown className="size-4 text-muted-foreground" />
             )}
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           {ratedCount === 0
             ? "Click to rate 6 competency dimensions"
             : ratedCount < 6
@@ -201,7 +201,7 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
                     </TooltipTrigger>
                     <TooltipContent side="left" className="max-w-xs">
                       <p>{dim.description}</p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Weight: {dim.weight}x
                       </p>
                     </TooltipContent>
@@ -218,7 +218,7 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
 
           {/* Overall Score Summary */}
           <div className="pt-3 border-t flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-600">
+            <span className="text-sm font-medium text-muted-foreground">
               Weighted Overall
             </span>
             <div className="flex items-center gap-2">

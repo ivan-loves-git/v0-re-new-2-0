@@ -27,21 +27,21 @@ export function RepreneursGroupsPage({ repreneurs }: { repreneurs: RepreneurWith
         tone="repreneur"
         actions={
           <>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => tableRef.current?.triggerExport()}
-            title="Export CSV"
-            aria-label="Export repreneurs CSV"
-          >
-            <Download data-icon="inline-start" />
-          </Button>
-          <Button asChild>
-            <Link href="/repreneurs/new">
-              <Plus data-icon="inline-start" />
-              Add Repreneur
-            </Link>
-          </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => tableRef.current?.triggerExport()}
+              title="Export CSV"
+              aria-label="Export repreneurs CSV"
+            >
+              <Download />
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/repreneurs/new">
+                <Plus data-icon="inline-start" />
+                Add Repreneur
+              </Link>
+            </Button>
           </>
         }
       />

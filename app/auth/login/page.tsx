@@ -1,16 +1,14 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import { signIn } from "@/lib/auth-client"
 import { submitWaitlistRequest } from "@/lib/actions/waitlist"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import Image from "next/image"
-
-const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
+import { KeyRound, Store, Waves } from "lucide-react"
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "request">("signin")
@@ -21,59 +19,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [requestSubmitted, setRequestSubmitted] = useState(false)
-
-  // Logo animation state
-  const [isTouchActive, setIsTouchActive] = useState(false)
-  const [isHovering, setIsHovering] = useState(false)
-  const [emojiIndex, setEmojiIndex] = useState(0)
-  const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [supportsHover, setSupportsHover] = useState(false)
-
-  const isAnimating = isTouchActive || isHovering
-
-  // Detect hover capability on mount
-  useEffect(() => {
-    setSupportsHover(window.matchMedia("(hover: hover)").matches)
-  }, [])
-
-  // Cycle through emojis when animating
-  useEffect(() => {
-    if (!isAnimating) {
-      setEmojiIndex(0)
-      return
-    }
-    const interval = setInterval(() => {
-      setEmojiIndex((prev) => (prev + 1) % LOGO_EMOJIS.length)
-    }, 150)
-    return () => clearInterval(interval)
-  }, [isAnimating])
-
-  // Cleanup touch timeout
-  useEffect(() => {
-    return () => {
-      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
-    }
-  }, [])
-
-  // Handle touch - wiggle for 3 seconds then stop
-  const handleTouchStart = () => {
-    if (supportsHover) return
-    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
-    setIsTouchActive(true)
-    touchTimeoutRef.current = setTimeout(() => {
-      setIsTouchActive(false)
-    }, 3000)
-  }
-
-  // Handle mouse hover - ONLY on devices that support hover (desktop)
-  const handleMouseEnter = () => {
-    if (!supportsHover) return
-    setIsHovering(true)
-  }
-  const handleMouseLeave = () => {
-    if (!supportsHover) return
-    setIsHovering(false)
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,70 +92,44 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Dark header - MOBILE: slim centered logo only, DESKTOP: full side panel */}
-      <div className="relative w-full lg:w-1/2 bg-gray-950 flex flex-col justify-center lg:justify-between py-6 lg:p-12 lg:min-h-screen overflow-hidden">
-        {/* Blue dots pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.15]"
-          style={{
-            backgroundImage: `radial-gradient(circle, #3b82f6 1px, transparent 1px)`,
-            backgroundSize: "24px 24px",
-          }}
-        />
+    <div className="flex min-h-svh flex-col bg-background lg:flex-row">
+      <aside className="flex w-full flex-col justify-between bg-[#081020] px-6 py-5 text-white lg:min-h-svh lg:w-[42%] lg:px-12 lg:py-10 xl:px-16">
+        <div className="flex items-center gap-3">
+          <span className="relative grid size-10 place-items-center rounded-lg border border-white/10 bg-white/[0.06] text-[#7dd3c7]">
+            <Waves className="size-5" />
+            <span aria-hidden="true" className="absolute -bottom-px left-1/2 h-0.5 w-4 -translate-x-1/2 bg-[#58a6ff]" />
+          </span>
+          <span className="grid leading-tight">
+            <span className="text-sm font-semibold tracking-[0.14em]">WAVE</span>
+            <span className="text-[10px] text-white/50">by Re-New</span>
+          </span>
+        </div>
 
-        {/* Glow orbs */}
-        <div className="absolute top-1/4 left-1/4 size-48 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 size-32 bg-cyan-500/20 rounded-full blur-2xl" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center lg:flex-1">
-          {/* Logo - centered on mobile, left-aligned on desktop */}
-          <div
-            className="logo-button flex items-center justify-center lg:justify-start gap-4 lg:mb-8 cursor-pointer lg:px-0"
-            onTouchStart={handleTouchStart}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <span className={`text-5xl w-14 text-center ${isAnimating ? "animate-wiggle" : ""}`}>
-              {isAnimating ? LOGO_EMOJIS[emojiIndex] : "🌊"}
-            </span>
-            <Image
-              src="/wave-logo.png"
-              alt="Wave - the repreneur CRM"
-              width={216}
-              height={72}
-              className={`h-auto logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
-              style={{ filter: "brightness(0) invert(1)", width: "auto" }}
-              priority
-            />
-          </div>
-
-          {/* Description - desktop only */}
-          <p className="text-muted-foreground text-lg leading-relaxed max-w-md hidden lg:block">
-            The repreneur CRM that helps you manage your pipeline and grow your acquisition practice.
+        <div className="hidden max-w-lg py-16 lg:block">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#7dd3c7]">Re-New operating system</p>
+          <h2 className="mt-5 font-serif text-4xl font-medium leading-[1.12] tracking-[-0.035em] xl:text-5xl">
+            Steer the acquisition journey with clarity.
+          </h2>
+          <p className="mt-6 max-w-md text-base leading-7 text-white/60">
+            One trusted workspace for repreneurs, opportunities, decisions, and the work that moves them forward.
           </p>
         </div>
 
-        {/* Status indicator - desktop only */}
-        <div className="relative z-10 items-center gap-2 text-white/40 text-sm hidden lg:flex">
-          <span className="relative flex size-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-          </span>
-          All systems operational
+        <div className="hidden items-center gap-2 text-xs text-white/65 lg:flex">
+          <span className="size-1.5 rounded-full bg-[#7dd3c7]" />
+          Secure Re-New workspace
         </div>
-      </div>
+      </aside>
 
-      {/* Right side - Light */}
-      <div className="w-full lg:w-1/2 bg-background flex items-center justify-center p-8 lg:p-12">
+      <main id="main-content" className="flex w-full flex-1 items-center justify-center px-6 py-10 sm:px-8 lg:px-12">
         <div className="w-full max-w-md">
           {mode === "signin" ? (
             <>
               {/* Sign In Header */}
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-foreground mb-2">Sign in</h1>
-                <p className="text-muted-foreground">Enter your credentials to continue</p>
+                <p className="wave-eyebrow mb-2">Workspace access</p>
+                <h1 className="mb-2 text-[28px] font-semibold tracking-[-0.03em] text-foreground">Welcome back</h1>
+                <p className="text-sm text-muted-foreground">Sign in to continue to the Re-New workspace.</p>
               </div>
 
               {/* Sign In Form */}
@@ -221,13 +140,16 @@ export default function LoginPage() {
                   </Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
+                    spellCheck={false}
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -237,19 +159,21 @@ export default function LoginPage() {
                     </Label>
                     <a
                       href="/auth/forgot-password"
-                      className="text-sm text-blue-500 hover:text-blue-600"
+                      className="text-sm font-medium text-primary hover:underline"
                     >
                       Forgot password?
                     </a>
                   </div>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11"
                   />
                 </div>
 
@@ -261,7 +185,7 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
+                  className="h-11 w-full"
                   disabled={loading}
                 >
                   {loading ? "Signing in..." : "Sign In"}
@@ -274,7 +198,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => switchMode("request")}
-                  className="text-blue-500 hover:text-blue-600 font-medium"
+                  className="font-medium text-primary hover:underline"
                 >
                   Request it
                 </button>
@@ -294,7 +218,7 @@ export default function LoginPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
               </div>
-              <h1 className="text-3xl font-bold text-foreground mb-3">You&apos;re on the list!</h1>
+              <h1 className="mb-3 text-[28px] font-semibold tracking-[-0.03em] text-foreground">You&apos;re on the list</h1>
               <p className="text-muted-foreground leading-relaxed mb-8">
                 We&apos;ve saved your request and will notify you by email as soon as the platform
                 is officially open. Stay tuned!
@@ -302,7 +226,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => switchMode("signin")}
-                className="text-blue-500 hover:text-blue-600 font-medium text-sm"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 Back to Sign In
               </button>
@@ -311,8 +235,9 @@ export default function LoginPage() {
             <>
               {/* Request Access Header */}
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-foreground mb-2">Request access</h1>
-                <p className="text-muted-foreground">Tell us a bit about yourself and we&apos;ll be in touch</p>
+                <p className="wave-eyebrow mb-2">Join Re-New</p>
+                <h1 className="mb-2 text-[28px] font-semibold tracking-[-0.03em] text-foreground">Request access</h1>
+                <p className="text-sm text-muted-foreground">Tell us about your role and we&apos;ll be in touch.</p>
               </div>
 
               {/* Request Access Form */}
@@ -323,13 +248,15 @@ export default function LoginPage() {
                   </Label>
                   <Input
                     id="req-name"
+                    name="name"
                     type="text"
+                    autoComplete="name"
                     placeholder="Your name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11"
                   />
                 </div>
 
@@ -339,13 +266,16 @@ export default function LoginPage() {
                   </Label>
                   <Input
                     id="req-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
+                    spellCheck={false}
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11"
                   />
                 </div>
 
@@ -357,17 +287,18 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setRole("repreneur")}
                       disabled={loading}
-                      className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                      aria-pressed={role === "repreneur"}
+                      className={`relative flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors ${
                         role === "repreneur"
-                          ? "border-blue-500 bg-blue-50 shadow-sm"
-                          : "border-border bg-background hover:border-gray-300"
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-card hover:border-input hover:bg-muted/40"
                       }`}
                     >
-                      <span className="text-2xl">🔑</span>
-                      <span className={`text-sm font-medium ${role === "repreneur" ? "text-blue-700" : "text-foreground"}`}>
+                      <KeyRound className={role === "repreneur" ? "size-5 text-primary" : "size-5 text-muted-foreground"} />
+                      <span className={`text-sm font-semibold ${role === "repreneur" ? "text-primary" : "text-foreground"}`}>
                         Repreneur
                       </span>
-                      <span className={`text-xs ${role === "repreneur" ? "text-blue-500" : "text-muted-foreground"}`}>
+                      <span className="text-xs text-muted-foreground">
                         Acquiring a business
                       </span>
                     </button>
@@ -375,17 +306,18 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setRole("seller")}
                       disabled={loading}
-                      className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                      aria-pressed={role === "seller"}
+                      className={`relative flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors ${
                         role === "seller"
-                          ? "border-blue-500 bg-blue-50 shadow-sm"
-                          : "border-border bg-background hover:border-gray-300"
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-card hover:border-input hover:bg-muted/40"
                       }`}
                     >
-                      <span className="text-2xl">🏪</span>
-                      <span className={`text-sm font-medium ${role === "seller" ? "text-blue-700" : "text-foreground"}`}>
+                      <Store className={role === "seller" ? "size-5 text-primary" : "size-5 text-muted-foreground"} />
+                      <span className={`text-sm font-semibold ${role === "seller" ? "text-primary" : "text-foreground"}`}>
                         Seller
                       </span>
-                      <span className={`text-xs ${role === "seller" ? "text-blue-500" : "text-muted-foreground"}`}>
+                      <span className="text-xs text-muted-foreground">
                         Selling a business
                       </span>
                     </button>
@@ -400,7 +332,7 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
+                  className="h-11 w-full"
                   disabled={loading}
                 >
                   {loading ? "Submitting..." : "Request Access"}
@@ -413,7 +345,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => switchMode("signin")}
-                  className="text-blue-500 hover:text-blue-600 font-medium"
+                  className="font-medium text-primary hover:underline"
                 >
                   Sign in
                 </button>
@@ -421,16 +353,12 @@ export default function LoginPage() {
             </>
           )}
 
-          {/* Status indicator - mobile only (at bottom of form) */}
-          <div className="flex lg:hidden items-center justify-center gap-2 text-muted-foreground text-sm mt-8">
-            <span className="relative flex size-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-            </span>
-            All systems operational
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground lg:hidden">
+            <span className="size-1.5 rounded-full bg-teal-600" />
+            Secure Re-New workspace
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

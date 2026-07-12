@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { WaveBarChart } from "@/components/wave/charts"
 
 interface ScoreDistributionProps {
@@ -9,18 +9,20 @@ interface ScoreDistributionProps {
 }
 
 export function ScoreDistribution({ whoDistribution, whenDistribution }: ScoreDistributionProps) {
-  const chartData = whoDistribution.map((who, i) => ({
+  const whenByBand = new Map(whenDistribution.map((item) => [item.band, item.count]))
+  const chartData = whoDistribution.map((who) => ({
     band: who.band,
     WHO: who.count,
-    WHEN: whenDistribution[i]?.count ?? 0,
+    WHEN: whenByBand.get(who.band) ?? 0,
   }))
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Score Distribution</CardTitle>
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="border-b py-3">
+        <CardTitle>Score distribution</CardTitle>
+        <CardDescription>WHO and WHEN profiles across the scoring bands.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="py-4">
         <WaveBarChart
           data={chartData}
           label="WHO and WHEN score distribution"

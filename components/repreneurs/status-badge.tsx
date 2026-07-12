@@ -12,7 +12,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     client: { label: "Client", className: "bg-green-100 text-green-800 hover:bg-green-100" },
     to_reactivate: { label: "To be reactivated", className: "bg-amber-100 text-amber-800 hover:bg-amber-100" },
     rejected: { label: "Rejected", className: "bg-red-100 text-red-800 hover:bg-red-100" },
-    declined: { label: "Declined", className: "bg-gray-100 text-gray-800 hover:bg-gray-100" },
+    declined: { label: "Declined", className: "bg-muted text-foreground hover:bg-muted" },
   }
 
   const variant = variants[status]

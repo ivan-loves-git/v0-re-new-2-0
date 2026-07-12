@@ -21,9 +21,10 @@ export function CardLinkButton({ href, tooltip = "View all" }: CardLinkButtonPro
         <TooltipTrigger asChild>
           <Link
             href={href}
-            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label={tooltip}
+            className="inline-grid size-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <ArrowRight className="size-4 text-gray-900" />
+            <ArrowRight className="size-4" />
           </Link>
         </TooltipTrigger>
         <TooltipContent side="top">

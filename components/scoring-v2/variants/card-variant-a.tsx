@@ -60,9 +60,9 @@ export function CardVariantA({ data, repreneurId }: CardVariantAProps) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold">{data.who ?? "—"}</span>
-            <span className="text-sm text-gray-500">points</span>
+            <span className="text-sm text-muted-foreground">points</span>
             {repreneurId && (
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2 ml-auto" asChild>
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-muted-foreground h-6 px-2 ml-auto" asChild>
                 <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
                   <Pencil className="size-3" />
                 </Link>
@@ -93,7 +93,7 @@ export function CardVariantA({ data, repreneurId }: CardVariantAProps) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold">{data.when ?? "—"}</span>
-            <span className="text-sm text-gray-500">points</span>
+            <span className="text-sm text-muted-foreground">points</span>
           </div>
           <Badge variant="outline" className="text-xs mt-2">
             {getWhenDescription(data.when)}

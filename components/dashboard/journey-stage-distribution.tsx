@@ -15,12 +15,12 @@ interface JourneyStageDistributionProps {
 }
 
 const COLORS = {
-  explorer: "#3b82f6",      // blue-500
-  learner: "#f59e0b",       // amber-500
-  ready: "#22c55e",         // green-500
-  execution: "#a855f7",     // purple-500
-  post_acquisition: "#f59e0b", // amber-500
-  no_stage: "#9ca3af",      // gray-400
+  explorer: "var(--chart-1)",
+  learner: "var(--chart-3)",
+  ready: "var(--chart-2)",
+  execution: "var(--chart-4)",
+  post_acquisition: "var(--chart-5)",
+  no_stage: "var(--muted-foreground)",
 }
 
 const kpiInfo = {
@@ -49,24 +49,24 @@ export function JourneyStageDistribution({
   ].filter(d => d.value > 0)
 
   return (
-    <Card className="h-full overflow-hidden gap-0">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Map className="size-5 text-gray-900" />
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="flex min-h-14 flex-row items-center border-b py-3">
+        <CardTitle className="flex items-center gap-2">
+          <Map className="size-4 text-muted-foreground" />
           Journey Stages
           <CardInfoButton info={kpiInfo.journeyStages} />
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 overflow-hidden">
-        <div className="flex items-center gap-3">
-          <div className="size-24 shrink-0">
+      <CardContent className="overflow-hidden py-3">
+        <div className="flex items-center gap-4">
+          <div className="size-28 shrink-0">
             <WaveDonutChart
               data={data}
               label="Journey stage distribution"
               nameKey="name"
               valueKey="value"
               colors={data.map((item) => item.color)}
-              className="h-24"
+              className="h-28"
             />
           </div>
           <div className="flex-1 space-y-1 min-w-0 overflow-hidden">
@@ -77,7 +77,7 @@ export function JourneyStageDistribution({
                     className="size-2 rounded-full shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-gray-600 text-xs truncate">{item.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{item.name}</span>
                 </div>
                 <span className="font-medium text-xs shrink-0 ml-2">{item.value}</span>
               </div>

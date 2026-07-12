@@ -37,14 +37,14 @@ export interface KpiMetricTileProps {
   className?: string
 }
 
-const toneClasses: Record<KpiTone, { icon: string; iconBg: string }> = {
-  email: { icon: "text-blue-600", iconBg: "bg-blue-50" },
-  repreneur: { icon: "text-green-600", iconBg: "bg-green-50" },
-  score: { icon: "text-violet-600", iconBg: "bg-violet-50" },
-  opportunity: { icon: "text-teal-600", iconBg: "bg-teal-50" },
-  attention: { icon: "text-amber-600", iconBg: "bg-amber-50" },
-  risk: { icon: "text-red-600", iconBg: "bg-red-50" },
-  neutral: { icon: "text-muted-foreground", iconBg: "bg-muted" },
+const toneClasses: Record<KpiTone, { icon: string; iconBg: string; marker: string }> = {
+  email: { icon: "text-blue-700", iconBg: "bg-blue-50", marker: "bg-blue-600" },
+  repreneur: { icon: "text-teal-700", iconBg: "bg-teal-50", marker: "bg-teal-600" },
+  score: { icon: "text-indigo-700", iconBg: "bg-indigo-50", marker: "bg-indigo-600" },
+  opportunity: { icon: "text-cyan-700", iconBg: "bg-cyan-50", marker: "bg-cyan-600" },
+  attention: { icon: "text-amber-700", iconBg: "bg-amber-50", marker: "bg-amber-600" },
+  risk: { icon: "text-red-700", iconBg: "bg-red-50", marker: "bg-red-600" },
+  neutral: { icon: "text-slate-600", iconBg: "bg-slate-50", marker: "bg-slate-500" },
 }
 
 const trendToneClasses: Record<KpiTrendTone, string> = {
@@ -87,15 +87,16 @@ export function KpiMetricTile({
   return (
     <Card
       className={cn(
-        "relative min-h-28 gap-0 rounded-md py-0 shadow-sm",
+        "relative min-h-[118px] gap-0 rounded-none border-0 bg-transparent py-0 shadow-none transition-colors hover:bg-muted/35",
         className
       )}
     >
-      <div className="flex h-full min-w-0 flex-col gap-2 p-2.5">
+      <span aria-hidden="true" className={cn("absolute inset-x-4 top-0 h-0.5 opacity-80", colors.marker)} />
+      <div className="flex h-full min-w-0 flex-col gap-2 p-4">
         <button
           type="button"
           aria-label={`About ${title}`}
-          className="group/info absolute right-2 top-2 z-10 inline-grid size-[17px] place-items-center rounded-full border border-gray-200 bg-muted text-muted-foreground shadow-[0_1px_1px_rgba(0,0,0,0.03)] transition-colors hover:border-gray-300 hover:bg-background hover:text-gray-600 focus-visible:border-gray-300 focus-visible:bg-background focus-visible:text-gray-600 focus-visible:outline-none"
+          className="group/info absolute right-3 top-3 z-10 inline-grid size-6 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Info className="size-3" />
           <span className="pointer-events-none absolute right-0 top-6 z-50 hidden w-64 rounded-md border bg-popover p-3 text-left text-popover-foreground shadow-md group-hover/info:block group-focus-visible/info:block">
@@ -109,18 +110,18 @@ export function KpiMetricTile({
           </span>
         </button>
 
-        <div className="flex min-w-0 items-start gap-2 pr-5">
-          <div className={cn("grid size-[26px] shrink-0 place-items-center rounded-md", colors.iconBg)}>
-            <Icon className={cn("size-4", colors.icon)} />
+        <div className="flex min-w-0 items-start gap-2.5 pr-6">
+          <div className={cn("grid size-7 shrink-0 place-items-center rounded-md", colors.iconBg)}>
+            <Icon className={cn("size-3.5", colors.icon)} strokeWidth={2} />
           </div>
           <div className="-mt-0.5 min-w-0">
-            <p className="line-clamp-2 text-xs font-semibold leading-tight text-foreground">{title}</p>
-            <p className="mt-[3px] truncate text-[10px] leading-tight text-muted-foreground">{period}</p>
+            <p className="line-clamp-2 text-[11px] font-semibold uppercase leading-4 tracking-[0.045em] text-muted-foreground">{title}</p>
+            <p className="mt-0.5 truncate text-[10px] leading-tight text-muted-foreground/80">{period}</p>
           </div>
         </div>
 
         <div className="mt-auto flex flex-col items-start gap-[3px]">
-          <div className="text-[22px] font-semibold leading-none tracking-normal text-foreground tabular-nums">
+          <div className="text-[26px] font-semibold leading-none tracking-[-0.03em] text-foreground tabular-nums">
             {value}
           </div>
           <div className={cn("inline-flex items-center gap-0.5 text-[11px] font-semibold leading-none tabular-nums", trendToneClasses[normalized.tone])}>
@@ -141,7 +142,7 @@ export function KpiMetricGrid({
   className?: string
 }) {
   return (
-    <div className={cn("grid grid-cols-2 gap-2 md:grid-cols-4 2xl:grid-cols-8", className)}>
+    <div className={cn("grid grid-cols-2 rounded-lg border bg-card sm:grid-cols-4 xl:grid-cols-8 [&>[data-slot=card]]:border-b [&>[data-slot=card]]:border-r", className)}>
       {children}
     </div>
   )

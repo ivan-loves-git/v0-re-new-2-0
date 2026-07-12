@@ -17,13 +17,13 @@ export default async function OpportunityFindPage() {
         tone="opportunity"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm">
               <Link href="/opportunities/import">
                 <Upload data-icon="inline-start" />
                 Import
               </Link>
             </Button>
-            <Button asChild>
+            <Button asChild size="sm">
               <Link href="/opportunities/new">
                 <Plus data-icon="inline-start" />
                 New opportunity

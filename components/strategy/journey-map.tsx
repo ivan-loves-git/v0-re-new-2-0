@@ -28,13 +28,13 @@ function getPhaseStatus(phaseNum: number, currentPhase: number) {
 const STATUS_STYLES = {
   completed: "border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50",
   current: "border-blue-300 bg-blue-50/50 hover:bg-blue-50 shadow-sm shadow-blue-100",
-  upcoming: "border-gray-200 bg-white opacity-50 hover:opacity-70",
+  upcoming: "border-border bg-white opacity-50 hover:opacity-70",
 }
 
 const STATUS_BADGE_STYLES = {
   completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
   current: "bg-blue-100 text-blue-700 border-blue-200",
-  upcoming: "bg-gray-100 text-gray-500 border-gray-200",
+  upcoming: "bg-muted text-muted-foreground border-border",
 }
 
 const STATUS_LABELS = {
@@ -141,7 +141,7 @@ function DetailRow({
 }) {
   return (
     <div className={cn(
-      "flex justify-between py-2.5 border-b border-gray-100 last:border-b-0 text-sm",
+      "flex justify-between py-2.5 border-b border-border/60 last:border-b-0 text-sm",
       multiline && "flex-col gap-1"
     )}>
       <span className="text-muted-foreground">{label}</span>

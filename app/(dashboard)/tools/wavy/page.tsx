@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth-server"
 import { getWavyTemplates, createWavyTemplate, deleteWavyTemplate } from "@/lib/actions/wavy"
 import { WavyTool } from "@/components/wavy/wavy-tool"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 interface PageProps {
   searchParams: Promise<{ repreneur?: string }>
@@ -20,20 +21,8 @@ export default async function WavyPage({ searchParams }: PageProps) {
   const preselectedRepreneurId = params.repreneur
 
   return (
-    <div className="container max-w-6xl py-6">
-      <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-            <Waves className="size-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Wavy</h1>
-            <p className="text-muted-foreground">
-              AI-powered writing assistant for team communications
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <SectionPageHeader title="Wavy" subtitle="AI-assisted, context-aware communication for Re-New workflows" icon={Waves} tone="neutral" />
 
       <Suspense fallback={<WavyToolSkeleton />}>
         <WavyToolLoader preselectedRepreneurId={preselectedRepreneurId} />

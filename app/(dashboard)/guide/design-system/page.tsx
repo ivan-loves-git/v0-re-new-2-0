@@ -53,7 +53,7 @@ export default function DesignSystemPage() {
   const resultCount = Math.max(3, 57 - activeCount * 14 - (filters.search ? 9 : 0))
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <SectionPageHeader
         title="WAVE Product UI"
         subtitle="The approved components and data language for a calmer, more coherent Wave 2.0."

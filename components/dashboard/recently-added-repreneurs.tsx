@@ -1,13 +1,23 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserPlus } from "lucide-react"
-import { CardInfoButton } from "./card-info-button"
-import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
-import { StatusBadge } from "@/components/repreneurs/status-badge"
+import { formatDistanceToNow } from "date-fns"
+import { UserPlus, UserRound } from "lucide-react"
+
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
+import { StatusBadge } from "@/components/repreneurs/status-badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import type { JourneyStage, LifecycleStatus } from "@/lib/types/repreneur"
+import { CardInfoButton } from "./card-info-button"
+import { CardLinkButton } from "./card-link-button"
 
 interface RecentRepreneur {
   id: string
@@ -22,14 +32,6 @@ interface RecentRepreneur {
   when_score?: number | null
 }
 
-function getScoreColor(who: number, when: number) {
-  const total = who + when
-  if (total >= 140) return "text-green-600 bg-green-50"
-  if (total >= 100) return "text-blue-600 bg-blue-50"
-  if (total >= 60) return "text-yellow-600 bg-yellow-50"
-  return "text-gray-500 bg-gray-50"
-}
-
 interface RecentlyAddedRepreneursProps {
   repreneurs: RecentRepreneur[]
   maxHeight?: string
@@ -37,76 +39,89 @@ interface RecentlyAddedRepreneursProps {
 
 const kpiInfo = {
   recentlyAdded: {
-    title: "Recently Added",
-    description: "Repreneurs added to the system in the last 7 days. Shows their current lifecycle status and journey stage at a glance.",
-    why: "New leads need fast follow-up. Studies show contacting within 24h dramatically increases conversion. This list helps prioritize fresh opportunities.",
+    title: "Recently added repreneurs",
+    description: "Profiles added in the last seven days, with their current status, score, and journey stage.",
+    why: "New relationships benefit from fast, visible follow-up.",
   },
 }
 
-export function RecentlyAddedRepreneurs({ repreneurs, maxHeight = "300px" }: RecentlyAddedRepreneursProps) {
+function ScoreValue({ value }: { value: number | null | undefined }) {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground">—</span>
+  }
+  return <span className="font-semibold tabular-nums text-foreground">{value}</span>
+}
+
+export function RecentlyAddedRepreneurs({
+  repreneurs,
+  maxHeight = "420px",
+}: RecentlyAddedRepreneursProps) {
   return (
-    <Card className="h-full gap-0">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <UserPlus className="size-5 text-gray-900" />
-          Recently Added
+    <Card className="gap-0 py-0">
+      <CardHeader className="flex min-h-14 flex-row items-center justify-between border-b py-3">
+        <CardTitle className="flex items-center gap-2">
+          <UserPlus className="size-4 text-muted-foreground" />
+          Recently added
           <CardInfoButton info={kpiInfo.recentlyAdded} />
         </CardTitle>
+        <CardLinkButton href="/repreneurs/explore" tooltip="Find all repreneurs" />
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3 overflow-y-auto pr-2" style={{ maxHeight }}>
-          {repreneurs.length > 0 ? (
-            repreneurs.map((repreneur) => (
-              <Link
-                key={repreneur.id}
-                href={`/repreneurs/${repreneur.id}`}
-                className="block p-3 rounded-lg border hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm truncate">
-                        {repreneur.first_name} {repreneur.last_name}
-                      </p>
-                      {(() => {
-                        const who = repreneur.who_score ?? 0
-                        const when = repreneur.when_score ?? 0
-                        const hasWhoWhen = repreneur.who_score != null || repreneur.when_score != null
-                        if (hasWhoWhen) {
-                          return (
-                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${getScoreColor(who, when)}`}>
-                              {who} / {when}
-                            </span>
-                          )
-                        }
-                        if (repreneur.tier1_score != null && repreneur.tier1_score > 0) {
-                          return (
-                            <span className="text-xs font-medium px-1.5 py-0.5 rounded text-gray-500 bg-gray-50">
-                              {repreneur.tier1_score}
-                            </span>
-                          )
-                        }
-                        return null
-                      })()}
-                    </div>
-                    <p className="text-xs text-gray-500 truncate">{repreneur.email}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Added {formatDistanceToNow(new Date(repreneur.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-1 items-end shrink-0">
-                    <StatusBadge status={repreneur.lifecycle_status} />
-                    {repreneur.journey_stage && (
-                      <JourneyStageBadge stage={repreneur.journey_stage} showIcon={false} />
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">No recent additions</p>
-          )}
-        </div>
+      <CardContent className="px-0">
+        {repreneurs.length > 0 ? (
+          <div className="overflow-y-auto" style={{ maxHeight }}>
+            <Table>
+              <TableHeader className="sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="min-w-48 pl-5">Name</TableHead>
+                  <TableHead className="min-w-56">Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">WHO</TableHead>
+                  <TableHead className="text-right">WHEN</TableHead>
+                  <TableHead>Journey</TableHead>
+                  <TableHead className="pr-5 text-right">Added</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {repreneurs.map((repreneur) => (
+                  <TableRow key={repreneur.id}>
+                    <TableCell className="pl-5">
+                      <Link
+                        href={`/repreneurs/${repreneur.id}`}
+                        className="flex items-center gap-2.5 font-medium hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span className="grid size-7 shrink-0 place-items-center rounded-md border bg-muted/60 text-muted-foreground">
+                          <UserRound className="size-3.5" />
+                        </span>
+                        <span>{repreneur.first_name} {repreneur.last_name}</span>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{repreneur.email}</TableCell>
+                    <TableCell><StatusBadge status={repreneur.lifecycle_status} /></TableCell>
+                    <TableCell className="text-right"><ScoreValue value={repreneur.who_score} /></TableCell>
+                    <TableCell className="text-right"><ScoreValue value={repreneur.when_score} /></TableCell>
+                    <TableCell>
+                      {repreneur.journey_stage ? (
+                        <JourneyStageBadge stage={repreneur.journey_stage} showIcon={false} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="pr-5 text-right text-muted-foreground">
+                      {formatDistanceToNow(new Date(repreneur.created_at), { addSuffix: true })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="grid min-h-36 place-items-center px-5 text-center">
+            <div>
+              <p className="text-sm font-medium">No new repreneurs this week</p>
+              <p className="mt-1 text-xs text-muted-foreground">New profiles will appear here as they are added.</p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

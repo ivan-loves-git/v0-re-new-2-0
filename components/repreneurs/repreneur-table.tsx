@@ -13,10 +13,8 @@ import {
   Flag,
   Rocket,
   Crown,
-  X,
   CalendarCheck,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -41,6 +39,9 @@ import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/ut
 import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
 import { NeedsCompletionBadge } from "./needs-completion-badge"
+import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
+import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
+import { useCollectionFilters } from "@/hooks/use-collection-filters"
 
 const ITEMS_PER_PAGE = 8
 
@@ -77,12 +78,12 @@ const STATUS_LABELS: Record<LifecycleStatus, string> = {
 }
 
 const STATUS_COLORS: Record<LifecycleStatus, string> = {
-  lead: "bg-blue-50 border-blue-200",
-  qualified: "bg-yellow-50 border-yellow-200",
-  client: "bg-green-50 border-green-200",
-  to_reactivate: "bg-amber-50 border-amber-200",
-  declined: "bg-gray-50 border-gray-200",
-  rejected: "bg-red-50 border-red-200",
+  lead: "border-l-blue-500",
+  qualified: "border-l-amber-500",
+  client: "border-l-emerald-500",
+  to_reactivate: "border-l-orange-500",
+  declined: "border-l-slate-400",
+  rejected: "border-l-red-500",
 }
 
 const DATE_RANGES = [
@@ -130,23 +131,23 @@ const AssessmentBadge = memo(function AssessmentBadge({
 }) {
   if (pending) {
     return (
-      <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+      <Badge variant="outline" className="text-xs text-muted-foreground">
         Pending
       </Badge>
     )
   }
   if (!decision) {
-    return <span className="text-gray-400 text-sm">—</span>
+    return <span className="text-sm text-muted-foreground/60">—</span>
   }
   switch (decision) {
     case "engagement":
-      return <Badge className="text-xs bg-green-100 text-green-700 border-0">Pass</Badge>
+      return <Badge className="border-0 bg-emerald-50 text-xs text-emerald-700">Pass</Badge>
     case "engagement_sous_conditions":
       return <Badge className="text-xs bg-amber-100 text-amber-700 border-0">Review</Badge>
     case "non_engagement":
       return <Badge className="text-xs bg-red-100 text-red-700 border-0">Fail</Badge>
     default:
-      return <span className="text-gray-400 text-sm">—</span>
+      return <span className="text-sm text-muted-foreground/60">—</span>
   }
 })
 
@@ -157,17 +158,21 @@ const ScoreDisplay = memo(function ScoreDisplay({ repreneur }: { repreneur: Repr
   const combined = (whoScore ?? 0) + (whenScore ?? 0)
 
   if (whoScore === null && whenScore === null) {
-    return <span className="text-gray-400 text-sm">N/A</span>
+    return <span className="text-sm text-muted-foreground/60">N/A</span>
   }
 
   return (
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-1 cursor-help">
-            <Target className="size-4 text-gray-400" />
+          <button
+            type="button"
+            aria-label={`Combined score ${combined}. WHO ${whoScore ?? "not scored"}, WHEN ${whenScore ?? "not scored"}`}
+            className="flex items-center gap-1 rounded-sm cursor-help focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Target className="size-4 text-muted-foreground/60" />
             <span className="font-medium">{combined}</span>
-          </div>
+          </button>
         </TooltipTrigger>
         <TooltipContent side="left" className="text-xs">
           <div className="space-y-1">
@@ -188,7 +193,7 @@ const ScoreDisplay = memo(function ScoreDisplay({ repreneur }: { repreneur: Repr
 
 const OfferDisplay = memo(function OfferDisplay({ offers }: { offers: string[] | undefined }) {
   if (!offers || offers.length === 0) {
-    return <span className="text-gray-400 text-sm">No offers</span>
+    return <span className="text-sm text-muted-foreground/60">No offers</span>
   }
 
   // Show first offer + count of additional offers
@@ -201,7 +206,7 @@ const OfferDisplay = memo(function OfferDisplay({ offers }: { offers: string[] |
         <Package className="size-3 mr-1" />
         {firstOffer}
       </Badge>
-      {additionalCount > 0 && <span className="text-xs text-gray-500">+{additionalCount}</span>}
+      {additionalCount > 0 && <span className="text-xs text-muted-foreground">+{additionalCount}</span>}
     </div>
   )
 })
@@ -229,7 +234,7 @@ const JourneyDisplay = memo(function JourneyDisplay({ repreneur }: { repreneur: 
         <StageIcon className="size-3" />
         {stageConfig.label}
       </Badge>
-      <span className="text-xs text-gray-500">({milestoneCount}/17)</span>
+      <span className="text-xs tabular-nums text-muted-foreground">{milestoneCount}/17</span>
     </div>
   )
 })
@@ -248,17 +253,6 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   ref,
 ) {
   const router = useRouter()
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<LifecycleStatus | "all">("all")
-  const [sourceFilter, setSourceFilter] = useState("")
-  const [offerFilter, setOfferFilter] = useState("")
-  const [dateRange, setDateRange] = useState("all")
-  const [minScore, setMinScore] = useState("all")
-  const [journeyFilter, setJourneyFilter] = useState<JourneyStage | "all">("all")
-  const [personaFilter, setPersonaFilter] = useState<PersonaType | "all">("all")
-  const [recommendationFilter, setRecommendationFilter] = useState("")
-  // Interview filter: "all" | "booked" | "none" — asked for by Bertrand 2026-04-23
-  const [interviewFilter, setInterviewFilter] = useState<"all" | "booked" | "none">("all")
   // Global sort for flat view
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -315,31 +309,40 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     return Array.from(uniqueOffers).sort()
   }, [repreneurs])
 
-  const hasActiveFilters =
-    search ||
-    statusFilter !== "all" ||
-    sourceFilter ||
-    offerFilter ||
-    dateRange !== "all" ||
-    minScore !== "all" ||
-    journeyFilter !== "all" ||
-    personaFilter !== "all" ||
-    recommendationFilter ||
-    interviewFilter !== "all"
+  const filterDefinitions = useMemo<CollectionFilterDefinition[]>(() => [
+    {
+      key: "status",
+      label: "Status",
+      options: STATUS_ORDER.map((status) => ({ value: status, label: STATUS_LABELS[status] })),
+    },
+    { key: "source", label: "Source", options: sources.map((source) => ({ value: source, label: source })) },
+    { key: "offer", label: "Offer", options: offers.map((offer) => ({ value: offer, label: offer })) },
+    { key: "added", label: "Added", options: DATE_RANGES.filter((option) => option.value !== "all") },
+    { key: "score", label: "Minimum score", options: SCORE_RANGES.filter((option) => option.value !== "all") },
+    { key: "journey", label: "Journey", options: JOURNEY_OPTIONS },
+    { key: "persona", label: "Persona", options: PERSONA_OPTIONS },
+    { key: "recommendation", label: "Recommendation", options: RECOMMENDATION_OPTIONS },
+    {
+      key: "interview",
+      label: "Interview",
+      options: [
+        { value: "booked", label: "Interview booked" },
+        { value: "none", label: "No interview" },
+      ],
+    },
+  ], [offers, sources])
 
-  const clearFilters = () => {
-    setSearch("")
-    setStatusFilter("all")
-    setSourceFilter("")
-    setOfferFilter("")
-    setDateRange("all")
-    setMinScore("all")
-    setJourneyFilter("all")
-    setPersonaFilter("all")
-    setRecommendationFilter("")
-    setInterviewFilter("all")
-    resetGroupPages()
-  }
+  const filters = useCollectionFilters({ definitions: filterDefinitions, onChange: resetGroupPages })
+  const search = filters.search
+  const statusFilter = (filters.values.status || "all") as LifecycleStatus | "all"
+  const sourceFilter = filters.values.source || ""
+  const offerFilter = filters.values.offer || ""
+  const dateRange = filters.values.added || "all"
+  const minScore = filters.values.score || "all"
+  const journeyFilter = (filters.values.journey || "all") as JourneyStage | "all"
+  const personaFilter = (filters.values.persona || "all") as PersonaType | "all"
+  const recommendationFilter = filters.values.recommendation || ""
+  const interviewFilter = (filters.values.interview || "all") as "all" | "booked" | "none"
 
   const filtered = repreneurs.filter((r) => {
     const matchesSearch =
@@ -548,11 +551,6 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   }
 
   // Reset pages when search changes
-  const handleSearchChange = (value: string) => {
-    setSearch(value)
-    resetGroupPages()
-  }
-
   // Global sort for flat view
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -606,13 +604,13 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
         return <OfferDisplay offers={repreneur.offer_names} />
       case "declined":
         return (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {repreneur.declined_at ? new Date(repreneur.declined_at).toLocaleDateString() : "Unknown"}
           </span>
         )
       case "rejected":
         return (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {repreneur.rejected_at ? new Date(repreneur.rejected_at).toLocaleDateString() : "Unknown"}
           </span>
         )
@@ -648,15 +646,15 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       <div className="space-y-4">
         <div className="flex gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name or email..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => filters.setSearch(e.target.value)}
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as LifecycleStatus | "all")}>
+          <Select value={statusFilter} onValueChange={(value) => filters.setFilter("status", value === "all" ? "" : value)}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -694,7 +692,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     No repreneurs found
                   </TableCell>
                 </TableRow>
@@ -702,20 +700,22 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                 sorted.map((repreneur) => (
                   <TableRow
                     key={repreneur.id}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-muted/50"
                     onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                     onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
                   >
                     <TableCell className="w-[25%]">
                       <div className="flex items-center gap-3 min-w-0">
-                        <RepreneurAvatar
-                          repreneurId={repreneur.id}
-                          avatarUrl={repreneur.avatar_url}
-                          firstName={repreneur.first_name}
-                          lastName={repreneur.last_name}
-                          size="sm"
-                        />
-                        <span className="font-medium text-gray-900 truncate">
+                        <span aria-hidden="true">
+                          <RepreneurAvatar
+                            repreneurId={repreneur.id}
+                            avatarUrl={repreneur.avatar_url}
+                            firstName={repreneur.first_name}
+                            lastName={repreneur.last_name}
+                            size="sm"
+                          />
+                        </span>
+                        <span className="font-medium text-foreground truncate">
                           {repreneur.first_name} {repreneur.last_name}
                         </span>
                         <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
@@ -729,14 +729,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="w-[25%] text-gray-600 truncate">{repreneur.email}</TableCell>
+                    <TableCell className="w-[25%] text-muted-foreground truncate">{repreneur.email}</TableCell>
                     <TableCell className="w-[15%]">
                       <StatusBadge status={repreneur.lifecycle_status} />
                     </TableCell>
                     <TableCell className="w-[20%]">
                       <JourneyDisplay repreneur={repreneur} />
                     </TableCell>
-                    <TableCell className="w-[15%] text-gray-600">
+                    <TableCell className="w-[15%] text-muted-foreground">
                       {new Date(repreneur.created_at).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
@@ -752,222 +752,20 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   // Grouped view with collapsible sections
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-lg border bg-card p-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                placeholder="Search repreneurs..."
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="h-9 pl-9"
-              />
-            </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value as LifecycleStatus | "all")
-                resetGroupPages()
-              }}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">All status</SelectItem>
-                  <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="to_reactivate">To be reactivated</SelectItem>
-                  <SelectItem value="declined">Declined</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            {sources.length > 0 && (
-              <Select
-                value={sourceFilter || "all"}
-                onValueChange={(value) => {
-                  setSourceFilter(value === "all" ? "" : value)
-                  resetGroupPages()
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-40">
-                  <SelectValue placeholder="All sources" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">All sources</SelectItem>
-                    {sources.map((source) => (
-                      <SelectItem key={source} value={source}>
-                        {source}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-            {offers.length > 0 && (
-              <Select
-                value={offerFilter || "all"}
-                onValueChange={(value) => {
-                  setOfferFilter(value === "all" ? "" : value)
-                  resetGroupPages()
-                }}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-44">
-                  <SelectValue placeholder="All offers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">All offers</SelectItem>
-                    {offers.map((offerName) => (
-                      <SelectItem key={offerName} value={offerName}>
-                        {offerName}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-            <Select
-              value={dateRange}
-              onValueChange={(value) => {
-                setDateRange(value)
-                resetGroupPages()
-              }}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-36">
-                <SelectValue placeholder="Date range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {DATE_RANGES.map((range) => (
-                    <SelectItem key={range.value} value={range.value}>
-                      {range.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              value={minScore}
-              onValueChange={(value) => {
-                setMinScore(value)
-                resetGroupPages()
-              }}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {SCORE_RANGES.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      {r.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              value={journeyFilter}
-              onValueChange={(v) => {
-                setJourneyFilter(v as JourneyStage | "all")
-                resetGroupPages()
-              }}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">All journeys</SelectItem>
-                  {JOURNEY_OPTIONS.map((j) => (
-                    <SelectItem key={j.value} value={j.value}>
-                      {j.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              value={personaFilter}
-              onValueChange={(v) => {
-                setPersonaFilter(v as PersonaType | "all")
-                resetGroupPages()
-              }}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">All personas</SelectItem>
-                  {PERSONA_OPTIONS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              value={recommendationFilter || "all"}
-              onValueChange={(v) => {
-                setRecommendationFilter(v === "all" ? "" : v)
-                resetGroupPages()
-              }}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-48">
-                <SelectValue placeholder="All recommendations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">All recommendations</SelectItem>
-                  {RECOMMENDATION_OPTIONS.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      {r.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              value={interviewFilter}
-              onValueChange={(v) => {
-                setInterviewFilter(v as "all" | "booked" | "none")
-                resetGroupPages()
-              }}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">Any interview</SelectItem>
-                  <SelectItem value="booked">Interview booked</SelectItem>
-                  <SelectItem value="none">No interview</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 w-full sm:w-auto">
-              <X data-icon="inline-start" />
-              Clear
-            </Button>
-          )}
-        </div>
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {filtered.length} repreneur{filtered.length !== 1 ? "s" : ""}
-          {hasActiveFilters ? ` filtered from ${repreneurs.length}` : " across lifecycle groups"}
-        </p>
-      </div>
+      <CollectionFilterBar
+        search={search}
+        onSearchChange={filters.setSearch}
+        searchPlaceholder="Search repreneurs..."
+        definitions={filterDefinitions}
+        values={filters.values}
+        onFilterChange={filters.setFilter}
+        onFilterRemove={filters.removeFilter}
+        onClearFilters={filters.clearFilters}
+        onReset={filters.reset}
+        resultCount={filtered.length}
+        totalCount={repreneurs.length}
+        resultLabel="repreneur"
+      />
 
       <div className="space-y-4">
         {STATUS_ORDER.filter((status) => statusFilter === "all" || statusFilter === status).map((status) => {
@@ -983,19 +781,20 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
           const paginatedGroup = sortedGroup.slice(startIndex, endIndex)
 
           return (
-            <div key={status} className={`rounded-lg border ${STATUS_COLORS[status]}`}>
+            <section key={status} className={`overflow-hidden rounded-lg border border-l-2 bg-card ${STATUS_COLORS[status]}`}>
               <button
-                className="w-full px-4 py-3 flex items-center justify-between text-left"
+                className="flex w-full items-center justify-between bg-muted/25 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 onClick={() => toggleGroup(status)}
+                aria-expanded={!isCollapsed}
               >
                 <div className="flex items-center gap-2">
                   {isCollapsed ? (
-                    <ChevronRight className="size-5 text-gray-400" />
+                    <ChevronRight className="size-4 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="size-5 text-gray-400" />
+                    <ChevronDown className="size-4 text-muted-foreground" />
                   )}
-                  <span className="font-semibold text-gray-900">{STATUS_LABELS[status]}</span>
-                  <Badge variant="secondary" className="ml-2">
+                  <span className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</span>
+                  <Badge variant="secondary" className="ml-1 tabular-nums">
                     {group.length}
                   </Badge>
                 </div>
@@ -1006,31 +805,27 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                   <Table className="min-w-[860px] table-fixed">
                     <TableHeader>
                       <TableRow>
-                        <TableHead
-                          className="w-[25%] cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleGroupSort(status, "name")}
-                        >
-                          Name{getSortIndicator(status, "name")}
+                        <TableHead className="w-[25%]" aria-sort={groupSorts[status].field === "name" ? (groupSorts[status].direction === "asc" ? "ascending" : "descending") : "none"}>
+                          <button type="button" className="flex h-full w-full items-center rounded-sm text-left hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => handleGroupSort(status, "name")}>
+                            Name{getSortIndicator(status, "name")}
+                          </button>
                         </TableHead>
-                        <TableHead
-                          className="w-[25%] cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleGroupSort(status, "email")}
-                        >
-                          Email{getSortIndicator(status, "email")}
+                        <TableHead className="w-[25%]" aria-sort={groupSorts[status].field === "email" ? (groupSorts[status].direction === "asc" ? "ascending" : "descending") : "none"}>
+                          <button type="button" className="flex h-full w-full items-center rounded-sm text-left hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => handleGroupSort(status, "email")}>
+                            Email{getSortIndicator(status, "email")}
+                          </button>
                         </TableHead>
-                        <TableHead
-                          className="w-[18%] cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleGroupSort(status, "status_column")}
-                        >
-                          {getStatusColumnHeader(status)}
-                          {getSortIndicator(status, "status_column")}
+                        <TableHead className="w-[18%]" aria-sort={groupSorts[status].field === "status_column" ? (groupSorts[status].direction === "asc" ? "ascending" : "descending") : "none"}>
+                          <button type="button" className="flex h-full w-full items-center rounded-sm text-left hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => handleGroupSort(status, "status_column")}>
+                            {getStatusColumnHeader(status)}
+                            {getSortIndicator(status, "status_column")}
+                          </button>
                         </TableHead>
                         <TableHead className="w-[18%]">Journey</TableHead>
-                        <TableHead
-                          className="w-[14%] text-right cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleGroupSort(status, "created_at")}
-                        >
-                          Created{getSortIndicator(status, "created_at")}
+                        <TableHead className="w-[14%] text-right" aria-sort={groupSorts[status].field === "created_at" ? (groupSorts[status].direction === "asc" ? "ascending" : "descending") : "none"}>
+                          <button type="button" className="flex h-full w-full items-center justify-end rounded-sm text-right hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => handleGroupSort(status, "created_at")}>
+                            Created{getSortIndicator(status, "created_at")}
+                          </button>
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1038,20 +833,29 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                       {paginatedGroup.map((repreneur) => (
                         <TableRow
                           key={repreneur.id}
-                          className="cursor-pointer hover:bg-gray-50"
+                          className="cursor-pointer focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                          tabIndex={0}
                           onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
                           onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault()
+                              router.push(`/repreneurs/${repreneur.id}`)
+                            }
+                          }}
                         >
                           <TableCell className="w-[25%]">
                             <div className="flex items-center gap-3 min-w-0">
-                              <RepreneurAvatar
-                                repreneurId={repreneur.id}
-                                avatarUrl={repreneur.avatar_url}
-                                firstName={repreneur.first_name}
-                                lastName={repreneur.last_name}
-                                size="sm"
-                              />
-                              <span className="font-medium text-gray-900 truncate">
+                              <span aria-hidden="true">
+                                <RepreneurAvatar
+                                  repreneurId={repreneur.id}
+                                  avatarUrl={repreneur.avatar_url}
+                                  firstName={repreneur.first_name}
+                                  lastName={repreneur.last_name}
+                                  size="sm"
+                                />
+                              </span>
+                              <span className="truncate font-semibold text-foreground">
                                 {repreneur.first_name} {repreneur.last_name}
                               </span>
                               <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
@@ -1068,12 +872,12 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="w-[25%] text-gray-600 truncate">{repreneur.email}</TableCell>
+                          <TableCell className="w-[25%] truncate text-muted-foreground">{repreneur.email}</TableCell>
                           <TableCell className="w-[18%]">{renderStatusColumn(repreneur)}</TableCell>
                           <TableCell className="w-[18%]">
                             <JourneyDisplay repreneur={repreneur} />
                           </TableCell>
-                          <TableCell className="w-[14%] text-right text-gray-600">
+                          <TableCell className="w-[14%] text-right text-xs text-muted-foreground">
                             {new Date(repreneur.created_at).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
@@ -1084,13 +888,14 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                   {/* Pagination */}
                   {totalPages > 1 && (
                     <div className="flex flex-col gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         Showing {startIndex + 1}-{Math.min(endIndex, sortedGroup.length)} of {sortedGroup.length}
                       </span>
                       <Pagination className="sm:mx-0 sm:w-auto">
                         <PaginationContent>
                           <PaginationItem>
                             <PaginationPrevious
+                              disabled={currentPage === 1}
                               onClick={() => currentPage > 1 && setGroupPage(status, currentPage - 1)}
                               className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                             />
@@ -1122,6 +927,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                             })}
                           <PaginationItem>
                             <PaginationNext
+                              disabled={currentPage === totalPages}
                               onClick={() => currentPage < totalPages && setGroupPage(status, currentPage + 1)}
                               className={
                                 currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"
@@ -1136,11 +942,11 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
               )}
 
               {!isCollapsed && group.length === 0 && (
-                <div className="rounded-b-lg bg-card px-4 py-6 text-center text-gray-500">
+                <div className="bg-card px-4 py-8 text-center text-sm text-muted-foreground">
                   No {STATUS_LABELS[status].toLowerCase()} found
                 </div>
               )}
-            </div>
+            </section>
           )
         })}
       </div>

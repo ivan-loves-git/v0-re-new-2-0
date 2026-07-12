@@ -140,59 +140,96 @@
     <main class="report">
       <header class="hero">
         <div class="eyebrow">Founder brief · July 2026</div>
-        <h1>Wave 2.0 now has a product design foundation.</h1>
+        <h1>Wave 2.0 now feels like one professional operating system.</h1>
         <p class="lede">
-          We tightened the operating interface so daily work feels calmer, more deliberate, and easier to extend. This is not a visual reskin: it gives Wave shared rules for filters, charts, and reusable product components.
+          We redesigned the complete working interface around one mature, Primer-inspired Re-New system: calmer navigation, clearer decisions, denser work surfaces, consistent records, and reusable rules for every future screen.
         </p>
-        <p class="meta">Released as Wave build 506 · available to the staff team</p>
+        <p class="meta">Released as Wave build 508 · staff workspace and repreneur portal</p>
       </header>
 
       <section class="section">
         <div class="eyebrow">Executive summary</div>
         <h2>Why this matters now</h2>
         <p class="section-intro">
-          Wave has grown feature by feature. That was right for getting operational, but it left similar pages with slightly different controls and visual choices. The new foundation preserves the speed of our existing shadcn setup while giving the product a clear Re-New layer above it: trusted guidance, visible flow, and mature operational density.
+          The redesign turns Wave from a collection of useful features into a governed product. Shadcn remains the component engine underneath, while the new WAVE layer decides how Re-New uses density, hierarchy, filtering, charts, status, navigation, and records. This gives founders a more credible product today and a safer base for faster AI-assisted development tomorrow.
         </p>
 
         <div class="logic">
           <article>
-            <span class="number">01 · Less visual noise</span>
-            <h3>Show only what the task needs</h3>
-            <p>Large directories no longer expose every possible filter by default. Search remains immediate; additional criteria are added only when useful.</p>
+            <span class="number">01 · One operating language</span>
+            <h3>Every screen now belongs to Wave</h3>
+            <p>The sidebar, headers, dashboards, tables, cards, records, forms, portal and public flows now share one hierarchy, spacing model, palette and interaction language.</p>
           </article>
           <article>
-            <span class="number">02 · More consistent decisions</span>
-            <h3>One language across the product</h3>
-            <p>Common headings, KPI tiles, filters, and charts now follow shared rules rather than being redesigned screen by screen.</p>
+            <span class="number">02 · Faster operational reading</span>
+            <h3>Decisions appear before decoration</h3>
+            <p>Dashboards prioritize queues and next actions. Records lead with identity and the next best action. Tables carry more useful information with less visual noise.</p>
           </article>
           <article>
-            <span class="number">03 · Safer future acceleration</span>
-            <h3>AI and team work have guardrails</h3>
-            <p>Future work draws from a written contract and reusable components, which makes changes faster while reducing accidental variation.</p>
+            <span class="number">03 · Governed future growth</span>
+            <h3>AI work now has real guardrails</h3>
+            <p>Shared WAVE components, URL-backed filters and an EvilCharts facade make future additions faster without allowing each generated screen to invent a new design.</p>
           </article>
         </div>
       </section>
 
       <section class="section">
-        <div class="eyebrow">In practice</div>
-        <h2>The new filtering pattern</h2>
+        <div class="eyebrow">Before and after</div>
+        <h2>The change is product-wide</h2>
         <p class="section-intro">
-          The first rollout is on Repreneur Find, Opportunity Find and Groups, and the M&amp;A directory. It follows the useful behaviour of Primer: progressive filters that can be added, edited, or removed without turning the page into a control panel.
+          These examples show the practical effect on the three surfaces used most often: the operating dashboard, the full repreneur directory, and the individual relationship record.
         </p>
 
+        <h3 style="margin-top:24px">1. Repreneur dashboard</h3>
+        <div class="comparison">
+          <figure>
+            <img src="assets/wave-2-dashboard-before.png" alt="Previous repreneur dashboard with visually separate card styles and navigation shortcuts" />
+            <figcaption>
+              <strong>Before</strong>
+              Many independent cards competed for attention, repeated navigation consumed space, and the dashboard read more like a feature catalogue than an operating view.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="assets/wave-2-dashboard-after.png" alt="Redesigned repreneur dashboard with WAVE sidebar, KPI rail, decision queues and standardized charts" />
+            <figcaption>
+              <strong>After</strong>
+              A single KPI rail establishes the state of the business; ranked profiles, assessment queues, funnel, journey and activity use a consistent operational hierarchy.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3 style="margin-top:28px">2. Repreneur directory and filtering</h3>
         <div class="comparison">
           <figure>
             <img src="assets/wave-2-filtering-before.png" alt="Previous Repreneur Find screen with seven permanent filter dropdowns" />
             <figcaption>
               <strong>Before</strong>
-              Seven filter controls were permanently visible, including criteria that many staff sessions did not need.
+              Seven permanent controls pushed the directory down and made every visit feel like filter configuration.
             </figcaption>
           </figure>
           <figure>
-            <img src="assets/wave-2-filtering-after.png" alt="Updated Repreneur Find screen with a search field, Add filter control, and Status Qualified filter chip" />
+            <img src="assets/wave-2-filtering-after.png" alt="Redesigned Repreneur Find screen with progressive filtering and dense standardized table" />
             <figcaption>
               <strong>After</strong>
-              Search stays visible. Staff add a filter only when needed, then see it as a clear, editable chip. In this live example, Status: Qualified reduces 252 repreneurs to 15.
+              Search stays immediate. Primer-style filters are added only when useful, remain removable, persist in the link, and work consistently on Find, Groups, Pipeline, Opportunities and M&amp;A.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3 style="margin-top:28px">3. Repreneur relationship record</h3>
+        <div class="comparison">
+          <figure>
+            <img src="assets/wave-2-record-before.png" alt="Previous repreneur record with fragmented cards and technical field presentation" />
+            <figcaption>
+              <strong>Before</strong>
+              The record exposed information, but the identity, priorities, scores, milestones and actions did not form a clear operating sequence.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="assets/wave-2-record-after.png" alt="Redesigned repreneur record with identity header, next best action and standardized information sections" />
+            <figcaption>
+              <strong>After</strong>
+              Identity and contact details lead, the next best action is explicit, and qualification, readiness, opportunities, engagement and notes share one coherent record system.
             </figcaption>
           </figure>
         </div>
@@ -201,15 +238,16 @@
           <div class="main">
             <h3>What changes for founders and staff</h3>
             <ul>
-              <li>Useful views can be shared or reopened because search and filter choices are part of the page link.</li>
-              <li>On desktop, filters open in a compact picker; on mobile, the same choice becomes a simple bottom sheet.</li>
-              <li>Charts now use one Re-New-owned layer built on EvilCharts, with a consistent palette and accessible data alternatives.</li>
-              <li>A live Design System page makes the approved components visible inside Wave, rather than hiding the rules in technical documentation.</li>
+              <li>Every major staff surface was rationalized: dashboards, analytics, directories, pipeline, opportunities, offers, emails, Wavy, settings, guide and record journeys.</li>
+              <li>The public intake, assessment, authentication and repreneur portal now inherit the same visual foundation.</li>
+              <li>All charts route through one Re-New-owned EvilCharts layer with a consistent palette and accessible data tables.</li>
+              <li>Keyboard behavior, mobile navigation, responsive tables, reduced motion, sorting and pagination were audited and refined.</li>
+              <li>The live Design System and written WAVE contract make the approved rules visible and reusable inside the product.</li>
             </ul>
           </div>
           <div class="watch">
-            <h3>What we will watch</h3>
-            <p>The next signal is simple: whether the new filters shorten the time needed to reach useful working lists in weekly operations. The foundation is intentionally flexible, so we can improve the patterns from real use without reopening the overall visual system.</p>
+            <h3>What remains intentionally flexible</h3>
+            <p>The system is strict about hierarchy, spacing, filters and charts, but flexible about new workflows. We can now improve individual journeys from real operating use without reopening the visual foundation each time.</p>
           </div>
         </div>
       </section>

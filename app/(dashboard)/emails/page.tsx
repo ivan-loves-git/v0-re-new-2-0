@@ -6,6 +6,8 @@ import { ManualSend } from "./components/manual-send"
 import { AiDraftTest } from "./components/ai-draft-test"
 import { getEmailStats, getEmailLogs, getTemplateSettings, getDailyEmailCounts } from "@/lib/actions/emails"
 import { connection } from "next/server"
+import { Mail } from "lucide-react"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 
 export default async function EmailsPage() {
@@ -19,15 +21,12 @@ export default async function EmailsPage() {
   ])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Email Tools</h1>
-        <p className="text-gray-600 mt-1">Monitor, edit, and send automation templates across Re-New workflows</p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <SectionPageHeader title="Email operations" subtitle="Monitor delivery, manage templates, and send workflow communications" icon={Mail} tone="neutral" />
 
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+        <TabsList className="grid w-full grid-cols-4 sm:w-fit sm:min-w-[520px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="logs">History</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>

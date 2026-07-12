@@ -63,15 +63,15 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 py-0">
+      <CardHeader className="py-4">
         <CardTitle>Response Queue</CardTitle>
         <CardDescription>
           {pendingCount === 0 ? "All responses have been reviewed." : `${pendingCount} response(s) need staff review.`}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto rounded-md border">
+      <CardContent className="px-0">
+        <div className="overflow-x-auto border-t">
           <Table className="min-w-[960px]">
             <TableHeader>
               <TableRow>

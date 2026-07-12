@@ -57,7 +57,8 @@ export function RepreneurOpportunityDetail({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
+      <header className="relative flex flex-col gap-3 border-b pb-5">
+        <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
           {opportunity.match_status === "active_pursuit" && (
@@ -66,7 +67,7 @@ export function RepreneurOpportunityDetail({
           <Badge variant="secondary">Selected by Re-New</Badge>
         </div>
         <div>
-          <h1 className="text-2xl font-semibold tracking-normal">{opportunityTitle(opportunity)}</h1>
+          <h1 className="text-2xl font-semibold tracking-[-0.025em]">{opportunityTitle(opportunity)}</h1>
           <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" />
@@ -82,7 +83,7 @@ export function RepreneurOpportunityDetail({
             </span>
           </div>
         </div>
-      </div>
+      </header>
 
       <Card>
         <CardHeader>
@@ -249,20 +250,20 @@ export function RepreneurOpportunityDetail({
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+      <div className="grid overflow-hidden rounded-lg border bg-card md:grid-cols-3">
+        <Card className="rounded-none border-0 border-b py-4 md:border-b-0 md:border-r">
           <CardHeader className="pb-2">
             <CardDescription>Revenue</CardDescription>
             <CardTitle>{formatNumber(opportunity.revenue_meur, "M EUR")}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="rounded-none border-0 border-b py-4 md:border-b-0 md:border-r">
           <CardHeader className="pb-2">
             <CardDescription>EBITDA</CardDescription>
             <CardTitle>{formatNumber(opportunity.ebitda_keur, "K EUR")}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="rounded-none border-0 py-4">
           <CardHeader className="pb-2">
             <CardDescription>Team</CardDescription>
             <CardTitle>{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</CardTitle>

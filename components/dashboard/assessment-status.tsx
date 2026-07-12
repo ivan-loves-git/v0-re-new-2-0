@@ -1,13 +1,22 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ClipboardCheck, CheckCircle2, Clock, AlertCircle, XCircle } from "lucide-react"
 import Link from "next/link"
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock3,
+  XCircle,
+} from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { CardInfoButton } from "./card-info-button"
 import { CardLinkButton } from "./card-link-button"
 
-interface AssessmentEntry {
+export interface AssessmentEntry {
   id: string
   first_name: string
   last_name: string
@@ -23,99 +32,135 @@ interface AssessmentStatusProps {
 
 const kpiInfo = {
   assessmentStatus: {
-    title: "Leadership Assessment Status",
-    description: "Overview of leadership potential assessments across all repreneurs. Shows completed assessments by decision outcome and pending assessments waiting for completion.",
-    why: "Tracks assessment coverage and outcomes. Helps identify repreneurs who still need assessment and monitors the distribution of engagement decisions.",
+    title: "Leadership assessment status",
+    description: "The latest leadership assessment for each repreneur, grouped by outcome.",
+    why: "This keeps outstanding assessment work and decision quality visible together.",
   },
 }
 
-export function AssessmentStatus({ assessments, totalRepreneurs }: AssessmentStatusProps) {
-  const completed = assessments.filter(a => a.completed)
-  const pending = assessments.filter(a => !a.completed)
-  const notSent = totalRepreneurs - assessments.length
+function assessmentState(entry: AssessmentEntry) {
+  if (!entry.completed) {
+    return { label: "Pending", icon: Clock3, className: "border-border bg-muted/50 text-muted-foreground" }
+  }
+  if (entry.decision === "engagement") {
+    return { label: "Pass", icon: CheckCircle2, className: "border-success/20 bg-success/5 text-success" }
+  }
+  if (entry.decision === "engagement_sous_conditions") {
+    return { label: "Review", icon: AlertCircle, className: "border-warning/25 bg-warning/5 text-warning" }
+  }
+  return { label: "Fail", icon: XCircle, className: "border-destructive/20 bg-destructive/5 text-destructive" }
+}
 
-  const engagement = completed.filter(a => a.decision === "engagement")
-  const conditional = completed.filter(a => a.decision === "engagement_sous_conditions")
-  const nonEngagement = completed.filter(a => a.decision === "non_engagement")
+export function AssessmentStatus({ assessments, totalRepreneurs }: AssessmentStatusProps) {
+  const completed = assessments.filter((assessment) => assessment.completed)
+  const pending = assessments.filter((assessment) => !assessment.completed)
+  const notSent = Math.max(0, totalRepreneurs - assessments.length)
 
   const rows = [
-    { label: "Pass", count: engagement.length, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", items: engagement },
-    { label: "Review", count: conditional.length, icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50", items: conditional },
-    { label: "Fail", count: nonEngagement.length, icon: XCircle, color: "text-red-600", bg: "bg-red-50", items: nonEngagement },
-    { label: "Pending", count: pending.length, icon: Clock, color: "text-gray-500", bg: "bg-gray-50", items: pending },
+    {
+      label: "Pass",
+      count: completed.filter((assessment) => assessment.decision === "engagement").length,
+      icon: CheckCircle2,
+      className: "border-success/20 bg-success/5 text-success",
+    },
+    {
+      label: "Review",
+      count: completed.filter((assessment) => assessment.decision === "engagement_sous_conditions").length,
+      icon: AlertCircle,
+      className: "border-warning/25 bg-warning/5 text-warning",
+    },
+    {
+      label: "Fail",
+      count: completed.filter((assessment) => assessment.decision === "non_engagement").length,
+      icon: XCircle,
+      className: "border-destructive/20 bg-destructive/5 text-destructive",
+    },
+    {
+      label: "Pending",
+      count: pending.length,
+      icon: Clock3,
+      className: "border-border bg-muted/50 text-muted-foreground",
+    },
   ]
 
   return (
-    <Card className="h-full flex flex-col gap-0">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ClipboardCheck className="size-5 text-gray-900" />
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="flex min-h-14 flex-row items-center justify-between border-b py-3">
+        <CardTitle className="flex items-center gap-2">
+          <ClipboardCheck className="size-4 text-muted-foreground" />
           Assessments
           <CardInfoButton info={kpiInfo.assessmentStatus} />
         </CardTitle>
-        <CardLinkButton href="/analytics_re" tooltip="View Analytics" />
+        <CardLinkButton href="/analytics_re" tooltip="View assessment analytics" />
       </CardHeader>
-      <CardContent className="pt-0 flex-1 flex flex-col">
-        {/* Summary counts */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="text-center p-2 rounded-lg bg-gray-50 border">
-            <p className="text-2xl font-bold">{completed.length}</p>
-            <p className="text-xs text-gray-500">Completed</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-gray-50 border">
-            <p className="text-2xl font-bold">{pending.length}</p>
-            <p className="text-xs text-gray-500">Pending</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-gray-50 border">
-            <p className="text-2xl font-bold">{notSent}</p>
-            <p className="text-xs text-gray-500">Not sent</p>
-          </div>
-        </div>
-
-        {/* Breakdown rows */}
-        <div className="space-y-2 flex-1">
-          {rows.map(row => {
-            if (row.count === 0) return null
-            const Icon = row.icon
-            return (
-              <div key={row.label} className={`flex items-center gap-3 p-2 rounded-lg border ${row.bg}`}>
-                <Icon className={`size-4 ${row.color}`} />
-                <span className={`text-sm font-medium ${row.color}`}>{row.label}</span>
-                <Badge variant="secondary" className="ml-auto">{row.count}</Badge>
-              </div>
-            )
-          })}
-          {completed.length === 0 && pending.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No assessments yet
-            </p>
-          )}
-        </div>
-
-        {/* Recent completed assessments */}
-        {completed.length > 0 && (
-          <div className="mt-3 pt-3 border-t">
-            <p className="text-xs text-gray-500 mb-2">Recent results</p>
-            <div className="space-y-1">
-              {completed.slice(0, 3).map(a => (
-                <Link
-                  key={a.id}
-                  href={`/repreneurs/${a.repreneur_id}`}
-                  className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-sm truncate flex-1">{a.first_name} {a.last_name}</span>
-                  {a.decision === "engagement" && (
-                    <Badge className="text-[10px] py-0 bg-green-100 text-green-700 border-0">Pass</Badge>
-                  )}
-                  {a.decision === "engagement_sous_conditions" && (
-                    <Badge className="text-[10px] py-0 bg-amber-100 text-amber-700 border-0">Review</Badge>
-                  )}
-                  {a.decision === "non_engagement" && (
-                    <Badge className="text-[10px] py-0 bg-red-100 text-red-700 border-0">Fail</Badge>
-                  )}
-                </Link>
-              ))}
+      <CardContent className="flex flex-1 flex-col gap-2 py-3">
+        {rows.map((row) => {
+          const Icon = row.icon
+          return (
+            <div
+              key={row.label}
+              className={cn("flex min-h-10 items-center gap-2.5 rounded-md border px-3", row.className)}
+            >
+              <Icon className="size-4" />
+              <span className="text-sm font-medium">{row.label}</span>
+              <span className="ml-auto text-sm font-semibold tabular-nums">{row.count}</span>
             </div>
+          )
+        })}
+
+        <div className="mt-auto grid grid-cols-3 gap-2 border-t pt-3 text-center">
+          <div>
+            <p className="text-base font-semibold tabular-nums">{completed.length}</p>
+            <p className="text-[11px] text-muted-foreground">Completed</p>
+          </div>
+          <div>
+            <p className="text-base font-semibold tabular-nums">{pending.length}</p>
+            <p className="text-[11px] text-muted-foreground">Pending</p>
+          </div>
+          <div>
+            <p className="text-base font-semibold tabular-nums">{notSent}</p>
+            <p className="text-[11px] text-muted-foreground">Not sent</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function RecentAssessmentResults({ assessments }: { assessments: AssessmentEntry[] }) {
+  const recent = assessments.slice(0, 5)
+
+  return (
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="flex min-h-14 flex-row items-center justify-between border-b py-3">
+        <CardTitle>Recent results</CardTitle>
+        <CardLinkButton href="/analytics_re" tooltip="View all assessment results" />
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col py-2">
+        {recent.length > 0 ? (
+          recent.map((assessment) => {
+            const state = assessmentState(assessment)
+            const Icon = state.icon
+            return (
+              <Link
+                key={assessment.id}
+                href={`/repreneurs/${assessment.repreneur_id}`}
+                className="group flex min-h-[46px] items-center gap-3 border-b py-2 last:border-b-0 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <Icon className={cn("size-4 shrink-0", state.className.split(" ").at(-1))} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {assessment.first_name} {assessment.last_name}
+                </span>
+                <Badge variant="outline" className={cn("shrink-0", state.className)}>
+                  {state.label}
+                </Badge>
+                <ArrowRight className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </Link>
+            )
+          })
+        ) : (
+          <div className="grid flex-1 place-items-center py-8 text-sm text-muted-foreground">
+            No assessment results yet
           </div>
         )}
       </CardContent>

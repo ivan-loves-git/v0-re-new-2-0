@@ -53,11 +53,11 @@ async function OpportunityDetailContent({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       <Button asChild variant="ghost" size="sm">
         <Link href="/opportunities/find">
-          <ArrowLeft className="size-4" />
-          Back to Opportunities
+          <ArrowLeft data-icon="inline-start" />
+          Back to opportunities
         </Link>
       </Button>
 

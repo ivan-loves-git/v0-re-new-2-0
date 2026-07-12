@@ -63,13 +63,13 @@ function getNoteTypeLabel(noteType: NoteType) {
 function getNoteTypeColor(noteType: NoteType) {
   switch (noteType) {
     case "call":
-      return "bg-green-100 text-green-700"
+      return "border-success/20 bg-success/5 text-success"
     case "email":
-      return "bg-blue-100 text-blue-700"
+      return "border-info/20 bg-info/5 text-info"
     case "meeting":
-      return "bg-purple-100 text-purple-700"
+      return "border-primary/20 bg-primary/5 text-primary"
     default:
-      return "bg-gray-100 text-gray-700"
+      return "border-border bg-muted/60 text-muted-foreground"
   }
 }
 
@@ -119,22 +119,22 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+      <Card className="gap-0 py-0">
+        <CardHeader className="flex flex-row items-center justify-between border-b py-3">
           <CardTitle className="flex items-center gap-2">
-            <StickyNote className="size-5" />
+            <StickyNote className="size-4 text-muted-foreground" />
             Notes
           </CardTitle>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-2">
-                <Plus className="size-4" />
-                Add Note
+              <Button size="sm">
+                <Plus className="size-4" data-icon="inline-start" />
+                Add note
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Add Note</DialogTitle>
+                <DialogTitle>Add note</DialogTitle>
                 <DialogDescription>
                   Record an interaction or observation about this candidate.
                 </DialogDescription>
@@ -177,60 +177,61 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                   Cancel
                 </Button>
                 <Button onClick={handleSubmit} disabled={isSubmitting || !content.trim()}>
-                  {isSubmitting ? "Saving..." : "Save Note"}
+                  {isSubmitting ? "Saving..." : "Save note"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </CardHeader>
-        <CardContent>
+        <CardContent className="py-2">
           {notes.length === 0 ? (
             <div className="flex items-center justify-center py-8">
-              <p className="text-sm text-gray-500">No notes yet</p>
+              <p className="text-sm text-muted-foreground">No notes yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="max-h-[380px] overflow-y-auto">
               {notes.map((note) => (
                 <div
                   key={note.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between border-b px-1 py-3 transition-colors first:pt-1 last:border-0 last:pb-1 hover:bg-muted/35"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className={`p-2 rounded-full ${getNoteTypeColor(note.note_type || "other")}`}>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className={`rounded-md border p-2 ${getNoteTypeColor(note.note_type || "other")}`}>
                       {getNoteTypeIcon(note.note_type || "other")}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-gray-500 uppercase">
+                        <span className="text-xs font-semibold uppercase tracking-[0.055em] text-muted-foreground">
                           {getNoteTypeLabel(note.note_type || "other")}
                         </span>
-                        <span className="text-xs text-gray-400">·</span>
-                        <span className="text-xs text-gray-500">{formatDate(note.created_at)}</span>
+                        <span className="text-xs text-muted-foreground/60">·</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(note.created_at)}</span>
                       </div>
-                      <p className="text-sm text-gray-700 line-clamp-1 mt-0.5">{note.content}</p>
+                      <p className="mt-0.5 line-clamp-1 text-sm text-foreground">{note.content}</p>
                     </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="size-8 ml-2 flex-shrink-0"
+                        size="icon-sm"
+                        className="ml-2 flex-shrink-0"
                         disabled={deletingId === note.id}
+                        aria-label={`Actions for ${getNoteTypeLabel(note.note_type || "other")} note`}
                       >
                         <MoreHorizontal className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setViewingNote(note)}>
-                        <Eye className="size-4 mr-2" />
+                        <Eye className="size-4" data-icon="inline-start" />
                         View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDelete(note.id)}
-                        className="text-red-600"
+                        className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="size-4 mr-2" />
+                        <Trash2 className="size-4" data-icon="inline-start" />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -247,9 +248,9 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className={`p-1.5 rounded-full ${getNoteTypeColor(viewingNote?.note_type || "other")}`}>
+              <span className={`rounded-md border p-1.5 ${getNoteTypeColor(viewingNote?.note_type || "other")}`}>
                 {getNoteTypeIcon(viewingNote?.note_type || "other")}
-              </div>
+              </span>
               {getNoteTypeLabel(viewingNote?.note_type || "other")} Note
             </DialogTitle>
             <DialogDescription>
@@ -257,7 +258,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingNote?.content}</p>
+            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{viewingNote?.content}</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewingNote(null)}>

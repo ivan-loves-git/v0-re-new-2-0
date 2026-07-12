@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Archive, Eye, MoreHorizontal, Plus, Search, Upload } from "lucide-react"
+import { Archive, Eye, MoreHorizontal, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -77,8 +77,8 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <section className="overflow-hidden rounded-lg border bg-card">
+      <div className="flex flex-col gap-3 border-b p-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row">
           <div className="relative max-w-sm flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -105,23 +105,10 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/opportunities/import">
-              <Upload className="size-4" />
-              Import
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/opportunities/new">
-              <Plus className="size-4" />
-              New
-            </Link>
-          </Button>
-        </div>
+        <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">{filtered.length}</span> of {opportunities.length} opportunities</p>
       </div>
 
-      <div className="overflow-hidden rounded-md border bg-card">
+      <div className="overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -202,6 +189,6 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
           </TableBody>
         </Table>
       </div>
-    </div>
+    </section>
   )
 }

@@ -42,16 +42,16 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
   }
 
   return (
-    <form action={handleSubmit}>
+    <form action={handleSubmit} className="mx-auto max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle>{repreneur ? "Edit Repreneur" : "Add New Repreneur"}</CardTitle>
+          <CardTitle>{repreneur ? "Edit core profile" : "Core profile"}</CardTitle>
           <CardDescription>
             {repreneur ? "Update repreneur information" : "Enter basic contact details. Send the questionnaire link to collect scoring data."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
+          <section className="grid gap-5 rounded-lg border bg-muted/20 p-5 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="first_name">First Name *</Label>
               <Input id="first_name" name="first_name" defaultValue={repreneur?.first_name} required />
@@ -134,9 +134,9 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-2">
+          <div className="space-y-2 rounded-lg border bg-muted/20 p-5">
             <Label htmlFor="company_background">Company Background</Label>
             <Textarea
               id="company_background"
@@ -147,7 +147,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           </div>
 
           {/* GDPR Consent Section */}
-          <div className="border-t pt-6 mt-6">
+          <div className="rounded-lg border bg-muted/20 p-5">
             <h3 className="text-sm font-medium mb-4">GDPR Consent</h3>
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
@@ -170,9 +170,11 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
             </div>
           </div>
 
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : submitLabel}
-          </Button>
+          <div className="flex justify-end border-t pt-5">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : submitLabel}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </form>

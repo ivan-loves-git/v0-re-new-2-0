@@ -152,7 +152,7 @@ export function AiDraftTest() {
   }
 
   return (
-    <Card className="border-amber-200 bg-amber-50/30">
+    <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
           <Sparkles className="size-5 text-amber-600" />
@@ -195,7 +195,7 @@ export function AiDraftTest() {
               {repreneurs.map((r) => (
                 <button
                   key={r.id}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b last:border-b-0"
+                  className="w-full border-b px-4 py-2 text-left hover:bg-muted/50 last:border-b-0"
                   onClick={() => setSelectedRepreneur(r)}
                 >
                   <div className="font-medium">
@@ -208,7 +208,7 @@ export function AiDraftTest() {
           )}
 
           {selectedRepreneur && (
-            <div className="flex items-center justify-between bg-amber-100/50 p-3 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
               <div>
                 <div className="font-medium">
                   {selectedRepreneur.first_name} {selectedRepreneur.last_name}
@@ -262,7 +262,7 @@ export function AiDraftTest() {
           <Button
             onClick={handleGenerate}
             disabled={!selectedRepreneur || !selectedTemplate || generating}
-            className="w-full bg-amber-600 hover:bg-amber-700"
+            className="w-full"
           >
             {generating ? (
               <>
@@ -305,7 +305,7 @@ export function AiDraftTest() {
               <Button
                 onClick={handleSendToTest}
                 disabled={sending}
-                className="flex-1 bg-amber-600 hover:bg-amber-700"
+                className="flex-1"
               >
                 {sending ? (
                   <>

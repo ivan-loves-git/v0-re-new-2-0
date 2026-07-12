@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { subDays } from "date-fns"
-import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Pagination,
@@ -71,11 +70,11 @@ const RECOMMENDATION_OPTIONS = [
 ]
 
 function getScoreColor(score: number | null | undefined) {
-  if (score == null) return "text-gray-400"
-  if (score >= 70) return "text-green-600"
-  if (score >= 50) return "text-blue-600"
-  if (score >= 30) return "text-yellow-600"
-  return "text-gray-500"
+  if (score == null) return "text-muted-foreground/60"
+  if (score >= 70) return "text-emerald-700"
+  if (score >= 50) return "text-blue-700"
+  if (score >= 30) return "text-amber-700"
+  return "text-muted-foreground"
 }
 
 interface RepreneurWithAssessment extends Repreneur {
@@ -291,12 +290,28 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
     }
 
     const SortIcon = ({ field }: { field: SortField }) => {
-      if (sortField !== field) return <ArrowUpDown className="size-3 ml-1 text-gray-400" />
+      if (sortField !== field) return <ArrowUpDown className="ml-1 size-3 text-muted-foreground/60" />
       return sortDirection === "asc" ? <ArrowUp className="size-3 ml-1" /> : <ArrowDown className="size-3 ml-1" />
     }
 
+    const SortableHead = ({ field, label, className }: { field: SortField; label: string; className?: string }) => (
+      <TableHead
+        className={className}
+        aria-sort={sortField === field ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+      >
+        <button
+          type="button"
+          className="flex h-full w-full items-center rounded-sm text-left hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => handleSort(field)}
+        >
+          {label}
+          <SortIcon field={field} />
+        </button>
+      </TableHead>
+    )
+
     return (
-      <div className="flex flex-col gap-4">
+      <div className="overflow-hidden rounded-lg border bg-card">
         <CollectionFilterBar
           search={filters.search}
           onSearchChange={filters.setSearch}
@@ -310,103 +325,62 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
           resultCount={sorted.length}
           totalCount={repreneurs.length}
           resultLabel="repreneur"
+          className="rounded-none border-x-0 border-t-0"
         />
 
-        {/* Table */}
-        <div className="overflow-hidden rounded-lg border bg-card">
-          <div className="overflow-x-auto">
-            <Table className="min-w-[980px]">
+        <div className="overflow-x-auto">
+            <Table className="min-w-[920px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => handleSort("name")}>
-                    <div className="flex items-center">
-                      Name
-                      <SortIcon field="name" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => handleSort("email")}>
-                    <div className="flex items-center">
-                      Email
-                      <SortIcon field="email" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-50 w-[100px]" onClick={() => handleSort("status")}>
-                    <div className="flex items-center">
-                      Status
-                      <SortIcon field="status" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-50 w-[80px]" onClick={() => handleSort("who")}>
-                    <div className="flex items-center">
-                      WHO
-                      <SortIcon field="who" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-50 w-[80px]" onClick={() => handleSort("when")}>
-                    <div className="flex items-center">
-                      WHEN
-                      <SortIcon field="when" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-gray-50 w-[100px]"
-                    onClick={() => handleSort("assessment")}
-                  >
-                    <div className="flex items-center">
-                      Assessment
-                      <SortIcon field="assessment" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-gray-50 w-[110px]"
-                    onClick={() => handleSort("journey")}
-                  >
-                    <div className="flex items-center">
-                      Journey
-                      <SortIcon field="journey" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-gray-50 w-[110px]"
-                    onClick={() => handleSort("created_at")}
-                  >
-                    <div className="flex items-center">
-                      Added
-                      <SortIcon field="created_at" />
-                    </div>
-                  </TableHead>
+                  <SortableHead field="name" label="Name" />
+                  <SortableHead field="email" label="Email" />
+                  <SortableHead field="status" label="Status" className="w-[100px]" />
+                  <SortableHead field="who" label="WHO" className="w-[80px]" />
+                  <SortableHead field="when" label="WHEN" className="w-[80px]" />
+                  <SortableHead field="assessment" label="Assessment" className="w-[100px]" />
+                  <SortableHead field="journey" label="Journey" className="w-[110px]" />
+                  <SortableHead field="created_at" label="Added" className="w-[110px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-gray-500 py-12">
-                      No repreneurs match your filters
+                    <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                      No repreneurs match these filters. Remove a filter to widen the list.
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginated.map((r) => (
                     <TableRow
                       key={r.id}
-                      className="cursor-pointer hover:bg-gray-50"
+                      className="cursor-pointer focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      tabIndex={0}
                       onClick={() => router.push(`/repreneurs/${r.id}`)}
                       onMouseEnter={() => router.prefetch(`/repreneurs/${r.id}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          router.push(`/repreneurs/${r.id}`)
+                        }
+                      }}
                     >
                       <TableCell>
                         <div className="flex items-center gap-2 min-w-0">
-                          <RepreneurAvatar
-                            repreneurId={r.id}
-                            avatarUrl={r.avatar_url}
-                            firstName={r.first_name}
-                            lastName={r.last_name}
-                            size="sm"
-                          />
-                          <span className="font-medium text-gray-900 truncate">
+                          <span aria-hidden="true">
+                            <RepreneurAvatar
+                              repreneurId={r.id}
+                              avatarUrl={r.avatar_url}
+                              firstName={r.first_name}
+                              lastName={r.last_name}
+                              size="sm"
+                            />
+                          </span>
+                          <span className="truncate font-semibold text-foreground">
                             {r.first_name} {r.last_name}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-gray-600 truncate max-w-[200px]">{r.email}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground">{r.email}</TableCell>
                       <TableCell>
                         <StatusBadge status={r.lifecycle_status} />
                       </TableCell>
@@ -420,27 +394,27 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
                       </TableCell>
                       <TableCell>
                         {r.assessment_pending ? (
-                          <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
                             Pending
                           </Badge>
                         ) : r.assessment_decision === "engagement" ? (
-                          <Badge className="text-xs bg-green-100 text-green-700 border-0">Pass</Badge>
+                          <Badge className="border-0 bg-emerald-50 text-xs text-emerald-700">Pass</Badge>
                         ) : r.assessment_decision === "engagement_sous_conditions" ? (
                           <Badge className="text-xs bg-amber-100 text-amber-700 border-0">Review</Badge>
                         ) : r.assessment_decision === "non_engagement" ? (
                           <Badge className="text-xs bg-red-100 text-red-700 border-0">Fail</Badge>
                         ) : (
-                          <span className="text-gray-400">{"\u2014"}</span>
+                          <span className="text-muted-foreground/60">{"\u2014"}</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {r.journey_stage ? (
                           <JourneyStageBadge stage={r.journey_stage} showIcon={false} showTooltip={false} />
                         ) : (
-                          <span className="text-gray-400 text-xs">None</span>
+                          <span className="text-xs text-muted-foreground/60">None</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-gray-600 text-sm">
+                      <TableCell className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(r.created_at), {
                           addSuffix: true,
                         })}
@@ -450,19 +424,18 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
                 )}
               </TableBody>
             </Table>
-          </div>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">
+          <div className="flex flex-col gap-3 border-t bg-muted/20 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-muted-foreground">
               Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, sorted.length)} of {sorted.length}
             </span>
-            <Pagination>
+            <Pagination className="sm:mx-0 sm:w-auto">
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
+                    disabled={currentPage === 1}
                     onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
                     className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   />
@@ -492,6 +465,7 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
                   })}
                 <PaginationItem>
                   <PaginationNext
+                    disabled={currentPage === totalPages}
                     onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
                     className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   />

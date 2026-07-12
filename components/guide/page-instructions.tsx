@@ -13,10 +13,10 @@ function renderFormattedText(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+      return <strong key={index} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>
     }
     if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
-      return <em key={index} className="text-gray-700">{part.slice(1, -1)}</em>
+      return <em key={index} className="text-foreground">{part.slice(1, -1)}</em>
     }
     return part
   })
@@ -180,20 +180,20 @@ This helps track what's been delivered and what's remaining for each client enga
 export function PageInstructions() {
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-gray-900">Page-by-Page Guide</h2>
+      <h2 className="text-xl font-semibold text-foreground">Page-by-Page Guide</h2>
       <Accordion type="single" collapsible className="w-full">
         {pages.map((page) => (
           <AccordionItem key={page.id} value={page.id}>
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gray-100">
-                  <page.icon className="size-4 text-gray-600" />
+                <div className="p-2 rounded-lg bg-muted">
+                  <page.icon className="size-4 text-muted-foreground" />
                 </div>
                 <span className="font-medium">{page.title}</span>
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <div className="pl-12 pr-4 pb-2 text-sm text-gray-600 whitespace-pre-line">
+              <div className="pl-12 pr-4 pb-2 text-sm text-muted-foreground whitespace-pre-line">
                 {renderFormattedText(page.content)}
               </div>
             </AccordionContent>

@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth-server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Mail, Calendar } from "lucide-react"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 export default async function AccountPage() {
   const user = await getCurrentUser()
@@ -24,13 +25,10 @@ export default async function AccountPage() {
     .slice(0, 2)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-foreground">Account</h1>
-        <p className="text-muted-foreground mt-1">Your profile information</p>
-      </div>
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <SectionPageHeader title="Account" subtitle="Your Re-New workspace identity and access details" icon={User} tone="neutral" />
 
-      <div className="max-w-2xl">
+      <div className="max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
@@ -41,7 +39,7 @@ export default async function AccountPage() {
             <div className="flex items-center gap-4">
               <Avatar className="size-20 rounded-xl">
                 <AvatarImage src={user?.image || undefined} alt={userName} />
-                <AvatarFallback className="rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl">
+                <AvatarFallback className="rounded-xl bg-primary text-xl text-primary-foreground">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
@@ -53,7 +51,7 @@ export default async function AccountPage() {
 
             {/* Info Grid */}
             <div className="grid gap-4 pt-4 border-t">
-              <div className="flex items-center gap-3">
+              <div className="grid grid-cols-[40px_1fr] items-center gap-3 rounded-md border bg-muted/30 p-3">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
                   <User className="size-5 text-muted-foreground" />
                 </div>
@@ -63,7 +61,7 @@ export default async function AccountPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="grid grid-cols-[40px_1fr] items-center gap-3 rounded-md border bg-muted/30 p-3">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
                   <Mail className="size-5 text-muted-foreground" />
                 </div>
@@ -73,7 +71,7 @@ export default async function AccountPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="grid grid-cols-[40px_1fr] items-center gap-3 rounded-md border bg-muted/30 p-3">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
                   <Calendar className="size-5 text-muted-foreground" />
                 </div>

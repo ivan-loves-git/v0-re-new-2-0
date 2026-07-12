@@ -112,7 +112,7 @@ export function AssignOfferForm({
         </DialogHeader>
         <div className="space-y-4 py-4">
           {availableOffers.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               No available offers to assign. All active offers have already been assigned.
             </p>
           ) : (

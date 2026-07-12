@@ -37,20 +37,20 @@ const principles = [
 export function KeyPrinciples() {
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-gray-900">Key Principles</h2>
+      <h2 className="text-xl font-semibold text-foreground">Key Principles</h2>
       <div className="grid gap-4 md:grid-cols-2">
         {principles.map((principle) => (
-          <Card key={principle.title} className="hover:shadow-md transition-shadow">
+          <Card key={principle.title}>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
-                <div className={`p-2 rounded-lg ${principle.bgColor}`}>
+                <span className={`rounded-md p-2 ${principle.bgColor}`}>
                   <principle.icon className={`size-4 ${principle.color}`} />
-                </div>
+                </span>
                 {principle.title}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">{principle.description}</p>
+              <p className="text-sm text-muted-foreground">{principle.description}</p>
             </CardContent>
           </Card>
         ))}

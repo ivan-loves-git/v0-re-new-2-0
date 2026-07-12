@@ -149,7 +149,7 @@ export function RadioOptionGrid({
             "flex items-center space-x-3 p-4 rounded-xl border-2 transition-all cursor-pointer",
             value === opt.value
               ? "border-blue-500 bg-blue-50"
-              : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
+              : "border-border/60 hover:border-border hover:bg-muted/50"
           )}
           onClick={() => onChange(opt.value)}
         >
@@ -231,7 +231,7 @@ export function CheckboxGrid({
             "flex items-center space-x-3 p-3 rounded-xl border-2 transition-all cursor-pointer",
             value.includes(opt.value)
               ? "border-blue-500 bg-blue-50"
-              : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
+              : "border-border/60 hover:border-border hover:bg-muted/50"
           )}
           onClick={() => toggleValue(opt.value)}
         >
@@ -414,7 +414,7 @@ export function ConsentCheckbox({
           <Label className="cursor-pointer">
             {label} {required && <span className="text-red-500">*</span>}
           </Label>
-          {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
+          {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
         </div>
       </div>
     )
@@ -426,7 +426,7 @@ export function ConsentCheckbox({
         "flex items-start space-x-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
         checked
           ? "border-blue-500 bg-blue-50"
-          : "border-gray-200 bg-white hover:border-blue-300"
+          : "border-border bg-white hover:border-blue-300"
       )}
       onClick={() => onChange(!checked)}
     >
@@ -439,7 +439,7 @@ export function ConsentCheckbox({
           {label} {required && <span className="text-red-500">*</span>}
         </Label>
         {description && (
-          <p className="text-sm text-gray-600 mt-1">{description}</p>
+          <p className="text-sm text-muted-foreground mt-1">{description}</p>
         )}
       </div>
     </div>

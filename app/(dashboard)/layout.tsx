@@ -57,16 +57,18 @@ export default function DashboardLayout({
         <DashboardSidebar />
       </Suspense>
       <SidebarInset>
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-4 md:p-6">
+        <div className="flex min-h-svh flex-1 flex-col overflow-x-hidden">
             <Suspense fallback={null}>
               <FloatingNav />
             </Suspense>
-            <Suspense fallback={<DashboardContentFallback />}>
-              <StaffDashboardGate>{children}</StaffDashboardGate>
-            </Suspense>
-          </div>
-        </main>
+            <div id="main-content" className="flex-1 px-4 py-5 md:px-6 md:py-6 xl:px-8">
+              <div className="mx-auto w-full max-w-[1440px]">
+                <Suspense fallback={<DashboardContentFallback />}>
+                  <StaffDashboardGate>{children}</StaffDashboardGate>
+                </Suspense>
+              </div>
+            </div>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )

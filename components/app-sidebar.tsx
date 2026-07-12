@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
@@ -38,6 +37,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
@@ -106,69 +106,18 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const { isMobile, setOpenMobile } = useSidebar()
   const [pendingHref, setPendingHref] = React.useState<string | null>(null)
-  const [isTouchActive, setIsTouchActive] = React.useState(false)
-  const [isHovering, setIsHovering] = React.useState(false)
-  const [emojiIndex, setEmojiIndex] = React.useState(0)
-  const touchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
-  const [supportsHover, setSupportsHover] = React.useState(false)
   const [hasMounted, setHasMounted] = React.useState(false)
   const hasNewRoadmap = hasRecentRoadmapUpdates()
-
-  const LOGO_EMOJIS = ["🌊", "✨", "🌹", "🌵", "🌙"]
-
-  // Whether animation is active (touch on mobile, hover on desktop)
-  const isAnimating = isTouchActive || isHovering
 
   React.useEffect(() => {
     setPendingHref(null)
   }, [pathname])
 
-  // Detect hover capability on mount (client-side only)
   React.useEffect(() => {
     setHasMounted(true)
-    setSupportsHover(window.matchMedia("(hover: hover)").matches)
   }, [])
-
-  // Cycle through emojis when animating
-  React.useEffect(() => {
-    if (!isAnimating) {
-      setEmojiIndex(0)
-      return
-    }
-    const interval = setInterval(() => {
-      setEmojiIndex((prev) => (prev + 1) % LOGO_EMOJIS.length)
-    }, 150)
-    return () => clearInterval(interval)
-  }, [isAnimating])
-
-  // Cleanup touch timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
-    }
-  }, [])
-
-  // Handle touch - wiggle for 3 seconds then stop (mobile only)
-  const handleTouchStart = () => {
-    if (supportsHover) return // Don't handle touch on desktop
-    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
-    setIsTouchActive(true)
-    touchTimeoutRef.current = setTimeout(() => {
-      setIsTouchActive(false)
-    }, 3000)
-  }
-
-  // Handle mouse hover - ONLY on devices that support hover (desktop)
-  // On mobile, synthetic mouse events fire after touch, so we must guard
-  const handleMouseEnter = () => {
-    if (!supportsHover) return // Ignore synthetic mouse events on mobile
-    setIsHovering(true)
-  }
-  const handleMouseLeave = () => {
-    if (!supportsHover) return
-    setIsHovering(false)
-  }
 
   // Check if current path is active
   const getIsActive = (href: string) => {
@@ -181,25 +130,8 @@ export function AppSidebar({
     if (href === "/opportunities/groups")
       return pathname === "/opportunities/groups"
     if (href === "/opportunities/ma") return pathname === "/opportunities/ma"
-    if (href === "/opportunities/find") {
-      return (
-        pathname === "/opportunities/find" ||
-        (pathname.startsWith("/opportunities/") &&
-          !pathname.startsWith("/opportunities/groups") &&
-          !pathname.startsWith("/opportunities/find") &&
-          !pathname.startsWith("/opportunities/ma") &&
-          !pathname.startsWith("/opportunities/import") &&
-          !pathname.startsWith("/opportunities/new") &&
-          !pathname.startsWith("/opportunities/reviews"))
-      )
-    }
-    // "Groups" (/repreneurs) should not match /repreneurs/explore
-    if (href === "/repreneurs")
-      return (
-        pathname === "/repreneurs" ||
-        (pathname.startsWith("/repreneurs/") &&
-          !pathname.startsWith("/repreneurs/explore"))
-      )
+    if (href === "/opportunities/find") return pathname === "/opportunities/find"
+    if (href === "/repreneurs") return pathname === "/repreneurs"
     return pathname.startsWith(href)
   }
 
@@ -222,7 +154,10 @@ export function AppSidebar({
     onFocus: () => warmRoute(href),
     onPointerEnter: () => warmRoute(href),
     onPointerDown: () => warmRoute(href),
-    onClick: () => startNavigation(href),
+    onClick: () => {
+      startNavigation(href)
+      if (isMobile) setOpenMobile(false)
+    },
   })
 
   // Get user initials for avatar fallback
@@ -239,39 +174,32 @@ export function AppSidebar({
   const displayName = userName || userEmail.split("@")[0]
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 overflow-hidden">
-      {/* Header with Logo */}
-      <SidebarHeader className="border-b border-sidebar-border">
+    <Sidebar collapsible="icon" className="overflow-hidden border-r-0">
+      <SidebarHeader className="border-b border-sidebar-border/80 p-2.5">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
+              asChild
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent cursor-default hover:bg-transparent logo-button focus-visible:ring-0 focus-visible:ring-offset-0 outline-none"
-              onTouchStart={handleTouchStart}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              tabIndex={-1}
+              tooltip="WAVE home"
+              className="h-12 hover:bg-sidebar-accent/70 data-[state=open]:bg-sidebar-accent"
             >
-              <span className="w-7 text-center text-2xl">
-                {isAnimating ? LOGO_EMOJIS[emojiIndex] : "🌊"}
-              </span>
-              <Image
-                src="/wave-logo.png"
-                alt="Wave - the repreneur CRM"
-                width={96}
-                height={32}
-                className={`transition-transform logo-image ${isTouchActive ? "animate-wiggle" : ""}`}
-                style={{ width: "auto", height: "32px" }}
-                priority
-              />
+              <Link href="/dashboard_re" {...linkWarmupProps("/dashboard_re")}>
+                <span className="relative grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.06] text-[#7dd3c7]">
+                  <Waves className="size-[18px]" strokeWidth={2} />
+                  <span aria-hidden="true" className="absolute -bottom-px left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-[#58a6ff]" />
+                </span>
+                <span className="grid min-w-0 flex-1 leading-tight">
+                  <span className="text-[13px] font-semibold tracking-[0.12em] text-white">WAVE</span>
+                  <span className="truncate text-[10px] text-sidebar-foreground/55">Re-New operating system</span>
+                </span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* Main Content */}
-      <SidebarContent>
-        {/* Repreneurs Section */}
+      <SidebarContent className="py-2">
         <SidebarGroup>
           <SidebarGroupLabel>Repreneurs</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -283,9 +211,10 @@ export function AppSidebar({
                     isActive={
                       getIsActive(item.href) || pendingHref === item.href
                     }
-                    tooltip={item.name}
+                    tooltip={`Repreneurs · ${item.name}`}
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                   >
-                    <Link href={item.href} {...linkWarmupProps(item.href)}>
+                    <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
                       <item.icon />
                       <span>{item.name}</span>
                       {item.badge && (
@@ -301,7 +230,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="opacity-60" />
 
         {/* Opportunities Section */}
         <SidebarGroup>
@@ -315,9 +244,10 @@ export function AppSidebar({
                     isActive={
                       getIsActive(item.href) || pendingHref === item.href
                     }
-                    tooltip={item.name}
+                    tooltip={`Opportunities · ${item.name}`}
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                   >
-                    <Link href={item.href} {...linkWarmupProps(item.href)}>
+                    <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
                       <item.icon />
                       <span>{item.name}</span>
                       {item.badge && (
@@ -333,7 +263,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="opacity-60" />
 
         {/* Tools Section */}
         <SidebarGroup>
@@ -347,9 +277,10 @@ export function AppSidebar({
                     isActive={
                       getIsActive(item.href) || pendingHref === item.href
                     }
-                    tooltip={item.name}
+                    tooltip={`Tools · ${item.name}`}
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                   >
-                    <Link href={item.href} {...linkWarmupProps(item.href)}>
+                    <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
                       <item.icon />
                       <span>{item.name}</span>
                     </Link>
@@ -360,7 +291,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="opacity-60" />
 
         {/* Project Section */}
         <SidebarGroup>
@@ -376,13 +307,14 @@ export function AppSidebar({
                       isActive={
                         getIsActive(item.href) || pendingHref === item.href
                       }
-                      tooltip={item.name}
+                      tooltip={`Project · ${item.name}`}
+                      className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                     >
-                      <Link href={item.href} {...linkWarmupProps(item.href)}>
+                      <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
                         <span className="relative inline-flex">
                           <item.icon className="size-4" />
                           {showRedDot && (
-                            <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-500" />
+                            <span className="absolute -top-1 -right-1 size-2 rounded-full bg-amber-400 ring-2 ring-sidebar" aria-label="Recently updated" />
                           )}
                         </span>
                         <span>{item.name}</span>
@@ -396,11 +328,9 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with User Account */}
-      <SidebarFooter>
-        {/* Build Version */}
-        <div className="px-2 pb-1 text-center">
-          <span className="text-[10px] text-sidebar-foreground/40 font-mono">
+      <SidebarFooter className="border-t border-sidebar-border/80 p-2.5">
+        <div className="px-2 pb-0.5 group-data-[collapsible=icon]:hidden">
+          <span className="font-mono text-[10px] text-sidebar-foreground/45">
             {BUILD_VERSION}
           </span>
         </div>
@@ -415,7 +345,7 @@ export function AppSidebar({
                   >
                     <Avatar className="size-8 rounded-lg">
                       <AvatarImage src={userAvatar} alt={displayName} />
-                      <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+                      <AvatarFallback className="rounded-lg bg-[#1f6feb] text-xs text-white">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
@@ -440,7 +370,7 @@ export function AppSidebar({
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="size-8 rounded-lg">
                         <AvatarImage src={userAvatar} alt={displayName} />
-                        <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+                        <AvatarFallback className="rounded-lg bg-[#1f6feb] text-xs text-white">
                           {userInitials}
                         </AvatarFallback>
                       </Avatar>
@@ -489,7 +419,7 @@ export function AppSidebar({
                 >
                   <Avatar className="size-8 rounded-lg">
                     <AvatarImage src={userAvatar} alt={displayName} />
-                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+                    <AvatarFallback className="rounded-lg bg-[#1f6feb] text-xs text-white">
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>

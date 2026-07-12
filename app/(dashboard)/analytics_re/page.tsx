@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { BarChart3 } from "lucide-react"
-import { getAnalyticsData, type AnalyticsData } from "@/lib/actions/analytics"
+import { getAnalyticsData } from "@/lib/actions/analytics"
 import { KpiCards } from "@/components/analytics/kpi-cards"
 import { OperationalKpis } from "@/components/analytics/operational-kpis"
 import { ScoreDistribution } from "@/components/analytics/score-distribution"
@@ -70,11 +70,9 @@ async function AnalyticsContent({ period }: { period: string }) {
   const data = await getAnalyticsData(period)
 
   return (
-    <>
-      {/* Row 1: KPI Cards */}
+    <div className="space-y-5">
       <KpiCards data={data} period={period} />
 
-      {/* Row 1.5: Operational KPIs */}
       <OperationalKpis data={{
         timeToFirstMeeting: data.timeToFirstMeeting,
         timeToQualification: data.timeToQualification,
@@ -87,34 +85,49 @@ async function AnalyticsContent({ period }: { period: string }) {
         accuracyStats: data.accuracyStats,
       }} />
 
-      {/* Row 2: Score Distribution + Conversion Funnel */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ScoreDistribution
-          whoDistribution={data.whoDistribution}
-          whenDistribution={data.whenDistribution}
-        />
-        <ConversionFunnelAnalytics
-          leadCount={data.leadCount}
-          qualifiedCount={data.qualifiedCount}
-          clientCount={data.clientCount}
-          leadToQualifiedRate={data.leadToQualifiedRate}
-          qualifiedToClientRate={data.qualifiedToClientRate}
-          leadToClientRate={data.leadToClientRate}
-        />
-      </div>
+      <section className="space-y-3" aria-labelledby="portfolio-insight-title">
+        <div>
+          <h2 id="portfolio-insight-title" className="text-base font-semibold">Portfolio insight</h2>
+          <p className="text-sm text-muted-foreground">Profile quality and movement through the repreneur pipeline.</p>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <ScoreDistribution
+            whoDistribution={data.whoDistribution}
+            whenDistribution={data.whenDistribution}
+          />
+          <ConversionFunnelAnalytics
+            leadCount={data.leadCount}
+            qualifiedCount={data.qualifiedCount}
+            clientCount={data.clientCount}
+            leadToQualifiedRate={data.leadToQualifiedRate}
+            qualifiedToClientRate={data.qualifiedToClientRate}
+            leadToClientRate={data.leadToClientRate}
+          />
+        </div>
+      </section>
 
-      {/* Row 3: Offer Conversion + Journey Stages */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <OfferConversion data={data.offerConversion} />
-        <JourneyWaterfall stageDistribution={data.stageDistribution} />
-      </div>
+      <section className="space-y-3" aria-labelledby="commercial-progression-title">
+        <div>
+          <h2 id="commercial-progression-title" className="text-base font-semibold">Commercial progression</h2>
+          <p className="text-sm text-muted-foreground">Offer performance and readiness across the acquisition journey.</p>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <OfferConversion data={data.offerConversion} />
+          <JourneyWaterfall stageDistribution={data.stageDistribution} />
+        </div>
+      </section>
 
-      {/* Row 4: Stale Leads + Decline Reasons */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <StaleLeads staleLeads={data.staleLeads} />
-        <DeclineReasons breakdown={data.declineReasonBreakdown} />
-      </div>
-    </>
+      <section className="space-y-3" aria-labelledby="attention-signals-title">
+        <div>
+          <h2 id="attention-signals-title" className="text-base font-semibold">Attention signals</h2>
+          <p className="text-sm text-muted-foreground">Follow-up risks and the reasons commercial paths stop.</p>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <StaleLeads staleLeads={data.staleLeads} />
+          <DeclineReasons breakdown={data.declineReasonBreakdown} />
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -125,7 +138,7 @@ export default async function RepreneurAnalyticsPage(
   const period = searchParams.period || "all"
 
   return (
-    <div className="space-y-6">
+    <div className="wave-page space-y-5">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <SectionPageHeader
@@ -141,13 +154,13 @@ export default async function RepreneurAnalyticsPage(
       {/* Content */}
       <Suspense
         fallback={
-          <div className="space-y-6">
+          <div className="space-y-5">
             <KpiSkeleton />
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2">
               <ChartSkeleton />
               <ChartSkeleton />
             </div>
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2">
               <ChartSkeleton />
               <ListSkeleton />
             </div>

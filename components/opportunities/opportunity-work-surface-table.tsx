@@ -4,7 +4,6 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Pagination,
   PaginationContent,
@@ -64,14 +63,14 @@ const FIND_ITEMS_PER_PAGE = 20
 const GROUP_ITEMS_PER_PAGE = 8
 
 const GROUP_CONFIG: Array<{ key: OpportunityGroupKey; label: string; className: string }> = [
-  { key: "draft", label: "Draft", className: "border-slate-200 bg-slate-50" },
-  { key: "inventory", label: "Live inventory", className: "border-sky-200 bg-sky-50" },
-  { key: "matching", label: "Matching and proposed", className: "border-amber-200 bg-amber-50" },
-  { key: "interest", label: "Interest received", className: "border-orange-200 bg-orange-50" },
-  { key: "active", label: "Active pursuit", className: "border-blue-200 bg-blue-50" },
-  { key: "advanced", label: "Meeting / LOI", className: "border-violet-200 bg-violet-50" },
-  { key: "paused", label: "Paused", className: "border-zinc-200 bg-zinc-50" },
-  { key: "closed", label: "Closed / dropped / archived", className: "border-emerald-200 bg-emerald-50" },
+  { key: "draft", label: "Draft", className: "border-l-slate-400" },
+  { key: "inventory", label: "Live inventory", className: "border-l-sky-500" },
+  { key: "matching", label: "Matching and proposed", className: "border-l-amber-500" },
+  { key: "interest", label: "Interest received", className: "border-l-orange-500" },
+  { key: "active", label: "Active pursuit", className: "border-l-blue-600" },
+  { key: "advanced", label: "Meeting / LOI", className: "border-l-violet-500" },
+  { key: "paused", label: "Paused", className: "border-l-zinc-400" },
+  { key: "closed", label: "Closed / dropped / archived", className: "border-l-emerald-600" },
 ]
 
 const GROUP_PAGE_DEFAULTS: Record<OpportunityGroupKey, number> = {
@@ -209,13 +208,20 @@ function OpportunityRow({ item, variant = "full" }: { item: PreparedOpportunity;
   if (variant === "group") {
     return (
       <TableRow
-        className="cursor-pointer hover:bg-muted/50"
+        className="cursor-pointer focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        tabIndex={0}
         onClick={() => router.push(`/opportunities/${opportunity.id}`)}
         onMouseEnter={() => router.prefetch(`/opportunities/${opportunity.id}`)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            router.push(`/opportunities/${opportunity.id}`)
+          }
+        }}
       >
         <TableCell className="w-[27%]">
           <div className="flex min-w-0 flex-col gap-1">
-            <span className="truncate font-medium text-foreground">{opportunity.public_title ?? opportunity.reference}</span>
+            <span className="truncate font-semibold text-foreground">{opportunity.public_title ?? opportunity.reference}</span>
             <span className="truncate text-xs text-muted-foreground">{opportunity.reference}</span>
           </div>
         </TableCell>
@@ -240,13 +246,20 @@ function OpportunityRow({ item, variant = "full" }: { item: PreparedOpportunity;
 
   return (
     <TableRow
-      className="cursor-pointer hover:bg-muted/50"
+      className="cursor-pointer focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      tabIndex={0}
       onClick={() => router.push(`/opportunities/${opportunity.id}`)}
       onMouseEnter={() => router.prefetch(`/opportunities/${opportunity.id}`)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          router.push(`/opportunities/${opportunity.id}`)
+        }
+      }}
     >
       <TableCell>
         <div className="flex flex-col gap-1">
-          <span className="font-medium text-foreground">{opportunity.public_title ?? opportunity.reference}</span>
+          <span className="font-semibold text-foreground">{opportunity.public_title ?? opportunity.reference}</span>
           <span className="text-xs text-muted-foreground">{opportunity.reference}</span>
         </div>
       </TableCell>
@@ -414,6 +427,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
       resultCount={filtered.length}
       totalCount={opportunities.length}
       resultLabel="opportunity"
+      className={mode === "find" ? "rounded-none border-x-0 border-t-0" : undefined}
     />
   )
 
@@ -434,20 +448,21 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
             const groupTotalPages = Math.ceil(items.length / GROUP_ITEMS_PER_PAGE)
 
             return (
-              <div key={group.key} className={`rounded-lg border ${group.className}`}>
+              <section key={group.key} className={`overflow-hidden rounded-lg border border-l-2 bg-card ${group.className}`}>
                 <button
-                  className="flex w-full items-center justify-between px-4 py-3 text-left"
+                  className="flex w-full items-center justify-between bg-muted/25 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   onClick={() => toggleGroup(group.key)}
+                  aria-expanded={!isCollapsed}
                 >
                   <div className="flex items-center gap-2">
-                    {isCollapsed ? <ChevronRight className="size-5 text-muted-foreground" /> : <ChevronDown className="size-5 text-muted-foreground" />}
-                    <span className="font-semibold text-foreground">{group.label}</span>
-                    <Badge variant="secondary">{items.length}</Badge>
+                    {isCollapsed ? <ChevronRight className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+                    <span className="text-sm font-semibold text-foreground">{group.label}</span>
+                    <Badge variant="secondary" className="tabular-nums">{items.length}</Badge>
                   </div>
                 </button>
 
                 {!isCollapsed && (
-                  <div className="overflow-x-auto rounded-b-lg bg-card">
+                  <div className="overflow-x-auto bg-card">
                     <Table className="min-w-[720px] table-fixed">
                       <TableHeader>
                         <TableRow>
@@ -468,13 +483,14 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
 
                     {groupTotalPages > 1 && (
                       <div className="flex flex-col gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           Showing {start + 1}-{Math.min(start + GROUP_ITEMS_PER_PAGE, items.length)} of {items.length}
                         </span>
                         <Pagination className="sm:mx-0 sm:w-auto">
                           <PaginationContent>
                             <PaginationItem>
                               <PaginationPrevious
+                                disabled={page === 1}
                                 onClick={() => page > 1 && setGroupPage(group.key, page - 1)}
                                 className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                               />
@@ -500,6 +516,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
                               })}
                             <PaginationItem>
                               <PaginationNext
+                                disabled={page === groupTotalPages}
                                 onClick={() => page < groupTotalPages && setGroupPage(group.key, page + 1)}
                                 className={page === groupTotalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                               />
@@ -510,7 +527,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
                     )}
                   </div>
                 )}
-              </div>
+              </section>
             )
           })}
         </div>
@@ -519,10 +536,10 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="overflow-hidden rounded-lg border bg-card">
       {filterBar}
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div>
         <div className="overflow-x-auto">
           <Table className="min-w-[1080px]">
             <TableHeader>
@@ -540,8 +557,8 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                    No opportunities match your filters.
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                    No opportunities match these filters. Remove a filter to widen the list.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -553,14 +570,15 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
       </div>
 
       {totalPages > 1 && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex flex-col gap-2 border-t bg-muted/20 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs text-muted-foreground">
             Showing {pageStart + 1}-{Math.min(pageStart + FIND_ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
           </span>
           <Pagination className="sm:mx-0 sm:w-auto">
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
+                  disabled={currentPage === 1}
                   onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                 />
@@ -586,6 +604,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
                 })}
               <PaginationItem>
                 <PaginationNext
+                  disabled={currentPage === totalPages}
                   onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
                   className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                 />

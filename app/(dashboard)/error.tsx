@@ -34,12 +34,12 @@ export default function DashboardError({
         </CardHeader>
         <CardContent className="space-y-4">
           {process.env.NODE_ENV === "development" && (
-            <div className="rounded-md bg-gray-50 p-3 text-sm">
-              <p className="font-mono text-xs text-gray-600 break-all">
+            <div className="rounded-md bg-muted/40 p-3 text-sm">
+              <p className="font-mono text-xs text-muted-foreground break-all">
                 {error.message}
               </p>
               {error.digest && (
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Error ID: {error.digest}
                 </p>
               )}

@@ -132,7 +132,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
               className={`flex items-center gap-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
-                  : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                  : 'border-border hover:bg-muted/50 hover:border-input'
               }`}
               onClick={() => toggleMultiSelect(question.field, option.value)}
             >
@@ -239,7 +239,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
                 className={`flex items-center gap-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
-                    : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                    : 'border-border hover:bg-muted/50 hover:border-input'
                 }`}
                 onClick={() => onChange({ q16_equity: option.value })}
               >

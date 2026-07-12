@@ -27,16 +27,18 @@ export function PeriodSelector() {
   }
 
   return (
-    <div className="flex gap-1 rounded-lg bg-muted p-1">
+    <div role="group" aria-label="Analytics period" className="inline-flex overflow-hidden rounded-md border bg-card">
       {periods.map((p) => (
         <button
+          type="button"
           key={p.value}
           onClick={() => handleSelect(p.value)}
+          aria-pressed={activePeriod === p.value}
           className={cn(
-            "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+            "min-h-9 border-r px-3 text-xs font-medium transition-colors last:border-r-0 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
             activePeriod === p.value
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
           )}
         >
           {p.label}

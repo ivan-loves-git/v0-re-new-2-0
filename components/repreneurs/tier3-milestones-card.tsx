@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useOptimistic, useTransition, useRef, useCallback } from "react"
+import { useOptimistic, useTransition, useRef, useCallback } from "react"
 import { Compass, Map, Flag, Rocket, Crown, CheckCircle2, Circle, LucideIcon } from "lucide-react"
 import { toggleMilestone } from "@/lib/actions/repreneurs"
 import { Badge } from "@/components/ui/badge"
@@ -65,6 +65,14 @@ const STAGE_ICONS: Record<JourneyStage, LucideIcon> = {
   post_acquisition: Crown,
 }
 
+const STAGE_TONES: Record<JourneyStage, string> = {
+  explorer: "border-border bg-muted text-muted-foreground",
+  learner: "border-primary/25 bg-primary/5 text-primary",
+  ready: "border-success/20 bg-success/5 text-success",
+  execution: "border-info/20 bg-info/5 text-info",
+  post_acquisition: "border-warning/25 bg-warning/5 text-warning",
+}
+
 function StageIcon({ stage, className }: { stage: JourneyStage; className?: string }) {
   const Icon = STAGE_ICONS[stage] || Compass
   return <Icon className={className} />
@@ -80,16 +88,16 @@ interface MilestoneGroupProps {
 
 function MilestoneGroup({ group, optimisticMilestones, onToggle, isPending }: MilestoneGroupProps) {
   return (
-    <div className="space-y-1">
+    <section className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+        <h3 className="wave-eyebrow">
           {group.title}
-        </span>
-        <span className="text-xs text-gray-400">
+        </h3>
+        <span className="text-xs tabular-nums text-muted-foreground">
           ({group.completedCount}/{group.milestones.length})
         </span>
       </div>
-      <div className="space-y-0.5 pl-2 border-l-2 border-gray-100">
+      <div className="space-y-0.5 border-l-2 border-primary/15 pl-2">
         {group.milestones.map((milestone) => {
           const isCompleted = optimisticMilestones[milestone.key]
           return (
@@ -100,18 +108,18 @@ function MilestoneGroup({ group, optimisticMilestones, onToggle, isPending }: Mi
                   onClick={() => onToggle(milestone.key)}
                   disabled={isPending}
                   className={cn(
-                    "flex items-center gap-2 py-1 px-2 rounded text-left transition-all w-full",
-                    "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500",
-                    isCompleted && "bg-green-50",
-                    isPending && "opacity-50 cursor-not-allowed"
+                    "flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-colors",
+                    "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isCompleted && "bg-success/5",
+                    isPending && "cursor-not-allowed opacity-50"
                   )}
                 >
                   {isCompleted ? (
-                    <CheckCircle2 className="size-3.5 text-green-600 flex-shrink-0" />
+                    <CheckCircle2 className="size-3.5 flex-shrink-0 text-success" />
                   ) : (
-                    <Circle className="size-3.5 text-gray-300 flex-shrink-0" />
+                    <Circle className="size-3.5 flex-shrink-0 text-muted-foreground/45" />
                   )}
-                  <span className={cn("text-sm", isCompleted ? "text-green-700" : "text-gray-600")}>
+                  <span className={cn("text-sm", isCompleted ? "font-medium text-success" : "text-foreground")}>
                     {milestone.label}
                   </span>
                 </button>
@@ -123,7 +131,7 @@ function MilestoneGroup({ group, optimisticMilestones, onToggle, isPending }: Mi
           )
         })}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -198,18 +206,18 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
   return (
     <div className="space-y-4">
       {/* Header with Stage Badge and Progress */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Badge className={cn("gap-1", stageConfig.bgColor, stageConfig.color, "border-0")}>
+          <Badge variant="outline" className={cn("gap-1", STAGE_TONES[derivedStage])}>
             <StageIcon stage={derivedStage} className="size-3" />
             {stageConfig.label}
           </Badge>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm tabular-nums text-muted-foreground">
             {optimisticCount}/{MILESTONES.length} milestones
           </span>
         </div>
         {progress.nextStage && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-muted-foreground">
             {progress.milestonesForNext} more for {getStageConfig(progress.nextStage).label}
           </span>
         )}
@@ -220,7 +228,7 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
 
       {/* Milestones in 2-column layout */}
       <TooltipProvider>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-5 sm:grid-cols-2">
           {/* Left column: Groups 1 & 2 */}
           <div className="space-y-3">
             {milestonesByGroup.slice(0, 2).map((group) => (

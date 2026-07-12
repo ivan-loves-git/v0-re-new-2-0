@@ -47,7 +47,7 @@ export function Tier1ScoreCard({ repreneur }: Tier1ScoreCardProps) {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold">{repreneur.tier1_score}</span>
-              <span className="text-sm text-gray-500">points</span>
+              <span className="text-sm text-muted-foreground">points</span>
               <div className="flex items-center gap-1 ml-2">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
@@ -68,7 +68,7 @@ export function Tier1ScoreCard({ repreneur }: Tier1ScoreCardProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-gray-400 hover:text-gray-600 h-6 px-2"
+                className="text-xs text-muted-foreground hover:text-muted-foreground h-6 px-2"
                 asChild
               >
                 <Link href={`/repreneurs/${repreneur.id}/questionnaire`}>

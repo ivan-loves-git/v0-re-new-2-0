@@ -9,6 +9,44 @@ import { Badge } from "@/components/ui/badge"
 const roadmapEvents = [
   {
     period: "Jul 12, 2026",
+    version: "0.9.20",
+    title: "WAVE interface rebuilt as one operating system",
+    isCompleted: true,
+    events: [
+      {
+        title: "One calm workspace shell",
+        type: "style",
+        description: "Navigation, page headers, typography, spacing, cards, tables, forms, tabs, and states now follow one mature Re-New visual language across staff and portal screens.",
+      },
+      {
+        title: "Dashboards made operational",
+        type: "product",
+        description: "Repreneur and opportunity dashboards now prioritize a compact KPI rail, the decisions that need attention, larger analytical regions, and recent work instead of equal-weight shortcut cards.",
+      },
+      {
+        title: "Directories and pipeline rationalized",
+        type: "feature",
+        description: "Find, Groups, M&A, pipeline, offers, and review queues use denser work surfaces, clearer actions, progressive filters, and consistent table behavior.",
+      },
+      {
+        title: "Records and forms given a clear hierarchy",
+        type: "style",
+        description: "Repreneur and opportunity records now lead with identity, status, and next actions, while forms group related decisions and keep secondary information quieter.",
+      },
+      {
+        title: "External journeys brought into the same family",
+        type: "style",
+        description: "Login, intake, assessment, and repreneur portal screens now share WAVE branding and product discipline without exposing the complexity of the staff workspace.",
+      },
+      {
+        title: "Charts governed by the Re-New chart layer",
+        type: "decision",
+        description: "The remaining email-volume visualization was migrated into the WAVE EvilCharts layer, completing the rule that product charts use one accessible, reusable system.",
+      },
+    ],
+  },
+  {
+    period: "Jul 12, 2026",
     version: "0.9.19",
     title: "Wave 2.0 design foundation introduced",
     isCompleted: true,
@@ -1578,29 +1616,29 @@ export function DevelopmentRoadmap() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Development Roadmap</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-xl font-semibold text-foreground">Development Roadmap</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           The complete journey of Wave — from first idea to production
         </p>
       </div>
 
       {/* Stats summary */}
       <div className="grid grid-cols-4 gap-3">
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <div className="text-2xl font-bold text-gray-900">{roadmapEvents.length}</div>
-          <div className="text-xs text-gray-500">Milestones</div>
+        <div className="text-center p-3 bg-muted/40 rounded-lg">
+          <div className="text-2xl font-bold text-foreground">{roadmapEvents.length}</div>
+          <div className="text-xs text-muted-foreground">Milestones</div>
         </div>
         <div className="text-center p-3 bg-sky-50 rounded-lg">
           <div className="text-2xl font-bold text-sky-600">{productUpdates}</div>
-          <div className="text-xs text-gray-500">Product updates</div>
+          <div className="text-xs text-muted-foreground">Product updates</div>
         </div>
         <div className="text-center p-3 bg-purple-50 rounded-lg">
           <div className="text-2xl font-bold text-purple-600">{uxImprovements}</div>
-          <div className="text-xs text-gray-500">UX improvements</div>
+          <div className="text-xs text-muted-foreground">UX improvements</div>
         </div>
         <div className="text-center p-3 bg-emerald-50 rounded-lg">
           <div className="text-2xl font-bold text-emerald-600">{validationWork}</div>
-          <div className="text-xs text-gray-500">QA / audits</div>
+          <div className="text-xs text-muted-foreground">QA / audits</div>
         </div>
       </div>
 
@@ -1631,13 +1669,13 @@ export function DevelopmentRoadmap() {
                         <CheckCircle className="size-4 text-green-500" />
                       )}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {period.title}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {period.events.length} updates
                       {period.version && (
-                        <span className="ml-2 text-[10px] font-mono text-gray-400">v{period.version}</span>
+                        <span className="ml-2 text-[10px] font-mono text-muted-foreground">v{period.version}</span>
                       )}
                     </p>
                   </div>
@@ -1650,7 +1688,7 @@ export function DevelopmentRoadmap() {
                     return (
                       <div
                         key={i}
-                        className="flex gap-2.5 py-2 px-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors animate-slide-in"
+                        className="flex gap-2.5 py-2 px-2.5 rounded-lg bg-muted/40 hover:bg-muted transition-colors animate-slide-in"
                         style={{ animationDelay: `${i * 30}ms` }}
                       >
                         <div className={`p-1.5 rounded-md ${config.bgColor} h-fit`}>
@@ -1658,14 +1696,14 @@ export function DevelopmentRoadmap() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-gray-900 text-sm">
+                            <span className="font-medium text-foreground text-sm">
                               {event.title}
                             </span>
                             <Badge variant="secondary" className="text-xs">
                               {config.label}
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-600 mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {event.description}
                           </p>
                         </div>
@@ -1680,7 +1718,7 @@ export function DevelopmentRoadmap() {
       </div>
 
       {/* Footer */}
-      <div className="text-center text-sm text-gray-500 pt-4 border-t">
+      <div className="text-center text-sm text-muted-foreground pt-4 border-t">
         <p className="flex items-center justify-center gap-2">
           <Rocket className="size-4 text-blue-500" />
           {totalEvents} roadmap updates captured from first idea to current June V2 build

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, MailOpen, MousePointerClick, AlertCircle } from "lucide-react"
 import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
 import type { EmailStats } from "@/lib/actions/emails"
+import { WaveBarChart } from "@/components/wave/charts"
 
 interface EmailOverviewProps {
   stats: EmailStats
@@ -34,7 +35,10 @@ const kpiInfo = {
 }
 
 export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
-  const maxCount = Math.max(...dailyCounts.map((d) => d.count), 1)
+  const chartData = dailyCounts.map((day) => ({
+    day: new Date(day.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+    count: day.count,
+  }))
 
   return (
     <div className="space-y-6">
@@ -74,41 +78,12 @@ export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
         />
       </KpiMetricGrid>
 
-      {/* Simple Bar Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Emails Sent Per Day</CardTitle>
+          <CardTitle>Daily send volume</CardTitle>
         </CardHeader>
         <CardContent>
-          {dailyCounts.length > 0 ? (
-            <div className="flex items-end gap-2 h-48">
-              {dailyCounts.map((day) => (
-                <div
-                  key={day.date}
-                  className="flex-1 flex flex-col items-center gap-1"
-                >
-                  <div
-                    className="w-full bg-blue-500 rounded-t transition-all hover:bg-blue-600"
-                    style={{
-                      height: `${(day.count / maxCount) * 160}px`,
-                      minHeight: day.count > 0 ? "4px" : "0",
-                    }}
-                    title={`${day.count} email(s)`}
-                  />
-                  <span className="text-xs text-muted-foreground rotate-45 origin-left whitespace-nowrap">
-                    {new Date(day.date).toLocaleDateString("en-US", {
-                      day: "2-digit",
-                      month: "2-digit",
-                    })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-48 flex items-center justify-center text-muted-foreground">
-              No data available
-            </div>
-          )}
+          <WaveBarChart data={chartData} label="Emails sent per day" xKey="day" series={[{ key: "count", label: "Emails", color: "var(--chart-1)" }]} className="h-[240px]" />
         </CardContent>
       </Card>
     </div>

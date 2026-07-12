@@ -48,9 +48,9 @@ const sourceTypeLabels = Object.fromEntries(
 ) as Record<MaSourceType, string>
 
 const sourceTypeClasses: Record<MaSourceType, string> = {
-  ma_firm: "border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100",
-  broker: "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-100",
-  direct: "border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
+  ma_firm: "border-transparent bg-violet-50 text-violet-700 hover:bg-violet-50",
+  broker: "border-transparent bg-blue-50 text-blue-700 hover:bg-blue-50",
+  direct: "border-transparent bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
   other: "border-transparent bg-slate-100 text-slate-700 hover:bg-slate-100",
 }
 
@@ -147,6 +147,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="overflow-hidden rounded-lg border bg-card">
       <CollectionFilterBar
         search={filters.search}
         onSearchChange={filters.setSearch}
@@ -160,6 +161,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
         resultCount={filteredSources.length}
         totalCount={sources.length}
         resultLabel="source"
+        className="rounded-none border-x-0 border-t-0"
         actions={
           <>
             <Button asChild variant="outline" size="sm" className="h-9">
@@ -176,7 +178,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
         }
       />
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div>
         <div className="overflow-x-auto">
           <Table className="min-w-[1080px] table-fixed">
             <TableHeader>
@@ -194,15 +196,15 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
             <TableBody>
               {filteredSources.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                    No M&A sources match your filters.
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                    No M&A sources match these filters. Remove a filter to widen the list.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredSources.map((source) => (
                   <TableRow key={source.id}>
                     <TableCell>
-                      <span className="block truncate font-medium text-foreground">{source.firm_name}</span>
+                      <span className="block truncate font-semibold text-foreground">{source.firm_name}</span>
                     </TableCell>
                     <TableCell>
                       <SourceTypeBadge sourceType={source.source_type} />
@@ -236,7 +238,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
                         <Badge variant="secondary">{source.opportunity_count} total</Badge>
                         <Badge variant="outline">{source.open_opportunity_count} open</Badge>
                         {source.stale_opportunity_count > 0 ? (
-                          <Badge className="border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100">
+                          <Badge className="border-transparent bg-amber-50 text-amber-700 hover:bg-amber-50">
                             {source.stale_opportunity_count} stale
                           </Badge>
                         ) : null}
@@ -259,7 +261,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
+                        size="icon-sm"
                         onClick={() => openEditDialog(source)}
                         aria-label={`Edit ${source.firm_name}`}
                       >
@@ -272,6 +274,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
             </TableBody>
           </Table>
         </div>
+      </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

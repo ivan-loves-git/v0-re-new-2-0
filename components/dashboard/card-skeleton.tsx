@@ -23,7 +23,7 @@ export function CardSkeleton({
         </div>
       </CardHeader>
       <CardContent>
-        <div className={cn("bg-gray-100 rounded", contentHeight)} />
+        <div className={cn("bg-muted rounded", contentHeight)} />
       </CardContent>
     </Card>
   )
@@ -39,7 +39,7 @@ export function StatCardSkeleton() {
       <CardContent>
         <div className="flex items-center justify-between">
           <div className="h-8 w-16 bg-gray-200 rounded" />
-          <div className="h-5 w-16 bg-gray-100 rounded-full" />
+          <div className="h-5 w-16 bg-muted rounded-full" />
         </div>
       </CardContent>
     </Card>
@@ -63,7 +63,7 @@ export function TierCardSkeleton() {
         <div className="flex items-center gap-2">
           <div className="size-5 bg-gray-200 rounded" />
           <div className="h-5 w-20 bg-gray-200 rounded" />
-          <div className="size-4 bg-gray-100 rounded-full" />
+          <div className="size-4 bg-muted rounded-full" />
           <div className="ml-auto size-6 bg-gray-200 rounded-full" />
         </div>
       </CardHeader>
@@ -75,7 +75,7 @@ export function TierCardSkeleton() {
               <div className="flex-1">
                 <div className="h-4 w-32 bg-gray-200 rounded" />
               </div>
-              <div className="h-6 w-10 bg-gray-100 rounded" />
+              <div className="h-6 w-10 bg-muted rounded" />
             </div>
           ))}
         </div>
@@ -100,8 +100,8 @@ export function FunnelSkeleton() {
           <div className="h-9 bg-green-100 rounded-lg w-3/5" />
         </div>
         <div className="mt-2 pt-2 border-t flex justify-between">
-          <div className="h-3 w-24 bg-gray-100 rounded" />
-          <div className="h-3 w-24 bg-gray-100 rounded" />
+          <div className="h-3 w-24 bg-muted rounded" />
+          <div className="h-3 w-24 bg-muted rounded" />
         </div>
       </CardContent>
     </Card>
@@ -119,7 +119,7 @@ export function JourneyStageSkeleton() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4">
-          <div className="size-32 bg-gray-100 rounded-full" />
+          <div className="size-32 bg-muted rounded-full" />
           <div className="flex-1 space-y-2">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="flex items-center justify-between">
@@ -155,8 +155,8 @@ export function ActivityStreamSkeleton() {
               </div>
               <div className="flex-1 space-y-1">
                 <div className="h-4 w-24 bg-gray-200 rounded" />
-                <div className="h-3 w-32 bg-gray-100 rounded" />
-                <div className="h-3 w-20 bg-gray-100 rounded" />
+                <div className="h-3 w-32 bg-muted rounded" />
+                <div className="h-3 w-20 bg-muted rounded" />
               </div>
             </div>
           ))}
@@ -182,12 +182,12 @@ export function RecentlyAddedSkeleton() {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
                   <div className="h-4 w-32 bg-gray-200 rounded" />
-                  <div className="h-3 w-40 bg-gray-100 rounded" />
-                  <div className="h-3 w-20 bg-gray-100 rounded" />
+                  <div className="h-3 w-40 bg-muted rounded" />
+                  <div className="h-3 w-20 bg-muted rounded" />
                 </div>
                 <div className="flex flex-col gap-1 items-end">
                   <div className="h-5 w-16 bg-gray-200 rounded-full" />
-                  <div className="h-5 w-14 bg-gray-100 rounded-full" />
+                  <div className="h-5 w-14 bg-muted rounded-full" />
                 </div>
               </div>
             </div>
@@ -215,7 +215,7 @@ export function ChartSkeleton() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] bg-gray-100 rounded relative overflow-hidden">
+        <div className="h-[300px] bg-muted rounded relative overflow-hidden">
           {/* Shimmer effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
         </div>
@@ -238,12 +238,12 @@ export function StatsColumnSkeleton() {
           {[...Array(4)].map((_, i) => (
             <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gray-100">
+                <div className="p-2 rounded-lg bg-muted">
                   <div className="size-4 bg-gray-200 rounded" />
                 </div>
                 <div className="space-y-1">
                   <div className="h-4 w-20 bg-gray-200 rounded" />
-                  <div className="h-3 w-16 bg-gray-100 rounded" />
+                  <div className="h-3 w-16 bg-muted rounded" />
                 </div>
               </div>
               <div className="h-8 w-10 bg-gray-200 rounded" />
@@ -262,7 +262,7 @@ export function DashboardSkeleton() {
       {/* Header skeleton */}
       <div>
         <div className="h-9 w-40 bg-gray-200 rounded animate-pulse" />
-        <div className="h-5 w-64 bg-gray-100 rounded mt-2 animate-pulse" />
+        <div className="h-5 w-64 bg-muted rounded mt-2 animate-pulse" />
       </div>
 
       {/* Row 1: Stats Column | Top Tier 1 | Top Tier 2 */}

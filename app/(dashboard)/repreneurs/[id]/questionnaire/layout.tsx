@@ -3,10 +3,8 @@ export default function QuestionnaireLayout({
 }: {
   children: React.ReactNode
 }) {
-  // This layout removes the parent's p-6 padding using negative margins
-  // and sets explicit height to fill the available space
   return (
-    <div className="-m-6 h-[calc(100vh-64px)] flex flex-col">
+    <div className="flex min-h-[calc(100svh-8rem)] flex-col overflow-hidden rounded-lg border bg-background">
       {children}
     </div>
   )

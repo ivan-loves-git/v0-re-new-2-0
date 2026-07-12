@@ -1,8 +1,16 @@
-"use client"
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  Clock3,
+  UserRound,
+  Users,
+} from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, UserCheck, Briefcase, TrendingUp, TrendingDown, Minus, Clock } from "lucide-react"
-import { CardInfoButton } from "./card-info-button"
+import {
+  KpiMetricGrid,
+  KpiMetricTile,
+  type KpiTrend,
+} from "@/components/ui/kpi-metric-tile"
 
 interface StatsColumnProps {
   totalRepreneurs: number
@@ -10,47 +18,30 @@ interface StatsColumnProps {
   qualifiedCount: number
   clientCount: number
   toReactivateCount?: number
-  // Last week comparison
   lastWeekTotal?: number
   lastWeekLeads?: number
   lastWeekQualified?: number
   lastWeekClients?: number
 }
 
-function getChangeIndicator(current: number, lastWeek: number | undefined) {
-  if (lastWeek === undefined) return null
-  const diff = current - lastWeek
+function comparisonTrend(
+  current: number,
+  previous: number | undefined,
+  positiveGrowth = false,
+): KpiTrend | null {
+  if (previous === undefined) return null
+  const difference = current - previous
+  if (difference === 0) return { value: "0 vs last week", direction: "flat", tone: "neutral" }
 
-  if (diff > 0) {
-    return (
-      <span className="flex items-center gap-1 text-xs text-green-600">
-        <TrendingUp className="size-3" />
-        +{diff} vs LW
-      </span>
-    )
-  } else if (diff < 0) {
-    return (
-      <span className="flex items-center gap-1 text-xs text-red-600">
-        <TrendingDown className="size-3" />
-        {diff} vs LW
-      </span>
-    )
-  } else {
-    return (
-      <span className="flex items-center gap-1 text-xs text-gray-500">
-        <Minus className="size-3" />
-        0 vs LW
-      </span>
-    )
+  return {
+    value: `${difference > 0 ? "+" : ""}${difference} vs last week`,
+    direction: difference > 0 ? "up" : "down",
+    tone: positiveGrowth
+      ? difference > 0
+        ? "positive"
+        : "negative"
+      : "neutral",
   }
-}
-
-const kpiInfo = {
-  pipelineStats: {
-    title: "Pipeline Stats",
-    description: "Overview of your repreneur pipeline showing total count and breakdown by lifecycle status (Lead, Qualified, Client).",
-    why: "Track pipeline health at a glance. The 'vs LW' comparison shows week-over-week growth to identify trends early.",
-  },
 }
 
 export function StatsColumn({
@@ -64,88 +55,79 @@ export function StatsColumn({
   lastWeekQualified,
   lastWeekClients,
 }: StatsColumnProps) {
-  const stats = [
+  const metrics = [
     {
-      label: "Total Repreneurs",
+      title: "Total repreneurs",
       value: totalRepreneurs,
-      lastWeek: lastWeekTotal,
+      period: "Current portfolio",
       icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      tone: "email" as const,
+      trend: comparisonTrend(totalRepreneurs, lastWeekTotal),
+      info: {
+        title: "Total repreneurs",
+        description: "Every repreneur profile currently held in Wave.",
+        why: "This is the reference base for the other pipeline measures.",
+      },
     },
     {
-      label: "Leads",
+      title: "Leads",
       value: leadCount,
-      lastWeek: lastWeekLeads,
-      icon: Users,
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
+      period: "Early-stage profiles",
+      icon: UserRound,
+      tone: "neutral" as const,
+      trend: comparisonTrend(leadCount, lastWeekLeads),
+      info: {
+        title: "Leads",
+        description: "Repreneurs currently at the lead stage.",
+        why: "Movement is shown neutrally because fewer leads may mean successful qualification.",
+      },
     },
     {
-      label: "Qualified",
+      title: "Qualified",
       value: qualifiedCount,
-      lastWeek: lastWeekQualified,
-      icon: UserCheck,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
+      period: "Validated profiles",
+      icon: BadgeCheck,
+      tone: "attention" as const,
+      trend: comparisonTrend(qualifiedCount, lastWeekQualified, true),
+      info: {
+        title: "Qualified repreneurs",
+        description: "Repreneurs who passed the current qualification threshold.",
+        why: "This is the pool ready for a more active commercial relationship.",
+      },
     },
     {
-      label: "Clients",
+      title: "Clients",
       value: clientCount,
-      lastWeek: lastWeekClients,
-      icon: Briefcase,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      period: "Active relationships",
+      icon: BriefcaseBusiness,
+      tone: "repreneur" as const,
+      trend: comparisonTrend(clientCount, lastWeekClients, true),
+      info: {
+        title: "Clients",
+        description: "Repreneurs currently recorded as clients.",
+        why: "This shows the number of relationships that progressed beyond qualification.",
+      },
     },
-    // Only render the To-be-reactivated row when there's actually something there;
-    // skips visual noise on a fresh install.
-    ...(toReactivateCount > 0
-      ? [
-          {
-            label: "To be reactivated",
-            value: toReactivateCount,
-            lastWeek: undefined as number | undefined,
-            icon: Clock,
-            color: "text-amber-600",
-            bgColor: "bg-amber-50",
-          },
-        ]
-      : []),
+    {
+      title: "To reactivate",
+      value: toReactivateCount,
+      period: "Follow-up required",
+      icon: Clock3,
+      tone: toReactivateCount > 0 ? "attention" as const : "neutral" as const,
+      trend: null,
+      info: {
+        title: "To reactivate",
+        description: "Profiles intentionally set aside for renewed contact.",
+        why: "A visible reactivation queue prevents valuable relationships from becoming invisible.",
+      },
+    },
   ]
 
   return (
-    <Card className="h-full gap-0">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Users className="size-5 text-gray-900" />
-          Pipeline Stats
-          <CardInfoButton info={kpiInfo.pipelineStats} />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
-          {stats.map((stat) => {
-            const Icon = stat.icon
-            return (
-              <div
-                key={stat.label}
-                className="flex items-center justify-between p-3 rounded-lg border"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                    <Icon className={`size-4 ${stat.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">{stat.label}</p>
-                    {getChangeIndicator(stat.value, stat.lastWeek)}
-                  </div>
-                </div>
-                <span className="text-2xl font-bold">{stat.value}</span>
-              </div>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <KpiMetricGrid className="grid-cols-1 sm:grid-cols-3 xl:grid-cols-5">
+      {metrics.map((metric) => (
+        <KpiMetricTile key={metric.title} {...metric} />
+      ))}
+    </KpiMetricGrid>
   )
 }

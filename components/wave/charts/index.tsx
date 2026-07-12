@@ -240,14 +240,19 @@ export function WaveDonutChart<TData extends object>({
   emptyMessage,
 }: WaveDonutChartProps<TData>) {
   if (data.length === 0) return <EmptyChart message={emptyMessage} />
-  const config: ChartConfig = Object.fromEntries(data.map((item, index) => [
-    String((item as Record<string, unknown>)[nameKey]),
-    { label: String((item as Record<string, unknown>)[nameKey]), colors: { light: [colors[index % colors.length]], dark: [colors[index % colors.length]] } },
+  const internalNameKey = "__waveSegment" as const
+  const chartData: Array<Record<string, unknown> & { __waveSegment: string }> = data.map((item, index) => ({
+    ...(item as Record<string, unknown>),
+    [internalNameKey]: `segment-${index}`,
+  }))
+  const config: ChartConfig = Object.fromEntries(chartData.map((item, index) => [
+    item[internalNameKey],
+    { label: String(item[nameKey]), colors: { light: [colors[index % colors.length]], dark: [colors[index % colors.length]] } },
   ]))
 
   return (
     <figure aria-label={label} className="min-w-0">
-      <EvilPieChart data={data as Record<string, unknown>[]} config={config} nameKey={nameKey} dataKey={valueKey} className={cn("h-[180px] aspect-auto", className)}>
+      <EvilPieChart data={chartData} config={config} nameKey={internalNameKey} dataKey={valueKey} className={cn("h-[180px] aspect-auto", className)}>
         <Pie variant="gradient" innerRadius="48%" outerRadius="78%" cornerRadius={3} paddingAngle={2} />
         <PieTooltip roundness="md" />
       </EvilPieChart>

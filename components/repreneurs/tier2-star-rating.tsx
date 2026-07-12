@@ -70,7 +70,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
         <>
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold">{currentStars}/5</span>
-            <span className="text-sm text-gray-500">stars</span>
+            <span className="text-sm text-muted-foreground">stars</span>
             <div className="flex items-center gap-1 ml-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -106,7 +106,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
               size="sm"
               onClick={handleClear}
               disabled={isUpdating}
-              className="text-xs text-gray-400 hover:text-gray-600 h-6 px-2"
+              className="text-xs text-muted-foreground hover:text-muted-foreground h-6 px-2"
             >
               Clear
             </Button>
@@ -116,7 +116,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
         <>
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold text-gray-300">—/5</span>
-            <span className="text-sm text-gray-500">stars</span>
+            <span className="text-sm text-muted-foreground">stars</span>
             <div className="flex items-center gap-1 ml-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -143,7 +143,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
               ))}
             </div>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             Click a star to rate after interview
           </p>
         </>

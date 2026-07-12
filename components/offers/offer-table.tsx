@@ -44,7 +44,7 @@ export function OfferTable({ offers }: OfferTableProps) {
     <div className="space-y-4">
       <div className="flex gap-4 justify-between">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search offers..."
             value={search}
@@ -73,7 +73,7 @@ export function OfferTable({ offers }: OfferTableProps) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No offers found
                 </TableCell>
               </TableRow>
@@ -82,21 +82,21 @@ export function OfferTable({ offers }: OfferTableProps) {
                 <TableRow key={offer.id}>
                   <TableCell>
                     <div>
-                      <span className="font-medium text-gray-900">{offer.name}</span>
+                      <span className="font-medium text-foreground">{offer.name}</span>
                       {offer.description && (
-                        <p className="text-sm text-gray-500 truncate max-w-xs">{offer.description}</p>
+                        <p className="text-sm text-muted-foreground truncate max-w-xs">{offer.description}</p>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-600">{formatPrice(offer.price)}</TableCell>
-                  <TableCell className="text-gray-600">{offer.duration_days} days</TableCell>
-                  <TableCell className="text-gray-600">
+                  <TableCell className="text-muted-foreground">{formatPrice(offer.price)}</TableCell>
+                  <TableCell className="text-muted-foreground">{offer.duration_days} days</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {offer.includes_hours ? `${offer.includes_hours}h` : "-"}
                   </TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        offer.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                        offer.is_active ? "bg-green-100 text-green-800" : "bg-muted text-foreground"
                       }`}
                     >
                       {offer.is_active ? "Active" : "Inactive"}

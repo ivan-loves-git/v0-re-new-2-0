@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 
 const repreneurLifecycle = [
@@ -139,20 +140,8 @@ function LayerCard({
 
 export default function GuidelinesPage() {
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8">
-      <header className="flex flex-col gap-3">
-        <Badge variant="outline" className="w-fit">
-          <BookOpenCheck className="size-3.5" />
-          Internal guidelines
-        </Badge>
-        <div className="max-w-3xl">
-          <h1 className="text-3xl font-semibold tracking-normal text-foreground">Guidelines</h1>
-          <p className="mt-2 text-muted-foreground">
-            The core journey logic behind Wave: how Re-New tracks repreneurs, opportunities, matching, and active deal
-            progress.
-          </p>
-        </div>
-      </header>
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <SectionPageHeader title="Guidelines" subtitle="The operating logic for repreneurs, opportunities, matching, and active deal progress" icon={BookOpenCheck} tone="neutral" />
 
       <section className="grid gap-4 lg:grid-cols-2">
         <Card>

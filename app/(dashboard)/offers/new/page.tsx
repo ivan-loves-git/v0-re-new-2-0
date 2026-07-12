@@ -1,11 +1,12 @@
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, PackagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { OfferForm } from "@/components/offers/offer-form"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 export default function NewOfferPage() {
   return (
-    <div className="space-y-6">
+    <div className="flex max-w-4xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <Link href="/offers">
           <Button variant="ghost" size="sm">
@@ -15,10 +16,12 @@ export default function NewOfferPage() {
         </Link>
       </div>
 
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">New Offer</h1>
-        <p className="text-gray-600 mt-1">Create a new consulting package</p>
-      </div>
+      <SectionPageHeader
+        title="New offer"
+        subtitle="Create a consulting package that can be assigned to a repreneur."
+        icon={PackagePlus}
+        tone="repreneur"
+      />
 
       <OfferForm />
     </div>

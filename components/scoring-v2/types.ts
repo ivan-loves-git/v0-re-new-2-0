@@ -89,7 +89,7 @@ export function getRecommendationColor(rec: RecommendedAction): string {
 }
 
 export function getScoreColor(score: number | null): string {
-  if (score === null) return "text-gray-400"
+  if (score === null) return "text-muted-foreground"
   if (score >= 80) return "text-green-600"
   if (score >= 60) return "text-blue-600"
   if (score >= 40) return "text-amber-600"
@@ -97,7 +97,7 @@ export function getScoreColor(score: number | null): string {
 }
 
 export function getScoreBgColor(score: number | null): string {
-  if (score === null) return "bg-gray-100"
+  if (score === null) return "bg-muted"
   if (score >= 80) return "bg-green-500"
   if (score >= 60) return "bg-blue-500"
   if (score >= 40) return "bg-amber-500"

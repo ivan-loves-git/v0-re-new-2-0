@@ -4,13 +4,13 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import { Package, ChevronDown, Info, ArrowUpDown } from "lucide-react"
-import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { KanbanFilters, type KanbanFiltersState } from "./kanban-filters"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
+import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
+import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
+import { useCollectionFilters } from "@/hooks/use-collection-filters"
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
@@ -25,18 +25,18 @@ interface StaticPipelineBoardProps {
 const INITIAL_VISIBLE = 15
 const LOAD_MORE_COUNT = 10
 
-const COLUMNS: { status: LifecycleStatus; title: string; color: string; bgColor: string }[] = [
-  { status: "lead", title: "Leads", color: "bg-blue-100", bgColor: "bg-blue-50/50" },
-  { status: "qualified", title: "Qualified", color: "bg-yellow-100", bgColor: "bg-yellow-50/50" },
-  { status: "client", title: "Clients", color: "bg-green-100", bgColor: "bg-green-50/50" },
-  { status: "to_reactivate", title: "To be reactivated", color: "bg-amber-100", bgColor: "bg-amber-50/50" },
-  { status: "declined", title: "Declined", color: "bg-gray-100", bgColor: "bg-gray-50/50" },
-  { status: "rejected", title: "Rejected", color: "bg-red-100", bgColor: "bg-red-50/50" },
+const COLUMNS: { status: LifecycleStatus; title: string; accent: string }[] = [
+  { status: "lead", title: "Leads", accent: "border-t-blue-500" },
+  { status: "qualified", title: "Qualified", accent: "border-t-amber-500" },
+  { status: "client", title: "Clients", accent: "border-t-emerald-500" },
+  { status: "to_reactivate", title: "To be reactivated", accent: "border-t-orange-500" },
+  { status: "declined", title: "Declined", accent: "border-t-slate-400" },
+  { status: "rejected", title: "Rejected", accent: "border-t-red-500" },
 ]
 
 function AssessmentDot({ decision, pending }: { decision?: string | null; pending?: boolean }) {
   if (pending) {
-    return <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-gray-500 border-gray-300">Pending</Badge>
+    return <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-muted-foreground">Pending</Badge>
   }
   if (!decision) return null
   switch (decision) {
@@ -60,11 +60,11 @@ function ScoreBadge({ repreneur }: { repreneur: RepreneurWithOffers }) {
   const color = total >= 140 ? "text-green-700 bg-green-50" :
     total >= 100 ? "text-blue-700 bg-blue-50" :
     total >= 60 ? "text-yellow-700 bg-yellow-50" :
-    "text-gray-600 bg-gray-50"
+    "text-muted-foreground bg-muted"
 
   return (
-    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${color}`}>
-      {total}
+    <span aria-label={`Combined WHO and WHEN score: ${total} points`} className={`whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-bold ${color}`}>
+      {total} pts
     </span>
   )
 }
@@ -98,7 +98,7 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
       case "declined":
         if (repreneur.declined_at) {
           return (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(repreneur.declined_at), { addSuffix: true })}
             </span>
           )
@@ -107,7 +107,7 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
       case "rejected":
         if (repreneur.rejected_at) {
           return (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(repreneur.rejected_at), { addSuffix: true })}
             </span>
           )
@@ -119,44 +119,44 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
   }
 
   return (
-    <Card
-      className="p-3 mb-2 cursor-pointer hover:shadow-md transition-shadow bg-white"
+    <button
+      type="button"
+      className="mb-2 w-full rounded-md border bg-card p-3 text-left transition-colors hover:border-border/90 hover:bg-accent/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       onClick={() => router.push(`/repreneurs/${repreneur.id}`)}
+      onMouseEnter={() => router.prefetch(`/repreneurs/${repreneur.id}`)}
     >
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <RepreneurAvatar
-            repreneurId={repreneur.id}
-            avatarUrl={repreneur.avatar_url}
-            firstName={repreneur.first_name}
-            lastName={repreneur.last_name}
-            size="sm"
-          />
+          <span aria-hidden="true">
+            <RepreneurAvatar
+              repreneurId={repreneur.id}
+              avatarUrl={repreneur.avatar_url}
+              firstName={repreneur.first_name}
+              lastName={repreneur.last_name}
+              size="sm"
+            />
+          </span>
           <div className="min-w-0 flex-1">
-            <h3 className="font-medium text-sm leading-tight truncate">
+            <h3 className="truncate text-sm font-semibold leading-tight text-foreground">
               {repreneur.first_name} {repreneur.last_name}
             </h3>
-            <p className="text-xs text-gray-500 truncate">{repreneur.email}</p>
+            <p className="truncate text-xs text-muted-foreground">{repreneur.email}</p>
           </div>
           <ScoreBadge repreneur={repreneur} />
         </div>
         {renderStatusInfo()}
       </div>
-    </Card>
+    </button>
   )
 }
 
 function PipelineColumn({
-  status,
   title,
-  color,
-  bgColor,
+  accent,
   repreneurs,
 }: {
-  status: LifecycleStatus
   title: string
-  color: string
-  bgColor: string
+  accent: string
   repreneurs: RepreneurWithOffers[]
 }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
@@ -170,16 +170,16 @@ function PipelineColumn({
   }
 
   return (
-    <div className="flex-1 min-w-[280px] max-w-[350px]">
-      <div className={`p-3 rounded-t-lg ${color}`}>
+    <section className={`min-w-[272px] max-w-[336px] flex-1 snap-start overflow-hidden rounded-lg border border-t-2 bg-card ${accent}`}>
+      <div className="border-b bg-muted/30 px-3 py-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">{title}</h2>
-          <Badge variant="secondary" className="bg-white">
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <Badge variant="secondary" className="tabular-nums">
             {repreneurs.length}
           </Badge>
         </div>
       </div>
-      <div className={`${bgColor} p-3 rounded-b-lg min-h-[calc(100vh-320px)] max-h-[calc(100vh-200px)] overflow-y-auto`}>
+      <div className="min-h-[calc(100vh-320px)] max-h-[calc(100vh-200px)] overflow-y-auto bg-muted/15 p-2.5">
         {visibleRepreneurs.map((repreneur) => (
           <PipelineCard key={repreneur.id} repreneur={repreneur} />
         ))}
@@ -189,7 +189,7 @@ function PipelineColumn({
             variant="ghost"
             size="sm"
             onClick={handleLoadMore}
-            className="w-full mt-2 text-gray-500 hover:text-gray-700"
+            className="mt-2 w-full text-muted-foreground hover:text-foreground"
           >
             <ChevronDown className="size-4 mr-1" />
             Show {Math.min(remainingCount, LOAD_MORE_COUNT)} more ({remainingCount} hidden)
@@ -197,21 +197,16 @@ function PipelineColumn({
         )}
 
         {repreneurs.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">No {title.toLowerCase()}</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">No {title.toLowerCase()}</p>
         )}
       </div>
-    </div>
+    </section>
   )
 }
 
 type SortMode = "score" | "date"
 
 export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
-  const [filters, setFilters] = useState<KanbanFiltersState>({
-    search: "",
-    source: "",
-    dateRange: "all",
-  })
   const [sortMode, setSortMode] = useState<SortMode>("score")
 
   // Extract unique sources from repreneurs
@@ -222,6 +217,22 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
     })
     return Array.from(uniqueSources).sort()
   }, [repreneurs])
+
+  const filterDefinitions = useMemo<CollectionFilterDefinition[]>(() => [
+    { key: "source", label: "Source", options: sources.map((source) => ({ value: source, label: source })) },
+    {
+      key: "added",
+      label: "Added",
+      options: [
+        { value: "7", label: "Last 7 days" },
+        { value: "30", label: "Last 30 days" },
+        { value: "90", label: "Last 90 days" },
+      ],
+    },
+  ], [sources])
+  const filters = useCollectionFilters({ definitions: filterDefinitions })
+  const sourceFilter = filters.values.source || ""
+  const dateRange = filters.values.added || "all"
 
   // Filter repreneurs based on current filters
   const filteredRepreneurs = useMemo(() => {
@@ -237,13 +248,13 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
       }
 
       // Source filter
-      if (filters.source && r.source !== filters.source) {
+      if (sourceFilter && r.source !== sourceFilter) {
         return false
       }
 
       // Date range filter
-      if (filters.dateRange !== "all") {
-        const days = parseInt(filters.dateRange)
+      if (dateRange !== "all") {
+        const days = parseInt(dateRange)
         const cutoffDate = new Date()
         cutoffDate.setDate(cutoffDate.getDate() - days)
         if (new Date(r.created_at) < cutoffDate) {
@@ -253,7 +264,7 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
 
       return true
     })
-  }, [repreneurs, filters])
+  }, [repreneurs, filters.search, sourceFilter, dateRange])
 
   // Group by status and sort by selected mode
   const groupedByStatus = useMemo(() => {
@@ -284,54 +295,51 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
     }, {} as Record<LifecycleStatus, RepreneurWithOffers[]>)
   }, [filteredRepreneurs, sortMode])
 
-  const totalFiltered = filteredRepreneurs.length
-  const totalAll = repreneurs.length
-  const isFiltered = totalFiltered !== totalAll
-
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1">
-          <KanbanFilters filters={filters} onFiltersChange={setFilters} sources={sources} />
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1.5 shrink-0"
-          onClick={() => setSortMode(sortMode === "score" ? "date" : "score")}
-        >
-          <ArrowUpDown className="size-3.5" />
-          {sortMode === "score" ? "By score" : "By date"}
-        </Button>
-      </div>
+    <div className="flex flex-col gap-4">
+      <CollectionFilterBar
+        search={filters.search}
+        onSearchChange={filters.setSearch}
+        searchPlaceholder="Search repreneurs..."
+        definitions={filterDefinitions}
+        values={filters.values}
+        onFilterChange={filters.setFilter}
+        onFilterRemove={filters.removeFilter}
+        onClearFilters={filters.clearFilters}
+        onReset={filters.reset}
+        resultCount={filteredRepreneurs.length}
+        totalCount={repreneurs.length}
+        resultLabel="repreneur"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 shrink-0 gap-1.5"
+            onClick={() => setSortMode(sortMode === "score" ? "date" : "score")}
+          >
+            <ArrowUpDown className="size-3.5" />
+            {sortMode === "score" ? "By score" : "By date"}
+          </Button>
+        }
+      />
 
-      {isFiltered && (
-        <p className="text-sm text-gray-500 mb-4">
-          Showing {totalFiltered} of {totalAll} repreneurs
-        </p>
-      )}
-
-      <TooltipProvider>
-        <div className="flex items-center gap-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <Info className="size-4 text-amber-600 flex-shrink-0" />
-          <p className="text-sm text-amber-800">
+      <div className="flex items-start gap-2 rounded-md border bg-muted/25 px-3 py-2.5">
+          <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <p className="text-xs leading-5 text-muted-foreground">
             Status changes are action-driven. To move a repreneur:{" "}
             <span className="font-medium">qualify manually</span> (→ Qualified),{" "}
             <span className="font-medium">assign an offer</span> (→ Client),{" "}
             <span className="font-medium">Decline</span> (internal, no email), or{" "}
             <span className="font-medium">Reject</span> (sends email).
           </p>
-        </div>
-      </TooltipProvider>
+      </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex snap-x gap-3 overflow-x-auto pb-3">
         {COLUMNS.map((column) => (
           <PipelineColumn
             key={column.status}
-            status={column.status}
             title={column.title}
-            color={column.color}
-            bgColor={column.bgColor}
+            accent={column.accent}
             repreneurs={groupedByStatus[column.status] || []}
           />
         ))}

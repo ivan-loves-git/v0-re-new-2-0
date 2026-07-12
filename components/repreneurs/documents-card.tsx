@@ -111,10 +111,10 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       />
 
       <div className="flex items-center gap-3">
-        <FileText className="size-5 text-gray-400" />
+        <FileText className="size-5 text-muted-foreground" />
         <div>
           <p className="font-medium text-sm">{label}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             {currentUrl ? "PDF uploaded" : "No file uploaded"}
           </p>
         </div>
@@ -153,7 +153,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
             <Button
               variant="outline"
               size="icon"
-              className="size-8 text-gray-400 hover:text-red-500 hover:border-red-200"
+              className="size-8 text-muted-foreground hover:text-red-500 hover:border-red-200"
               onClick={handleDelete}
               disabled={isDeleting}
             >

@@ -24,8 +24,12 @@ export function CardInfoButton({ info }: CardInfoButtonProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="p-0.5 rounded-full hover:bg-gray-100 transition-colors">
-          <Info className="size-3.5 text-muted-foreground cursor-help" />
+        <button
+          type="button"
+          aria-label={`About ${isRich ? info.title : "this metric"}`}
+          className="inline-grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Info className="size-3.5" />
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" className="max-w-xs p-3">

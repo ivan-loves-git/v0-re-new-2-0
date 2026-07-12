@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, CheckCircle2, TrendingUp } from "lucide-react"
 import type { OfferConversionData } from "@/lib/actions/analytics"
@@ -11,15 +11,16 @@ interface OfferConversionProps {
 
 export function OfferConversion({ data }: OfferConversionProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Offer Conversion</CardTitle>
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b py-3">
+        <CardTitle>Offer conversion</CardTitle>
+        <CardDescription>Speed to offer, acceptance, and offer-type performance.</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+      <CardContent className="flex flex-col gap-5 py-4">
         {/* KPI row */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid gap-3 sm:grid-cols-3">
           {/* Time to Offer Sent */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 border-b pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="size-3.5" />
               Time to Offer Sent
@@ -31,7 +32,7 @@ export function OfferConversion({ data }: OfferConversionProps) {
           </div>
 
           {/* Time to Offer Accepted */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 border-b pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CheckCircle2 className="size-3.5" />
               Time to Accepted

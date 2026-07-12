@@ -44,7 +44,7 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
             </Popover>
           </CardTitle>
           {repreneurId && (
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-muted-foreground h-6 px-2" asChild>
               <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
                 <Pencil className="size-3 mr-1" />
                 <span className="text-xs">Edit</span>
@@ -72,10 +72,10 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold">{data.who ?? "—"}</span>
-              <span className="text-xs text-gray-500">/100</span>
+              <span className="text-xs text-muted-foreground">/100</span>
             </div>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${getScoreBgColor(data.who)}`}
               style={{ width: `${data.who ?? 0}%` }}
@@ -104,10 +104,10 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold">{data.when ?? "—"}</span>
-              <span className="text-xs text-gray-500">/100</span>
+              <span className="text-xs text-muted-foreground">/100</span>
             </div>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${getScoreBgColor(data.when)}`}
               style={{ width: `${data.when ?? 0}%` }}

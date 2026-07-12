@@ -76,7 +76,7 @@ export function DeclineButton({ repreneurId, currentStatus, repreneurName, decli
       <div className="space-y-2">
         {/* Show decline reason if available */}
         {declineReasonCategory && (
-          <div className="rounded-md bg-gray-50 border px-3 py-2 text-sm">
+          <div className="rounded-md bg-muted/40 border px-3 py-2 text-sm">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Decline Reason</p>
             <p className="font-medium">{DECLINE_REASON_OPTIONS.find(o => o.value === declineReasonCategory)?.label || declineReasonCategory}</p>
             {declineReasonText && <p className="text-muted-foreground mt-0.5">{declineReasonText}</p>}
@@ -113,7 +113,7 @@ export function DeclineButton({ repreneurId, currentStatus, repreneurName, decli
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 text-gray-600 hover:text-gray-700">
+        <Button variant="outline" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
           <XCircle className="size-4" />
           Decline
         </Button>

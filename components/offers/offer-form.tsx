@@ -92,7 +92,7 @@ export function OfferForm({ offer }: OfferFormProps) {
                 defaultValue={offer?.duration_days}
                 required
               />
-              <p className="text-xs text-gray-500">How long the offer lasts after acceptance</p>
+              <p className="text-xs text-muted-foreground">How long the offer lasts after acceptance</p>
             </div>
 
             <div className="space-y-2">
@@ -105,7 +105,7 @@ export function OfferForm({ offer }: OfferFormProps) {
                 placeholder="e.g., 14"
                 defaultValue={offer?.acceptance_deadline_days || ""}
               />
-              <p className="text-xs text-gray-500">Days to accept after being offered</p>
+              <p className="text-xs text-muted-foreground">Days to accept after being offered</p>
             </div>
 
             <div className="space-y-2">
@@ -118,7 +118,7 @@ export function OfferForm({ offer }: OfferFormProps) {
                 placeholder="e.g., 10"
                 defaultValue={offer?.includes_hours || ""}
               />
-              <p className="text-xs text-gray-500">Hours included in the package</p>
+              <p className="text-xs text-muted-foreground">Hours included in the package</p>
             </div>
           </div>
 

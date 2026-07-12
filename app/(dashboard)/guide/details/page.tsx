@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Lightbulb, AlertCircle, CheckCircle2, Workflow } from "lucide-react"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 
 const workflows = [
@@ -108,27 +109,18 @@ const commonQuestions = [
 
 export default function DetailedGuidePage() {
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/guide">
-          <Button variant="ghost" size="sm" className="gap-2">
-            <ArrowLeft className="size-4" />
-            Back to Guide
-          </Button>
-        </Link>
-      </div>
-
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Detailed Usage Guide</h1>
-        <p className="text-gray-600 mt-2">
-          Step-by-step workflows, tips, and answers to common questions
-        </p>
-      </div>
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <SectionPageHeader
+        title="Detailed usage guide"
+        subtitle="Step-by-step workflows, practical tips, and answers to common questions"
+        icon={Workflow}
+        tone="neutral"
+        actions={<Button asChild variant="outline" size="sm"><Link href="/guide"><ArrowLeft className="size-4" />Back to guide</Link></Button>}
+      />
 
       {/* Workflows */}
       <section id="workflows" className="space-y-4 scroll-mt-8">
-        <h2 className="text-xl font-semibold text-gray-900">Common Workflows</h2>
+        <h2 className="text-lg font-semibold text-foreground">Common workflows</h2>
         <div className="space-y-4">
           {workflows.map((workflow, index) => (
             <Card key={index}>
@@ -141,8 +133,8 @@ export default function DetailedGuidePage() {
               <CardContent>
                 <ol className="space-y-2">
                   {workflow.steps.map((step, stepIndex) => (
-                    <li key={stepIndex} className="flex gap-3 text-sm text-gray-600">
-                      <span className="flex-shrink-0 size-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-medium">
+                    <li key={stepIndex} className="flex gap-3 text-sm leading-5 text-muted-foreground">
+                      <span className="flex size-6 flex-shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-semibold text-foreground">
                         {stepIndex + 1}
                       </span>
                       <span>{step}</span>
@@ -157,19 +149,19 @@ export default function DetailedGuidePage() {
 
       {/* Tips & Tricks */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <Lightbulb className="size-5 text-amber-500" />
           Tips & Tricks
         </h2>
         <div className="grid gap-3 md:grid-cols-2">
           {tips.map((tip, index) => (
-            <Card key={index} className="border-amber-100">
+            <Card key={index}>
               <CardContent className="p-4">
                 <div className="flex gap-3">
                   <CheckCircle2 className="size-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-gray-900 text-sm">{tip.title}</p>
-                    <p className="text-sm text-gray-600 mt-1">{tip.description}</p>
+                    <p className="text-sm font-medium text-foreground">{tip.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{tip.description}</p>
                   </div>
                 </div>
               </CardContent>
@@ -180,7 +172,7 @@ export default function DetailedGuidePage() {
 
       {/* FAQ */}
       <section id="faq" className="space-y-4 scroll-mt-8">
-        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <AlertCircle className="size-5 text-blue-500" />
           Common Questions
         </h2>
@@ -188,8 +180,8 @@ export default function DetailedGuidePage() {
           {commonQuestions.map((item, index) => (
             <Card key={index}>
               <CardContent className="p-4">
-                <p className="font-medium text-gray-900">{item.question}</p>
-                <p className="text-sm text-gray-600 mt-2">{item.answer}</p>
+                <p className="font-medium text-foreground">{item.question}</p>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">{item.answer}</p>
               </CardContent>
             </Card>
           ))}
@@ -198,7 +190,7 @@ export default function DetailedGuidePage() {
 
       {/* Footer */}
       <div className="text-center py-8 border-t">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Still have questions? Reach out to Ivan for support.
         </p>
         <Link href="/guide" className="mt-4 inline-block">

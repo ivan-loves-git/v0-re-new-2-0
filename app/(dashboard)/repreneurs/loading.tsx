@@ -21,7 +21,7 @@ export default function RepreneursLoading() {
       {/* Grouped Tables */}
       <div className="space-y-4">
         {["Leads", "Qualified", "Clients", "Rejected"].map((status) => (
-          <div key={status} className="rounded-lg border bg-gray-50">
+          <div key={status} className="rounded-lg border bg-muted/40">
             {/* Group Header */}
             <div className="px-4 py-3 flex items-center gap-2">
               <Skeleton className="h-5 w-5" />

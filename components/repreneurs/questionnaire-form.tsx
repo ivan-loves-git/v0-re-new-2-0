@@ -119,9 +119,9 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
               </Badge>
             )}
             {isExpanded ? (
-              <ChevronUp className="size-5 text-gray-400" />
+              <ChevronUp className="size-5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="size-5 text-gray-400" />
+              <ChevronDown className="size-5 text-muted-foreground" />
             )}
           </div>
         </div>

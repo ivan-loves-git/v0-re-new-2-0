@@ -114,29 +114,30 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
-          className="size-6 p-0 text-gray-400 hover:text-gray-600"
+          size="icon-sm"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Edit WHEN score"
         >
           <Pencil className="size-3.5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Edit WHEN Score</DialogTitle>
+          <DialogTitle>Edit WHEN score</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto pr-2">
           {/* Q11 v3 priority choice — read-only context for the score */}
           {localAnswers.q11_priority && (
-            <div className="space-y-1 rounded-md border border-gray-200 bg-gray-50 p-3">
-              <Label className="text-xs uppercase tracking-wide text-gray-500">
+            <div className="space-y-1 rounded-md border bg-muted/30 p-3">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Acquisition priority (Q11)
               </Label>
-              <p className="text-sm text-gray-900">
+              <p className="text-sm text-foreground">
                 {localAnswers.q11_priority === 'preferred'
                   ? 'Preferred career option'
                   : "One option among others"}
                 {localAnswers.q11_priority === 'one_among_others' && (
-                  <span className="ml-2 text-xs font-medium text-red-700">−10 WHEN penalty</span>
+                  <span className="ml-2 text-xs font-medium text-destructive">−10 WHEN penalty</span>
                 )}
               </p>
             </div>
@@ -144,12 +145,12 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
 
           {/* Fiche de cadrage status — flag the missing-fiche penalty */}
           {localAnswers.q11_priority && localAnswers.q11.includes('framed') && !localAnswers.hasFicheDeCadrage && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/5 p-3 text-sm text-foreground">
               <FileWarning className="size-4 mt-0.5 shrink-0" />
               <div>
                 <span className="font-medium">Projet cadré without fiche de cadrage</span>
-                <span className="ml-2 text-xs font-medium text-red-700">−10 WHEN penalty</span>
-                <p className="mt-1 text-xs text-amber-800">
+                <span className="ml-2 text-xs font-medium text-destructive">−10 WHEN penalty</span>
+                <p className="mt-1 text-xs text-muted-foreground">
                   The candidate selected &quot;Projet cadré&quot; in Q12 but no lettre de cadrage was uploaded.
                 </p>
               </div>
@@ -161,10 +162,10 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
             <Label className="text-sm font-medium">
               {PROJECT_STATUS_QUESTION.q11.labelEn}
             </Label>
-            <p className="text-xs text-gray-500">{PROJECT_STATUS_QUESTION.q11.helpTextEn}</p>
+            <p className="text-xs text-muted-foreground">{PROJECT_STATUS_QUESTION.q11.helpTextEn}</p>
             <div className="space-y-2">
               {PROJECT_STATUS_QUESTION.q11.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <Checkbox
                     id={`q11-${opt.value}`}
                     checked={localAnswers.q11.includes(opt.value as Q11ProjectStatus)}
@@ -182,11 +183,11 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
           <div className="space-y-2">
             <Label className="text-sm font-medium">
               {WHEN_QUESTIONS.q12.labelEn}
-              <span className="ml-2 text-xs text-gray-400 font-normal">(info only)</span>
+              <span className="ml-2 text-xs font-normal text-muted-foreground">(info only)</span>
             </Label>
             <div className="grid grid-cols-2 gap-2">
               {WHEN_QUESTIONS.q12.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <Checkbox
                     id={`q12-${opt.value}`}
                     checked={localAnswers.q12.includes(opt.value)}
@@ -204,11 +205,11 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
           <div className="space-y-2">
             <Label className="text-sm font-medium">
               {WHEN_QUESTIONS.q13.labelEn}
-              <span className="ml-2 text-xs text-gray-400 font-normal">(info only)</span>
+              <span className="ml-2 text-xs font-normal text-muted-foreground">(info only)</span>
             </Label>
             <div className="grid grid-cols-2 gap-2">
               {WHEN_QUESTIONS.q13.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <Checkbox
                     id={`q13-${opt.value}`}
                     checked={localAnswers.q13.includes(opt.value)}
@@ -227,10 +228,10 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
             <Label className="text-sm font-medium">
               {WHEN_QUESTIONS.q14.labelEn}
             </Label>
-            <p className="text-xs text-gray-500">{WHEN_QUESTIONS.q14.helpTextEn}</p>
+            <p className="text-xs text-muted-foreground">{WHEN_QUESTIONS.q14.helpTextEn}</p>
             <div className="space-y-2">
               {WHEN_QUESTIONS.q14.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <Checkbox
                     id={`q14-${opt.value}`}
                     checked={localAnswers.q14.includes(opt.value as Q14DealSize)}
@@ -249,10 +250,10 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
             <Label className="text-sm font-medium">
               {WHEN_QUESTIONS.q15.labelEn}
             </Label>
-            <p className="text-xs text-gray-500">{WHEN_QUESTIONS.q15.helpTextEn}</p>
+            <p className="text-xs text-muted-foreground">{WHEN_QUESTIONS.q15.helpTextEn}</p>
             <div className="space-y-2">
               {WHEN_QUESTIONS.q15.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <Checkbox
                     id={`q15-${opt.value}`}
                     checked={localAnswers.q15.includes(opt.value as Q15Structure)}
@@ -276,7 +277,7 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
               onValueChange={(v) => handleRadioChange('q16', v)}
             >
               {WHEN_QUESTIONS.q16.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={opt.value} id={`q16-${opt.value}`} />
                   <Label htmlFor={`q16-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label}
@@ -287,15 +288,15 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
           </div>
 
           {/* Live Score Preview */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+          <div className="space-y-3 rounded-md border bg-muted/30 p-4">
             <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium text-gray-700">Live Score Preview</span>
+              <span className="text-sm font-medium text-foreground">Live score preview</span>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-gray-900">{liveScore.score}</span>
-                <span className="text-sm text-gray-500">/ 100</span>
+                <span className="text-2xl font-semibold tabular-nums text-foreground">{liveScore.score}</span>
+                <span className="text-sm text-muted-foreground">/ 100</span>
               </div>
             </div>
-            <div className="text-xs text-gray-600 space-y-1">
+            <div className="space-y-1 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <span>Financial Fit:</span>
                 <span className="font-medium">{liveScore.breakdown.fitFinancier} pts</span>
@@ -309,7 +310,7 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
                 <span className="font-medium">{liveScore.breakdown.projectStatus} pts</span>
               </div>
               {(liveScore.breakdown.penalties ?? 0) < 0 && (
-                <div className="flex justify-between border-t border-gray-200 pt-1 mt-1 text-red-700">
+                <div className="mt-1 flex justify-between border-t pt-1 text-destructive">
                   <span>v3 penalties:</span>
                   <span className="font-medium">{liveScore.breakdown.penalties} pts</span>
                 </div>
@@ -319,23 +320,23 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
 
           {/* Flags Display */}
           {flagResult.flags.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+            <div className="space-y-3 rounded-md border border-destructive/20 bg-destructive/5 p-4">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="size-4 text-red-600" />
-                <span className="text-sm font-medium text-red-700">Warning Flags</span>
+                <AlertTriangle className="size-4 text-destructive" />
+                <span className="text-sm font-medium text-destructive">Warning flags</span>
               </div>
               <div className="space-y-2">
                 {flagResult.flags.map((flag) => (
                   <div key={flag} className="flex items-start gap-2">
                     <Badge variant="destructive" className="text-xs">{flag}</Badge>
-                    <span className="text-xs text-red-700">{FLAG_DESCRIPTIONS[flag]}</span>
+                    <span className="text-xs text-muted-foreground">{FLAG_DESCRIPTIONS[flag]}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </div>
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="border-t pt-4">
           <Button
             variant="outline"
             onClick={() => setIsOpen(false)}
@@ -348,11 +349,11 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
             disabled={isPending}
           >
             {isPending ? (
-              <Loader2 className="size-4 animate-spin mr-2" />
+              <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
             ) : (
-              <Calculator className="size-4 mr-2" />
+              <Calculator className="size-4" data-icon="inline-start" />
             )}
-            {isPending ? "Saving..." : "Calculate & Save"}
+            {isPending ? "Saving..." : "Calculate & save"}
           </Button>
         </DialogFooter>
       </DialogContent>

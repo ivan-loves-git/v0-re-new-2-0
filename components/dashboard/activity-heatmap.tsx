@@ -64,11 +64,11 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
 
   // Get color based on activity count (blue gradient matching buttons)
   const getColor = (count: number): string => {
-    if (count === 0) return "bg-gray-100"
-    if (count === 1) return "bg-blue-200"
-    if (count <= 3) return "bg-blue-400"
-    if (count <= 5) return "bg-blue-500"
-    return "bg-blue-600"
+    if (count === 0) return "bg-muted"
+    if (count === 1) return "bg-info/20"
+    if (count <= 3) return "bg-info/45"
+    if (count <= 5) return "bg-info/70"
+    return "bg-info"
   }
 
   // Get month labels for the header
@@ -109,25 +109,28 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
   const totalActivityLogs = activityData.reduce((sum, d) => sum + d.activities, 0)
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-2">
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="flex min-h-14 justify-center border-b py-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarDays className="size-5" />
+            <CalendarDays className="size-4 text-muted-foreground" />
             <span className="hidden sm:inline">Activity Heatmap</span>
             <span className="sm:hidden">Heatmap</span>
             <CardInfoButton info={kpiInfo.activityHeatmap} />
           </CardTitle>
-          <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground sm:gap-4">
             <span>{totalActivities} total</span>
-            <span className="text-gray-300">|</span>
+            <span aria-hidden="true" className="text-border">|</span>
             <span>{totalNewRepreneurs} new</span>
-            <span className="text-gray-300">|</span>
+            <span aria-hidden="true" className="text-border">|</span>
             <span>{totalActivityLogs} activities</span>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-center">
+      <CardContent className="flex flex-1 flex-col justify-center py-4">
+        <p className="sr-only">
+          Over the last 12 months: {totalActivities} total events, including {totalNewRepreneurs} new repreneurs and {totalActivityLogs} logged activities.
+        </p>
         <TooltipProvider delayDuration={100}>
           {/* Scrollable container - scroll hint on mobile */}
           <div className="relative">
@@ -143,7 +146,7 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
               {monthLabels.map((label, index) => (
                 <div
                   key={index}
-                  className="text-xs text-gray-500"
+                    className="text-xs text-muted-foreground"
                   style={{ width: `${label.colSpan * 14}px` }}
                 >
                   {label.month}
@@ -158,7 +161,7 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
                 {dayLabels.map((label, index) => (
                   <div
                     key={index}
-                    className="h-[12px] text-[10px] text-gray-500 leading-[12px] pr-1"
+                    className="h-[12px] pr-1 text-[10px] leading-[12px] text-muted-foreground"
                   >
                     {label}
                   </div>
@@ -178,13 +181,13 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
                       return (
                         <Tooltip key={dayIndex}>
                           <TooltipTrigger asChild>
-                            <div
+                            <span
+                              aria-hidden="true"
                               className={`
-                                w-[12px] h-[12px] rounded-sm cursor-pointer
+                                size-[12px] rounded-sm
                                 ${getColor(count)}
-                                ${isCurrentDay ? "ring-1 ring-gray-400" : ""}
-                                hover:ring-1 hover:ring-gray-400
-                                transition-all
+                                ${isCurrentDay ? "ring-1 ring-foreground/40" : ""}
+                                transition-shadow hover:ring-1 hover:ring-foreground/40
                               `}
                             />
                           </TooltipTrigger>
@@ -192,7 +195,7 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
                             <div className="font-medium">{format(day, "EEEE, MMM d, yyyy")}</div>
                             {count > 0 ? (
                               <div className="mt-1 space-y-0.5">
-                                <div className="text-blue-600 font-medium">{count} activities</div>
+                                <div className="font-medium text-info">{count} activities</div>
                                 {dayData?.newRepreneurs ? (
                                   <div>{dayData.newRepreneurs} new repreneur{dayData.newRepreneurs > 1 ? "s" : ""}</div>
                                 ) : null}
@@ -201,7 +204,7 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
                                 ) : null}
                               </div>
                             ) : (
-                              <div className="text-gray-500">No activity</div>
+                              <div className="text-muted-foreground">No activity</div>
                             )}
                           </TooltipContent>
                         </Tooltip>
@@ -213,20 +216,20 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
               <span>Less</span>
               <div className="flex gap-[2px]">
-                <div className="w-[12px] h-[12px] rounded-sm bg-gray-100" />
-                <div className="w-[12px] h-[12px] rounded-sm bg-blue-200" />
-                <div className="w-[12px] h-[12px] rounded-sm bg-blue-400" />
-                <div className="w-[12px] h-[12px] rounded-sm bg-blue-500" />
-                <div className="w-[12px] h-[12px] rounded-sm bg-blue-600" />
+                <div className="size-[12px] rounded-sm bg-muted" />
+                <div className="size-[12px] rounded-sm bg-info/20" />
+                <div className="size-[12px] rounded-sm bg-info/45" />
+                <div className="size-[12px] rounded-sm bg-info/70" />
+                <div className="size-[12px] rounded-sm bg-info" />
               </div>
               <span>More</span>
             </div>
             </div>
             {/* Scroll hint - fade effect on right edge (mobile only) */}
-            <div className="absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none sm:hidden" />
+            <div className="pointer-events-none absolute bottom-3 right-0 top-0 w-8 bg-gradient-to-l from-card to-transparent sm:hidden" />
           </div>
         </TooltipProvider>
       </CardContent>

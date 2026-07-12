@@ -20,6 +20,8 @@ Primer is a behavioral reference for dense operational work, especially progress
 8. Motion must explain a state change. Charts default to no entrance animation and respect reduced motion.
 9. Desktop and mobile are first-class. Popovers may become bottom sheets on narrow screens. Hover cannot be the only way to discover or operate a control.
 10. Empty and zero-result states must name what happened and expose the next recovery action.
+11. The staff shell is stable product infrastructure: dark navy navigation, a 48px workspace bar, a 1440px maximum canvas, and 16px/24px/32px responsive page padding.
+12. Use semantic hierarchy before containers. A page is not a stack of equal cards: one primary work surface, supporting panels, then secondary reference material.
 
 ## Foundation
 
@@ -35,9 +37,9 @@ Charts should not rely on color alone. Every chart includes a screen-reader tabl
 
 ### Shape and elevation
 
-- Standard controls and cards: `rounded-md` or the shadcn default radius
+- Standard controls and cards: `rounded-md` or the 8px shadcn default radius
 - Page-level or composite sections: `rounded-lg`
-- Use `shadow-xs` or `shadow-sm` only when separation from the background is otherwise unclear
+- Default product surfaces have no shadow. Use `shadow-xs` or `shadow-sm` only for a floating layer whose separation is otherwise unclear
 - Do not stack multiple bordered cards merely to create decoration
 
 ### Type and density
@@ -47,6 +49,25 @@ Charts should not rely on color alone. Every chart includes a screen-reader tabl
 - Tables remain dense enough for operations, with whitespace concentrated around page structure and decision points
 - Numeric data uses tabular figures where comparison matters
 
+### Page archetypes
+
+Every product screen starts from one of four compositions:
+
+1. **Dashboard:** compact page header, one KPI rail, two or three larger operational regions, then a full-width recent-work table. Do not add shortcut cards that duplicate the sidebar.
+2. **Collection:** page header and actions, progressive filter toolbar, result count, then one dense table or directory. The filter and collection read as one work surface.
+3. **Record:** identity header with semantic `h1`, status and metadata, primary next action, tabs, then a main/aside composition. Avoid repeating the record identity inside every tab.
+4. **Focus form:** maximum width 768-1024px, grouped field sections, explicit helper copy, and actions at the end of the reading flow.
+
+Staff pages use `SectionPageHeader`. Its two-pixel tide marker is the restrained WAVE signature and must not be replaced by decorative gradients or oversized icon tiles.
+
+### Navigation and shell
+
+- The sidebar uses WAVE navy and a single active tide marker. Navigation does not animate, wiggle, cycle emoji, or compete with the work.
+- Repeated labels such as Dashboard and Analytics include their domain in collapsed tooltips.
+- The top workspace bar is sticky and contains the sidebar control, semantic breadcrumb, and workspace context.
+- The sidebar closes after navigation on mobile. All navigation and account controls retain keyboard focus and at least a 40px mobile target.
+- The page shell exposes a skip link and one main landmark.
+
 ## Collection filtering
 
 The canonical anatomy is:
@@ -55,7 +76,7 @@ The canonical anatomy is:
 2. `Add filter` button that lists only unused criteria
 3. Active chips formatted as `Criterion: Value`
 4. Chip body edits the value; chip close control removes the criterion
-5. No more than four chips shown before a `+N more` summary
+5. No more than four chips shown before a `+N active` control; that control opens the hidden chips so each remains editable and removable
 6. `Clear filters` preserves search; `Reset all` clears both search and filters
 7. Live result count announces changes
 8. URL parameters use stable, human-readable keys and omit defaults

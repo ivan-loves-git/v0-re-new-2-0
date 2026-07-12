@@ -51,7 +51,7 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
   }
 
   return (
-    <form action={handleSubmit} noValidate>
+    <form action={handleSubmit} noValidate className="mx-auto max-w-5xl">
       <Card>
         <CardHeader>
           <CardTitle>{opportunity ? "Edit opportunity" : "Create opportunity"}</CardTitle>
@@ -60,7 +60,7 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
         <CardContent className="space-y-8">
           <input type="hidden" name="source_id" value={opportunity?.source_id ?? ""} />
 
-          <section className="space-y-4">
+          <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
             <div>
               <h3 className="text-sm font-medium">Core fields</h3>
               <p className="text-sm text-muted-foreground">Operational data used by the Re-New team.</p>
@@ -130,7 +130,7 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
             </div>
           </section>
 
-          <section className="space-y-4 border-t pt-6">
+          <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
             <div>
               <h3 className="text-sm font-medium">Repreneur-visible version</h3>
               <p className="text-sm text-muted-foreground">Use anonymized content until disclosure is explicitly approved.</p>
@@ -165,7 +165,7 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
             </div>
           </section>
 
-          <section className="space-y-4 border-t pt-6">
+          <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
             <div>
               <h3 className="text-sm font-medium">Staff-only M&A source</h3>
               <p className="text-sm text-muted-foreground">Minimal source/contact context. Not a CRM.</p>
@@ -214,16 +214,18 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
             </div>
           </section>
 
-          <section className="space-y-4 border-t pt-6">
+          <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
             <div className="space-y-2">
               <Label htmlFor="internal_notes">Opportunity internal notes</Label>
               <Textarea id="internal_notes" name="internal_notes" rows={3} defaultValue={opportunity?.internal_notes ?? ""} />
             </div>
           </section>
 
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : submitLabel}
-          </Button>
+          <div className="flex justify-end border-t pt-5">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : submitLabel}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </form>

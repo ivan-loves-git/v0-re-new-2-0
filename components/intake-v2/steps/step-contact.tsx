@@ -99,13 +99,17 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
           <Label htmlFor="first_name">{t('firstName')} *</Label>
           <Input
             id="first_name"
+            name="first_name"
+            autoComplete="given-name"
+            aria-invalid={Boolean(errors.first_name)}
+            aria-describedby={errors.first_name ? "first_name-error" : undefined}
             value={data.first_name || ''}
             onChange={(e) => onChange({ first_name: e.target.value })}
             placeholder="Jean"
             className={errors.first_name ? 'border-red-500' : ''}
           />
           {errors.first_name && (
-            <p className="text-sm text-red-500">{errors.first_name}</p>
+            <p id="first_name-error" className="text-sm text-red-600">{errors.first_name}</p>
           )}
         </div>
 
@@ -114,13 +118,17 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
           <Label htmlFor="last_name">{t('lastName')} *</Label>
           <Input
             id="last_name"
+            name="last_name"
+            autoComplete="family-name"
+            aria-invalid={Boolean(errors.last_name)}
+            aria-describedby={errors.last_name ? "last_name-error" : undefined}
             value={data.last_name || ''}
             onChange={(e) => onChange({ last_name: e.target.value })}
             placeholder="Dupont"
             className={errors.last_name ? 'border-red-500' : ''}
           />
           {errors.last_name && (
-            <p className="text-sm text-red-500">{errors.last_name}</p>
+            <p id="last_name-error" className="text-sm text-red-600">{errors.last_name}</p>
           )}
         </div>
       </div>
@@ -130,14 +138,19 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
         <Label htmlFor="email">{t('email')} *</Label>
         <Input
           id="email"
+          name="email"
           type="email"
+          autoComplete="email"
+          spellCheck={false}
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? "email-error" : undefined}
           value={data.email || ''}
           onChange={(e) => onChange({ email: e.target.value })}
           placeholder="jean.dupont@email.com"
           className={errors.email ? 'border-red-500' : ''}
         />
         {errors.email && (
-          <p className="text-sm text-red-500">{errors.email}</p>
+          <p id="email-error" className="text-sm text-red-600">{errors.email}</p>
         )}
       </div>
 
@@ -146,36 +159,44 @@ export function StepContact({ data, onChange, onNext, errors = {} }: IntakeV2Ste
         <Label htmlFor="phone">{t('phone')} *</Label>
         <Input
           id="phone"
+          name="phone"
           type="tel"
+          autoComplete="tel"
+          aria-invalid={Boolean(errors.phone)}
+          aria-describedby={errors.phone ? "phone-error" : undefined}
           value={data.phone || ''}
           onChange={(e) => onChange({ phone: e.target.value })}
           placeholder="+33 6 12 34 56 78"
           className={errors.phone ? 'border-red-500' : ''}
         />
         {errors.phone && (
-          <p className="text-sm text-red-500">{errors.phone}</p>
+          <p id="phone-error" className="text-sm text-red-600">{errors.phone}</p>
         )}
       </div>
 
       {/* CV Upload */}
       <div className="space-y-2">
-        <Label>{t('cv')} *</Label>
-        <p className="text-sm text-muted-foreground">{t('cvHelpText')}</p>
+        <Label htmlFor="cv-upload">{t('cv')} *</Label>
+        <p id="cv-help" className="text-sm text-muted-foreground">{t('cvHelpText')}</p>
 
         {cvUpload.url ? (
           <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
             <FileText className="size-5 text-muted-foreground" />
             <span className="flex-1 text-sm truncate">{t('cvUploaded')}</span>
-            <Button variant="ghost" size="sm" onClick={removeFile}>
+            <Button type="button" variant="ghost" size="sm" aria-label="Remove uploaded CV" onClick={removeFile}>
               <X className="size-4" />
             </Button>
           </div>
         ) : (
-          <div className="relative">
+          <div className="relative rounded-md focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <input
+              id="cv-upload"
+              name="cv"
               type="file"
               accept=".pdf,.doc,.docx"
               onChange={handleFileChange}
+              aria-describedby="cv-help"
+              aria-invalid={Boolean(errors.cv_url || cvUpload.error)}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               disabled={cvUpload.uploading}
             />

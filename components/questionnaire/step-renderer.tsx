@@ -124,7 +124,7 @@ export function QuestionRenderer({
           placeholder={question.placeholder}
           error={error}
           required={question.required}
-          icon={Icon && <Icon className="size-4 text-gray-400" />}
+          icon={Icon && <Icon className="size-4 text-muted-foreground" />}
           variant={variant}
         />
       )

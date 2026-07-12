@@ -14,21 +14,21 @@ interface SectionPageHeaderProps {
   className?: string
 }
 
-const toneClasses: Record<SectionTone, { icon: string; iconBg: string; ring: string }> = {
+const toneClasses: Record<SectionTone, { icon: string; iconBg: string; marker: string }> = {
   repreneur: {
-    icon: "text-green-600",
-    iconBg: "bg-green-50",
-    ring: "ring-green-100",
+    icon: "text-teal-700",
+    iconBg: "bg-teal-50",
+    marker: "bg-teal-600",
   },
   opportunity: {
-    icon: "text-purple-600",
-    iconBg: "bg-purple-50",
-    ring: "ring-purple-100",
+    icon: "text-blue-700",
+    iconBg: "bg-blue-50",
+    marker: "bg-blue-600",
   },
   neutral: {
-    icon: "text-muted-foreground",
+    icon: "text-slate-600",
     iconBg: "bg-muted",
-    ring: "ring-border",
+    marker: "bg-slate-500",
   },
 }
 
@@ -43,17 +43,18 @@ export function SectionPageHeader({
   const colors = toneClasses[tone]
 
   return (
-    <div className={cn("flex flex-col gap-3 md:flex-row md:items-start md:justify-between", className)}>
-      <div className="flex min-w-0 items-start gap-4">
-        <div className={cn("grid size-14 shrink-0 place-items-center rounded-xl ring-1", colors.iconBg, colors.ring)}>
-          <Icon className={cn("size-7", colors.icon)} />
+    <header className={cn("relative flex flex-col gap-4 border-b border-border/80 pb-5 md:flex-row md:items-start md:justify-between", className)}>
+      <span aria-hidden="true" className={cn("absolute -bottom-px left-0 h-0.5 w-12", colors.marker)} />
+      <div className="flex min-w-0 items-start gap-3">
+        <div className={cn("grid size-10 shrink-0 place-items-center rounded-lg border border-border/70", colors.iconBg)}>
+          <Icon className={cn("size-5", colors.icon)} strokeWidth={1.8} />
         </div>
-        <div className="min-w-0 pt-0.5">
-          <h1 className="text-2xl font-semibold tracking-normal text-foreground">{title}</h1>
-          {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold leading-8 tracking-[-0.025em] text-foreground">{title}</h1>
+          {subtitle ? <p className="mt-0.5 max-w-3xl text-[13px] leading-5 text-muted-foreground">{subtitle}</p> : null}
         </div>
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2 md:pt-1">{actions}</div> : null}
-    </div>
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+    </header>
   )
 }

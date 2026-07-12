@@ -8,7 +8,7 @@ export default async function OpportunityAnalyticsPage() {
   const data = await getOpportunityKpiData()
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="wave-page flex flex-col gap-5">
       <SectionPageHeader
         title="Analytics"
         subtitle="Internal deal-flow metrics across opportunities, introductions, pursuits, NDA status, and documents."

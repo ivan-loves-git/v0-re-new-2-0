@@ -155,7 +155,7 @@ export function ManualSend() {
 
         {/* Test Mode: Custom Email Input */}
         {testMode ? (
-          <div className="space-y-4 p-4 border-2 border-dashed border-purple-200 rounded-lg bg-purple-50/50">
+          <div className="space-y-4 rounded-lg border border-dashed bg-muted/30 p-4">
             <div className="flex items-center gap-2 text-purple-700 text-sm font-medium">
               <FlaskConical className="size-4" />
               Test Mode: Emails are sent directly without logging
@@ -200,7 +200,7 @@ export function ManualSend() {
                 {repreneurs.map((r) => (
                   <button
                     key={r.id}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b last:border-b-0 flex justify-between items-center"
+                    className="flex w-full items-center justify-between border-b px-4 py-2 text-left hover:bg-muted/50 last:border-b-0"
                     onClick={() => setSelectedRepreneur(r)}
                   >
                     <div>
@@ -221,7 +221,7 @@ export function ManualSend() {
 
             {/* Selected Repreneur */}
             {selectedRepreneur && (
-              <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+              <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
                 <div>
                   <div className="font-medium">
                     {selectedRepreneur.first_name} {selectedRepreneur.last_name}
@@ -279,7 +279,7 @@ export function ManualSend() {
         <Button
           onClick={handleSend}
           disabled={!canSend || loading}
-          className={`w-full ${testMode ? "bg-purple-600 hover:bg-purple-700" : ""}`}
+          className="w-full"
         >
           <Send className="size-4 mr-2" />
           {loading ? "Sending..." : testMode ? "Send Test Email" : "Send Email"}

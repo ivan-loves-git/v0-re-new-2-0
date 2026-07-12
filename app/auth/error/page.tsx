@@ -5,12 +5,12 @@ import { AlertCircle } from "lucide-react"
 
 export default function AuthErrorPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <main id="main-content" className="flex min-h-svh items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5 text-destructive" />
-            <CardTitle className="text-2xl font-semibold">Authentication Error</CardTitle>
+            <CardTitle className="text-2xl font-semibold tracking-[-0.025em]">Authentication error</CardTitle>
           </div>
           <CardDescription>There was a problem signing you in</CardDescription>
         </CardHeader>
@@ -20,6 +20,6 @@ export default function AuthErrorPage() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   )
 }

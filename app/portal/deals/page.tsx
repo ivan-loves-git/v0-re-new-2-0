@@ -1,6 +1,8 @@
 import { connection } from "next/server"
 import { RepreneurOpportunityList } from "@/components/opportunities/repreneur-opportunity-list"
 import { listMyRepreneurOpportunities } from "@/lib/actions/repreneur-opportunities"
+import { BriefcaseBusiness } from "lucide-react"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 
 export default async function PortalDealsPage() {
@@ -9,10 +11,7 @@ export default async function PortalDealsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-normal">Deals</h1>
-        <p className="text-sm text-muted-foreground">Anonymized opportunities selected by the Re-New team.</p>
-      </div>
+      <SectionPageHeader title="Your deals" subtitle="Anonymized opportunities selected for you by the Re-New team" icon={BriefcaseBusiness} tone="opportunity" />
       <RepreneurOpportunityList repreneur={repreneur} opportunities={opportunities} />
     </div>
   )

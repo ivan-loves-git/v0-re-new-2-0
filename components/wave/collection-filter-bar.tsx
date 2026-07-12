@@ -90,7 +90,7 @@ function ActiveFilterChip({
             {getCollectionFilterLabel(definition, value)}
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-56 p-2">
+        <PopoverContent align="start" className="max-h-[min(70vh,28rem)] w-56 overflow-y-auto p-2">
           <p className="px-2 pb-1.5 text-xs font-medium text-muted-foreground">Change {definition.label.toLowerCase()}</p>
           <div className="grid gap-1">
             {definition.options.map((option) => (
@@ -126,18 +126,24 @@ export function CollectionFilterBar({
 }: CollectionFilterBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [desktopOpen, setDesktopOpen] = useState(false)
+  const [overflowOpen, setOverflowOpen] = useState(false)
   const activeDefinitions = definitions.filter((definition) => values[definition.key])
   const hiddenCount = Math.max(0, activeDefinitions.length - 4)
   const hasFilters = activeDefinitions.length > 0
   const hasAnyState = hasFilters || search.trim().length > 0
+  const resultLabelText = resultCount === 1
+    ? resultLabel
+    : resultLabel.endsWith("y")
+      ? `${resultLabel.slice(0, -1)}ies`
+      : `${resultLabel}s`
 
   return (
-    <section className={cn("rounded-lg border bg-card p-3 shadow-xs", className)} aria-label="Collection filters">
+    <section className={cn("rounded-lg border bg-card p-3", className)} aria-label="Collection filters">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder={searchPlaceholder} className="h-9 bg-background pl-9 pr-9" />
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input aria-label={searchPlaceholder} name="collection-search" autoComplete="off" value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder={searchPlaceholder} className="h-9 bg-background pl-9 pr-9" />
             {search ? (
               <button type="button" aria-label="Clear search" onClick={() => onSearchChange("")} className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground">
                 <X className="size-3.5" />
@@ -152,7 +158,7 @@ export function CollectionFilterBar({
                 Add filter
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[360px] p-2">
+            <PopoverContent align="start" className="max-h-[min(70vh,34rem)] w-[360px] overflow-y-auto p-2">
               <FilterPicker definitions={definitions} values={values} onFilterChange={onFilterChange} onDone={() => setDesktopOpen(false)} />
             </PopoverContent>
           </Popover>
@@ -178,7 +184,23 @@ export function CollectionFilterBar({
           {activeDefinitions.slice(0, 4).map((definition) => (
             <ActiveFilterChip key={definition.key} definition={definition} value={values[definition.key]} onChange={(value) => onFilterChange(definition.key, value)} onRemove={() => onFilterRemove(definition.key)} />
           ))}
-          {hiddenCount > 0 ? <span className="text-xs font-medium text-muted-foreground">+{hiddenCount} more</span> : null}
+          {hiddenCount > 0 ? (
+            <Popover open={overflowOpen} onOpenChange={setOverflowOpen}>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground">
+                  +{hiddenCount} active
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="max-h-[min(70vh,28rem)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">More active filters</p>
+                <div className="flex flex-wrap gap-2">
+                  {activeDefinitions.slice(4).map((definition) => (
+                    <ActiveFilterChip key={definition.key} definition={definition} value={values[definition.key]} onChange={(value) => onFilterChange(definition.key, value)} onRemove={() => onFilterRemove(definition.key)} />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -188,8 +210,8 @@ export function CollectionFilterBar({
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-muted-foreground" role="status" aria-live="polite">
-        <span className="font-medium text-foreground">{resultCount}</span> {resultLabel}{resultCount === 1 ? "" : "s"}
+      <p className="mt-3 border-t pt-2.5 text-xs text-muted-foreground" role="status" aria-live="polite">
+        <span className="font-medium text-foreground">{resultCount}</span> {resultLabelText}
         {hasAnyState ? ` filtered from ${totalCount}` : " in the full list"}
       </p>
     </section>

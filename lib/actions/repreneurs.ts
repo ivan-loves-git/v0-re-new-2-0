@@ -262,6 +262,28 @@ export async function updateRepreneurField(id: string, field: string, value: str
   }
 }
 
+export async function updateRepreneurIdentity(id: string, firstName: string, lastName: string) {
+  await requireStaffAccess()
+  const normalizedFirstName = firstName.trim()
+  const normalizedLastName = lastName.trim()
+  if (!normalizedFirstName || !normalizedLastName) {
+    throw new Error("Name and surname are required")
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from("repreneurs")
+    .update({ first_name: normalizedFirstName, last_name: normalizedLastName })
+    .eq("id", id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath("/repreneurs")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+  revalidateRepreneurDashboardTags()
+}
+
 export async function createNote(repreneurId: string, content: string, noteType: string = "other") {
   const supabase = createAdminClient()
 

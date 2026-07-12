@@ -50,7 +50,7 @@ export function CardVariantB({ data, repreneurId }: CardVariantBProps) {
             </Badge>
             {data.flags.length > 0 && <FlagBadges flags={data.flags} compact />}
             {repreneurId && (
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2" asChild>
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-muted-foreground h-6 px-2" asChild>
                 <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
                   <Pencil className="size-3" />
                 </Link>
@@ -79,7 +79,7 @@ export function CardVariantB({ data, repreneurId }: CardVariantBProps) {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-bold">{data.who ?? "—"}</span>
-              <span className="text-sm text-gray-500">pts</span>
+              <span className="text-sm text-muted-foreground">pts</span>
             </div>
             <Badge variant="outline" className="text-xs">
               {getWhoDescription(data.who)}
@@ -103,7 +103,7 @@ export function CardVariantB({ data, repreneurId }: CardVariantBProps) {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-bold">{data.when ?? "—"}</span>
-              <span className="text-sm text-gray-500">pts</span>
+              <span className="text-sm text-muted-foreground">pts</span>
             </div>
             <Badge variant="outline" className="text-xs">
               {getWhenDescription(data.when)}

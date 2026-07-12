@@ -66,7 +66,7 @@ export function CardVariantD({ data, repreneurId }: CardVariantDProps) {
 
           {/* Edit button */}
           {repreneurId && (
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 h-6 px-2 ml-auto" asChild>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-muted-foreground h-6 px-2 ml-auto" asChild>
               <Link href={`/repreneurs/${repreneurId}/questionnaire`}>
                 <Pencil className="size-3" />
               </Link>
@@ -89,7 +89,7 @@ export function CardVariantD({ data, repreneurId }: CardVariantDProps) {
 }
 
 function getScoreColorClass(score: number | null): string {
-  if (score === null) return "text-gray-400"
+  if (score === null) return "text-muted-foreground"
   if (score >= 80) return "text-green-600"
   if (score >= 60) return "text-blue-600"
   if (score >= 40) return "text-amber-600"

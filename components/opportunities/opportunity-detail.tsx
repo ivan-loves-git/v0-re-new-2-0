@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { CalendarDays, MapPin, Users } from "lucide-react"
+import { ArrowRight, CalendarDays, ListChecks, MapPin, Pencil, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -113,20 +113,43 @@ export function OpportunityDetail({
     .filter((candidate) => !savedRepreneurIds.has(candidate.id))
     .sort((left, right) => (right.platform_score ?? -1) - (left.platform_score ?? -1))
     .slice(0, 4)
+  const activePursuit = matches.find((match) => match.status === "active_pursuit")
+  const nextAction = activePursuit
+    ? {
+        title: `Continue the active pursuit with ${repreneurDisplayName(activePursuit)}`,
+        reason: "Review the pursuit stage, NDA position, documents, and the next deal milestone.",
+        href: `/opportunities/${opportunity.id}?tab=pursuit`,
+        label: "Open pursuit",
+      }
+    : topMatches.length > 0 || topCandidates.length > 0
+      ? {
+          title: "Review repreneur recommendations",
+          reason: `${topMatches.length + topCandidates.length} prioritised profiles are ready for a staff decision.`,
+          href: `/opportunities/${opportunity.id}?tab=recommendations`,
+          label: "Review matches",
+        }
+      : {
+          title: "Complete the opportunity profile",
+          reason: "Add enough internal and repreneur-visible context to support confident matching.",
+          href: `/opportunities/${opportunity.id}?tab=edit`,
+          label: "Open edit",
+        }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-3">
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-col gap-4 border-b border-border/80 pb-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <OpportunityStatusBadge status={opportunity.status} />
             <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">{opportunity.reference}</p>
-            <h1 className="text-2xl font-semibold tracking-normal">{opportunity.public_title || opportunity.sector || "Opportunity"}</h1>
+            <p className="font-mono text-xs text-muted-foreground">{opportunity.reference}</p>
+            <h1 className="mt-1 text-2xl font-semibold leading-8 tracking-[-0.025em] text-foreground sm:text-[28px] sm:leading-9">
+              {opportunity.public_title || opportunity.sector || "Opportunity"}
+            </h1>
           </div>
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" />
               {opportunity.location ?? "No location"}
@@ -141,81 +164,113 @@ export function OpportunityDetail({
             </span>
           </div>
         </div>
-      </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/opportunities/${opportunity.id}?tab=edit`}>
+            <Pencil data-icon="inline-start" />
+            Edit opportunity
+          </Link>
+        </Button>
+      </header>
 
       <OpportunityDetailTabs defaultValue={initialTab} validTabs={OPPORTUNITY_DETAIL_TAB_VALUES}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-          <TabsTrigger value="pursuit">Pursuit</TabsTrigger>
-          <TabsTrigger value="ma">M&A</TabsTrigger>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto border-b border-border/80">
+          <TabsList className="w-max border-b-0">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+            <TabsTrigger value="pursuit">Pursuit</TabsTrigger>
+            <TabsTrigger value="ma">M&A</TabsTrigger>
+            <TabsTrigger value="edit">Edit</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Revenue</CardDescription>
-                <CardTitle>{formatNumber(opportunity.revenue_meur, "M EUR")}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>EBITDA</CardDescription>
-                <CardTitle>{formatNumber(opportunity.ebitda_keur, "K EUR")}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Headcount</CardDescription>
-                <CardTitle>{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
+        <TabsContent value="overview" className="flex flex-col gap-5">
+          <Card className="gap-0 py-0">
+            <CardHeader className="border-b py-4">
+              <CardTitle className="flex items-center gap-2">
+                <ListChecks />
+                Next Best Action
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-1">
+                <p className="text-base font-medium text-foreground">{nextAction.title}</p>
+                <p className="max-w-3xl text-sm text-muted-foreground">{nextAction.reason}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm">
+                  <Link href={nextAction.href}>
+                    {nextAction.label}
+                    <ArrowRight data-icon="inline-end" />
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/opportunities/${opportunity.id}?tab=documents`}>Open documents</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-            <div className="space-y-6">
+          <dl className="grid overflow-hidden rounded-lg border bg-card sm:grid-cols-3 sm:divide-x">
+            <div className="flex flex-col gap-1 p-4">
+              <dt className="text-xs font-medium text-muted-foreground">Revenue</dt>
+              <dd className="text-xl font-semibold tabular-nums text-foreground">{formatNumber(opportunity.revenue_meur, "M EUR")}</dd>
+            </div>
+            <div className="flex flex-col gap-1 border-t p-4 sm:border-t-0">
+              <dt className="text-xs font-medium text-muted-foreground">EBITDA</dt>
+              <dd className="text-xl font-semibold tabular-nums text-foreground">{formatNumber(opportunity.ebitda_keur, "K EUR")}</dd>
+            </div>
+            <div className="flex flex-col gap-1 border-t p-4 sm:border-t-0">
+              <dt className="text-xs font-medium text-muted-foreground">Headcount</dt>
+              <dd className="text-xl font-semibold tabular-nums text-foreground">{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</dd>
+            </div>
+          </dl>
+
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="flex min-w-0 flex-col gap-5">
               <Card>
                 <CardHeader>
-                  <CardTitle>Staff View</CardTitle>
-                  <CardDescription>Internal opportunity context.</CardDescription>
+                  <CardTitle>Opportunity Information</CardTitle>
+                  <CardDescription>Internal operating context and the controlled repreneur-facing version.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Sector / activity</p>
-                    <p className="font-medium">{[opportunity.sector, opportunity.activity].filter(Boolean).join(" / ") || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Description</p>
-                    <p className="whitespace-pre-wrap text-sm">{opportunity.description || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Internal notes</p>
-                    <p className="whitespace-pre-wrap text-sm">{opportunity.internal_notes || "-"}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                <CardContent className="grid gap-5 lg:grid-cols-2 lg:gap-0">
+                  <section className="flex min-w-0 flex-col gap-4 lg:pr-5" aria-labelledby="staff-view-title">
+                    <div className="flex flex-col gap-1">
+                      <h3 id="staff-view-title" className="text-sm font-semibold text-foreground">Staff View</h3>
+                      <p className="text-xs text-muted-foreground">Internal opportunity context.</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Sector / activity</p>
+                      <p className="font-medium">{[opportunity.sector, opportunity.activity].filter(Boolean).join(" / ") || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Description</p>
+                      <p className="whitespace-pre-wrap text-sm leading-6">{opportunity.description || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Internal notes</p>
+                      <p className="whitespace-pre-wrap text-sm leading-6">{opportunity.internal_notes || "-"}</p>
+                    </div>
+                  </section>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Repreneur-visible Version</CardTitle>
-                  <CardDescription>Content eligible for matching or later disclosure.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
-                    <Badge variant="outline">Source hidden unless approved</Badge>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Public title</p>
-                    <p className="font-medium">{opportunity.public_title || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Teaser summary</p>
-                    <p className="whitespace-pre-wrap text-sm">{opportunity.teaser_summary || "-"}</p>
-                  </div>
+                  <section className="flex min-w-0 flex-col gap-4 border-t pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" aria-labelledby="public-view-title">
+                    <div className="flex flex-col gap-1">
+                      <h3 id="public-view-title" className="text-sm font-semibold text-foreground">Repreneur-visible Version</h3>
+                      <p className="text-xs text-muted-foreground">Content eligible for matching or later disclosure.</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
+                      <Badge variant="outline">Source hidden unless approved</Badge>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Public title</p>
+                      <p className="font-medium">{opportunity.public_title || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Teaser summary</p>
+                      <p className="whitespace-pre-wrap text-sm leading-6">{opportunity.teaser_summary || "-"}</p>
+                    </div>
+                  </section>
                 </CardContent>
               </Card>
 
@@ -231,7 +286,7 @@ export function OpportunityDetail({
                     </Link>
                   </Button>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="flex flex-col gap-4">
                   {topMatches.length > 0 ? (
                     <div className="divide-y rounded-md border">
                       {topMatches.map((match) => (
@@ -255,7 +310,7 @@ export function OpportunityDetail({
                   ) : null}
 
                   {topCandidates.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                         Platform suggestions not saved yet
                       </p>

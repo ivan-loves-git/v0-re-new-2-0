@@ -136,7 +136,7 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
             <>
               <DropdownMenuItem
                 onClick={() => setIsDeclineDialogOpen(true)}
-                className="text-gray-600"
+                className="text-muted-foreground"
               >
                 <XCircle className="size-4 mr-2" />
                 Decline (no email)

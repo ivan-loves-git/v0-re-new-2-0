@@ -5,12 +5,12 @@ import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-import { Geist_Mono, Inter as V0_Font_Inter, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
+import { Inter as V0_Font_Inter, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
 
 // Initialize fonts
-const _inter = V0_Font_Inter({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
-const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
-const _sourceSerif_4 = V0_Font_Source_Serif_4({ subsets: ['latin'], weight: ["200","300","400","500","600","700","800","900"] })
+const _inter = V0_Font_Inter({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"], variable: "--font-inter" })
+const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"], variable: "--font-geist-mono" })
+const _sourceSerif_4 = V0_Font_Source_Serif_4({ subsets: ['latin'], weight: ["200","300","400","500","600","700","800","900"], variable: "--font-source-serif" })
 
 export const metadata: Metadata = {
   title: "Re-New Platform",
@@ -57,8 +57,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`} suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <body className={`${_inter.variable} ${_geistMono.variable} ${_sourceSerif_4.variable} font-sans antialiased`} suppressHydrationWarning>
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         {children}
         <Toaster
           position="bottom-right"
@@ -70,12 +71,12 @@ export default function RootLayout({
           toastOptions={{
             duration: 4500,
             classNames: {
-              toast: "min-h-16 rounded-lg border px-5 py-4 shadow-lg backdrop-blur-sm",
-              success: "border-emerald-200 bg-emerald-50 text-emerald-950 shadow-[0_18px_55px_rgba(22,163,74,0.16)]",
-              error: "border-red-200 bg-red-50 text-red-950 shadow-[0_18px_55px_rgba(239,68,68,0.14)]",
-              warning: "border-amber-200 bg-amber-50 text-amber-950 shadow-[0_18px_55px_rgba(217,119,6,0.14)]",
-              info: "border-blue-200 bg-blue-50 text-blue-950 shadow-[0_18px_55px_rgba(59,130,246,0.14)]",
-              title: "text-base font-semibold leading-6",
+              toast: "min-h-14 rounded-lg border px-4 py-3 shadow-md",
+              success: "border-emerald-200 bg-emerald-50 text-emerald-950",
+              error: "border-red-200 bg-red-50 text-red-950",
+              warning: "border-amber-200 bg-amber-50 text-amber-950",
+              info: "border-blue-200 bg-blue-50 text-blue-950",
+              title: "text-sm font-semibold leading-5",
               description: "text-sm leading-5 opacity-90",
               icon: "mt-0.5",
               closeButton: "border bg-background text-muted-foreground shadow-sm hover:bg-muted",

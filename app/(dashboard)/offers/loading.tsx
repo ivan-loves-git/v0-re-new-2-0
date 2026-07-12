@@ -10,7 +10,7 @@ export default function OffersLoading() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border bg-card">
         {/* Table Header */}
         <div className="border-b px-4 py-3 grid grid-cols-5 gap-4">
           <Skeleton className="h-4 w-16" />

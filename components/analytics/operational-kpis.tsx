@@ -1,5 +1,18 @@
-import { Timer, TrendingDown, CalendarCheck, Send, BarChart3, UserX, Ratio, Target, type LucideIcon } from "lucide-react"
-import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
+import {
+  BarChart3,
+  CalendarCheck,
+  Ratio,
+  Send,
+  Target,
+  Timer,
+  TrendingDown,
+  UserX,
+  type LucideIcon,
+} from "lucide-react"
+
+import { CardInfoButton } from "@/components/dashboard/card-info-button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 interface OperationalKpisProps {
   data: {
@@ -15,166 +28,185 @@ interface OperationalKpisProps {
   }
 }
 
-interface KpiCard {
+interface Metric {
   title: string
   value: string
   icon: LucideIcon
-  tone: "email" | "repreneur" | "score" | "opportunity" | "attention" | "risk" | "neutral"
   period: string
+  tone?: "default" | "attention" | "risk" | "positive"
   info: {
     title: string
     description: string
-    why?: string
+    why: string
   }
 }
 
+const toneClasses = {
+  default: "bg-muted/60 text-muted-foreground",
+  attention: "bg-warning/10 text-warning",
+  risk: "bg-destructive/10 text-destructive",
+  positive: "bg-success/10 text-success",
+}
+
+function MetricRow({ metric }: { metric: Metric }) {
+  const Icon = metric.icon
+  return (
+    <div className="flex min-h-[58px] items-center gap-3 border-b py-2.5 last:border-b-0">
+      <span className={cn("grid size-8 shrink-0 place-items-center rounded-md", toneClasses[metric.tone ?? "default"])}>
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1">
+          <p className="truncate text-sm font-medium">{metric.title}</p>
+          <CardInfoButton info={metric.info} />
+        </div>
+        <p className="text-[11px] text-muted-foreground">{metric.period}</p>
+      </div>
+      <p className="shrink-0 text-lg font-semibold tabular-nums tracking-[-0.02em]">{metric.value}</p>
+    </div>
+  )
+}
+
 export function OperationalKpis({ data }: OperationalKpisProps) {
-  const speedCards: KpiCard[] = [
+  const speedMetrics: Metric[] = [
     {
-      title: "Time to First Meeting",
-      value: data.timeToFirstMeeting !== null ? `${data.timeToFirstMeeting}d` : "\u2014",
+      title: "Time to first meeting",
+      value: data.timeToFirstMeeting !== null ? `${data.timeToFirstMeeting}d` : "—",
       icon: Timer,
-      tone: "attention",
       period: "Median days",
+      tone: "attention",
       info: {
-        title: "Time to First Meeting",
+        title: "Time to first meeting",
         description: "Median time between application and first logged meeting.",
         why: "Measures how quickly the team turns new interest into a real conversation.",
       },
     },
     {
-      title: "Time to Qualification",
-      value: data.timeToQualification !== null ? `${data.timeToQualification}d` : "\u2014",
+      title: "Time to qualification",
+      value: data.timeToQualification !== null ? `${data.timeToQualification}d` : "—",
       icon: TrendingDown,
-      tone: "score",
       period: "Median days",
       info: {
-        title: "Time to Qualification",
+        title: "Time to qualification",
         description: "Median time needed to move a repreneur into qualified status.",
         why: "Shows whether the assessment process is moving quickly enough.",
       },
     },
   ]
 
-  const conversionCards: KpiCard[] = [
+  const conversionMetrics: Metric[] = [
     {
-      title: "First Meeting Booking Rate",
+      title: "First meeting booking rate",
       value: `${data.firstMeetingBookingRate}%`,
       icon: CalendarCheck,
-      tone: "opportunity",
       period: "Current rate",
+      tone: "positive",
       info: {
-        title: "First Meeting Booking Rate",
+        title: "First meeting booking rate",
         description: "Share of profiles that have at least one interview or meeting logged.",
         why: "Indicates whether leads are converting into live conversations.",
       },
     },
     {
-      title: "Offer Submission Rate",
+      title: "Offer submission rate",
       value: `${data.offerSubmissionRate}%`,
       icon: Send,
-      tone: "email",
       period: "Current rate",
       info: {
-        title: "Offer Submission Rate",
+        title: "Offer submission rate",
         description: "Share of qualified-or-better repreneurs who received an offer.",
         why: "Measures how often qualified repreneurs move into a commercial next step.",
       },
     },
   ]
 
-  const operationalCards: KpiCard[] = [
+  const operationalMetrics: Metric[] = [
     {
-      title: "Interviews Held",
+      title: "Interviews held",
       value: `${data.interviewsHeld}`,
       icon: BarChart3,
-      tone: "score",
       period: "All time",
       info: {
-        title: "Interviews Held",
+        title: "Interviews held",
         description: "Total interviews currently logged in the platform.",
         why: "Shows the volume of direct assessment activity.",
       },
     },
     {
-      title: "No-show Rate",
+      title: "No-show rate",
       value: `${data.noShowRate}%`,
       icon: UserX,
-      tone: data.noShowRate > 20 ? "risk" : "attention",
       period: "Current rate",
+      tone: data.noShowRate > 20 ? "risk" : "attention",
       info: {
-        title: "No-show Rate",
+        title: "No-show rate",
         description: "Share of scheduled meetings where the repreneur did not attend.",
         why: "Highlights friction in the meeting process or weak commitment signals.",
       },
     },
     {
-      title: "Meeting-to-Offer Ratio",
-      value: data.meetingToOfferRatio !== null ? `${data.meetingToOfferRatio}:1` : "\u2014",
+      title: "Meeting-to-offer ratio",
+      value: data.meetingToOfferRatio !== null ? `${data.meetingToOfferRatio}:1` : "—",
       icon: Ratio,
-      tone: "opportunity",
       period: "Meetings per offer",
       info: {
-        title: "Meeting-to-Offer Ratio",
+        title: "Meeting-to-offer ratio",
         description: "Number of interviews held for each offer sent.",
         why: "Shows how efficiently meetings convert into commercial proposals.",
       },
     },
     ...(data.accuracyStats.total > 0
-      ? [
-          {
-            title: "Scoring Accuracy",
-            value: `${data.accuracyStats.whoAccurate}% / ${data.accuracyStats.whenAccurate}%`,
-            icon: Target,
-            tone: "score",
-            period: "WHO / WHEN",
-            info: {
-              title: "Scoring Accuracy",
-              description: "Share of reviewed scores considered accurate for WHO and WHEN.",
-              why: "Checks whether the scoring model is matching team judgment.",
-            },
-          } satisfies KpiCard,
-        ]
+      ? [{
+          title: "Scoring accuracy",
+          value: `${data.accuracyStats.whoAccurate}% / ${data.accuracyStats.whenAccurate}%`,
+          icon: Target,
+          period: "WHO / WHEN",
+          info: {
+            title: "Scoring accuracy",
+            description: "Share of reviewed scores considered accurate for WHO and WHEN.",
+            why: "Checks whether the scoring model is matching team judgment.",
+          },
+        } satisfies Metric]
       : []),
   ]
 
-  const sections = [
-    { title: "Speed", cards: speedCards },
-    { title: "Conversion", cards: conversionCards, dropOff: data.dropOffByStage },
-    { title: "Operational", cards: operationalCards },
-  ]
-
   return (
-    <div className="space-y-6">
-      {sections.map((section) => (
-        <div key={section.title}>
-          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            {section.title}
-          </h4>
-          <KpiMetricGrid className="xl:grid-cols-4">
-            {section.cards.map((card) => (
-              <KpiMetricTile key={card.title} {...card} />
-            ))}
-          </KpiMetricGrid>
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b py-3">
+        <CardTitle>Operating rhythm</CardTitle>
+        <CardDescription>Speed, conversion, and day-to-day execution in one compact view.</CardDescription>
+      </CardHeader>
+      <CardContent className="px-0">
+        <div className="grid xl:grid-cols-3 xl:divide-x">
+          <section className="px-5 py-4" aria-labelledby="analytics-speed-title">
+            <h3 id="analytics-speed-title" className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">Speed</h3>
+            <div className="mt-2">{speedMetrics.map((metric) => <MetricRow key={metric.title} metric={metric} />)}</div>
+          </section>
 
-          {section.dropOff && section.dropOff.length > 0 && (
-            <div className="mt-3 rounded-lg border bg-muted/30 p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Drop-off by Stage</p>
-              <div className="space-y-1">
-                {section.dropOff.map((row) => (
-                  <div key={row.stage} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground truncate mr-2">{row.stage}</span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="tabular-nums">{row.count} total</span>
-                      <span className="tabular-nums text-red-600">{row.dropOff} dropped</span>
+          <section className="border-t px-5 py-4 xl:border-t-0" aria-labelledby="analytics-conversion-title">
+            <h3 id="analytics-conversion-title" className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">Conversion</h3>
+            <div className="mt-2">{conversionMetrics.map((metric) => <MetricRow key={metric.title} metric={metric} />)}</div>
+            {data.dropOffByStage.length > 0 && (
+              <div className="mt-3 rounded-md border bg-muted/25 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.055em] text-muted-foreground">Drop-off by stage</p>
+                <div className="mt-2 space-y-1.5">
+                  {data.dropOffByStage.map((row) => (
+                    <div key={row.stage} className="flex items-center justify-between gap-3 text-xs">
+                      <span className="min-w-0 truncate text-muted-foreground">{row.stage}</span>
+                      <span className="shrink-0 tabular-nums"><strong>{row.count}</strong> total · <span className="text-destructive">{row.dropOff} dropped</span></span>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </section>
+
+          <section className="border-t px-5 py-4 xl:border-t-0" aria-labelledby="analytics-operations-title">
+            <h3 id="analytics-operations-title" className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">Operations</h3>
+            <div className="mt-2">{operationalMetrics.map((metric) => <MetricRow key={metric.title} metric={metric} />)}</div>
+          </section>
         </div>
-      ))}
-    </div>
+      </CardContent>
+    </Card>
   )
 }

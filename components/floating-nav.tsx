@@ -33,6 +33,15 @@ const pathNames: Record<string, string> = {
   questionnaire: "Questionnaire",
 }
 
+const topLevelContexts: Record<string, { name: string; href: string }> = {
+  dashboard_re: { name: "Repreneurs", href: "/repreneurs" },
+  analytics_re: { name: "Repreneurs", href: "/repreneurs" },
+  pipeline: { name: "Repreneurs", href: "/repreneurs" },
+  offers: { name: "Repreneurs", href: "/repreneurs" },
+  dashboard_op: { name: "Opportunities", href: "/opportunities/groups" },
+  analytics_op: { name: "Opportunities", href: "/opportunities/groups" },
+}
+
 export function FloatingNav() {
   const pathname = usePathname()
   const { toggleSidebar, open, isMobile } = useSidebar()
@@ -54,39 +63,47 @@ export function FloatingNav() {
 
       return { href, name, isLast }
     })
+  const contextualRoot = segments.length === 1 ? topLevelContexts[segments[0]] : undefined
+  const visibleBreadcrumbItems = contextualRoot
+    ? [
+        { ...contextualRoot, isLast: false },
+        ...breadcrumbItems,
+      ]
+    : breadcrumbItems
 
   return (
-    <nav className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-      {/* Sidebar toggle - subtle icon only */}
+    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b bg-card/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-card/90 md:px-5">
       <button
         onClick={toggleSidebar}
         className={cn(
-          "p-1.5 rounded-md hover:bg-muted transition-colors",
-          "text-muted-foreground hover:text-foreground"
+          "grid size-8 shrink-0 place-items-center rounded-md transition-colors hover:bg-muted",
+          "text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         )}
-        aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+        aria-label={isMobile ? "Open navigation" : open ? "Collapse sidebar" : "Expand sidebar"}
       >
         <PanelLeft className="size-4" />
       </button>
 
-      {/* Breadcrumbs */}
-      <div className="flex items-center gap-1">
-        {breadcrumbItems.map((item, index) => (
-          <div key={item.href} className="flex items-center gap-1">
+      <nav aria-label="Breadcrumb" className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <ol className="flex min-w-max items-center gap-1 text-xs text-muted-foreground">
+        {visibleBreadcrumbItems.map((item, index) => (
+          <li key={item.href} className="flex items-center gap-1">
             {index > 0 && <ChevronRight className="size-3.5 text-muted-foreground/50" />}
             {item.isLast ? (
-              <span className="text-foreground font-medium">{item.name}</span>
+              <span aria-current="page" className="font-semibold text-foreground">{item.name}</span>
             ) : (
               <Link
                 href={item.href}
-                className="hover:text-foreground transition-colors"
+                className="transition-colors hover:text-foreground"
               >
                 {item.name}
               </Link>
             )}
-          </div>
+          </li>
         ))}
-      </div>
-    </nav>
+        </ol>
+      </nav>
+      <span className="ml-auto hidden shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70 sm:inline">Re-New workspace</span>
+    </header>
   )
 }

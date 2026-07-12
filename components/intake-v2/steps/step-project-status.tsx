@@ -85,7 +85,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
               className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
                 priorityValue === option.value
                   ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
-                  : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                  : 'border-border hover:bg-muted/50 hover:border-input'
               }`}
               onClick={() => onChange({ q11_priority_choice: option.value })}
             >
@@ -130,7 +130,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
                     ? isHighest
                       ? 'bg-blue-100 border-blue-500 ring-1 ring-blue-300'
                       : 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
-                    : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                    : 'border-border hover:bg-muted/50 hover:border-input'
                 }`}
                 onClick={() => toggleOption(option.value)}
               >

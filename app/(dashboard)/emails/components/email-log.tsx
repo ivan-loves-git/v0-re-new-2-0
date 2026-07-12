@@ -51,8 +51,8 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
   })
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 py-0">
+      <CardHeader className="py-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <CardTitle>Email History ({initialTotal})</CardTitle>
           <div className="flex gap-2">
@@ -90,7 +90,7 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -125,7 +125,7 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate">{log.subject}</TableCell>
                   <TableCell>
-                    <Badge className={statusColors[log.status] || "bg-gray-100 text-gray-800"}>
+                    <Badge className={statusColors[log.status] || "bg-muted text-foreground"}>
                       {statusLabels[log.status] || log.status}
                     </Badge>
                   </TableCell>

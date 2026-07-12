@@ -35,6 +35,7 @@ export interface AnalyticsData {
   stageDistribution: { stage: string; count: number }[]
   // Stale leads
   staleLeads: { id: string; first_name: string; last_name: string; email: string; updated_at: string; days_stale: number }[]
+  staleLeadCount: number
   // Conversion rates
   leadToQualifiedRate: number
   qualifiedToClientRate: number
@@ -196,7 +197,7 @@ async function getCachedAnalyticsData(
   // Stale leads (lead status, not updated in 7+ days)
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-  const staleLeads = repreneurs
+  const allStaleLeads = repreneurs
     .filter(r => r.lifecycle_status === "lead" && new Date(r.updated_at) < sevenDaysAgo)
     .map(r => ({
       id: r.id,
@@ -207,7 +208,8 @@ async function getCachedAnalyticsData(
       days_stale: Math.floor((Date.now() - new Date(r.updated_at).getTime()) / (1000 * 60 * 60 * 24)),
     }))
     .sort((a, b) => b.days_stale - a.days_stale)
-    .slice(0, 20)
+  const staleLeadCount = allStaleLeads.length
+  const staleLeads = allStaleLeads.slice(0, 20)
 
   // Conversion rates
   const leadToQualifiedRate = leadCount + qualifiedCount + clientCount > 0
@@ -393,6 +395,7 @@ async function getCachedAnalyticsData(
     whenDistribution,
     stageDistribution,
     staleLeads,
+    staleLeadCount,
     leadToQualifiedRate,
     qualifiedToClientRate,
     leadToClientRate,

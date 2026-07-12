@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState, useEffect } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -17,16 +17,11 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [tokenError, setTokenError] = useState(false)
 
   const token = searchParams.get("token")
   const isPortalSetup = searchParams.get("intent") === "portal"
 
-  useEffect(() => {
-    if (!token) {
-      setTokenError(true)
-    }
-  }, [token])
+  const tokenError = !token
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,13 +60,13 @@ function ResetPasswordContent() {
 
   if (tokenError) {
     return (
-      <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+      <main id="main-content" className="flex min-h-svh items-center justify-center bg-background p-4">
         <div className="w-full max-w-md">
-          <div className="bg-background rounded-2xl shadow-sm border border-border p-8 text-center">
+          <div className="rounded-lg border bg-card p-8 text-center">
             <div className="size-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircle className="size-8 text-destructive" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+            <h1 className="mb-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
               Invalid link
             </h1>
             <p className="text-muted-foreground mb-6">
@@ -79,26 +74,26 @@ function ResetPasswordContent() {
             </p>
             <Link
               href="/auth/forgot-password"
-              className="text-blue-500 hover:text-blue-600 font-medium"
+              className="font-medium text-primary hover:underline"
             >
               Request a new link
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     )
   }
 
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+    <main id="main-content" className="flex min-h-svh items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="bg-background rounded-2xl shadow-sm border border-border p-8">
+        <div className="rounded-lg border bg-card p-8">
           {success ? (
             <div className="text-center">
               <div className="size-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="size-8 text-success" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">
+              <h1 className="mb-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
                 {isPortalSetup ? "Mot de passe cree" : "Password reset"}
               </h1>
               <p className="text-muted-foreground mb-6">
@@ -108,14 +103,15 @@ function ResetPasswordContent() {
               </p>
               <Link
                 href="/auth/login"
-                className="inline-flex items-center justify-center w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md"
+                className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground hover:bg-[#1859bd]"
               >
                 {isPortalSetup ? "Se connecter" : "Sign in"}
               </Link>
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-foreground mb-2">
+              <p className="wave-eyebrow mb-2">WAVE access</p>
+              <h1 className="mb-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
                 {isPortalSetup
                   ? "Creer votre mot de passe"
                   : "Set new password"}
@@ -133,13 +129,15 @@ function ResetPasswordContent() {
                   </Label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="Min 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11"
                   />
                 </div>
 
@@ -151,13 +149,15 @@ function ResetPasswordContent() {
                   </Label>
                   <Input
                     id="confirmPassword"
+                    name="confirmPassword"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="Repeat your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500"
+                    className="h-11"
                   />
                 </div>
 
@@ -169,7 +169,7 @@ function ResetPasswordContent() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
+                  className="h-11 w-full"
                   disabled={loading}
                 >
                   {loading
@@ -185,20 +185,20 @@ function ResetPasswordContent() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+    <main id="main-content" className="flex min-h-svh items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="bg-background rounded-2xl shadow-sm border border-border p-8 text-center">
-          <Loader2 className="size-8 animate-spin text-blue-500 mx-auto" />
+        <div className="rounded-lg border bg-card p-8 text-center">
+          <Loader2 className="mx-auto size-8 animate-spin text-primary" />
           <p className="text-muted-foreground mt-4">Loading...</p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 

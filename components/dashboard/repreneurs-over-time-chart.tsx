@@ -35,7 +35,7 @@ export function RepreneursOverTimeChart({ data, showCard = true }: RepreneursOve
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <TrendingUp className="size-5 text-gray-900" />
+          <TrendingUp className="size-5 text-foreground" />
           Repreneurs Over Time
           <CardInfoButton info="Cumulative count of repreneurs in the system over the last 30 days. Shows overall pipeline growth." />
         </CardTitle>

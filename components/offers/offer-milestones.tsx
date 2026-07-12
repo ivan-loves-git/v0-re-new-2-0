@@ -250,7 +250,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-gray-700">Milestones</h4>
+        <h4 className="text-sm font-medium text-foreground">Milestones</h4>
         {isActive && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -327,13 +327,13 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
       </div>
 
       {localMilestones.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">No milestones yet</p>
+        <p className="text-sm text-muted-foreground italic">No milestones yet</p>
       ) : (
         <div className="space-y-3">
           {/* Deliverables */}
           {deliverables.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-gray-500 uppercase font-medium">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase font-medium">
                 <Package className="size-3" />
                 Deliverables
               </div>
@@ -354,7 +354,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
           {/* Checkpoints */}
           {checkpoints.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-gray-500 uppercase font-medium">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase font-medium">
                 <Flag className="size-3" />
                 Checkpoints
               </div>
@@ -438,9 +438,9 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
           </DialogHeader>
           <div className="py-4">
             {selectedMilestone?.notes ? (
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedMilestone.notes}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{selectedMilestone.notes}</p>
             ) : (
-              <p className="text-sm text-gray-400 italic">No notes recorded for this milestone.</p>
+              <p className="text-sm text-muted-foreground italic">No notes recorded for this milestone.</p>
             )}
           </div>
           <DialogFooter>
@@ -469,7 +469,7 @@ function MilestoneItem({ milestone, isActive, onToggle, onView, onEdit, onDelete
   return (
     <div
       className={`flex items-center gap-3 p-2 rounded-lg border ${
-        milestone.is_completed ? "bg-gray-50" : "bg-white"
+        milestone.is_completed ? "bg-muted/40" : "bg-white"
       } ${isTemp ? "opacity-70" : ""}`}
     >
       <button
@@ -480,15 +480,15 @@ function MilestoneItem({ milestone, isActive, onToggle, onView, onEdit, onDelete
         {milestone.is_completed ? (
           <CheckCircle className="size-5 text-green-500" />
         ) : (
-          <Circle className="size-5 text-gray-300 hover:text-gray-400" />
+          <Circle className="size-5 text-gray-300 hover:text-muted-foreground" />
         )}
       </button>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm ${milestone.is_completed ? "text-gray-500 line-through" : "text-gray-900"}`}>
+        <p className={`text-sm ${milestone.is_completed ? "text-muted-foreground line-through" : "text-foreground"}`}>
           {milestone.title}
         </p>
         {milestone.due_date && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             Due: {formatDate(milestone.due_date)}
           </p>
         )}

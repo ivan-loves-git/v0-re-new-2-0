@@ -97,17 +97,18 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
-          className="size-6 p-0 text-gray-400 hover:text-gray-600"
+          size="icon-sm"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Edit WHO score"
         >
           <Pencil className="size-3.5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Edit WHO Score</DialogTitle>
+          <DialogTitle>Edit WHO score</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto pr-2">
           {/* Q05 */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">
@@ -118,7 +119,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
               onValueChange={(v) => handleLocalChange('q05', v)}
             >
               {WHO_QUESTIONS.q05.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={opt.value} id={`q05-${opt.value}`} />
                   <Label htmlFor={`q05-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label} ({opt.points} pts)
@@ -138,7 +139,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
               onValueChange={(v) => handleLocalChange('q06', v)}
             >
               {WHO_QUESTIONS.q06.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={opt.value} id={`q06-${opt.value}`} />
                   <Label htmlFor={`q06-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label} ({opt.points} pts)
@@ -158,7 +159,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
               onValueChange={(v) => handleLocalChange('q07', v)}
             >
               {WHO_QUESTIONS.q07.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={opt.value} id={`q07-${opt.value}`} />
                   <Label htmlFor={`q07-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label} ({opt.points} pts)
@@ -178,7 +179,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
               onValueChange={(v) => handleLocalChange('q08', v)}
             >
               {WHO_QUESTIONS.q08.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={opt.value} id={`q08-${opt.value}`} />
                   <Label htmlFor={`q08-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label} ({opt.points} pts)
@@ -198,7 +199,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
               onValueChange={(v) => handleLocalChange('q09', v)}
             >
               {WHO_QUESTIONS.q09.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={opt.value} id={`q09-${opt.value}`} />
                   <Label htmlFor={`q09-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label} ({opt.points} pts)
@@ -218,7 +219,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
               onValueChange={(v) => handleLocalChange('q10', v)}
             >
               {WHO_QUESTIONS.q10.options.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
+                <div key={opt.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={opt.value} id={`q10-${opt.value}`} />
                   <Label htmlFor={`q10-${opt.value}`} className="text-xs font-normal cursor-pointer">
                     {opt.label} ({opt.points} pts)
@@ -229,15 +230,15 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
           </div>
 
           {/* Live Score Preview */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+          <div className="space-y-3 rounded-md border bg-muted/30 p-4">
             <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium text-gray-700">Live Score Preview</span>
+              <span className="text-sm font-medium text-foreground">Live score preview</span>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-gray-900">{liveScore.score}</span>
-                <span className="text-sm text-gray-500">/ 100</span>
+                <span className="text-2xl font-semibold tabular-nums text-foreground">{liveScore.score}</span>
+                <span className="text-sm text-muted-foreground">/ 100</span>
               </div>
             </div>
-            <div className="text-xs text-gray-600 space-y-1">
+            <div className="space-y-1 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <span>Status:</span>
                 <span className="font-medium">{liveScore.breakdown.q05} pts</span>
@@ -265,7 +266,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
             </div>
           </div>
         </div>
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="border-t pt-4">
           <Button
             variant="outline"
             onClick={() => setIsOpen(false)}
@@ -278,11 +279,11 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
             disabled={isPending}
           >
             {isPending ? (
-              <Loader2 className="size-4 animate-spin mr-2" />
+              <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
             ) : (
-              <Calculator className="size-4 mr-2" />
+              <Calculator className="size-4" data-icon="inline-start" />
             )}
-            {isPending ? "Saving..." : "Calculate & Save"}
+            {isPending ? "Saving..." : "Calculate & save"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -172,7 +172,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
       <CardContent>
         {localOffers.length === 0 ? (
           <div className="flex items-center justify-center py-8">
-            <p className="text-sm text-gray-500">No offers assigned yet.</p>
+            <p className="text-sm text-muted-foreground">No offers assigned yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -188,7 +188,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                     <span className="font-medium">{ro.offer?.name}</span>
                     <OfferStatusBadge status={ro.status} />
                   </div>
-                  <div className="text-sm text-gray-500 space-x-4">
+                  <div className="text-sm text-muted-foreground space-x-4">
                     <span>{ro.offer ? formatPrice(ro.offer.price) : "-"}</span>
                     <span>Offered: {formatDate(ro.offered_at)}</span>
                     {ro.expires_at && <span>Expires: {formatDate(ro.expires_at)}</span>}
@@ -265,30 +265,30 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
         </DialogHeader>
         <div className="py-4 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">Status</span>
+            <span className="text-sm text-muted-foreground">Status</span>
             <OfferStatusBadge status={viewingOffer?.status || "offered"} />
           </div>
           {viewingOffer?.offer && (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Price</span>
+                <span className="text-sm text-muted-foreground">Price</span>
                 <span className="font-medium">{formatPrice(viewingOffer.offer.price)}</span>
               </div>
               {viewingOffer.offer.description && (
                 <div className="space-y-1">
-                  <span className="text-sm text-gray-500">Description</span>
-                  <p className="text-sm text-gray-700">{viewingOffer.offer.description}</p>
+                  <span className="text-sm text-muted-foreground">Description</span>
+                  <p className="text-sm text-foreground">{viewingOffer.offer.description}</p>
                 </div>
               )}
               {viewingOffer.offer.duration_days && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Duration</span>
+                  <span className="text-sm text-muted-foreground">Duration</span>
                   <span className="text-sm">{viewingOffer.offer.duration_days} days</span>
                 </div>
               )}
               {viewingOffer.offer.includes_hours && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Consulting Hours</span>
+                  <span className="text-sm text-muted-foreground">Consulting Hours</span>
                   <span className="text-sm">{viewingOffer.offer.includes_hours} hours</span>
                 </div>
               )}

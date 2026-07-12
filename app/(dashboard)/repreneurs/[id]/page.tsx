@@ -4,6 +4,7 @@ import Link from "next/link"
 import type { ReactNode } from "react"
 import {
   AlertTriangle,
+  ArrowLeft,
   BriefcaseBusiness,
   Clock3,
   Crown,
@@ -23,7 +24,6 @@ import {
 } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/auth-server"
-import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,7 @@ import { MILESTONES, STAGE_GROUPS, getStageConfig } from "@/lib/constants/tier-c
 import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/utils/journey-derivation"
 import { RepreneurAvatar } from "@/components/ui/repreneur-avatar"
 import { EditableTextField } from "@/components/repreneurs/editable-text-field"
+import { EditableRepreneurIdentity } from "@/components/repreneurs/editable-repreneur-identity"
 import { EditableMultiSelect } from "@/components/repreneurs/editable-multi-select"
 import { RepreneurNotes } from "@/components/repreneurs/repreneur-notes"
 import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
@@ -77,6 +78,11 @@ const SOURCE_OPTIONS = [
 
 type QuestionOptionMap = Record<string, { options?: ReadonlyArray<{ value: string; label: string }> }>
 
+function humanizeIdentifier(value: string): string {
+  const label = value.replaceAll("_", " ").trim()
+  return label ? `${label.charAt(0).toUpperCase()}${label.slice(1)}` : value
+}
+
 // Helper functions for WHO/WHEN scoring display
 function getWhoDescription(score: number | null | undefined): string {
   if (score === null || score === undefined) return "Not calculated"
@@ -103,7 +109,7 @@ function getRecommendationLabel(recommendation: string | null | undefined, whoSc
       case "interview_validate_execution": return "Interview (Execution)"
       case "starter_pack": return "Starter Pack"
       case "priority_interview": return "Priority Interview"
-      default: return recommendation
+      default: return humanizeIdentifier(recommendation)
     }
   }
   // Fallback: derive from scores
@@ -118,12 +124,12 @@ function getRecommendationColor(recommendation: string | null | undefined): stri
   switch (recommendation) {
     case "deal_flow":
     case "priority_interview":
-      return "bg-green-100 text-green-800 border-green-200"
+      return "border-success/30 bg-success/10 text-success"
     case "interview_validate_thesis":
     case "interview_validate_execution":
-      return "bg-blue-100 text-blue-800 border-blue-200"
+      return "border-info/30 bg-info/10 text-info"
     default:
-      return "bg-amber-100 text-amber-800 border-amber-200"
+      return "border-warning/30 bg-warning/10 text-warning"
   }
 }
 
@@ -137,7 +143,7 @@ function getV2Label(
   const options = questions[questionId]?.options
   if (!options) return null
   const option = options.find((o) => o.value === value)
-  return option?.label || value
+  return option?.label || humanizeIdentifier(value)
 }
 
 function formatV2Array(
@@ -149,7 +155,7 @@ function formatV2Array(
   const options = questions[questionId]?.options
   if (!options) return null
   return values
-    .map((v) => options.find((o) => o.value === v)?.label || v)
+    .map((v) => options.find((o) => o.value === v)?.label || humanizeIdentifier(v))
     .join(", ")
 }
 
@@ -193,6 +199,14 @@ function StageIconGlyph({ stage, className }: { stage: ReturnType<typeof deriveJ
   if (stage === "ready") return <Flag className={className} />
   if (stage === "execution") return <Rocket className={className} />
   return <Crown className={className} />
+}
+
+function getStageTone(stage: ReturnType<typeof deriveJourneyStage>): string {
+  if (stage === "explorer") return "border-border bg-muted text-muted-foreground"
+  if (stage === "learner") return "border-primary/30 bg-primary/10 text-primary"
+  if (stage === "ready") return "border-success/30 bg-success/10 text-success"
+  if (stage === "execution") return "border-info/30 bg-info/10 text-info"
+  return "border-warning/30 bg-warning/10 text-warning"
 }
 
 function getActivityLabel(activityType: Activity["activity_type"]) {
@@ -419,14 +433,19 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <BackButton label="Back" />
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/repreneurs/explore">
+            <ArrowLeft data-icon="inline-start" />
+            Back to repreneurs
+          </Link>
+        </Button>
       </div>
 
-      {/* Header with avatar, name, contact and status controls */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-4">
+      {/* Record identity and current operating state */}
+      <header className="grid gap-6 border-b border-border/80 pb-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+        <div className="flex min-w-0 items-start gap-4">
           <RepreneurAvatar
             repreneurId={id}
             avatarUrl={repreneur.avatar_url}
@@ -435,33 +454,14 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             size="xl"
             editable
           />
-          <div className="space-y-2 min-w-0 flex-1">
-            <div className="flex flex-col sm:flex-row sm:gap-6 gap-1">
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">Name</Label>
-                <EditableTextField
-                  repreneurId={id}
-                  field="first_name"
-                  value={repreneur.first_name}
-                  label="First Name"
-                  placeholder="First name"
-                  textClassName="text-xl sm:text-2xl font-semibold text-foreground"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">Surname</Label>
-                <EditableTextField
-                  repreneurId={id}
-                  field="last_name"
-                  value={repreneur.last_name}
-                  label="Last Name"
-                  placeholder="Last name"
-                  textClassName="text-xl sm:text-2xl font-semibold text-foreground"
-                />
-              </div>
-            </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <EditableRepreneurIdentity
+              repreneurId={id}
+              firstName={repreneur.first_name}
+              lastName={repreneur.last_name}
+            />
             {/* Email and Phone - stacked on mobile */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-muted-foreground">
+            <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:items-center sm:gap-4">
               <div className="flex items-center gap-1.5 min-w-0">
                 <Mail className="size-4 text-muted-foreground shrink-0" />
                 <EditableTextField
@@ -491,24 +491,23 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             )}
           </div>
         </div>
-        {/* Right side: Status + Journey Stage + Actions */}
-        <div className="flex flex-wrap items-start gap-4 sm:gap-6">
+        <div className="flex flex-wrap items-end gap-3 xl:justify-end">
           {/* Status */}
-          <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">Status</Label>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-muted-foreground">Status</Label>
             <StatusBadge status={repreneur.lifecycle_status} />
           </div>
           {/* Journey Stage */}
-          <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">Journey</Label>
-            <Badge className={`gap-1.5 ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-muted-foreground">Journey</Label>
+            <Badge variant="outline" className={`gap-1.5 ${getStageTone(derivedStage)}`}>
               <StageIconGlyph stage={derivedStage} className="size-3.5" />
               {stageConfig.label}
               <span className="text-xs opacity-75">({milestoneCount}/17)</span>
             </Badge>
           </div>
           {/* Actions menu */}
-          <div className="pt-5">
+          <div className="pb-px">
             <RepreneurActionsMenu
               repreneurId={repreneur.id}
               currentStatus={repreneur.lifecycle_status}
@@ -516,11 +515,11 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             />
           </div>
         </div>
-      </div>
+      </header>
 
       <RepreneurDetailTabs defaultValue="overview" validTabs={REPRENEUR_DETAIL_TAB_VALUES}>
-        <div className="overflow-x-auto pb-1">
-          <TabsList className="w-max">
+        <div className="overflow-x-auto border-b border-border/80">
+          <TabsList className="w-max border-b-0">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="qualification">Qualification</TabsTrigger>
             <TabsTrigger value="readiness">Readiness</TabsTrigger>
@@ -530,15 +529,15 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
           </TabsList>
         </div>
 
-        <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
+        <TabsContent value="overview" className="flex flex-col gap-5">
+          <Card className="gap-0 py-0">
+            <CardHeader className="border-b py-4">
               <CardTitle className="flex items-center gap-2">
                 <ListChecks className="size-5" />
                 Next Best Action
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <CardContent className="flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
                 <p className="text-base font-medium">{nextBestAction.title}</p>
                 <p className="max-w-3xl text-sm text-muted-foreground">{nextBestAction.reason}</p>
@@ -554,8 +553,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
+          <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+            <Card className="xl:col-start-1 xl:row-start-1">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <KeyRound className="size-5" />
@@ -567,14 +566,14 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                   <StatusBadge status={repreneur.lifecycle_status} />
                 </FieldSummary>
                 <FieldSummary label="Journey">
-                  <Badge className={`gap-1.5 ${stageConfig.bgColor} ${stageConfig.color} border-0`}>
+                  <Badge variant="outline" className={`gap-1.5 ${getStageTone(derivedStage)}`}>
                     <StageIconGlyph stage={derivedStage} className="size-3.5" />
                     {stageConfig.label}
                     <span className="text-xs opacity-75">({milestoneCount}/17)</span>
                   </Badge>
                 </FieldSummary>
                 <FieldSummary label="Source">
-                  {SOURCE_OPTIONS.find((option) => option.value === repreneur.source)?.label ?? muted(repreneur.source)}
+                  {SOURCE_OPTIONS.find((option) => option.value === repreneur.source)?.label ?? (repreneur.source ? humanizeIdentifier(repreneur.source) : muted(null))}
                 </FieldSummary>
                 <FieldSummary label="Portal">
                   {portalAccessStatus.enabled ? "Enabled" : <EmptyText>Disabled</EmptyText>}
@@ -587,7 +586,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="xl:col-start-2 xl:row-start-1">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Star className="size-5" />
@@ -614,7 +613,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                     {recommendationLabel}
                   </Badge>
                   {scoringFlags.length > 0 ? (
-                    <Badge variant="outline" className="border-red-200 text-red-700">
+                    <Badge variant="outline" className="border-destructive/30 text-destructive">
                       {scoringFlags.length} flag{scoringFlags.length > 1 ? "s" : ""}
                     </Badge>
                   ) : (
@@ -628,7 +627,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="xl:col-start-1 xl:row-start-2">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Target className="size-5" />
@@ -651,7 +650,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="xl:col-start-1 xl:row-start-3">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <BriefcaseBusiness className="size-5" />
@@ -686,7 +685,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="xl:col-start-2 xl:row-start-2">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Flag className="size-5" />
@@ -706,7 +705,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="xl:col-start-2 xl:row-start-3">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <History className="size-5" />
@@ -736,7 +735,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             </Card>
           </div>
 
-          <Card>
+          <Card className="gap-4">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="size-5" />
@@ -773,13 +772,13 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+                            <div className="inline-flex items-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1 text-destructive">
                               <AlertTriangle className="size-3" />
                               <span className="text-xs font-medium">{scoringFlags.length}</span>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="mb-1 text-xs font-medium text-red-600">Flags override recommendation</p>
+                            <p className="mb-1 text-xs font-medium text-destructive">Flags override recommendation</p>
                             {scoringFlags.map((flag) => (
                               <p key={flag} className="text-xs">{flag}</p>
                             ))}
@@ -802,8 +801,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button type="button" className="text-muted-foreground transition-colors hover:text-foreground">
-                              <Info className="size-3" />
+                            <button type="button" aria-label="About the WHO score" className="grid size-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                              <Info className="size-3.5" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs">
@@ -828,8 +827,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button type="button" className="text-muted-foreground transition-colors hover:text-foreground">
-                              <Info className="size-3" />
+                            <button type="button" aria-label="About the WHEN score" className="grid size-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                              <Info className="size-3.5" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs">
@@ -933,7 +932,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground transition-colors hover:text-foreground">
+                      <button type="button" aria-label="About readiness milestones" className="grid size-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <Info className="size-4" />
                       </button>
                     </TooltipTrigger>

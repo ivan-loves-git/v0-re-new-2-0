@@ -5,18 +5,18 @@ import { Target } from "lucide-react"
 
 export function PlatformGoal() {
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="p-2 rounded-lg bg-blue-50">
-            <Target className="size-4 text-blue-600" />
-          </div>
+          <span className="rounded-md border bg-muted p-2">
+            <Target className="size-4 text-muted-foreground" />
+          </span>
           What is Wave?
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm text-gray-600">
+      <CardContent className="space-y-3 text-sm text-muted-foreground">
         <p>
-          <strong className="text-gray-900">Wave is Re-New's internal management platform</strong> — built to replace
+          <strong className="text-foreground">Wave is Re-New's internal management platform</strong> — built to replace
           Flatchr and give the team a purpose-built tool for managing repreneurs as long-term
           clients, not one-time candidates.
         </p>
@@ -27,7 +27,7 @@ export function PlatformGoal() {
           across multiple offers.
         </p>
         <p>
-          The platform is the <strong className="text-gray-900">operational cockpit of Re-New</strong> — providing visibility
+          The platform is the <strong className="text-foreground">operational cockpit of Re-New</strong> — providing visibility
           into leads, active prospects, clients, and the full pipeline of activity.
         </p>
       </CardContent>

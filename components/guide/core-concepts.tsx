@@ -188,10 +188,10 @@ function renderFormattedText(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+      return <strong key={index} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>
     }
     if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
-      return <em key={index} className="text-gray-700">{part.slice(1, -1)}</em>
+      return <em key={index} className="text-foreground">{part.slice(1, -1)}</em>
     }
     return part
   })
@@ -200,7 +200,7 @@ function renderFormattedText(text: string) {
 export function CoreConcepts() {
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-gray-900">Core Concepts</h2>
+      <h2 className="text-xl font-semibold text-foreground">Core Concepts</h2>
       <Accordion type="single" collapsible className="w-full">
         {concepts.map((concept) => (
           <AccordionItem key={concept.id} value={concept.id}>
@@ -213,7 +213,7 @@ export function CoreConcepts() {
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <div className="pl-12 pr-4 pb-2 text-sm text-gray-600 whitespace-pre-line">
+              <div className="pl-12 pr-4 pb-2 text-sm text-muted-foreground whitespace-pre-line">
                 {renderFormattedText(concept.content)}
               </div>
             </AccordionContent>

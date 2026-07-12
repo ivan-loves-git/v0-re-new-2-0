@@ -69,7 +69,6 @@ export function ClientOfferCard({
   id,
   repreneurId,
   repreneurName,
-  repreneurEmail,
   avatarUrl,
   offer,
   status,
@@ -129,18 +128,18 @@ export function ClientOfferCard({
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-4">
+      <Card className="gap-0 py-0 transition-colors hover:border-border/90 hover:bg-accent/20">
+        <CardContent className="p-3.5">
+          <div className="flex items-start gap-3">
             {/* Avatar */}
             <Link href={`/repreneurs/${repreneurId}`} className="flex-shrink-0">
-              <div className="relative size-12 rounded-full overflow-hidden bg-gray-200 border border-gray-200 hover:ring-2 hover:ring-blue-500 transition-all">
+              <div className="relative size-10 overflow-hidden rounded-full border bg-muted transition-shadow hover:ring-2 hover:ring-ring/30">
                 <Image
                   src={imageSrc}
                   alt={repreneurName}
                   fill
                   className="object-cover"
-                  sizes="48px"
+                  sizes="40px"
                 />
               </div>
             </Link>
@@ -152,13 +151,13 @@ export function ClientOfferCard({
                 <div className="min-w-0">
                   <Link
                     href={`/repreneurs/${repreneurId}`}
-                    className="font-medium text-gray-900 hover:text-blue-600 transition-colors truncate block"
+                    className="block truncate font-semibold text-foreground transition-colors hover:text-primary"
                   >
                     {repreneurName}
                   </Link>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <Package className="size-3.5 text-gray-400" />
-                    <span className="text-sm text-gray-600">{offer.name}</span>
+                    <Package className="size-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{offer.name}</span>
                     <OfferStatusBadge status={status} />
                   </div>
                 </div>
@@ -166,7 +165,7 @@ export function ClientOfferCard({
                 {/* Actions dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8" disabled={isLoading}>
+                    <Button variant="ghost" size="icon-sm" disabled={isLoading} aria-label={`Actions for ${repreneurName}`}>
                       <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -222,7 +221,7 @@ export function ClientOfferCard({
                             ? isCurrent
                               ? "bg-blue-100 text-blue-700"
                               : "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-400"
+                            : "bg-muted text-muted-foreground/60"
                         }`}>
                           {isComplete && !isCurrent ? (
                             <CheckCircle2 className="size-3" />
@@ -233,7 +232,7 @@ export function ClientOfferCard({
                         </div>
                         {index < STATUS_STEPS.length - 1 && (
                           <ArrowRight className={`size-3 mx-0.5 ${
-                            index < currentStepIndex ? "text-green-400" : "text-gray-300"
+                            index < currentStepIndex ? "text-emerald-500" : "text-border"
                           }`} />
                         )}
                       </div>
@@ -243,7 +242,7 @@ export function ClientOfferCard({
               )}
 
               {/* Info row: dates and milestones */}
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="size-3" />
                   <span>Offered {formatDate(offeredAt)}</span>
@@ -262,7 +261,7 @@ export function ClientOfferCard({
                 )}
                 {totalMilestones > 0 && (
                   <div className="flex items-center gap-1">
-                    <CheckCircle2 className={`size-3 ${completedMilestones === totalMilestones ? "text-green-500" : "text-gray-400"}`} />
+                    <CheckCircle2 className={`size-3 ${completedMilestones === totalMilestones ? "text-emerald-500" : "text-muted-foreground/60"}`} />
                     <span>{completedMilestones}/{totalMilestones} milestones</span>
                   </div>
                 )}
@@ -283,11 +282,11 @@ export function ClientOfferCard({
             <DialogDescription className="flex items-center gap-2">
               <User className="size-3.5" />
               {repreneurName}
-              <span className="text-gray-300">|</span>
+              <span className="text-border">|</span>
               Offered: {formatDate(offeredAt)}
               {expiresAt && (
                 <>
-                  <span className="text-gray-300">|</span>
+                  <span className="text-border">|</span>
                   Expires: {formatDate(expiresAt)}
                 </>
               )}
@@ -296,28 +295,28 @@ export function ClientOfferCard({
 
           <div className="py-4 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Status</span>
+              <span className="text-sm text-muted-foreground">Status</span>
               <OfferStatusBadge status={status} />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Price</span>
+              <span className="text-sm text-muted-foreground">Price</span>
               <span className="font-medium">{formatPrice(offer.price)}</span>
             </div>
             {offer.description && (
               <div className="space-y-1">
-                <span className="text-sm text-gray-500">Description</span>
-                <p className="text-sm text-gray-700">{offer.description}</p>
+                <span className="text-sm text-muted-foreground">Description</span>
+                <p className="text-sm text-foreground">{offer.description}</p>
               </div>
             )}
             {offer.duration_days && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Duration</span>
+                <span className="text-sm text-muted-foreground">Duration</span>
                 <span className="text-sm">{offer.duration_days} days</span>
               </div>
             )}
             {offer.includes_hours && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Consulting Hours</span>
+                <span className="text-sm text-muted-foreground">Consulting Hours</span>
                 <span className="text-sm">{offer.includes_hours} hours</span>
               </div>
             )}

@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingDown } from "lucide-react"
 import { DECLINE_REASON_OPTIONS } from "@/lib/types/repreneur"
 import { WaveBarChart } from "@/components/wave/charts"
@@ -22,17 +22,18 @@ export function DeclineReasons({ breakdown }: DeclineReasonsProps) {
   }))
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="border-b py-3">
+        <CardTitle className="flex items-center gap-2">
           <TrendingDown className="size-4 text-muted-foreground" />
           Decline Reasons
           <span className="ml-auto text-xs font-normal text-muted-foreground">
             {total} declined
           </span>
         </CardTitle>
+        <CardDescription>Recorded reasons behind declined offers.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="py-4">
         {total === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <p className="text-sm text-muted-foreground">No declined offers yet</p>

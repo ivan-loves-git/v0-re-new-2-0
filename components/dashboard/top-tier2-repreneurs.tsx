@@ -45,7 +45,7 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
       case 0:
         return "text-yellow-500"
       case 1:
-        return "text-gray-400"
+        return "text-muted-foreground"
       case 2:
         return "text-amber-600"
       default:
@@ -77,7 +77,7 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
     <Card className="h-full flex flex-col gap-0">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Star className="size-5 text-gray-900" />
+          <Star className="size-5 text-foreground" />
           Top Tier 2
           <CardInfoButton info={kpiInfo.topTier2} />
         </CardTitle>
@@ -92,13 +92,13 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
                 <Link
                   key={repreneur.id}
                   href={`/repreneurs/${repreneur.id}`}
-                  className="flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors h-10"
+                  className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors h-10"
                 >
                   <div className="flex items-center justify-center w-6">
                     {actualIndex < 3 ? (
                       <Medal className={`size-5 ${getMedalColor(index)}`} />
                     ) : (
-                      <span className="text-sm text-gray-400 font-medium">{actualIndex + 1}</span>
+                      <span className="text-sm text-muted-foreground font-medium">{actualIndex + 1}</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -129,7 +129,7 @@ export function TopTier2Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {currentPage + 1} / {totalPages}
             </span>
             <Button

@@ -3,7 +3,7 @@
 import { useLanguage } from '@/lib/i18n/language-context'
 import { LanguageToggle } from '@/components/intake-v2/language-toggle'
 import { AssessmentForm } from '@/components/assessment/assessment-form'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Waves } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -28,19 +28,19 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
     }
 
     return (
-      <main className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-16 px-4">
+      <main id="main-content" className="min-h-svh bg-background px-4 py-16">
         <div className="max-w-lg mx-auto">
           <div className="flex justify-end mb-6">
             <LanguageToggle />
           </div>
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="size-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <AlertCircle className="size-10 text-red-600 dark:text-red-400" />
+              <div className="flex size-16 items-center justify-center rounded-full border bg-red-50">
+                <AlertCircle className="size-8 text-red-700" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-4">{content.title}</h1>
-            <p className="text-lg text-muted-foreground mb-8">{content.description}</p>
+            <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.03em]">{content.title}</h1>
+            <p className="mb-8 text-base leading-7 text-muted-foreground">{content.description}</p>
             <Button asChild>
               <Link href="https://re-new.team" target="_blank">{content.cta}</Link>
             </Button>
@@ -62,19 +62,19 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
     }
 
     return (
-      <main className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-16 px-4">
+      <main id="main-content" className="min-h-svh bg-background px-4 py-16">
         <div className="max-w-lg mx-auto">
           <div className="flex justify-end mb-6">
             <LanguageToggle />
           </div>
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="size-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
+              <div className="flex size-16 items-center justify-center rounded-full border bg-teal-50">
+                <CheckCircle2 className="size-8 text-teal-700" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-4">{content.title}</h1>
-            <p className="text-lg text-muted-foreground mb-8">{content.description}</p>
+            <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.03em]">{content.title}</h1>
+            <p className="mb-8 text-base leading-7 text-muted-foreground">{content.description}</p>
             <Button asChild>
               <Link href="https://re-new.team" target="_blank">{content.cta}</Link>
             </Button>
@@ -91,13 +91,14 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
     : undefined
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-8 px-4">
-      <div className="max-w-2xl mx-auto mb-8">
-        <div className="flex justify-end mb-4">
+    <main id="main-content" className="min-h-svh bg-background px-4 py-6 md:py-10">
+      <div className="mx-auto mb-8 max-w-2xl border-b pb-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-lg bg-[#081020] text-[#7dd3c7]"><Waves className="size-[18px]" /></span><span className="text-xs font-semibold tracking-[0.12em]">WAVE</span></div>
           <LanguageToggle />
         </div>
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{title}</h1>
+          <h1 className="mb-2 text-[28px] font-semibold tracking-[-0.03em]">{title}</h1>
           {subtitle && (
             <p className="text-muted-foreground">{subtitle}</p>
           )}

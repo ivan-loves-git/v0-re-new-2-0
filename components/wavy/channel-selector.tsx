@@ -15,7 +15,7 @@ export function ChannelSelector({ value, onChange }: ChannelSelectorProps) {
         type="button"
         onClick={() => onChange("email")}
         className={cn(
-          "flex flex-1 items-center justify-center gap-2 rounded-lg border p-3 transition-all",
+          "flex flex-1 items-center justify-center gap-2 rounded-md border p-3 text-sm transition-colors",
           value === "email"
             ? "border-primary bg-primary/10 text-primary"
             : "border-border hover:border-primary/50 hover:bg-muted/50"
@@ -28,10 +28,10 @@ export function ChannelSelector({ value, onChange }: ChannelSelectorProps) {
         type="button"
         onClick={() => onChange("whatsapp")}
         className={cn(
-          "flex flex-1 items-center justify-center gap-2 rounded-lg border p-3 transition-all",
+          "flex flex-1 items-center justify-center gap-2 rounded-md border p-3 text-sm transition-colors",
           value === "whatsapp"
-            ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400"
-            : "border-border hover:border-green-500/50 hover:bg-muted/50"
+            ? "border-teal-600 bg-teal-50 text-teal-700"
+            : "border-border hover:border-teal-600/50 hover:bg-muted/50"
         )}
       >
         <MessageCircle className="size-5" />

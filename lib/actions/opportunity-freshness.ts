@@ -24,6 +24,7 @@ export interface OpportunityFreshnessReminder {
 
 export interface OpportunityFreshnessData {
   staleThresholdDays: number
+  staleTotal: number
   staleOpportunities: OpportunityFreshnessReminder[]
   openWithoutDate: number
   oldestOpenDays: number | null
@@ -129,6 +130,7 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
 
   return {
     staleThresholdDays: STALE_OPPORTUNITY_DAYS,
+    staleTotal: reminders.length,
     staleOpportunities: reminders.slice(0, 12),
     openWithoutDate: rows.filter((opportunity) => !parseDate(opportunity.date_added)).length,
     oldestOpenDays: datedOpenDays.length > 0 ? Math.max(...datedOpenDays) : null,

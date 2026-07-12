@@ -29,9 +29,9 @@ interface EnhancedChartProps {
 
 const kpiInfo = {
   pipelineTrends: {
-    title: "Pipeline & Client Trends",
-    description: "Weekly view combining cumulative repreneur growth (blue area) with cumulative clients (orange line). Navigate with arrows or select custom date range.",
-    why: "Track whether the repreneur base is converting into clients. If repreneurs grow but clients stay flat, review qualification, offer timing, and follow-up.",
+    title: "Profile growth & current-client cohorts",
+    description: "Weekly view of cumulative profile creation and the subset of those profiles that are clients today, grouped by profile creation date.",
+    why: "Shows whether stronger client relationships are coming from newer or older profile cohorts without implying a historical conversion date.",
   },
 }
 
@@ -103,13 +103,13 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
   const canNavigateRight = !isAfter(addWeeks(endDate, 1), endOfWeek(new Date(), { weekStartsOn: 1 }))
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="gap-0 py-0">
+      <CardHeader className="flex min-h-14 justify-center border-b py-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="size-5 text-gray-900" />
-            <span className="hidden sm:inline">Pipeline & Client Trends</span>
-            <span className="sm:hidden">Trends</span>
+            <TrendingUp className="size-4 text-muted-foreground" />
+            <span className="hidden sm:inline">Profile Growth & Client Cohorts</span>
+            <span className="sm:hidden">Profile cohorts</span>
             <CardInfoButton info={kpiInfo.pipelineTrends} />
           </CardTitle>
 
@@ -120,6 +120,7 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
               size="icon"
               className="size-8"
               onClick={() => navigateWeeks("left")}
+              aria-label="Show the previous eight weeks"
             >
               <ChevronLeft className="size-4" />
             </Button>
@@ -140,8 +141,9 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
               <PopoverContent className="w-auto p-4" align="end">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-700">Start Date</label>
+                    <label htmlFor="pipeline-trend-start" className="text-xs font-medium text-foreground">Start date</label>
                     <Input
+                      id="pipeline-trend-start"
                       type="date"
                       value={format(startDate, "yyyy-MM-dd")}
                       max={format(new Date(), "yyyy-MM-dd")}
@@ -154,8 +156,9 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-700">End Date</label>
+                    <label htmlFor="pipeline-trend-end" className="text-xs font-medium text-foreground">End date</label>
                     <Input
+                      id="pipeline-trend-end"
                       type="date"
                       value={format(endDate, "yyyy-MM-dd")}
                       max={format(new Date(), "yyyy-MM-dd")}
@@ -184,20 +187,21 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
               className="size-8"
               onClick={() => navigateWeeks("right")}
               disabled={!canNavigateRight}
+              aria-label="Show the next eight weeks"
             >
               <ChevronRight className="size-4" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="py-4">
         <WaveAreaChart
           data={chartData}
-          label="Pipeline and client trends"
+          label="Profile creation growth and current client cohorts"
           xKey="week"
           series={[
             { key: "cumulativeRepreneurs", label: "Repreneurs", color: "var(--chart-1)" },
-            { key: "cumulativeClients", label: "Clients", color: "var(--chart-4)" },
+            { key: "cumulativeClients", label: "Current clients by profile start", color: "var(--chart-4)" },
           ]}
           className="h-[240px]"
         />

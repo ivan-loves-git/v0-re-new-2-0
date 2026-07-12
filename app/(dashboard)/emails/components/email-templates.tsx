@@ -30,13 +30,6 @@ interface EmailTemplatesProps {
   templates: EmailTemplate[]
 }
 
-const categoryColors: Record<string, string> = {
-  intake: "bg-blue-100 text-blue-800",
-  offer: "bg-green-100 text-green-800",
-  status: "bg-purple-100 text-purple-800",
-  ma: "bg-violet-100 text-violet-800",
-}
-
 const categoryLabels: Record<string, string> = {
   intake: "Inscription",
   offer: "Offres",
@@ -178,13 +171,13 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="grid gap-4 xl:grid-cols-2">
       {Object.entries(groupedTemplates).map(([category, items]) => (
         <Card key={category}>
           <CardHeader>
             <div className="flex items-center gap-2">
               <CardTitle>{categoryLabels[category] || category}</CardTitle>
-              <Badge className={categoryColors[category] || "bg-gray-100 text-gray-800"}>
+              <Badge variant="secondary">
                 {items.length} templates
               </Badge>
             </div>
@@ -194,7 +187,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
               {items.map((item) => (
                 <div
                   key={item.key}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex flex-col justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -202,7 +195,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                       <Badge variant={item.audience === "opp" ? "outline" : "secondary"}>
                         {TEMPLATE_AUDIENCE_LABELS[item.audience]}
                       </Badge>
-                      <code className="text-xs bg-gray-100 px-2 py-0.5 rounded">{item.key}</code>
+                      <code className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{item.key}</code>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                   </div>

@@ -86,7 +86,7 @@ export function EditableMultiSelect({
                 {filteredOptions.map((option) => (
                   <div
                     key={option}
-                    className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                    className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
                     onClick={() => handleToggle(option)}
                   >
                     <Checkbox checked={selectedItems.includes(option)} />

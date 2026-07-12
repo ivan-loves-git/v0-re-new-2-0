@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Activity, Mail, Phone, Users, FileText, Calendar } from "lucide-react"
 import { CardInfoButton } from "./card-info-button"
+import { CardLinkButton } from "./card-link-button"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 
@@ -13,7 +14,7 @@ interface ActivityItem {
   description: string | null
   duration_minutes: number | null
   created_at: string
-  repreneur_id: string
+  repreneur_id: string | null
   repreneur_name: string
   owner?: string
 }
@@ -42,44 +43,49 @@ const kpiInfo = {
 
 export function GlobalActivityStream({ activities, maxHeight = "400px" }: GlobalActivityStreamProps) {
   return (
-    <Card className="h-full gap-0">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Activity className="size-5 text-gray-900" />
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="flex min-h-14 flex-row items-center justify-between border-b py-3">
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="size-4 text-muted-foreground" />
           Activity Stream
           <CardInfoButton info={kpiInfo.activityStream} />
         </CardTitle>
+        <CardLinkButton href="/analytics_re" tooltip="View activity analytics" />
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3 overflow-y-auto pr-2" style={{ maxHeight }}>
+      <CardContent className="py-2">
+        <div className="overflow-y-auto pr-1" style={{ maxHeight }}>
           {activities.length > 0 ? (
             activities.map((activity) => {
               const Icon = activityIcons[activity.type.toLowerCase()] || activityIcons.default
               return (
                 <div
                   key={activity.id}
-                  className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
+                  className="flex min-h-[52px] items-start gap-3 border-b py-2.5 last:border-0"
                 >
-                  <div className="p-2 rounded-full bg-blue-50 text-blue-600 shrink-0">
-                    <Icon className="size-4" />
+                  <div className="grid size-7 shrink-0 place-items-center rounded-md border bg-muted/60 text-muted-foreground">
+                    <Icon className="size-3.5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm capitalize">{activity.title || activity.type}</span>
                       {activity.duration_minutes && (
-                        <span className="text-xs text-gray-400">{activity.duration_minutes} min</span>
+                        <span className="text-xs text-muted-foreground">{activity.duration_minutes} min</span>
                       )}
                     </div>
-                    <Link
-                      href={`/repreneurs/${activity.repreneur_id}`}
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      {activity.repreneur_name}
-                    </Link>
-                    {activity.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{activity.description}</p>
+                    {activity.repreneur_id ? (
+                      <Link
+                        href={`/repreneurs/${activity.repreneur_id}`}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        {activity.repreneur_name}
+                      </Link>
+                    ) : (
+                      <span className="text-xs font-medium text-muted-foreground">{activity.repreneur_name}</span>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
+                    {activity.description && (
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{activity.description}</p>
+                    )}
+                    <p className="mt-1 text-[11px] text-muted-foreground/80">
                       {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
                       {activity.owner && <span> · by {activity.owner}</span>}
                     </p>

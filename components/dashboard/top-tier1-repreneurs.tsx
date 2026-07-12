@@ -28,7 +28,7 @@ interface TopTier1RepreneursProps {
 }
 
 const ITEMS_PER_PAGE = 5
-const ITEM_HEIGHT = 44 // height of each repreneur row in pixels
+const ITEM_HEIGHT = 42
 
 const kpiInfo = {
   topTier1: {
@@ -58,22 +58,22 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
     const actualIndex = startIndex + index
     switch (actualIndex) {
       case 0:
-        return "text-yellow-500"
+        return "text-warning"
       case 1:
-        return "text-gray-400"
+        return "text-muted-foreground"
       case 2:
-        return "text-amber-600"
+        return "text-warning/80"
       default:
-        return "text-gray-300"
+        return "text-muted-foreground/50"
     }
   }
 
   // Combined score (WHO + WHEN) ranges from 0-200
   const getScoreColor = (score: number) => {
-    if (score >= 140) return "text-green-600 bg-green-50"
-    if (score >= 100) return "text-blue-600 bg-blue-50"
-    if (score >= 60) return "text-yellow-600 bg-yellow-50"
-    return "text-gray-600 bg-gray-50"
+    if (score >= 140) return "text-success"
+    if (score >= 100) return "text-info"
+    if (score >= 60) return "text-warning"
+    return "text-muted-foreground"
   }
 
   const getScores = (repreneur: TopRepreneur) => {
@@ -86,16 +86,16 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
   const listHeight = ITEMS_PER_PAGE * ITEM_HEIGHT
 
   return (
-    <Card className="h-full flex flex-col gap-0">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
+    <Card className="h-full gap-0 py-0">
+      <CardHeader className="flex min-h-14 flex-row items-center justify-between border-b py-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Trophy className="size-5 text-gray-900" />
+          <Trophy className="size-4 text-warning" />
           Top Rated
           <CardInfoButton info={kpiInfo.topTier1} />
         </CardTitle>
         <div className="flex items-center gap-2">
           <Select value={timeRange} onValueChange={(v) => { setTimeRange(v); setCurrentPage(0) }}>
-            <SelectTrigger className="h-7 w-[120px] text-xs">
+            <SelectTrigger className="h-8 w-[116px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -110,8 +110,8 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
           <CardLinkButton href="/pipeline" tooltip="View Pipeline" />
         </div>
       </CardHeader>
-      <CardContent className="pt-0 flex-1 flex flex-col">
-        <div className="space-y-2" style={{ minHeight: listHeight }}>
+      <CardContent className="flex flex-1 flex-col py-2">
+        <div style={{ minHeight: listHeight }}>
           {visibleRepreneurs.length > 0 ? (
             <TooltipProvider delayDuration={0}>
               {visibleRepreneurs.map((repreneur, index) => {
@@ -122,13 +122,13 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
                     <TooltipTrigger asChild>
                       <Link
                         href={`/repreneurs/${repreneur.id}`}
-                        className="flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors h-10"
+                        className="flex h-[42px] items-center gap-3 border-b px-1 transition-colors last:border-b-0 hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       >
                         <div className="flex items-center justify-center w-6">
                           {actualIndex < 3 ? (
                             <Medal className={`size-5 ${getMedalColor(index)}`} />
                           ) : (
-                            <span className="text-sm text-gray-400 font-medium">{actualIndex + 1}</span>
+                            <span className="text-xs font-semibold tabular-nums text-muted-foreground">{actualIndex + 1}</span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -136,7 +136,7 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
                             {repreneur.first_name} {repreneur.last_name}
                           </p>
                         </div>
-                        <div className={`px-2 py-1 rounded text-sm font-bold ${getScoreColor(scores.total)}`}>
+                        <div className={`min-w-9 text-right text-sm font-semibold tabular-nums ${getScoreColor(scores.total)}`}>
                           {scores.total}
                         </div>
                       </Link>
@@ -166,17 +166,18 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-3 mt-2 border-t">
+          <div className="mt-auto flex items-center justify-center gap-2 border-t pt-2">
             <Button
               variant="outline"
               size="icon"
               className="size-7"
               onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
               disabled={currentPage === 0}
+              aria-label="Previous ranked repreneurs"
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="text-xs text-gray-500">
+            <span className="min-w-12 text-center text-xs tabular-nums text-muted-foreground">
               {currentPage + 1} / {totalPages}
             </span>
             <Button
@@ -185,6 +186,7 @@ export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }
               className="size-7"
               onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
               disabled={currentPage >= totalPages - 1}
+              aria-label="Next ranked repreneurs"
             >
               <ChevronRight className="size-4" />
             </Button>

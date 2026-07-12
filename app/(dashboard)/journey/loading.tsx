@@ -3,44 +3,65 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function JourneyLoading() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-5 w-80 mt-2" />
+    <div className="flex flex-col gap-5" aria-label="Loading journey">
+      <div className="flex items-start gap-3 border-b pb-5">
+        <Skeleton className="size-10 rounded-lg" />
+        <div className="flex flex-1 flex-col gap-2">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-[34rem] max-w-full" />
+        </div>
       </div>
 
-      {/* Journey Stages */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {["Discovery", "Screening", "Due Diligence", "Negotiation", "Closing"].map((stage) => (
-          <div key={stage} className="space-y-3">
-            {/* Stage Header */}
-            <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-5 w-6 rounded-full" />
+      <Card className="gap-0 py-0">
+        <CardHeader className="border-b py-4">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="grid gap-px bg-border md:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((stage) => (
+              <div key={stage} className="flex flex-col gap-4 bg-card p-4">
+                <div className="flex items-start justify-between">
+                  <Skeleton className="size-9 rounded-md" />
+                  <Skeleton className="h-4 w-5" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
               </div>
-            </div>
-
-            {/* Cards in Stage */}
-            <div className="space-y-2">
-              {[1, 2].map((i) => (
-                <Card key={i} className="cursor-pointer">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
-                      <div className="flex-1">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-3 w-16 mt-1" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
+
+      <Card className="gap-0 py-0">
+        <CardHeader className="border-b py-4">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-4 w-96 max-w-full" />
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="grid gap-px bg-border md:grid-cols-2 xl:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((stage) => (
+              <div key={stage} className="bg-card">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-5 w-8" />
+                </div>
+                <div className="flex flex-col divide-y">
+                  {[0, 1, 2].map((row) => (
+                    <div key={row} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-4 w-10" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

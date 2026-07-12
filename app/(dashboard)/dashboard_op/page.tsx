@@ -9,7 +9,6 @@ import {
   Inbox,
   Landmark,
   LayoutDashboard,
-  type LucideIcon,
   ShieldAlert,
 } from "lucide-react"
 import { OpportunityFreshnessPanel } from "@/components/dashboard/opportunity-freshness-panel"
@@ -19,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
+import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getOpportunityFreshnessData } from "@/lib/actions/opportunity-freshness"
 import { listOpportunityMatchResponses } from "@/lib/actions/opportunity-matches"
@@ -80,75 +80,59 @@ function repreneurName(row: { first_name?: string | null; last_name?: string | n
   return [row.first_name, row.last_name].filter(Boolean).join(" ") || row.email || "Unknown repreneur"
 }
 
-async function listActivePursuits(): Promise<ActivePursuitRow[]> {
+async function listActivePursuits(): Promise<{
+  rows: ActivePursuitRow[]
+  totalCount: number
+  ndaBlockedCount: number
+}> {
   const supabase = createAdminClient()
-  const { data, error } = await supabase
-    .from("opportunity_matches")
-    .select(`
-      id,
-      opportunity_id,
-      repreneur_id,
-      pursuit_stage,
-      nda_status,
-      updated_at,
-      opportunity:opportunities(id, reference, public_title, sector, location),
-      repreneur:repreneurs(id, first_name, last_name, email)
-    `)
-    .eq("status", "active_pursuit")
-    .order("updated_at", { ascending: false })
-    .limit(8)
+  const [rowsResult, countResult, ndaResult] = await Promise.all([
+    supabase
+      .from("opportunity_matches")
+      .select(`
+        id,
+        opportunity_id,
+        repreneur_id,
+        pursuit_stage,
+        nda_status,
+        updated_at,
+        opportunity:opportunities(id, reference, public_title, sector, location),
+        repreneur:repreneurs(id, first_name, last_name, email)
+      `)
+      .eq("status", "active_pursuit")
+      .order("updated_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("opportunity_matches")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active_pursuit"),
+    supabase
+      .from("opportunity_matches")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active_pursuit")
+      .in("nda_status", ["required", "sent"]),
+  ])
 
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((row) => ({
+  if (rowsResult.error) throw new Error(rowsResult.error.message)
+  if (countResult.error) throw new Error(countResult.error.message)
+  if (ndaResult.error) throw new Error(ndaResult.error.message)
+
+  const rows = (rowsResult.data ?? []).map((row) => ({
     ...row,
     opportunity: Array.isArray(row.opportunity) ? row.opportunity[0] ?? null : row.opportunity ?? null,
     repreneur: Array.isArray(row.repreneur) ? row.repreneur[0] ?? null : row.repreneur ?? null,
   })) as ActivePursuitRow[]
-}
-
-function OperationalStatCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  href,
-}: {
-  title: string
-  value: number
-  description: string
-  icon: LucideIcon
-  href: string
-}) {
-  return (
-    <Card className="gap-3">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <CardDescription>{title}</CardDescription>
-            <CardTitle className="text-2xl">{value}</CardTitle>
-          </div>
-          <div className="rounded-md border bg-muted p-2 text-muted-foreground">
-            <Icon />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">{description}</p>
-        <Button asChild variant="outline" size="sm" className="w-fit">
-          <Link href={href}>
-            Open
-            <ArrowRight data-icon="inline-end" />
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  )
+  return {
+    rows,
+    totalCount: countResult.count ?? rows.length,
+    ndaBlockedCount: ndaResult.count ?? 0,
+  }
 }
 
 export default async function OpportunityDashboardPage() {
   await connection()
 
-  const [freshnessData, opportunities, responses, activePursuits] = await Promise.all([
+  const [freshnessData, opportunities, responses, activePursuitSummary] = await Promise.all([
     getOpportunityFreshnessData(),
     listOpportunities(),
     listOpportunityMatchResponses(),
@@ -157,10 +141,13 @@ export default async function OpportunityDashboardPage() {
 
   const pendingResponses = responses.filter((response) => !response.reviewed_at).slice(0, 6)
   const recentOpportunities = opportunities.slice(0, 6)
-  const ndaBlockedPursuits = activePursuits.filter((pursuit) => ["required", "sent"].includes(pursuit.nda_status ?? ""))
+  const activePursuits = activePursuitSummary.rows
+  const openOpportunities = opportunities.filter(
+    (opportunity) => !["archived", "closed"].includes(opportunity.status)
+  )
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="wave-page flex flex-col gap-5">
       <SectionPageHeader
         title="Dashboard"
         subtitle="Daily operating view for opportunity follow-up, response review, active pursuits, NDA gates, and stale follow-up."
@@ -168,51 +155,25 @@ export default async function OpportunityDashboardPage() {
         tone="opportunity"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <OperationalStatCard
-          title="Latest opportunities"
-          value={recentOpportunities.length}
-          description="Newest opportunities needing staff hygiene and follow-up."
-          icon={BriefcaseBusiness}
-          href="/opportunities/find"
-        />
-        <OperationalStatCard
-          title="Pending responses"
-          value={pendingResponses.length}
-          description="Repreneur interest or not-a-fit responses waiting for staff review."
-          icon={Inbox}
-          href="/opportunities/reviews"
-        />
-        <OperationalStatCard
-          title="Active pursuits"
-          value={activePursuits.length}
-          description="Validated one-repreneur deal paths currently locked for execution."
-          icon={Landmark}
-          href="/opportunities/groups"
-        />
-        <OperationalStatCard
-          title="NDA blocked"
-          value={ndaBlockedPursuits.length}
-          description="Active pursuits where document access still depends on NDA progress."
-          icon={ShieldAlert}
-          href="/opportunities/groups"
-        />
-      </div>
-
-      <OpportunityFreshnessPanel data={freshnessData} />
+      <KpiMetricGrid className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiMetricTile title="Open opportunities" value={openOpportunities.length} period="Current inventory" icon={BriefcaseBusiness} tone="opportunity" trend={null} info={{ title: "Open opportunities", description: "Draft, active, and paused opportunities currently available to staff.", why: "Closed and archived records are excluded from this working inventory." }} />
+        <KpiMetricTile title="Pending responses" value={responses.filter((response) => !response.reviewed_at).length} period="Waiting for review" icon={Inbox} tone="attention" trend={null} info={{ title: "Pending responses", description: "Repreneur interest or decline responses awaiting staff review.", why: "These decisions unblock the next matching step." }} />
+        <KpiMetricTile title="Active pursuits" value={activePursuitSummary.totalCount} period="Validated deal paths" icon={Landmark} tone="repreneur" trend={null} info={{ title: "Active pursuits", description: "All validated one-repreneur deal paths currently in execution.", why: "The count now reflects the full set while the queue below remains intentionally concise." }} />
+        <KpiMetricTile title="NDA blocked" value={activePursuitSummary.ndaBlockedCount} period="Document access gated" icon={ShieldAlert} tone={activePursuitSummary.ndaBlockedCount > 0 ? "risk" : "neutral"} trend={null} info={{ title: "NDA blocked", description: "Active pursuits where access still depends on an NDA.", why: "These paths need document follow-up before they can progress." }} />
+      </KpiMetricGrid>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 py-0">
+          <CardHeader className="border-b py-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Inbox />
               Response review queue
             </CardTitle>
             <CardDescription>Newest repreneur responses that still need a staff decision.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0">
             {pendingResponses.length > 0 ? (
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -250,7 +211,7 @@ export default async function OpportunityDashboardPage() {
                 </Table>
               </div>
             ) : (
-              <Alert>
+              <Alert className="m-5 w-auto">
                 <CheckCircle2 />
                 <AlertTitle>No pending responses</AlertTitle>
                 <AlertDescription>There are no repreneur responses waiting for staff review.</AlertDescription>
@@ -259,17 +220,17 @@ export default async function OpportunityDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 py-0">
+          <CardHeader className="border-b py-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Landmark />
               Active pursuit queue
             </CardTitle>
             <CardDescription>Validated pursuits, current stage, and NDA state.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0">
             {activePursuits.length > 0 ? (
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -311,7 +272,7 @@ export default async function OpportunityDashboardPage() {
                 </Table>
               </div>
             ) : (
-              <Alert>
+              <Alert className="m-5 w-auto">
                 <AlertTriangle />
                 <AlertTitle>No active pursuits</AlertTitle>
                 <AlertDescription>Validated pursuit paths will appear here once staff locks a repreneur to an opportunity.</AlertDescription>
@@ -321,17 +282,20 @@ export default async function OpportunityDashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <OpportunityFreshnessPanel data={freshnessData} />
+
+      <Card className="gap-0 py-0">
+        <CardHeader className="border-b py-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <FileCheck2 />
             Latest opportunities
           </CardTitle>
           <CardDescription>Newest opportunities for quick operational follow-up.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-hidden rounded-md border">
-            <Table>
+        <CardContent className="px-0">
+          {recentOpportunities.length > 0 ? (
+            <div className="overflow-hidden">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Opportunity</TableHead>
@@ -365,8 +329,15 @@ export default async function OpportunityDashboardPage() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
-          </div>
+              </Table>
+            </div>
+          ) : (
+            <Alert className="m-5 w-auto">
+              <CheckCircle2 />
+              <AlertTitle>No opportunities yet</AlertTitle>
+              <AlertDescription>New opportunities will appear here once they are added.</AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </div>

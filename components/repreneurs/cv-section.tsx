@@ -148,7 +148,7 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
           <Button
             variant="outline"
             size="icon"
-            className="size-10 text-gray-400 hover:text-red-500 hover:border-red-200"
+            className="size-10 text-muted-foreground hover:text-red-500 hover:border-red-200"
             onClick={handleDelete}
             disabled={isDeleting}
           >

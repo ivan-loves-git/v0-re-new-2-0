@@ -1,10 +1,11 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, PackageOpen } from "lucide-react"
 import { createServerClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { OfferForm } from "@/components/offers/offer-form"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 export default async function EditOfferPage({ params }: { params: Promise<{ id: string }> }) {
   await connection()
@@ -19,7 +20,7 @@ export default async function EditOfferPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex max-w-4xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <Link href="/offers">
           <Button variant="ghost" size="sm">
@@ -29,10 +30,12 @@ export default async function EditOfferPage({ params }: { params: Promise<{ id: 
         </Link>
       </div>
 
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Edit Offer</h1>
-        <p className="text-gray-600 mt-1">Update the offer details</p>
-      </div>
+      <SectionPageHeader
+        title="Edit offer"
+        subtitle="Update the package details used across active client engagements."
+        icon={PackageOpen}
+        tone="repreneur"
+      />
 
       <OfferForm offer={offer} />
     </div>

@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { ArrowLeft, ArrowRight, Calculator, Loader2, Check, X, Info, ExternalLink } from "lucide-react"
-import { saveQuestionnaire, type QuestionnaireInput } from "@/lib/actions/repreneurs"
+import { ArrowLeft, ArrowRight, Check, X, Info, ExternalLink } from "lucide-react"
+import type { QuestionnaireInput } from "@/lib/actions/repreneurs"
 import {
   EMPLOYMENT_STATUS_OPTIONS,
   YEARS_EXPERIENCE_OPTIONS,
@@ -54,13 +54,59 @@ const STEPS: Step[] = [
   { id: 4, title: "Financial & Network", shortTitle: "Financial", description: "Investment capacity and affiliations" },
 ]
 
+function YesNoSkipQuestion({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: boolean | null
+  onChange: (value: boolean | null) => void
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <Label className="text-base font-medium">{label}</Label>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          type="button"
+          variant={value === true ? "default" : "outline"}
+          className={`min-w-[100px] flex-1 ${value === true ? "bg-primary" : ""}`}
+          onClick={() => onChange(true)}
+          disabled
+        >
+          <Check data-icon="inline-start" />
+          Yes
+        </Button>
+        <Button
+          type="button"
+          variant={value === false ? "default" : "outline"}
+          className={`min-w-[100px] flex-1 ${value === false ? "bg-primary" : ""}`}
+          onClick={() => onChange(false)}
+          disabled
+        >
+          <X data-icon="inline-start" />
+          No
+        </Button>
+        <Button
+          type="button"
+          variant={value === null ? "secondary" : "ghost"}
+          className="min-w-[100px] flex-1 text-muted-foreground"
+          onClick={() => onChange(null)}
+          disabled
+        >
+          Skip
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function QuestionnairePage() {
   const router = useRouter()
   const params = useParams()
   const repreneurId = params.id as string
 
   const [currentStep, setCurrentStep] = useState(1)
-  const [isSaving, setIsSaving] = useState(false)
   const [repreneurName, setRepreneurName] = useState("")
 
   const [formData, setFormData] = useState<QuestionnaireInput>({
@@ -114,18 +160,6 @@ export default function QuestionnairePage() {
     loadData()
   }, [repreneurId])
 
-  const handleSubmit = async () => {
-    setIsSaving(true)
-    try {
-      await saveQuestionnaire(repreneurId, formData)
-      router.push(`/repreneurs/${repreneurId}`)
-    } catch (error) {
-      console.error("Failed to save questionnaire:", error)
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const toggleMultiSelect = (field: keyof QuestionnaireInput, value: string) => {
     const current = formData[field] as string[]
     const updated = current.includes(value)
@@ -137,43 +171,6 @@ export default function QuestionnairePage() {
   const setYesNo = (field: keyof QuestionnaireInput, value: boolean | null) => {
     setFormData({ ...formData, [field]: value })
   }
-
-  // Check if all required questions are answered
-  const isStepComplete = (step: number): boolean => {
-    switch (step) {
-      case 1:
-        return !!(
-          formData.q1_employment_status &&
-          formData.q2_years_experience &&
-          formData.q3_industry_sectors.length > 0 &&
-          formData.q5_team_size &&
-          formData.q8_executive_roles.length > 0
-        )
-      case 2:
-        return !!(
-          formData.q4_has_ma_experience !== null &&
-          formData.q6_involved_in_ma !== null &&
-          formData.q9_board_experience !== null
-        )
-      case 3:
-        return !!(
-          formData.q10_journey_stages.length > 0 &&
-          formData.q11_target_sectors.length > 0 &&
-          formData.q12_has_identified_targets !== null
-        )
-      case 4:
-        return !!(
-          formData.q14_investment_capacity &&
-          formData.q15_funding_status &&
-          formData.q16_network_training.length > 0 &&
-          formData.q17_open_to_co_acquisition !== null
-        )
-      default:
-        return false
-    }
-  }
-
-  const isAllComplete = STEPS.every((step) => isStepComplete(step.id))
 
   // Calculate per-step progress percentage
   const getStepProgress = (step: number): number => {
@@ -214,70 +211,24 @@ export default function QuestionnairePage() {
     }
   }
 
-  const YesNoSkipQuestion = ({
-    label,
-    value,
-    onChange,
-  }: {
-    label: string
-    value: boolean | null
-    onChange: (val: boolean | null) => void
-  }) => (
-    <div className="space-y-3">
-      <Label className="text-base font-medium">{label}</Label>
-      <div className="flex flex-wrap gap-3">
-        <Button
-          type="button"
-          variant={value === true ? "default" : "outline"}
-          className={`flex-1 min-w-[100px] ${value === true ? "bg-primary" : ""}`}
-          onClick={() => onChange(true)}
-          disabled
-        >
-          <Check className="size-4 mr-2" />
-          Yes
-        </Button>
-        <Button
-          type="button"
-          variant={value === false ? "default" : "outline"}
-          className={`flex-1 min-w-[100px] ${value === false ? "bg-primary" : ""}`}
-          onClick={() => onChange(false)}
-          disabled
-        >
-          <X className="size-4 mr-2" />
-          No
-        </Button>
-        <Button
-          type="button"
-          variant={value === null ? "secondary" : "ghost"}
-          className="flex-1 min-w-[100px] text-muted-foreground"
-          onClick={() => onChange(null)}
-          disabled
-        >
-          Skip
-        </Button>
-      </div>
-    </div>
-  )
-
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Unified Header */}
-      <div className="bg-white border-b shadow-sm shrink-0">
+      <div className="shrink-0 border-b bg-background">
         {/* Top row: Back button and title */}
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="max-w-4xl mx-auto flex items-center">
+        <div className="border-b px-4 py-3">
+          <div className="mx-auto flex max-w-4xl items-center">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push(`/repreneurs/${repreneurId}`)}
-              className="gap-2"
             >
-              <ArrowLeft className="size-4" />
+              <ArrowLeft data-icon="inline-start" />
               <span className="hidden sm:inline">Back to Profile</span>
               <span className="sm:hidden">Back</span>
             </Button>
-            <div className="text-center flex-1 px-4">
-              <h1 className="font-semibold text-gray-900">Intake Questionnaire</h1>
+            <div className="flex-1 px-4 text-center">
+              <h1 className="font-semibold text-foreground">Intake Questionnaire</h1>
               <p className="text-xs text-muted-foreground">{repreneurName}</p>
             </div>
             <div className="w-[100px]" /> {/* Spacer for centering */}
@@ -286,10 +237,10 @@ export default function QuestionnairePage() {
 
         {/* Step cards with integrated progress */}
         <div className="px-4 py-3">
-          <div className="max-w-xl mx-auto">
+          <div className="mx-auto max-w-xl">
             <div className="grid grid-cols-4 gap-2">
               {STEPS.map((step) => {
-                const complete = isStepComplete(step.id)
+                const complete = getStepProgress(step.id) === 100
                 const active = currentStep === step.id
                 const progress = getStepProgress(step.id)
                 return (
@@ -297,12 +248,12 @@ export default function QuestionnairePage() {
                     key={step.id}
                     onClick={() => setCurrentStep(step.id)}
                     className={`
-                      relative overflow-hidden rounded-lg border-2 text-left transition-all min-h-[60px] flex flex-col
+                      relative flex min-h-[60px] flex-col overflow-hidden rounded-md border text-left transition-[background-color,border-color,box-shadow]
                       ${active
-                        ? "border-primary ring-2 ring-primary/20"
+                        ? "border-primary bg-primary/5 shadow-xs"
                         : complete
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-gray-300"
+                          ? "border-success/30 bg-success/5"
+                          : "border-border hover:border-ring/40 hover:bg-muted/40"
                       }
                     `}
                   >
@@ -310,27 +261,27 @@ export default function QuestionnairePage() {
                     <div className="px-2 py-2 flex-1">
                       <div className="flex items-start gap-1.5">
                         {complete && (
-                          <div className="flex-shrink-0 size-4 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
+                          <div className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-success">
                             <Check className="size-2.5 text-white" />
                           </div>
                         )}
-                        <span className={`text-xs font-medium leading-tight whitespace-pre-line ${complete ? "text-green-700" : active ? "text-primary" : "text-gray-700"}`}>
+                        <span className={`whitespace-pre-line text-xs font-medium leading-tight ${complete ? "text-success" : active ? "text-primary" : "text-foreground"}`}>
                           {step.id}. {step.title}
                         </span>
                       </div>
                     </div>
                     {/* Progress bar at bottom */}
                     {!complete && (
-                      <div className="h-1 bg-gray-100 mt-auto">
+                      <div className="mt-auto h-1 bg-muted">
                         <div
-                          className={`h-full transition-all duration-300 ${active ? "bg-primary" : "bg-gray-300"}`}
+                          className={`h-full transition-[width] duration-300 ${active ? "bg-primary" : "bg-muted-foreground/30"}`}
                           style={{ width: `${progress}%` }}
                         />
                       </div>
                     )}
                     {/* Full green bar when complete */}
                     {complete && (
-                      <div className="h-1 bg-green-500 mt-auto" />
+                      <div className="mt-auto h-1 bg-success" />
                     )}
                   </button>
                 )
@@ -341,17 +292,17 @@ export default function QuestionnairePage() {
       </div>
 
       {/* Main Content - Scrollable */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 min-h-0">
-        <div className="max-w-3xl mx-auto px-4 py-6">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-surface-subtle/60">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           {/* Read-only Banner */}
-          <Alert className="mb-6 bg-amber-50 border-amber-200">
-            <Info className="size-4 text-amber-600" />
-            <AlertTitle className="text-amber-800">Questionnaire v1 (Lecture seule)</AlertTitle>
-            <AlertDescription className="text-amber-700">
+          <Alert className="mb-6 border-warning/30 bg-warning/5">
+            <Info className="size-4 text-warning" />
+            <AlertTitle>Questionnaire v1 (Lecture seule)</AlertTitle>
+            <AlertDescription>
               Ce questionnaire est en lecture seule. Pour modifier les scores, utilisez le nouveau questionnaire v2 sur la page profil.
               <Link
                 href={`/repreneurs/${repreneurId}`}
-                className="ml-2 inline-flex items-center gap-1 text-amber-800 font-medium hover:underline"
+                className="ml-2 inline-flex items-center gap-1 font-medium text-foreground hover:underline"
               >
                 Retour au profil
                 <ExternalLink className="size-3" />
@@ -359,17 +310,17 @@ export default function QuestionnairePage() {
             </AlertDescription>
           </Alert>
 
-          <Card className="opacity-75">
+          <Card>
             <CardHeader>
               <CardTitle className="text-xl">{STEPS[currentStep - 1].title}</CardTitle>
               <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-10">
+            <CardContent className="flex flex-col gap-10">
               {/* Step 1: Professional Background */}
               {currentStep === 1 && (
                 <>
                   {/* Q1: Employment Status */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q1. Current employment status</Label>
                     <RadioGroup
                       value={formData.q1_employment_status ?? ""}
@@ -378,7 +329,7 @@ export default function QuestionnairePage() {
                       disabled
                     >
                       {EMPLOYMENT_STATUS_WITH_SKIP.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q1_employment_status === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q1_employment_status === opt.value ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <RadioGroupItem value={opt.value} id={`q1-${opt.value}`} />
                           <Label htmlFor={`q1-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -389,7 +340,7 @@ export default function QuestionnairePage() {
                   </div>
 
                   {/* Q2: Years of Experience */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q2. Years of professional experience</Label>
                     <RadioGroup
                       value={formData.q2_years_experience ?? ""}
@@ -398,7 +349,7 @@ export default function QuestionnairePage() {
                       disabled
                     >
                       {YEARS_EXPERIENCE_OPTIONS.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q2_years_experience === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q2_years_experience === opt.value ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <RadioGroupItem value={opt.value} id={`q2-${opt.value}`} />
                           <Label htmlFor={`q2-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -409,11 +360,11 @@ export default function QuestionnairePage() {
                   </div>
 
                   {/* Q3: Industry Sectors */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q3. Industry sectors of experience (select all that apply)</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {INDUSTRY_SECTOR_OPTIONS.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q3_industry_sectors.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q3_industry_sectors.includes(opt.value) ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <Checkbox
                             id={`q3-${opt.value}`}
                             checked={formData.q3_industry_sectors.includes(opt.value)}
@@ -429,7 +380,7 @@ export default function QuestionnairePage() {
                   </div>
 
                   {/* Q4: Team Size */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q4. Largest team size managed</Label>
                     <RadioGroup
                       value={formData.q5_team_size ?? ""}
@@ -438,7 +389,7 @@ export default function QuestionnairePage() {
                       disabled
                     >
                       {TEAM_SIZE_WITH_SKIP.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q5_team_size === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q5_team_size === opt.value ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <RadioGroupItem value={opt.value} id={`q4-${opt.value}`} />
                           <Label htmlFor={`q4-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -449,11 +400,11 @@ export default function QuestionnairePage() {
                   </div>
 
                   {/* Q5: Executive Roles */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q5. Executive roles held (select all that apply)</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {EXECUTIVE_ROLE_OPTIONS.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q8_executive_roles.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q8_executive_roles.includes(opt.value) ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <Checkbox
                             id={`q5-${opt.value}`}
                             checked={formData.q8_executive_roles.includes(opt.value)}
@@ -486,7 +437,7 @@ export default function QuestionnairePage() {
                   />
 
                   {(formData.q4_has_ma_experience || formData.q6_involved_in_ma) && (
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-3">
                       <Label className="text-base font-medium">Q8. Describe your M&A experience (optional)</Label>
                       <Textarea
                         value={formData.q7_ma_details ?? ""}
@@ -511,11 +462,11 @@ export default function QuestionnairePage() {
               {currentStep === 3 && (
                 <>
                   {/* Q10: Journey Stages */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q10. Current journey stage (select all that apply)</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {JOURNEY_STAGE_OPTIONS.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q10_journey_stages.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q10_journey_stages.includes(opt.value) ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <Checkbox
                             id={`q10-${opt.value}`}
                             checked={formData.q10_journey_stages.includes(opt.value)}
@@ -531,11 +482,11 @@ export default function QuestionnairePage() {
                   </div>
 
                   {/* Q11: Target Sectors */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q11. Target acquisition sectors (select all that apply)</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {INDUSTRY_SECTOR_OPTIONS.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q11_target_sectors.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q11_target_sectors.includes(opt.value) ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <Checkbox
                             id={`q11-${opt.value}`}
                             checked={formData.q11_target_sectors.includes(opt.value)}
@@ -557,7 +508,7 @@ export default function QuestionnairePage() {
                   />
 
                   {formData.q12_has_identified_targets && (
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-3">
                       <Label className="text-base font-medium">Q13. Describe your identified targets (optional)</Label>
                       <Textarea
                         value={formData.q13_target_details ?? ""}
@@ -576,7 +527,7 @@ export default function QuestionnairePage() {
               {currentStep === 4 && (
                 <>
                   {/* Q14: Investment Capacity */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q14. Investment capacity</Label>
                     <RadioGroup
                       value={formData.q14_investment_capacity ?? ""}
@@ -585,7 +536,7 @@ export default function QuestionnairePage() {
                       disabled
                     >
                       {INVESTMENT_CAPACITY_OPTIONS.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q14_investment_capacity === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q14_investment_capacity === opt.value ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <RadioGroupItem value={opt.value} id={`q14-${opt.value}`} />
                           <Label htmlFor={`q14-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -596,7 +547,7 @@ export default function QuestionnairePage() {
                   </div>
 
                   {/* Q15: Funding Status */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q15. Funding status</Label>
                     <RadioGroup
                       value={formData.q15_funding_status ?? ""}
@@ -605,7 +556,7 @@ export default function QuestionnairePage() {
                       disabled
                     >
                       {FUNDING_STATUS_WITH_SKIP.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q15_funding_status === opt.value ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q15_funding_status === opt.value ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <RadioGroupItem value={opt.value} id={`q15-${opt.value}`} />
                           <Label htmlFor={`q15-${opt.value}`} className="flex-1 cursor-pointer">
                             {opt.label}
@@ -616,11 +567,11 @@ export default function QuestionnairePage() {
                   </div>
 
                   {/* Q16: Network/Training */}
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <Label className="text-base font-medium">Q16. Network or training affiliations (select all that apply)</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {NETWORK_TRAINING_OPTIONS.map((opt) => (
-                        <div key={opt.value} className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${formData.q16_network_training.includes(opt.value) ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
+                        <div key={opt.value} className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${formData.q16_network_training.includes(opt.value) ? "border-primary/30 bg-primary/5" : "hover:bg-muted/60"}`}>
                           <Checkbox
                             id={`q16-${opt.value}`}
                             checked={formData.q16_network_training.includes(opt.value)}
@@ -646,13 +597,13 @@ export default function QuestionnairePage() {
           </Card>
 
           {/* Navigation Footer - Read-only mode */}
-          <div className="flex items-center justify-between mt-6 pb-8">
+          <div className="mt-6 flex items-center justify-between gap-3 pb-8">
             <Button
               variant="outline"
               onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
               disabled={currentStep === 1}
             >
-              <ArrowLeft className="size-4 mr-2" />
+              <ArrowLeft data-icon="inline-start" />
               Previous
             </Button>
 
@@ -660,12 +611,12 @@ export default function QuestionnairePage() {
               {currentStep < STEPS.length ? (
                 <Button onClick={() => setCurrentStep(currentStep + 1)}>
                   Next
-                  <ArrowRight className="size-4 ml-2" />
+                  <ArrowRight data-icon="inline-end" />
                 </Button>
               ) : (
                 <Button asChild>
                   <Link href={`/repreneurs/${repreneurId}`}>
-                    <ArrowLeft className="size-4 mr-2" />
+                    <ArrowLeft data-icon="inline-start" />
                     Retour au profil
                   </Link>
                 </Button>

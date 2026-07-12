@@ -22,6 +22,7 @@ import {
   type OpportunityImportRawRow,
 } from "@/lib/utils/opportunity-import"
 import { OpportunityImportSummary } from "@/components/opportunities/opportunity-import-summary"
+import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 function parseRowsFromText(text: string): OpportunityImportRawRow[] {
   const trimmed = text.trim()
@@ -100,17 +101,13 @@ export function OpportunityImportReview() {
 
   return (
     <div className="space-y-6">
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/opportunities/find">
-          <ArrowLeft className="size-4" />
-          Back to Opportunities
-        </Link>
-      </Button>
-
-      <div>
-        <h1 className="text-2xl font-semibold tracking-normal">Import opportunities</h1>
-        <p className="text-sm text-muted-foreground">Review mapped rows and diagnostics before saving.</p>
-      </div>
+      <SectionPageHeader
+        title="Import opportunities"
+        subtitle="Validate field mapping and diagnostics before records enter the opportunity workspace"
+        icon={FileUp}
+        tone="opportunity"
+        actions={<Button asChild variant="outline" size="sm"><Link href="/opportunities/find"><ArrowLeft className="size-4" />Back to opportunities</Link></Button>}
+      />
 
       <Card>
         <CardHeader>
@@ -120,7 +117,7 @@ export function OpportunityImportReview() {
           </CardTitle>
           <CardDescription>Use CSV, TSV, or JSON rows exported from the workbook.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]">
           <Input
             type="file"
             accept=".csv,.tsv,.txt,.json"
@@ -135,7 +132,7 @@ export function OpportunityImportReview() {
             rows={6}
             placeholder="Paste CSV/TSV/JSON rows here..."
           />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 lg:col-span-2">
             <Button type="button" onClick={() => void runPreview()} disabled={isBusy}>
               Preview rows
             </Button>
@@ -155,8 +152,8 @@ export function OpportunityImportReview() {
             <CardTitle>Review</CardTitle>
             <CardDescription>Blocked rows cannot be saved until required fields are fixed.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-hidden rounded-md border">
+          <CardContent className="px-0 pb-0">
+            <div className="overflow-hidden border-t">
               <Table>
                 <TableHeader>
                   <TableRow>
