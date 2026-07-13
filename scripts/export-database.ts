@@ -7,6 +7,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import * as fs from "fs"
 import * as path from "path"
+import { resolvePrivateExportDirectory } from "../lib/utils/private-export-path"
 
 // Simple env loader (same pattern as add-test-repreneur.ts)
 function loadEnv() {
@@ -139,10 +140,14 @@ async function exportDatabase() {
   // Generate filename with timestamp (safe for filenames)
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
   const filename = `export-${timestamp}.json`
-  const exportPath = path.join(process.cwd(), "data", "exports", filename)
+  const exportDirectory = resolvePrivateExportDirectory(
+    process.cwd(),
+    process.env.RENEW_EXPORT_DIR,
+  )
+  const exportPath = path.join(exportDirectory, filename)
 
-  // Ensure directory exists
-  fs.mkdirSync(path.dirname(exportPath), { recursive: true })
+  // Ensure the private export directory exists.
+  fs.mkdirSync(exportDirectory, { recursive: true })
 
   // Write file with UTF-8 encoding
   fs.writeFileSync(exportPath, JSON.stringify(exportData, null, 2), {
@@ -152,7 +157,7 @@ async function exportDatabase() {
   // Print summary
   console.log("Export complete!")
   console.log("")
-  console.log(`File: data/exports/${filename}`)
+  console.log(`File: ${exportPath}`)
   console.log(`Total records: ${exportData.metadata.totalRecords}`)
   console.log("")
   console.log("Record counts by table:")
@@ -161,16 +166,15 @@ async function exportDatabase() {
   })
   console.log("")
   console.log("Next steps:")
-  console.log("  git add data/exports/")
-  console.log("  git commit -m 'chore(02-01): export database snapshot before cleanup'")
+  console.log("The export is outside the repository and must be handled as a private artifact.")
 
-  return { filename, metadata: exportData.metadata }
+  return { filename, exportPath, metadata: exportData.metadata }
 }
 
 exportDatabase()
-  .then(({ filename }) => {
+  .then(({ exportPath }) => {
     console.log("")
-    console.log(`✓ Export saved to: data/exports/${filename}`)
+    console.log(`✓ Export saved outside the repository: ${exportPath}`)
     process.exit(0)
   })
   .catch((err) => {

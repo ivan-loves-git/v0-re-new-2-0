@@ -32,24 +32,8 @@ CREATE TRIGGER update_app_user_roles_updated_at
 
 ALTER TABLE public.app_user_roles ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Authenticated users can view app user roles" ON public.app_user_roles;
-CREATE POLICY "Authenticated users can view app user roles"
-  ON public.app_user_roles FOR SELECT
-  TO authenticated
-  USING (true);
-
-DROP POLICY IF EXISTS "Authenticated users can insert app user roles" ON public.app_user_roles;
-CREATE POLICY "Authenticated users can insert app user roles"
-  ON public.app_user_roles FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Authenticated users can update app user roles" ON public.app_user_roles;
-CREATE POLICY "Authenticated users can update app user roles"
-  ON public.app_user_roles FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
+-- Role assignments are managed through server-side staff-authorized actions.
+-- No anon/authenticated policies are created here; service_role bypasses RLS.
 
 INSERT INTO public.app_user_roles (user_id, email, role)
 SELECT id, LOWER(email), 'staff'::app_user_role

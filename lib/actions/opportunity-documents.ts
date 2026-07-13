@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { requireUser } from "@/lib/auth-server"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
@@ -30,7 +30,7 @@ function safeFileName(fileName: string) {
 }
 
 export async function listOpportunityDocuments(opportunityId: string): Promise<OpportunityDocument[]> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -44,7 +44,7 @@ export async function listOpportunityDocuments(opportunityId: string): Promise<O
 }
 
 export async function registerOpportunityDocument(formData: FormData) {
-  const user = await requireUser()
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
 
   const opportunityId = readString(formData, "opportunity_id")
@@ -109,7 +109,7 @@ export async function updateOpportunityDocumentVisibility(
   opportunityId: string,
   visibility: OpportunityDocumentVisibility
 ) {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -123,7 +123,7 @@ export async function updateOpportunityDocumentVisibility(
 }
 
 export async function removeOpportunityDocument(documentId: string, opportunityId: string) {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data: document, error: fetchError } = await supabase

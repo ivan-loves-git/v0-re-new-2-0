@@ -1,6 +1,7 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireStaffAccess } from "@/lib/access-control"
 import { sendEmail } from "@/lib/email"
 import { revalidatePath } from "next/cache"
 import { render } from "@react-email/render"
@@ -73,6 +74,7 @@ export interface EmailLogEntry {
  * Get email analytics stats
  */
 export async function getEmailStats(days: number = 30): Promise<EmailStats> {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
@@ -122,6 +124,7 @@ export async function getEmailLogs(options: {
   templateKey?: EmailTemplateKey
   status?: string
 }) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const { limit = 50, offset = 0, templateKey, status } = options
 
@@ -183,6 +186,7 @@ export async function getEmailLogs(options: {
  * Get template settings from database
  */
 export async function getTemplateSettings() {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -201,6 +205,7 @@ export async function getTemplateSettings() {
  * Toggle template enabled/disabled
  */
 export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabled: boolean) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -223,6 +228,7 @@ export async function updateTemplateSettings(
   templateKey: EmailTemplateKey,
   settings: { subject?: string; preview_text?: string; body_markdown?: string }
 ) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -286,6 +292,7 @@ export async function getTemplateSubject(
 export async function getRenderedTemplate(
   templateKey: EmailTemplateKey,
 ): Promise<{ subject: string; html: string; bodyMarkdown: string | null; bodyEditable: boolean }> {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const { data: row } = await supabase
     .from("email_templates")
@@ -389,6 +396,7 @@ export async function getRenderedTemplate(
  * Get list of repreneurs for manual send
  */
 export async function getRepreneursForManualSend(search?: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   let query = supabase
@@ -423,6 +431,7 @@ export async function sendManualEmail(
   templateKey: EmailTemplateKey,
   metadata?: Record<string, unknown>
 ) {
+  await requireStaffAccess()
   if (TEMPLATE_METADATA[templateKey]?.audience !== "rep") {
     return {
       success: false,
@@ -542,6 +551,7 @@ export async function sendTestEmail(
   firstName: string,
   templateKey: EmailTemplateKey
 ): Promise<{ success: boolean; message: string }> {
+  await requireStaffAccess()
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
@@ -681,6 +691,7 @@ export async function sendTestEmail(
  * Get daily email counts for chart
  */
 export async function getDailyEmailCounts(days: number = 14) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)

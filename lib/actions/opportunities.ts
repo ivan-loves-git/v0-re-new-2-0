@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { requireUser } from "@/lib/auth-server"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
@@ -200,7 +200,7 @@ function buildOpportunityPayload(formData: FormData, sourceId: string | null): O
 }
 
 export async function listOpportunities(): Promise<OpportunityWithSource[]> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -214,7 +214,7 @@ export async function listOpportunities(): Promise<OpportunityWithSource[]> {
 }
 
 export async function listOpportunityWorkSurfaceRecords(): Promise<OpportunityWorkSurfaceRecord[]> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -262,7 +262,7 @@ export async function listOpportunityWorkSurfaceRecords(): Promise<OpportunityWo
 }
 
 export async function getOpportunity(id: string): Promise<OpportunityWithSource | null> {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -280,7 +280,7 @@ export async function getOpportunity(id: string): Promise<OpportunityWithSource 
 }
 
 export async function createOpportunity(formData: FormData) {
-  const user = await requireUser()
+  const { user } = await requireStaffAccess()
   const validation = validateOpportunityForm(formData)
   if (validation) return validation
 
@@ -310,7 +310,7 @@ export async function createOpportunity(formData: FormData) {
 }
 
 export async function createOpportunityFromDraft(draft: Opportunity_Insert): Promise<Opportunity> {
-  const user = await requireUser()
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -330,7 +330,7 @@ export async function createOpportunityFromDraft(draft: Opportunity_Insert): Pro
 }
 
 export async function updateOpportunity(id: string, formData: FormData) {
-  const user = await requireUser()
+  const { user } = await requireStaffAccess()
   const validation = validateOpportunityForm(formData)
   if (validation) return validation
 
@@ -357,7 +357,7 @@ export async function updateOpportunity(id: string, formData: FormData) {
 }
 
 export async function archiveOpportunity(id: string) {
-  await requireUser()
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
