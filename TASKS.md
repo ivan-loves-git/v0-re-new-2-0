@@ -23,3 +23,10 @@ Live cross-cutting queue only. Product bugs, feature requests, testing asks, and
 ## ✅ Completed Cleanup
 
 - [x] 2026-06-21 Pruned `TASKS.md` from 22 product-tracker-style rows to the live cross-cutting queue; archived context at `docs/task-backlog-2026-06-21.md`.
+
+## Intake updates · 2026-07-13
+
+- [ ] Finalize the H2 roadmap and WAVE data architecture with Bertrand Galas (due 2026-07-13) · src: meeting 2026-07-09
+- [ ] Define the boundary between structured WAVE data and any external AI-oriented source store · src: meeting 2026-07-09
+- [ ] Map Bertrand Galas's sanitized opportunity-data sample into the existing M&A source records and validate the data model when received · src: meeting 2026-07-09
+- [ ] Propose a lightweight Re-New website technology, template, and branding direction · src: meeting 2026-07-09
