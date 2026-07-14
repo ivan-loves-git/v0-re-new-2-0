@@ -151,7 +151,7 @@ export function OffersTimeline({ clientOffers }: OffersTimelineProps) {
           {Object.entries(groupedOffers).map(([status, offers]) => (
             <div key={status}>
               <div className="mb-2 flex items-center gap-2 border-b pb-2">
-                <h3 className="text-sm font-medium text-foreground">
+                <h3 className="wave-micro-label text-foreground">
                   {STATUS_LABELS[status as OfferStatus]}
                 </h3>
                 <span className="rounded bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">

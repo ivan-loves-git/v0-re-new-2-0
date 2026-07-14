@@ -311,7 +311,7 @@ export function OpportunityDetail({
 
                   {topCandidates.length > 0 ? (
                     <div className="flex flex-col gap-2">
-                      <p className="text-xs font-medium text-muted-foreground">
+                      <p className="wave-micro-label">
                         Platform suggestions not saved yet
                       </p>
                       <div className="divide-y rounded-md border border-dashed">

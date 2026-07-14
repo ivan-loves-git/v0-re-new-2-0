@@ -5,5 +5,20 @@
       "maxFindings": 5,
       "maxChars": 8000
     }
+  },
+  "detector": {
+    "designSystem": {
+      "enabled": true
+    },
+    "ignoreFiles": [
+      "app/api/wavy/send/route.ts",
+      "app/c/**",
+      "app/scrapbook/**",
+      "app/scrapbook-html-page.tsx",
+      "app/opengraph-image.tsx",
+      "app/twitter-image.tsx",
+      "app/welcome/opengraph-image.tsx",
+      "app/welcome/twitter-image.tsx"
+    ]
   }
 }

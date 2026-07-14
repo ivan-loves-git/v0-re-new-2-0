@@ -115,7 +115,7 @@ export function KpiMetricTile({
             <Icon className={cn("size-3.5", colors.icon)} strokeWidth={2} />
           </div>
           <div className="-mt-0.5 min-w-0">
-            <p className="line-clamp-2 text-xs font-medium leading-4 text-muted-foreground">{title}</p>
+            <p className="wave-micro-label line-clamp-2">{title}</p>
             <p className="mt-0.5 truncate text-[10px] leading-tight text-muted-foreground/80">{period}</p>
           </div>
         </div>

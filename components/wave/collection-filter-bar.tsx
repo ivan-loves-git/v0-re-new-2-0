@@ -192,7 +192,7 @@ export function CollectionFilterBar({
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="start" className="max-h-[min(70vh,28rem)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto p-3">
-                <p className="mb-2 text-xs font-medium text-muted-foreground">More active filters</p>
+                <p className="wave-micro-label mb-2">More active filters</p>
                 <div className="flex flex-wrap gap-2">
                   {activeDefinitions.slice(4).map((definition) => (
                     <ActiveFilterChip key={definition.key} definition={definition} value={values[definition.key]} onChange={(value) => onFilterChange(definition.key, value)} onRemove={() => onFilterRemove(definition.key)} />

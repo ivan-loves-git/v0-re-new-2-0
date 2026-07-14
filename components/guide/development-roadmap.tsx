@@ -3,6 +3,7 @@
 import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw, Lightbulb, Target, AlertTriangle, Zap, Rocket } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { WaveSegmentedMetric, WaveSegmentedSummary } from "@/components/wave/visual-foundations"
 
 // Comprehensive roadmap capturing the full Wave journey
 // Product outcomes, product work, UX improvements, validation work, learnings, and features
@@ -1613,7 +1614,7 @@ const typeConfig = {
   feature: { icon: Sparkles, color: "text-blue-600", bgColor: "bg-blue-50", label: "Feature" },
   product: { icon: Zap, color: "text-sky-600", bgColor: "bg-sky-50", label: "Product work" },
   fix: { icon: Bug, color: "text-green-600", bgColor: "bg-green-50", label: "Fix" },
-  style: { icon: Palette, color: "text-purple-600", bgColor: "bg-purple-50", label: "UX improvement" },
+  style: { icon: Palette, color: "text-primary", bgColor: "bg-accent", label: "UX improvement" },
   testing: { icon: AlertTriangle, color: "text-indigo-600", bgColor: "bg-indigo-50", label: "Testing" },
   audit: { icon: CheckCircle, color: "text-emerald-600", bgColor: "bg-emerald-50", label: "Audit" },
   refactor: { icon: RefreshCw, color: "text-amber-600", bgColor: "bg-amber-50", label: "Refactor" },
@@ -1646,22 +1647,16 @@ export function DevelopmentRoadmap() {
       </div>
 
       {/* Stats summary */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-lg border bg-card sm:grid-cols-4">
+      <WaveSegmentedSummary>
         {[
           [roadmapEvents.length, "Milestones"],
           [productUpdates, "Product updates"],
           [uxImprovements, "UX improvements"],
           [validationWork, "QA / audits"],
-        ].map(([value, label], index) => (
-          <div
-            key={label}
-            className={`px-4 py-3 ${index % 2 ? "border-l" : ""} ${index > 1 ? "border-t sm:border-t-0" : ""} ${index > 0 ? "sm:border-l" : ""}`}
-          >
-            <div className="text-xl font-semibold tabular-nums text-foreground">{value}</div>
-            <div className="text-xs text-muted-foreground">{label}</div>
-          </div>
+        ].map(([value, label]) => (
+          <WaveSegmentedMetric key={label} value={value} label={label} />
         ))}
-      </div>
+      </WaveSegmentedSummary>
 
       <div className="relative">
         {/* Timeline line */}
@@ -1678,7 +1673,7 @@ export function DevelopmentRoadmap() {
             {/* Period card */}
             <Card className="overflow-hidden border-blue-100 py-0 gap-0">
               <CardContent className="p-0">
-                <div className="flex items-center justify-between bg-muted/25 p-4">
+                <div className="wave-panel-muted flex items-center justify-between p-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-xs bg-white">
@@ -1708,8 +1703,7 @@ export function DevelopmentRoadmap() {
                     return (
                       <div
                         key={i}
-                        className="flex gap-2.5 py-2 px-2.5 rounded-lg bg-muted/40 hover:bg-muted transition-colors animate-slide-in"
-                        style={{ animationDelay: `${i * 30}ms` }}
+                        className="flex gap-2.5 rounded-lg bg-muted/40 px-2.5 py-2 transition-colors hover:bg-muted"
                       >
                         <div className={`p-1.5 rounded-md ${config.bgColor} h-fit`}>
                           <Icon className={`size-3.5 ${config.color}`} />

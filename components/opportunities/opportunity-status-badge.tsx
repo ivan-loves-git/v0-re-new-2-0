@@ -43,7 +43,7 @@ export function OpportunityJourneyBadge({ journey }: { journey: OpportunityJourn
     draft: { className: "border-transparent bg-slate-100 text-slate-700 hover:bg-slate-100", icon: Pencil },
     live_in_inventory: { className: "border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100", icon: Inbox },
     matching: { className: "border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100", icon: Handshake },
-    proposed: { className: "border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100", icon: Send },
+    proposed: { className: "border-transparent bg-accent text-accent-foreground hover:bg-accent", icon: Send },
     interest_received: { className: "border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100", icon: MessageCircle },
     active_pursuit: { className: "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-100", icon: Handshake },
     info_memo_received: { className: "border-transparent bg-cyan-100 text-cyan-800 hover:bg-cyan-100", icon: FileText },

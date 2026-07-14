@@ -136,9 +136,11 @@ Impeccable is the mandatory implementation-quality gate for every UI change. It 
 - Treat every Impeccable hook finding as blocking. Correct the implementation immediately, then continue. Never dismiss, suppress, or ignore a finding without Ivan's explicit approval.
 - Before completing any UI task, run `pnpm design:check`. Fix every high-confidence artifact and rerun until the detector returns clean. A UI task cannot be called done while this command reports findings.
 - For broad, multi-screen, or design-system changes, also run an Impeccable `polish` pass on the changed surfaces. The deterministic detector cannot recognize every higher-order pattern.
-- The correction scope includes recognizable AI implementation artifacts across the product, not only side stripes: repeated equal-card grids, decorative accent borders, ghost cards, decorative gradients or stripes, excessive glass or rounding, tiny uppercase eyebrow scaffolding, invented affordances, and other Impeccable anti-patterns.
+- The correction scope includes recognizable AI implementation artifacts across the product, not only side stripes: repeated equal-card grids, decorative accent borders, ghost cards, decorative gradients or stripes, excessive glass or rounding, repeated decorative eyebrow scaffolding, invented affordances, and other Impeccable anti-patterns.
+- Ivan explicitly retained compact uppercase labels. `.wave-micro-label` and `WaveMicroLabel` are approved for KPI labels, table-style labels, short categories, and compact navigation. Do not report this governed pattern as an Impeccable defect, and do not improvise local uppercase/tracking variants.
+- Approved defaults are encoded in `DESIGN.md`, `app/globals.css`, and `components/wave/visual-foundations.tsx`: neutral full borders, quiet persistent panels, restrained semantic tints, segmented metric summaries, flat page/header surfaces, semantic product colors, and state-only motion.
 - Preserve valid product semantics. Standard tab underlines, navigation selection markers, status meaning, and the WAVE tide marker are not decorative card accents merely because they use a border.
-- Separate implementation corrections from product strategy. Impeccable may report information hierarchy, KPI, workflow, or product-model concerns, but those remain advisory until Ivan approves a strategic redesign.
+- Impeccable is forbidden from proposing or changing product logic, KPIs, workflows, hierarchy, information architecture, filters, or strategy. Its authority ends at implementation-level visual polish.
 - After corrections, perform browser QA on the actual changed surfaces at desktop and mobile widths. The detector passing is necessary, not sufficient.
 
 ## Open Questions (Waiting on Bertrand)

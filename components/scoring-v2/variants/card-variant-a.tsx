@@ -46,7 +46,7 @@ export function CardVariantA({ data, repreneurId }: CardVariantAProps) {
         {/* WHO Score */}
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHO</span>
+            <span className="wave-micro-label">WHO</span>
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -79,7 +79,7 @@ export function CardVariantA({ data, repreneurId }: CardVariantAProps) {
         {/* WHEN Score */}
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHEN</span>
+            <span className="wave-micro-label">WHEN</span>
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">

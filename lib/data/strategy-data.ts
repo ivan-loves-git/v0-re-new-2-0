@@ -115,7 +115,7 @@ export const REVENUE_COLORS = {
   subscription: "bg-emerald-500",
   consulting: "bg-amber-500",
   certification: "bg-blue-500",
-  commission: "bg-purple-500",
+  commission: "bg-chart-4",
 } as const
 
 export const REVENUE_LABELS = {

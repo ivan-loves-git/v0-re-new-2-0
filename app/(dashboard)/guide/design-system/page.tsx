@@ -6,6 +6,13 @@ import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { WaveAreaChart, WaveBarChart, WaveRadarChart } from "@/components/wave/charts"
+import {
+  WaveMicroLabel,
+  WavePanel,
+  WaveSegmentedMetric,
+  WaveSegmentedSummary,
+  WaveSemanticPanel,
+} from "@/components/wave/visual-foundations"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
 
@@ -47,6 +54,17 @@ const profileData = [
   { dimension: "Finance", score: 70 },
 ]
 
+const VISUAL_RULES = [
+  ["Compact labels", "Uppercase micro-labels are retained and must use the governed WAVE pattern."],
+  ["Container edges", "One neutral full border. No colored side or top stripes."],
+  ["Persistent panels", "Eight-pixel radius, quiet border, no wide soft shadow."],
+  ["Semantic emphasis", "Light token-based tint with a complete one-pixel border."],
+  ["Metric summaries", "Related values share one segmented surface."],
+  ["Page surfaces", "Flat canvas and muted headers. No decorative gradients."],
+  ["Color language", "Re-New semantic tokens only. No isolated purple or decorative stripes."],
+  ["Motion", "State feedback only. No staggered page-load choreography."],
+]
+
 export default function DesignSystemPage() {
   const filters = useCollectionFilters({ definitions: FILTERS })
   const activeCount = Object.values(filters.values).filter(Boolean).length
@@ -60,7 +78,47 @@ export default function DesignSystemPage() {
         icon={Palette}
       />
 
-      <section className="space-y-3">
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Governed visual language</h2>
+          <p className="text-sm text-muted-foreground">These defaults apply to every new screen and component. They are implementation rules, not product strategy.</p>
+        </div>
+
+        <WavePanel asChild>
+          <div>
+            <div className="wave-section-header">
+              <div>
+                <WaveMicroLabel>Re-New visual contract</WaveMicroLabel>
+                <h3 className="mt-1 text-base font-semibold">Quiet operational confidence</h3>
+              </div>
+              <p className="max-w-xl text-sm text-muted-foreground">Impeccable may test visual implementation against these rules. It may not redefine KPIs, workflows, filters, hierarchy, architecture, or strategy.</p>
+            </div>
+            <div className="divide-y">
+              {VISUAL_RULES.map(([rule, defaultTreatment]) => (
+                <div key={rule} className="grid gap-1 px-5 py-3 sm:grid-cols-[180px_1fr] sm:gap-5">
+                  <p className="text-sm font-medium text-foreground">{rule}</p>
+                  <p className="text-sm text-muted-foreground">{defaultTreatment}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </WavePanel>
+
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.45fr)]">
+          <WaveSegmentedSummary>
+            <WaveSegmentedMetric value="14" label="Milestones" />
+            <WaveSegmentedMetric value="32" label="Product updates" />
+            <WaveSegmentedMetric value="21" label="UX improvements" />
+            <WaveSegmentedMetric value="18" label="QA / audits" />
+          </WaveSegmentedSummary>
+          <WaveSemanticPanel className="flex flex-col justify-center gap-1 px-4 py-3">
+            <WaveMicroLabel>Semantic emphasis</WaveMicroLabel>
+            <p className="text-sm text-foreground">A restrained tint communicates importance without becoming a promotional card.</p>
+          </WaveSemanticPanel>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
         <div>
           <h2 className="text-lg font-semibold">Operational metrics</h2>
           <p className="text-sm text-muted-foreground">Consistent hierarchy, compact density, and semantic tones.</p>
@@ -72,7 +130,7 @@ export default function DesignSystemPage() {
         </KpiMetricGrid>
       </section>
 
-      <section className="space-y-3">
+      <section className="flex flex-col gap-3">
         <div>
           <h2 className="text-lg font-semibold">Progressive collection filtering</h2>
           <p className="text-sm text-muted-foreground">Search stays visible; optional criteria appear only when chosen.</p>
@@ -80,7 +138,7 @@ export default function DesignSystemPage() {
         <CollectionFilterBar search={filters.search} onSearchChange={filters.setSearch} searchPlaceholder="Search repreneurs..." definitions={FILTERS} values={filters.values} onFilterChange={filters.setFilter} onFilterRemove={filters.removeFilter} onClearFilters={filters.clearFilters} onReset={filters.reset} resultCount={resultCount} totalCount={57} resultLabel="repreneur" />
       </section>
 
-      <section className="space-y-3">
+      <section className="flex flex-col gap-3">
         <div>
           <h2 className="text-lg font-semibold">WAVE charts</h2>
           <p className="text-sm text-muted-foreground">EvilCharts foundations, customized for Re-New and exposed through one stable product API.</p>

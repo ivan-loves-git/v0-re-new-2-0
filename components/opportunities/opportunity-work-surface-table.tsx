@@ -181,7 +181,7 @@ function pursuitSignal(item: PreparedOpportunity) {
   if (item.proposedCount > 0) {
     return {
       label: `${item.proposedCount} proposed`,
-      className: "border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100",
+      className: "border-transparent bg-accent text-accent-foreground hover:bg-accent",
     }
   }
   if (item.opportunity.matches.length > 0) {
@@ -448,7 +448,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
             const groupTotalPages = Math.ceil(items.length / GROUP_ITEMS_PER_PAGE)
 
             return (
-              <section key={group.key} className="overflow-hidden rounded-lg border bg-card">
+              <section key={group.key} className="wave-panel overflow-hidden">
                 <button
                   className="flex w-full items-center justify-between bg-muted/25 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   onClick={() => toggleGroup(group.key)}

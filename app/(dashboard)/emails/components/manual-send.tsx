@@ -128,13 +128,13 @@ export function ManualSend() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <FlaskConical className={`size-4 ${testMode ? "text-purple-600" : "text-muted-foreground"}`} />
+            <FlaskConical className={`size-4 ${testMode ? "text-primary" : "text-muted-foreground"}`} />
             <Switch
               checked={testMode}
               onCheckedChange={setTestMode}
               aria-label="Toggle test mode"
             />
-            <span className={`text-sm font-medium ${testMode ? "text-purple-600" : "text-muted-foreground"}`}>
+            <span className={`text-sm font-medium ${testMode ? "text-primary" : "text-muted-foreground"}`}>
               Test Mode
             </span>
           </div>
@@ -156,7 +156,7 @@ export function ManualSend() {
         {/* Test Mode: Custom Email Input */}
         {testMode ? (
           <div className="space-y-4 rounded-lg border border-dashed bg-muted/30 p-4">
-            <div className="flex items-center gap-2 text-purple-700 text-sm font-medium">
+            <div className="flex items-center gap-2 text-sm font-medium text-primary">
               <FlaskConical className="size-4" />
               Test Mode: Emails are sent directly without logging
             </div>

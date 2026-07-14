@@ -13,7 +13,7 @@ const LEGEND_DOTS: Record<string, string> = {
   subscription: "bg-emerald-500",
   consulting: "bg-amber-500",
   certification: "bg-blue-500",
-  commission: "bg-purple-500",
+  commission: "bg-chart-4",
 }
 
 export function RevenueJourney({ persona }: RevenueJourneyProps) {

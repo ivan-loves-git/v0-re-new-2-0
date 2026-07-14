@@ -15,8 +15,8 @@ const principles = [
     icon: Package,
     title: "Offer-Centric Management",
     description: "Re-New operates through offers (Starter Pack, Deal Flow, Sparring Partner). The platform tracks which offers are assigned to which clients, their status, milestones, and deliverables.",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    color: "text-primary",
+    bgColor: "bg-accent",
   },
   {
     icon: Zap,

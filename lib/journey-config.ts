@@ -22,7 +22,7 @@ export const stageConfig: Record<JourneyStage, { label: string; color: string; i
   },
   execution: {
     label: "Execution",
-    color: "bg-purple-100 text-purple-800 border-purple-200",
+    color: "border-primary/20 bg-accent text-accent-foreground",
     icon: Rocket,
     description: "Actively executing an acquisition deal",
   },

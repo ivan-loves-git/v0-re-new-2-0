@@ -797,7 +797,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">WHO</span>
+                      <span className="wave-micro-label">WHO</span>
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -823,7 +823,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">WHEN</span>
+                      <span className="wave-micro-label">WHEN</span>
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>

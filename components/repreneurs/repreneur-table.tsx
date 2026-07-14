@@ -772,7 +772,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
           const paginatedGroup = sortedGroup.slice(startIndex, endIndex)
 
           return (
-            <section key={status} className="overflow-hidden rounded-lg border bg-card">
+            <section key={status} className="wave-panel overflow-hidden">
               <button
                 className="flex w-full items-center justify-between bg-muted/25 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 onClick={() => toggleGroup(status)}

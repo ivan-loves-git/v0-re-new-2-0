@@ -103,7 +103,7 @@ export function FloatingNav() {
         ))}
         </ol>
       </nav>
-      <span className="ml-auto hidden shrink-0 text-xs font-medium text-muted-foreground sm:inline">Re-New workspace</span>
+      <span className="wave-micro-label ml-auto hidden shrink-0 font-mono sm:inline">Re-New workspace</span>
     </header>
   )
 }

@@ -58,7 +58,7 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHO</span>
+              <span className="wave-micro-label">WHO</span>
               <Popover>
                 <PopoverTrigger asChild>
                   <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -90,7 +90,7 @@ export function CardVariantC({ data, repreneurId }: CardVariantCProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WHEN</span>
+              <span className="wave-micro-label">WHEN</span>
               <Popover>
                 <PopoverTrigger asChild>
                   <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">

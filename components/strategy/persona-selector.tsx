@@ -37,7 +37,7 @@ export function PersonaSelector({ personas, selectedIndex, onSelect }: PersonaSe
               {/* Name + Tag */}
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-base">{persona.name}</span>
-                <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wide font-semibold", TAG_STYLES[persona.tagColor])}>
+                <Badge variant="outline" className={cn("wave-micro-label", TAG_STYLES[persona.tagColor])}>
                   {persona.tag}
                 </Badge>
               </div>

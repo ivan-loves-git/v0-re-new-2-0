@@ -168,7 +168,7 @@ function PipelineColumn({
   }
 
   return (
-    <section className="min-w-[272px] max-w-[336px] flex-1 snap-start overflow-hidden rounded-lg border bg-card">
+    <section className="wave-panel min-w-[272px] max-w-[336px] flex-1 snap-start overflow-hidden">
       <div className="border-b bg-muted/30 px-3 py-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">{title}</h2>
