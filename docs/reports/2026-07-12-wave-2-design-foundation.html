@@ -439,6 +439,61 @@
         max-height: 560px;
       }
 
+      .live-evidence {
+        margin: 28px 0 0;
+        padding: 26px;
+        background: #f7fafc;
+        border: 1px solid #d9e4ec;
+        border-radius: 12px;
+      }
+
+      .live-evidence-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 18px;
+      }
+
+      .live-evidence-head h3 {
+        margin-bottom: 4px;
+        font-size: 22px;
+      }
+
+      .live-evidence-head p {
+        max-width: 690px;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .live-evidence-status {
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        color: #1f5b57;
+        background: var(--teal-soft);
+        border: 1px solid #cbe8e5;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .live-evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .live-evidence figure img {
+        display: block;
+        width: 100%;
+        height: 260px;
+        object-fit: cover;
+        object-position: left top;
+        background: #f6f8fa;
+      }
+
       .portal-after {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 118px;
@@ -544,8 +599,22 @@
         .executive,
         .logic-grid,
         .comparison,
+        .live-evidence-grid,
         .next-chapter {
           grid-template-columns: 1fr;
+        }
+
+        .live-evidence {
+          padding: 18px;
+        }
+
+        .live-evidence-head {
+          display: block;
+        }
+
+        .live-evidence-status {
+          display: inline-block;
+          margin-top: 12px;
         }
         .logic-grid article,
         .logic-grid article + article {
@@ -773,11 +842,13 @@
         <div class="proof-intro">
           <div>
             <span class="eyebrow">The change in practice</span>
-            <h2>Six representative product changes</h2>
+            <h2>Six product changes, now governed by one visual language</h2>
             <p>
               The examples below show how the same consolidation improves daily
               staff work, decision quality and the external repreneur
-              experience.
+              experience. The current-production evidence that follows shows
+              how the visual foundation now keeps those gains coherent as the
+              product grows.
             </p>
           </div>
           <div class="proof-count">All major product areas covered</div>
@@ -895,13 +966,13 @@
             </figure>
             <figure>
               <img
-                src="assets/wave-2-filtering-after.png"
-                alt="Consolidated directory with an open Add filter menu and a removable Qualified status chip"
+                src="assets/wave-2-filtering-after-current.jpeg"
+                alt="Current live Re-New directory with its Add filter menu open"
               />
               <figcaption>
-                <strong>Now</strong>The screenshot shows the open filter menu,
-                the active “Status: Qualified” chip and its one-click remove
-                action.
+                <strong>Now · current live product</strong>The filter menu is
+                available only when needed, preserving working space for the
+                list itself.
               </figcaption>
             </figure>
           </div>
@@ -946,13 +1017,13 @@
           </div>
           <figure class="current-proof">
             <img
-              src="assets/wave-2-pipeline-after.png"
-              alt="Current Re-New pipeline with shared filters and clear lifecycle columns"
+              src="assets/wave-2-pipeline-after-current.jpeg"
+              alt="Current live Re-New pipeline with neutral lifecycle columns and progressive filters"
             />
             <figcaption>
-              <strong>Current consolidated view</strong>Leads, qualified
-              profiles, clients and reactivation work now sit in one readable
-              lifecycle.
+              <strong>Current live product</strong>Leads, qualified profiles,
+              clients and reactivation work sit in one readable lifecycle,
+              without decorative colour competing with the status itself.
             </figcaption>
           </figure>
         </article>
@@ -1068,12 +1139,13 @@
             </figure>
             <figure>
               <img
-                src="assets/wave-2-opportunities-after.png"
-                alt="Consolidated opportunity dashboard with response review and active pursuit queues first"
+                src="assets/wave-2-opportunities-after-current.jpeg"
+                alt="Current live opportunity groups with quiet, neutral group containers"
               />
               <figcaption>
-                <strong>Now</strong>Response review and active pursuit queues
-                lead the operating view.
+                <strong>Now · current live product</strong>Opportunity groups
+                stay easy to distinguish without relying on decorative stripes
+                or competing coloured panels.
               </figcaption>
             </figure>
           </div>
@@ -1149,6 +1221,83 @@
             </figure>
           </div>
         </article>
+
+        <article class="story">
+          <div class="story-head">
+            <span class="story-number">07</span>
+            <div>
+              <span class="story-kicker">A foundation that holds as we add</span>
+              <h3>Make visual quality repeatable, not dependent on a redesign</h3>
+              <p>
+                The new visual pass is now part of the product foundation. New
+                screens inherit a calmer hierarchy, consistent panels, compact
+                labels, disciplined emphasis and one chart language rather than
+                inventing a new style each time.
+              </p>
+            </div>
+          </div>
+          <div class="change-logic">
+            <div>
+              <strong>Before</strong>
+              <p>
+                A good new screen could still introduce its own visual habits,
+                gradually making the product less coherent.
+              </p>
+            </div>
+            <div>
+              <strong>Now</strong>
+              <p>
+                Reusable visual rules make density, emphasis, metrics and
+                filtering feel like parts of the same operating system.
+              </p>
+            </div>
+            <div class="impact">
+              <strong>Why it matters</strong>
+              <p>
+                The team can ship faster while keeping the product familiar,
+                credible and easier to trust.
+              </p>
+            </div>
+          </div>
+
+          <div class="live-evidence">
+            <div class="live-evidence-head">
+              <div>
+                <span class="eyebrow">Current production evidence</span>
+                <h3>The refreshed visual system in practice</h3>
+                <p>
+                  Captured from the live product on 14 July. The operating
+                  language is deliberately quieter: priority comes from content,
+                  not decorative cards, stripes or gradients.
+                </p>
+              </div>
+              <span class="live-evidence-status">Live now</span>
+            </div>
+            <div class="live-evidence-grid">
+              <figure>
+                <img
+                  src="assets/wave-2-design-system-after-current.jpeg"
+                  alt="Live WAVE design system showing the governed visual contract, metric summary and progressive filtering"
+                />
+                <figcaption>
+                  <strong>One governed language</strong>Related metrics share
+                  one segmented summary; emphasis is restrained and functional.
+                </figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="assets/wave-2-roadmap-after-current.jpeg"
+                  alt="Live Re-New roadmap using the new quiet panel and segmented summary treatment"
+                />
+                <figcaption>
+                  <strong>Applied to real work</strong>Roadmap updates use the
+                  same calm structure, so attention stays with milestones and
+                  decisions rather than surface decoration.
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </article>
       </section>
 
       <section class="section next-chapter">
@@ -1174,7 +1323,7 @@
 
       <footer class="footer">
         <span>Re-New founder brief · UI / UX consolidation</span>
-        <span>Released in WAVE build 508</span>
+        <span>Updated with current production evidence · 14 July 2026</span>
       </footer>
     </main>
   </body>
