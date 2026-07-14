@@ -5,22 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Founder brief on the Re-New WAVE security foundation: what has been closed, what remains, and the release decision."
+      content="Founder brief on the completed Re-New WAVE security foundation: what was closed, how it was verified, and the release decision."
     />
     <link rel="icon" href="data:," />
     <title>Getting ready to sprint: Re-New security foundation</title>
     <!--
       Report source notes
       Audience: product stakeholders / Re-New founders.
-      Decision: whether WAVE can continue operating and what must close before wider exposure.
+      Decision: whether WAVE's audited security foundation is ready for controlled acceleration.
       Baseline: 23 reportable findings and 1 deferred credential check from security scan
       9981db41-3008-45cb-9658-dd982a46de7d at revision 95bb970.
-      Current-state evidence: remediation commit a1c22ff, WAVE build 512, 120/120 tests,
-      production staff and repreneur role QA, live RLS isolation checks.
+      Current-state evidence: remediation commits a1c22ff, 21ecee1 and 049f99b;
+      production build 049f99b; 128/128 tests; staff, populated repreneur,
+      empty-state repreneur and unassigned-account QA; live RLS, RPC, signup,
+      throttling, upload-token and stored-content checks.
       Structure mapping: title; Executive Summary; six evidence stories; next steps;
       founder decisions; caveats and assumptions.
-      Visual choice: exact status composition and labeled counts are used instead of a trend
-      chart because the evidence is a single audit snapshot, not a time series.
+      Visual choice: exact closure composition and labeled counts are used instead of a trend
+      chart because the evidence is one completed audit cohort, not a time series.
     -->
     <style>
       :root {
@@ -320,7 +322,7 @@
 
       .status-track {
         display: grid;
-        grid-template-columns: 14fr 9fr;
+        grid-template-columns: 1fr;
         min-height: 62px;
         overflow: hidden;
         border: 1px solid #cbd5e1;
@@ -988,9 +990,9 @@
         <h1>Getting ready to sprint: Re-New security foundation</h1>
         <p class="hero-lede">
           Re-New is entering its next chapter with a more mature product and a
-          clearer operating model. The first security pass has closed the
-          highest-risk exposure. One focused hardening pass remains before we
-          should widen access or accelerate public-facing growth.
+          clearer operating model. The audited security foundation is now closed
+          and production-verified. WAVE can move into controlled acceleration
+          with security maintained as an operating discipline.
         </p>
 
         <div class="runway" aria-label="Re-New product foundation sequence">
@@ -1000,14 +1002,14 @@
             <small>One coherent product experience</small>
           </article>
           <article>
-            <span class="runway-label">02 · First pass complete</span>
+            <span class="runway-label">02 · Complete</span>
             <strong>Security foundation</strong>
-            <small>All original high-risk findings closed</small>
+            <small>All 24 audit candidates resolved</small>
           </article>
           <article>
-            <span class="runway-label">03 · Next</span>
+            <span class="runway-label">03 · Ready</span>
             <strong>Controlled acceleration</strong>
-            <small>Close release gates, then widen exposure</small>
+            <small>Grow on a verified operating foundation</small>
           </article>
         </div>
       </header>
@@ -1017,22 +1019,22 @@
           <div class="executive-copy">
             <span class="eyebrow">Executive Summary</span>
             <h2 id="executive-summary">
-              The material exposure is closed. Full sign-off is not yet.
+              The audited security foundation is closed and verified.
             </h2>
             <p>
-              The audit validated 23 reportable security findings. Fourteen are
-              now closed in production, including every original high-risk
-              finding. The work protects the core CRM dataset, staff roles,
-              exports, opportunities, documents and email operations from
-              unauthorized access or action.
+              The audit produced 23 reportable findings and one deferred
+              credential-hygiene candidate. All 24 are now resolved. The work
+              protects the core CRM dataset, staff roles, exports,
+              opportunities, documents, email operations, identity flows, public
+              content and uploads from the validated attack paths.
             </p>
             <p>
-              WAVE can continue controlled staff operations and monitored
-              repreneur use. Nine findings remain before full security sign-off.
-              Five are release gates around identity claiming, unsafe public
-              content, public uploads and assessment access. The remaining four
-              deepen login protection and staff-only control over offers and
-              imports. One separate test credential check is still deferred.
+              Production proof covered four owned account states, blocked public
+              signup, database isolation, staff-only workflows, sanitized or
+              isolated stored content, one-use upload authority and live login
+              throttling. There is no meaningful audit remediation backlog. What
+              remains is continuous security maintenance as WAVE grows, not
+              unfinished foundation work.
             </p>
           </div>
 
@@ -1067,37 +1069,30 @@
             <div>
               <h3>Security closure status</h3>
               <p>
-                Original reportable findings from the July audit. The separate
-                deferred credential check is shown below but is not part of the
-                23-finding denominator.
+                Complete July audit cohort: 23 reportable findings plus the one
+                deferred credential-hygiene candidate.
               </p>
             </div>
-            <span class="status-note"
-              >All 9 original high-risk findings closed</span
-            >
+            <span class="status-note">All 24 audit candidates resolved</span>
           </div>
           <div
             class="status-track"
             role="img"
-            aria-label="Fourteen of twenty-three reportable findings are closed and nine remain pending"
+            aria-label="All twenty-four audit candidates are resolved"
           >
             <div class="status-segment closed">
-              <strong>14 closed</strong>
-              <span>61% of reportable findings</span>
-            </div>
-            <div class="status-segment pending">
-              <strong>9 pending</strong>
-              <span>39% of reportable findings</span>
+              <strong>24 resolved</strong>
+              <span>100% of the validated audit cohort</span>
             </div>
           </div>
           <div class="status-foot">
             <div>
-              <strong>23</strong>
-              <span>Validated reportable findings</span>
+              <strong>23 / 23</strong>
+              <span>Reportable findings closed</span>
             </div>
             <div>
-              <strong>1</strong>
-              <span>Deferred credential check</span>
+              <strong>1 / 1</strong>
+              <span>Credential candidate closed by rotation</span>
             </div>
             <div>
               <strong>58 / 58</strong>
@@ -1125,10 +1120,10 @@
           </article>
           <article>
             <span class="eyebrow">What follows</span>
-            <h3>Finish the public-facing edges</h3>
+            <h3>Maintain the control as WAVE grows</h3>
             <p>
-              The next pass closes identity, content and abuse-prevention gaps,
-              then re-runs the same production proof before sign-off.
+              New public flows, integrations and roles should pass the same
+              security regression and production proof before release.
             </p>
           </article>
         </div>
@@ -1145,9 +1140,7 @@
               release decisions rather than implementation detail.
             </p>
           </div>
-          <div class="proof-count">
-            Closed, verified and pending work separated
-          </div>
+          <div class="proof-count">Closed controls and production proof</div>
         </div>
 
         <article class="story">
@@ -1377,7 +1370,7 @@
                 real staff and repreneur journeys.
               </p>
               <span class="story-status"
-                >WAVE build 512 · production verified</span
+                >WAVE build 049f99b · production verified</span
               >
             </div>
           </div>
@@ -1409,7 +1402,7 @@
             aria-label="Production verification evidence"
           >
             <div>
-              <strong>120 / 120</strong>
+              <strong>128 / 128</strong>
               <span>Automated tests passed</span>
             </div>
             <div>
@@ -1417,93 +1410,94 @@
               <span>Production build and lint errors</span>
             </div>
             <div>
-              <strong>2 roles</strong>
-              <span>Staff and repreneur journeys checked</span>
+              <strong>4 states</strong>
+              <span>Owned account journeys checked</span>
             </div>
             <div>
-              <strong>0 rows</strong>
-              <span>Core tables returned to anonymous access</span>
+              <strong>429 live</strong>
+              <span>Repeated login attempts throttled</span>
             </div>
           </div>
         </article>
 
-        <article class="story priority-story">
+        <article class="story">
           <div class="story-head">
             <span class="story-number">05</span>
             <div>
               <span class="story-kicker"
-                >Release gates before wider exposure</span
+                >The public-facing edges now fail safely</span
               >
-              <h3>Close identity, public content and abuse paths</h3>
+              <h3>Secure identity, public content and upload paths</h3>
               <p>
-                Five medium-priority findings form the next release gate. They
-                sit on surfaces that can be reached publicly or by a regular
-                account and therefore deserve the next focused pass.
+                The five findings that formed the public release gate are now
+                closed across portal claiming, stored content, public uploads
+                and assessment issuance.
               </p>
-              <span class="story-status pending"
-                >5 findings pending · release gate</span
+              <span class="story-status"
+                >5 findings closed · release gate passed</span
               >
             </div>
           </div>
           <div class="change-logic">
             <div>
-              <strong>Current state</strong>
+              <strong>Before</strong>
               <p>
-                Core data is protected, but some identity, content, upload and
-                assessment flows still trust caller input too much.
+                Public and regular-account flows could over-trust identity,
+                stored markup, uploads or assessment issuance.
               </p>
             </div>
             <div>
-              <strong>Next pass</strong>
+              <strong>Now</strong>
               <p>
-                Require verified ownership, render only safe content, constrain
-                uploads and restrict assessment issuance.
+                Access is invitation-led, stored markup is sanitized or
+                isolated, uploads require one-use authority and assessment
+                issuance is staff-only.
               </p>
             </div>
             <div class="impact">
               <strong>Why it matters</strong>
               <p>
-                These controls should be complete before Re-New expands public
-                signup, partner access or high-volume external campaigns.
+                Re-New can operate public intake and controlled portal access
+                without leaving the validated abuse paths open.
               </p>
             </div>
           </div>
-          <div class="evidence-panel pending-panel">
+          <div class="evidence-panel">
             <div class="evidence-title">
-              <strong>Next release gates</strong>
+              <strong>Closed public-edge controls</strong>
               <span>Five findings across four founder-level outcomes</span>
             </div>
             <div class="evidence-grid four">
               <div class="evidence-item">
-                <span class="item-number">01 · Pending</span>
+                <span class="item-number">01 · Closed</span>
                 <b>Verified portal identity</b>
                 <p>
-                  An existing repreneur profile must be claimed only through
-                  verified ownership or staff approval.
+                  Public signup is disabled. Staff invitations invalidate any
+                  pre-existing password and session before linking access.
                 </p>
               </div>
               <div class="evidence-item">
-                <span class="item-number">02 · Pending</span>
+                <span class="item-number">02 · Closed</span>
                 <b>Safe public content</b>
                 <p>
-                  Two stored-content paths must reject or sanitize unsafe markup
-                  before public display.
+                  Public markup is sanitized, review content is escaped and
+                  interactive reports run isolated from the WAVE session.
                 </p>
               </div>
               <div class="evidence-item">
-                <span class="item-number">03 · Pending</span>
+                <span class="item-number">03 · Closed</span>
                 <b>Resilient public uploads</b>
                 <p>
-                  Public CV intake needs quotas, throttling and abuse controls
-                  around storage.
+                  Public CV intake now uses same-origin, one-use upload
+                  authority with request-size and hourly quotas.
                 </p>
               </div>
               <div class="evidence-item">
-                <span class="item-number">04 · Pending</span>
+                <span class="item-number">04 · Closed</span>
                 <b>Controlled assessments</b>
                 <p>
-                  Leadership-assessment links and results must be issued only
-                  through an authorized flow.
+                  Leadership-assessment links are issued through a staff-only
+                  action and record the staff issuer.
                 </p>
               </div>
             </div>
@@ -1517,76 +1511,76 @@
               <span class="story-kicker"
                 >Depth and hygiene complete the foundation</span
               >
-              <h3>Finish login and staff-only workflow hardening</h3>
+              <h3>Harden login and staff-only workflows</h3>
               <p>
-                Four remaining findings and one deferred credential check do not
-                reopen the protected CRM core, but they still belong in the path
-                to full sign-off.
+                The final four reportable findings and the deferred credential
+                candidate are closed. Login abuse is throttled and offers,
+                imports and production credentials now follow explicit control.
               </p>
-              <span class="story-status pending"
-                >4 findings pending · 1 check deferred</span
+              <span class="story-status"
+                >4 findings closed · credential candidate resolved</span
               >
             </div>
           </div>
           <div class="change-logic">
             <div>
-              <strong>Current state</strong>
+              <strong>Before</strong>
               <p>
-                Login attempts are not locally throttled, and some offer and
-                opportunity-import actions need a staff-only boundary.
+                Repeated login attempts were unthrottled, and offer and import
+                actions relied on a weaker signed-in boundary.
               </p>
             </div>
             <div>
-              <strong>Completion path</strong>
+              <strong>Now</strong>
               <p>
-                Add login throttling, restrict offer and import changes, then
-                remove or rotate the tracked test credential.
+                Login attempts are database-throttled, business mutations are
+                staff-only and exposed credentials were removed and rotated.
               </p>
             </div>
             <div class="impact">
               <strong>Why it matters</strong>
               <p>
-                This closes the remaining avoidable paths and gives founders a
-                clean, evidence-backed sign-off point.
+                Founders now have a clean, evidence-backed closure point without
+                carrying avoidable security debt into the next sprint.
               </p>
             </div>
           </div>
-          <div class="evidence-panel pending-panel">
+          <div class="evidence-panel">
             <div class="evidence-title">
-              <strong>Remaining hardening</strong>
-              <span>Four reportable findings plus one separate check</span>
+              <strong>Closed hardening controls</strong>
+              <span>Four reportable findings plus one separate candidate</span>
             </div>
             <div class="evidence-grid">
               <div class="evidence-item">
-                <span class="item-number">01 · Pending</span>
+                <span class="item-number">01 · Closed</span>
                 <b>Login protection</b>
                 <p>
-                  Throttle repeated sign-in attempts to reduce automated
-                  password guessing.
+                  Repeated sign-in attempts are blocked after five failures in
+                  the fifteen-minute window, verified live in production.
                 </p>
               </div>
               <div class="evidence-item">
-                <span class="item-number">02 · Pending</span>
+                <span class="item-number">02 · Closed</span>
                 <b>Offer governance</b>
                 <p>
-                  Creating or changing offers must be explicitly limited to
-                  staff.
+                  Creating, changing, assigning or deleting offers and
+                  milestones is explicitly staff-only.
                 </p>
               </div>
               <div class="evidence-item">
-                <span class="item-number">03 · Pending</span>
+                <span class="item-number">03 · Closed</span>
                 <b>Opportunity imports</b>
                 <p>
-                  Bulk opportunity creation must use the same staff-only
-                  boundary as deal editing.
+                  Opportunity preview and bulk creation are staff-only, capped
+                  at 500 rows and reject invalid selections.
                 </p>
               </div>
               <div class="evidence-item">
-                <span class="item-number">04 · Deferred</span>
+                <span class="item-number">04 · Closed</span>
                 <b>Test credential hygiene</b>
                 <p>
-                  Remove the tracked production-targeted test login and rotate
-                  it without testing its current validity.
+                  Tracked logins were removed, five credential accounts were
+                  rotated and 110 existing sessions were revoked.
                 </p>
               </div>
             </div>
@@ -1597,43 +1591,42 @@
       <section class="section next-steps" aria-labelledby="next-steps-title">
         <div>
           <span class="eyebrow">Recommended next steps</span>
-          <h2 id="next-steps-title">Three passes to full sign-off</h2>
+          <h2 id="next-steps-title">Move from remediation to maintenance</h2>
           <p>
-            The order follows exposure and business consequence. It keeps the
-            next sprint focused and gives Re-New a clear point at which wider
-            access becomes a deliberate decision rather than an assumption.
+            There is no remaining audit-fix queue. The next security work is a
+            lightweight operating rhythm that keeps the verified foundation
+            intact while the product, user base and integrations expand.
           </p>
         </div>
         <ol class="step-list">
           <li>
             <span>01</span>
             <div>
-              <strong>Close the five release-gate findings</strong>
+              <strong>Keep security regression in the release gate</strong>
               <p>
-                Verified portal claiming, safe public content, upload abuse
-                controls and authorized assessment issuance come first.
+                Run the focused authorization and abuse-control suite whenever
+                identity, public intake, documents or outbound actions change.
               </p>
             </div>
           </li>
           <li>
             <span>02</span>
             <div>
-              <strong>Finish the four remaining workflow controls</strong>
+              <strong>Keep credentials in approved secret stores</strong>
               <p>
-                Add login throttling and staff-only authorization for offer
-                creation, offer changes and opportunity imports.
+                Maintain owned QA personas through local or CI secrets, rotate
+                on exposure and never place live logins in tracked files.
               </p>
             </div>
           </li>
           <li>
             <span>03</span>
             <div>
-              <strong
-                >Close credential hygiene and repeat production proof</strong
-              >
+              <strong>Re-check before materially wider exposure</strong>
               <p>
-                Remove and rotate the tracked test login, rerun the security
-                regression suite, then verify staff and repreneur journeys live.
+                Repeat the production proof and a targeted scan before adding
+                broader signup, new partner roles or materially new public
+                upload and content surfaces.
               </p>
             </div>
           </li>
@@ -1645,36 +1638,37 @@
         aria-labelledby="decision-title"
       >
         <span class="eyebrow">Founder decision</span>
-        <h2 id="decision-title">Keep operating. Hold wider exposure.</h2>
+        <h2 id="decision-title">Proceed with controlled acceleration.</h2>
         <p>
-          The right decision today is to continue normal controlled use while
-          treating broader public or partner access as gated. Full security
-          sign-off comes after the nine pending findings and the deferred
-          credential check are closed and re-verified in production.
+          The audited foundation no longer carries a meaningful remediation
+          backlog. Re-New can proceed with the next product chapter on build
+          049f99b, while continuing to treat materially new public exposure as a
+          fresh security decision rather than assuming today's proof covers
+          tomorrow's features.
         </p>
         <div class="decision-grid">
           <article class="decision-card">
-            <span>Continue</span>
-            <strong>Controlled WAVE operations</strong>
+            <span>Proceed</span>
+            <strong>Controlled product acceleration</strong>
             <p>
-              Staff workflows and monitored repreneur use can continue on the
-              protected production foundation.
-            </p>
-          </article>
-          <article class="decision-card hold">
-            <span>Hold</span>
-            <strong>Wider public and partner exposure</strong>
-            <p>
-              Do not broaden signup, upload campaigns or public content sharing
-              until the five release-gate findings are closed.
+              Staff workflows, repreneur access and public intake can continue
+              on the verified production foundation.
             </p>
           </article>
           <article class="decision-card">
-            <span>Sign off</span>
-            <strong>After the complete hardening pass</strong>
+            <span>Maintain</span>
+            <strong>Security as a release discipline</strong>
             <p>
-              Close all remaining items, repeat the audit checks and verify both
-              user roles in production before declaring the chapter complete.
+              Keep role, abuse, upload and content checks attached to the flows
+              they protect as WAVE evolves.
+            </p>
+          </article>
+          <article class="decision-card">
+            <span>Re-check</span>
+            <strong>At the next exposure boundary</strong>
+            <p>
+              Run targeted review before new signup models, partner roles or
+              materially different public surfaces are released.
             </p>
           </article>
         </div>
@@ -1692,8 +1686,8 @@
         <ul class="caveat-list">
           <li>
             <strong>Scope:</strong> the audit covered all 58 defined repository
-            areas at the reviewed revision and used bounded, non-destructive
-            production checks.
+            areas at the reviewed revision. Closure proof combines source tests,
+            live database checks and bounded production requests.
           </li>
           <li>
             <strong>Closure:</strong> closed means the control was changed and
@@ -1701,9 +1695,10 @@
             does not mean every possible future attack path has been eliminated.
           </li>
           <li>
-            <strong>Deferred credential:</strong> its presence was proven, but
-            validity was intentionally not tested. Removal and rotation are the
-            safe completion action.
+            <strong>Credential closure:</strong> current tracked credentials
+            were removed, five accounts were rotated and 110 sessions revoked.
+            Old values in repository history were not rewritten, but are no
+            longer valid credentials.
           </li>
           <li>
             <strong>Incident status:</strong> the audit proves vulnerable paths
@@ -1711,16 +1706,16 @@
             or did not occur.
           </li>
           <li>
-            <strong>Historical scope:</strong> repository-history sanitization
-            is excluded from this report. The closure count reflects the current
-            deployed product and tracked files.
+            <strong>Historical scope:</strong> repository-history rewriting is
+            excluded by decision. The closure count reflects the current
+            deployed product, database controls and tracked files.
           </li>
         </ul>
       </section>
 
       <footer class="footer">
         <span>Re-New founder brief · Security foundation</span>
-        <span>Security remediation released in WAVE build 512</span>
+        <span>Security remediation verified in WAVE build 049f99b</span>
       </footer>
     </main>
   </body>
