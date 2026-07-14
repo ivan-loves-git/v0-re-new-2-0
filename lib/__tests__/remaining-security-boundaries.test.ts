@@ -34,10 +34,14 @@ function expectStaffBeforeAdmin(relativePath: string, functionName: string) {
 describe("remaining security boundaries", () => {
   it("keeps Better Auth invitation-only with database-backed rate limits", () => {
     const authSource = source("lib/auth.ts")
+    const authRouteSource = source("app/api/auth/[...all]/route.ts")
     expect(authSource).toMatch(/disableSignUp:\s*true/)
     expect(authSource).toMatch(/rateLimit:\s*{[\s\S]*enabled:\s*true/)
     expect(authSource).toMatch(/storage:\s*"database"/)
     expect(authSource).not.toMatch(/rateLimit:\s*{\s*enabled:\s*false/)
+    expect(authRouteSource).toContain("consumeRequestRateLimit")
+    expect(authRouteSource).toContain('"/api/auth/sign-in/email"')
+    expect(authRouteSource).toContain("status: 429")
   })
 
   it("invalidates pre-existing credentials before linking portal access", () => {

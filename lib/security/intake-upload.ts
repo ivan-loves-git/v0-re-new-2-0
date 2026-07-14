@@ -36,7 +36,7 @@ function requestIp(request: Request) {
   return forwarded.split(",")[0]?.trim() || "unknown"
 }
 
-function clientFingerprint(request: Request) {
+export function requestFingerprint(request: Request) {
   return createHmac("sha256", env.BETTER_AUTH_SECRET)
     .update(requestIp(request))
     .digest("base64url")
@@ -48,7 +48,7 @@ function sign(value: string) {
     .digest("base64url")
 }
 
-async function consumeRateLimit(
+export async function consumeRequestRateLimit(
   key: string,
   max: number,
   windowSeconds: number,
@@ -93,8 +93,8 @@ export class IntakeUploadSecurityError extends Error {
 }
 
 export async function issueIntakeUploadToken(request: Request) {
-  const fingerprint = clientFingerprint(request)
-  const issueLimit = await consumeRateLimit(
+  const fingerprint = requestFingerprint(request)
+  const issueLimit = await consumeRequestRateLimit(
     `intake-token:${fingerprint}`,
     TOKEN_ISSUE_LIMIT,
     60 * 60,
@@ -157,7 +157,7 @@ export async function verifyAndConsumeIntakeUploadToken(
     payload.scope !== "intake-upload" ||
     !payload.jti ||
     payload.exp < Math.floor(Date.now() / 1000) ||
-    payload.ip !== clientFingerprint(request)
+    payload.ip !== requestFingerprint(request)
   ) {
     throw new IntakeUploadSecurityError(
       "Upload authorization has expired or is invalid.",
@@ -165,7 +165,7 @@ export async function verifyAndConsumeIntakeUploadToken(
     )
   }
 
-  const tokenLimit = await consumeRateLimit(
+  const tokenLimit = await consumeRequestRateLimit(
     `intake-upload-token:${payload.jti}`,
     1,
     TOKEN_TTL_SECONDS,
@@ -178,7 +178,7 @@ export async function verifyAndConsumeIntakeUploadToken(
     )
   }
 
-  const ipLimit = await consumeRateLimit(
+  const ipLimit = await consumeRequestRateLimit(
     `intake-upload-ip:${payload.ip}`,
     UPLOADS_PER_IP_PER_HOUR,
     60 * 60,
