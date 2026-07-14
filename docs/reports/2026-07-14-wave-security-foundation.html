@@ -19,8 +19,8 @@
       production build 049f99b; 128/128 tests; staff, populated repreneur,
       empty-state repreneur and unassigned-account QA; live RLS, RPC, signup,
       throttling, upload-token and stored-content checks.
-      Structure mapping: title; Executive Summary; six evidence stories; next steps;
-      founder decisions; caveats and assumptions.
+      Structure mapping: title; Executive Summary; six evidence stories; cyber
+      operating rhythm; caveats and assumptions.
       Visual choice: exact closure composition and labeled counts are used instead of a trend
       chart because the evidence is one completed audit cohort, not a time series.
     -->
@@ -1590,88 +1590,50 @@
 
       <section class="section next-steps" aria-labelledby="next-steps-title">
         <div>
-          <span class="eyebrow">Recommended next steps</span>
-          <h2 id="next-steps-title">Move from remediation to maintenance</h2>
+          <span class="eyebrow">What’s next for cyber</span>
+          <h2 id="next-steps-title">
+            The known risks are fixed. Security now becomes routine.
+          </h2>
           <p>
-            There is no remaining audit-fix queue. The next security work is a
-            lightweight operating rhythm that keeps the verified foundation
-            intact while the product, user base and integrations expand.
+            The risks found in the audit were fixed and rechecked by different
+            security agents, automated tests and live production checks. There
+            is no known cyber-remediation backlog. From here, security becomes
+            part of how we operate and build WAVE.
           </p>
         </div>
         <ol class="step-list">
           <li>
             <span>01</span>
             <div>
-              <strong>Keep security regression in the release gate</strong>
+              <strong>Weekly security check</strong>
               <p>
-                Run the focused authorization and abuse-control suite whenever
-                identity, public intake, documents or outbound actions change.
+                Review recent changes, access controls, alerts and new exposure
+                so small issues are caught early.
               </p>
             </div>
           </li>
           <li>
             <span>02</span>
             <div>
-              <strong>Keep credentials in approved secret stores</strong>
+              <strong>Security gate for every major build</strong>
               <p>
-                Maintain owned QA personas through local or CI secrets, rotate
-                on exposure and never place live logins in tracked files.
+                Any major release that changes data, access, public forms,
+                uploads or integrations receives a focused security check before
+                it goes live.
               </p>
             </div>
           </li>
           <li>
             <span>03</span>
             <div>
-              <strong>Re-check before materially wider exposure</strong>
+              <strong>One general audit every month</strong>
               <p>
-                Repeat the production proof and a targeted scan before adding
-                broader signup, new partner roles or materially new public
-                upload and content surfaces.
+                Run a full platform review, verify that earlier controls still
+                hold and close anything new before it becomes accumulated risk.
               </p>
             </div>
           </li>
         </ol>
-      </section>
-
-      <section
-        class="section decision-section"
-        aria-labelledby="decision-title"
-      >
-        <span class="eyebrow">Founder decision</span>
-        <h2 id="decision-title">Proceed with controlled acceleration.</h2>
-        <p>
-          The audited foundation no longer carries a meaningful remediation
-          backlog. Re-New can proceed with the next product chapter on build
-          049f99b, while continuing to treat materially new public exposure as a
-          fresh security decision rather than assuming today's proof covers
-          tomorrow's features.
-        </p>
-        <div class="decision-grid">
-          <article class="decision-card">
-            <span>Proceed</span>
-            <strong>Controlled product acceleration</strong>
-            <p>
-              Staff workflows, repreneur access and public intake can continue
-              on the verified production foundation.
-            </p>
-          </article>
-          <article class="decision-card">
-            <span>Maintain</span>
-            <strong>Security as a release discipline</strong>
-            <p>
-              Keep role, abuse, upload and content checks attached to the flows
-              they protect as WAVE evolves.
-            </p>
-          </article>
-          <article class="decision-card">
-            <span>Re-check</span>
-            <strong>At the next exposure boundary</strong>
-            <p>
-              Run targeted review before new signup models, partner roles or
-              materially different public surfaces are released.
-            </p>
-          </article>
-        </div>
       </section>
 
       <section class="section caveats" aria-labelledby="caveats-title">
