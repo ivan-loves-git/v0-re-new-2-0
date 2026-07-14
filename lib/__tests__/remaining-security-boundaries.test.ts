@@ -44,6 +44,15 @@ describe("remaining security boundaries", () => {
     expect(authRouteSource).toContain("status: 429")
   })
 
+  it("clears revoked sessions instead of looping at the routing gate", () => {
+    const routingSource = functionSource(
+      "lib/access-control.ts",
+      "getPostLoginDestination",
+    )
+    expect(routingSource).toContain('if (!access) return "/auth/logout"')
+    expect(routingSource).not.toContain('if (!access) return "/auth/login"')
+  })
+
   it("invalidates pre-existing credentials before linking portal access", () => {
     const portalSource = functionSource(
       "lib/actions/portal-access.ts",

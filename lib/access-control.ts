@@ -171,7 +171,11 @@ export const getCurrentUserAccess = cache(
 
 export async function getPostLoginDestination() {
   const access = await getCurrentUserAccess()
-  if (!access) return "/auth/login"
+  // `/routing` is only reached when the proxy sees a session cookie. If the
+  // session behind that cookie has expired or been revoked, clear the stale
+  // cookie before returning to login instead of bouncing forever between
+  // `/routing` and `/auth/login`.
+  if (!access) return "/auth/logout"
   if (access.role === "staff") return "/dashboard_re"
   if (hasPortalAccess(access)) return "/portal/deals"
   return "/auth/logout"
