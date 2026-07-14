@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Impeccable visual polish decisions | Re-New</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17243a;
+      --muted: #657084;
+      --faint: #8992a2;
+      --line: #d8dee8;
+      --line-strong: #b9c2d0;
+      --paper: #ffffff;
+      --canvas: #f5f6f8;
+      --soft: #f0f2f5;
+      --navy: #10233f;
+      --blue: #155eef;
+      --blue-soft: #edf4ff;
+      --yes: #087a55;
+      --yes-soft: #e9f8f1;
+      --no: #b42318;
+      --no-soft: #fff0ee;
+      --warning: #a15c00;
+      --warning-soft: #fff6e8;
+      --radius: 10px;
+      --focus: 0 0 0 3px rgba(21, 94, 239, 0.22);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    button { font: inherit; }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+    }
+
+    .topbar {
+      position: sticky;
+      z-index: 20;
+      top: 0;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+    }
+
+    .topbar-inner,
+    main {
+      width: min(1480px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .topbar-inner {
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 220px;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .brand strong { display: block; font-size: 14px; }
+    .brand span { display: block; color: var(--muted); font-size: 12px; }
+
+    .progress {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .progress-track {
+      height: 6px;
+      flex: 1;
+      overflow: hidden;
+      border-radius: 99px;
+      background: var(--soft);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: var(--blue);
+      transition: width 160ms ease;
+    }
+
+    .progress-copy {
+      min-width: 120px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .top-actions { display: flex; gap: 8px; }
+
+    .button {
+      min-height: 36px;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      background: white;
+      color: var(--ink);
+      cursor: pointer;
+      padding: 7px 11px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .button:hover { background: var(--soft); }
+
+    .button.primary {
+      border-color: var(--navy);
+      background: var(--navy);
+      color: white;
+    }
+
+    .button.primary:hover { background: #1b3456; }
+
+    main { padding: 54px 0 80px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+      gap: 56px;
+      align-items: end;
+      padding-bottom: 38px;
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .kicker {
+      margin: 0 0 12px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    h1 {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(36px, 4.4vw, 62px);
+      font-weight: 650;
+      letter-spacing: -0.045em;
+      line-height: 0.98;
+    }
+
+    .lede {
+      max-width: 780px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .scope-box {
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--paper);
+    }
+
+    .scope-row {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 12px;
+      padding: 13px 15px;
+    }
+
+    .scope-row + .scope-row { border-top: 1px solid var(--line); }
+    .scope-row b { font-size: 13px; }
+    .scope-row span { color: var(--muted); font-size: 13px; }
+    .scope-row.no span { color: var(--no); font-weight: 600; }
+
+    .section-intro {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 28px;
+      padding: 34px 0 20px;
+    }
+
+    .section-intro h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .section-intro p {
+      max-width: 860px;
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .decision-list {
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      background: var(--paper);
+    }
+
+    .decision {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr) 170px;
+      min-height: 310px;
+    }
+
+    .decision + .decision { border-top: 1px solid var(--line-strong); }
+
+    .decision-meta,
+    .decision-choice { padding: 24px; }
+
+    .decision-meta {
+      border-right: 1px solid var(--line);
+      background: #fafbfc;
+    }
+
+    .decision-id {
+      display: inline-flex;
+      min-width: 32px;
+      height: 25px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: white;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .source {
+      margin: 14px 0 0;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .decision-meta h3 {
+      margin: 5px 0 8px;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      line-height: 1.2;
+    }
+
+    .decision-meta p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .surface-list {
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .surface-list li + li { margin-top: 4px; }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .sample {
+      min-width: 0;
+      padding: 22px;
+    }
+
+    .sample + .sample { border-left: 1px solid var(--line); }
+
+    .sample-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .sample.after .sample-label { color: var(--yes); }
+
+    .sample-note {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stage {
+      min-height: 172px;
+      display: grid;
+      align-content: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7f8fa;
+      padding: 18px;
+    }
+
+    .decision-choice {
+      border-left: 1px solid var(--line);
+      background: #fafbfc;
+    }
+
+    .choice-label {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .choice-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+
+    .choice {
+      min-height: 40px;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      background: white;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .choice:hover { border-color: #8591a3; }
+    .choice.yes[aria-pressed="true"] { border-color: var(--yes); background: var(--yes-soft); color: var(--yes); }
+    .choice.no[aria-pressed="true"] { border-color: var(--no); background: var(--no-soft); color: var(--no); }
+
+    .decision-state {
+      margin-top: 12px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .decision[data-value="yes"] .decision-state { color: var(--yes); }
+    .decision[data-value="no"] .decision-state { color: var(--no); }
+
+    /* Specimens */
+    .mini-panel {
+      overflow: hidden;
+      border: 1px solid #d3d9e3;
+      border-radius: 9px;
+      background: white;
+    }
+
+    .mini-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 13px;
+      border-bottom: 1px solid #e0e4eb;
+      background: #f3f5f7;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .mini-panel-body { padding: 12px 13px; }
+    .mini-line { height: 7px; border-radius: 9px; background: #e4e8ee; }
+    .mini-line + .mini-line { margin-top: 8px; }
+    .mini-line.short { width: 58%; }
+    .mini-count { color: var(--muted); font-size: 11px; font-weight: 500; }
+
+    .uppercase-label {
+      color: #687487;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .natural-label { color: #536074; font-size: 12px; font-weight: 550; }
+    .metric-value { margin-top: 5px; font-size: 25px; font-weight: 650; letter-spacing: -0.03em; }
+
+    .accent-left-blue { border-left: 3px solid #2f6feb; }
+    .accent-left-amber { border-left: 3px solid #d29922; }
+    .accent-left-green { border-left: 3px solid #2da44e; }
+    .accent-top-blue { border-top: 3px solid #2f6feb; }
+    .accent-top-amber { border-top: 3px solid #d29922; }
+
+    .two-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .milestone-list { display: grid; gap: 10px; padding-left: 11px; border-left: 2px solid rgba(21, 94, 239, 0.22); }
+    .milestone-list.clean { padding-left: 0; border-left: 0; }
+    .milestone { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: center; font-size: 12px; }
+    .check { width: 16px; height: 16px; border: 1px solid #b8c1ce; border-radius: 4px; background: white; }
+
+    .question-card-old {
+      border: 1px solid #e0e4ea;
+      border-radius: 18px;
+      background: white;
+      box-shadow: 0 16px 28px rgba(31, 41, 55, 0.13);
+      padding: 18px;
+    }
+
+    .question-card-new { border: 1px solid #d7dde6; border-radius: 8px; background: white; padding: 18px; }
+    .field { height: 34px; margin-top: 10px; border: 1px solid #cbd3df; border-radius: 6px; background: #fff; }
+
+    .gradient-old { background: linear-gradient(135deg, #eff6ff, #eef2ff); }
+    .page-gradient-old { background: linear-gradient(180deg, white 0%, #eef1f5 100%); }
+    .flat-new { background: white; }
+
+    .consent-old { border: 2px solid #93c5fd; border-radius: 18px; background: linear-gradient(135deg, #eff6ff, #eef2ff); padding: 18px; }
+    .consent-new { border: 1px solid rgba(21, 94, 239, 0.24); border-radius: 8px; background: rgba(21, 94, 239, 0.045); padding: 18px; }
+
+    .stats-old { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-old { border-radius: 8px; padding: 11px; text-align: center; }
+    .stat-old:nth-child(1) { background: #eef0f3; }
+    .stat-old:nth-child(2) { background: #eaf6ff; color: #0369a1; }
+    .stat-old:nth-child(3) { background: #f5edff; color: #7e22ce; }
+    .stat-old:nth-child(4) { background: #eafaf1; color: #087a55; }
+    .stat-old b, .stat-new b { display: block; font-size: 19px; }
+    .stat-old span, .stat-new span { color: #657084; font-size: 10px; }
+
+    .stats-new { display: grid; grid-template-columns: repeat(2, 1fr); overflow: hidden; border: 1px solid #d7dde6; border-radius: 8px; background: white; }
+    .stat-new { padding: 11px; }
+    .stat-new:nth-child(even) { border-left: 1px solid #d7dde6; }
+    .stat-new:nth-child(n+3) { border-top: 1px solid #d7dde6; }
+
+    .timeline { display: grid; gap: 10px; }
+    .timeline-row { display: grid; grid-template-columns: 11px 1fr; gap: 9px; align-items: center; }
+    .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #2f6feb; }
+    .timeline-row.old:nth-child(2) { opacity: 0.68; transform: translateY(4px); }
+    .timeline-row.old:nth-child(3) { opacity: 0.38; transform: translateY(8px); }
+
+    .revenue-track { height: 18px; overflow: hidden; border-radius: 5px; background: #e5e9ef; }
+    .revenue-fill-old { width: 68%; height: 100%; background: repeating-linear-gradient(45deg, rgba(168, 85, 247, 0.26), rgba(168, 85, 247, 0.26) 4px, rgba(126, 34, 206, 0.46) 4px, rgba(126, 34, 206, 0.46) 8px); }
+    .revenue-fill-new { width: 68%; height: 100%; background: rgba(21, 94, 239, 0.34); }
+
+    .profile-old, .profile-new { border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+    .profile-old.good { border: 1px solid #8fd19e; border-left: 4px solid #2da44e; background: #f1f8f3; }
+    .profile-old.bad { border: 1px solid #ffb3ad; border-left: 4px solid #cf222e; background: #fff5f5; opacity: 0.6; }
+    .profile-new.good { border: 1px solid rgba(8, 122, 85, 0.24); background: rgba(8, 122, 85, 0.045); }
+    .profile-new.bad { border: 1px solid rgba(180, 35, 24, 0.2); background: rgba(180, 35, 24, 0.035); opacity: 0.72; }
+    .versus-old { padding: 8px 0; text-align: center; color: #657084; font-size: 9px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+    .versus-new { padding: 8px 0; text-align: center; color: #657084; font-size: 11px; }
+
+    .token-row { display: flex; gap: 12px; align-items: center; }
+    .token-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; background: white; font-weight: 800; }
+    .purple { color: #7e22ce; border: 1px solid #e6d2f7; }
+    .primary-token { color: var(--blue); border: 1px solid #c9d9ff; }
+
+    .protected {
+      margin-top: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      background: white;
+    }
+
+    .protected-head { display: grid; grid-template-columns: 180px 1fr; gap: 28px; padding: 22px 24px; border-bottom: 1px solid var(--line); }
+    .protected-head h2 { margin: 0; font-size: 15px; }
+    .protected-head p { margin: 0; color: var(--muted); }
+    .protected-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .protected-item { padding: 18px 24px; }
+    .protected-item + .protected-item { border-left: 1px solid var(--line); }
+    .protected-item b { display: block; margin-bottom: 5px; font-size: 13px; }
+    .protected-item span { color: var(--muted); font-size: 12px; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr) auto;
+      gap: 28px;
+      align-items: center;
+      margin-top: 38px;
+      padding: 24px;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      background: var(--navy);
+      color: white;
+    }
+
+    .summary h2 { margin: 0; font-size: 15px; }
+    .summary p { margin: 0; color: #cad4e3; }
+    .summary .button { border-color: #64748b; }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      right: 20px;
+      bottom: 20px;
+      transform: translateY(20px);
+      border-radius: 8px;
+      background: var(--navy);
+      color: white;
+      opacity: 0;
+      pointer-events: none;
+      padding: 11px 14px;
+      font-size: 13px;
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 1120px) {
+      .decision { grid-template-columns: 165px minmax(0, 1fr); }
+      .decision-choice { grid-column: 1 / -1; display: grid; grid-template-columns: 140px 180px 1fr; align-items: center; gap: 14px; border-top: 1px solid var(--line); border-left: 0; }
+      .choice-label, .decision-state { margin: 0; }
+    }
+
+    @media (max-width: 800px) {
+      .topbar-inner, main { width: min(100% - 24px, 1480px); }
+      .topbar-inner { flex-wrap: wrap; gap: 10px; padding: 10px 0; }
+      .brand { min-width: 0; flex: 1; }
+      .progress { order: 3; flex-basis: 100%; }
+      .button[data-action="all-yes"], .button[data-action="reset"] { display: none; }
+      main { padding-top: 34px; }
+      .hero { grid-template-columns: 1fr; gap: 28px; }
+      .section-intro, .protected-head { grid-template-columns: 1fr; gap: 8px; }
+      .decision { display: block; }
+      .decision-meta { border-right: 0; border-bottom: 1px solid var(--line); }
+      .comparison { grid-template-columns: 1fr; }
+      .sample + .sample { border-top: 1px solid var(--line); border-left: 0; }
+      .decision-choice { display: grid; grid-template-columns: 1fr; }
+      .protected-grid { grid-template-columns: 1fr; }
+      .protected-item + .protected-item { border-top: 1px solid var(--line); border-left: 0; }
+      .summary { grid-template-columns: 1fr; gap: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
+    }
+
+    @media print {
+      .topbar, .top-actions, .choice-buttons, .summary .button { display: none !important; }
+      main { width: 100%; padding: 0; }
+      .decision { break-inside: avoid; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">R</div>
+        <div><strong>Re-New</strong><span>Visual decision board</span></div>
+      </div>
+      <div class="progress" aria-label="Decision progress">
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-copy" id="progress-copy">0 of 11 decided</div>
+      </div>
+      <div class="top-actions">
+        <button class="button" type="button" data-action="reset">Reset</button>
+        <button class="button" type="button" data-action="all-yes">Approve all</button>
+        <button class="button primary" type="button" data-action="copy">Copy decisions</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="kicker">Impeccable, tightly scoped</p>
+        <h1>Visual polish only.<br>Ivan decides every change.</h1>
+        <p class="lede">This board contains the complete set of distinct visual rules proposed in the Impeccable cleanup. Repeated edits are grouped under one decision, with every affected surface named. Nothing here changes what Re-New measures, how work flows, or how the product is organised.</p>
+      </div>
+      <div class="scope-box" aria-label="Impeccable scope">
+        <div class="scope-row"><b>Allowed</b><span>Small visual polish and removal of recognisable AI design artefacts.</span></div>
+        <div class="scope-row no"><b>Forbidden</b><span>KPIs, product logic, workflows, hierarchy, information architecture, and strategy.</span></div>
+        <div class="scope-row"><b>Authority</b><span>Impeccable proposes. Ivan approves or rejects. Nothing else.</span></div>
+      </div>
+    </section>
+
+    <div class="section-intro">
+      <h2>11 visual decisions</h2>
+      <p>Choose Yes to keep the proposed polish. Choose No to restore the previous treatment. Your choices are saved in this browser automatically.</p>
+    </div>
+
+    <section class="decision-list" aria-label="Visual polish decisions">
+      <article class="decision" data-id="01" data-title="Use natural case for small interface labels" data-value="">
+        <div class="decision-meta">
+          <span class="decision-id">01</span>
+          <p class="source">Polish pass</p>
+          <h3>Natural case for small labels</h3>
+          <p>Remove the tiny, widely tracked uppercase label style that makes ordinary interface copy look generated or overdesigned.</p>
+          <ul class="surface-list"><li>KPI tiles and analytics</li><li>Sidebar and top navigation</li><li>Offers, filters, notes, login</li><li>Questionnaire labels</li></ul>
+        </div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>AI artefact</span></div><div class="stage"><div><div class="uppercase-label">Time to first conversation</div><div class="metric-value">18 days</div></div></div><p class="sample-note">Tiny uppercase text, extra tracking, and excessive emphasis for a supporting label.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div><div class="natural-label">Time to first conversation</div><div class="metric-value">18 days</div></div></div><p class="sample-note">Normal reading rhythm and hierarchy. The metric, not the label styling, carries the emphasis.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="02" data-title="Remove colored side stripes from grouped collections" data-value="">
+        <div class="decision-meta"><span class="decision-id">02</span><p class="source">Detector confirmed</p><h3>No colored side stripes on groups</h3><p>Let status text and counts explain the group. Do not decorate every container edge with a different color.</p><ul class="surface-list"><li>Opportunities by stage</li><li>Repreneurs by lifecycle</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>AI artefact</span></div><div class="stage"><div class="two-mini"><div class="mini-panel accent-left-blue"><div class="mini-panel-head">Active pursuit <span class="mini-count">12</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line short"></div></div></div><div class="mini-panel accent-left-amber"><div class="mini-panel-head">Matching <span class="mini-count">8</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line short"></div></div></div></div></div><p class="sample-note">A colored strip is added to each neutral group, even when color does not communicate a critical state.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div class="two-mini"><div class="mini-panel"><div class="mini-panel-head">Active pursuit <span class="mini-count">12</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line short"></div></div></div><div class="mini-panel"><div class="mini-panel-head">Matching <span class="mini-count">8</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line short"></div></div></div></div></div><p class="sample-note">One structural border system. Color remains available for states that genuinely need attention.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="03" data-title="Remove colored top stripes from pipeline columns" data-value="">
+        <div class="decision-meta"><span class="decision-id">03</span><p class="source">Polish pass</p><h3>No colored top stripes on pipeline columns</h3><p>Use the same quiet container for each stage. The stage name and its contents already distinguish the columns.</p><ul class="surface-list"><li>Repreneur pipeline board</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Decorative</span></div><div class="stage"><div class="two-mini"><div class="mini-panel accent-top-blue"><div class="mini-panel-head">Leads <span class="mini-count">18</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line"></div></div></div><div class="mini-panel accent-top-amber"><div class="mini-panel-head">Qualified <span class="mini-count">7</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line"></div></div></div></div></div><p class="sample-note">Each pipeline column receives a color accent without adding meaningful information.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div class="two-mini"><div class="mini-panel"><div class="mini-panel-head">Leads <span class="mini-count">18</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line"></div></div></div><div class="mini-panel"><div class="mini-panel-head">Qualified <span class="mini-count">7</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line"></div></div></div></div></div><p class="sample-note">The board reads as one operating surface instead of a collection of themed cards.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="04" data-title="Remove the decorative rail from milestone lists" data-value="">
+        <div class="decision-meta"><span class="decision-id">04</span><p class="source">Polish pass</p><h3>No decorative rail inside milestone lists</h3><p>Remove the extra vertical line when spacing, checkboxes, and headings already establish the list structure.</p><ul class="surface-list"><li>Tier 3 milestone card</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Extra chrome</span></div><div class="stage"><div class="milestone-list"><div class="milestone"><span class="check"></span><span>Profile reviewed</span></div><div class="milestone"><span class="check"></span><span>First call completed</span></div><div class="milestone"><span class="check"></span><span>Opportunity introduced</span></div></div></div><p class="sample-note">A colored rail repeats structure that is already visible in the checklist.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div class="milestone-list clean"><div class="milestone"><span class="check"></span><span>Profile reviewed</span></div><div class="milestone"><span class="check"></span><span>First call completed</span></div><div class="milestone"><span class="check"></span><span>Opportunity introduced</span></div></div></div><p class="sample-note">The checklist remains clear with fewer competing visual lines.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="05" data-title="Replace heavy floating questionnaire cards with quiet panels" data-value="">
+        <div class="decision-meta"><span class="decision-id">05</span><p class="source">Polish pass</p><h3>Quiet questionnaire panels</h3><p>Replace large shadows and oversized corner radii with the same crisp panel treatment used across the product.</p><ul class="surface-list"><li>Name and contact groups</li><li>Standard questionnaire questions</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Floating card</span></div><div class="stage"><div class="question-card-old"><div class="uppercase-label">Your current role</div><div class="field"></div></div></div><p class="sample-note">Large radius and soft shadow make each question feel like a detached marketing card.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div class="question-card-new"><div class="natural-label">Your current role</div><div class="field"></div></div></div><p class="sample-note">A restrained panel feels part of the same product and keeps focus on the form.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="06" data-title="Remove decorative page and header gradients" data-value="">
+        <div class="decision-meta"><span class="decision-id">06</span><p class="source">Polish pass</p><h3>Flat page and header surfaces</h3><p>Remove gentle blue and grey gradients that add atmosphere but no hierarchy or meaning.</p><ul class="surface-list"><li>Development roadmap headers</li><li>Strategy explorer page</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Decorative gradient</span></div><div class="stage page-gradient-old"><div class="mini-panel"><div class="mini-panel-head gradient-old">Jul 14, 2026 <span class="mini-count">v0.9.21</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line short"></div></div></div></div><p class="sample-note">A decorative fade is applied to both the page and the record header.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage flat-new"><div class="mini-panel"><div class="mini-panel-head">Jul 14, 2026 <span class="mini-count">v0.9.21</span></div><div class="mini-panel-body"><div class="mini-line"></div><div class="mini-line short"></div></div></div></div><p class="sample-note">Neutral layers carry the hierarchy without atmosphere for atmosphere's sake.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="07" data-title="Use a restrained semantic tint for consent callouts" data-value="">
+        <div class="decision-meta"><span class="decision-id">07</span><p class="source">Polish pass</p><h3>Restrained consent callout</h3><p>Keep the consent question distinct, but remove the thick border, large radius, and blue to indigo gradient.</p><ul class="surface-list"><li>Marketing consent question</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Overstyled</span></div><div class="stage"><div class="consent-old"><div class="uppercase-label">Marketing consent</div><div class="mini-line" style="margin-top:10px"></div><div class="mini-line short"></div></div></div><p class="sample-note">Several treatments compete to announce one form field.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div class="consent-new"><div class="natural-label">Marketing consent</div><div class="mini-line" style="margin-top:10px"></div><div class="mini-line short"></div></div></div><p class="sample-note">A light semantic tint preserves distinction without becoming a promotional card.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="08" data-title="Consolidate roadmap metrics into one segmented summary" data-value="">
+        <div class="decision-meta"><span class="decision-id">08</span><p class="source">Polish pass</p><h3>One segmented metric summary</h3><p>Replace four individually colored statistic tiles with one neutral summary surface.</p><ul class="surface-list"><li>Development roadmap summary</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Card collection</span></div><div class="stage"><div class="stats-old"><div class="stat-old"><b>14</b><span>Milestones</span></div><div class="stat-old"><b>32</b><span>Product updates</span></div><div class="stat-old"><b>21</b><span>UX improvements</span></div><div class="stat-old"><b>18</b><span>QA / audits</span></div></div></div><p class="sample-note">Four equal colored cards fragment a single compact summary.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div class="stats-new"><div class="stat-new"><b>14</b><span>Milestones</span></div><div class="stat-new"><b>32</b><span>Product updates</span></div><div class="stat-new"><b>21</b><span>UX improvements</span></div><div class="stat-new"><b>18</b><span>QA / audits</span></div></div></div><p class="sample-note">One bounded structure shows that the four values belong together.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="09" data-title="Remove staggered entrance animation from roadmap items" data-value="">
+        <div class="decision-meta"><span class="decision-id">09</span><p class="source">Polish pass</p><h3>No staggered roadmap reveal</h3><p>Show the roadmap immediately instead of making each row fade in after the page loads.</p><ul class="surface-list"><li>Development roadmap timeline</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Staggered reveal</span></div><div class="stage"><div class="timeline"><div class="timeline-row old"><span class="timeline-dot"></span><span class="mini-line"></span></div><div class="timeline-row old"><span class="timeline-dot"></span><span class="mini-line"></span></div><div class="timeline-row old"><span class="timeline-dot"></span><span class="mini-line"></span></div></div></div><p class="sample-note">Rows arrive in sequence, adding delay to an operational reference page.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div class="timeline"><div class="timeline-row"><span class="timeline-dot"></span><span class="mini-line"></span></div><div class="timeline-row"><span class="timeline-dot"></span><span class="mini-line"></span></div><div class="timeline-row"><span class="timeline-dot"></span><span class="mini-line"></span></div></div></div><p class="sample-note">The full reference is available immediately. Functional transitions elsewhere remain untouched.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="10" data-title="Replace decorative purple and striped revenue styling with product tokens" data-value="">
+        <div class="decision-meta"><span class="decision-id">10</span><p class="source">Polish pass</p><h3>One product color language</h3><p>Replace isolated purple icons, text, and diagonal stripe fills with Re-New's primary color and a calm solid fill.</p><ul class="surface-list"><li>Revenue journey</li><li>Seller perspective icon</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>One-off styling</span></div><div class="stage"><div><div class="token-row"><span class="token-icon purple">€</span><span class="uppercase-label" style="color:#7e22ce">Projected commission</span></div><div class="revenue-track" style="margin-top:18px"><div class="revenue-fill-old"></div></div></div></div><p class="sample-note">Purple and diagonal stripes introduce a visual language used nowhere else.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div><div class="token-row"><span class="token-icon primary-token">€</span><span class="natural-label" style="color:#155eef">Projected commission</span></div><div class="revenue-track" style="margin-top:18px"><div class="revenue-fill-new"></div></div></div></div><p class="sample-note">The same product token system handles the icon, annotation, and projection.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+
+      <article class="decision" data-id="11" data-title="Calm the seller profile comparison styling" data-value="">
+        <div class="decision-meta"><span class="decision-id">11</span><p class="source">Polish pass</p><h3>Calmer profile comparison</h3><p>Keep the positive and negative semantic distinction while removing colored side bars and the theatrical uppercase “VS.” divider.</p><ul class="surface-list"><li>Seller perspective comparison</li></ul></div>
+        <div class="comparison">
+          <div class="sample before"><div class="sample-label"><span>Before</span><span>Theatrical</span></div><div class="stage"><div><div class="profile-old good">Re-New certified profile<br>Operational evidence and fit</div><div class="versus-old">VS.</div><div class="profile-old bad">Generic candidate<br>No verified acquisition record</div></div></div><p class="sample-note">Strong bars, heavy color, low opacity, and an uppercase divider dramatise the comparison.</p></div>
+          <div class="sample after"><div class="sample-label"><span>After</span><span>Proposed</span></div><div class="stage"><div><div class="profile-new good">Re-New certified profile<br>Operational evidence and fit</div><div class="versus-new">Compared with</div><div class="profile-new bad">Generic candidate<br>No verified acquisition record</div></div></div><p class="sample-note">Semantic tints remain, but the content carries the comparison.</p></div>
+        </div>
+        <div class="decision-choice"><p class="choice-label">Keep this change?</p><div class="choice-buttons"><button class="choice yes" type="button" data-choice="yes" aria-pressed="false">Yes</button><button class="choice no" type="button" data-choice="no" aria-pressed="false">No</button></div><p class="decision-state">Not decided</p></div>
+      </article>
+    </section>
+
+    <section class="protected">
+      <div class="protected-head"><h2>Protected from Impeccable</h2><p>These are not visual decisions for this tool. They remain governed by the product and design foundation.</p></div>
+      <div class="protected-grid">
+        <div class="protected-item"><b>Product semantics</b><span>KPIs, prioritisation, workflows, filters, information hierarchy, copy meaning, and information architecture.</span></div>
+        <div class="protected-item"><b>Useful state cues</b><span>Active tab underline, navigation selection, loading feedback, focus states, errors, warnings, success, and genuine status color.</span></div>
+        <div class="protected-item"><b>Re-New identity</b><span>WAVE navigation marker, brand voice, chart grammar, density rules, and the governed product system.</span></div>
+      </div>
+    </section>
+
+    <section class="summary">
+      <h2>Decision record</h2>
+      <p id="summary-copy">No decisions recorded yet. Use Yes or No on each visual rule above.</p>
+      <button class="button" type="button" data-action="copy">Copy decisions</button>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">Decisions copied</div>
+
+  <script>
+    (() => {
+      const storageKey = "renew-impeccable-visual-decisions-v1";
+      const decisions = Array.from(document.querySelectorAll(".decision"));
+      const progressFill = document.getElementById("progress-fill");
+      const progressCopy = document.getElementById("progress-copy");
+      const summaryCopy = document.getElementById("summary-copy");
+      const toast = document.getElementById("toast");
+
+      function readStored() {
+        try { return JSON.parse(localStorage.getItem(storageKey) || "{}"); }
+        catch { return {}; }
+      }
+
+      function save() {
+        const value = {};
+        decisions.forEach((decision) => {
+          if (decision.dataset.value) value[decision.dataset.id] = decision.dataset.value;
+        });
+        localStorage.setItem(storageKey, JSON.stringify(value));
+      }
+
+      function renderDecision(decision, value) {
+        decision.dataset.value = value || "";
+        decision.querySelectorAll("[data-choice]").forEach((button) => {
+          button.setAttribute("aria-pressed", String(button.dataset.choice === value));
+        });
+        const state = decision.querySelector(".decision-state");
+        state.textContent = value === "yes" ? "Approved" : value === "no" ? "Rejected" : "Not decided";
+      }
+
+      function updateSummary() {
+        const yes = decisions.filter((item) => item.dataset.value === "yes").length;
+        const no = decisions.filter((item) => item.dataset.value === "no").length;
+        const total = decisions.length;
+        const decided = yes + no;
+        progressFill.style.width = `${(decided / total) * 100}%`;
+        progressCopy.textContent = `${decided} of ${total} decided`;
+        summaryCopy.textContent = decided === 0
+          ? "No decisions recorded yet. Use Yes or No on each visual rule above."
+          : `${yes} approved, ${no} rejected, ${total - decided} still to decide. Choices are saved in this browser.`;
+      }
+
+      function setChoice(decision, value) {
+        renderDecision(decision, value);
+        save();
+        updateSummary();
+      }
+
+      function copyDecisions() {
+        const lines = ["Re-New Impeccable visual polish decisions", ""];
+        decisions.forEach((decision) => {
+          const value = decision.dataset.value === "yes" ? "YES" : decision.dataset.value === "no" ? "NO" : "UNDECIDED";
+          lines.push(`${decision.dataset.id}. ${value} | ${decision.dataset.title}`);
+        });
+        lines.push("", "Boundary: Impeccable may propose visual polish only. Product logic, KPIs, workflows, hierarchy, information architecture, and strategy are excluded.");
+        navigator.clipboard.writeText(lines.join("\n")).then(() => showToast("Decisions copied"), () => showToast("Copy unavailable in this browser"));
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.setTimeout(() => toast.classList.remove("show"), 1800);
+      }
+
+      const stored = readStored();
+      decisions.forEach((decision) => {
+        renderDecision(decision, stored[decision.dataset.id] || "");
+        decision.querySelectorAll("[data-choice]").forEach((button) => {
+          button.addEventListener("click", () => setChoice(decision, button.dataset.choice));
+        });
+      });
+
+      document.querySelectorAll('[data-action="copy"]').forEach((button) => button.addEventListener("click", copyDecisions));
+      document.querySelector('[data-action="all-yes"]').addEventListener("click", () => {
+        decisions.forEach((decision) => renderDecision(decision, "yes"));
+        save();
+        updateSummary();
+        showToast("All visual changes approved");
+      });
+      document.querySelector('[data-action="reset"]').addEventListener("click", () => {
+        decisions.forEach((decision) => renderDecision(decision, ""));
+        localStorage.removeItem(storageKey);
+        updateSummary();
+        showToast("Decisions reset");
+      });
+
+      updateSummary();
+    })();
+  </script>
+</body>
+</html>
