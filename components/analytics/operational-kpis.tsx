@@ -179,16 +179,16 @@ export function OperationalKpis({ data }: OperationalKpisProps) {
       <CardContent className="px-0">
         <div className="grid xl:grid-cols-3 xl:divide-x">
           <section className="px-5 py-4" aria-labelledby="analytics-speed-title">
-            <h3 id="analytics-speed-title" className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">Speed</h3>
+            <h3 id="analytics-speed-title" className="text-sm font-medium text-foreground">Speed</h3>
             <div className="mt-2">{speedMetrics.map((metric) => <MetricRow key={metric.title} metric={metric} />)}</div>
           </section>
 
           <section className="border-t px-5 py-4 xl:border-t-0" aria-labelledby="analytics-conversion-title">
-            <h3 id="analytics-conversion-title" className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">Conversion</h3>
+            <h3 id="analytics-conversion-title" className="text-sm font-medium text-foreground">Conversion</h3>
             <div className="mt-2">{conversionMetrics.map((metric) => <MetricRow key={metric.title} metric={metric} />)}</div>
             {data.dropOffByStage.length > 0 && (
               <div className="mt-3 rounded-md border bg-muted/25 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.055em] text-muted-foreground">Drop-off by stage</p>
+                <p className="text-xs font-medium text-muted-foreground">Drop-off by stage</p>
                 <div className="mt-2 space-y-1.5">
                   {data.dropOffByStage.map((row) => (
                     <div key={row.stage} className="flex items-center justify-between gap-3 text-xs">
@@ -202,7 +202,7 @@ export function OperationalKpis({ data }: OperationalKpisProps) {
           </section>
 
           <section className="border-t px-5 py-4 xl:border-t-0" aria-labelledby="analytics-operations-title">
-            <h3 id="analytics-operations-title" className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">Operations</h3>
+            <h3 id="analytics-operations-title" className="text-sm font-medium text-foreground">Operations</h3>
             <div className="mt-2">{operationalMetrics.map((metric) => <MetricRow key={metric.title} metric={metric} />)}</div>
           </section>
         </div>

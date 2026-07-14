@@ -47,7 +47,7 @@ No certification. No details.`
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Users className="size-4 text-purple-600" />
+          <Users className="size-4 text-primary" />
           Seller Perspective
         </CardTitle>
       </CardHeader>
@@ -66,15 +66,15 @@ No certification. No details.`
           <div className="space-y-2">
             {/* Re-New Profile */}
             <p className="text-xs font-semibold text-emerald-600">Re-New Certified Profile</p>
-            <pre className="bg-muted/50 border border-emerald-200 border-l-[3px] border-l-emerald-500 rounded-lg p-3 text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-words">
+            <pre className="rounded-lg border border-success/20 bg-success/5 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words">
               {renewProfile}
             </pre>
 
-            <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">vs.</p>
+            <p className="text-center text-xs text-muted-foreground">Compared with</p>
 
             {/* Generic Profile */}
             <p className="text-xs font-semibold text-red-500">Generic Candidate</p>
-            <pre className="bg-muted/30 border border-red-200 border-l-[3px] border-l-red-400 rounded-lg p-3 text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-words opacity-60">
+            <pre className="rounded-lg border border-destructive/15 bg-destructive/[0.03] p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words opacity-70">
               {genericProfile}
             </pre>
           </div>

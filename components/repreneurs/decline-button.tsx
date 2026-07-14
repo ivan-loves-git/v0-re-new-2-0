@@ -77,7 +77,7 @@ export function DeclineButton({ repreneurId, currentStatus, repreneurName, decli
         {/* Show decline reason if available */}
         {declineReasonCategory && (
           <div className="rounded-md bg-muted/40 border px-3 py-2 text-sm">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Decline Reason</p>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Decline reason</p>
             <p className="font-medium">{DECLINE_REASON_OPTIONS.find(o => o.value === declineReasonCategory)?.label || declineReasonCategory}</p>
             {declineReasonText && <p className="text-muted-foreground mt-0.5">{declineReasonText}</p>}
           </div>

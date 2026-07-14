@@ -25,13 +25,13 @@ interface StaticPipelineBoardProps {
 const INITIAL_VISIBLE = 15
 const LOAD_MORE_COUNT = 10
 
-const COLUMNS: { status: LifecycleStatus; title: string; accent: string }[] = [
-  { status: "lead", title: "Leads", accent: "border-t-blue-500" },
-  { status: "qualified", title: "Qualified", accent: "border-t-amber-500" },
-  { status: "client", title: "Clients", accent: "border-t-emerald-500" },
-  { status: "to_reactivate", title: "To be reactivated", accent: "border-t-orange-500" },
-  { status: "declined", title: "Declined", accent: "border-t-slate-400" },
-  { status: "rejected", title: "Rejected", accent: "border-t-red-500" },
+const COLUMNS: { status: LifecycleStatus; title: string }[] = [
+  { status: "lead", title: "Leads" },
+  { status: "qualified", title: "Qualified" },
+  { status: "client", title: "Clients" },
+  { status: "to_reactivate", title: "To be reactivated" },
+  { status: "declined", title: "Declined" },
+  { status: "rejected", title: "Rejected" },
 ]
 
 function AssessmentDot({ decision, pending }: { decision?: string | null; pending?: boolean }) {
@@ -152,11 +152,9 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
 
 function PipelineColumn({
   title,
-  accent,
   repreneurs,
 }: {
   title: string
-  accent: string
   repreneurs: RepreneurWithOffers[]
 }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
@@ -170,7 +168,7 @@ function PipelineColumn({
   }
 
   return (
-    <section className={`min-w-[272px] max-w-[336px] flex-1 snap-start overflow-hidden rounded-lg border border-t-2 bg-card ${accent}`}>
+    <section className="min-w-[272px] max-w-[336px] flex-1 snap-start overflow-hidden rounded-lg border bg-card">
       <div className="border-b bg-muted/30 px-3 py-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">{title}</h2>
@@ -339,7 +337,6 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
           <PipelineColumn
             key={column.status}
             title={column.title}
-            accent={column.accent}
             repreneurs={groupedByStatus[column.status] || []}
           />
         ))}

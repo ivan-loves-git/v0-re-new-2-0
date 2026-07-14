@@ -97,7 +97,7 @@ function MilestoneGroup({ group, optimisticMilestones, onToggle, isPending }: Mi
           ({group.completedCount}/{group.milestones.length})
         </span>
       </div>
-      <div className="space-y-0.5 border-l-2 border-primary/15 pl-2">
+      <div className="space-y-0.5">
         {group.milestones.map((milestone) => {
           const isCompleted = optimisticMilestones[milestone.key]
           return (

@@ -62,15 +62,15 @@ interface PreparedOpportunity {
 const FIND_ITEMS_PER_PAGE = 20
 const GROUP_ITEMS_PER_PAGE = 8
 
-const GROUP_CONFIG: Array<{ key: OpportunityGroupKey; label: string; className: string }> = [
-  { key: "draft", label: "Draft", className: "border-l-slate-400" },
-  { key: "inventory", label: "Live inventory", className: "border-l-sky-500" },
-  { key: "matching", label: "Matching and proposed", className: "border-l-amber-500" },
-  { key: "interest", label: "Interest received", className: "border-l-orange-500" },
-  { key: "active", label: "Active pursuit", className: "border-l-blue-600" },
-  { key: "advanced", label: "Meeting / LOI", className: "border-l-violet-500" },
-  { key: "paused", label: "Paused", className: "border-l-zinc-400" },
-  { key: "closed", label: "Closed / dropped / archived", className: "border-l-emerald-600" },
+const GROUP_CONFIG: Array<{ key: OpportunityGroupKey; label: string }> = [
+  { key: "draft", label: "Draft" },
+  { key: "inventory", label: "Live inventory" },
+  { key: "matching", label: "Matching and proposed" },
+  { key: "interest", label: "Interest received" },
+  { key: "active", label: "Active pursuit" },
+  { key: "advanced", label: "Meeting / LOI" },
+  { key: "paused", label: "Paused" },
+  { key: "closed", label: "Closed / dropped / archived" },
 ]
 
 const GROUP_PAGE_DEFAULTS: Record<OpportunityGroupKey, number> = {
@@ -448,7 +448,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
             const groupTotalPages = Math.ceil(items.length / GROUP_ITEMS_PER_PAGE)
 
             return (
-              <section key={group.key} className={`overflow-hidden rounded-lg border border-l-2 bg-card ${group.className}`}>
+              <section key={group.key} className="overflow-hidden rounded-lg border bg-card">
                 <button
                   className="flex w-full items-center justify-between bg-muted/25 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   onClick={() => toggleGroup(group.key)}

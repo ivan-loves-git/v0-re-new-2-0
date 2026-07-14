@@ -129,7 +129,7 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
           {/* Q11 v3 priority choice — read-only context for the score */}
           {localAnswers.q11_priority && (
             <div className="space-y-1 rounded-md border bg-muted/30 p-3">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              <Label className="text-xs font-medium text-muted-foreground">
                 Acquisition priority (Q11)
               </Label>
               <p className="text-sm text-foreground">

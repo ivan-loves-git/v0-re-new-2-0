@@ -31,7 +31,7 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Wallet className="size-4 text-purple-600" />
+            <Wallet className="size-4 text-primary" />
             Revenue Journey
           </CardTitle>
           <div className="text-right text-xs text-muted-foreground">
@@ -55,7 +55,7 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
           <span className="text-2xl font-bold">{total.toLocaleString()}</span>
           <span className="text-sm text-muted-foreground ml-1">EUR</span>
           {projectedCommission > 0 && (
-            <p className="text-xs text-purple-600 mt-0.5">
+            <p className="mt-0.5 text-xs text-primary">
               Projected if deal closes: +{projectedCommission.toLocaleString()} EUR commission ({projectedDeal}) = {projectedTotal.toLocaleString()} EUR total
             </p>
           )}
@@ -99,7 +99,7 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
               )}
               {projectedCommission > 0 && (
                 <div
-                  className="h-full transition-all duration-500 bg-purple-500/35 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(168,85,247,0.3)_4px,rgba(168,85,247,0.3)_8px)]"
+                  className="h-full bg-primary/25 transition-all duration-500"
                   style={{ width: pct(projectedCommission) }}
                   title={`Projected commission: ${projectedCommission} EUR`}
                 />

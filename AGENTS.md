@@ -129,6 +129,18 @@ Use shadcn/ui for new feature surfaces and dashboard sections. Check installed `
 
 For dashboards and operational pages, prefer shadcn `Card`, `Table`, `Badge`, `Tabs`, `Sheet`, `Dialog`, `Select`, `Input`, `Button`, `Skeleton`, `Tooltip`, `DropdownMenu`, and `Chart` over custom markup.
 
+## Impeccable design quality gate
+
+Impeccable is the mandatory implementation-quality gate for every UI change. It is a linter and correction loop, not the product strategist.
+
+- Treat every Impeccable hook finding as blocking. Correct the implementation immediately, then continue. Never dismiss, suppress, or ignore a finding without Ivan's explicit approval.
+- Before completing any UI task, run `pnpm design:check`. Fix every high-confidence artifact and rerun until the detector returns clean. A UI task cannot be called done while this command reports findings.
+- For broad, multi-screen, or design-system changes, also run an Impeccable `polish` pass on the changed surfaces. The deterministic detector cannot recognize every higher-order pattern.
+- The correction scope includes recognizable AI implementation artifacts across the product, not only side stripes: repeated equal-card grids, decorative accent borders, ghost cards, decorative gradients or stripes, excessive glass or rounding, tiny uppercase eyebrow scaffolding, invented affordances, and other Impeccable anti-patterns.
+- Preserve valid product semantics. Standard tab underlines, navigation selection markers, status meaning, and the WAVE tide marker are not decorative card accents merely because they use a border.
+- Separate implementation corrections from product strategy. Impeccable may report information hierarchy, KPI, workflow, or product-model concerns, but those remain advisory until Ivan approves a strategic redesign.
+- After corrections, perform browser QA on the actual changed surfaces at desktop and mobile widths. The detector passing is necessary, not sufficient.
+
 ## Open Questions (Waiting on Bertrand)
 - Notes structure: free text vs structured (call/email/meeting + outcome)
 - Flatchr export format and fields

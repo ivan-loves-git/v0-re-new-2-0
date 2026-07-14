@@ -82,7 +82,7 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
           {/* Active packages */}
           {activePackages.length > 0 && (
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-[0.055em] text-muted-foreground">Active packages</h4>
+              <h4 className="text-sm font-medium text-foreground">Active packages</h4>
               <div className="space-y-2">
                 {activePackages.map((pkg) => (
                   <PackageItem
@@ -101,7 +101,7 @@ export function PackageManagementSheet({ packages }: PackageManagementSheetProps
           {/* Inactive packages */}
           {inactivePackages.length > 0 && (
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-[0.055em] text-muted-foreground/70">Inactive packages</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">Inactive packages</h4>
               <div className="space-y-2">
                 {inactivePackages.map((pkg) => (
                   <PackageItem

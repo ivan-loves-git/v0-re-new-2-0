@@ -278,7 +278,7 @@ export function StepRenderer({
         if (step.id === 1 && question.id === "first_name") {
           const lastName = step.questions.find(q => q.id === "last_name")
           return (
-            <div key="name-group" className="bg-white rounded-2xl shadow-xl shadow-gray-100 border p-8">
+            <div key="name-group" className="rounded-lg border bg-card p-8">
               <div className="grid sm:grid-cols-2 gap-4">
                 <QuestionRenderer
                   question={question}
@@ -308,7 +308,7 @@ export function StepRenderer({
         if (step.id === 1 && question.id === "phone") {
           const linkedin = step.questions.find(q => q.id === "linkedin_url")
           return (
-            <div key="contact-group" className="bg-white rounded-2xl shadow-xl shadow-gray-100 border p-8">
+            <div key="contact-group" className="rounded-lg border bg-card p-8">
               <div className="grid sm:grid-cols-2 gap-4">
                 <QuestionRenderer
                   question={question}
@@ -337,7 +337,7 @@ export function StepRenderer({
         // Marketing consent gets special styling
         if (question.id === "marketing_consent") {
           return (
-            <div key={question.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 p-6">
+            <div key={question.id} className="rounded-lg border border-primary/20 bg-primary/[0.04] p-6">
               <QuestionRenderer
                 question={question}
                 formData={formData}
@@ -351,7 +351,7 @@ export function StepRenderer({
 
         // Standard card wrapper
         return (
-          <div key={question.id} className="bg-white rounded-2xl shadow-xl shadow-gray-100 border p-6">
+          <div key={question.id} className="rounded-lg border bg-card p-6">
             <QuestionRenderer
               question={question}
               formData={formData}

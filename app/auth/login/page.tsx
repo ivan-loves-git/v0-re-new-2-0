@@ -106,7 +106,7 @@ export default function LoginPage() {
         </div>
 
         <div className="hidden max-w-lg py-16 lg:block">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#7dd3c7]">Re-New operating system</p>
+          <p className="text-xs font-medium text-[#7dd3c7]">Re-New operating system</p>
           <h2 className="mt-5 font-serif text-4xl font-medium leading-[1.12] tracking-[-0.035em] xl:text-5xl">
             Steer the acquisition journey with clarity.
           </h2>

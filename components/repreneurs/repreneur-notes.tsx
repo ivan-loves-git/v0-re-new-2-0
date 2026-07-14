@@ -201,7 +201,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-[0.055em] text-muted-foreground">
+                        <span className="text-xs font-medium text-muted-foreground">
                           {getNoteTypeLabel(note.note_type || "other")}
                         </span>
                         <span className="text-xs text-muted-foreground/60">·</span>

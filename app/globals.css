@@ -243,7 +243,7 @@
   }
 
   .wave-eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+    @apply text-xs font-medium text-muted-foreground;
   }
 
   .wave-mono {

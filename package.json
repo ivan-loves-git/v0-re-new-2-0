@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "next build",
+    "design:check": "node .agents/skills/impeccable/scripts/detect.mjs app components styles",
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",

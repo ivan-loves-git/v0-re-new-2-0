@@ -8,6 +8,29 @@ import { Badge } from "@/components/ui/badge"
 // Product outcomes, product work, UX improvements, validation work, learnings, and features
 const roadmapEvents = [
   {
+    period: "Jul 14, 2026",
+    version: "0.9.21",
+    title: "WAVE design quality gate enforced",
+    isCompleted: true,
+    events: [
+      {
+        title: "Recognizable design artifacts caught before release",
+        type: "decision",
+        description: "Every interface change now passes an automatic Re-New design check, and concrete visual artifacts must be corrected before the work can be called complete.",
+      },
+      {
+        title: "Visual noise removed across the product",
+        type: "style",
+        description: "Decorative accent borders, repeated metric cards, heavy shadow cards, decorative gradients and stripes, and repeated tiny uppercase labels were replaced with calmer product structure.",
+      },
+      {
+        title: "Polish separated from product strategy",
+        type: "decision",
+        description: "Automatic design corrections can improve implementation quality, while changes to KPIs, workflows, and information hierarchy remain explicit product decisions.",
+      },
+    ],
+  },
+  {
     period: "Jul 12, 2026",
     version: "0.9.20",
     title: "WAVE interface rebuilt as one operating system",
@@ -1623,23 +1646,21 @@ export function DevelopmentRoadmap() {
       </div>
 
       {/* Stats summary */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="text-center p-3 bg-muted/40 rounded-lg">
-          <div className="text-2xl font-bold text-foreground">{roadmapEvents.length}</div>
-          <div className="text-xs text-muted-foreground">Milestones</div>
-        </div>
-        <div className="text-center p-3 bg-sky-50 rounded-lg">
-          <div className="text-2xl font-bold text-sky-600">{productUpdates}</div>
-          <div className="text-xs text-muted-foreground">Product updates</div>
-        </div>
-        <div className="text-center p-3 bg-purple-50 rounded-lg">
-          <div className="text-2xl font-bold text-purple-600">{uxImprovements}</div>
-          <div className="text-xs text-muted-foreground">UX improvements</div>
-        </div>
-        <div className="text-center p-3 bg-emerald-50 rounded-lg">
-          <div className="text-2xl font-bold text-emerald-600">{validationWork}</div>
-          <div className="text-xs text-muted-foreground">QA / audits</div>
-        </div>
+      <div className="grid grid-cols-2 overflow-hidden rounded-lg border bg-card sm:grid-cols-4">
+        {[
+          [roadmapEvents.length, "Milestones"],
+          [productUpdates, "Product updates"],
+          [uxImprovements, "UX improvements"],
+          [validationWork, "QA / audits"],
+        ].map(([value, label], index) => (
+          <div
+            key={label}
+            className={`px-4 py-3 ${index % 2 ? "border-l" : ""} ${index > 1 ? "border-t sm:border-t-0" : ""} ${index > 0 ? "sm:border-l" : ""}`}
+          >
+            <div className="text-xl font-semibold tabular-nums text-foreground">{value}</div>
+            <div className="text-xs text-muted-foreground">{label}</div>
+          </div>
+        ))}
       </div>
 
       <div className="relative">
@@ -1649,8 +1670,7 @@ export function DevelopmentRoadmap() {
         {roadmapEvents.map((period, index) => (
           <div
             key={index}
-            className="relative pl-10 pb-8 last:pb-0 animate-fade-in"
-            style={{ animationDelay: `${index * 50}ms` }}
+            className="relative pb-8 pl-10 last:pb-0"
           >
             {/* Timeline dot */}
             <div className="absolute left-0 size-6 rounded-full bg-blue-500 border-4 border-white shadow-sm" />
@@ -1658,7 +1678,7 @@ export function DevelopmentRoadmap() {
             {/* Period card */}
             <Card className="overflow-hidden border-blue-100 py-0 gap-0">
               <CardContent className="p-0">
-                <div className="p-4 flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
+                <div className="flex items-center justify-between bg-muted/25 p-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-xs bg-white">

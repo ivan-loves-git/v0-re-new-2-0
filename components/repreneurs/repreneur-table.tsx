@@ -77,15 +77,6 @@ const STATUS_LABELS: Record<LifecycleStatus, string> = {
   rejected: "Rejected",
 }
 
-const STATUS_COLORS: Record<LifecycleStatus, string> = {
-  lead: "border-l-blue-500",
-  qualified: "border-l-amber-500",
-  client: "border-l-emerald-500",
-  to_reactivate: "border-l-orange-500",
-  declined: "border-l-slate-400",
-  rejected: "border-l-red-500",
-}
-
 const DATE_RANGES = [
   { value: "all", label: "All time" },
   { value: "7", label: "Last 7 days" },
@@ -781,7 +772,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
           const paginatedGroup = sortedGroup.slice(startIndex, endIndex)
 
           return (
-            <section key={status} className={`overflow-hidden rounded-lg border border-l-2 bg-card ${STATUS_COLORS[status]}`}>
+            <section key={status} className="overflow-hidden rounded-lg border bg-card">
               <button
                 className="flex w-full items-center justify-between bg-muted/25 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 onClick={() => toggleGroup(status)}
