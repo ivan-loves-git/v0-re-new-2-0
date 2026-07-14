@@ -1,40 +1,49 @@
 /**
  * E2E Test Configuration
  *
- * Central configuration for all test settings, credentials, and timeouts.
+ * Central configuration for all test settings and timeouts. Credentials must
+ * come from the local environment and are never committed to the repository.
  */
+
+function requiredEnvironmentValue(name: string) {
+  const value = process.env[name]?.trim()
+  if (!value) {
+    throw new Error(`${name} is required to run the production E2E suite`)
+  }
+  return value
+}
 
 export const TEST_CONFIG = {
   // Target environment
-  baseUrl: "https://app.re-new.team",
+  baseUrl: process.env.E2E_BASE_URL || "https://app.re-new.team",
 
-  // Test credentials (from project docs)
+  // Test credentials are stored only in .env.local or the CI secret store.
   credentials: {
-    email: "bertrand@renew.com",
-    password: "testpassword123"
+    email: requiredEnvironmentValue("E2E_TEST_EMAIL"),
+    password: requiredEnvironmentValue("E2E_TEST_PASSWORD"),
   },
 
   // Timeouts in milliseconds
   timeouts: {
-    navigation: 10000,    // Wait for page navigation
-    element: 5000,        // Wait for element to appear
-    animation: 500,       // Wait for animations to complete
-    action: 2000,         // Wait after an action (click, type)
+    navigation: 10000, // Wait for page navigation
+    element: 5000, // Wait for element to appear
+    animation: 500, // Wait for animations to complete
+    action: 2000, // Wait after an action (click, type)
   },
 
   // Test data configuration
   testData: {
-    prefix: "TEST_E2E_",          // Prefix for test records (easy cleanup)
+    prefix: "TEST_E2E_", // Prefix for test records (easy cleanup)
     emailDomain: "@test-e2e.com", // Email domain for test users
-    cleanupBefore: true,          // Clean test data before run
-    cleanupAfter: true,           // Clean test data after run
+    cleanupBefore: true, // Clean test data before run
+    cleanupAfter: true, // Clean test data after run
   },
 
   // Screenshots configuration
   screenshots: {
     enabled: true,
     captureOnFailure: true,
-    captureOnSuccess: false,  // Set to true for full visual documentation
+    captureOnSuccess: false, // Set to true for full visual documentation
   },
 
   // Report configuration
@@ -42,7 +51,7 @@ export const TEST_CONFIG = {
     directory: "./reports",
     includeTimestamp: true,
     includeScreenshots: true,
-  }
+  },
 }
 
 // Route definitions for navigation
@@ -86,8 +95,8 @@ export const SELECTORS = {
   topTier2: '[data-testid="top-tier2"]',
 
   // Repreneurs
-  repreneurTable: 'table',
-  repreneurRow: 'tbody tr',
+  repreneurTable: "table",
+  repreneurRow: "tbody tr",
   searchInput: 'input[placeholder*="Search"]',
   statusFilter: '[data-testid="status-filter"]',
   newRepreneurButton: 'a[href="/repreneurs/new"]',
@@ -116,8 +125,8 @@ export const SELECTORS = {
   journeyStage: '[data-testid="journey-stage"]',
 
   // Offers
-  offerTable: 'table',
-  offerRow: 'tbody tr',
+  offerTable: "table",
+  offerRow: "tbody tr",
   newOfferButton: 'a[href="/offers/new"]',
   offerNameInput: 'input[name="name"]',
   offerPriceInput: 'input[name="price"]',
@@ -130,7 +139,7 @@ export const SELECTORS = {
   emailTemplatesTab: 'button:has-text("Templates")',
   emailManualSendTab: 'button:has-text("Manual Send")',
   emailStatsCard: '[data-testid="email-stats"]',
-  emailLogTable: 'table',
+  emailLogTable: "table",
   emailTemplateCard: '[data-testid="template-card"]',
 
   // Guide

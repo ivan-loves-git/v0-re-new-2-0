@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
+import { plainTextToSafeHtml } from "@/lib/security/sanitize-html"
 
 export async function POST(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
+  const access = await getCurrentUserAccess()
+  if (!access) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  if (access.role !== "staff") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const { title, content } = await request.json()
@@ -16,11 +20,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient()
 
-  const htmlContent = content
-    .split("\n\n")
-    .filter((p: string) => p.trim())
-    .map((p: string) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-    .join("\n")
+  const htmlContent = plainTextToSafeHtml(content)
 
   const { error } = await supabase.from("clipboard").upsert(
     {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       html_content: htmlContent,
       created_at: new Date().toISOString(),
     },
-    { onConflict: "slug" }
+    { onConflict: "slug" },
   )
 
   if (error) {

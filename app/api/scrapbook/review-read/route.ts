@@ -1,12 +1,16 @@
 import { connection, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getCurrentUser } from "@/lib/auth-server"
+import { getCurrentUserAccess } from "@/lib/access-control"
+import { sanitizePublicHtml } from "@/lib/security/sanitize-html"
 
 export async function GET() {
   await connection()
-  const user = await getCurrentUser()
-  if (!user) {
+  const access = await getCurrentUserAccess()
+  if (!access) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  if (access.role !== "staff") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const supabase = createAdminClient()
@@ -21,5 +25,8 @@ export async function GET() {
     return NextResponse.json({})
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json({
+    ...data,
+    html_content: sanitizePublicHtml(data.html_content),
+  })
 }

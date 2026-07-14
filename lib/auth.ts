@@ -27,10 +27,7 @@ function isPortalAccessSetupUrl(url: string) {
   try {
     const callbackURL = new URL(url).searchParams.get("callbackURL")
     if (!callbackURL) return false
-    const callback = new URL(
-      callbackURL,
-      env.BETTER_AUTH_URL,
-    )
+    const callback = new URL(callbackURL, env.BETTER_AUTH_URL)
     return callback.searchParams.get("intent") === "portal"
   } catch {
     return false
@@ -99,6 +96,9 @@ export const auth = betterAuth({
   // Email/password authentication
   emailAndPassword: {
     enabled: true,
+    // WAVE access is provisioned by staff. Public self-registration would let
+    // an attacker preclaim a repreneur email before the legitimate invitation.
+    disableSignUp: true,
     minPasswordLength: 8,
     sendResetPassword: async ({ user, url }) => {
       try {
@@ -145,20 +145,34 @@ export const auth = betterAuth({
   // Security settings
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
+    ipAddress: {
+      ipAddressHeaders: [
+        "x-vercel-forwarded-for",
+        "x-forwarded-for",
+        "cf-connecting-ip",
+        "x-real-ip",
+      ],
+    },
   },
 
-  // Rate limiting (disabled for initial setup, re-enable later)
+  // Database-backed limits apply consistently across Vercel instances.
   rateLimit: {
-    enabled: false,
+    enabled: true,
+    storage: "database",
+    window: 60,
+    max: 60,
+    customRules: {
+      "/sign-in/email": { window: 15 * 60, max: 5 },
+      "/forget-password": { window: 15 * 60, max: 3 },
+      "/reset-password": { window: 15 * 60, max: 5 },
+      "/sign-up/email": { window: 60 * 60, max: 1 },
+    },
   },
 
   // Trusted origins for CORS
   // Better Auth 1.4.14: function receives Request (can be undefined), must return string[]
   trustedOrigins: async (request: Request | undefined) => {
-    const origins = [
-      env.BETTER_AUTH_URL,
-      "https://app.re-new.team",
-    ]
+    const origins = [env.BETTER_AUTH_URL, "https://app.re-new.team"]
     // Dynamically allow Vercel preview deployments and V0 app builder
     const origin = request?.headers?.get("origin")
     if (origin) {

@@ -28,5 +28,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.upsert_clipboard(text, text, text) TO anon;
-GRANT EXECUTE ON FUNCTION public.upsert_clipboard(text, text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.upsert_clipboard(text, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.upsert_clipboard(text, text, text) FROM anon;
+REVOKE ALL ON FUNCTION public.upsert_clipboard(text, text, text) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.upsert_clipboard(text, text, text) TO service_role;

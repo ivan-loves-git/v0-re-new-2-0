@@ -1,17 +1,22 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
-import { requireUser } from "@/lib/auth-server"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { redirect } from "next/navigation"
-import type { Offer_Insert, OfferStatus, MilestoneType } from "@/lib/types/offer"
+import type {
+  Offer_Insert,
+  OfferStatus,
+  MilestoneType,
+} from "@/lib/types/offer"
 import { sendEmail } from "@/lib/email"
 import { OfferReceivedEmail } from "@/lib/email/templates/offer-received"
 import { OfferAcceptedEmail } from "@/lib/email/templates/offer-accepted"
 import { MilestoneCompletedEmail } from "@/lib/email/templates/milestone-completed"
 
 export async function createOffer(formData: FormData) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const offer: Offer_Insert = {
@@ -41,6 +46,7 @@ export async function createOffer(formData: FormData) {
 }
 
 export async function updateOffer(id: string, formData: FormData) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const updates = {
@@ -69,9 +75,13 @@ export async function updateOffer(id: string, formData: FormData) {
 }
 
 export async function toggleOfferActive(id: string, isActive: boolean) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { error } = await supabase.from("offers").update({ is_active: isActive }).eq("id", id)
+  const { error } = await supabase
+    .from("offers")
+    .update({ is_active: isActive })
+    .eq("id", id)
 
   if (error) {
     throw new Error(error.message)
@@ -81,17 +91,12 @@ export async function toggleOfferActive(id: string, isActive: boolean) {
   revalidateRepreneurDashboardTags()
 }
 
-export async function assignOfferToRepreneur(repreneurId: string, offerId: string) {
+export async function assignOfferToRepreneur(
+  repreneurId: string,
+  offerId: string,
+) {
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  // Get current user from Better Auth
-  let user
-  try {
-    user = await requireUser()
-  } catch (authError) {
-    console.error("Auth error in assignOfferToRepreneur:", authError)
-    throw new Error(`Authentication failed: ${authError instanceof Error ? authError.message : "Unknown auth error"}`)
-  }
 
   // Insert the offer assignment
   const { error: offerError } = await supabase.from("repreneur_offers").insert({
@@ -120,7 +125,11 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
 
   // Send offer received email (parallel fetch)
   const [{ data: repreneurData }, { data: offerData }] = await Promise.all([
-    supabase.from("repreneurs").select("first_name, last_name, email").eq("id", repreneurId).single(),
+    supabase
+      .from("repreneurs")
+      .select("first_name, last_name, email")
+      .eq("id", repreneurId)
+      .single(),
     supabase.from("offers").select("name").eq("id", offerId).single(),
   ])
 
@@ -153,7 +162,12 @@ export async function assignOfferToRepreneur(repreneurId: string, offerId: strin
   revalidateRepreneurDashboardTags()
 }
 
-export async function updateRepreneurOfferStatus(repreneurOfferId: string, newStatus: OfferStatus, repreneurId: string) {
+export async function updateRepreneurOfferStatus(
+  repreneurOfferId: string,
+  newStatus: OfferStatus,
+  repreneurId: string,
+) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const updates: Record<string, unknown> = { status: newStatus }
@@ -170,14 +184,19 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
       updates.accepted_at = now.toISOString()
 
       const expiresAt = new Date(now)
-      expiresAt.setDate(expiresAt.getDate() + repreneurOffer.offer.duration_days)
+      expiresAt.setDate(
+        expiresAt.getDate() + repreneurOffer.offer.duration_days,
+      )
       updates.expires_at = expiresAt.toISOString()
     }
   } else if (newStatus === "declined") {
     updates.declined_at = new Date().toISOString()
   }
 
-  const { error } = await supabase.from("repreneur_offers").update(updates).eq("id", repreneurOfferId)
+  const { error } = await supabase
+    .from("repreneur_offers")
+    .update(updates)
+    .eq("id", repreneurOfferId)
 
   if (error) {
     throw new Error(error.message)
@@ -192,19 +211,32 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
   } else if (newStatus === "declined") {
     await supabase
       .from("repreneurs")
-      .update({ lifecycle_status: "declined", declined_at: new Date().toISOString() })
+      .update({
+        lifecycle_status: "declined",
+        declined_at: new Date().toISOString(),
+      })
       .eq("id", repreneurId)
   }
 
   // Send email for accepted status change
   if (newStatus === "accepted") {
     const [{ data: repreneurData }, { data: offerInfo }] = await Promise.all([
-      supabase.from("repreneurs").select("first_name, last_name, email").eq("id", repreneurId).single(),
-      supabase.from("repreneur_offers").select("offer:offers(name)").eq("id", repreneurOfferId).single(),
+      supabase
+        .from("repreneurs")
+        .select("first_name, last_name, email")
+        .eq("id", repreneurId)
+        .single(),
+      supabase
+        .from("repreneur_offers")
+        .select("offer:offers(name)")
+        .eq("id", repreneurOfferId)
+        .single(),
     ])
 
     if (repreneurData && offerInfo?.offer) {
-      const offerRow = Array.isArray(offerInfo.offer) ? offerInfo.offer[0] : offerInfo.offer
+      const offerRow = Array.isArray(offerInfo.offer)
+        ? offerInfo.offer[0]
+        : offerInfo.offer
       const offerName = (offerRow as { name: string }).name
       const emailData = {
         id: repreneurId,
@@ -233,10 +265,17 @@ export async function updateRepreneurOfferStatus(repreneurOfferId: string, newSt
   revalidateRepreneurDashboardTags()
 }
 
-export async function deleteRepreneurOffer(repreneurOfferId: string, repreneurId: string) {
+export async function deleteRepreneurOffer(
+  repreneurOfferId: string,
+  repreneurId: string,
+) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { error } = await supabase.from("repreneur_offers").delete().eq("id", repreneurOfferId)
+  const { error } = await supabase
+    .from("repreneur_offers")
+    .delete()
+    .eq("id", repreneurOfferId)
 
   if (error) {
     throw new Error(error.message)
@@ -255,12 +294,10 @@ export async function createMilestone(
   milestoneType: MilestoneType,
   title: string,
   notes?: string,
-  dueDate?: string
+  dueDate?: string,
 ) {
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  // Get current user from Better Auth
-  const user = await requireUser()
 
   const { error } = await supabase.from("offer_milestones").insert({
     repreneur_offer_id: repreneurOfferId,
@@ -281,8 +318,9 @@ export async function createMilestone(
 export async function toggleMilestoneComplete(
   milestoneId: string,
   repreneurId: string,
-  isCompleted: boolean
+  isCompleted: boolean,
 ) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const updates: Record<string, unknown> = {
@@ -325,7 +363,9 @@ export async function toggleMilestoneComplete(
       const offerRow = Array.isArray(repreneurOfferRow?.offer)
         ? repreneurOfferRow.offer[0]
         : repreneurOfferRow?.offer
-      const offerName = (offerRow as { name: string } | undefined)?.name || "votre accompagnement"
+      const offerName =
+        (offerRow as { name: string } | undefined)?.name ||
+        "votre accompagnement"
 
       sendEmail({
         to: repreneurData.email,
@@ -358,8 +398,9 @@ export async function updateMilestone(
   repreneurId: string,
   title: string,
   notes?: string,
-  dueDate?: string
+  dueDate?: string,
 ) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -378,10 +419,17 @@ export async function updateMilestone(
   revalidatePath(`/repreneurs/${repreneurId}`)
 }
 
-export async function deleteMilestone(milestoneId: string, repreneurId: string) {
+export async function deleteMilestone(
+  milestoneId: string,
+  repreneurId: string,
+) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { error } = await supabase.from("offer_milestones").delete().eq("id", milestoneId)
+  const { error } = await supabase
+    .from("offer_milestones")
+    .delete()
+    .eq("id", milestoneId)
 
   if (error) {
     throw new Error(error.message)
@@ -393,16 +441,19 @@ export async function deleteMilestone(milestoneId: string, repreneurId: string) 
 // === Data Fetching ===
 
 export async function getAllClientOffers() {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from("repreneur_offers")
-    .select(`
+    .select(
+      `
       *,
       offer:offers(*),
       repreneur:repreneurs(id, first_name, last_name, email, avatar_url),
       milestones:offer_milestones(*)
-    `)
+    `,
+    )
     .order("offered_at", { ascending: false })
 
   if (error) {

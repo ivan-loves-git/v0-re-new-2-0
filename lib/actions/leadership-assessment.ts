@@ -1,19 +1,23 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { scoreLeadershipAssessment } from "@/lib/utils/leadership-scoring"
-import type { LeadershipFormData, LeadershipAssessment } from "@/lib/types/leadership-assessment"
+import type {
+  LeadershipFormData,
+  LeadershipAssessment,
+} from "@/lib/types/leadership-assessment"
 
 /**
  * Create a new assessment for a repreneur and return the token URL
  */
 export async function createAssessment(
   repreneurId: string,
-  sentBy?: string
 ): Promise<{ success: boolean; token?: string; error?: string }> {
   try {
+    const { user } = await requireStaffAccess()
     const supabase = createAdminClient()
 
     // Check if there's already a completed assessment (one-shot: cannot retake)
@@ -26,7 +30,11 @@ export async function createAssessment(
       .maybeSingle()
 
     if (completed) {
-      return { success: false, error: "Assessment already completed. Leadership assessment can only be taken once." }
+      return {
+        success: false,
+        error:
+          "Assessment already completed. Leadership assessment can only be taken once.",
+      }
     }
 
     // Check if there's already an incomplete assessment
@@ -48,7 +56,7 @@ export async function createAssessment(
     const { error } = await supabase.from("leadership_assessments").insert({
       repreneur_id: repreneurId,
       token,
-      sent_by: sentBy || null,
+      sent_by: user.id,
     })
 
     if (error) {
@@ -68,9 +76,10 @@ export async function createAssessment(
 /**
  * Get assessment by token (public, no auth required)
  */
-export async function getAssessmentByToken(
-  token: string
-): Promise<{ assessment: LeadershipAssessment | null; repreneur: { first_name: string; last_name: string } | null }> {
+export async function getAssessmentByToken(token: string): Promise<{
+  assessment: LeadershipAssessment | null
+  repreneur: { first_name: string; last_name: string } | null
+}> {
   const supabase = createAdminClient()
 
   // Fetch assessment
@@ -104,7 +113,7 @@ export async function getAssessmentByToken(
  */
 export async function submitAssessment(
   token: string,
-  answers: LeadershipFormData
+  answers: LeadershipFormData,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createAdminClient()
@@ -121,7 +130,10 @@ export async function submitAssessment(
     }
 
     if (assessment.completed_at) {
-      return { success: false, error: "This assessment has already been completed" }
+      return {
+        success: false,
+        error: "This assessment has already been completed",
+      }
     }
 
     // Score the assessment
@@ -209,8 +221,9 @@ export async function submitAssessment(
  * Get the latest completed assessment for a repreneur (team view)
  */
 export async function getLatestAssessment(
-  repreneurId: string
+  repreneurId: string,
 ): Promise<LeadershipAssessment | null> {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -230,8 +243,9 @@ export async function getLatestAssessment(
  * Get pending (incomplete) assessment for a repreneur
  */
 export async function getPendingAssessment(
-  repreneurId: string
+  repreneurId: string,
 ): Promise<{ token: string; created_at: string } | null> {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase

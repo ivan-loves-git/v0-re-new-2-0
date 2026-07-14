@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { requireUser } from "@/lib/auth-server"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
@@ -24,6 +24,8 @@ export interface OpportunityImportCommitSummary {
   warnings: number
 }
 
+const MAX_OPPORTUNITY_IMPORT_ROWS = 500
+
 function parseRows(formData: FormData): OpportunityImportRawRow[] {
   const rowsJson = formData.get("rows_json")
   if (typeof rowsJson !== "string" || rowsJson.trim().length === 0) {
@@ -35,11 +37,19 @@ function parseRows(formData: FormData): OpportunityImportRawRow[] {
     throw new Error("Rows JSON must be an array")
   }
 
+  if (parsed.length > MAX_OPPORTUNITY_IMPORT_ROWS) {
+    throw new Error(
+      `Opportunity imports are limited to ${MAX_OPPORTUNITY_IMPORT_ROWS} rows`,
+    )
+  }
+
   return parsed as OpportunityImportRawRow[]
 }
 
-export async function previewOpportunityImport(formData: FormData): Promise<OpportunityImportPreview> {
-  await requireUser()
+export async function previewOpportunityImport(
+  formData: FormData,
+): Promise<OpportunityImportPreview> {
+  await requireStaffAccess()
   const rows = parseRows(formData)
   const results = normalizeOpportunityRows(rows)
 
@@ -49,18 +59,30 @@ export async function previewOpportunityImport(formData: FormData): Promise<Oppo
   }
 }
 
-export async function commitOpportunityImport(formData: FormData): Promise<OpportunityImportCommitSummary> {
-  const user = await requireUser()
+export async function commitOpportunityImport(
+  formData: FormData,
+): Promise<OpportunityImportCommitSummary> {
+  const { user } = await requireStaffAccess()
   const rows = parseRows(formData)
   const selectedJson = formData.get("approved_indexes")
-  const approvedIndexes = new Set(
+  const parsedIndexes =
     typeof selectedJson === "string" && selectedJson
-      ? (JSON.parse(selectedJson) as number[])
+      ? JSON.parse(selectedJson)
       : rows.map((_, index) => index)
-  )
+  if (
+    !Array.isArray(parsedIndexes) ||
+    parsedIndexes.some(
+      (value) => !Number.isInteger(value) || value < 0 || value >= rows.length,
+    )
+  ) {
+    throw new Error("Approved indexes must reference imported rows")
+  }
+  const approvedIndexes = new Set(parsedIndexes as number[])
 
   const results = normalizeOpportunityRows(rows)
-  const approved = results.filter((result) => approvedIndexes.has(result.rowIndex))
+  const approved = results.filter((result) =>
+    approvedIndexes.has(result.rowIndex),
+  )
   const creatable = approved.filter((result) => result.isValid)
   const blocked = approved.length - creatable.length
   const supabase = createAdminClient()
@@ -70,7 +92,7 @@ export async function commitOpportunityImport(formData: FormData): Promise<Oppor
       creatable.map((result) => ({
         ...result.draft,
         created_by: user.id,
-      }))
+      })),
     )
 
     if (error) throw new Error(error.message)
@@ -83,6 +105,10 @@ export async function commitOpportunityImport(formData: FormData): Promise<Oppor
     created: creatable.length,
     skipped: results.length - approved.length,
     blocked,
-    warnings: creatable.filter((result) => result.diagnostics.some((diagnostic) => diagnostic.severity === "warning")).length,
+    warnings: creatable.filter((result) =>
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.severity === "warning",
+      ),
+    ).length,
   }
 }

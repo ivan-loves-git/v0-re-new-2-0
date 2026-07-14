@@ -2,8 +2,8 @@ import { Suspense } from "react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { CopyButton } from "../c/[slug]/copy-button"
 import { connection } from "next/server"
-import { requireAuthenticatedAccess } from "@/lib/access-control"
-
+import { requireStaffAccess } from "@/lib/access-control"
+import { sanitizePublicHtml } from "@/lib/security/sanitize-html"
 
 export default function ScrapbookPage() {
   return (
@@ -15,7 +15,7 @@ export default function ScrapbookPage() {
 
 async function ScrapbookContent() {
   await connection()
-  await requireAuthenticatedAccess()
+  await requireStaffAccess()
 
   const supabase = createAdminClient()
 
@@ -41,6 +41,8 @@ async function ScrapbookContent() {
       </div>
     )
   }
+
+  const safeHtml = sanitizePublicHtml(data.html_content)
 
   return (
     <div
@@ -81,10 +83,10 @@ async function ScrapbookContent() {
           >
             Review
           </a>
-          <CopyButton html={data.html_content} />
+          <CopyButton html={safeHtml} />
         </div>
       </div>
-      <div dangerouslySetInnerHTML={{ __html: data.html_content }} />
+      <div dangerouslySetInnerHTML={{ __html: safeHtml }} />
     </div>
   )
 }

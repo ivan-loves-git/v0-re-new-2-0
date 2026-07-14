@@ -3,6 +3,13 @@ import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
+import {
+  IntakeUploadSecurityError,
+  verifyAndConsumeIntakeUploadToken,
+} from "@/lib/security/intake-upload"
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024
+const MAX_REQUEST_BYTES = MAX_FILE_BYTES + 1024 * 1024
 
 const DOCUMENT_FIELDS = {
   cv: "cv_url",
@@ -33,7 +40,9 @@ function safeStorageOwnerId(value: string) {
 
 function verifyFileContent(bytes: Uint8Array, extension: string) {
   const expected = MAGIC_BYTES[extension]
-  return Boolean(expected && expected.every((byte, index) => bytes[index] === byte))
+  return Boolean(
+    expected && expected.every((byte, index) => bytes[index] === byte),
+  )
 }
 
 function extractCvsStoragePath(value: string) {
@@ -59,6 +68,23 @@ function documentDownloadUrl(repreneurId: string, documentType: DocumentType) {
 
 export async function POST(request: NextRequest) {
   try {
+    const contentLength = Number(request.headers.get("content-length") ?? 0)
+    if (contentLength > MAX_REQUEST_BYTES) {
+      return NextResponse.json(
+        { error: "Upload is too large" },
+        { status: 413 },
+      )
+    }
+
+    const access = await getCurrentUserAccess()
+    const staffUpload = access?.role === "staff"
+    const intakeGrant = staffUpload
+      ? null
+      : await verifyAndConsumeIntakeUploadToken(
+          request,
+          request.headers.get("x-intake-upload-token"),
+        )
+
     const formData = await request.formData()
     const file = formData.get("file") as File | null
     const repreneurId = formData.get("repreneurId") as string | null
@@ -69,18 +95,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (repreneurId) {
-      const access = await getCurrentUserAccess()
-      if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      if (!access)
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      if (access.role !== "staff")
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const fileExt = file.name.split(".").pop()?.toLowerCase()
     if (!fileExt || !(fileExt in MIME_BY_EXTENSION)) {
-      return NextResponse.json({ error: "File must be a PDF or Word document" }, { status: 400 })
+      return NextResponse.json(
+        { error: "File must be a PDF or Word document" },
+        { status: 400 },
+      )
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 })
+    if (file.size > MAX_FILE_BYTES) {
+      return NextResponse.json(
+        { error: "File size must be less than 10MB" },
+        { status: 400 },
+      )
     }
 
     const headerBytes = new Uint8Array(await file.slice(0, 8).arrayBuffer())
@@ -92,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ownerId = safeStorageOwnerId(
-      repreneurId || `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      repreneurId || `intake-${intakeGrant?.id}`,
     )
     const filePath = `cvs/${ownerId}-${documentType}-${Date.now()}.${fileExt}`
 
@@ -108,7 +141,10 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error("Storage upload error:", uploadError)
-      return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
+      return NextResponse.json(
+        { error: "Failed to upload file" },
+        { status: 500 },
+      )
     }
 
     if (repreneurId) {
@@ -120,7 +156,10 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error("Document profile update error:", updateError)
-        return NextResponse.json({ error: "Failed to attach document" }, { status: 500 })
+        return NextResponse.json(
+          { error: "Failed to attach document" },
+          { status: 500 },
+        )
       }
 
       revalidatePath("/repreneurs")
@@ -135,23 +174,46 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ path: filePath, url: filePath })
   } catch (error) {
+    if (error instanceof IntakeUploadSecurityError) {
+      return NextResponse.json(
+        { error: error.message },
+        {
+          status: error.status,
+          headers: error.retryAfter
+            ? { "Retry-After": String(error.retryAfter) }
+            : undefined,
+        },
+      )
+    }
     console.error("Upload error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    )
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const access = await getCurrentUserAccess()
-    if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    if (!access)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (access.role !== "staff")
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-    const { repreneurId, cvUrl, documentType: requestedType } = await request.json()
+    const {
+      repreneurId,
+      cvUrl,
+      documentType: requestedType,
+    } = await request.json()
     const documentType: DocumentType = requestedType === "ldc" ? "ldc" : "cv"
     const field = DOCUMENT_FIELDS[documentType]
 
     if (!repreneurId || !cvUrl) {
-      return NextResponse.json({ error: "Missing repreneurId or document URL" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Missing repreneurId or document URL" },
+        { status: 400 },
+      )
     }
 
     const adminClient = createAdminClient()
@@ -163,17 +225,26 @@ export async function DELETE(request: NextRequest) {
 
     if (fetchError) {
       console.error("Document owner fetch error:", fetchError)
-      return NextResponse.json({ error: "Failed to load document owner" }, { status: 500 })
+      return NextResponse.json(
+        { error: "Failed to load document owner" },
+        { status: 500 },
+      )
     }
 
     const storedValue = repreneur?.[field as keyof typeof repreneur]
     if (!storedValue || storedValue !== cvUrl) {
-      return NextResponse.json({ error: "Document does not belong to this repreneur" }, { status: 403 })
+      return NextResponse.json(
+        { error: "Document does not belong to this repreneur" },
+        { status: 403 },
+      )
     }
 
     const filePath = extractCvsStoragePath(storedValue)
     if (!filePath) {
-      return NextResponse.json({ error: "Invalid document path" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Invalid document path" },
+        { status: 400 },
+      )
     }
 
     const { error: deleteError } = await adminClient.storage
@@ -182,7 +253,10 @@ export async function DELETE(request: NextRequest) {
 
     if (deleteError) {
       console.error("Storage delete error:", deleteError)
-      return NextResponse.json({ error: "Failed to delete file" }, { status: 500 })
+      return NextResponse.json(
+        { error: "Failed to delete file" },
+        { status: 500 },
+      )
     }
 
     const { error: updateError } = await adminClient
@@ -192,7 +266,10 @@ export async function DELETE(request: NextRequest) {
 
     if (updateError) {
       console.error("Document profile clear error:", updateError)
-      return NextResponse.json({ error: "Failed to clear document" }, { status: 500 })
+      return NextResponse.json(
+        { error: "Failed to clear document" },
+        { status: 500 },
+      )
     }
 
     revalidatePath("/repreneurs")
@@ -202,6 +279,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Delete error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    )
   }
 }

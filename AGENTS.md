@@ -3,9 +3,11 @@
 # Re-New Platform Project
 
 ## ⚠️ CRITICAL: Codex's Role
+
 **Codex is the lead architect and technical guide for this project.**
 
 Ivan is a business/product person, NOT a developer. Codex must:
+
 - **Be proactive**: Don't wait for Ivan to ask - anticipate what's needed
 - **Guide the process**: Tell Ivan what to do next, don't assume he knows
 - **Validate before advancing**: NEVER mark tasks "done" without testing the actual app
@@ -14,6 +16,7 @@ Ivan is a business/product person, NOT a developer. Codex must:
 - **Test everything**: Before moving to new features, verify existing ones work
 
 **Anti-patterns to avoid:**
+
 - Marking tasks done based on code existing (must test in browser)
 - Assuming Ivan knows dev workflows (npm, env vars, deployment)
 - Moving forward without validating the foundation works
@@ -21,41 +24,47 @@ Ivan is a business/product person, NOT a developer. Codex must:
 
 ## ⚠️ Testing Credentials (READ BEFORE stopping at any login screen)
 
-**Login at `app.re-new.team` (production) or `http://localhost:3000` (local dev):**
-- Email: `ivanpaudice@icloud.com`
-- Password: `Ciaociao01`
+**Credentials are local secrets.** They live in `.env.local` and the approved
+CI secret store. Never add a password or production login to a tracked file,
+commit message, terminal output, screenshot, or report.
 
 **Production QA personas (owned test accounts):**
-| Coverage | Email | Password | Expected behavior |
+| Coverage | Email variable | Password variable | Expected behavior |
 | --- | --- | --- | --- |
-| Staff/admin access | `qa.staff@re-new.team` | `Stromboli.1` | Routes to `/dashboard_re`; redirects away from `/portal/*`. |
-| Repreneur portal with demo deals | `myworkmail4@gmail.com` | `Stromboli.1` | Routes to `/portal/deals`; shows populated proposed and active pursuit cards. |
-| Repreneur portal empty state | `qa.repreneur.empty@re-new.team` | `Stromboli.1` | Routes to `/portal/deals`; shows the no-opportunities state. |
-| Authenticated but no app role | `qa.unassigned@re-new.team` | `Stromboli.1` | Is rejected by `/routing` and returns to `/auth/login`. |
+| Staff/admin access | `QA_STAFF_EMAIL` | `QA_STAFF_PASSWORD` | Routes to `/dashboard_re`; redirects away from `/portal/*`. |
+| Repreneur portal with demo deals | `QA_REPRENEUR_EMAIL` | `QA_REPRENEUR_PASSWORD` | Routes to `/portal/deals`; shows populated proposed and active pursuit cards. |
+| Repreneur portal empty state | `QA_REPRENEUR_EMPTY_EMAIL` | `QA_REPRENEUR_EMPTY_PASSWORD` | Routes to `/portal/deals`; shows the no-opportunities state. |
+| Authenticated but no app role | `QA_UNASSIGNED_EMAIL` | `QA_UNASSIGNED_PASSWORD` | Is rejected by `/routing` and returns to `/auth/login`. |
 
-**Rule:** When verifying any change to this platform, log in with these credentials and click through the actual UI. **Never report "I don't have credentials" or stop at the login wall** — Ivan has explicitly approved storing them in plain text in this file. Wasting his time by halting at login is the #1 anti-pattern in this project.
+**Rule:** When verifying any change to this platform, load the relevant local
+environment variables without printing them and click through the actual UI.
+Never stop at the login wall before checking the approved secret source.
 
 **Role QA rule:** Routine regression testing must use the owned QA personas above before touching real team/client accounts. Real accounts such as Bertrand's are for final user confirmation only, not the primary test harness.
 
 **Where to test:**
+
 - Default: production app at `app.re-new.team` via Codex's browser tooling when available. Real data, the live deploy.
 - Fallback: local dev via `preview_*` MCP at `localhost:3000` (run `preview_start renew-dev`). Use only when testing changes that aren't yet deployed.
 
 After Vercel auto-deploys a push to `main` (typically 1–3 min), test on production. The app footer shows the build number — confirm it matches your push (`git rev-list --count HEAD`).
 
 ## Project Context
+
 - **What:** Internal CRM replacing Flatchr ATS for managing repreneurs
 - **Timeline:** 8-10 FTE working days
 - **Client:** Re-New (Bertrand + 2 part-time team members)
 - **Ivan's role:** Product owner, non-technical
 
 ## Tech Stack
+
 - **Frontend:** Next.js 16 + Tailwind + shadcn/ui
 - **Backend/Database:** Supabase (PostgreSQL + API) - uses service role key (bypasses RLS)
 - **Hosting:** Vercel (Hobby plan)
 - **Auth:** Better Auth (email/password) - NOT Supabase Auth
 
 ## Project Structure (Cleaned Jan 2026)
+
 ```
 emba--renew-platform/
 ├── app/                 # Next.js App Router (routes only)
@@ -77,6 +86,7 @@ emba--renew-platform/
 ```
 
 ## Deployment (Vercel)
+
 - **GitHub Repo:** `ivan-loves-git/v0-re-new-2-0`
 - **Production URL:** `app.re-new.team`
 - **Deploy Hook (manual trigger):**
@@ -87,8 +97,9 @@ emba--renew-platform/
 - **Backup Branch:** `backup/pre-restructure-20260104`
 
 ## Environment Variables (Quick Reference)
-| Variable | Purpose | Default |
-|----------|---------|---------|
+
+| Variable                         | Purpose                                                         | Default       |
+| -------------------------------- | --------------------------------------------------------------- | ------------- |
 | `NEXT_PUBLIC_SHOW_TEST_AUTOFILL` | Show autofill/test buttons on public intake form (`/intake-v2`) | `false` (off) |
 
 To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` to `.env.local` and restart dev server. This shows yellow "Autofill" buttons on each form step for quick testing with dummy data. **Must be off in production** (it is off by default since build 335).
@@ -100,6 +111,7 @@ Per-project work → `TASKS.md` in this folder. Cross-session items Ivan is trac
 ## Notion Boundary and Product Progress
 
 Use Notion only for the Re-New product pipeline:
+
 - Product updates.
 - Product requests.
 - Testing asks and feedback.
@@ -115,6 +127,7 @@ For Re-New work, check `claude_mem` when available for existing project memory b
 GSD is the shared execution system for Claude Code and Codex. Use the repo `.planning/` folder as the common GSD memory: requirements, roadmap, phases, decisions, state, verification notes.
 
 Linear is the team-facing project tracker. Mirror GSD into Linear with this mapping:
+
 - GSD milestone → Linear project milestone.
 - GSD phase → Linear parent issue or milestone workstream.
 - GSD implementation task → Linear issue.
@@ -144,12 +157,14 @@ Impeccable is the mandatory implementation-quality gate for every UI change. It 
 - After corrections, perform browser QA on the actual changed surfaces at desktop and mobile widths. The detector passing is necessary, not sufficient.
 
 ## Open Questions (Waiting on Bertrand)
+
 - Notes structure: free text vs structured (call/email/meeting + outcome)
 - Flatchr export format and fields
 - Current offers/packages details
 - Repreneur acquisition journey mapping
 
 ## Data Model Summary
+
 - **Repreneur:** Profile with lifecycle status (lead/qualified/client)
 - **Offer:** Consulting packages (price, duration, hours included)
 - **Repreneur_Offer:** Junction tracking offer status per repreneur
@@ -158,9 +173,11 @@ Impeccable is the mandatory implementation-quality gate for every UI change. It 
 ## Verification
 
 After code changes:
+
 ```bash
 npm run build && npm run lint
 ```
+
 Fix root causes, don't suppress errors.
 
 ## Git workflow
@@ -175,10 +192,10 @@ In-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team. When
 
 Wavy is the platform's AI mascot for internal team updates. Always test-send to `ivanpaudice@me.com` first; only after Ivan confirms, send to team.
 
-| Item | Location |
-|------|----------|
-| Personality + voice | `docs/communications/WAVY.md` |
+| Item                 | Location                                         |
+| -------------------- | ------------------------------------------------ |
+| Personality + voice  | `docs/communications/WAVY.md`                    |
 | Email template rules | `docs/communications/PRODUCT_UPDATE_TEMPLATE.md` |
-| Sent archive | `docs/emails-sent/` |
-| Send script | `scripts/send-roadmap-email.ts` |
-| Team list | `lib/distribution-lists.ts` |
+| Sent archive         | `docs/emails-sent/`                              |
+| Send script          | `scripts/send-roadmap-email.ts`                  |
+| Team list            | `lib/distribution-lists.ts`                      |

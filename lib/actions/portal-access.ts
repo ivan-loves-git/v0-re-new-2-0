@@ -120,6 +120,29 @@ async function ensureCredentialAccount(userId: string) {
   return true
 }
 
+async function invalidateCredentialAndSessions(userId: string) {
+  await ensureCredentialAccount(userId)
+
+  const unusablePassword = randomBytes(32).toString("base64url")
+  const passwordHash = await hashPassword(unusablePassword)
+  const client = await getPool().connect()
+
+  try {
+    await client.query("BEGIN")
+    await client.query(
+      'UPDATE "account" SET password = $1, "updatedAt" = NOW() WHERE "userId" = $2 AND "providerId" = $3',
+      [passwordHash, userId, "credential"],
+    )
+    await client.query('DELETE FROM "session" WHERE "userId" = $1', [userId])
+    await client.query("COMMIT")
+  } catch (error) {
+    await client.query("ROLLBACK")
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
 async function createAuthUser(
   email: string,
   name: string,
@@ -259,7 +282,15 @@ export async function enableRepreneurPortalAccess(repreneurId: string) {
   const name = fullName(repreneur.first_name, repreneur.last_name)
   const existingUser = await findAuthUserByEmail(email)
   const authUser = existingUser ?? (await createAuthUser(email, name))
-  await ensureCredentialAccount(authUser.id)
+
+  // Never trust an account that happened to register this email first. Any
+  // existing password and session are invalidated before the staff invitation
+  // is linked, so only the mailbox recipient can complete the reset flow.
+  if (existingUser) {
+    await invalidateCredentialAndSessions(authUser.id)
+  } else {
+    await ensureCredentialAccount(authUser.id)
+  }
 
   const supabase = createAdminClient()
   const { data: existingRoles, error: roleLookupError } = await supabase

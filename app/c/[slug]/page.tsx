@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
 import { CopyButton } from "./copy-button"
+import { sanitizePublicHtml } from "@/lib/security/sanitize-html"
 
 export default function ClipboardPage({
   params,
@@ -36,6 +37,8 @@ async function ClipboardContent({
     notFound()
   }
 
+  const safeHtml = sanitizePublicHtml(data.html_content)
+
   return (
     <div
       style={{
@@ -58,9 +61,9 @@ async function ClipboardContent({
         <h1 style={{ fontSize: 16, fontWeight: 600, color: "#333", margin: 0 }}>
           {data.title}
         </h1>
-        <CopyButton html={data.html_content} />
+        <CopyButton html={safeHtml} />
       </div>
-      <div dangerouslySetInnerHTML={{ __html: data.html_content }} />
+      <div dangerouslySetInnerHTML={{ __html: safeHtml }} />
     </div>
   )
 }

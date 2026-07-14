@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { HtmlPreview } from "./scrapbook-html-download-button"
 import { connection } from "next/server"
-
+import { requireStaffAccess } from "@/lib/access-control"
 
 export function ScrapbookHtmlPage({ slot }: { slot: number }) {
   return (
@@ -26,6 +26,7 @@ function ScrapbookHtmlFallback() {
 
 async function ScrapbookHtmlContent({ slot }: { slot: number }) {
   await connection()
+  await requireStaffAccess()
 
   const supabase = createAdminClient()
   const slug = `scrapbook-html-${slot}`
