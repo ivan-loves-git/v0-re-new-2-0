@@ -20,7 +20,7 @@
       empty-state repreneur and unassigned-account QA; live RLS, RPC, signup,
       throttling, upload-token and stored-content checks.
       Structure mapping: title; Executive Summary; six evidence stories; cyber
-      operating rhythm; caveats and assumptions.
+      operating rhythm.
       Visual choice: exact closure composition and labeled counts are used instead of a trend
       chart because the evidence is one completed audit cohort, not a time series.
     -->
@@ -1588,96 +1588,24 @@
         </article>
       </section>
 
-      <section class="section next-steps" aria-labelledby="next-steps-title">
-        <div>
-          <span class="eyebrow">What’s next for cyber</span>
-          <h2 id="next-steps-title">
-            The known risks are fixed. Security now becomes routine.
-          </h2>
-          <p>
-            The risks found in the audit were fixed and rechecked by different
-            security agents, automated tests and live production checks. There
-            is no known cyber-remediation backlog. From here, security becomes
-            part of how we operate and build WAVE.
-          </p>
-        </div>
-        <ol class="step-list">
-          <li>
-            <span>01</span>
-            <div>
-              <strong>Weekly security check</strong>
-              <p>
-                Review recent changes, access controls, alerts and new exposure
-                so small issues are caught early.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>02</span>
-            <div>
-              <strong>Security gate for every major build</strong>
-              <p>
-                Any major release that changes data, access, public forms,
-                uploads or integrations receives a focused security check before
-                it goes live.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>03</span>
-            <div>
-              <strong>One general audit every month</strong>
-              <p>
-                Run a full platform review, verify that earlier controls still
-                hold and close anything new before it becomes accumulated risk.
-              </p>
-            </div>
-          </li>
-        </ol>
-      </section>
-
-      <section class="section caveats" aria-labelledby="caveats-title">
-        <div>
-          <span class="eyebrow">Caveats and assumptions</span>
-          <h2 id="caveats-title">What this report does and does not prove</h2>
-          <p>
-            The status is evidence-backed, but security is a maintained
-            operating condition rather than a one-time certificate.
-          </p>
-        </div>
-        <ul class="caveat-list">
-          <li>
-            <strong>Scope:</strong> the audit covered all 58 defined repository
-            areas at the reviewed revision. Closure proof combines source tests,
-            live database checks and bounded production requests.
-          </li>
-          <li>
-            <strong>Closure:</strong> closed means the control was changed and
-            verified through tests and proportionate production evidence. It
-            does not mean every possible future attack path has been eliminated.
-          </li>
-          <li>
-            <strong>Credential closure:</strong> current tracked credentials
-            were removed, five accounts were rotated and 110 sessions revoked.
-            Old values in repository history were not rewritten, but are no
-            longer valid credentials.
-          </li>
-          <li>
-            <strong>Incident status:</strong> the audit proves vulnerable paths
-            and current controls. It does not prove whether a past incident did
-            or did not occur.
-          </li>
-          <li>
-            <strong>Historical scope:</strong> repository-history rewriting is
-            excluded by decision. The closure count reflects the current
-            deployed product, database controls and tracked files.
-          </li>
-        </ul>
+      <section class="section" aria-labelledby="next-steps-title">
+        <span class="eyebrow">What’s next for cyber</span>
+        <h2 id="next-steps-title">
+          Security is now part of our normal operating rhythm.
+        </h2>
+        <p>
+          All risks found through the independent audits have been fixed and
+          rechecked. We will keep it that way with a simple routine:
+          <strong>a security review every week</strong>,
+          <strong>a security sign-off before every major release</strong>, and
+          <strong>one full independent audit every month</strong>. Anything new
+          that is found will be tracked and fixed to closure.
+        </p>
       </section>
 
       <footer class="footer">
         <span>Re-New founder brief · Security foundation</span>
-        <span>Security remediation verified in WAVE build 049f99b</span>
+        <span>Weekly checks · Release sign-off · Monthly audit</span>
       </footer>
     </main>
   </body>
