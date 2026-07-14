@@ -35,6 +35,9 @@ describe("remaining security boundaries", () => {
   it("keeps Better Auth invitation-only with database-backed rate limits", () => {
     const authSource = source("lib/auth.ts")
     const authRouteSource = source("app/api/auth/[...all]/route.ts")
+    const rateLimitMigration = source(
+      "scripts/065_fix_better_auth_rate_limit_id.sql",
+    )
     expect(authSource).toMatch(/disableSignUp:\s*true/)
     expect(authSource).toMatch(/rateLimit:\s*{[\s\S]*enabled:\s*true/)
     expect(authSource).toMatch(/storage:\s*"database"/)
@@ -42,6 +45,14 @@ describe("remaining security boundaries", () => {
     expect(authRouteSource).toContain("consumeRequestRateLimit")
     expect(authRouteSource).toContain('"/api/auth/sign-in/email"')
     expect(authRouteSource).toContain("status: 429")
+    expect(rateLimitMigration).toMatch(/ADD COLUMN IF NOT EXISTS id TEXT/)
+    expect(rateLimitMigration).toMatch(
+      /ALTER COLUMN id SET DEFAULT gen_random_uuid\(\)::TEXT/,
+    )
+    expect(rateLimitMigration).toMatch(/ALTER COLUMN id SET NOT NULL/)
+    expect(rateLimitMigration).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS rate_limit_id_uidx/,
+    )
   })
 
   it("clears revoked sessions instead of looping at the routing gate", () => {
