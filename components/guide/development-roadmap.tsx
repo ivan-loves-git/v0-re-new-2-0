@@ -1,13 +1,29 @@
 "use client"
 
-import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw, Lightbulb, Target, AlertTriangle, Zap, Rocket } from "lucide-react"
+import { Calendar, CheckCircle, Sparkles, Bug, Palette, RefreshCw, Lightbulb, Target, AlertTriangle, Zap, Rocket, type LucideIcon } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { WaveSegmentedMetric, WaveSegmentedSummary } from "@/components/wave/visual-foundations"
 
 // Comprehensive roadmap capturing the full Wave journey
 // Product outcomes, product work, UX improvements, validation work, learnings, and features
-const roadmapEvents = [
+type RoadmapEventType = "feature" | "product" | "fix" | "style" | "testing" | "audit" | "refactor" | "direction" | "learning" | "decision"
+
+interface RoadmapEvent {
+  title: string
+  type: RoadmapEventType
+  description: string
+}
+
+interface RoadmapPeriod {
+  period: string
+  version: string
+  title: string
+  isCompleted: boolean
+  events: RoadmapEvent[]
+}
+
+const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Jul 14, 2026",
     version: "0.9.21",
@@ -22,12 +38,12 @@ const roadmapEvents = [
       {
         title: "Visual noise removed across the product",
         type: "style",
-        description: "Decorative accent borders, repeated metric cards, heavy shadow cards, decorative gradients and stripes, and repeated tiny uppercase labels were replaced with calmer product structure.",
+        description: "Decorative accent borders, repeated metric cards, heavy shadow cards, gradients, and stripes were removed. Compact uppercase labels were retained and standardized as a governed Re-New pattern.",
       },
       {
         title: "Polish separated from product strategy",
         type: "decision",
-        description: "Automatic design corrections can improve implementation quality, while changes to KPIs, workflows, and information hierarchy remain explicit product decisions.",
+        description: "Impeccable is limited to visual implementation quality. KPIs, workflows, hierarchy, information architecture, filters, and strategy remain outside its scope.",
       },
     ],
   },
@@ -1610,7 +1626,7 @@ const roadmapEvents = [
   },
 ]
 
-const typeConfig = {
+const typeConfig: Record<RoadmapEventType, { icon: LucideIcon; color: string; bgColor: string; label: string }> = {
   feature: { icon: Sparkles, color: "text-blue-600", bgColor: "bg-blue-50", label: "Feature" },
   product: { icon: Zap, color: "text-sky-600", bgColor: "bg-sky-50", label: "Product work" },
   fix: { icon: Bug, color: "text-green-600", bgColor: "bg-green-50", label: "Fix" },
@@ -1620,6 +1636,7 @@ const typeConfig = {
   refactor: { icon: RefreshCw, color: "text-amber-600", bgColor: "bg-amber-50", label: "Refactor" },
   direction: { icon: Target, color: "text-rose-600", bgColor: "bg-rose-50", label: "Product direction" },
   learning: { icon: Lightbulb, color: "text-yellow-600", bgColor: "bg-yellow-50", label: "Learning" },
+  decision: { icon: CheckCircle, color: "text-primary", bgColor: "bg-accent", label: "Decision" },
 }
 
 export function DevelopmentRoadmap() {
@@ -1698,7 +1715,7 @@ export function DevelopmentRoadmap() {
 
                 <div className="px-3 pb-3 pt-2 border-t border-blue-100 space-y-2">
                   {period.events.map((event, i) => {
-                    const config = typeConfig[event.type as keyof typeof typeConfig]
+                    const config = typeConfig[event.type]
                     const Icon = config.icon
                     return (
                       <div
