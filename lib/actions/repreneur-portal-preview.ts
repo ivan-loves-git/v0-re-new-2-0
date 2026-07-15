@@ -1,8 +1,12 @@
 "use server"
 
 import { requireStaffAccess } from "@/lib/access-control"
+import {
+  normalizePortalRepreneurProfile,
+  PORTAL_REPRENEUR_PROFILE_SELECT,
+  type PortalRepreneurProfile,
+} from "@/lib/data/portal-profile"
 import { createAdminClient } from "@/lib/supabase/admin"
-import type { LeadershipAssessment } from "@/lib/types/leadership-assessment"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -10,7 +14,6 @@ import type {
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
-import type { Repreneur } from "@/lib/types/repreneur"
 
 const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
@@ -54,10 +57,6 @@ interface PreviewOpportunityRow {
 interface PreviewOpportunityMatchRow {
   id: string
   status: RepreneurOpportunityExposure["match_status"]
-  platform_recommendation: RepreneurOpportunityExposure["platform_recommendation"]
-  platform_score: number | null
-  platform_reasons: unknown
-  human_recommendation: RepreneurOpportunityExposure["human_recommendation"]
   decline_reason_categories: unknown
   decline_reason_text: string | null
   pursuit_stage: RepreneurOpportunityExposure["pursuit_stage"]
@@ -119,10 +118,6 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
-    platform_recommendation: row.platform_recommendation,
-    platform_score: row.platform_score,
-    platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
-    human_recommendation: row.human_recommendation,
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -214,10 +209,6 @@ async function listVisibleOpportunitiesForRepreneur(
     .select(`
       id,
       status,
-      platform_recommendation,
-      platform_score,
-      platform_reasons,
-      human_recommendation,
       decline_reason_categories,
       decline_reason_text,
       pursuit_stage,
@@ -322,38 +313,19 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
 }
 
 export async function getStaffPortalPreviewProfile(repreneurId: string): Promise<{
-  repreneur: Repreneur | null
-  leadershipAssessment: LeadershipAssessment | null
+  repreneur: PortalRepreneurProfile | null
 }> {
   await requireStaffAccess()
 
   const supabase = createAdminClient()
   const { data: repreneur, error } = await supabase
     .from("repreneurs")
-    .select("*")
+    .select(PORTAL_REPRENEUR_PROFILE_SELECT)
     .eq("id", repreneurId)
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  if (!repreneur) return { repreneur: null, leadershipAssessment: null }
-
-  const { data: leadershipAssessment, error: assessmentError } = await supabase
-    .from("leadership_assessments")
-    .select("*")
-    .eq("repreneur_id", repreneurId)
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (assessmentError && assessmentError.code !== "42P01") {
-    throw new Error(assessmentError.message)
-  }
-
-  return {
-    repreneur: repreneur as Repreneur,
-    leadershipAssessment: (leadershipAssessment as LeadershipAssessment | null) ?? null,
-  }
+  return { repreneur: normalizePortalRepreneurProfile(repreneur) }
 }
 
 export async function listStaffPortalPreviewOpportunities(repreneurId: string): Promise<{

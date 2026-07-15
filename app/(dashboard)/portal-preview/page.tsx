@@ -50,7 +50,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         selectedMatchId ? getStaffPortalPreviewOpportunity(selectedRepreneurId, selectedMatchId) : Promise.resolve(null),
       ])
     : [
-        { repreneur: null, leadershipAssessment: null },
+        { repreneur: null },
         { repreneur: null, opportunities: [] },
         null,
       ]
@@ -139,9 +139,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
           <TabsContent value="profile">
             <RepreneurProfileSummary
               repreneur={profileData.repreneur}
-              leadershipAssessment={profileData.leadershipAssessment}
+              opportunities={opportunityData.opportunities}
               dealsHref={portalPreviewHref(selectedRepreneurId)}
-              showContactAction={false}
             />
           </TabsContent>
         </Tabs>

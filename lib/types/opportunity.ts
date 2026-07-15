@@ -457,10 +457,6 @@ export interface RepreneurOpportunityExposure {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
-  platform_recommendation: OpportunityMatchRecommendation
-  platform_score?: number | null
-  platform_reasons: string[]
-  human_recommendation: OpportunityMatchRecommendation
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   updated_at: string

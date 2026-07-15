@@ -56,10 +56,6 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
-    platform_recommendation: row.platform_recommendation,
-    platform_score: row.platform_score,
-    platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
-    human_recommendation: row.human_recommendation,
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -172,10 +168,6 @@ export async function listMyRepreneurOpportunities(): Promise<{
     .select(`
       id,
       status,
-      platform_recommendation,
-      platform_score,
-      platform_reasons,
-      human_recommendation,
       decline_reason_categories,
       decline_reason_text,
       pursuit_stage,
@@ -240,10 +232,6 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
     .select(`
       id,
       status,
-      platform_recommendation,
-      platform_score,
-      platform_reasons,
-      human_recommendation,
       decline_reason_categories,
       decline_reason_text,
       pursuit_stage,
