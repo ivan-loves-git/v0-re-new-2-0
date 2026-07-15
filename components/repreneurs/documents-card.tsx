@@ -1,7 +1,15 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { FileText, Upload, Trash2, Loader2, ExternalLink, FolderOpen } from "lucide-react"
+import {
+  Download,
+  ExternalLink,
+  FileText,
+  FolderOpen,
+  Loader2,
+  Trash2,
+  Upload,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -24,6 +32,8 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const documentType = field === "ldc_url" ? "ldc" : "cv"
+  const documentUrl = `/api/repreneurs/${encodeURIComponent(repreneurId)}/documents/${documentType}`
 
   const handleUpload = async (file: File) => {
     // Validate file type (PDF only)
@@ -42,7 +52,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("repreneurId", repreneurId)
-      formData.append("documentType", field === "ldc_url" ? "ldc" : "cv")
+      formData.append("documentType", documentType)
 
       const response = await fetch("/api/upload-cv", {
         method: "POST",
@@ -78,7 +88,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
         body: JSON.stringify({
           repreneurId,
           cvUrl: currentUrl,
-          documentType: field === "ldc_url" ? "ldc" : "cv",
+          documentType,
         }),
       })
 
@@ -123,19 +133,17 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       <div className="flex items-center gap-1">
         {currentUrl ? (
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() =>
-                window.open(
-                  `/api/repreneurs/${encodeURIComponent(repreneurId)}/documents/${field === "ldc_url" ? "ldc" : "cv"}`,
-                  "_blank",
-                )
-              }
-            >
-              <ExternalLink className="size-3.5" />
-              <span className="hidden sm:inline">View</span>
+            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+              <a href={documentUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="size-3.5" />
+                <span className="hidden sm:inline">View</span>
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+              <a href={`${documentUrl}?download`}>
+                <Download className="size-3.5" />
+                <span className="hidden md:inline">Download</span>
+              </a>
             </Button>
             <Button
               variant="outline"
@@ -143,6 +151,8 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
               className="size-8"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
+              aria-label={`Replace ${label}`}
+              title={`Replace ${label}`}
             >
               {isUploading ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -156,6 +166,8 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
               className="size-8 text-muted-foreground hover:text-red-500 hover:border-red-200"
               onClick={handleDelete}
               disabled={isDeleting}
+              aria-label={`Delete ${label}`}
+              title={`Delete ${label}`}
             >
               {isDeleting ? (
                 <Loader2 className="size-3.5 animate-spin" />

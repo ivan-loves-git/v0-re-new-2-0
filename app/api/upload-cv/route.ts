@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { recalculateRepreneurScoresAndMatches } from "@/lib/repreneur-profile-refresh"
+import { resolveRepreneurDocumentStoragePath } from "@/lib/repreneur-document-storage"
 import {
   IntakeUploadSecurityError,
   verifyAndConsumeIntakeUploadToken,
@@ -44,23 +45,6 @@ function verifyFileContent(bytes: Uint8Array, extension: string) {
   return Boolean(
     expected && expected.every((byte, index) => bytes[index] === byte),
   )
-}
-
-function extractCvsStoragePath(value: string) {
-  if (value.startsWith("cvs/")) return value
-
-  try {
-    const url = new URL(value)
-    const marker = "/cvs/"
-    const markerIndex = url.pathname.indexOf(marker)
-    if (markerIndex >= 0) {
-      return `cvs/${decodeURIComponent(url.pathname.slice(markerIndex + marker.length))}`
-    }
-  } catch {
-    // Fall through to invalid path response.
-  }
-
-  return null
 }
 
 function documentDownloadUrl(repreneurId: string, documentType: DocumentType) {
@@ -283,7 +267,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const filePath = extractCvsStoragePath(storedValue)
+    const filePath = resolveRepreneurDocumentStoragePath(storedValue)
     if (!filePath) {
       return NextResponse.json(
         { error: "Invalid document path" },
