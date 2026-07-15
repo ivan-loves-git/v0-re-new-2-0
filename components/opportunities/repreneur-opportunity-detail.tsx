@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
 import { declineMyOpportunity, markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunities"
 import {
   canDownloadOpportunityDocuments,
@@ -54,6 +55,7 @@ export function RepreneurOpportunityDetail({
   const declineAction = declineMyOpportunity.bind(null, opportunity.match_id)
   const documentsAllowed = canDownloadOpportunityDocuments(opportunity.nda_status ?? "not_required")
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
+  const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,6 +63,7 @@ export function RepreneurOpportunityDetail({
         <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
+          {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "active_pursuit" && (
             <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge>
           )}
@@ -95,7 +98,7 @@ export function RepreneurOpportunityDetail({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {opportunity.match_status === "interested" && (
+          {opportunity.match_status === "interested" && !lockedForAnotherRepreneur && (
             <Alert>
               <CheckCircle2 />
               <AlertTitle>Interest sent</AlertTitle>
@@ -103,7 +106,7 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {opportunity.match_status === "declined" && (
+          {opportunity.match_status === "declined" && !lockedForAnotherRepreneur && (
             <Alert>
               <XCircle />
               <AlertTitle>Marked as not a fit</AlertTitle>
@@ -134,7 +137,16 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {readOnly && canRespond(opportunity.match_status) && (
+          {lockedForAnotherRepreneur ? (
+            <LockedOpportunityInterestAction
+              opportunityId={opportunity.opportunity_id}
+              interestRecorded={Boolean(opportunity.interest_expressed_at)}
+              notificationSent={Boolean(opportunity.interest_notification_sent_at)}
+              readOnly={readOnly}
+            />
+          ) : null}
+
+          {readOnly && !lockedForAnotherRepreneur && canRespond(opportunity.match_status) && (
             <Alert>
               <ShieldCheck />
               <AlertTitle>Staff preview</AlertTitle>
@@ -142,7 +154,7 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {!readOnly && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && canRespond(opportunity.match_status) && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <form action={interestAction}>
                 <Button type="submit" disabled={opportunity.match_status === "interested"}>
@@ -153,7 +165,7 @@ export function RepreneurOpportunityDetail({
             </div>
           )}
 
-          {!readOnly && opportunity.match_status !== "declined" && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && opportunity.match_status !== "declined" && canRespond(opportunity.match_status) && (
             <form action={declineAction} className="rounded-md border p-4">
               <div className="flex flex-col gap-4">
                 <div>

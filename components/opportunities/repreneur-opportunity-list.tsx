@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { WaveMicroLabel } from "@/components/wave/visual-foundations"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
@@ -38,6 +39,7 @@ interface RepreneurOpportunityListProps {
   detailHrefForOpportunity?: (opportunity: RepreneurOpportunityListItem) => string | null
   detailLabel?: string
   emptyDescription?: string
+  readOnly?: boolean
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityListItem) {
@@ -129,20 +131,24 @@ function DealCard({
   opportunity,
   detailHref,
   detailLabel,
+  readOnly,
 }: {
   opportunity: RepreneurOpportunityListItem
   detailHref: string | null
   detailLabel: string
+  readOnly: boolean
 }) {
   const staffRecommended = isStaffRecommended(opportunity)
   const isDeclined = opportunity.match_status === "declined"
   const publicRelevance = relevanceGrade(opportunity)
+  const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
 
   return (
     <Card className="gap-0 py-0 md:grid md:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {staffRecommended && !isDeclined ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
+          {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status ? <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge> : null}
           {opportunity.pursuit_stage ? <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge> : null}
           {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge> : null}
@@ -179,6 +185,14 @@ function DealCard({
             <span className="font-medium">{opportunity.headcount_range ?? opportunity.headcount ?? "—"}</span>
           </div>
         </div>
+        {lockedForAnotherRepreneur ? (
+          <LockedOpportunityInterestAction
+            opportunityId={opportunity.opportunity_id}
+            interestRecorded={Boolean(opportunity.interest_expressed_at)}
+            notificationSent={Boolean(opportunity.interest_notification_sent_at)}
+            readOnly={readOnly}
+          />
+        ) : null}
         {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
         {detailHref ? (
           <Button asChild variant="outline" className="w-fit">
@@ -199,12 +213,14 @@ function DealSection({
   opportunities,
   detailHrefForOpportunity,
   detailLabel,
+  readOnly,
 }: {
   title: string
   description: string
   opportunities: RepreneurDealDiscoveryOpportunity[]
   detailHrefForOpportunity: (opportunity: RepreneurOpportunityListItem) => string | null
   detailLabel: string
+  readOnly: boolean
 }) {
   if (opportunities.length === 0) return null
 
@@ -221,6 +237,7 @@ function DealSection({
             opportunity={opportunity}
             detailHref={detailHrefForOpportunity(opportunity)}
             detailLabel={detailLabel}
+            readOnly={readOnly}
           />
         ))}
       </div>
@@ -234,6 +251,7 @@ export function RepreneurOpportunityList({
   detailHrefForOpportunity,
   detailLabel = "View detail",
   emptyDescription,
+  readOnly = false,
 }: RepreneurOpportunityListProps) {
   const [search, setSearch] = useState("")
   const [filters, setFilters] = useState<RepreneurDealDiscoveryFilters>(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS)
@@ -297,15 +315,15 @@ export function RepreneurOpportunityList({
         </Alert>
       ) : (
         <div className="flex flex-col gap-6">
-          <DealSection title="Recommended by Re-New" description="The Re-New team recommends starting with these opportunities." opportunities={sections.staffRecommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} />
-          <DealSection title="Current deals" description="Other live opportunities available for you to review." opportunities={sections.remaining} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} />
+          <DealSection title="Recommended by Re-New" description="The Re-New team recommends starting with these opportunities." opportunities={sections.staffRecommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
+          <DealSection title="Current deals" description="Other live opportunities available for you to review." opportunities={sections.remaining} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
           {sections.outsideCurrentCriteria.length > 0 ? (
             <>
               <Separator />
-              <DealSection title="Outside your current criteria" description="These deals remain available if you would like to explore beyond your current criteria." opportunities={sections.outsideCurrentCriteria} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} />
+              <DealSection title="Outside your current criteria" description="These deals remain available if you would like to explore beyond your current criteria." opportunities={sections.outsideCurrentCriteria} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
             </>
           ) : null}
-          <DealSection title="Declined deals" description="You can revisit a past decision whenever your priorities change." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} />
+          <DealSection title="Declined deals" description="You can revisit a past decision whenever your priorities change." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
         </div>
       )}
     </div>
