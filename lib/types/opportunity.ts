@@ -120,6 +120,12 @@ export const OPPORTUNITY_DECLINE_REASON_OPTIONS = [
   { value: "other", label: "Other" },
 ] as const satisfies ReadonlyArray<{ value: OpportunityDeclineReasonCategory; label: string }>
 
+export function isOpportunityDeclineReasonCategory(
+  value: unknown,
+): value is OpportunityDeclineReasonCategory {
+  return OPPORTUNITY_DECLINE_REASON_OPTIONS.some((option) => option.value === value)
+}
+
 export interface MaSource {
   id: string
   firm_name: string

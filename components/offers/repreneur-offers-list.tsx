@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation"
 import { MoreHorizontal, Check, Clock, Trash2, Package, Eye } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -26,6 +34,10 @@ import { OfferMilestones } from "./offer-milestones"
 import { updateRepreneurOfferStatus, deleteRepreneurOffer } from "@/lib/actions/offers"
 import { toast } from "sonner"
 import type { Offer, RepreneurOffer, OfferStatus, OfferMilestone } from "@/lib/types/offer"
+import {
+  OPPORTUNITY_DECLINE_REASON_OPTIONS,
+  type OpportunityDeclineReasonCategory,
+} from "@/lib/types/opportunity"
 
 interface RepreneurOffersListProps {
   repreneurId: string
@@ -38,6 +50,9 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
   const [localOffers, setLocalOffers] = useState<RepreneurOffer[]>(repreneurOffers)
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [viewingOffer, setViewingOffer] = useState<RepreneurOffer | null>(null)
+  const [decliningOffer, setDecliningOffer] = useState<RepreneurOffer | null>(null)
+  const [declineReasonCategory, setDeclineReasonCategory] = useState<OpportunityDeclineReasonCategory | "">("")
+  const [declineReasonText, setDeclineReasonText] = useState("")
 
   // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
   const isMutatingRef = useRef(false)
@@ -66,7 +81,12 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
     })
   }
 
-  const handleStatusChange = async (repreneurOfferId: string, newStatus: OfferStatus) => {
+  const handleStatusChange = async (
+    repreneurOfferId: string,
+    newStatus: OfferStatus,
+    declineReason?: OpportunityDeclineReasonCategory,
+    declineDetails?: string,
+  ) => {
     // Store original for potential revert
     const originalOffers = [...localOffers]
 
@@ -82,22 +102,49 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
     )
 
     try {
-      await updateRepreneurOfferStatus(repreneurOfferId, newStatus, repreneurId)
+      await updateRepreneurOfferStatus(
+        repreneurOfferId,
+        newStatus,
+        repreneurId,
+        declineReason,
+        declineDetails,
+      )
       toast.success("Offer status updated")
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
       setTimeout(() => {
         isMutatingRef.current = false
       }, 500)
+      return true
     } catch (error) {
       console.error("Failed to update offer status:", error)
       toast.error("Failed to update offer status")
       // Revert on error
       setLocalOffers(originalOffers)
       isMutatingRef.current = false
+      return false
     } finally {
       setIsLoading(null)
     }
+  }
+
+  const resetDeclineDialog = () => {
+    setDecliningOffer(null)
+    setDeclineReasonCategory("")
+    setDeclineReasonText("")
+  }
+
+  const handleOfferDecline = async () => {
+    if (!decliningOffer || !declineReasonCategory) return
+
+    const wasUpdated = await handleStatusChange(
+      decliningOffer.id,
+      "declined",
+      declineReasonCategory,
+      declineReasonText,
+    )
+
+    if (wasUpdated) resetDeclineDialog()
   }
 
   const handleDelete = async (repreneurOfferId: string) => {
@@ -201,6 +248,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                       size="icon"
                       className="size-8"
                       disabled={isLoading === ro.id}
+                      aria-label={`Actions for ${ro.offer?.name || "offer"}`}
                     >
                       <MoreHorizontal className="size-4" />
                     </Button>
@@ -216,7 +264,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                           <Check className="size-4 mr-2" />
                           Mark as Accepted
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "declined")}>
+                        <DropdownMenuItem onClick={() => setDecliningOffer(ro)}>
                           <Clock className="size-4 mr-2" />
                           Mark as Declined
                         </DropdownMenuItem>
@@ -228,7 +276,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                           <Check className="size-4 mr-2" />
                           Mark as Completed
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(ro.id, "declined")}>
+                        <DropdownMenuItem onClick={() => setDecliningOffer(ro)}>
                           <Clock className="size-4 mr-2" />
                           Mark as Declined
                         </DropdownMenuItem>
@@ -310,6 +358,64 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
         <DialogFooter>
           <Button variant="outline" onClick={() => setViewingOffer(null)}>
             Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog
+      open={!!decliningOffer}
+      onOpenChange={(open) => {
+        if (!open && isLoading !== decliningOffer?.id) resetDeclineDialog()
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Mark offer as declined?</DialogTitle>
+          <DialogDescription>
+            Select the main reason for declining {decliningOffer?.offer?.name || "this offer"}. The rationale will be available to analytics.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="engagement-decline-reason">Decline reason</Label>
+            <Select
+              value={declineReasonCategory}
+              onValueChange={(value) => setDeclineReasonCategory(value as OpportunityDeclineReasonCategory)}
+            >
+              <SelectTrigger id="engagement-decline-reason">
+                <SelectValue placeholder="Select a reason..." />
+              </SelectTrigger>
+              <SelectContent>
+                {OPPORTUNITY_DECLINE_REASON_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="engagement-decline-details">Details (optional)</Label>
+            <Textarea
+              id="engagement-decline-details"
+              value={declineReasonText}
+              onChange={(event) => setDeclineReasonText(event.target.value)}
+              placeholder="Add context for the team..."
+              rows={3}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={resetDeclineDialog} disabled={isLoading === decliningOffer?.id}>
+            Cancel
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleOfferDecline}
+            disabled={!declineReasonCategory || isLoading === decliningOffer?.id}
+          >
+            {isLoading === decliningOffer?.id ? "Declining..." : "Mark as declined"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -10,6 +10,8 @@ import type {
   OfferStatus,
   MilestoneType,
 } from "@/lib/types/offer"
+import type { OpportunityDeclineReasonCategory } from "@/lib/types/opportunity"
+import { isOpportunityDeclineReasonCategory } from "@/lib/types/opportunity"
 import { sendEmail } from "@/lib/email"
 import { OfferReceivedEmail } from "@/lib/email/templates/offer-received"
 import { OfferAcceptedEmail } from "@/lib/email/templates/offer-accepted"
@@ -166,9 +168,21 @@ export async function updateRepreneurOfferStatus(
   repreneurOfferId: string,
   newStatus: OfferStatus,
   repreneurId: string,
+  declineReasonCategory?: OpportunityDeclineReasonCategory,
+  declineReasonText?: string,
 ) {
   await requireStaffAccess()
   const supabase = createAdminClient()
+
+  if (
+    newStatus === "declined" &&
+    declineReasonCategory &&
+    !isOpportunityDeclineReasonCategory(declineReasonCategory)
+  ) {
+    throw new Error("Select a valid decline reason.")
+  }
+
+  const normalizedDeclineReasonText = declineReasonText?.trim() || null
 
   const updates: Record<string, unknown> = { status: newStatus }
 
@@ -214,6 +228,8 @@ export async function updateRepreneurOfferStatus(
       .update({
         lifecycle_status: "declined",
         declined_at: new Date().toISOString(),
+        decline_reason_category: declineReasonCategory || null,
+        decline_reason_text: normalizedDeclineReasonText,
       })
       .eq("id", repreneurId)
   }

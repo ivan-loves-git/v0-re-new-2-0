@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingDown } from "lucide-react"
 import { DECLINE_REASON_OPTIONS } from "@/lib/types/repreneur"
+import { OPPORTUNITY_DECLINE_REASON_OPTIONS } from "@/lib/types/opportunity"
 import { WaveBarChart } from "@/components/wave/charts"
 
 interface DeclineReasonsProps {
@@ -11,6 +12,7 @@ interface DeclineReasonsProps {
 
 const LABEL_BY_VALUE: Record<string, string> = {
   ...Object.fromEntries(DECLINE_REASON_OPTIONS.map(o => [o.value, o.label])),
+  ...Object.fromEntries(OPPORTUNITY_DECLINE_REASON_OPTIONS.map(o => [o.value, o.label])),
   unspecified: "Not specified",
 }
 
