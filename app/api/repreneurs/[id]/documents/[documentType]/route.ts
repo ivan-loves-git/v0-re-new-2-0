@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getCurrentUserAccess } from "@/lib/access-control"
+import {
+  getRepreneurDocumentDownloadName,
+  resolveRepreneurDocumentStoragePath,
+} from "@/lib/repreneur-document-storage"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 const DOCUMENT_FIELDS = {
@@ -13,25 +17,8 @@ function isDocumentType(value: string): value is DocumentType {
   return value === "cv" || value === "ldc"
 }
 
-function extractCvsStoragePath(value: string) {
-  if (value.startsWith("cvs/")) return value
-
-  try {
-    const url = new URL(value)
-    const marker = "/cvs/"
-    const markerIndex = url.pathname.indexOf(marker)
-    if (markerIndex >= 0) {
-      return `cvs/${decodeURIComponent(url.pathname.slice(markerIndex + marker.length))}`
-    }
-  } catch {
-    // The value is not a legacy public URL.
-  }
-
-  return null
-}
-
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string; documentType: string }> },
 ) {
   const access = await getCurrentUserAccess()
@@ -51,25 +38,50 @@ export async function GET(
     .eq("id", id)
     .maybeSingle()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error("Repreneur document lookup error:", error)
+    return NextResponse.json(
+      { error: "Unable to load the document" },
+      { status: 500 },
+    )
+  }
 
   const storedValue = repreneur?.[field as keyof typeof repreneur]
   if (!storedValue) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 })
   }
 
-  const storagePath = extractCvsStoragePath(storedValue)
+  const storagePath = resolveRepreneurDocumentStoragePath(storedValue)
   if (!storagePath) {
-    return NextResponse.json({ error: "Invalid document path" }, { status: 400 })
+    return NextResponse.json(
+      { error: "Document metadata is unavailable" },
+      { status: 404 },
+    )
   }
+
+  const shouldDownload = request.nextUrl.searchParams.has("download")
+  const downloadName = shouldDownload
+    ? getRepreneurDocumentDownloadName(documentType, storagePath)
+    : undefined
 
   const { data: signedUrl, error: signedUrlError } = await supabase.storage
     .from("cvs")
-    .createSignedUrl(storagePath, 60)
+    .createSignedUrl(
+      storagePath,
+      60,
+      downloadName ? { download: downloadName } : undefined,
+    )
 
-  if (signedUrlError) {
-    return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
+  if (signedUrlError || !signedUrl?.signedUrl) {
+    console.error("Repreneur document signing error:", signedUrlError)
+    return NextResponse.json(
+      { error: "Document file is unavailable" },
+      { status: 404 },
+    )
   }
 
-  return NextResponse.redirect(signedUrl.signedUrl)
+  const response = NextResponse.redirect(signedUrl.signedUrl)
+  response.headers.set("Cache-Control", "private, no-store")
+  response.headers.set("Referrer-Policy", "no-referrer")
+  return response
 }
