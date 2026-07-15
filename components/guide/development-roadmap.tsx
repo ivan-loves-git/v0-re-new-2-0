@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 15, 2026",
+    version: "0.9.22",
+    title: "Courteous interest signals for positioned opportunities",
+    isCompleted: true,
+    events: [
+      {
+        title: "Positioned opportunities stay visible",
+        type: "feature",
+        description: "Repreneurs can still see an anonymized opportunity when another candidate is already positioned, with a clear explanation of Re-New's one-candidate-at-a-time principle.",
+      },
+      {
+        title: "Interest reaches Re-New without creating competition",
+        type: "decision",
+        description: "A repreneur can send one private interest signal for direct staff follow-up. The signal creates no public queue, ranking, timer, automatic reassignment, or competition between candidates.",
+      },
+    ],
+  },
+  {
     period: "Jul 14, 2026",
     version: "0.9.21",
     title: "WAVE design quality gate enforced",

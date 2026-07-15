@@ -7,6 +7,7 @@ import {
   type PortalRepreneurProfile,
 } from "@/lib/data/portal-profile"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -64,6 +65,8 @@ interface PreviewOpportunityMatchRow {
   pursuit_stage_updated_at: string | null
   nda_status: RepreneurOpportunityExposure["nda_status"]
   nda_updated_at: string | null
+  interest_expressed_at?: string | null
+  interest_notification_sent_at?: string | null
   updated_at: string
   opportunity: PreviewOpportunityRow | PreviewOpportunityRow[] | null
 }
@@ -126,6 +129,8 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
         )
       : [],
     decline_reason_text: row.decline_reason_text,
+    interest_expressed_at: row.interest_expressed_at,
+    interest_notification_sent_at: row.interest_notification_sent_at,
     updated_at: row.updated_at,
   }
 }
@@ -178,13 +183,13 @@ async function getActivePursuitOwners(
   return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))
 }
 
-function isVisibleUnderActiveLock(
-  exposure: RepreneurOpportunityExposure,
+function isLockedForOtherRepreneur(
+  opportunityId: string,
   currentRepreneurId: string,
   activeOwnerByOpportunity: Map<string, string>
 ) {
-  const activeOwner = activeOwnerByOpportunity.get(exposure.opportunity_id)
-  return !activeOwner || activeOwner === currentRepreneurId
+  const activeOwner = activeOwnerByOpportunity.get(opportunityId)
+  return Boolean(activeOwner && activeOwner !== currentRepreneurId)
 }
 
 async function getRepreneurProfileById(
@@ -258,11 +263,20 @@ async function listVisibleOpportunitiesForRepreneur(
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
+  const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
+    supabase,
+    opportunities.map((opportunity) => opportunity.match_id),
+  )
 
   return opportunities
-    .filter((opportunity) => isVisibleUnderActiveLock(opportunity, repreneurId, activeOwnerByOpportunity))
     .map((opportunity) => ({
       ...opportunity,
+      ...interestStateByMatch.get(opportunity.match_id),
+      is_locked_for_other_repreneur: isLockedForOtherRepreneur(
+        opportunity.opportunity_id,
+        repreneurId,
+        activeOwnerByOpportunity,
+      ),
       visible_documents:
         opportunity.match_status === "active_pursuit" ? documentsByOpportunity.get(opportunity.opportunity_id) ?? [] : [],
     }))

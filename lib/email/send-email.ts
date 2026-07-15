@@ -240,16 +240,20 @@ export async function sendEmailDirect(params: {
   to: string
   subject: string
   react: ReactElement
+  idempotencyKey?: string
 }): Promise<{ success: boolean; error?: string }> {
-  const { to, subject, react } = params
+  const { to, subject, react, idempotencyKey } = params
 
   try {
-    const { error } = await resend.emails.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: [to],
-      subject,
-      react,
-    })
+    const { error } = await resend.emails.send(
+      {
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to: [to],
+        subject,
+        react,
+      },
+      idempotencyKey ? { idempotencyKey } : undefined,
+    )
 
     if (error) {
       return { success: false, error: error.message }

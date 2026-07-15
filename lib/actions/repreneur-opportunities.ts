@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import {
   sortRepreneurDealFlow,
@@ -99,6 +100,8 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
         )
       : [],
     decline_reason_text: row.decline_reason_text,
+    interest_expressed_at: row.interest_expressed_at,
+    interest_notification_sent_at: row.interest_notification_sent_at,
     updated_at: row.updated_at,
   }
 }
@@ -168,13 +171,13 @@ async function getActivePursuitOwners(
   return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))
 }
 
-function isVisibleUnderActiveLock(
-  exposure: RepreneurOpportunityExposure,
+function isLockedForOtherRepreneur(
+  opportunityId: string,
   currentRepreneurId: string,
   activeOwnerByOpportunity: Map<string, string>
 ) {
-  const activeOwner = activeOwnerByOpportunity.get(exposure.opportunity_id)
-  return !activeOwner || activeOwner === currentRepreneurId
+  const activeOwner = activeOwnerByOpportunity.get(opportunityId)
+  return Boolean(activeOwner && activeOwner !== currentRepreneurId)
 }
 
 async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile | null> {
@@ -285,10 +288,13 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     date_added: opportunity.date_added,
     decline_reason_categories: opportunity.decline_reason_categories,
     decline_reason_text: opportunity.decline_reason_text,
+    interest_expressed_at: opportunity.interest_expressed_at,
+    interest_notification_sent_at: opportunity.interest_notification_sent_at,
     updated_at: opportunity.updated_at,
     is_staff_recommended: opportunity.is_staff_recommended,
     is_outside_current_criteria: opportunity.is_outside_current_criteria,
     relevance_grade: opportunity.relevance_grade,
+    is_locked_for_other_repreneur: opportunity.is_locked_for_other_repreneur,
   }
 }
 
@@ -347,13 +353,22 @@ export async function listMyRepreneurOpportunities(): Promise<{
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
+  const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
+    supabase,
+    opportunities.map((opportunity) => opportunity.match_id),
+  )
 
   return {
     repreneur,
     opportunities: opportunities
-      .filter((opportunity) => isVisibleUnderActiveLock(opportunity, repreneur.id, activeOwnerByOpportunity))
       .map((opportunity) => ({
         ...opportunity,
+        ...interestStateByMatch.get(opportunity.match_id),
+        is_locked_for_other_repreneur: isLockedForOtherRepreneur(
+          opportunity.opportunity_id,
+          repreneur.id,
+          activeOwnerByOpportunity,
+        ),
         visible_documents:
           opportunity.match_status === "active_pursuit" ? documentsByOpportunity.get(opportunity.opportunity_id) ?? [] : [],
       })),
@@ -440,11 +455,20 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     supabase,
     matchedOpportunities.map((opportunity) => opportunity.opportunity_id),
   )
+  const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
+    supabase,
+    matchedOpportunities.map((opportunity) => opportunity.match_id),
+  )
 
   const staffRecommended = matchedOpportunities
-    .filter((opportunity) => isVisibleUnderActiveLock(opportunity, repreneur.id, activeOwnerByOpportunity))
     .map((opportunity) => ({
       ...opportunity,
+      ...interestStateByMatch.get(opportunity.match_id),
+      is_locked_for_other_repreneur: isLockedForOtherRepreneur(
+        opportunity.opportunity_id,
+        repreneur.id,
+        activeOwnerByOpportunity,
+      ),
       visible_documents:
         opportunity.match_status === "active_pursuit"
           ? documentsByOpportunity.get(opportunity.opportunity_id) ?? []
@@ -455,8 +479,14 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   const dealFlow = sortRepreneurDealFlow(
     allOpportunities
       .filter((opportunity) => !recommendedOpportunityIds.has(opportunity.id))
-      .filter((opportunity) => !activeOwnerByOpportunity.has(opportunity.id))
-      .map((opportunity) => toDealFlowOpportunity(opportunity, repreneur)),
+      .map((opportunity) => ({
+        ...toDealFlowOpportunity(opportunity, repreneur),
+        is_locked_for_other_repreneur: isLockedForOtherRepreneur(
+          opportunity.id,
+          repreneur.id,
+          activeOwnerByOpportunity,
+        ),
+      })),
     sort,
   ).map(withoutRelevanceScore)
 
@@ -511,11 +541,17 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
   if (!exposure) return null
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
-  if (!isVisibleUnderActiveLock(exposure, repreneur.id, activeOwnerByOpportunity)) return null
 
   const documentsByOpportunity = await listApprovedDocumentsByOpportunity(supabase, [exposure.opportunity_id])
+  const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(supabase, [exposure.match_id])
   return {
     ...exposure,
+    ...interestStateByMatch.get(exposure.match_id),
+    is_locked_for_other_repreneur: isLockedForOtherRepreneur(
+      exposure.opportunity_id,
+      repreneur.id,
+      activeOwnerByOpportunity,
+    ),
     visible_documents:
       exposure.match_status === "active_pursuit" ? documentsByOpportunity.get(exposure.opportunity_id) ?? [] : [],
   }

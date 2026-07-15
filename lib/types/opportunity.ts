@@ -349,6 +349,8 @@ export interface OpportunityMatch {
   created_by?: string | null
   reviewed_by?: string | null
   reviewed_at?: string | null
+  interest_expressed_at?: string | null
+  interest_notification_sent_at?: string | null
   created_at: string
   updated_at: string
   repreneur?: OpportunityMatchRepreneur | null
@@ -460,7 +462,10 @@ export interface RepreneurOpportunityExposure {
   date_added?: string | null
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
+  interest_expressed_at?: string | null
+  interest_notification_sent_at?: string | null
   updated_at: string
+  is_locked_for_other_repreneur?: boolean
 }
 
 export interface RepreneurDealFlowOpportunity {
@@ -485,10 +490,13 @@ export interface RepreneurDealFlowOpportunity {
   date_added?: string | null
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
+  interest_expressed_at?: string | null
+  interest_notification_sent_at?: string | null
   updated_at: string
   is_staff_recommended: boolean
   is_outside_current_criteria: boolean
   relevance_grade?: OpportunityMatchRecommendation
+  is_locked_for_other_repreneur?: boolean
 }
 
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
