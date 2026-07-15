@@ -40,10 +40,10 @@ export interface IntakeV2FormData {
   q14_deal_size: string[]           // Multi-select: ['1-3M', '3-5M', '>5M']
   q15_structure: string[]           // Multi-select: capital structure options
   q16_equity: string                // Single: 'tbd' | '151-250' | '251-350' | '351-450' | '>450'
+  // Optional matching inputs. They are deliberately excluded from WHO/WHEN scoring.
   target_revenue_min_meur: number | null
   target_revenue_max_meur: number | null
   target_ebitda_margin_min_pct: number | null
-  target_ebitda_margin_max_pct: number | null
   target_staff_size_min: number | null
   target_staff_size_max: number | null
 
@@ -81,7 +81,6 @@ export const EMPTY_INTAKE_FORM: IntakeV2FormData = {
   target_revenue_min_meur: null,
   target_revenue_max_meur: null,
   target_ebitda_margin_min_pct: null,
-  target_ebitda_margin_max_pct: null,
   target_staff_size_min: null,
   target_staff_size_max: null,
   q17_current_needs: [],

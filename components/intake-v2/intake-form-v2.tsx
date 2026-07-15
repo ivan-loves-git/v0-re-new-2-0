@@ -189,7 +189,6 @@ export function IntakeFormV2() {
         target_revenue_min_meur: 1.5,
         target_revenue_max_meur: 5,
         target_ebitda_margin_min_pct: 10,
-        target_ebitda_margin_max_pct: 25,
         target_staff_size_min: 10,
         target_staff_size_max: 80,
       },

@@ -44,7 +44,6 @@ export const TEST_WHEN_DATA: Partial<IntakeV2FormData> = {
   target_revenue_min_meur: 1.5,
   target_revenue_max_meur: 4,
   target_ebitda_margin_min_pct: 10,
-  target_ebitda_margin_max_pct: 25,
   target_staff_size_min: 10,
   target_staff_size_max: 60,
   // Triangulation: 1-3M + solo + >450K = GREEN (2) = 40pts fit

@@ -137,6 +137,13 @@ export function StepReview({
     return values.map(v => getTranslatedLabel(optionKeys, v))
   }
 
+  const formatRange = (minimum: number | null | undefined, maximum: number | null | undefined, unit: string) => {
+    if (minimum == null && maximum == null) return null
+    if (minimum != null && maximum != null) return `${minimum}–${maximum} ${unit}`
+    if (minimum != null) return `${language === 'fr' ? 'À partir de' : 'From'} ${minimum} ${unit}`
+    return `${language === 'fr' ? 'Jusqu’à' : 'Up to'} ${maximum} ${unit}`
+  }
+
   // Labels for sections
   const labels = language === 'fr' ? {
     title: 'Vérification',
@@ -159,6 +166,9 @@ export function StepReview({
     dealSize: 'Taille de transaction',
     structure: 'Structure capitalistique',
     equity: 'Apport personnel',
+    targetRevenue: 'Chiffre d’affaires cible',
+    minimumEbitdaMargin: 'Marge EBITDA minimale',
+    targetStaffSize: 'Effectif cible',
     currentNeeds: 'Besoins actuels',
     thesis: 'Lettre de cadrage',
     consentConfirmed: 'Vous avez accepté de recevoir des communications de Re-New.',
@@ -193,6 +203,9 @@ export function StepReview({
     dealSize: 'Deal size',
     structure: 'Capital structure',
     equity: 'Equity contribution',
+    targetRevenue: 'Target revenue',
+    minimumEbitdaMargin: 'Minimum EBITDA margin',
+    targetStaffSize: 'Target staff size',
     currentNeeds: 'Current needs',
     thesis: 'Investment thesis',
     consentConfirmed: 'You have agreed to receive communications from Re-New.',
@@ -358,6 +371,27 @@ export function StepReview({
             <div className="text-muted-foreground text-xs">{labels.equity}</div>
             <div>{getTranslatedLabel(WHEN_OPTION_KEYS.q16, data.q16_equity || '')}</div>
           </div>
+
+          {formatRange(data.target_revenue_min_meur, data.target_revenue_max_meur, 'M€') && (
+            <div>
+              <div className="text-muted-foreground text-xs">{labels.targetRevenue}</div>
+              <div>{formatRange(data.target_revenue_min_meur, data.target_revenue_max_meur, 'M€')}</div>
+            </div>
+          )}
+
+          {data.target_ebitda_margin_min_pct != null && (
+            <div>
+              <div className="text-muted-foreground text-xs">{labels.minimumEbitdaMargin}</div>
+              <div>{data.target_ebitda_margin_min_pct}%</div>
+            </div>
+          )}
+
+          {formatRange(data.target_staff_size_min, data.target_staff_size_max, language === 'fr' ? 'personnes' : 'people') && (
+            <div>
+              <div className="text-muted-foreground text-xs">{labels.targetStaffSize}</div>
+              <div>{formatRange(data.target_staff_size_min, data.target_staff_size_max, language === 'fr' ? 'personnes' : 'people')}</div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

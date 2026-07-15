@@ -255,6 +255,12 @@ export interface Repreneur {
   q14_deal_size?: string[] // ['1-3M' | '3-5M' | '>5M']
   q15_structure?: string[] // ['majority_without_fund' | 'majority_with_minority' | 'manager_with_majority' | 'havent_thought']
   q16_equity?: string // 'tbd' | '151-250' | '251-350' | '351-450' | '>450'
+  // Optional matching inputs; not part of the WHO/WHEN score.
+  target_revenue_min_meur?: number | null
+  target_revenue_max_meur?: number | null
+  target_ebitda_margin_min_pct?: number | null
+  target_staff_size_min?: number | null
+  target_staff_size_max?: number | null
   // Dual score results
   who_score?: number // Profile quality (0-100)
   when_score?: number // Project maturity (0-100)
@@ -363,6 +369,11 @@ export interface Repreneur_Insert {
   q14_deal_size?: string[]
   q15_structure?: string[]
   q16_equity?: string
+  target_revenue_min_meur?: number | null
+  target_revenue_max_meur?: number | null
+  target_ebitda_margin_min_pct?: number | null
+  target_staff_size_min?: number | null
+  target_staff_size_max?: number | null
   who_score?: number
   when_score?: number
   who_score_breakdown?: Record<string, number>

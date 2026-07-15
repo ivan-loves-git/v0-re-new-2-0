@@ -85,4 +85,36 @@ describe("calculateOpportunityMatchScore", () => {
     expect(result.score).toBe(86)
     expect(result.recommendation).toBe("strong_fit")
   })
+
+  it("keeps the existing score unchanged when optional matching inputs are present", () => {
+    const baseRepreneur = {
+      who_score: 90,
+      when_score: 92,
+      q13_target_sectors_v2: ["industry"],
+      q12_geo_zones: ["ile-de-france"],
+      q14_deal_size: ["1-3M"],
+    }
+    const opportunity = {
+      sector: "industry",
+      location: "ile-de-france",
+      revenue_meur: 2,
+      ebitda_keur: 300,
+      headcount: 24,
+    }
+
+    const withoutOptionalInputs = calculateOpportunityMatchScore(baseRepreneur, opportunity)
+    const withOptionalInputs = calculateOpportunityMatchScore(
+      {
+        ...baseRepreneur,
+        target_revenue_min_meur: 1.5,
+        target_revenue_max_meur: 3,
+        target_ebitda_margin_min_pct: 12,
+        target_staff_size_min: 10,
+        target_staff_size_max: 40,
+      },
+      opportunity,
+    )
+
+    expect(withOptionalInputs).toEqual(withoutOptionalInputs)
+  })
 })

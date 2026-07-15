@@ -12,6 +12,12 @@ type ScoringRepreneur = {
   target_location?: string | string[] | null
   target_acquisition_size?: string | null
   investment_capacity?: string | null
+  // Collected for matching context, but intentionally excluded from the current score.
+  target_revenue_min_meur?: number | string | null
+  target_revenue_max_meur?: number | string | null
+  target_ebitda_margin_min_pct?: number | string | null
+  target_staff_size_min?: number | string | null
+  target_staff_size_max?: number | string | null
 }
 
 type ScoringOpportunity = {

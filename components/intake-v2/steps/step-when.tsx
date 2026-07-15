@@ -259,33 +259,32 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
         )}
       </div>
 
-      {/* Optional matching criteria */}
+      {/* Optional matching criteria. They are stored for opportunity matching, not scoring. */}
       <div className="flex flex-col gap-4 rounded-lg border p-4">
         <div>
           <Label className="text-base font-medium">
-            {language === 'fr' ? 'Parametres financiers cibles (optionnel)' : 'Target financial criteria (optional)'}
+            {language === 'fr' ? 'Critères de matching complémentaires (optionnel)' : 'Additional matching criteria (optional)'}
           </Label>
           <p className="mt-1 text-sm text-muted-foreground">
             {language === 'fr'
-              ? 'Ces reponses ameliorent le matching avec les opportunites. Elles ne sont pas scorees.'
+              ? 'Ces réponses aident à comparer votre projet aux opportunités. Elles ne sont pas prises en compte dans votre score.'
               : 'These answers improve opportunity matching. They are not scored.'}
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <div className="grid grid-cols-2 gap-2">
-            <Label className="col-span-2 text-sm">{language === 'fr' ? 'CA cible (M EUR)' : 'Target revenue (M EUR)'}</Label>
-            <Input type="number" min="0" step="0.1" placeholder="Min" value={data.target_revenue_min_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_min_meur', e.target.value)} />
-            <Input type="number" min="0" step="0.1" placeholder="Max" value={data.target_revenue_max_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_max_meur', e.target.value)} />
+            <Label className="col-span-2 text-sm">{language === 'fr' ? 'Chiffre d’affaires cible (M€)' : 'Target revenue (M EUR)'}</Label>
+            <Input aria-label={language === 'fr' ? 'Chiffre d’affaires cible minimum' : 'Minimum target revenue'} type="number" min="0" step="0.1" placeholder="Min" value={data.target_revenue_min_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_min_meur', e.target.value)} />
+            <Input aria-label={language === 'fr' ? 'Chiffre d’affaires cible maximum' : 'Maximum target revenue'} type="number" min="0" step="0.1" placeholder="Max" value={data.target_revenue_max_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_max_meur', e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Label className="col-span-2 text-sm">{language === 'fr' ? 'Marge EBITDA cible (%)' : 'Target EBITDA margin (%)'}</Label>
-            <Input type="number" min="0" max="100" step="0.1" placeholder="Min" value={data.target_ebitda_margin_min_pct ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_margin_min_pct', e.target.value)} />
-            <Input type="number" min="0" max="100" step="0.1" placeholder="Max" value={data.target_ebitda_margin_max_pct ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_margin_max_pct', e.target.value)} />
+          <div className="grid gap-2">
+            <Label className="text-sm">{language === 'fr' ? 'Marge EBITDA minimale (%)' : 'Minimum EBITDA margin (%)'}</Label>
+            <Input aria-label={language === 'fr' ? 'Marge EBITDA minimale' : 'Minimum EBITDA margin'} type="number" min="0" max="100" step="0.1" placeholder="Min" value={data.target_ebitda_margin_min_pct ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_margin_min_pct', e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Label className="col-span-2 text-sm">{language === 'fr' ? 'Effectif cible' : 'Target staff size'}</Label>
-            <Input type="number" min="0" step="1" placeholder="Min" value={data.target_staff_size_min ?? ''} onChange={(e) => updateOptionalNumber('target_staff_size_min', e.target.value)} />
-            <Input type="number" min="0" step="1" placeholder="Max" value={data.target_staff_size_max ?? ''} onChange={(e) => updateOptionalNumber('target_staff_size_max', e.target.value)} />
+            <Input aria-label={language === 'fr' ? 'Effectif cible minimum' : 'Minimum target staff size'} type="number" min="0" step="1" placeholder="Min" value={data.target_staff_size_min ?? ''} onChange={(e) => updateOptionalNumber('target_staff_size_min', e.target.value)} />
+            <Input aria-label={language === 'fr' ? 'Effectif cible maximum' : 'Maximum target staff size'} type="number" min="0" step="1" placeholder="Max" value={data.target_staff_size_max ?? ''} onChange={(e) => updateOptionalNumber('target_staff_size_max', e.target.value)} />
           </div>
         </div>
       </div>

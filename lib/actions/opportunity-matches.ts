@@ -35,6 +35,24 @@ const MATCH_RECOMMENDATION_VALUES = OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.map
 const STAFF_EDITABLE_MATCH_STATUS_VALUES: OpportunityMatchStatus[] = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter(
   (option) => option.value !== "active_pursuit",
 ).map((option) => option.value as OpportunityMatchStatus)
+const REPRENEUR_MATCHING_INPUT_FIELDS = `
+  who_score,
+  when_score,
+  scoring_flags,
+  q12_geo_zones,
+  q13_target_sectors_v2,
+  q14_deal_size,
+  q16_equity,
+  sector_preferences,
+  target_location,
+  target_acquisition_size,
+  investment_capacity,
+  target_revenue_min_meur,
+  target_revenue_max_meur,
+  target_ebitda_margin_min_pct,
+  target_staff_size_min,
+  target_staff_size_max
+`
 
 export type OpportunityMatchActionResult =
   | { ok: true }
@@ -209,20 +227,7 @@ async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: 
       .maybeSingle(),
     supabase
       .from("repreneurs")
-      .select(`
-        id,
-        who_score,
-        when_score,
-        scoring_flags,
-        q12_geo_zones,
-        q13_target_sectors_v2,
-        q14_deal_size,
-        q16_equity,
-        sector_preferences,
-        target_location,
-        target_acquisition_size,
-        investment_capacity
-      `)
+      .select(`id, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
       .eq("id", repreneurId)
       .maybeSingle(),
   ])
@@ -425,17 +430,7 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
         lifecycle_status,
         journey_stage,
         recommendation,
-        who_score,
-        when_score,
-        scoring_flags,
-        q12_geo_zones,
-        q13_target_sectors_v2,
-        q14_deal_size,
-        q16_equity,
-        sector_preferences,
-        target_location,
-        target_acquisition_size,
-        investment_capacity
+        ${REPRENEUR_MATCHING_INPUT_FIELDS}
       `)
       .not("lifecycle_status", "in", "(rejected,declined)")
       .order("updated_at", { ascending: false })
@@ -473,20 +468,7 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
     await Promise.all([
       supabase
         .from("repreneurs")
-        .select(`
-          id,
-          who_score,
-          when_score,
-          scoring_flags,
-          q12_geo_zones,
-          q13_target_sectors_v2,
-          q14_deal_size,
-          q16_equity,
-          sector_preferences,
-          target_location,
-          target_acquisition_size,
-          investment_capacity
-        `)
+        .select(`id, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
         .eq("id", repreneurId)
         .maybeSingle(),
       supabase
