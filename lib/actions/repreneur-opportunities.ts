@@ -224,16 +224,11 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
 
 function withStaffRecommendation(
   opportunity: RepreneurOpportunityExposure,
-  repreneur: RepreneurDealFlowProfile,
-): RepreneurDealFlowSortCandidate {
-  const relevance = calculateOpportunityMatchScore(repreneur, opportunity)
-
+): RepreneurDealFlowOpportunity {
   return {
     ...opportunity,
     is_staff_recommended: true,
     is_outside_current_criteria: false,
-    relevance_grade: relevance.recommendation,
-    relevance_score: relevance.score,
   }
 }
 
@@ -455,8 +450,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
           ? documentsByOpportunity.get(opportunity.opportunity_id) ?? []
           : [],
     }))
-    .map((opportunity) => withStaffRecommendation(opportunity, repreneur))
-    .map(withoutRelevanceScore)
+    .map(withStaffRecommendation)
   const recommendedOpportunityIds = new Set(staffRecommended.map((opportunity) => opportunity.opportunity_id))
   const dealFlow = sortRepreneurDealFlow(
     allOpportunities

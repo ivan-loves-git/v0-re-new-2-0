@@ -488,7 +488,7 @@ export interface RepreneurDealFlowOpportunity {
   updated_at: string
   is_staff_recommended: boolean
   is_outside_current_criteria: boolean
-  relevance_grade: OpportunityMatchRecommendation
+  relevance_grade?: OpportunityMatchRecommendation
 }
 
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {

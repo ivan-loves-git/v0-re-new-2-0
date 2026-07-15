@@ -1,6 +1,7 @@
-import type { RepreneurDealFlowOpportunity } from "@/lib/types/opportunity"
+import type { OpportunityMatchRecommendation, RepreneurDealFlowOpportunity } from "@/lib/types/opportunity"
 
 export type RepreneurDealFlowSortCandidate = RepreneurDealFlowOpportunity & {
+  relevance_grade: OpportunityMatchRecommendation
   relevance_score: number
 }
 
