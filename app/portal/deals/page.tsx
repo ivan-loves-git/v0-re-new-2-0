@@ -15,20 +15,11 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
   const params = await searchParams
   const sort = parseRepreneurDealSort(params.sort)
   const { repreneur, staffRecommended, dealFlow } = await listMyRepreneurDealFlow(sort)
+  const opportunities = [...staffRecommended, ...dealFlow]
 
   return (
     <div className="flex flex-col gap-6">
       <SectionPageHeader title="Your deals" subtitle="Recommended opportunities and the full anonymized Re-New deal flow" icon={BriefcaseBusiness} tone="opportunity" />
-
-      {staffRecommended.length > 0 && (
-        <section className="flex flex-col gap-3" aria-labelledby="recommended-deals">
-          <div>
-            <h2 id="recommended-deals" className="text-base font-semibold">Recommended by Re-New</h2>
-            <p className="text-sm text-muted-foreground">Opportunities the team has selected for you.</p>
-          </div>
-          <RepreneurOpportunityList repreneur={repreneur} opportunities={staffRecommended} />
-        </section>
-      )}
 
       <section className="flex flex-col gap-3" aria-labelledby="deal-flow">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -40,12 +31,7 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
         </div>
         <RepreneurOpportunityList
           repreneur={repreneur}
-          opportunities={dealFlow}
-          emptyDescription={
-            staffRecommended.length > 0
-              ? "There are no additional opportunities available at the moment."
-              : undefined
-          }
+          opportunities={opportunities}
         />
       </section>
     </div>

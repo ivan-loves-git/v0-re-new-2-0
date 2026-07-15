@@ -40,6 +40,7 @@ interface PreviewRepreneurRow {
 
 interface PreviewOpportunityRow {
   id: string
+  reference: string
   status: string | null
   repreneur_exposure: string | null
   public_title: string | null
@@ -57,6 +58,8 @@ interface PreviewOpportunityRow {
 interface PreviewOpportunityMatchRow {
   id: string
   status: RepreneurOpportunityExposure["match_status"]
+  platform_recommendation: RepreneurOpportunityExposure["platform_recommendation"]
+  human_recommendation: RepreneurOpportunityExposure["human_recommendation"]
   decline_reason_categories: unknown
   decline_reason_text: string | null
   pursuit_stage: RepreneurOpportunityExposure["pursuit_stage"]
@@ -108,6 +111,7 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
     opportunity_id: opportunity.id,
+    reference: opportunity.reference,
     public_title: opportunity.public_title,
     teaser_summary: opportunity.teaser_summary,
     sector: opportunity.sector,
@@ -118,6 +122,8 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
+    platform_recommendation: row.platform_recommendation ?? "not_evaluated",
+    human_recommendation: row.human_recommendation ?? "not_evaluated",
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -209,6 +215,8 @@ async function listVisibleOpportunitiesForRepreneur(
     .select(`
       id,
       status,
+      platform_recommendation,
+      human_recommendation,
       decline_reason_categories,
       decline_reason_text,
       pursuit_stage,
@@ -218,6 +226,7 @@ async function listVisibleOpportunitiesForRepreneur(
       updated_at,
       opportunity:opportunities(
         id,
+        reference,
         status,
         repreneur_exposure,
         public_title,

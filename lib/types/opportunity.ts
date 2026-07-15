@@ -447,6 +447,7 @@ export interface RepreneurOpportunityExposure {
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
   opportunity_id: string
+  reference: string
   public_title?: string | null
   teaser_summary?: string | null
   sector?: string | null
@@ -457,6 +458,10 @@ export interface RepreneurOpportunityExposure {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
+  platform_recommendation?: OpportunityMatchRecommendation | null
+  platform_score?: number | null
+  platform_reasons?: string[] | null
+  human_recommendation?: OpportunityMatchRecommendation | null
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   updated_at: string
@@ -471,6 +476,7 @@ export interface RepreneurDealFlowOpportunity {
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
   opportunity_id: string
+  reference: string
   public_title?: string | null
   teaser_summary?: string | null
   sector?: string | null

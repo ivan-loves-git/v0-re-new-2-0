@@ -40,6 +40,7 @@ type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
 
 type RepreneurDealFlowOpportunityRow = {
   id: string
+  reference: string
   public_title: string | null
   teaser_summary: string | null
   sector: string | null
@@ -77,6 +78,7 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
     opportunity_id: opportunity.id,
+    reference: opportunity.reference,
     public_title: opportunity.public_title,
     teaser_summary: opportunity.teaser_summary,
     sector: opportunity.sector,
@@ -87,6 +89,10 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
+    platform_recommendation: row.platform_recommendation ?? "not_evaluated",
+    platform_score: row.platform_score,
+    platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
+    human_recommendation: row.human_recommendation ?? "not_evaluated",
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -221,13 +227,18 @@ function withStaffRecommendation(
   repreneur: RepreneurDealFlowProfile,
 ): RepreneurDealFlowOpportunity {
   const relevance = calculateOpportunityMatchScore(repreneur, opportunity)
+  const humanRecommendation = opportunity.human_recommendation ?? "not_evaluated"
   const relevanceGrade =
-    opportunity.human_recommendation !== "not_evaluated"
-      ? opportunity.human_recommendation
+    humanRecommendation !== "not_evaluated"
+      ? humanRecommendation
       : relevance.recommendation
 
   return {
     ...opportunity,
+    platform_recommendation: opportunity.platform_recommendation ?? relevance.recommendation,
+    platform_score: opportunity.platform_score ?? relevance.score,
+    platform_reasons: opportunity.platform_reasons ?? relevance.reasons,
+    human_recommendation: humanRecommendation,
     is_staff_recommended: true,
     relevance_grade: relevanceGrade,
     relevance_score: relevance.score,
@@ -245,6 +256,7 @@ function toDealFlowOpportunity(
     match_status: null,
     visible_documents: [],
     opportunity_id: opportunity.id,
+    reference: opportunity.reference,
     public_title: opportunity.public_title,
     teaser_summary: opportunity.teaser_summary,
     sector: opportunity.sector,
@@ -288,6 +300,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       updated_at,
       opportunity:opportunities(
         id,
+        reference,
         status,
         repreneur_exposure,
         public_title,
@@ -361,6 +374,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         updated_at,
         opportunity:opportunities(
           id,
+          reference,
           status,
           repreneur_exposure,
           public_title,
@@ -382,6 +396,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       .from("opportunities")
       .select(`
         id,
+        reference,
         status,
         repreneur_exposure,
         public_title,
@@ -458,6 +473,7 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
       updated_at,
       opportunity:opportunities(
         id,
+        reference,
         status,
         repreneur_exposure,
         public_title,
