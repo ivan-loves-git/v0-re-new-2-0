@@ -462,6 +462,37 @@ export interface RepreneurOpportunityExposure {
   updated_at: string
 }
 
+export interface RepreneurDealFlowOpportunity {
+  match_id: string | null
+  match_status: OpportunityMatchStatus | null
+  pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_updated_at?: string | null
+  nda_status?: OpportunityNdaStatus | null
+  nda_updated_at?: string | null
+  visible_documents: RepreneurOpportunityDocument[]
+  opportunity_id: string
+  public_title?: string | null
+  teaser_summary?: string | null
+  sector?: string | null
+  activity?: string | null
+  location?: string | null
+  revenue_meur?: number | null
+  ebitda_keur?: number | null
+  headcount?: number | null
+  headcount_range?: string | null
+  date_added?: string | null
+  platform_recommendation: OpportunityMatchRecommendation
+  platform_score?: number | null
+  platform_reasons: string[]
+  human_recommendation: OpportunityMatchRecommendation
+  decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
+  decline_reason_text?: string | null
+  updated_at: string
+  is_staff_recommended: boolean
+  relevance_grade: OpportunityMatchRecommendation
+  relevance_score: number
+}
+
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
   return OPPORTUNITY_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
 }

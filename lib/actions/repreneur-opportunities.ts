@@ -4,9 +4,12 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
+import { sortRepreneurDealFlow, type RepreneurDealSort } from "@/lib/utils/repreneur-deal-flow"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
+  RepreneurDealFlowOpportunity,
   RepreneurOpportunityDocument,
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
@@ -21,6 +24,34 @@ const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "business_model",
   "other",
 ])
+
+type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
+  who_score?: number | null
+  when_score?: number | null
+  scoring_flags?: string[] | null
+  q12_geo_zones?: string | string[] | null
+  q13_target_sectors_v2?: string | string[] | null
+  q14_deal_size?: string | string[] | null
+  sector_preferences?: string | string[] | null
+  target_location?: string | string[] | null
+  target_acquisition_size?: string | null
+  investment_capacity?: string | null
+}
+
+type RepreneurDealFlowOpportunityRow = {
+  id: string
+  public_title: string | null
+  teaser_summary: string | null
+  sector: string | null
+  activity: string | null
+  location: string | null
+  revenue_meur: number | null
+  ebitda_keur: number | null
+  headcount: number | null
+  headcount_range: string | null
+  date_added: string | null
+  updated_at: string
+}
 
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
   return {
@@ -155,6 +186,86 @@ async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile
   return profile ? normalizeProfile(profile) : null
 }
 
+async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowProfile | null> {
+  const access = await requirePortalAccess()
+  if (!access.repreneurId) return null
+
+  const supabase = createAdminClient()
+  const { data: profile, error } = await supabase
+    .from("repreneurs")
+    .select(`
+      id,
+      first_name,
+      last_name,
+      email,
+      who_score,
+      when_score,
+      scoring_flags,
+      q12_geo_zones,
+      q13_target_sectors_v2,
+      q14_deal_size,
+      sector_preferences,
+      target_location,
+      target_acquisition_size,
+      investment_capacity
+    `)
+    .eq("id", access.repreneurId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return profile ? (profile as RepreneurDealFlowProfile) : null
+}
+
+function withStaffRecommendation(
+  opportunity: RepreneurOpportunityExposure,
+  repreneur: RepreneurDealFlowProfile,
+): RepreneurDealFlowOpportunity {
+  const relevance = calculateOpportunityMatchScore(repreneur, opportunity)
+  const relevanceGrade =
+    opportunity.human_recommendation !== "not_evaluated"
+      ? opportunity.human_recommendation
+      : relevance.recommendation
+
+  return {
+    ...opportunity,
+    is_staff_recommended: true,
+    relevance_grade: relevanceGrade,
+    relevance_score: relevance.score,
+  }
+}
+
+function toDealFlowOpportunity(
+  opportunity: RepreneurDealFlowOpportunityRow,
+  repreneur: RepreneurDealFlowProfile,
+): RepreneurDealFlowOpportunity {
+  const relevance = calculateOpportunityMatchScore(repreneur, opportunity)
+
+  return {
+    match_id: null,
+    match_status: null,
+    visible_documents: [],
+    opportunity_id: opportunity.id,
+    public_title: opportunity.public_title,
+    teaser_summary: opportunity.teaser_summary,
+    sector: opportunity.sector,
+    activity: opportunity.activity,
+    location: opportunity.location,
+    revenue_meur: opportunity.revenue_meur,
+    ebitda_keur: opportunity.ebitda_keur,
+    headcount: opportunity.headcount,
+    headcount_range: opportunity.headcount_range,
+    date_added: opportunity.date_added,
+    platform_recommendation: relevance.recommendation,
+    platform_score: relevance.score,
+    platform_reasons: relevance.reasons,
+    human_recommendation: "not_evaluated",
+    updated_at: opportunity.updated_at,
+    is_staff_recommended: false,
+    relevance_grade: relevance.recommendation,
+    relevance_score: relevance.score,
+  }
+}
+
 export async function listMyRepreneurOpportunities(): Promise<{
   repreneur: RepreneurOpportunityProfile | null
   opportunities: RepreneurOpportunityExposure[]
@@ -219,6 +330,112 @@ export async function listMyRepreneurOpportunities(): Promise<{
         visible_documents:
           opportunity.match_status === "active_pursuit" ? documentsByOpportunity.get(opportunity.opportunity_id) ?? [] : [],
       })),
+  }
+}
+
+export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<{
+  repreneur: RepreneurOpportunityProfile | null
+  staffRecommended: RepreneurDealFlowOpportunity[]
+  dealFlow: RepreneurDealFlowOpportunity[]
+}> {
+  const repreneur = await getCurrentRepreneurDealFlowProfile()
+  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [] }
+
+  const supabase = createAdminClient()
+  const [matchesResult, opportunitiesResult] = await Promise.all([
+    supabase
+      .from("opportunity_matches")
+      .select(`
+        id,
+        status,
+        platform_recommendation,
+        platform_score,
+        platform_reasons,
+        human_recommendation,
+        decline_reason_categories,
+        decline_reason_text,
+        pursuit_stage,
+        pursuit_stage_updated_at,
+        nda_status,
+        nda_updated_at,
+        updated_at,
+        opportunity:opportunities(
+          id,
+          status,
+          repreneur_exposure,
+          public_title,
+          teaser_summary,
+          sector,
+          activity,
+          location,
+          revenue_meur,
+          ebitda_keur,
+          headcount,
+          headcount_range,
+          date_added
+        )
+      `)
+      .eq("repreneur_id", repreneur.id)
+      .in("status", VISIBLE_MATCH_STATUSES)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("opportunities")
+      .select(`
+        id,
+        status,
+        repreneur_exposure,
+        public_title,
+        teaser_summary,
+        sector,
+        activity,
+        location,
+        revenue_meur,
+        ebitda_keur,
+        headcount,
+        headcount_range,
+        date_added,
+        updated_at
+      `)
+      .eq("status", "active")
+      .neq("repreneur_exposure", "staff_only"),
+  ])
+
+  if (matchesResult.error) throw new Error(matchesResult.error.message)
+  if (opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
+
+  const matchedOpportunities = (matchesResult.data ?? [])
+    .map(normalizeExposure)
+    .filter((opportunity): opportunity is RepreneurOpportunityExposure => Boolean(opportunity))
+  const allOpportunities = opportunitiesResult.data ?? []
+  const activeOwnerByOpportunity = await getActivePursuitOwners(
+    supabase,
+    allOpportunities.map((opportunity) => opportunity.id),
+  )
+  const documentsByOpportunity = await listApprovedDocumentsByOpportunity(
+    supabase,
+    matchedOpportunities.map((opportunity) => opportunity.opportunity_id),
+  )
+
+  const staffRecommended = matchedOpportunities
+    .filter((opportunity) => isVisibleUnderActiveLock(opportunity, repreneur.id, activeOwnerByOpportunity))
+    .map((opportunity) => ({
+      ...opportunity,
+      visible_documents:
+        opportunity.match_status === "active_pursuit"
+          ? documentsByOpportunity.get(opportunity.opportunity_id) ?? []
+          : [],
+    }))
+    .map((opportunity) => withStaffRecommendation(opportunity, repreneur))
+  const recommendedOpportunityIds = new Set(staffRecommended.map((opportunity) => opportunity.opportunity_id))
+  const dealFlow = allOpportunities
+    .filter((opportunity) => !recommendedOpportunityIds.has(opportunity.id))
+    .filter((opportunity) => !activeOwnerByOpportunity.has(opportunity.id))
+    .map((opportunity) => toDealFlowOpportunity(opportunity, repreneur))
+
+  return {
+    repreneur,
+    staffRecommended,
+    dealFlow: sortRepreneurDealFlow(dealFlow, sort),
   }
 }
 

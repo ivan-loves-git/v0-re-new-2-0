@@ -132,7 +132,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             <RepreneurOpportunityList
               repreneur={opportunityData.repreneur}
               opportunities={opportunityData.opportunities}
-              detailHrefForOpportunity={(opportunity) => portalPreviewHref(selectedRepreneurId, opportunity.match_id)}
+              detailHrefForOpportunity={(opportunity) => portalPreviewHref(selectedRepreneurId, opportunity.match_id ?? undefined)}
               detailLabel="Preview detail"
             />
           </TabsContent>
