@@ -40,6 +40,11 @@ export type PortalRepreneurProfile = {
   target_ebitda_margin_min_pct: number | null
   target_staff_size_min: number | null
   target_staff_size_max: number | null
+  ldc_url: string | null
+  ldc_self_certified_at: string | null
+  advisory_team_self_certified_at: string | null
+  ms_ldc_validated: boolean
+  ms_advisory_team: boolean
 } & Partial<Record<PortalMilestoneColumn | `ms_${MilestoneKey}`, boolean>>
 
 export const PORTAL_REPRENEUR_PROFILE_SELECT = [
@@ -60,6 +65,11 @@ export const PORTAL_REPRENEUR_PROFILE_SELECT = [
   "target_ebitda_margin_min_pct",
   "target_staff_size_min",
   "target_staff_size_max",
+  "ldc_url",
+  "ldc_self_certified_at",
+  "advisory_team_self_certified_at",
+  "ms_ldc_validated",
+  "ms_advisory_team",
   ...PORTAL_MILESTONE_COLUMNS,
 ].join(", ")
 
@@ -111,6 +121,11 @@ export function normalizePortalRepreneurProfile(row: unknown): PortalRepreneurPr
     target_ebitda_margin_min_pct: readNumber(row.target_ebitda_margin_min_pct),
     target_staff_size_min: readNumber(row.target_staff_size_min),
     target_staff_size_max: readNumber(row.target_staff_size_max),
+    ldc_url: readString(row.ldc_url),
+    ldc_self_certified_at: readString(row.ldc_self_certified_at),
+    advisory_team_self_certified_at: readString(row.advisory_team_self_certified_at),
+    ms_ldc_validated: row.ms_ldc_validated === true,
+    ms_advisory_team: row.ms_advisory_team === true,
     ...milestones,
   }
 }

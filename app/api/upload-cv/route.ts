@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
+import { recalculateRepreneurScoresAndMatches } from "@/lib/repreneur-profile-refresh"
 import {
   IntakeUploadSecurityError,
   verifyAndConsumeIntakeUploadToken,
@@ -76,19 +77,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const access = await getCurrentUserAccess()
-    const staffUpload = access?.role === "staff"
-    const intakeGrant = staffUpload
-      ? null
-      : await verifyAndConsumeIntakeUploadToken(
-          request,
-          request.headers.get("x-intake-upload-token"),
-        )
-
     const formData = await request.formData()
     const file = formData.get("file") as File | null
     const repreneurId = formData.get("repreneurId") as string | null
     const documentType = normalizeDocumentType(formData.get("documentType"))
+    const access = await getCurrentUserAccess()
+    const isOwnedPortalUpload =
+      access?.role === "repreneur" && access.repreneurId === repreneurId
+    const intakeGrant = !repreneurId && access?.role !== "staff"
+      ? await verifyAndConsumeIntakeUploadToken(
+          request,
+          request.headers.get("x-intake-upload-token"),
+        )
+      : null
 
     if (!file) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 })
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
     if (repreneurId) {
       if (!access)
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      if (access.role !== "staff")
+      if (access.role !== "staff" && !isOwnedPortalUpload)
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -130,6 +131,29 @@ export async function POST(request: NextRequest) {
     const filePath = `cvs/${ownerId}-${documentType}-${Date.now()}.${fileExt}`
 
     const adminClient = createAdminClient()
+
+    if (isOwnedPortalUpload && documentType === "ldc") {
+      const { data: repreneur, error: validationError } = await adminClient
+        .from("repreneurs")
+        .select("ms_ldc_validated")
+        .eq("id", repreneurId)
+        .maybeSingle()
+
+      if (validationError) {
+        console.error("LDC validation lookup error:", validationError)
+        return NextResponse.json(
+          { error: "Failed to validate the current document" },
+          { status: 500 },
+        )
+      }
+      if (repreneur?.ms_ldc_validated) {
+        return NextResponse.json(
+          { error: "This Lettre de cadrage is already validated by Re-New and cannot be replaced here." },
+          { status: 409 },
+        )
+      }
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer())
 
     const { error: uploadError } = await adminClient.storage
@@ -151,7 +175,12 @@ export async function POST(request: NextRequest) {
       const field = DOCUMENT_FIELDS[documentType]
       const { error: updateError } = await adminClient
         .from("repreneurs")
-        .update({ [field]: filePath })
+        .update({
+          [field]: filePath,
+          ...(isOwnedPortalUpload && documentType === "ldc"
+            ? { ldc_self_certified_at: new Date().toISOString() }
+            : {}),
+        })
         .eq("id", repreneurId)
 
       if (updateError) {
@@ -165,6 +194,11 @@ export async function POST(request: NextRequest) {
       revalidatePath("/repreneurs")
       revalidatePath(`/repreneurs/${repreneurId}`)
       revalidateRepreneurDashboardTags()
+      if (documentType === "ldc") {
+        await recalculateRepreneurScoresAndMatches(repreneurId)
+      } else if (isOwnedPortalUpload) {
+        revalidatePath("/portal/profile")
+      }
 
       return NextResponse.json({
         path: filePath,

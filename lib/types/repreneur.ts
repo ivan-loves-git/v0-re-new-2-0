@@ -150,6 +150,9 @@ export interface Repreneur {
   sector_preferences?: string[]
   target_location?: string[] // Multiple target regions (JSONB array)
   target_acquisition_size?: string
+  // Repreneur self-declarations are separate from staff-managed `ms_*` milestones.
+  ldc_self_certified_at?: string | null
+  advisory_team_self_certified_at?: string | null
   lifecycle_status: LifecycleStatus
   journey_stage?: JourneyStage
   persona?: PersonaType // Acquisition style/profile type
@@ -340,6 +343,8 @@ export interface Repreneur_Insert {
   sector_preferences?: string[]
   target_location?: string[] // Multiple target regions (JSONB array)
   target_acquisition_size?: string
+  ldc_self_certified_at?: string | null
+  advisory_team_self_certified_at?: string | null
   lifecycle_status?: LifecycleStatus
   journey_stage?: JourneyStage
   persona?: PersonaType

@@ -1,4 +1,6 @@
 import type { OpportunityMatchRecommendation } from "@/lib/types/opportunity"
+import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
+import { targetThesisMatchTerms } from "@/lib/repreneur-target-thesis"
 
 type ScoringRepreneur = {
   who_score?: number | null
@@ -26,7 +28,7 @@ type ScoringOpportunity = {
   location?: string | null
   revenue_meur?: number | string | null
   ebitda_keur?: number | string | null
-  headcount?: number | null
+  headcount?: number | string | null
 }
 
 export type OpportunityMatchScoreResult = {
@@ -40,7 +42,11 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function normalizeText(value: string | null | undefined) {
-  return value?.trim().toLowerCase() ?? ""
+  return value
+    ?.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase() ?? ""
 }
 
 function toTextList(value: string | string[] | null | undefined) {
@@ -75,6 +81,14 @@ function dealSizeBucket(revenueMeur: number | null) {
   if (revenueMeur > 3 && revenueMeur <= 5) return "3-5M"
   if (revenueMeur > 5) return ">5M"
   return null
+}
+
+function preferredList(
+  canonical: string | string[] | null | undefined,
+  legacy: string | string[] | null | undefined,
+) {
+  const canonicalValues = normalizeList(canonical)
+  return canonicalValues.length > 0 ? canonicalValues : normalizeList(legacy)
 }
 
 function recommendationFromScore(score: number): OpportunityMatchRecommendation {
@@ -119,8 +133,14 @@ export function calculateOpportunityMatchScore(
   }
 
   const opportunitySectorValues = normalizeList(opportunity.sector, opportunity.activity)
-  const repreneurSectorValues = normalizeList(repreneur.q13_target_sectors_v2, repreneur.sector_preferences)
-  const sectorMatch = hasTextMatch(opportunitySectorValues, repreneurSectorValues)
+  const repreneurSectorValues = targetThesisMatchTerms(
+    preferredList(repreneur.q13_target_sectors_v2, repreneur.sector_preferences),
+    WHEN_QUESTIONS.q13.options,
+    "sector",
+  ).map(normalizeText)
+  const sectorMatch = repreneurSectorValues.includes("all")
+    ? true
+    : hasTextMatch(opportunitySectorValues, repreneurSectorValues)
   if (sectorMatch === true) {
     score += 20
     reasons.push("Sector or activity matches the repreneur target preference.")
@@ -134,8 +154,14 @@ export function calculateOpportunityMatchScore(
   }
 
   const opportunityLocationValues = normalizeList(opportunity.location)
-  const repreneurLocationValues = normalizeList(repreneur.q12_geo_zones, repreneur.target_location)
-  const locationMatch = hasTextMatch(opportunityLocationValues, repreneurLocationValues)
+  const repreneurLocationValues = targetThesisMatchTerms(
+    preferredList(repreneur.q12_geo_zones, repreneur.target_location),
+    WHEN_QUESTIONS.q12.options,
+    "geography",
+  ).map(normalizeText)
+  const locationMatch = repreneurLocationValues.includes("all-france")
+    ? true
+    : hasTextMatch(opportunityLocationValues, repreneurLocationValues)
   if (locationMatch === true) {
     score += 15
     reasons.push("Location matches the repreneur geographic preference.")
@@ -148,9 +174,8 @@ export function calculateOpportunityMatchScore(
     reasons.push("Geographic fit cannot be fully confirmed from current data.")
   }
 
-  const revenueMeur = toNumber(opportunity.revenue_meur)
-  const opportunityBucket = dealSizeBucket(revenueMeur)
-  const repreneurDealSizes = normalizeList(repreneur.q14_deal_size, repreneur.target_acquisition_size)
+  const opportunityBucket = dealSizeBucket(toNumber(opportunity.revenue_meur))
+  const repreneurDealSizes = preferredList(repreneur.q14_deal_size, repreneur.target_acquisition_size)
   if (opportunityBucket && repreneurDealSizes.length > 0) {
     const targetBuckets = repreneurDealSizes.map((value) => value.toUpperCase())
     if (targetBuckets.includes(opportunityBucket.toUpperCase())) {

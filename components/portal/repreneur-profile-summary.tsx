@@ -3,11 +3,16 @@ import { CheckCircle2, Target } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  RepreneurProfileContributions,
+  RepreneurTargetThesisEditor,
+} from "@/components/portal/repreneur-target-thesis-editor"
 import { MILESTONES } from "@/lib/constants/tier-config"
 import type { PortalRepreneurProfile } from "@/lib/data/portal-profile"
 import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity"
@@ -173,7 +178,10 @@ export function RepreneurProfileSummary({
             <Target data-icon="inline-start" />
             Target thesis
           </CardTitle>
-          <CardDescription>This staff-managed view summarizes the acquisition criteria Re-New is using.</CardDescription>
+          <CardDescription>Keep the acquisition criteria Re-New uses to surface relevant opportunities current.</CardDescription>
+          <CardAction>
+            <RepreneurTargetThesisEditor repreneur={repreneur} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -184,6 +192,18 @@ export function RepreneurProfileSummary({
               </div>
             ))}
           </dl>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your supporting items</CardTitle>
+          <CardDescription>
+            Add or certify information for Re-New to review. These declarations never change readiness milestones.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RepreneurProfileContributions repreneur={repreneur} />
         </CardContent>
       </Card>
 

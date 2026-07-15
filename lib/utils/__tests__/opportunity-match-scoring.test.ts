@@ -117,4 +117,43 @@ describe("calculateOpportunityMatchScore", () => {
 
     expect(withOptionalInputs).toEqual(withoutOptionalInputs)
   })
+
+  it("prefers canonical v2 criteria over stale legacy preferences", () => {
+    const result = calculateOpportunityMatchScore(
+      {
+        who_score: 90,
+        when_score: 92,
+        q13_target_sectors_v2: ["services"],
+        sector_preferences: ["industry"],
+        q12_geo_zones: ["ile-de-france"],
+        q14_deal_size: ["1-3M"],
+      },
+      {
+        sector: "industry",
+        location: "ile-de-france",
+        revenue_meur: 2,
+      },
+    )
+
+    expect(result.reasons).toContain("Sector or activity is not clearly in the repreneur target preferences.")
+  })
+
+  it("keeps canonical Tech / Digital selections compatible with opportunity labels", () => {
+    const result = calculateOpportunityMatchScore(
+      {
+        who_score: 80,
+        when_score: 80,
+        q13_target_sectors_v2: ["tech"],
+        q12_geo_zones: ["all-france"],
+        q14_deal_size: ["1-3M"],
+      },
+      {
+        sector: "Digital/IT services",
+        location: "Île-de-France",
+        revenue_meur: 2,
+      },
+    )
+
+    expect(result.reasons).toContain("Sector or activity matches the repreneur target preference.")
+  })
 })
