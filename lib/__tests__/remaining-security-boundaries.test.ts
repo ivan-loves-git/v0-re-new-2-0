@@ -65,13 +65,23 @@ describe("remaining security boundaries", () => {
   })
 
   it("invalidates pre-existing credentials before linking portal access", () => {
-    const portalSource = functionSource(
-      "lib/actions/portal-access.ts",
-      "enableRepreneurPortalAccess",
+    const portalSource = source("lib/actions/portal-access.ts")
+    const start = portalSource.indexOf(
+      "async function provisionPortalAccess",
     )
-    const invalidation = portalSource.indexOf("invalidateCredentialAndSessions")
-    const roleWrite = portalSource.indexOf("const roleWrite")
+    const end = portalSource.indexOf(
+      "\nfunction revalidatePortalAccess",
+      start,
+    )
+    const provisionSource = portalSource.slice(start, end)
+    const reconciliation = provisionSource.indexOf(
+      "planPortalRoleReconciliation",
+    )
+    const invalidation = provisionSource.indexOf("rotateCredentialAndSessions")
+    const roleWrite = provisionSource.indexOf("const roleWrite")
+    expect(reconciliation).toBeGreaterThanOrEqual(0)
     expect(invalidation).toBeGreaterThanOrEqual(0)
+    expect(reconciliation).toBeLessThan(invalidation)
     expect(invalidation).toBeLessThan(roleWrite)
   })
 
