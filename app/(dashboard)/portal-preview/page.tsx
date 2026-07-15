@@ -142,6 +142,9 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               repreneur={profileData.repreneur}
               opportunities={opportunityData.opportunities}
               dealsHref={portalPreviewHref(selectedRepreneurId)}
+              detailHrefForOpportunity={(opportunity) =>
+                portalPreviewHref(selectedRepreneurId, opportunity.match_id)
+              }
             />
           </TabsContent>
         </Tabs>

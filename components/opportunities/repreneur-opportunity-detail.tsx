@@ -12,17 +12,21 @@ import {
   getOpportunityNdaStatusLabel,
   getOpportunityPursuitStageLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
+  type RepreneurDealFlowOpportunity,
   type RepreneurOpportunityDocument,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
+import { getEbitdaMarginPercentage, isStaffRecommended } from "@/lib/utils/repreneur-deal-discovery"
+
+type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
 
 interface RepreneurOpportunityDetailProps {
-  opportunity: RepreneurOpportunityExposure
+  opportunity: RepreneurOpportunityDetailItem
   readOnly?: boolean
   documentHrefForDocument?: (document: RepreneurOpportunityDocument) => string | null
 }
 
-function opportunityTitle(opportunity: RepreneurOpportunityExposure) {
+function opportunityTitle(opportunity: RepreneurOpportunityDetailItem) {
   return opportunity.public_title || opportunity.sector || "Opportunity"
 }
 
@@ -36,13 +40,19 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
 }
 
+function formatEbitdaMargin(opportunity: RepreneurOpportunityDetailItem) {
+  const margin = getEbitdaMarginPercentage(opportunity)
+  if (margin === null) return "—"
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(margin)}%`
+}
+
 function formatBytes(bytes: number | null | undefined) {
   if (!bytes) return "-"
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function canRespond(status: RepreneurOpportunityExposure["match_status"]) {
+function canRespond(status: RepreneurOpportunityDetailItem["match_status"]) {
   return status === "proposed" || status === "interested" || status === "declined"
 }
 
@@ -51,8 +61,12 @@ export function RepreneurOpportunityDetail({
   readOnly = false,
   documentHrefForDocument,
 }: RepreneurOpportunityDetailProps) {
-  const interestAction = markMyOpportunityInterested.bind(null, opportunity.match_id)
-  const declineAction = declineMyOpportunity.bind(null, opportunity.match_id)
+  const interestAction = opportunity.match_id
+    ? markMyOpportunityInterested.bind(null, opportunity.match_id)
+    : null
+  const declineAction = opportunity.match_id
+    ? declineMyOpportunity.bind(null, opportunity.match_id)
+    : null
   const documentsAllowed = canDownloadOpportunityDocuments(opportunity.nda_status ?? "not_required")
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
@@ -62,12 +76,14 @@ export function RepreneurOpportunityDetail({
       <header className="relative flex flex-col gap-3 border-b pb-5">
         <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
+          {opportunity.match_status ? (
+            <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
+          ) : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "active_pursuit" && (
             <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge>
           )}
-          <Badge variant="secondary">Selected by Re-New</Badge>
+          {isStaffRecommended(opportunity) ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-[-0.025em]">{opportunityTitle(opportunity)}</h1>
@@ -78,17 +94,21 @@ export function RepreneurOpportunityDetail({
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="size-4" />
-              {formatDate(opportunity.date_added)}
+              Added {formatDate(opportunity.date_added)}
             </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-4" />
               {opportunity.headcount_range ?? opportunity.headcount ?? "-"} people
             </span>
           </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>Re-New ref <span className="font-mono text-foreground">{opportunity.reference}</span></span>
+            <span>{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</span>
+          </div>
         </div>
       </header>
 
-      <Card>
+      {opportunity.match_status ? <Card>
         <CardHeader>
           <CardTitle>{readOnly ? "Response" : "Your response"}</CardTitle>
           <CardDescription>
@@ -154,7 +174,7 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {!readOnly && !lockedForAnotherRepreneur && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && interestAction && canRespond(opportunity.match_status) && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <form action={interestAction}>
                 <Button type="submit" disabled={opportunity.match_status === "interested"}>
@@ -165,7 +185,7 @@ export function RepreneurOpportunityDetail({
             </div>
           )}
 
-          {!readOnly && !lockedForAnotherRepreneur && opportunity.match_status !== "declined" && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && declineAction && opportunity.match_status !== "declined" && canRespond(opportunity.match_status) && (
             <form action={declineAction} className="rounded-md border p-4">
               <div className="flex flex-col gap-4">
                 <div>
@@ -204,7 +224,7 @@ export function RepreneurOpportunityDetail({
             </form>
           )}
         </CardContent>
-      </Card>
+      </Card> : null}
 
       {opportunity.match_status === "active_pursuit" && (
         <Card>
@@ -262,20 +282,26 @@ export function RepreneurOpportunityDetail({
         </Card>
       )}
 
-      <div className="grid overflow-hidden rounded-lg border bg-card md:grid-cols-3">
+      <div className="grid overflow-hidden rounded-lg border bg-card sm:grid-cols-2 md:grid-cols-4">
         <Card className="rounded-none border-0 border-b py-4 md:border-b-0 md:border-r">
           <CardHeader className="pb-2">
             <CardDescription>Revenue</CardDescription>
             <CardTitle>{formatNumber(opportunity.revenue_meur, "M EUR")}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="rounded-none border-0 border-b py-4 md:border-b-0 md:border-r">
+        <Card className="rounded-none border-0 border-b py-4 sm:border-l md:border-b-0 md:border-l-0 md:border-r">
           <CardHeader className="pb-2">
             <CardDescription>EBITDA</CardDescription>
             <CardTitle>{formatNumber(opportunity.ebitda_keur, "K EUR")}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="rounded-none border-0 py-4">
+        <Card className="rounded-none border-0 border-b py-4 md:border-b-0 md:border-r">
+          <CardHeader className="pb-2">
+            <CardDescription>EBITDA margin</CardDescription>
+            <CardTitle>{formatEbitdaMargin(opportunity)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="rounded-none border-0 py-4 sm:border-l md:border-l-0">
           <CardHeader className="pb-2">
             <CardDescription>Team</CardDescription>
             <CardTitle>{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</CardTitle>

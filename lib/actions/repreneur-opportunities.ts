@@ -497,24 +497,50 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   }
 }
 
-export async function getMyRepreneurOpportunity(matchId: string): Promise<RepreneurOpportunityExposure | null> {
-  const repreneur = await getCurrentRepreneurProfile()
+export async function getMyRepreneurOpportunity(
+  dealId: string,
+): Promise<RepreneurOpportunityExposure | RepreneurDealFlowOpportunity | null> {
+  const repreneur = await getCurrentRepreneurDealFlowProfile()
   if (!repreneur) return null
 
   const supabase = createAdminClient()
-  const { data, error } = await supabase
-    .from("opportunity_matches")
-    .select(`
-      id,
-      status,
-      decline_reason_categories,
-      decline_reason_text,
-      pursuit_stage,
-      pursuit_stage_updated_at,
-      nda_status,
-      nda_updated_at,
-      updated_at,
-      opportunity:opportunities(
+  const [matchResult, opportunityResult] = await Promise.all([
+    supabase
+      .from("opportunity_matches")
+      .select(`
+        id,
+        status,
+        decline_reason_categories,
+        decline_reason_text,
+        pursuit_stage,
+        pursuit_stage_updated_at,
+        nda_status,
+        nda_updated_at,
+        updated_at,
+        opportunity:opportunities(
+          id,
+          reference,
+          status,
+          repreneur_exposure,
+          public_title,
+          teaser_summary,
+          sector,
+          activity,
+          location,
+          revenue_meur,
+          ebitda_keur,
+          headcount,
+          headcount_range,
+          date_added
+        )
+      `)
+      .eq("id", dealId)
+      .eq("repreneur_id", repreneur.id)
+      .in("status", VISIBLE_MATCH_STATUSES)
+      .maybeSingle(),
+    supabase
+      .from("opportunities")
+      .select(`
         id,
         reference,
         status,
@@ -528,17 +554,28 @@ export async function getMyRepreneurOpportunity(matchId: string): Promise<Repren
         ebitda_keur,
         headcount,
         headcount_range,
-        date_added
-      )
-    `)
-    .eq("id", matchId)
-    .eq("repreneur_id", repreneur.id)
-    .in("status", VISIBLE_MATCH_STATUSES)
-    .maybeSingle()
+        date_added,
+        updated_at
+      `)
+      .eq("id", dealId)
+      .eq("status", "active")
+      .neq("repreneur_exposure", "staff_only")
+      .maybeSingle(),
+  ])
 
-  if (error) throw new Error(error.message)
-  const exposure = data ? normalizeExposure(data) : null
-  if (!exposure) return null
+  if (matchResult.error) throw new Error(matchResult.error.message)
+  if (opportunityResult.error) throw new Error(opportunityResult.error.message)
+  const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null
+
+  if (!exposure) {
+    const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
+    if (!opportunity) return null
+
+    const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [opportunity.id])
+    if (activeOwnerByOpportunity.has(opportunity.id)) return null
+
+    return withoutRelevanceScore(toDealFlowOpportunity(opportunity, repreneur))
+  }
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
 

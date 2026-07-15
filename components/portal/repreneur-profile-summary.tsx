@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { CheckCircle2, Target } from "lucide-react"
+import { ArrowRight, CheckCircle2, Target } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Card,
@@ -13,14 +13,17 @@ import {
   RepreneurProfileContributions,
   RepreneurTargetThesisEditor,
 } from "@/components/portal/repreneur-target-thesis-editor"
+import { WaveMicroLabel } from "@/components/wave/visual-foundations"
 import { MILESTONES } from "@/lib/constants/tier-config"
 import type { PortalRepreneurProfile } from "@/lib/data/portal-profile"
 import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity"
+import { getEbitdaMarginPercentage } from "@/lib/utils/repreneur-deal-discovery"
 
 interface RepreneurProfileSummaryProps {
   repreneur: PortalRepreneurProfile | null
   opportunities: RepreneurOpportunityExposure[]
   dealsHref?: string
+  detailHrefForOpportunity?: (opportunity: RepreneurOpportunityExposure) => string
 }
 
 const SECTOR_LABELS: Record<string, string> = {
@@ -109,16 +112,33 @@ function opportunityTitle(opportunity: RepreneurOpportunityExposure) {
   return opportunity.public_title || opportunity.sector || "Opportunity"
 }
 
+function formatOpportunityMetric(value: number | null | undefined, suffix: string) {
+  if (value === null || value === undefined) return "—"
+  return `${formatNumber(value)} ${suffix}`
+}
+
+function formatOpportunityDate(value: string | null | undefined) {
+  if (!value) return "—"
+  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
+}
+
+function formatOpportunityMargin(opportunity: RepreneurOpportunityExposure) {
+  const margin = getEbitdaMarginPercentage(opportunity)
+  return margin === null ? "—" : `${formatNumber(margin)}%`
+}
+
 function DealGroup({
   title,
   description,
   opportunities,
   emptyMessage,
+  detailHrefForOpportunity,
 }: {
   title: string
   description: string
   opportunities: RepreneurOpportunityExposure[]
   emptyMessage: string
+  detailHrefForOpportunity: (opportunity: RepreneurOpportunityExposure) => string
 }) {
   return (
     <section aria-labelledby={`${title.toLowerCase().replaceAll(" ", "-")}-heading`} className="flex flex-col gap-3">
@@ -129,13 +149,65 @@ function DealGroup({
       {opportunities.length === 0 ? (
         <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
-        <ul className="divide-y border-t">
-          {opportunities.map((opportunity) => (
-            <li key={opportunity.match_id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm">
-              <span className="font-medium">{opportunityTitle(opportunity)}</span>
-              <span className="text-muted-foreground">{opportunity.location ?? "Location to confirm"}</span>
-            </li>
-          ))}
+        <ul className="divide-y border-y">
+          {opportunities.map((opportunity) => {
+            const title = opportunityTitle(opportunity)
+
+            return (
+              <li key={opportunity.match_id} className="flex flex-col gap-4 py-4 text-sm">
+                <div className="flex flex-col gap-2">
+                  <h4 className="font-medium">{title}</h4>
+                  <dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="flex flex-col gap-1">
+                      <WaveMicroLabel asChild><dt>Re-New ref</dt></WaveMicroLabel>
+                      <dd className="font-mono text-foreground">{opportunity.reference}</dd>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <WaveMicroLabel asChild><dt>Location</dt></WaveMicroLabel>
+                      <dd className="text-foreground">{opportunity.location ?? "Location to confirm"}</dd>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <WaveMicroLabel asChild><dt>Sector</dt></WaveMicroLabel>
+                      <dd className="text-foreground">{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</dd>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <WaveMicroLabel asChild><dt>Date added</dt></WaveMicroLabel>
+                      <dd className="text-foreground">{formatOpportunityDate(opportunity.date_added)}</dd>
+                    </div>
+                  </dl>
+                  <p className="line-clamp-2 text-muted-foreground">
+                    {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
+                  </p>
+                </div>
+                <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="flex flex-col gap-1">
+                    <WaveMicroLabel asChild><dt>Revenue</dt></WaveMicroLabel>
+                    <dd className="font-medium">{formatOpportunityMetric(opportunity.revenue_meur, "M EUR")}</dd>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <WaveMicroLabel asChild><dt>EBITDA</dt></WaveMicroLabel>
+                    <dd className="font-medium">{formatOpportunityMetric(opportunity.ebitda_keur, "K EUR")}</dd>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <WaveMicroLabel asChild><dt>EBITDA margin</dt></WaveMicroLabel>
+                    <dd className="font-medium">{formatOpportunityMargin(opportunity)}</dd>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <WaveMicroLabel asChild><dt>Employees</dt></WaveMicroLabel>
+                    <dd className="font-medium">{opportunity.headcount_range ?? opportunity.headcount ?? "—"}</dd>
+                  </div>
+                </dl>
+                <Link
+                  href={detailHrefForOpportunity(opportunity)}
+                  className="inline-flex w-fit items-center gap-1 font-medium text-primary hover:underline"
+                  aria-label={`View details for ${title}`}
+                >
+                  View detail
+                  <ArrowRight className="size-4" />
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </section>
@@ -146,6 +218,7 @@ export function RepreneurProfileSummary({
   repreneur,
   opportunities,
   dealsHref = "/portal/deals",
+  detailHrefForOpportunity,
 }: RepreneurProfileSummaryProps) {
   if (!repreneur) {
     return (
@@ -164,6 +237,8 @@ export function RepreneurProfileSummary({
   )
   const proposedDeals = opportunities.filter((opportunity) => opportunity.match_status === "proposed")
   const pursuedDeals = opportunities.filter((opportunity) => opportunity.match_status === "active_pursuit")
+  const opportunityDetailHref = (opportunity: RepreneurOpportunityExposure) =>
+    detailHrefForOpportunity?.(opportunity) ?? `/portal/deals/${opportunity.match_id}`
 
   return (
     <div className="flex flex-col gap-6">
@@ -239,12 +314,14 @@ export function RepreneurProfileSummary({
             description="Available for your review in the Deals area."
             opportunities={proposedDeals}
             emptyMessage="No proposed deals are available at the moment."
+            detailHrefForOpportunity={opportunityDetailHref}
           />
           <DealGroup
             title="Pursued deals"
             description="Validated by Re-New as active pursuits."
             opportunities={pursuedDeals}
             emptyMessage="No active pursuits are recorded at the moment."
+            detailHrefForOpportunity={opportunityDetailHref}
           />
           <Link href={dealsHref} className="w-fit text-sm font-medium text-primary hover:underline">
             Open all deals

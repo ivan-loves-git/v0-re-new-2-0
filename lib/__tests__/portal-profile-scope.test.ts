@@ -65,4 +65,65 @@ describe("repreneur portal profile scope", () => {
       expect(profileSummary).not.toContain(staffOnlySurface)
     }
   })
+
+  it("renders the complete anonymized opportunity facts on every portal list surface", () => {
+    const dealList = source("components/opportunities/repreneur-opportunity-list.tsx")
+    const profileSummary = source("components/portal/repreneur-profile-summary.tsx")
+
+    for (const surface of [dealList, profileSummary]) {
+      for (const field of [
+        "Re-New ref",
+        "Sector",
+        "Revenue",
+        "EBITDA",
+        "EBITDA margin",
+        "Employees",
+      ]) {
+        expect(surface).toContain(field)
+      }
+      expect(surface).toContain("teaser_summary")
+      expect(surface).toMatch(/line-clamp-[23]/)
+      expect(surface).toContain("View detail")
+    }
+
+    expect(dealList).toContain("Added {formatDate(opportunity.date_added)}")
+    expect(dealList).toContain("opportunity.match_id ?? opportunity.opportunity_id")
+    expect(profileSummary).toContain("Date added")
+  })
+
+  it("keeps staff-only opportunity data out of the repreneur information contract", () => {
+    const opportunityTypes = source("lib/types/opportunity.ts")
+    const portalExposureTypes = opportunityTypes.slice(
+      opportunityTypes.indexOf("export interface RepreneurOpportunityExposure"),
+      opportunityTypes.indexOf("export function getOpportunityStatusLabel"),
+    )
+
+    for (const staffOnlyField of [
+      "description",
+      "internal_notes",
+      "source_id",
+      "source_label",
+      "platform_score",
+      "platform_reasons",
+      "human_notes",
+      "relevance_score",
+    ]) {
+      expect(portalExposureTypes).not.toContain(staffOnlyField)
+    }
+  })
+
+  it("opens unmatched deal details without adding response or locked-deal actions", () => {
+    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
+    const detailGetter = portalOpportunities.slice(
+      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
+      portalOpportunities.indexOf("async function updateMyOpportunityResponse"),
+    )
+    const opportunityDetail = source("components/opportunities/repreneur-opportunity-detail.tsx")
+
+    expect(detailGetter).toContain("activeOwnerByOpportunity.has(opportunity.id)")
+    expect(detailGetter).toContain("withoutRelevanceScore(toDealFlowOpportunity(opportunity, repreneur))")
+    expect(opportunityDetail).toContain("const interestAction = opportunity.match_id")
+    expect(opportunityDetail).toContain("const declineAction = opportunity.match_id")
+    expect(opportunityDetail).toContain("{opportunity.match_status ? <Card>")
+  })
 })

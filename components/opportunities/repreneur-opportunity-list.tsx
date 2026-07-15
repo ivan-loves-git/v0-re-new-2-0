@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, BriefcaseBusiness, MapPin } from "lucide-react"
+import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -156,25 +156,40 @@ function DealCard({
         </div>
         <div className="flex flex-col gap-1">
           <CardTitle>{opportunityTitle(opportunity)}</CardTitle>
-          <CardDescription className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5">
-            <MapPin className="size-4" />
-            {opportunity.location ?? "Location to confirm"} · {formatDate(opportunity.date_added)}
+          <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="size-4" />
+              {opportunity.location ?? "Location to confirm"}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="size-4" />
+              Added {formatDate(opportunity.date_added)}
+            </span>
           </CardDescription>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <WaveMicroLabel asChild><span>Re-New ref</span></WaveMicroLabel>
-          <span className="font-mono text-foreground">{opportunity.reference}</span>
-          {opportunity.sector ? <span>{opportunity.sector}</span> : null}
-        </div>
+        <dl className="grid gap-2 text-xs sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <WaveMicroLabel asChild><dt>Re-New ref</dt></WaveMicroLabel>
+            <dd className="font-mono text-foreground">{opportunity.reference}</dd>
+          </div>
+          <div className="flex flex-col gap-1">
+            <WaveMicroLabel asChild><dt>Sector</dt></WaveMicroLabel>
+            <dd className="text-foreground">{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</dd>
+          </div>
+        </dl>
       </CardHeader>
       <CardContent className="flex flex-col justify-between gap-4 border-t py-5 md:border-l md:border-t-0">
         <p className="line-clamp-3 text-sm text-muted-foreground">
           {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
         </p>
-        <div className="grid gap-3 text-sm sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex flex-col gap-1">
             <WaveMicroLabel asChild><span>Revenue</span></WaveMicroLabel>
             <span className="font-medium">{formatNumber(opportunity.revenue_meur, "M EUR")}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <WaveMicroLabel asChild><span>EBITDA</span></WaveMicroLabel>
+            <span className="font-medium">{formatNumber(opportunity.ebitda_keur, "K EUR")}</span>
           </div>
           <div className="flex flex-col gap-1">
             <WaveMicroLabel asChild><span>EBITDA margin</span></WaveMicroLabel>
@@ -285,7 +300,7 @@ export function RepreneurOpportunityList({
 
   const detailHref = (opportunity: RepreneurOpportunityListItem) =>
     detailHrefForOpportunity?.(opportunity) ??
-    (opportunity.match_id ? `/portal/deals/${opportunity.match_id}` : null)
+    `/portal/deals/${opportunity.match_id ?? opportunity.opportunity_id}`
 
   return (
     <div className="flex flex-col gap-6">
