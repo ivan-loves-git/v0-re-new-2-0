@@ -5,7 +5,11 @@ import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
-import { sortRepreneurDealFlow, type RepreneurDealSort } from "@/lib/utils/repreneur-deal-flow"
+import {
+  sortRepreneurDealFlow,
+  type RepreneurDealFlowSortCandidate,
+  type RepreneurDealSort,
+} from "@/lib/utils/repreneur-deal-flow"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -89,10 +93,6 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
-    platform_recommendation: row.platform_recommendation ?? "not_evaluated",
-    platform_score: row.platform_score,
-    platform_reasons: Array.isArray(row.platform_reasons) ? row.platform_reasons : [],
-    human_recommendation: row.human_recommendation ?? "not_evaluated",
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -225,22 +225,14 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
 function withStaffRecommendation(
   opportunity: RepreneurOpportunityExposure,
   repreneur: RepreneurDealFlowProfile,
-): RepreneurDealFlowOpportunity {
+): RepreneurDealFlowSortCandidate {
   const relevance = calculateOpportunityMatchScore(repreneur, opportunity)
-  const humanRecommendation = opportunity.human_recommendation ?? "not_evaluated"
-  const relevanceGrade =
-    humanRecommendation !== "not_evaluated"
-      ? humanRecommendation
-      : relevance.recommendation
 
   return {
     ...opportunity,
-    platform_recommendation: opportunity.platform_recommendation ?? relevance.recommendation,
-    platform_score: opportunity.platform_score ?? relevance.score,
-    platform_reasons: opportunity.platform_reasons ?? relevance.reasons,
-    human_recommendation: humanRecommendation,
     is_staff_recommended: true,
-    relevance_grade: relevanceGrade,
+    is_outside_current_criteria: false,
+    relevance_grade: relevance.recommendation,
     relevance_score: relevance.score,
   }
 }
@@ -248,7 +240,7 @@ function withStaffRecommendation(
 function toDealFlowOpportunity(
   opportunity: RepreneurDealFlowOpportunityRow,
   repreneur: RepreneurDealFlowProfile,
-): RepreneurDealFlowOpportunity {
+): RepreneurDealFlowSortCandidate {
   const relevance = calculateOpportunityMatchScore(repreneur, opportunity)
 
   return {
@@ -267,14 +259,41 @@ function toDealFlowOpportunity(
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
-    platform_recommendation: relevance.recommendation,
-    platform_score: relevance.score,
-    platform_reasons: relevance.reasons,
-    human_recommendation: "not_evaluated",
     updated_at: opportunity.updated_at,
     is_staff_recommended: false,
+    is_outside_current_criteria: relevance.recommendation === "not_fit",
     relevance_grade: relevance.recommendation,
     relevance_score: relevance.score,
+  }
+}
+
+function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): RepreneurDealFlowOpportunity {
+  return {
+    match_id: opportunity.match_id,
+    match_status: opportunity.match_status,
+    pursuit_stage: opportunity.pursuit_stage,
+    pursuit_stage_updated_at: opportunity.pursuit_stage_updated_at,
+    nda_status: opportunity.nda_status,
+    nda_updated_at: opportunity.nda_updated_at,
+    visible_documents: opportunity.visible_documents,
+    opportunity_id: opportunity.opportunity_id,
+    reference: opportunity.reference,
+    public_title: opportunity.public_title,
+    teaser_summary: opportunity.teaser_summary,
+    sector: opportunity.sector,
+    activity: opportunity.activity,
+    location: opportunity.location,
+    revenue_meur: opportunity.revenue_meur,
+    ebitda_keur: opportunity.ebitda_keur,
+    headcount: opportunity.headcount,
+    headcount_range: opportunity.headcount_range,
+    date_added: opportunity.date_added,
+    decline_reason_categories: opportunity.decline_reason_categories,
+    decline_reason_text: opportunity.decline_reason_text,
+    updated_at: opportunity.updated_at,
+    is_staff_recommended: opportunity.is_staff_recommended,
+    is_outside_current_criteria: opportunity.is_outside_current_criteria,
+    relevance_grade: opportunity.relevance_grade,
   }
 }
 
@@ -361,10 +380,6 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       .select(`
         id,
         status,
-        platform_recommendation,
-        platform_score,
-        platform_reasons,
-        human_recommendation,
         decline_reason_categories,
         decline_reason_text,
         pursuit_stage,
@@ -441,16 +456,20 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
           : [],
     }))
     .map((opportunity) => withStaffRecommendation(opportunity, repreneur))
+    .map(withoutRelevanceScore)
   const recommendedOpportunityIds = new Set(staffRecommended.map((opportunity) => opportunity.opportunity_id))
-  const dealFlow = allOpportunities
-    .filter((opportunity) => !recommendedOpportunityIds.has(opportunity.id))
-    .filter((opportunity) => !activeOwnerByOpportunity.has(opportunity.id))
-    .map((opportunity) => toDealFlowOpportunity(opportunity, repreneur))
+  const dealFlow = sortRepreneurDealFlow(
+    allOpportunities
+      .filter((opportunity) => !recommendedOpportunityIds.has(opportunity.id))
+      .filter((opportunity) => !activeOwnerByOpportunity.has(opportunity.id))
+      .map((opportunity) => toDealFlowOpportunity(opportunity, repreneur)),
+    sort,
+  ).map(withoutRelevanceScore)
 
   return {
     repreneur,
     staffRecommended,
-    dealFlow: sortRepreneurDealFlow(dealFlow, sort),
+    dealFlow,
   }
 }
 

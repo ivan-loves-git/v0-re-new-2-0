@@ -1,5 +1,9 @@
 import type { RepreneurDealFlowOpportunity } from "@/lib/types/opportunity"
 
+export type RepreneurDealFlowSortCandidate = RepreneurDealFlowOpportunity & {
+  relevance_score: number
+}
+
 export const REPRENEUR_DEAL_SORT_OPTIONS = [
   { value: "relevance", label: "Relevance" },
   { value: "deal_size", label: "Deal size" },
@@ -18,21 +22,21 @@ export function parseRepreneurDealSort(value: string | null | undefined): Repren
     : "relevance"
 }
 
-function dateValue(opportunity: RepreneurDealFlowOpportunity) {
+function dateValue(opportunity: RepreneurDealFlowSortCandidate) {
   const value = opportunity.date_added ?? opportunity.updated_at
   const timestamp = Date.parse(value)
   return Number.isNaN(timestamp) ? 0 : timestamp
 }
 
 function compareByRelevance(
-  left: RepreneurDealFlowOpportunity,
-  right: RepreneurDealFlowOpportunity,
+  left: RepreneurDealFlowSortCandidate,
+  right: RepreneurDealFlowSortCandidate,
 ) {
   return right.relevance_score - left.relevance_score || dateValue(right) - dateValue(left)
 }
 
 export function sortRepreneurDealFlow(
-  opportunities: RepreneurDealFlowOpportunity[],
+  opportunities: RepreneurDealFlowSortCandidate[],
   sort: RepreneurDealSort,
 ) {
   return [...opportunities].sort((left, right) => {

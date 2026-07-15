@@ -458,10 +458,6 @@ export interface RepreneurOpportunityExposure {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
-  platform_recommendation?: OpportunityMatchRecommendation | null
-  platform_score?: number | null
-  platform_reasons?: string[] | null
-  human_recommendation?: OpportunityMatchRecommendation | null
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   updated_at: string
@@ -487,16 +483,12 @@ export interface RepreneurDealFlowOpportunity {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
-  platform_recommendation: OpportunityMatchRecommendation
-  platform_score?: number | null
-  platform_reasons: string[]
-  human_recommendation: OpportunityMatchRecommendation
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   updated_at: string
   is_staff_recommended: boolean
+  is_outside_current_criteria: boolean
   relevance_grade: OpportunityMatchRecommendation
-  relevance_score: number
 }
 
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {

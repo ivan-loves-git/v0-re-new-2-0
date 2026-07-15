@@ -5,11 +5,11 @@ import {
   getEbitdaMarginPercentage,
   partitionRepreneurDeals,
 } from "../repreneur-deal-discovery";
-import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity";
+import type { RepreneurDealFlowSortCandidate } from "../repreneur-deal-flow";
 
 function opportunity(
-  overrides: Partial<RepreneurOpportunityExposure> = {},
-): RepreneurOpportunityExposure {
+  overrides: Partial<RepreneurDealFlowSortCandidate> = {},
+): RepreneurDealFlowSortCandidate {
   return {
     match_id: "match-1",
     match_status: "proposed",
@@ -24,10 +24,11 @@ function opportunity(
     ebitda_keur: 450,
     headcount: 30,
     headcount_range: null,
-    platform_recommendation: "possible_fit",
-    platform_reasons: [],
-    human_recommendation: "not_evaluated",
     updated_at: "2026-07-15T09:00:00.000Z",
+    is_staff_recommended: false,
+    is_outside_current_criteria: false,
+    relevance_grade: "possible_fit",
+    relevance_score: 60,
     ...overrides,
   };
 }
@@ -101,17 +102,17 @@ describe("repreneur deal discovery", () => {
   it("keeps input order inside the decided presentation sections", () => {
     const recommended = opportunity({
       match_id: "recommended",
-      human_recommendation: "strong_fit",
+      is_staff_recommended: true,
     });
     const remaining = opportunity({ match_id: "remaining" });
     const outside = opportunity({
       match_id: "outside",
-      platform_recommendation: "not_fit",
+      is_outside_current_criteria: true,
     });
     const declined = opportunity({
       match_id: "declined",
       match_status: "declined",
-      human_recommendation: "strong_fit",
+      is_staff_recommended: true,
     });
 
     expect(

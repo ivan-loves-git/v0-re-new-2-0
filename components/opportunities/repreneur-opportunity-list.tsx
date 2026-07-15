@@ -63,7 +63,7 @@ function formatEbitdaMargin(opportunity: RepreneurOpportunityListItem) {
 function relevanceGrade(opportunity: RepreneurOpportunityListItem) {
   return "relevance_grade" in opportunity
     ? opportunity.relevance_grade
-    : opportunity.platform_recommendation ?? "not_evaluated"
+    : null
 }
 
 function filterOptions(
@@ -136,6 +136,7 @@ function DealCard({
 }) {
   const staffRecommended = isStaffRecommended(opportunity)
   const isDeclined = opportunity.match_status === "declined"
+  const publicRelevance = relevanceGrade(opportunity)
 
   return (
     <Card className="gap-0 py-0 md:grid md:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
@@ -145,7 +146,7 @@ function DealCard({
           {opportunity.match_status ? <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge> : null}
           {opportunity.pursuit_stage ? <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge> : null}
           {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge> : null}
-          <Badge variant="outline">Relevance: {getOpportunityMatchRecommendationLabel(relevanceGrade(opportunity))}</Badge>
+          {publicRelevance ? <Badge variant="outline">Relevance: {getOpportunityMatchRecommendationLabel(publicRelevance)}</Badge> : null}
         </div>
         <div className="flex flex-col gap-1">
           <CardTitle>{opportunityTitle(opportunity)}</CardTitle>

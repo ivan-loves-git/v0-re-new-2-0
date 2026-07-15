@@ -1,18 +1,17 @@
 import { describe, expect, it } from "vitest"
-import type { RepreneurDealFlowOpportunity } from "@/lib/types/opportunity"
+import type { RepreneurDealFlowSortCandidate } from "../repreneur-deal-flow"
 import { parseRepreneurDealSort, sortRepreneurDealFlow } from "../repreneur-deal-flow"
 
-function opportunity(overrides: Partial<RepreneurDealFlowOpportunity>): RepreneurDealFlowOpportunity {
+function opportunity(overrides: Partial<RepreneurDealFlowSortCandidate>): RepreneurDealFlowSortCandidate {
   return {
     match_id: null,
     match_status: null,
     visible_documents: [],
     opportunity_id: "opportunity",
-    platform_recommendation: "possible_fit",
-    platform_reasons: [],
-    human_recommendation: "not_evaluated",
+    reference: "RN-1001",
     updated_at: "2026-07-01T00:00:00.000Z",
     is_staff_recommended: false,
+    is_outside_current_criteria: false,
     relevance_grade: "possible_fit",
     relevance_score: 60,
     ...overrides,

@@ -82,11 +82,7 @@ export function getEbitdaMarginPercentage(
 
 export function isStaffRecommended(opportunity: RepreneurDealDiscoveryOpportunity) {
   if ("is_staff_recommended" in opportunity) return opportunity.is_staff_recommended;
-
-  return (
-    opportunity.human_recommendation === "strong_fit" ||
-    opportunity.human_recommendation === "possible_fit"
-  );
+  return true;
 }
 
 /**
@@ -97,7 +93,7 @@ export function isStaffRecommended(opportunity: RepreneurDealDiscoveryOpportunit
 export function isOutsideCurrentCriteria(
   opportunity: RepreneurDealDiscoveryOpportunity,
 ) {
-  return opportunity.platform_recommendation === "not_fit";
+  return "is_outside_current_criteria" in opportunity && opportunity.is_outside_current_criteria;
 }
 
 export function filterRepreneurDeals(
