@@ -22,6 +22,7 @@ interface PortalAccessCardProps {
 interface PortalAccessActionResponse {
   success?: boolean
   emailSent?: boolean
+  warning?: boolean
   message?: string
 }
 
@@ -43,6 +44,22 @@ function getPortalRecoveryMessage(status: RepreneurPortalAccessStatus) {
     return "Add an email address before enabling portal access."
   }
 
+  if (status.identityIssue === "staff_email") {
+    return "This email belongs to a staff login and cannot also be used for repreneur portal access. Use a separate repreneur email."
+  }
+
+  if (status.identityIssue === "multiple_auth_users") {
+    return "More than one login identity uses this email. Access was left unchanged to avoid linking the wrong account."
+  }
+
+  if (status.identityIssue === "assigned_to_another_repreneur") {
+    return "This login identity is already assigned to another repreneur. Access was left unchanged to protect both accounts."
+  }
+
+  if (status.identityIssue === "inconsistent_link") {
+    return "Portal access points to an outdated email or login identity. Use Repair portal access to relink the current account and send a fresh setup email."
+  }
+
   if (status.roleId || status.hasAuthUser || status.hasCredentialAccount) {
     return "Portal setup is incomplete. Use Repair portal access to relink the account and send a fresh setup email."
   }
@@ -60,7 +77,7 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
         const result = await action()
         const actionResult = result && typeof result === "object" ? (result as PortalAccessActionResponse) : null
         const message = actionResult?.message ?? successMessage
-        if (actionResult?.emailSent === false) {
+        if (actionResult?.warning || actionResult?.emailSent === false) {
           toast.warning(message)
         } else {
           toast.success(message)
@@ -73,7 +90,7 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
     })
   }
 
-  const canEnable = Boolean(status.repreneurEmail) && !status.enabled
+  const canEnable = Boolean(status.repreneurEmail) && !status.enabled && status.repairable
   const canResend = Boolean(status.repreneurEmail) && status.enabled
   const recoveryMessage = getPortalRecoveryMessage(status)
   const enableButtonLabel = status.roleId || status.hasAuthUser || status.hasCredentialAccount ? "Repair portal access" : "Enable portal access"
