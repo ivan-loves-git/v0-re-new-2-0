@@ -30,36 +30,33 @@ import {
   type ProfileContribution,
   type TargetThesisInput,
 } from "@/lib/actions/repreneur-profile"
-import type { Repreneur } from "@/lib/types/repreneur"
 
-export type TargetThesisProfile = Pick<
-  Repreneur,
-  | "id"
-  | "q12_geo_zones"
-  | "q13_target_sectors_v2"
-  | "q14_deal_size"
-  | "q16_equity"
-  | "target_location"
-  | "sector_preferences"
-  | "target_acquisition_size"
-  | "investment_capacity"
-  | "target_revenue_min_meur"
-  | "target_revenue_max_meur"
-  | "target_ebitda_margin_min_pct"
-  | "target_staff_size_min"
-  | "target_staff_size_max"
->
+export type TargetThesisProfile = {
+  id: string
+  q12_geo_zones?: string[]
+  q13_target_sectors_v2?: string[]
+  q14_deal_size?: string[]
+  q16_equity?: string | null
+  target_location?: string[]
+  sector_preferences?: string[]
+  target_acquisition_size?: string | null
+  investment_capacity?: string | null
+  target_revenue_min_meur?: number | null
+  target_revenue_max_meur?: number | null
+  target_ebitda_margin_min_pct?: number | null
+  target_staff_size_min?: number | null
+  target_staff_size_max?: number | null
+}
 
-export type ProfileContributionsProfile = Pick<
-  Repreneur,
-  | "id"
-  | "ldc_url"
-  | "ldc_self_certified_at"
-  | "advisory_team_self_certified_at"
-  | "ms_ldc_validated"
-  | "ms_advisory_team"
-  | "ms_advisory_team_identified"
->
+export type ProfileContributionsProfile = {
+  id: string
+  ldc_url?: string | null
+  ldc_self_certified_at?: string | null
+  advisory_team_self_certified_at?: string | null
+  ms_ldc_validated?: boolean
+  ms_advisory_team?: boolean
+  ms_advisory_team_identified?: boolean
+}
 
 type Draft = Omit<TargetThesisInput, "target_revenue_min_meur" | "target_revenue_max_meur" | "target_ebitda_margin_min_pct" | "target_staff_size_min" | "target_staff_size_max"> & {
   target_revenue_min_meur: string

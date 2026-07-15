@@ -77,15 +77,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const access = await getCurrentUserAccess()
+    // Anonymous intake uploads must prove their one-time capability before we
+    // parse multipart data. Authenticated portal and staff uploads are checked
+    // against their role and profile immediately after parsing their metadata.
+    const anonymousIntakeGrant = !access
+      ? await verifyAndConsumeIntakeUploadToken(
+          request,
+          request.headers.get("x-intake-upload-token"),
+        )
+      : null
+
     const formData = await request.formData()
     const file = formData.get("file") as File | null
     const repreneurId = formData.get("repreneurId") as string | null
     const documentType = normalizeDocumentType(formData.get("documentType"))
-    const access = await getCurrentUserAccess()
     const isOwnedPortalUpload =
       access?.role === "repreneur" && access.repreneurId === repreneurId
     const intakeGrant = !repreneurId && access?.role !== "staff"
-      ? await verifyAndConsumeIntakeUploadToken(
+      ? anonymousIntakeGrant ?? await verifyAndConsumeIntakeUploadToken(
           request,
           request.headers.get("x-intake-upload-token"),
         )
