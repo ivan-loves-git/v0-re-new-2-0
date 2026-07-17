@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 17, 2026",
+    version: "0.9.23",
+    title: "Opportunity review made clearer and more consistent",
+    isCompleted: true,
+    events: [
+      {
+        title: "Complete opportunity information in the repreneur portal",
+        type: "feature",
+        description: "Opportunity cards and profile rows now show the Re-New reference, anonymized name, location, sector, summary, revenue, EBITDA, margin, team size, and date added while keeping source and internal information private.",
+      },
+      {
+        title: "Decline reasons aligned across staff workflows",
+        type: "fix",
+        description: "Staff declining an offer from Engagement now select the same reason categories used elsewhere, with optional context, so feedback can be reviewed consistently.",
+      },
+    ],
+  },
+  {
     period: "Jul 15, 2026",
     version: "0.9.22",
     title: "Courteous interest signals for positioned opportunities",
