@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 18, 2026",
+    version: "0.9.24",
+    title: "Repreneur decisions and opportunity intake made dependable",
+    isCompleted: true,
+    events: [
+      {
+        title: "Portal decisions fail safely",
+        type: "fix",
+        description: "Repreneurs must now choose a reason before declining a proposed opportunity, Other requires context, and recoverable problems appear beside the decision instead of breaking the portal journey.",
+      },
+      {
+        title: "Owned framing letters open from Profile",
+        type: "fix",
+        description: "A repreneur can open their own Lettre de Cadrage while other users' documents and staff-only document types remain protected.",
+      },
+      {
+        title: "Proposed deal detail access protected",
+        type: "testing",
+        description: "The reported proposed-deal record and a live QA journey were verified in production, with regression coverage preserving match ownership, visibility checks, and safe not-found behavior.",
+      },
+      {
+        title: "New opportunities use the agreed sector choices",
+        type: "feature",
+        description: "Staff creating an opportunity choose from the 16 agreed sectors, with a required precise description for Other, while existing opportunity records remain unchanged.",
+      },
+    ],
+  },
+  {
     period: "Jul 17, 2026",
     version: "0.9.23",
     title: "Opportunity review made clearer and more consistent",
