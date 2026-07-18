@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { resolveNewOpportunitySector } from "@/lib/utils/opportunity-sector"
 import type {
   MaSource,
   MaSourceType,
@@ -96,7 +97,11 @@ function isValidEmail(email: string | null) {
   return Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
 }
 
-function validateOpportunityForm(formData: FormData): OpportunityActionResult | null {
+function validateOpportunityForm(
+  formData: FormData,
+  sectorValue = readString(formData, "sector"),
+  sectorFieldError?: { field: "sector_choice" | "sector_other"; message: string } | null,
+): OpportunityActionResult | null {
   const fieldErrors: Record<string, string> = {}
 
   const requiredTextFields: Array<[string, string]> = [
@@ -104,7 +109,6 @@ function validateOpportunityForm(formData: FormData): OpportunityActionResult | 
     ["source_firm_name", "Source is required."],
     ["source_contact_name", "M&A contact name is required."],
     ["location", "Localisation is required."],
-    ["sector", "Secteur is required."],
     ["description", "Description is required."],
     ["headcount_range", "Effectif is required."],
     ["date_added", "Date ajout is required."],
@@ -113,6 +117,12 @@ function validateOpportunityForm(formData: FormData): OpportunityActionResult | 
 
   for (const [field, message] of requiredTextFields) {
     if (!readString(formData, field)) fieldErrors[field] = message
+  }
+
+  if (sectorFieldError) {
+    fieldErrors[sectorFieldError.field] = sectorFieldError.message
+  } else if (!sectorValue) {
+    fieldErrors.sector = "Secteur is required."
   }
 
   const sourceEmail = readString(formData, "source_contact_email")
@@ -177,13 +187,17 @@ async function upsertSourceFromForm(formData: FormData, createdBy: string): Prom
   return (data as MaSource).id
 }
 
-function buildOpportunityPayload(formData: FormData, sourceId: string | null): Opportunity_Update {
+function buildOpportunityPayload(
+  formData: FormData,
+  sourceId: string | null,
+  sectorValue = readString(formData, "sector"),
+): Opportunity_Update {
   return {
     reference: readString(formData, "reference") ?? undefined,
     status: readStatus(formData),
     source_id: sourceId,
     source_label: readString(formData, "source_label") ?? readString(formData, "source_firm_name"),
-    sector: readString(formData, "sector"),
+    sector: sectorValue,
     activity: readString(formData, "activity"),
     location: readString(formData, "location"),
     description: readString(formData, "description"),
@@ -281,7 +295,15 @@ export async function getOpportunity(id: string): Promise<OpportunityWithSource 
 
 export async function createOpportunity(formData: FormData) {
   const { user } = await requireStaffAccess()
-  const validation = validateOpportunityForm(formData)
+  const sectorResolution = resolveNewOpportunitySector(
+    formData.get("sector_choice"),
+    formData.get("sector_other"),
+  )
+  const validation = validateOpportunityForm(
+    formData,
+    sectorResolution.value,
+    sectorResolution.fieldError,
+  )
   if (validation) return validation
 
   const reference = readString(formData, "reference")
@@ -295,7 +317,7 @@ export async function createOpportunity(formData: FormData) {
 
   const sourceId = await upsertSourceFromForm(formData, user.id)
   const payload: Opportunity_Insert = {
-    ...(buildOpportunityPayload(formData, sourceId) as Opportunity_Insert),
+    ...(buildOpportunityPayload(formData, sourceId, sectorResolution.value) as Opportunity_Insert),
     reference,
     created_by: user.id,
   }

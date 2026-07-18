@@ -15,6 +15,7 @@ import {
   type OpportunityActionResult,
   type OpportunityWithSource,
 } from "@/lib/types/opportunity"
+import { NEW_OPPORTUNITY_SECTORS, OTHER_SECTOR } from "@/lib/utils/opportunity-sector"
 
 interface OpportunityFormProps {
   opportunity?: OpportunityWithSource
@@ -25,6 +26,7 @@ interface OpportunityFormProps {
 export function OpportunityForm({ opportunity, action, submitLabel = "Save opportunity" }: OpportunityFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [sectorChoice, setSectorChoice] = useState("")
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -89,9 +91,52 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sector">Secteur *</Label>
-                <Input id="sector" name="sector" defaultValue={opportunity?.sector ?? ""} required />
-                {errorFor("sector")}
+                <Label htmlFor={opportunity ? "sector" : "sector_choice"}>Secteur *</Label>
+                {opportunity ? (
+                  <Input id="sector" name="sector" defaultValue={opportunity.sector ?? ""} required />
+                ) : (
+                  <>
+                    <Select
+                      name="sector_choice"
+                      value={sectorChoice}
+                      onValueChange={setSectorChoice}
+                      required
+                    >
+                      <SelectTrigger
+                        id="sector_choice"
+                        className="w-full"
+                        aria-invalid={Boolean(fieldErrors.sector_choice)}
+                      >
+                        <SelectValue placeholder="Sélectionner un secteur" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {NEW_OPPORTUNITY_SECTORS.map((sector) => (
+                            <SelectItem key={sector} value={sector}>
+                              {sector}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    {errorFor("sector_choice")}
+                    {sectorChoice === OTHER_SECTOR ? (
+                      <div className="space-y-2 pt-1">
+                        <Label htmlFor="sector_other">Précisez le secteur *</Label>
+                        <Input
+                          id="sector_other"
+                          name="sector_other"
+                          placeholder="Ex. Économie sociale"
+                          maxLength={120}
+                          aria-invalid={Boolean(fieldErrors.sector_other)}
+                          required
+                        />
+                        {errorFor("sector_other")}
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                {opportunity ? errorFor("sector") : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="activity">Activity</Label>
