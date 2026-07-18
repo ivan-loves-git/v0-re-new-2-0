@@ -34,11 +34,6 @@ export type RepreneurOpportunityDeclineActionState =
   | { status: "idle"; message: "" }
   | { status: "error"; message: string }
 
-export const INITIAL_REPRENEUR_OPPORTUNITY_DECLINE_STATE: RepreneurOpportunityDeclineActionState = {
-  status: "idle",
-  message: "",
-}
-
 class RepreneurOpportunityResponseError extends Error {}
 
 type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {

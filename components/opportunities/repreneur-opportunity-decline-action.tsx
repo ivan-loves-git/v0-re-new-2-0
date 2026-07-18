@@ -6,8 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import {
-  INITIAL_REPRENEUR_OPPORTUNITY_DECLINE_STATE,
   declineMyOpportunity,
+  type RepreneurOpportunityDeclineActionState,
 } from "@/lib/actions/repreneur-opportunities"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
@@ -18,6 +18,11 @@ interface RepreneurOpportunityDeclineActionProps {
   matchId: string
   initialReasons: OpportunityDeclineReasonCategory[]
   initialDetails: string
+}
+
+const INITIAL_REPRENEUR_OPPORTUNITY_DECLINE_STATE: RepreneurOpportunityDeclineActionState = {
+  status: "idle",
+  message: "",
 }
 
 export function RepreneurOpportunityDeclineAction({
