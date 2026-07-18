@@ -30,6 +30,17 @@ const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "other",
 ])
 
+export type RepreneurOpportunityDeclineActionState =
+  | { status: "idle"; message: "" }
+  | { status: "error"; message: string }
+
+export const INITIAL_REPRENEUR_OPPORTUNITY_DECLINE_STATE: RepreneurOpportunityDeclineActionState = {
+  status: "idle",
+  message: "",
+}
+
+class RepreneurOpportunityResponseError extends Error {}
+
 type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
   who_score?: number | null
   when_score?: number | null
@@ -607,20 +618,20 @@ async function updateMyOpportunityResponse(matchId: string, status: "interested"
     .maybeSingle()
 
   if (matchError) throw new Error(matchError.message)
-  if (!match) throw new Error("Opportunity match not found")
+  if (!match) throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
   if (!REPRENEUR_RESPONSE_ALLOWED_STATUSES.includes(match.status as OpportunityMatchStatus)) {
-    throw new Error("This opportunity response can no longer be changed")
+    throw new RepreneurOpportunityResponseError("This opportunity response can no longer be changed.")
   }
 
   const declineReasonCategories = status === "declined" ? readDeclineReasonCategories(formData) : []
   const declineReasonText = status === "declined" ? readDeclineReasonText(formData) : null
 
   if (status === "declined" && declineReasonCategories.length === 0) {
-    throw new Error("Choose at least one reason before marking this opportunity as not a fit.")
+    throw new RepreneurOpportunityResponseError("Choose at least one reason before marking this opportunity as not a fit.")
   }
 
   if (status === "declined" && declineReasonCategories.includes("other") && !declineReasonText) {
-    throw new Error("Add details when selecting Other.")
+    throw new RepreneurOpportunityResponseError("Add details when selecting Other.")
   }
 
   const { error } = await supabase
@@ -637,17 +648,43 @@ async function updateMyOpportunityResponse(matchId: string, status: "interested"
 
   if (error) throw new Error(error.message)
 
+  return match.opportunity_id
+}
+
+function refreshMyOpportunityResponse(matchId: string, opportunityId: string) {
   revalidatePath("/portal/deals")
   revalidatePath(`/portal/deals/${matchId}`)
   revalidatePath("/opportunities/reviews")
-  revalidatePath(`/opportunities/${match.opportunity_id}`)
-  redirect("/portal/deals")
+  revalidatePath(`/opportunities/${opportunityId}`)
 }
 
 export async function markMyOpportunityInterested(matchId: string) {
-  await updateMyOpportunityResponse(matchId, "interested")
+  const opportunityId = await updateMyOpportunityResponse(matchId, "interested")
+  refreshMyOpportunityResponse(matchId, opportunityId)
+  redirect("/portal/deals")
 }
 
-export async function declineMyOpportunity(matchId: string, formData: FormData) {
-  await updateMyOpportunityResponse(matchId, "declined", formData)
+export async function declineMyOpportunity(
+  matchId: string,
+  _previousState: RepreneurOpportunityDeclineActionState,
+  formData: FormData,
+): Promise<RepreneurOpportunityDeclineActionState> {
+  let opportunityId: string
+
+  try {
+    opportunityId = await updateMyOpportunityResponse(matchId, "declined", formData)
+  } catch (error) {
+    if (error instanceof RepreneurOpportunityResponseError) {
+      return { status: "error", message: error.message }
+    }
+
+    console.error("Failed to mark repreneur opportunity as not a fit", error)
+    return {
+      status: "error",
+      message: "We could not save your response right now. Please try again.",
+    }
+  }
+
+  refreshMyOpportunityResponse(matchId, opportunityId)
+  redirect("/portal/deals")
 }

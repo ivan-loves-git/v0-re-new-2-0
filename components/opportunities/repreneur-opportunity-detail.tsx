@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
-import { declineMyOpportunity, markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunities"
+import { RepreneurOpportunityDeclineAction } from "@/components/opportunities/repreneur-opportunity-decline-action"
+import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunities"
 import {
   canDownloadOpportunityDocuments,
   getOpportunityMatchStatusLabel,
@@ -63,9 +64,6 @@ export function RepreneurOpportunityDetail({
 }: RepreneurOpportunityDetailProps) {
   const interestAction = opportunity.match_id
     ? markMyOpportunityInterested.bind(null, opportunity.match_id)
-    : null
-  const declineAction = opportunity.match_id
-    ? declineMyOpportunity.bind(null, opportunity.match_id)
     : null
   const documentsAllowed = canDownloadOpportunityDocuments(opportunity.nda_status ?? "not_required")
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
@@ -185,43 +183,12 @@ export function RepreneurOpportunityDetail({
             </div>
           )}
 
-          {!readOnly && !lockedForAnotherRepreneur && declineAction && opportunity.match_status !== "declined" && canRespond(opportunity.match_status) && (
-            <form action={declineAction} className="rounded-md border p-4">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-sm font-medium">Not a fit?</p>
-                  <p className="text-sm text-muted-foreground">Select the reason(s) so Re-New can improve future recommendations.</p>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {OPPORTUNITY_DECLINE_REASON_OPTIONS.map((option) => (
-                    <label key={option.value} className="flex items-start gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="decline_reason_categories"
-                        value={option.value}
-                        defaultChecked={selectedDeclineReasons.has(option.value)}
-                        className="mt-1 size-4 rounded border-border"
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-                <label className="flex flex-col gap-2 text-sm">
-                  <span className="font-medium">Details if useful</span>
-                  <textarea
-                    name="decline_reason_text"
-                    defaultValue={opportunity.decline_reason_text ?? ""}
-                    rows={3}
-                    className="min-h-20 rounded-md border bg-background px-3 py-2 text-sm"
-                    placeholder="Add context if you selected Other or want to clarify the reason."
-                  />
-                </label>
-                <Button type="submit" variant="outline" className="w-fit">
-                  <XCircle data-icon="inline-start" />
-                  Not a fit
-                </Button>
-              </div>
-            </form>
+          {!readOnly && !lockedForAnotherRepreneur && opportunity.match_id && opportunity.match_status !== "declined" && canRespond(opportunity.match_status) && (
+            <RepreneurOpportunityDeclineAction
+              matchId={opportunity.match_id}
+              initialReasons={Array.from(selectedDeclineReasons)}
+              initialDetails={opportunity.decline_reason_text ?? ""}
+            />
           )}
         </CardContent>
       </Card> : null}
