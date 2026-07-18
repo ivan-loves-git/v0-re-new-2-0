@@ -5,10 +5,18 @@ import { CheckCircle2, LockKeyhole, MailWarning } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import {
-  INITIAL_LOCKED_OPPORTUNITY_INTEREST_STATE,
-  expressLockedOpportunityInterestAction,
-} from "@/lib/actions/locked-opportunity-interest"
+import { expressLockedOpportunityInterestAction } from "@/lib/actions/locked-opportunity-interest"
+
+type LockedOpportunityInterestActionState =
+  | { status: "idle"; message: ""; recorded: false }
+  | { status: "success"; message: string; recorded: true }
+  | { status: "error"; message: string; recorded: boolean }
+
+const INITIAL_LOCKED_OPPORTUNITY_INTEREST_STATE: LockedOpportunityInterestActionState = {
+  status: "idle",
+  message: "",
+  recorded: false,
+}
 
 interface LockedOpportunityInterestActionProps {
   opportunityId: string

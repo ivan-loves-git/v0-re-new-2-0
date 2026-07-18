@@ -21,6 +21,13 @@ describe("locked opportunity interest boundaries", () => {
     expect(actionSource).not.toContain('formData.get("repreneur_id")')
   })
 
+  it("exports only the async action from its use-server module", () => {
+    expect(actionSource.startsWith('"use server"')).toBe(true)
+    expect(actionSource.match(/^export /gm)).toHaveLength(1)
+    expect(actionSource).toContain("export async function expressLockedOpportunityInterestAction")
+    expect(actionSource).not.toContain("export const INITIAL_LOCKED_OPPORTUNITY_INTEREST_STATE")
+  })
+
   it("keeps eligibility and idempotency inside one database transaction", () => {
     expect(migrationSource).toContain("status = 'active'")
     expect(migrationSource).toContain("repreneur_exposure <> 'staff_only'")

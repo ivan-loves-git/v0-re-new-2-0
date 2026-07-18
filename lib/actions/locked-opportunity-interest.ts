@@ -9,16 +9,10 @@ import {
   expressLockedOpportunityInterest,
 } from "@/lib/locked-opportunity-interest"
 
-export type LockedOpportunityInterestActionState =
+type LockedOpportunityInterestActionState =
   | { status: "idle"; message: ""; recorded: false }
   | { status: "success"; message: string; recorded: true }
   | { status: "error"; message: string; recorded: boolean }
-
-export const INITIAL_LOCKED_OPPORTUNITY_INTEREST_STATE: LockedOpportunityInterestActionState = {
-  status: "idle",
-  message: "",
-  recorded: false,
-}
 
 function readOpportunityId(formData: FormData) {
   const value = formData.get("opportunity_id")
