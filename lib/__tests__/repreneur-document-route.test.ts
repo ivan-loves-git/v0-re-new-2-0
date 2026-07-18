@@ -23,6 +23,13 @@ const STAFF_ACCESS = {
   user: { id: "qa-staff" },
 }
 
+const REPRENEUR_ACCESS = {
+  role: "repreneur",
+  repreneurId: "fixture",
+  repreneurName: "Fixture Repreneur",
+  user: { id: "qa-repreneur" },
+}
+
 function setupAdminClient(
   repreneur: { cv_url: string | null; ldc_url: string | null } | null,
 ) {
@@ -55,21 +62,64 @@ function requestFor(id: string, documentType: string, query = "") {
   )
 }
 
-describe("staff repreneur document route", () => {
+describe("repreneur document route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("rejects unauthenticated and repreneur sessions before loading metadata", async () => {
+  it("rejects unauthenticated sessions before loading metadata", async () => {
     mocks.getCurrentUserAccess.mockResolvedValueOnce(null)
     expect((await requestFor("fixture", "cv")).status).toBe(401)
 
-    mocks.getCurrentUserAccess.mockResolvedValueOnce({
-      ...STAFF_ACCESS,
-      role: "repreneur",
-      repreneurId: "fixture",
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("lets a repreneur open their own Lettre de cadrage", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValue(REPRENEUR_ACCESS)
+    const { createSignedUrl, eq } = setupAdminClient({
+      cv_url: "cvs/fixture-cv.pdf",
+      ldc_url: "cvs/fixture-ldc.pdf",
     })
+
+    const response = await requestFor("fixture", "ldc")
+
+    expect(eq).toHaveBeenCalledWith("id", "fixture")
+    expect(createSignedUrl).toHaveBeenCalledWith(
+      "cvs/fixture-ldc.pdf",
+      60,
+      undefined,
+    )
+    expect(response.status).toBe(307)
+  })
+
+  it("does not expose another repreneur's Lettre de cadrage", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValue(REPRENEUR_ACCESS)
+
+    expect((await requestFor("another-repreneur", "ldc")).status).toBe(403)
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("keeps CV documents staff-only even for the owning repreneur", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValue(REPRENEUR_ACCESS)
+
     expect((await requestFor("fixture", "cv")).status).toBe(403)
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("rejects unassigned and unlinked repreneur sessions", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValueOnce({
+      ...REPRENEUR_ACCESS,
+      role: "unassigned",
+      repreneurId: null,
+    })
+    expect((await requestFor("fixture", "ldc")).status).toBe(403)
+
+    mocks.getCurrentUserAccess.mockResolvedValueOnce({
+      ...REPRENEUR_ACCESS,
+      role: "repreneur",
+      repreneurId: null,
+    })
+    expect((await requestFor("fixture", "ldc")).status).toBe(403)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 

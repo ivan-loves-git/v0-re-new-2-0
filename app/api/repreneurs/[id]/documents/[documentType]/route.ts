@@ -23,11 +23,19 @@ export async function GET(
 ) {
   const access = await getCurrentUserAccess()
   if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { id, documentType } = await context.params
   if (!isDocumentType(documentType)) {
     return NextResponse.json({ error: "Unsupported document type" }, { status: 400 })
+  }
+
+  const canAccessDocument =
+    access.role === "staff" ||
+    (access.role === "repreneur" &&
+      access.repreneurId === id &&
+      documentType === "ldc")
+  if (!canAccessDocument) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const field = DOCUMENT_FIELDS[documentType]
