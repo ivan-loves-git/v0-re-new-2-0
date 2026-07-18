@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
 import { RepreneurOpportunityDeclineAction } from "@/components/opportunities/repreneur-opportunity-decline-action"
-import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunities"
+import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity-responses"
 import {
   canDownloadOpportunityDocuments,
   getOpportunityMatchStatusLabel,

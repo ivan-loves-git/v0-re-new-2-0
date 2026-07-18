@@ -5,10 +5,7 @@ import { CircleAlert, XCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import {
-  declineMyOpportunity,
-  type RepreneurOpportunityDeclineActionState,
-} from "@/lib/actions/repreneur-opportunities"
+import { declineMyOpportunity } from "@/lib/actions/repreneur-opportunity-responses"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type OpportunityDeclineReasonCategory,
@@ -19,6 +16,10 @@ interface RepreneurOpportunityDeclineActionProps {
   initialReasons: OpportunityDeclineReasonCategory[]
   initialDetails: string
 }
+
+type RepreneurOpportunityDeclineActionState =
+  | { status: "idle"; message: "" }
+  | { status: "error"; message: string }
 
 const INITIAL_REPRENEUR_OPPORTUNITY_DECLINE_STATE: RepreneurOpportunityDeclineActionState = {
   status: "idle",

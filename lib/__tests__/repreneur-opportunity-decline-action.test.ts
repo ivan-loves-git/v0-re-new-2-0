@@ -9,7 +9,7 @@ function source(relativePath: string) {
 
 describe("repreneur opportunity not-a-fit response", () => {
   it("returns recoverable action state for validation and mutation errors", () => {
-    const action = source("lib/actions/repreneur-opportunities.ts")
+    const action = source("lib/actions/repreneur-opportunity-responses.ts")
     const declineAction = action.slice(action.indexOf("export async function declineMyOpportunity"))
 
     expect(declineAction).toContain("_previousState: RepreneurOpportunityDeclineActionState")
@@ -31,7 +31,7 @@ describe("repreneur opportunity not-a-fit response", () => {
   })
 
   it("keeps the decline control scoped to an owned opportunity match", () => {
-    const action = source("lib/actions/repreneur-opportunities.ts")
+    const action = source("lib/actions/repreneur-opportunity-responses.ts")
     const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
     expect(action).toContain('.eq("id", matchId)')
@@ -39,5 +39,17 @@ describe("repreneur opportunity not-a-fit response", () => {
     expect(detail).toContain("opportunity.match_id &&")
     expect(detail).toContain("matchId={opportunity.match_id}")
     expect(detail).not.toContain("declineMyOpportunity.bind")
+  })
+
+  it("keeps client-invoked response actions in a dedicated async-only server module", () => {
+    const action = source("lib/actions/repreneur-opportunity-responses.ts")
+    const readModel = source("lib/actions/repreneur-opportunities.ts")
+
+    expect(action.startsWith('"use server"')).toBe(true)
+    expect(action.match(/^export /gm)).toHaveLength(2)
+    expect(action).toContain("export async function markMyOpportunityInterested")
+    expect(action).toContain("export async function declineMyOpportunity")
+    expect(readModel.startsWith('import "server-only"')).toBe(true)
+    expect(readModel).not.toContain('"use server"')
   })
 })
