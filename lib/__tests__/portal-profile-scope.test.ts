@@ -123,7 +123,8 @@ describe("repreneur portal profile scope", () => {
     expect(detailGetter).toContain("activeOwnerByOpportunity.has(opportunity.id)")
     expect(detailGetter).toContain("withoutRelevanceScore(toDealFlowOpportunity(opportunity, repreneur))")
     expect(opportunityDetail).toContain("const interestAction = opportunity.match_id")
-    expect(opportunityDetail).toContain("const declineAction = opportunity.match_id")
+    expect(opportunityDetail).toContain("opportunity.match_id &&")
+    expect(opportunityDetail).toContain("matchId={opportunity.match_id}")
     expect(opportunityDetail).toContain("{opportunity.match_status ? <Card>")
   })
 
