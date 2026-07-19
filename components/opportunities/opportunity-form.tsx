@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { type FormEvent, useRef, useState } from "react"
 import { AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -38,7 +38,9 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
   const [sectorChoice, setSectorChoice] = useState("")
   const isClosed = opportunity?.status === "closed"
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
     setIsSubmitting(true)
     setFieldErrors({})
     setIncompleteDataWarning(null)
@@ -79,7 +81,13 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} noValidate onInput={clearIncompleteDataAcknowledgement} className="mx-auto max-w-5xl">
+    <form
+      ref={formRef}
+      noValidate
+      onInput={clearIncompleteDataAcknowledgement}
+      onSubmit={handleSubmit}
+      className="mx-auto max-w-5xl"
+    >
       <Card>
         <CardHeader>
           <CardTitle>{opportunity ? "Edit opportunity" : "Create opportunity"}</CardTitle>

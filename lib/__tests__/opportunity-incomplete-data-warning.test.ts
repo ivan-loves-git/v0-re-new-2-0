@@ -135,6 +135,36 @@ describe("incomplete opportunity data warnings", () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
+  it("preserves the warning submission values for an acknowledged resubmit", async () => {
+    const formData = validOpportunityForm()
+    formData.set("reference", "OPP-RETAINED")
+    formData.set("location", "Lyon")
+
+    await expect(createOpportunity(formData)).resolves.toMatchObject({
+      success: false,
+      incompleteData: { missingFields: MISSING_FIELDS },
+    })
+
+    formData.set("acknowledge_incomplete_data", "true")
+    const { insert } = setupCreateClient()
+
+    await createOpportunity(formData)
+
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reference: "OPP-RETAINED",
+        sector: "Tech & Digital",
+        location: "Lyon",
+        description: "A valid internal opportunity record.",
+        date_added: "2026-07-19",
+        teaser_summary: "An anonymized opportunity summary.",
+        revenue_meur: null,
+        ebitda_keur: null,
+        headcount: null,
+      }),
+    )
+  })
+
   it("saves an acknowledged create with unknown fields stored as null", async () => {
     const formData = validOpportunityForm()
     formData.set("acknowledge_incomplete_data", "true")
@@ -204,12 +234,16 @@ describe("incomplete opportunity data warnings", () => {
     )
   })
 
-  it("renders the clear warning and the explicit save-anyway control", () => {
+  it("uses a client submit handler so warning acknowledgement retains uncontrolled values", () => {
     const form = readFileSync(
       `${process.cwd()}/components/opportunities/opportunity-form.tsx`,
       "utf8",
     )
 
+    expect(form).toContain("event.preventDefault()")
+    expect(form).toContain("new FormData(event.currentTarget)")
+    expect(form).toContain("onSubmit={handleSubmit}")
+    expect(form).not.toContain("action={handleSubmit}")
     expect(form).toContain(
       "Incomplete data — this opportunity may not match correctly",
     )
