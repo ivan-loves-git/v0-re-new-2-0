@@ -48,6 +48,16 @@ export type OpportunityDeclineReasonCategory =
   | "business_model"
   | "other"
 
+export type OpportunityClosureReason =
+  | "stale"
+  | "sold"
+  | "signed_repreneur"
+  | "paused_cabinet"
+  | "withdrawn_seller"
+  | "no_viable_match"
+  | "dd_disqualified"
+  | "duplicate"
+
 export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
@@ -55,6 +65,17 @@ export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "archived", label: "Archived" },
   { value: "closed", label: "Closed" },
 ] as const
+
+export const OPPORTUNITY_CLOSURE_REASON_OPTIONS = [
+  { value: "stale", label: "Stale" },
+  { value: "sold", label: "Sold" },
+  { value: "signed_repreneur", label: "Signed repreneur" },
+  { value: "paused_cabinet", label: "Paused by cabinet" },
+  { value: "withdrawn_seller", label: "Withdrawn by seller" },
+  { value: "no_viable_match", label: "No viable match" },
+  { value: "dd_disqualified", label: "Disqualified in due diligence" },
+  { value: "duplicate", label: "Duplicate" },
+] as const satisfies ReadonlyArray<{ value: OpportunityClosureReason; label: string }>
 
 export const OPPORTUNITY_VISIBILITY_OPTIONS = [
   { value: "staff_only", label: "Staff only" },
@@ -130,6 +151,14 @@ export function isOpportunityDeclineReasonCategory(
   value: unknown,
 ): value is OpportunityDeclineReasonCategory {
   return OPPORTUNITY_DECLINE_REASON_OPTIONS.some((option) => option.value === value)
+}
+
+export function isOpportunityStatus(value: unknown): value is OpportunityStatus {
+  return OPPORTUNITY_STATUS_OPTIONS.some((option) => option.value === value)
+}
+
+export function isOpportunityClosureReason(value: unknown): value is OpportunityClosureReason {
+  return OPPORTUNITY_CLOSURE_REASON_OPTIONS.some((option) => option.value === value)
 }
 
 export interface MaSource {
@@ -218,6 +247,14 @@ export interface Opportunity {
 
 export interface OpportunityWithSource extends Opportunity {
   source?: MaSource | null
+}
+
+export interface OpportunityClosureHistoryEntry {
+  id: string
+  opportunity_id: string
+  reason: OpportunityClosureReason
+  closed_by: string
+  closed_at: string
 }
 
 export interface OpportunityActionResult {
@@ -513,6 +550,10 @@ export interface RepreneurDealFlowOpportunity {
 
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
   return OPPORTUNITY_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+}
+
+export function getOpportunityClosureReasonLabel(reason: OpportunityClosureReason): string {
+  return OPPORTUNITY_CLOSURE_REASON_OPTIONS.find((option) => option.value === reason)?.label ?? reason
 }
 
 export function getOpportunityVisibilityLabel(visibility: OpportunityVisibility): string {

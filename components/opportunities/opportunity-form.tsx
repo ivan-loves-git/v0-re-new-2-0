@@ -17,6 +17,8 @@ import {
 } from "@/lib/types/opportunity"
 import { NEW_OPPORTUNITY_SECTORS, OTHER_SECTOR } from "@/lib/utils/opportunity-sector"
 
+const EDITABLE_OPPORTUNITY_STATUS_OPTIONS = OPPORTUNITY_STATUS_OPTIONS.filter((option) => option.value !== "closed")
+
 interface OpportunityFormProps {
   opportunity?: OpportunityWithSource
   action: (formData: FormData) => Promise<OpportunityActionResult | void>
@@ -27,6 +29,7 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [sectorChoice, setSectorChoice] = useState("")
+  const isClosed = opportunity?.status === "closed"
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -75,20 +78,29 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select name="status" defaultValue={opportunity?.status ?? "draft"}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {OPPORTUNITY_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                {isClosed ? (
+                  <>
+                    <Input id="status" value="Closed" disabled />
+                    <input type="hidden" name="status" value="closed" />
+                    <p className="text-xs text-muted-foreground">Reopen this opportunity from Overview before changing its status.</p>
+                  </>
+                ) : (
+                  <Select name="status" defaultValue={opportunity?.status ?? "draft"}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {EDITABLE_OPPORTUNITY_STATUS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                )}
+                {errorFor("status")}
               </div>
               <div className="space-y-2">
                 <Label htmlFor={opportunity ? "sector" : "sector_choice"}>Secteur *</Label>

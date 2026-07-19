@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MaSourcePanel } from "@/components/opportunities/ma-source-panel"
 import { OpportunityDetailTabs } from "@/components/opportunities/opportunity-detail-tabs"
+import { OpportunityClosureControls } from "@/components/opportunities/opportunity-closure-controls"
 import { OpportunityMaWorkflowPanel } from "@/components/opportunities/opportunity-ma-workflow-panel"
 import { OpportunityDocumentsPanel } from "@/components/opportunities/opportunity-documents-panel"
 import { OpportunityForm } from "@/components/opportunities/opportunity-form"
@@ -15,6 +16,8 @@ import { OpportunityStatusBadge, OpportunityVisibilityBadge } from "@/components
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import type {
   OpportunityActionResult,
+  OpportunityClosureHistoryEntry,
+  OpportunityClosureReason,
   OpportunityDocument,
   OpportunityMatch,
   OpportunityMatchCandidate,
@@ -38,6 +41,9 @@ interface OpportunityDetailProps {
   pursuitEvents: OpportunityPursuitEvent[]
   maWorkflow: MaOpportunityWorkflow
   updateAction: (formData: FormData) => Promise<OpportunityActionResult | void>
+  closureHistory: OpportunityClosureHistoryEntry[]
+  closeAction: (reason: OpportunityClosureReason) => Promise<OpportunityActionResult>
+  reopenAction: () => Promise<OpportunityActionResult>
   defaultTab?: string
 }
 
@@ -98,6 +104,9 @@ export function OpportunityDetail({
   pursuitEvents,
   maWorkflow,
   updateAction,
+  closureHistory,
+  closeAction,
+  reopenAction,
   defaultTab,
 }: OpportunityDetailProps) {
   const initialTab = defaultTab && OPPORTUNITY_DETAIL_TABS.has(defaultTab) ? defaultTab : "overview"
@@ -210,6 +219,13 @@ export function OpportunityDetail({
               </div>
             </CardContent>
           </Card>
+
+          <OpportunityClosureControls
+            opportunityStatus={opportunity.status}
+            closureHistory={closureHistory}
+            closeAction={closeAction}
+            reopenAction={reopenAction}
+          />
 
           <dl className="grid overflow-hidden rounded-lg border bg-card sm:grid-cols-3 sm:divide-x">
             <div className="flex flex-col gap-1 p-4">

@@ -7,7 +7,8 @@ import { OpportunityDetail } from "@/components/opportunities/opportunity-detail
 import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
 import { listOpportunityMatchCandidates, listOpportunityMatches, listOpportunityPursuitEvents } from "@/lib/actions/opportunity-matches"
-import { getOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
+import { closeOpportunity, getOpportunity, getOpportunityClosureHistory, reopenOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
+import type { OpportunityClosureReason } from "@/lib/types/opportunity"
 
 
 export default function OpportunityDetailPage({
@@ -33,23 +34,33 @@ async function OpportunityDetailContent({
 }) {
   const { id } = await params
   const { tab } = await searchParams
-  const opportunity = await getOpportunity(id)
-
-  if (!opportunity) {
-    notFound()
-  }
-
-  const [documents, matches, matchCandidates, pursuitEvents, maWorkflow] = await Promise.all([
+  const [opportunity, documents, matches, matchCandidates, pursuitEvents, maWorkflow, closureHistory] = await Promise.all([
+    getOpportunity(id),
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
     listOpportunityMatchCandidates(id),
     listOpportunityPursuitEvents(id),
     getMaOpportunityWorkflow(id),
+    getOpportunityClosureHistory(id),
   ])
+
+  if (!opportunity) {
+    notFound()
+  }
 
   async function updateAction(formData: FormData) {
     "use server"
     return updateOpportunity(id, formData)
+  }
+
+  async function closeAction(reason: OpportunityClosureReason) {
+    "use server"
+    return closeOpportunity(id, reason)
+  }
+
+  async function reopenAction() {
+    "use server"
+    return reopenOpportunity(id)
   }
 
   return (
@@ -69,6 +80,9 @@ async function OpportunityDetailContent({
         pursuitEvents={pursuitEvents}
         maWorkflow={maWorkflow}
         updateAction={updateAction}
+        closureHistory={closureHistory}
+        closeAction={closeAction}
+        reopenAction={reopenAction}
         defaultTab={tab}
       />
     </div>

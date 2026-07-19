@@ -6,20 +6,23 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { resolveNewOpportunitySector } from "@/lib/utils/opportunity-sector"
-import type {
-  MaSource,
-  MaSourceType,
-  MaSource_Insert,
-  MaSource_Update,
-  Opportunity,
-  OpportunityActionResult,
-  OpportunityStatus,
-  OpportunityVisibility,
-  Opportunity_Insert,
-  Opportunity_Update,
-  OpportunityWithSource,
-  OpportunityWorkSurfaceMatch,
-  OpportunityWorkSurfaceRecord,
+import {
+  isOpportunityClosureReason,
+  isOpportunityStatus,
+  type MaSource,
+  type MaSourceType,
+  type MaSource_Insert,
+  type MaSource_Update,
+  type Opportunity,
+  type OpportunityActionResult,
+  type OpportunityClosureHistoryEntry,
+  type OpportunityStatus,
+  type OpportunityVisibility,
+  type Opportunity_Insert,
+  type Opportunity_Update,
+  type OpportunityWithSource,
+  type OpportunityWorkSurfaceMatch,
+  type OpportunityWorkSurfaceRecord,
 } from "@/lib/types/opportunity"
 
 type OpportunitySourceRow = Record<string, unknown> & {
@@ -59,8 +62,9 @@ function readHeadcountApproximation(formData: FormData): number | null {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : null
 }
 
-function readStatus(formData: FormData): OpportunityStatus {
-  return (readString(formData, "status") as OpportunityStatus | null) ?? "draft"
+function readStatus(formData: FormData, fallback: OpportunityStatus = "draft"): OpportunityStatus {
+  const value = readString(formData, "status")
+  return isOpportunityStatus(value) ? value : fallback
 }
 
 function readVisibility(formData: FormData, key: string, fallback: OpportunityVisibility): OpportunityVisibility {
@@ -191,10 +195,11 @@ function buildOpportunityPayload(
   formData: FormData,
   sourceId: string | null,
   sectorValue = readString(formData, "sector"),
+  fallbackStatus: OpportunityStatus = "draft",
 ): Opportunity_Update {
   return {
     reference: readString(formData, "reference") ?? undefined,
-    status: readStatus(formData),
+    status: readStatus(formData, fallbackStatus),
     source_id: sourceId,
     source_label: readString(formData, "source_label") ?? readString(formData, "source_firm_name"),
     sector: sectorValue,
@@ -293,8 +298,30 @@ export async function getOpportunity(id: string): Promise<OpportunityWithSource 
   return normalizeOpportunity(data)
 }
 
+export async function getOpportunityClosureHistory(id: string): Promise<OpportunityClosureHistoryEntry[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunity_closure_history")
+    .select("id, opportunity_id, reason, closed_by, closed_at")
+    .eq("opportunity_id", id)
+    .order("closed_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []) as OpportunityClosureHistoryEntry[]
+}
+
 export async function createOpportunity(formData: FormData) {
   const { user } = await requireStaffAccess()
+  if (readStatus(formData) === "closed") {
+    return {
+      success: false,
+      message: "Choose a closure reason from the opportunity detail before closing it.",
+      fieldErrors: { status: "Use the dedicated closure control to close an opportunity." },
+    } satisfies OpportunityActionResult
+  }
+
   const sectorResolution = resolveNewOpportunitySector(
     formData.get("sector_choice"),
     formData.get("sector_other"),
@@ -365,9 +392,41 @@ export async function updateOpportunity(id: string, formData: FormData) {
     } satisfies OpportunityActionResult
   }
 
-  const sourceId = await upsertSourceFromForm(formData, user.id)
-  const payload = buildOpportunityPayload(formData, sourceId)
   const supabase = createAdminClient()
+  const { data: existingOpportunity, error: existingOpportunityError } = await supabase
+    .from("opportunities")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (existingOpportunityError) throw new Error(existingOpportunityError.message)
+  if (!existingOpportunity) {
+    return {
+      success: false,
+      message: "Opportunity not found.",
+    } satisfies OpportunityActionResult
+  }
+
+  const currentStatus = existingOpportunity.status as OpportunityStatus
+  const requestedStatus = readStatus(formData, currentStatus)
+  if (currentStatus !== "closed" && requestedStatus === "closed") {
+    return {
+      success: false,
+      message: "Choose a closure reason from the opportunity detail before closing it.",
+      fieldErrors: { status: "Use the dedicated closure control to close an opportunity." },
+    } satisfies OpportunityActionResult
+  }
+
+  if (currentStatus === "closed" && requestedStatus !== "closed") {
+    return {
+      success: false,
+      message: "Reopen this opportunity from its detail before changing its status.",
+      fieldErrors: { status: "Use the dedicated reopen control to change a closed opportunity." },
+    } satisfies OpportunityActionResult
+  }
+
+  const sourceId = await upsertSourceFromForm(formData, user.id)
+  const payload = buildOpportunityPayload(formData, sourceId, undefined, currentStatus)
 
   const { error } = await supabase.from("opportunities").update(payload).eq("id", id)
   if (error) throw new Error(error.message)
@@ -376,6 +435,59 @@ export async function updateOpportunity(id: string, formData: FormData) {
   revalidatePath(`/opportunities/${id}`)
   revalidateOpportunityDashboardTags()
   return { success: true, message: "Opportunity saved." } satisfies OpportunityActionResult
+}
+
+export async function closeOpportunity(id: string, reason: unknown): Promise<OpportunityActionResult> {
+  const { user } = await requireStaffAccess()
+  if (!isOpportunityClosureReason(reason)) {
+    return {
+      success: false,
+      message: "Choose one closure reason before closing this opportunity.",
+      fieldErrors: { closure_reason: "Choose a valid closure reason." },
+    }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.rpc("close_opportunity_with_reason", {
+    p_opportunity_id: id,
+    p_reason: reason,
+    p_closed_by: user.id,
+  })
+
+  if (error) {
+    if (error.message.includes("opportunity_not_open_for_closure")) {
+      return { success: false, message: "This opportunity is already closed." }
+    }
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/opportunities")
+  revalidatePath(`/opportunities/${id}`)
+  revalidateOpportunityDashboardTags()
+  return { success: true, message: "Opportunity closed. Its closure reason is retained in history." }
+}
+
+export async function reopenOpportunity(id: string): Promise<OpportunityActionResult> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunities")
+    .update({ status: "active" })
+    .eq("id", id)
+    .eq("status", "closed")
+    .select("id")
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) {
+    return { success: false, message: "Only a closed opportunity can be reopened." }
+  }
+
+  revalidatePath("/opportunities")
+  revalidatePath(`/opportunities/${id}`)
+  revalidateOpportunityDashboardTags()
+  return { success: true, message: "Opportunity reopened as active. Closure history is retained." }
 }
 
 export async function archiveOpportunity(id: string) {
