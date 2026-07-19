@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 20, 2026",
+    version: "0.9.25",
+    title: "Opportunity integrity and confidentiality strengthened",
+    isCompleted: true,
+    events: [
+      {
+        title: "Confidential memos open only after the real gate is complete",
+        type: "fix",
+        description: "NDA receipt, completed signature, source-identity disclosure, and actual memo availability are now treated as separate facts, so a repreneur sees an approved memo only after a signed or waived NDA and a real file are both present.",
+      },
+      {
+        title: "Incomplete opportunity data is visible before saving",
+        type: "product",
+        description: "Staff receive a non-blocking warning when matching-critical financial, headcount, source, or contact data is missing, can explicitly save unknown values, and keep numeric zero distinct from missing data.",
+      },
+      {
+        title: "Opportunity closure decisions remain auditable",
+        type: "feature",
+        description: "Closing an opportunity now records a structured reason and durable history, while reopening restores active work without erasing the earlier decision.",
+      },
+    ],
+  },
+  {
     period: "Jul 18, 2026",
     version: "0.9.24",
     title: "Repreneur decisions and opportunity intake made dependable",
