@@ -35,6 +35,12 @@ export type OpportunityPursuitStage =
 
 export type OpportunityNdaStatus = "not_required" | "required" | "sent" | "signed" | "waived"
 
+/** Evidence recorded by staff for the confidentiality gate on one active pursuit. */
+export interface OpportunityConfidentialityGate {
+  nda_received_at?: string | null
+  nda_signed_at?: string | null
+}
+
 export type OpportunityDeclineReasonCategory =
   | "geography"
   | "sector"
@@ -331,7 +337,7 @@ export interface OpportunityMatchRepreneur {
   when_score?: number | null
 }
 
-export interface OpportunityMatch {
+export interface OpportunityMatch extends OpportunityConfidentialityGate {
   id: string
   opportunity_id: string
   repreneur_id: string
@@ -527,8 +533,4 @@ export function getOpportunityPursuitStageLabel(stage: OpportunityPursuitStage):
 
 export function getOpportunityNdaStatusLabel(status: OpportunityNdaStatus): string {
   return OPPORTUNITY_NDA_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
-}
-
-export function canDownloadOpportunityDocuments(ndaStatus: OpportunityNdaStatus | null | undefined): boolean {
-  return ndaStatus === "not_required" || ndaStatus === "signed" || ndaStatus === "waived"
 }

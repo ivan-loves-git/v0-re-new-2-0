@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
+import { canMarkOpportunityInfoMemoReceived } from "@/lib/opportunity-confidentiality"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import type {
@@ -89,6 +90,11 @@ function readString(formData: FormData, key: string): string | null {
   if (typeof value !== "string") return null
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
+}
+
+function readCheckbox(formData: FormData, key: string) {
+  const value = formData.get(key)
+  return value === "on" || value === "true"
 }
 
 function readRecommendation(formData: FormData, key: string): OpportunityMatchRecommendation {
@@ -719,6 +725,37 @@ export async function updateOpportunityPursuitStage(matchId: string, opportunity
   const supabase = createAdminClient()
   const now = new Date().toISOString()
 
+  const { data: activeMatch, error: activeMatchError } = await supabase
+    .from("opportunity_matches")
+    .select("id, repreneur_id, nda_status")
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "active_pursuit")
+    .maybeSingle()
+
+  if (activeMatchError) throw new Error(activeMatchError.message)
+  if (!activeMatch) throw new Error("Only an active pursuit can have its stage updated.")
+
+  if (stage === "info_memo_received") {
+    const { data: documents, error: documentsError } = await supabase
+      .from("opportunity_documents")
+      .select("document_type, visibility, storage_path, external_url")
+      .eq("opportunity_id", opportunityId)
+      .eq("document_type", "deal_book")
+      .eq("visibility", "approved_for_repreneur")
+
+    if (documentsError) throw new Error(documentsError.message)
+    const memoAvailable = (documents ?? []).some((document) =>
+      canMarkOpportunityInfoMemoReceived(activeMatch.nda_status, document),
+    )
+    if (!memoAvailable) {
+      throw formError(
+        "A signed or waived NDA and an approved info memo file are required before marking Info memo received.",
+        "pursuit_stage",
+      )
+    }
+  }
+
   const { data, error } = await supabase
     .from("opportunity_matches")
     .update({
@@ -732,7 +769,7 @@ export async function updateOpportunityPursuitStage(matchId: string, opportunity
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
     .eq("status", "active_pursuit")
-    .select("id, repreneur_id")
+    .select("id")
     .maybeSingle()
 
   if (error) throw new Error(error.message)
@@ -741,7 +778,7 @@ export async function updateOpportunityPursuitStage(matchId: string, opportunity
   await createPursuitEvent({
     matchId,
     opportunityId,
-    repreneurId: data.repreneur_id,
+    repreneurId: activeMatch.repreneur_id,
     stage,
     note,
     createdBy: access.user.id,
@@ -753,6 +790,7 @@ export async function updateOpportunityPursuitStage(matchId: string, opportunity
 export async function updateOpportunityPursuitNda(matchId: string, opportunityId: string, formData: FormData) {
   const access = await requireStaffAccess()
   const ndaStatus = readNdaStatus(formData)
+  const ndaReceived = readCheckbox(formData, "nda_received")
   const ndaDocumentId = readString(formData, "nda_document_id")
   const ndaNotes = readString(formData, "nda_notes")
   const supabase = createAdminClient()
@@ -772,12 +810,28 @@ export async function updateOpportunityPursuitNda(matchId: string, opportunityId
     if (!document) throw new Error("Select an NDA document from this opportunity.")
   }
 
+  const { data: activeMatch, error: activeMatchError } = await supabase
+    .from("opportunity_matches")
+    .select("id, nda_received_at, nda_signed_at")
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "active_pursuit")
+    .maybeSingle()
+
+  if (activeMatchError) throw new Error(activeMatchError.message)
+  if (!activeMatch) throw new Error("Only an active pursuit can have NDA status updated.")
+
+  const ndaReceivedAt = ndaReceived || ndaStatus === "signed" ? activeMatch.nda_received_at ?? now : null
+  const ndaSignedAt = ndaStatus === "signed" ? activeMatch.nda_signed_at ?? now : null
+
   const { data, error } = await supabase
     .from("opportunity_matches")
     .update({
       nda_status: ndaStatus,
       nda_document_id: linkedNdaDocumentId,
       nda_notes: ndaNotes,
+      nda_received_at: ndaReceivedAt,
+      nda_signed_at: ndaSignedAt,
       nda_updated_by: access.user.id,
       nda_updated_at: now,
       reviewed_by: access.user.id,

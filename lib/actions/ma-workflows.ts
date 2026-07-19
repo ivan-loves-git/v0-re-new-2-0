@@ -7,9 +7,10 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
+import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
 import type { EmailTemplateKey } from "@/lib/types/email"
-import type { MaSourceInteraction, OpportunityMatchStatus, OpportunityPursuitStage } from "@/lib/types/opportunity"
+import type { MaSourceInteraction, OpportunityMatchStatus, OpportunityNdaStatus, OpportunityPursuitStage } from "@/lib/types/opportunity"
 
 const MA_TEMPLATE_KEYS = [
   "ma_opportunity_validity_check",
@@ -48,6 +49,7 @@ interface MatchRow {
   status: OpportunityMatchStatus
   pursuit_stage: OpportunityPursuitStage | null
   pursuit_stage_updated_at: string | null
+  nda_status: OpportunityNdaStatus | null
   updated_at: string
   repreneur?: {
     first_name: string | null
@@ -222,6 +224,7 @@ async function loadOpportunityContext(opportunityId: string) {
         status,
         pursuit_stage,
         pursuit_stage_updated_at,
+        nda_status,
         updated_at,
         repreneur:repreneurs(
           first_name,
@@ -297,7 +300,23 @@ export async function getMaOpportunityWorkflow(opportunityId: string): Promise<M
 
   if (error && error.code !== "42P01") throw new Error(error.message)
   const interactions = ((data ?? []) as MaSourceInteraction[])
-  const recommendation = deriveMaWorkflowRecommendation({ opportunity, activeMatch, interactions })
+
+  let memoAvailable = false
+  if (activeMatch) {
+    const { data: memoDocuments, error: memoDocumentsError } = await supabase
+      .from("opportunity_documents")
+      .select("document_type, visibility, storage_path, external_url")
+      .eq("opportunity_id", opportunityId)
+      .eq("document_type", "deal_book")
+      .eq("visibility", "approved_for_repreneur")
+
+    if (memoDocumentsError) throw new Error(memoDocumentsError.message)
+    memoAvailable = (memoDocuments ?? []).some((document) =>
+      canAccessOpportunityMemo(activeMatch.nda_status, document),
+    )
+  }
+
+  const recommendation = deriveMaWorkflowRecommendation({ opportunity, activeMatch, interactions, memoAvailable })
 
   return {
     recipientEmail: opportunity.source?.contact_email ?? null,

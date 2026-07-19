@@ -83,10 +83,11 @@ function interactionDate(interaction: InteractionContext | null | undefined) {
 function deriveNdaInfoMemoReminder(
   activeMatch: MatchContext | null,
   interactions: InteractionContext[],
+  memoAvailable: boolean,
   now: Date,
 ): MaWorkflowRecommendation | null {
-  if (!activeMatch || activeMatch.pursuit_stage === "info_memo_received") return null
-  if (activeMatch.pursuit_stage && activeMatch.pursuit_stage !== "interest") return null
+  if (!activeMatch || memoAvailable) return null
+  if (activeMatch.pursuit_stage && !["interest", "info_memo_received"].includes(activeMatch.pursuit_stage)) return null
 
   const ndaRequest = latestSentInteraction(interactions, "ma_nda_info_memo_request")
   const referenceDate = interactionDate(ndaRequest) ?? activeMatch.pursuit_stage_updated_at ?? activeMatch.updated_at
@@ -96,7 +97,7 @@ function deriveNdaInfoMemoReminder(
   if (ndaRequest) {
     return {
       title: "5-business-day NDA/info memo follow-up due",
-      message: `The NDA/info memo request was sent ${stalledBusinessDays} business days ago and the pursuit is still before info memo received.`,
+      message: `The NDA/info memo request was sent ${stalledBusinessDays} business days ago and no approved info-memo file is available yet.`,
       templateKey: "ma_process_follow_up",
     }
   }
@@ -143,16 +144,18 @@ export function deriveMaWorkflowRecommendation({
   opportunity,
   activeMatch,
   interactions,
+  memoAvailable = false,
   now = new Date(),
 }: {
   opportunity: OpportunityContext
   activeMatch: MatchContext | null
   interactions: InteractionContext[]
+  memoAvailable?: boolean
   now?: Date
 }): MaWorkflowRecommendation | null {
-  const ndaInfoMemoReminder = deriveNdaInfoMemoReminder(activeMatch, interactions, now)
+  const ndaInfoMemoReminder = deriveNdaInfoMemoReminder(activeMatch, interactions, memoAvailable, now)
   if (ndaInfoMemoReminder) return ndaInfoMemoReminder
-  if (activeMatch) {
+  if (activeMatch && !memoAvailable) {
     return {
       title: "NDA/info memo request available",
       message: "The next expected M&A action is to request the firm's NDA and info memo using their process.",

@@ -4,12 +4,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
 import { updateOpportunityPursuitNda, updateOpportunityPursuitStage } from "@/lib/actions/opportunity-matches"
+import { canAccessOpportunityMemo, hasCompletedNdaSignature } from "@/lib/opportunity-confidentiality"
 import {
   OPPORTUNITY_NDA_STATUS_OPTIONS,
   OPPORTUNITY_PURSUIT_STAGE_OPTIONS,
@@ -66,6 +68,8 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
   const updateNdaAction = activeMatch ? updateOpportunityPursuitNda.bind(null, activeMatch.id, opportunityId) : null
   const ndaDocuments = documents.filter((document) => document.document_type === "nda")
   const linkedNdaDocument = ndaDocuments.find((document) => document.id === activeMatch?.nda_document_id) ?? null
+  const ndaComplete = hasCompletedNdaSignature(activeMatch?.nda_status)
+  const memoAvailable = documents.some((document) => canAccessOpportunityMemo(activeMatch?.nda_status, document))
   const showInfoMemoNextAction = Boolean(
     activeMatch && (!activeMatch.pursuit_stage || activeMatch.pursuit_stage === "interest"),
   )
@@ -130,6 +134,13 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
 
               {activeMatch && updateAction && (
                 <form action={updateAction} className="flex flex-col gap-4 rounded-md border p-4">
+                  <Alert>
+                    <FileText />
+                    <AlertTitle>Info memo verification</AlertTitle>
+                    <AlertDescription>
+                      “Info memo received” can be saved only after the NDA is signed or waived and an approved deal-book file is available.
+                    </AlertDescription>
+                  </Alert>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="pursuit_stage">Current stage</Label>
                     <Select name="pursuit_stage" defaultValue={activeMatch.pursuit_stage ?? "interest"}>
@@ -173,7 +184,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
             <ShieldCheck data-icon="inline-start" />
             NDA and document gate
           </CardTitle>
-          <CardDescription>Control whether approved documents can be downloaded by the active repreneur.</CardDescription>
+          <CardDescription>Keep receipt, completed NDA, and actual info-memo availability as separate checks.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {!activeMatch && (
@@ -190,12 +201,21 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{getOpportunityNdaStatusLabel(activeMatch.nda_status ?? "not_required")}</Badge>
+                    <Badge variant={activeMatch.nda_received_at ? "secondary" : "outline"}>
+                      {activeMatch.nda_received_at ? "NDA receipt recorded" : "NDA receipt not recorded"}
+                    </Badge>
+                    <Badge variant={ndaComplete ? "secondary" : "outline"}>
+                      {ndaComplete ? "NDA complete" : "Signature pending"}
+                    </Badge>
+                    <Badge variant={memoAvailable ? "secondary" : "outline"}>
+                      {memoAvailable ? "Info memo available" : "Info memo unavailable"}
+                    </Badge>
                     {linkedNdaDocument && <Badge variant="secondary">NDA: {linkedNdaDocument.title}</Badge>}
                   </div>
                   <div>
-                    <p className="font-medium">Document downloads</p>
+                    <p className="font-medium">Memo access</p>
                     <p className="text-sm text-muted-foreground">
-                      Allowed when NDA is not required, signed, or waived. Approved documents stay blocked while NDA is required or sent.
+                      Receiving an NDA never opens confidential material. The repreneur can receive the approved deal-book memo only after the NDA is signed or waived and its file is available.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -225,6 +245,19 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="flex items-start gap-3 rounded-md border p-3">
+                  <Checkbox
+                    id="nda_received"
+                    name="nda_received"
+                    defaultChecked={Boolean(activeMatch.nda_received_at)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="nda_received">NDA received from the intermediary</Label>
+                    <p className="text-sm text-muted-foreground">
+                      This records receipt only. It does not disclose source information or unlock the info memo.
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="nda_document_id">Linked NDA document</Label>

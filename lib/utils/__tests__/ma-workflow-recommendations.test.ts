@@ -54,6 +54,30 @@ describe("deriveMaWorkflowRecommendation", () => {
     expect(recommendation?.title).toBe("5-business-day NDA/info memo follow-up due")
   })
 
+  it("does not treat the info-memo stage as complete without a real memo file", () => {
+    const recommendation = deriveMaWorkflowRecommendation({
+      opportunity: baseOpportunity,
+      activeMatch: { ...baseActiveMatch, pursuit_stage: "info_memo_received" },
+      interactions: [],
+      memoAvailable: false,
+      now,
+    })
+
+    expect(recommendation?.templateKey).toBe("ma_nda_info_memo_request")
+  })
+
+  it("stops NDA/info-memo messaging when an actual memo is available", () => {
+    const recommendation = deriveMaWorkflowRecommendation({
+      opportunity: baseOpportunity,
+      activeMatch: baseActiveMatch,
+      interactions: [],
+      memoAvailable: true,
+      now,
+    })
+
+    expect(recommendation).toBeNull()
+  })
+
   it("recommends a first opportunity freshness check after 90 calendar days", () => {
     const recommendation = deriveMaWorkflowRecommendation({
       opportunity: {

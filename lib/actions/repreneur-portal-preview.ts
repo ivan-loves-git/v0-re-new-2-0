@@ -8,6 +8,7 @@ import {
 } from "@/lib/data/portal-profile"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
+import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -69,6 +70,12 @@ interface PreviewOpportunityMatchRow {
   interest_notification_sent_at?: string | null
   updated_at: string
   opportunity: PreviewOpportunityRow | PreviewOpportunityRow[] | null
+}
+
+type PortalMemoDocument = RepreneurOpportunityDocument & {
+  visibility: "approved_for_repreneur"
+  storage_path: string | null
+  external_url: string | null
 }
 
 export interface StaffPortalPreviewOption {
@@ -135,22 +142,23 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
   }
 }
 
-async function listApprovedDocumentsByOpportunity(
+async function listApprovedMemoDocumentsByOpportunity(
   supabase: ReturnType<typeof createAdminClient>,
   opportunityIds: string[]
-): Promise<Map<string, RepreneurOpportunityDocument[]>> {
+): Promise<Map<string, PortalMemoDocument[]>> {
   if (opportunityIds.length === 0) return new Map()
 
   const { data, error } = await supabase
     .from("opportunity_documents")
-    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at")
+    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url")
     .in("opportunity_id", opportunityIds)
+    .eq("document_type", "deal_book")
     .eq("visibility", "approved_for_repreneur")
     .order("uploaded_at", { ascending: false })
 
   if (error) throw new Error(error.message)
 
-  const documentsByOpportunity = new Map<string, RepreneurOpportunityDocument[]>()
+  const documentsByOpportunity = new Map<string, PortalMemoDocument[]>()
   for (const document of data ?? []) {
     const documents = documentsByOpportunity.get(document.opportunity_id) ?? []
     documents.push({
@@ -160,11 +168,32 @@ async function listApprovedDocumentsByOpportunity(
       file_name: document.file_name,
       size_bytes: document.size_bytes,
       uploaded_at: document.uploaded_at,
-    } as RepreneurOpportunityDocument)
+      visibility: document.visibility,
+      storage_path: document.storage_path,
+      external_url: document.external_url,
+    } as PortalMemoDocument)
     documentsByOpportunity.set(document.opportunity_id, documents)
   }
 
   return documentsByOpportunity
+}
+
+function visibleMemoDocumentsForMatch(
+  opportunity: RepreneurOpportunityExposure,
+  documents: PortalMemoDocument[] | undefined,
+): RepreneurOpportunityDocument[] {
+  if (opportunity.match_status !== "active_pursuit") return []
+
+  return (documents ?? [])
+    .filter((document) => canAccessOpportunityMemo(opportunity.nda_status, document))
+    .map((document) => ({
+      id: document.id,
+      title: document.title,
+      document_type: document.document_type,
+      file_name: document.file_name,
+      size_bytes: document.size_bytes,
+      uploaded_at: document.uploaded_at,
+    }))
 }
 
 async function getActivePursuitOwners(
@@ -259,7 +288,7 @@ async function listVisibleOpportunitiesForRepreneur(
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
-  const documentsByOpportunity = await listApprovedDocumentsByOpportunity(
+  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
@@ -277,8 +306,10 @@ async function listVisibleOpportunitiesForRepreneur(
         repreneurId,
         activeOwnerByOpportunity,
       ),
-      visible_documents:
-        opportunity.match_status === "active_pursuit" ? documentsByOpportunity.get(opportunity.opportunity_id) ?? [] : [],
+      visible_documents: visibleMemoDocumentsForMatch(
+        opportunity,
+        documentsByOpportunity.get(opportunity.opportunity_id),
+      ),
     }))
 }
 

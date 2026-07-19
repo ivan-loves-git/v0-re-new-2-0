@@ -3,6 +3,7 @@ import "server-only"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
+import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import {
   sortRepreneurDealFlow,
@@ -56,6 +57,12 @@ type RepreneurDealFlowOpportunityRow = {
   updated_at: string
 }
 
+type PortalMemoDocument = RepreneurOpportunityDocument & {
+  visibility: "approved_for_repreneur"
+  storage_path: string | null
+  external_url: string | null
+}
+
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
   return {
     id: row.id,
@@ -103,22 +110,23 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
   }
 }
 
-async function listApprovedDocumentsByOpportunity(
+async function listApprovedMemoDocumentsByOpportunity(
   supabase: ReturnType<typeof createAdminClient>,
   opportunityIds: string[]
-): Promise<Map<string, RepreneurOpportunityDocument[]>> {
+): Promise<Map<string, PortalMemoDocument[]>> {
   if (opportunityIds.length === 0) return new Map()
 
   const { data, error } = await supabase
     .from("opportunity_documents")
-    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at")
+    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url")
     .in("opportunity_id", opportunityIds)
+    .eq("document_type", "deal_book")
     .eq("visibility", "approved_for_repreneur")
     .order("uploaded_at", { ascending: false })
 
   if (error) throw new Error(error.message)
 
-  const documentsByOpportunity = new Map<string, RepreneurOpportunityDocument[]>()
+  const documentsByOpportunity = new Map<string, PortalMemoDocument[]>()
   for (const document of data ?? []) {
     const documents = documentsByOpportunity.get(document.opportunity_id) ?? []
     documents.push({
@@ -128,11 +136,32 @@ async function listApprovedDocumentsByOpportunity(
       file_name: document.file_name,
       size_bytes: document.size_bytes,
       uploaded_at: document.uploaded_at,
-    } as RepreneurOpportunityDocument)
+      visibility: document.visibility,
+      storage_path: document.storage_path,
+      external_url: document.external_url,
+    } as PortalMemoDocument)
     documentsByOpportunity.set(document.opportunity_id, documents)
   }
 
   return documentsByOpportunity
+}
+
+function visibleMemoDocumentsForMatch(
+  opportunity: RepreneurOpportunityExposure,
+  documents: PortalMemoDocument[] | undefined,
+): RepreneurOpportunityDocument[] {
+  if (opportunity.match_status !== "active_pursuit") return []
+
+  return (documents ?? [])
+    .filter((document) => canAccessOpportunityMemo(opportunity.nda_status, document))
+    .map((document) => ({
+      id: document.id,
+      title: document.title,
+      document_type: document.document_type,
+      file_name: document.file_name,
+      size_bytes: document.size_bytes,
+      uploaded_at: document.uploaded_at,
+    }))
 }
 
 async function getActivePursuitOwners(
@@ -329,7 +358,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
-  const documentsByOpportunity = await listApprovedDocumentsByOpportunity(
+  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
@@ -349,8 +378,10 @@ export async function listMyRepreneurOpportunities(): Promise<{
           repreneur.id,
           activeOwnerByOpportunity,
         ),
-        visible_documents:
-          opportunity.match_status === "active_pursuit" ? documentsByOpportunity.get(opportunity.opportunity_id) ?? [] : [],
+        visible_documents: visibleMemoDocumentsForMatch(
+          opportunity,
+          documentsByOpportunity.get(opportunity.opportunity_id),
+        ),
       })),
   }
 }
@@ -431,7 +462,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     supabase,
     allOpportunities.map((opportunity) => opportunity.id),
   )
-  const documentsByOpportunity = await listApprovedDocumentsByOpportunity(
+  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(
     supabase,
     matchedOpportunities.map((opportunity) => opportunity.opportunity_id),
   )
@@ -449,10 +480,10 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         repreneur.id,
         activeOwnerByOpportunity,
       ),
-      visible_documents:
-        opportunity.match_status === "active_pursuit"
-          ? documentsByOpportunity.get(opportunity.opportunity_id) ?? []
-          : [],
+      visible_documents: visibleMemoDocumentsForMatch(
+        opportunity,
+        documentsByOpportunity.get(opportunity.opportunity_id),
+      ),
     }))
     .map(withStaffRecommendation)
   const recommendedOpportunityIds = new Set(staffRecommended.map((opportunity) => opportunity.opportunity_id))
@@ -559,7 +590,7 @@ export async function getMyRepreneurOpportunity(
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
 
-  const documentsByOpportunity = await listApprovedDocumentsByOpportunity(supabase, [exposure.opportunity_id])
+  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(supabase, [exposure.opportunity_id])
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(supabase, [exposure.match_id])
   return {
     ...exposure,
@@ -569,7 +600,9 @@ export async function getMyRepreneurOpportunity(
       repreneur.id,
       activeOwnerByOpportunity,
     ),
-    visible_documents:
-      exposure.match_status === "active_pursuit" ? documentsByOpportunity.get(exposure.opportunity_id) ?? [] : [],
+    visible_documents: visibleMemoDocumentsForMatch(
+      exposure,
+      documentsByOpportunity.get(exposure.opportunity_id),
+    ),
   }
 }
