@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,9 +12,11 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Textarea } from "@/components/ui/textarea"
 import {
   MA_SOURCE_TYPE_OPTIONS,
+  getOpportunityIncompleteDataFieldLabel,
   OPPORTUNITY_STATUS_OPTIONS,
   OPPORTUNITY_VISIBILITY_OPTIONS,
   type OpportunityActionResult,
+  type OpportunityIncompleteDataWarning,
   type OpportunityWithSource,
 } from "@/lib/types/opportunity"
 import { NEW_OPPORTUNITY_SECTORS, OTHER_SECTOR } from "@/lib/utils/opportunity-sector"
@@ -26,17 +30,24 @@ interface OpportunityFormProps {
 }
 
 export function OpportunityForm({ opportunity, action, submitLabel = "Save opportunity" }: OpportunityFormProps) {
+  const formRef = useRef<HTMLFormElement>(null)
+  const incompleteDataAcknowledgementRef = useRef<HTMLInputElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [incompleteDataWarning, setIncompleteDataWarning] = useState<OpportunityIncompleteDataWarning | null>(null)
   const [sectorChoice, setSectorChoice] = useState("")
   const isClosed = opportunity?.status === "closed"
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
     setFieldErrors({})
+    setIncompleteDataWarning(null)
     try {
       const result = await action(formData)
-      if (result?.fieldErrors) {
+      if (result?.incompleteData) {
+        setIncompleteDataWarning(result.incompleteData)
+        toast.warning(result.message)
+      } else if (result?.fieldErrors) {
         setFieldErrors(result.fieldErrors)
         toast.error(result.message)
       } else if (result?.success) {
@@ -55,8 +66,20 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
     return message ? <p className="text-xs text-destructive">{message}</p> : null
   }
 
+  function clearIncompleteDataAcknowledgement() {
+    if (incompleteDataAcknowledgementRef.current) {
+      incompleteDataAcknowledgementRef.current.value = ""
+    }
+  }
+
+  function acknowledgeIncompleteDataAndSave() {
+    if (!formRef.current || !incompleteDataAcknowledgementRef.current) return
+    incompleteDataAcknowledgementRef.current.value = "true"
+    formRef.current.requestSubmit()
+  }
+
   return (
-    <form action={handleSubmit} noValidate className="mx-auto max-w-5xl">
+    <form ref={formRef} action={handleSubmit} noValidate onInput={clearIncompleteDataAcknowledgement} className="mx-auto max-w-5xl">
       <Card>
         <CardHeader>
           <CardTitle>{opportunity ? "Edit opportunity" : "Create opportunity"}</CardTitle>
@@ -64,6 +87,26 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
         </CardHeader>
         <CardContent className="space-y-8">
           <input type="hidden" name="source_id" value={opportunity?.source_id ?? ""} />
+          <input ref={incompleteDataAcknowledgementRef} type="hidden" name="acknowledge_incomplete_data" />
+
+          {incompleteDataWarning ? (
+            <Alert className="border-amber-300 bg-amber-50/70 text-amber-950 [&>svg]:text-amber-700">
+              <AlertTriangle className="text-amber-700" />
+              <AlertTitle>Incomplete data — this opportunity may not match correctly</AlertTitle>
+              <AlertDescription className="gap-3 text-amber-900">
+                <p>Missing: {incompleteDataWarning.missingFields.map(getOpportunityIncompleteDataFieldLabel).join(", ")}.</p>
+                <p>You can keep editing, or save the opportunity with these values left unknown.</p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button type="button" size="sm" onClick={acknowledgeIncompleteDataAndSave} disabled={isSubmitting}>
+                    Save anyway
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setIncompleteDataWarning(null)} disabled={isSubmitting}>
+                    Keep editing
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
             <div>
@@ -165,18 +208,18 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
                 {errorFor("date_added")}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="revenue_meur">CA M€ *</Label>
-                <Input id="revenue_meur" name="revenue_meur" inputMode="decimal" defaultValue={opportunity?.revenue_meur ?? ""} required />
+                <Label htmlFor="revenue_meur">CA M€</Label>
+                <Input id="revenue_meur" name="revenue_meur" inputMode="decimal" defaultValue={opportunity?.revenue_meur ?? ""} />
                 {errorFor("revenue_meur")}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ebitda_keur">EBE K€ *</Label>
-                <Input id="ebitda_keur" name="ebitda_keur" inputMode="decimal" defaultValue={opportunity?.ebitda_keur ?? ""} required />
+                <Label htmlFor="ebitda_keur">EBE K€</Label>
+                <Input id="ebitda_keur" name="ebitda_keur" inputMode="decimal" defaultValue={opportunity?.ebitda_keur ?? ""} />
                 {errorFor("ebitda_keur")}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="headcount_range">Effectif *</Label>
-                <Input id="headcount_range" name="headcount_range" defaultValue={opportunity?.headcount_range ?? opportunity?.headcount ?? ""} required />
+                <Label htmlFor="headcount_range">Effectif</Label>
+                <Input id="headcount_range" name="headcount_range" defaultValue={opportunity?.headcount_range ?? opportunity?.headcount ?? ""} />
                 {errorFor("headcount_range")}
               </div>
             </div>
@@ -229,8 +272,8 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="source_firm_name">Source *</Label>
-                <Input id="source_firm_name" name="source_firm_name" defaultValue={opportunity?.source?.firm_name ?? opportunity?.source_label ?? ""} required />
+                <Label htmlFor="source_firm_name">Source</Label>
+                <Input id="source_firm_name" name="source_firm_name" defaultValue={opportunity?.source?.firm_name ?? opportunity?.source_label ?? ""} />
                 {errorFor("source_firm_name")}
               </div>
               <div className="space-y-2">
@@ -251,13 +294,13 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="source_contact_name">M&A contact name *</Label>
-                <Input id="source_contact_name" name="source_contact_name" defaultValue={opportunity?.source?.contact_name ?? ""} required />
+                <Label htmlFor="source_contact_name">M&A contact name</Label>
+                <Input id="source_contact_name" name="source_contact_name" defaultValue={opportunity?.source?.contact_name ?? ""} />
                 {errorFor("source_contact_name")}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="source_contact_email">M&A contact email *</Label>
-                <Input id="source_contact_email" name="source_contact_email" type="email" defaultValue={opportunity?.source?.contact_email ?? ""} required />
+                <Label htmlFor="source_contact_email">M&A contact email</Label>
+                <Input id="source_contact_email" name="source_contact_email" type="email" defaultValue={opportunity?.source?.contact_email ?? ""} />
                 {errorFor("source_contact_email")}
               </div>
               <div className="space-y-2">

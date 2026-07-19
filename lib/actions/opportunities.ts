@@ -5,6 +5,13 @@ import { redirect } from "next/navigation"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
+import {
+  findIncompleteOpportunityDataFields,
+  isIncompleteOpportunityDataAcknowledged,
+  readOpportunityFormString,
+  readOpportunityHeadcount,
+  readOpportunityNumber,
+} from "@/lib/utils/opportunity-incomplete-data"
 import { resolveNewOpportunitySector } from "@/lib/utils/opportunity-sector"
 import {
   isOpportunityClosureReason,
@@ -33,42 +40,13 @@ type OpportunityWorkSurfaceMatchRow = Record<string, unknown> & {
   repreneur?: OpportunityWorkSurfaceMatch["repreneur"] | OpportunityWorkSurfaceMatch["repreneur"][] | null
 }
 
-function readString(formData: FormData, key: string): string | null {
-  const value = formData.get(key)
-  if (typeof value !== "string") return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-function readNumber(formData: FormData, key: string): number | null {
-  const value = readString(formData, key)
-  if (!value) return null
-  const normalized = value
-    .replace(/\s/g, "")
-    .replace(",", ".")
-    .replace(/m€|meur|m€/gi, "")
-    .replace(/k€|keur|k€/gi, "")
-    .replace(/[€]/g, "")
-  const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-function readHeadcountApproximation(formData: FormData): number | null {
-  const value = readString(formData, "headcount_range")
-  if (!value) return null
-  const match = value.replace(",", ".").match(/\d+(\.\d+)?/)
-  if (!match) return null
-  const parsed = Number(match[0])
-  return Number.isFinite(parsed) ? Math.trunc(parsed) : null
-}
-
 function readStatus(formData: FormData, fallback: OpportunityStatus = "draft"): OpportunityStatus {
-  const value = readString(formData, "status")
+  const value = readOpportunityFormString(formData, "status")
   return isOpportunityStatus(value) ? value : fallback
 }
 
 function readVisibility(formData: FormData, key: string, fallback: OpportunityVisibility): OpportunityVisibility {
-  return (readString(formData, key) as OpportunityVisibility | null) ?? fallback
+  return (readOpportunityFormString(formData, key) as OpportunityVisibility | null) ?? fallback
 }
 
 function normalizeOpportunity(row: OpportunitySourceRow): OpportunityWithSource {
@@ -87,40 +65,27 @@ function normalizeWorkSurfaceMatch(row: OpportunityWorkSurfaceMatchRow): Opportu
   } as OpportunityWorkSurfaceMatch
 }
 
-function hasSourceFormData(formData: FormData) {
-  return Boolean(
-    readString(formData, "source_firm_name") ||
-    readString(formData, "source_contact_name") ||
-    readString(formData, "source_contact_email") ||
-    readString(formData, "source_contact_phone") ||
-    readString(formData, "source_internal_notes")
-  )
-}
-
 function isValidEmail(email: string | null) {
   return Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
 }
 
 function validateOpportunityForm(
   formData: FormData,
-  sectorValue = readString(formData, "sector"),
+  sectorValue = readOpportunityFormString(formData, "sector"),
   sectorFieldError?: { field: "sector_choice" | "sector_other"; message: string } | null,
 ): OpportunityActionResult | null {
   const fieldErrors: Record<string, string> = {}
 
   const requiredTextFields: Array<[string, string]> = [
     ["reference", "Ref. Mandat is required."],
-    ["source_firm_name", "Source is required."],
-    ["source_contact_name", "M&A contact name is required."],
     ["location", "Localisation is required."],
     ["description", "Description is required."],
-    ["headcount_range", "Effectif is required."],
     ["date_added", "Date ajout is required."],
     ["teaser_summary", "Teaser summary is required."],
   ]
 
   for (const [field, message] of requiredTextFields) {
-    if (!readString(formData, field)) fieldErrors[field] = message
+    if (!readOpportunityFormString(formData, field)) fieldErrors[field] = message
   }
 
   if (sectorFieldError) {
@@ -129,24 +94,18 @@ function validateOpportunityForm(
     fieldErrors.sector = "Secteur is required."
   }
 
-  const sourceEmail = readString(formData, "source_contact_email")
-  if (!sourceEmail) {
-    fieldErrors.source_contact_email = "M&A contact email is required."
-  } else if (!isValidEmail(sourceEmail)) {
+  const sourceEmail = readOpportunityFormString(formData, "source_contact_email")
+  if (sourceEmail && !isValidEmail(sourceEmail)) {
     fieldErrors.source_contact_email = "M&A contact email must be valid."
   }
 
-  const revenue = readNumber(formData, "revenue_meur")
-  if (readString(formData, "revenue_meur") === null) {
-    fieldErrors.revenue_meur = "CA M€ is required."
-  } else if (revenue === null) {
+  const revenue = readOpportunityNumber(formData, "revenue_meur")
+  if (readOpportunityFormString(formData, "revenue_meur") !== null && revenue === null) {
     fieldErrors.revenue_meur = "CA M€ must be a number."
   }
 
-  const ebitda = readNumber(formData, "ebitda_keur")
-  if (readString(formData, "ebitda_keur") === null) {
-    fieldErrors.ebitda_keur = "EBE K€ is required."
-  } else if (ebitda === null) {
+  const ebitda = readOpportunityNumber(formData, "ebitda_keur")
+  if (readOpportunityFormString(formData, "ebitda_keur") !== null && ebitda === null) {
     fieldErrors.ebitda_keur = "EBE K€ must be a number."
   }
 
@@ -160,19 +119,19 @@ function validateOpportunityForm(
 }
 
 async function upsertSourceFromForm(formData: FormData, createdBy: string): Promise<string | null> {
-  if (!hasSourceFormData(formData)) return null
+  const sourceId = readOpportunityFormString(formData, "source_id")
+  const firmName = readOpportunityFormString(formData, "source_firm_name")
+  if (!firmName) return null
 
   const supabase = createAdminClient()
-  const sourceId = readString(formData, "source_id")
-  const firmName = readString(formData, "source_firm_name") ?? "Unknown source"
-  const sourceType = (readString(formData, "source_type") as MaSourceType | null) ?? "ma_firm"
+  const sourceType = (readOpportunityFormString(formData, "source_type") as MaSourceType | null) ?? "ma_firm"
   const payload: MaSource_Insert & MaSource_Update = {
     firm_name: firmName,
     source_type: sourceType,
-    contact_name: readString(formData, "source_contact_name"),
-    contact_email: readString(formData, "source_contact_email"),
-    contact_phone: readString(formData, "source_contact_phone"),
-    internal_notes: readString(formData, "source_internal_notes"),
+    contact_name: readOpportunityFormString(formData, "source_contact_name"),
+    contact_email: readOpportunityFormString(formData, "source_contact_email"),
+    contact_phone: readOpportunityFormString(formData, "source_contact_phone"),
+    internal_notes: readOpportunityFormString(formData, "source_internal_notes"),
   }
 
   if (sourceId) {
@@ -194,27 +153,27 @@ async function upsertSourceFromForm(formData: FormData, createdBy: string): Prom
 function buildOpportunityPayload(
   formData: FormData,
   sourceId: string | null,
-  sectorValue = readString(formData, "sector"),
+  sectorValue = readOpportunityFormString(formData, "sector"),
   fallbackStatus: OpportunityStatus = "draft",
 ): Opportunity_Update {
   return {
-    reference: readString(formData, "reference") ?? undefined,
+    reference: readOpportunityFormString(formData, "reference") ?? undefined,
     status: readStatus(formData, fallbackStatus),
     source_id: sourceId,
-    source_label: readString(formData, "source_label") ?? readString(formData, "source_firm_name"),
+    source_label: readOpportunityFormString(formData, "source_label") ?? readOpportunityFormString(formData, "source_firm_name"),
     sector: sectorValue,
-    activity: readString(formData, "activity"),
-    location: readString(formData, "location"),
-    description: readString(formData, "description"),
-    revenue_meur: readNumber(formData, "revenue_meur"),
-    ebitda_keur: readNumber(formData, "ebitda_keur"),
-    headcount: readHeadcountApproximation(formData),
-    headcount_range: readString(formData, "headcount_range"),
-    date_added: readString(formData, "date_added"),
+    activity: readOpportunityFormString(formData, "activity"),
+    location: readOpportunityFormString(formData, "location"),
+    description: readOpportunityFormString(formData, "description"),
+    revenue_meur: readOpportunityNumber(formData, "revenue_meur"),
+    ebitda_keur: readOpportunityNumber(formData, "ebitda_keur"),
+    headcount: readOpportunityHeadcount(formData),
+    headcount_range: readOpportunityFormString(formData, "headcount_range"),
+    date_added: readOpportunityFormString(formData, "date_added"),
     repreneur_exposure: readVisibility(formData, "repreneur_exposure", "anonymized"),
-    public_title: readString(formData, "public_title"),
-    teaser_summary: readString(formData, "teaser_summary"),
-    internal_notes: readString(formData, "internal_notes"),
+    public_title: readOpportunityFormString(formData, "public_title"),
+    teaser_summary: readOpportunityFormString(formData, "teaser_summary"),
+    internal_notes: readOpportunityFormString(formData, "internal_notes"),
   }
 }
 
@@ -333,7 +292,16 @@ export async function createOpportunity(formData: FormData) {
   )
   if (validation) return validation
 
-  const reference = readString(formData, "reference")
+  const incompleteFields = findIncompleteOpportunityDataFields(formData)
+  if (incompleteFields.length > 0 && !isIncompleteOpportunityDataAcknowledged(formData)) {
+    return {
+      success: false,
+      message: "Incomplete data — this opportunity may not match correctly.",
+      incompleteData: { missingFields: incompleteFields },
+    } satisfies OpportunityActionResult
+  }
+
+  const reference = readOpportunityFormString(formData, "reference")
   if (!reference) {
     return {
       success: false,
@@ -383,7 +351,16 @@ export async function updateOpportunity(id: string, formData: FormData) {
   const validation = validateOpportunityForm(formData)
   if (validation) return validation
 
-  const reference = readString(formData, "reference")
+  const incompleteFields = findIncompleteOpportunityDataFields(formData)
+  if (incompleteFields.length > 0 && !isIncompleteOpportunityDataAcknowledged(formData)) {
+    return {
+      success: false,
+      message: "Incomplete data — this opportunity may not match correctly.",
+      incompleteData: { missingFields: incompleteFields },
+    } satisfies OpportunityActionResult
+  }
+
+  const reference = readOpportunityFormString(formData, "reference")
   if (!reference) {
     return {
       success: false,

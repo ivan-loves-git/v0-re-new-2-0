@@ -83,6 +83,20 @@ export const OPPORTUNITY_VISIBILITY_OPTIONS = [
   { value: "repreneur_visible", label: "Repreneur visible" },
 ] as const
 
+export const OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS = [
+  { value: "revenue_meur", label: "CA M€" },
+  { value: "ebitda_keur", label: "EBE K€" },
+  { value: "headcount_range", label: "Effectif" },
+  { value: "source_firm_name", label: "Source" },
+  { value: "source_contact_name", label: "M&A contact name" },
+] as const
+
+export type OpportunityIncompleteDataField = (typeof OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS)[number]["value"]
+
+export interface OpportunityIncompleteDataWarning {
+  missingFields: OpportunityIncompleteDataField[]
+}
+
 export const MA_SOURCE_TYPE_OPTIONS = [
   { value: "ma_firm", label: "M&A firm" },
   { value: "broker", label: "Broker" },
@@ -261,6 +275,7 @@ export interface OpportunityActionResult {
   success: boolean
   message: string
   fieldErrors?: Record<string, string>
+  incompleteData?: OpportunityIncompleteDataWarning
 }
 
 export interface OpportunityWorkSurfaceMatch {
@@ -554,6 +569,10 @@ export function getOpportunityStatusLabel(status: OpportunityStatus): string {
 
 export function getOpportunityClosureReasonLabel(reason: OpportunityClosureReason): string {
   return OPPORTUNITY_CLOSURE_REASON_OPTIONS.find((option) => option.value === reason)?.label ?? reason
+}
+
+export function getOpportunityIncompleteDataFieldLabel(field: OpportunityIncompleteDataField): string {
+  return OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS.find((option) => option.value === field)?.label ?? field
 }
 
 export function getOpportunityVisibilityLabel(visibility: OpportunityVisibility): string {
