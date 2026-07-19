@@ -36,6 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_opportunity_closure_history_opportunity_closed_at
 CREATE OR REPLACE FUNCTION public.prevent_opportunity_closure_history_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 BEGIN
   RAISE EXCEPTION 'opportunity_closure_history_is_immutable';
