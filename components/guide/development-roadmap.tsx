@@ -26,6 +26,29 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Jul 20, 2026",
+    version: "0.9.26",
+    title: "Matching language aligned and memo access announced",
+    isCompleted: true,
+    events: [
+      {
+        title: "One sector language from intake to deal flow",
+        type: "feature",
+        description: "Repreneurs and staff now use the same 16-sector taxonomy across intake, opportunity records, filters, imports, and matching. Broad legacy Services and Santé records remain discoverable without guessing a narrower classification.",
+      },
+      {
+        title: "Repreneurs hear when a confidential memo is ready",
+        type: "fix",
+        description: "Each eligible pursuit now receives one notification only after the NDA is signed or waived and a real approved memo is available, while later document edits cannot send duplicates.",
+      },
+      {
+        title: "Legacy data is corrected without invented choices",
+        type: "decision",
+        description: "Unambiguous historic sectors are remapped with rollback evidence, while 24 broad Services or Santé opportunity records stay compatible and await precise staff classification instead of being rewritten by assumption.",
+      },
+    ],
+  },
+  {
+    period: "Jul 20, 2026",
     version: "0.9.25",
     title: "Opportunity integrity and confidentiality strengthened",
     isCompleted: true,
