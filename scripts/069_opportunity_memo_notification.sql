@@ -123,7 +123,7 @@ BEGIN
     v_repreneur_id,
     v_recipient_email
   )
-  ON CONFLICT (match_id) DO UPDATE
+  ON CONFLICT ON CONSTRAINT opportunity_memo_notifications_match_id_key DO UPDATE
   SET
     recipient_email = EXCLUDED.recipient_email,
     updated_at = p_attempted_at
