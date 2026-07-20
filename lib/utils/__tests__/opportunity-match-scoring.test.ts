@@ -156,4 +156,46 @@ describe("calculateOpportunityMatchScore", () => {
 
     expect(result.reasons).toContain("Sector or activity matches the repreneur target preference.")
   })
+
+  it("matches both successors of a broad legacy Services opportunity", () => {
+    for (const target of ["Services aux entreprises (B2B)", "Services aux particuliers (B2C)"]) {
+      const result = calculateOpportunityMatchScore(
+        {
+          who_score: 80,
+          when_score: 80,
+          q13_target_sectors_v2: [target],
+          q12_geo_zones: ["all-france"],
+          q14_deal_size: ["1-3M"],
+        },
+        {
+          sector: "Services",
+          location: "Île-de-France",
+          revenue_meur: 2,
+        },
+      )
+
+      expect(result.reasons).toContain("Sector or activity matches the repreneur target preference.")
+    }
+  })
+
+  it("matches both successors of a broad legacy Santé target preference", () => {
+    for (const sector of ["Industrie pharmaceutique & Dispositifs médicaux", "Services de santé"]) {
+      const result = calculateOpportunityMatchScore(
+        {
+          who_score: 80,
+          when_score: 80,
+          q13_target_sectors_v2: ["healthcare"],
+          q12_geo_zones: ["all-france"],
+          q14_deal_size: ["1-3M"],
+        },
+        {
+          sector,
+          location: "Île-de-France",
+          revenue_meur: 2,
+        },
+      )
+
+      expect(result.reasons).toContain("Sector or activity matches the repreneur target preference.")
+    }
+  })
 })

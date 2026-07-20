@@ -38,6 +38,11 @@ import {
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
+import {
+  opportunityMatchesSectorFilter,
+  SECTOR_OPTIONS,
+  type Sector,
+} from "@/lib/utils/opportunity-sector"
 
 type WorkSurfaceMode = "find" | "groups"
 type FreshnessFilter = "all" | "fresh" | "stale" | "no_date"
@@ -310,10 +315,6 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
 
   const prepared = useMemo(() => opportunities.map(prepareOpportunity), [opportunities])
 
-  const sectors = useMemo(
-    () => Array.from(new Set(opportunities.map((opportunity) => opportunity.sector).filter(Boolean) as string[])).sort(),
-    [opportunities],
-  )
   const locations = useMemo(
     () => Array.from(new Set(opportunities.map((opportunity) => opportunity.location).filter(Boolean) as string[])).sort(),
     [opportunities],
@@ -328,7 +329,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
     { key: "journey", label: "Journey", options: OPPORTUNITY_JOURNEY_OPTIONS },
     { key: "status", label: "Status", options: OPPORTUNITY_STATUS_OPTIONS },
     { key: "visibility", label: "Visibility", options: OPPORTUNITY_VISIBILITY_OPTIONS },
-    { key: "sector", label: "Sector", options: sectors.map((sector) => ({ value: sector, label: sector })) },
+    { key: "sector", label: "Sector", options: SECTOR_OPTIONS },
     { key: "location", label: "Location", options: locations.map((location) => ({ value: location, label: location })) },
     { key: "sourceType", label: "Source", options: MA_SOURCE_TYPE_OPTIONS },
     { key: "freshness", label: "Freshness", options: [
@@ -340,7 +341,7 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
       { value: "active", label: "Active pursuit" },
       { value: "none", label: "No active pursuit" },
     ] },
-  ], [locations, sectors])
+  ], [locations])
 
   const filters = useCollectionFilters({ definitions: filterDefinitions, onChange: resetPages })
   const search = filters.search
@@ -361,7 +362,10 @@ export function OpportunityWorkSurfaceTable({ opportunities, mode }: Opportunity
       if (journeyFilter !== "all" && item.journey !== journeyFilter) return false
       if (statusFilter !== "all" && opportunity.status !== statusFilter) return false
       if (visibilityFilter !== "all" && opportunity.repreneur_exposure !== visibilityFilter) return false
-      if (sectorFilter !== "all" && opportunity.sector !== sectorFilter) return false
+      if (
+        sectorFilter !== "all"
+        && !opportunityMatchesSectorFilter(opportunity.sector, sectorFilter as Sector)
+      ) return false
       if (locationFilter !== "all" && opportunity.location !== locationFilter) return false
       if (sourceTypeFilter !== "all" && opportunity.source?.source_type !== sourceTypeFilter) return false
       if (activePursuitFilter === "active" && !item.activeMatch) return false

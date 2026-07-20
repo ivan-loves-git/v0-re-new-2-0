@@ -1,30 +1,20 @@
+import {
+  canonicalSectorSelections,
+  sectorCompatibilityValues,
+} from "@/lib/utils/opportunity-sector"
+
 type ThesisOption = { value: string; label: string }
 
 type SelectionKind = "geography" | "sector"
 
 const LEGACY_SELECTION_ALIASES: Record<SelectionKind, Record<string, string>> = {
   geography: {},
-  sector: {
-    b2bservices: "services",
-    digitalitservices: "tech",
-    logistics: "transport",
-    lightindustry: "industry",
-  },
+  sector: {},
 }
 
 const MATCH_TERMS: Record<SelectionKind, Record<string, string[]>> = {
   geography: {},
-  sector: {
-    retail: ["commerce", "distribution"],
-    industry: ["industry"],
-    services: ["services"],
-    construction: ["construction", "btp"],
-    healthcare: ["healthcare", "sante"],
-    tech: ["digital", "it services"],
-    environment: ["environment"],
-    hospitality: ["hospitality", "hotel", "restauration"],
-    transport: ["transport", "logistics"],
-  },
+  sector: {},
 }
 
 function comparable(value: string) {
@@ -48,6 +38,10 @@ export function canonicalTargetThesisValues(
   options: ReadonlyArray<ThesisOption>,
   kind?: SelectionKind,
 ) {
+  if (kind === "sector") {
+    return unique(canonicalSectorSelections(values))
+  }
+
   const configuredValues = new Map<string, string>()
   for (const option of options) {
     configuredValues.set(comparable(option.value), option.value)
@@ -91,6 +85,17 @@ export function targetThesisMatchTerms(
   kind: SelectionKind,
 ) {
   const labels = new Map(options.map((option) => [option.value, option.label]))
+  if (kind === "sector") {
+    return unique(
+      canonicalTargetThesisValues(values, options, kind).flatMap((value) => {
+        if (value === "all") return [value]
+        const compatible = sectorCompatibilityValues(value)
+        if (compatible.length === 0) return [value]
+        return [value, ...compatible]
+      }),
+    )
+  }
+
   return unique(
     canonicalTargetThesisValues(values, options, kind).flatMap((value) => [
       value,

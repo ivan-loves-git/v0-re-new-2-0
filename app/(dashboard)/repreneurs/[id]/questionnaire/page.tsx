@@ -23,6 +23,7 @@ import {
   NETWORK_TRAINING_OPTIONS,
   INDUSTRY_SECTOR_OPTIONS,
 } from "@/lib/utils/tier1-scoring"
+import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 
 // Extended options with skip/N/A where reasonable
 const EMPLOYMENT_STATUS_WITH_SKIP = [
@@ -139,7 +140,7 @@ export default function QuestionnairePage() {
         setFormData({
           q1_employment_status: data.q1_employment_status ?? null,
           q2_years_experience: data.q2_years_experience ?? null,
-          q3_industry_sectors: data.q3_industry_sectors ?? [],
+          q3_industry_sectors: canonicalSectorSelections(data.q3_industry_sectors ?? []),
           q4_has_ma_experience: data.q4_has_ma_experience,
           q5_team_size: data.q5_team_size ?? null,
           q6_involved_in_ma: data.q6_involved_in_ma,
@@ -147,7 +148,7 @@ export default function QuestionnairePage() {
           q8_executive_roles: data.q8_executive_roles ?? [],
           q9_board_experience: data.q9_board_experience,
           q10_journey_stages: data.q10_journey_stages ?? [],
-          q11_target_sectors: data.q11_target_sectors ?? [],
+          q11_target_sectors: canonicalSectorSelections(data.q11_target_sectors ?? []),
           q12_has_identified_targets: data.q12_has_identified_targets,
           q13_target_details: data.q13_target_details ?? null,
           q14_investment_capacity: data.q14_investment_capacity ?? null,

@@ -22,6 +22,7 @@ describe("opportunity import", () => {
     expect(result.draft.ebitda_keur).toBe(250)
     expect(result.draft.headcount).toBe(12)
     expect(result.draft.headcount_range).toBe("12")
+    expect(result.draft.sector).toBe("Hôtellerie, Restauration & Loisirs")
   })
 
   it("converts euro and million-euro values to stored opportunity units", () => {
@@ -41,6 +42,7 @@ describe("opportunity import", () => {
     expect(result.draft.ebitda_keur).toBe(1200)
     expect(result.draft.headcount).toBe(10)
     expect(result.draft.headcount_range).toBe("10-20")
+    expect(result.draft.sector).toBe("Services")
   })
 
   it("parses semicolon-delimited rows and imports numeric fields", () => {
@@ -53,5 +55,6 @@ describe("opportunity import", () => {
     expect(result.draft.revenue_meur).toBe(2.4)
     expect(result.draft.ebitda_keur).toBe(480)
     expect(result.draft.headcount).toBe(34)
+    expect(result.draft.sector).toBe("Commerce, Négoce & Distribution")
   })
 })

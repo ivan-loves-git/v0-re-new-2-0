@@ -27,6 +27,7 @@ import {
   INDUSTRY_SECTOR_OPTIONS,
 } from "@/lib/utils/tier1-scoring"
 import type { Repreneur } from "@/lib/types/repreneur"
+import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 
 interface QuestionnaireModalProps {
   repreneur: Repreneur
@@ -42,7 +43,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
   const [formData, setFormData] = useState<QuestionnaireInput>({
     q1_employment_status: repreneur.q1_employment_status ?? null,
     q2_years_experience: repreneur.q2_years_experience ?? null,
-    q3_industry_sectors: repreneur.q3_industry_sectors ?? [],
+    q3_industry_sectors: canonicalSectorSelections(repreneur.q3_industry_sectors ?? []),
     q4_has_ma_experience: repreneur.q4_has_ma_experience ?? null,
     q5_team_size: repreneur.q5_team_size ?? null,
     q6_involved_in_ma: repreneur.q6_involved_in_ma ?? null,
@@ -50,7 +51,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
     q8_executive_roles: repreneur.q8_executive_roles ?? [],
     q9_board_experience: repreneur.q9_board_experience ?? null,
     q10_journey_stages: repreneur.q10_journey_stages ?? [],
-    q11_target_sectors: repreneur.q11_target_sectors ?? [],
+    q11_target_sectors: canonicalSectorSelections(repreneur.q11_target_sectors ?? []),
     q12_has_identified_targets: repreneur.q12_has_identified_targets ?? null,
     q13_target_details: repreneur.q13_target_details ?? null,
     q14_investment_capacity: repreneur.q14_investment_capacity ?? null,

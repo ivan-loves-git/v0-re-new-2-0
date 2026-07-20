@@ -1,4 +1,5 @@
 import type { Opportunity_Insert } from "@/lib/types/opportunity"
+import { normalizeOpportunitySector } from "@/lib/utils/opportunity-sector"
 
 export type OpportunityImportRawRow = Record<string, unknown>
 
@@ -298,7 +299,7 @@ export function normalizeOpportunityRows(
 
     const reference = asString(referenceField.value)
     const source = asString(sourceField.value)
-    const sector = asString(sectorField.value)
+    const sector = normalizeOpportunitySector(asString(sectorField.value))
     const location = asString(locationField.value)
     const description = asString(descriptionField.value)
     const revenue = asMoneyNumber(revenueField, "meur")

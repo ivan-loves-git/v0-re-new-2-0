@@ -347,46 +347,30 @@ export const translations = {
     fr: "Quel(s) secteur(s) d'activité ciblez-vous pour votre projet de reprise ?",
     en: 'Which sector(s) are you targeting for your acquisition project?',
   },
-  q13_all: {
-    fr: 'Tous secteurs',
-    en: 'All sectors',
+  q13_agroalimentaire: { fr: 'Agroalimentaire', en: 'Agrifood' },
+  q13_manufacturing: { fr: 'Industrie manufacturière', en: 'Manufacturing' },
+  q13_heavy_industry: { fr: 'Industrie lourde', en: 'Heavy industry' },
+  q13_pharma_medical: {
+    fr: 'Industrie pharmaceutique & Dispositifs médicaux',
+    en: 'Pharmaceuticals & Medical devices',
   },
-  q13_retail: {
-    fr: 'Commerce / Distribution',
-    en: 'Retail / Distribution',
+  q13_health_services: { fr: 'Services de santé', en: 'Health services' },
+  q13_automotive_mobility: { fr: 'Automobile & Mobilité', en: 'Automotive & Mobility' },
+  q13_textile_luxury_fashion: { fr: 'Textile, Luxe & Mode', en: 'Textile, Luxury & Fashion' },
+  q13_trade_distribution: {
+    fr: 'Commerce, Négoce & Distribution',
+    en: 'Trade, Wholesale & Distribution',
   },
-  q13_industry: {
-    fr: 'Industrie',
-    en: 'Industry',
+  q13_btp_construction: { fr: 'BTP & Construction', en: 'Building & Construction' },
+  q13_b2b_services: { fr: 'Services aux entreprises (B2B)', en: 'Business services (B2B)' },
+  q13_b2c_services: { fr: 'Services aux particuliers (B2C)', en: 'Consumer services (B2C)' },
+  q13_tech_digital: { fr: 'Tech & Digital', en: 'Tech & Digital' },
+  q13_environment_energy: { fr: 'Environnement & Énergie', en: 'Environment & Energy' },
+  q13_hospitality_leisure: {
+    fr: 'Hôtellerie, Restauration & Loisirs',
+    en: 'Hospitality, Food service & Leisure',
   },
-  q13_services: {
-    fr: 'Services',
-    en: 'Services',
-  },
-  q13_construction: {
-    fr: 'BTP / Construction',
-    en: 'Construction',
-  },
-  q13_health: {
-    fr: 'Santé',
-    en: 'Healthcare',
-  },
-  q13_tech: {
-    fr: 'Tech / Digital',
-    en: 'Tech / Digital',
-  },
-  q13_environment: {
-    fr: 'Environnement',
-    en: 'Environment',
-  },
-  q13_hospitality: {
-    fr: 'Hôtellerie / Restauration',
-    en: 'Hospitality / Food service',
-  },
-  q13_transport: {
-    fr: 'Transport / Logistique',
-    en: 'Transport / Logistics',
-  },
+  q13_transport_logistics: { fr: 'Transport & Logistique', en: 'Transport & Logistics' },
   q13_other: {
     fr: 'Autre',
     en: 'Other',

@@ -106,31 +106,7 @@ export const TARGET_LOCATION_OPTIONS = [
   { value: "international", label: "International" },
 ] as const
 
-export const INDUSTRY_SECTOR_OPTIONS = [
-  { value: "agriculture", label: "Agriculture" },
-  { value: "arts", label: "Arts" },
-  { value: "construction", label: "Construction" },
-  { value: "commerce_detail", label: "Commerce de détail" },
-  { value: "commerce_gros", label: "Commerce de gros" },
-  { value: "finance_assurances", label: "Finance & Assurances" },
-  { value: "gestion_entreprises", label: "Gestion des entreprises" },
-  { value: "hebergement_restauration", label: "Hébergement & Restauration" },
-  { value: "immobilier", label: "Immobilier & location" },
-  { value: "industrie", label: "Industrie manufacturière" },
-  { value: "information_medias", label: "Information & Médias" },
-  { value: "sante", label: "Santé & Assistance sociale" },
-  { value: "services_admin", label: "Services administratifs & de soutien" },
-  { value: "services_educatifs", label: "Services éducatifs" },
-  { value: "services_pro", label: "Services professionnels" },
-  { value: "spectacles_loisirs", label: "Spectacles & Loisirs" },
-  { value: "scientifiques_techniques", label: "Scientifiques & techniques" },
-  { value: "sylviculture", label: "Sylviculture" },
-  { value: "transport", label: "Transport & entreposage" },
-  { value: "services_publics", label: "Services publics" },
-  { value: "admin_publique", label: "Administration publique & gouvernement" },
-  { value: "extraction", label: "Extraction minière" },
-  { value: "autres_services", label: "Autres services" },
-] as const
+export { SECTOR_OPTIONS as INDUSTRY_SECTOR_OPTIONS } from "@/lib/utils/opportunity-sector"
 
 // Input type for scoring calculation
 export interface Tier1ScoringInput {

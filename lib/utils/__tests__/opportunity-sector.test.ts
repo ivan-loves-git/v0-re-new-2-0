@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
 import {
+  canonicalSectorSelections,
+  isAmbiguousLegacySector,
   NEW_OPPORTUNITY_SECTORS,
+  normalizeOpportunitySector,
+  opportunityMatchesSectorFilter,
   resolveNewOpportunitySector,
+  sectorCompatibilityValues,
 } from "@/lib/utils/opportunity-sector"
 
 describe("new opportunity sector selection", () => {
@@ -75,5 +80,42 @@ describe("new opportunity sector selection", () => {
         message: "Other sector must be 120 characters or fewer.",
       },
     })
+  })
+
+  it("deterministically remaps one-to-one legacy values", () => {
+    expect(normalizeOpportunitySector("Industrie")).toBe("Industrie manufacturière")
+    expect(normalizeOpportunitySector("Commerce / Distribution")).toBe("Commerce, Négoce & Distribution")
+    expect(normalizeOpportunitySector("Digital/IT services")).toBe("Tech & Digital")
+  })
+
+  it("preserves ambiguous single-value opportunities and expands compatibility", () => {
+    expect(normalizeOpportunitySector("Services")).toBe("Services")
+    expect(normalizeOpportunitySector("Santé")).toBe("Santé")
+    expect(isAmbiguousLegacySector("Services")).toBe(true)
+    expect(sectorCompatibilityValues("Services")).toEqual([
+      "Services aux entreprises (B2B)",
+      "Services aux particuliers (B2C)",
+    ])
+    expect(sectorCompatibilityValues("Santé")).toEqual([
+      "Industrie pharmaceutique & Dispositifs médicaux",
+      "Services de santé",
+    ])
+  })
+
+  it("expands broad legacy target selections without exposing old options", () => {
+    expect(canonicalSectorSelections(["industry", "services", "healthcare"])).toEqual([
+      "Industrie manufacturière",
+      "Services aux entreprises (B2B)",
+      "Services aux particuliers (B2C)",
+      "Industrie pharmaceutique & Dispositifs médicaux",
+      "Services de santé",
+    ])
+  })
+
+  it("maps filters onto legacy compatibility without adding legacy filter values", () => {
+    expect(opportunityMatchesSectorFilter("Services", "Services aux entreprises (B2B)")).toBe(true)
+    expect(opportunityMatchesSectorFilter("Services", "Services aux particuliers (B2C)")).toBe(true)
+    expect(opportunityMatchesSectorFilter("Industrie", "Industrie manufacturière")).toBe(true)
+    expect(opportunityMatchesSectorFilter("Industrie", "Services de santé")).toBe(false)
   })
 })

@@ -86,10 +86,11 @@ export async function getIntakeCriteria(): Promise<DynamicCriteriaMap> {
       })
     }
 
-    // Merge with static fallbacks for questions not in DB
-    // (like industry sectors, target location, etc.)
+    // Sector choices are governed in code so retired database criteria cannot
+    // reintroduce a second taxonomy. Other criteria retain their DB overrides.
     for (const [key, options] of Object.entries(STATIC_FALLBACKS)) {
-      if (!criteriaMap[key] || criteriaMap[key].length === 0) {
+      const isSectorQuestion = key === "q3_industry_sectors" || key === "q11_target_sectors"
+      if (isSectorQuestion || !criteriaMap[key] || criteriaMap[key].length === 0) {
         criteriaMap[key] = options.map(opt => ({
           value: opt.value,
           label: opt.label,

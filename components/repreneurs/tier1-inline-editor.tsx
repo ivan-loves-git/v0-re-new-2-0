@@ -48,6 +48,7 @@ import {
   NETWORK_TRAINING_OPTIONS,
   INDUSTRY_SECTOR_OPTIONS,
 } from "@/lib/utils/tier1-scoring"
+import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 
 interface Tier1InlineEditorProps {
   repreneur: Repreneur
@@ -156,7 +157,10 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
   const getInitialAnswers = (): LocalAnswers => {
     const answers: LocalAnswers = {}
     for (const q of QUESTIONS) {
-      answers[q.key] = repreneur[q.key as keyof Repreneur] as string | string[] | boolean | null
+      const value = repreneur[q.key as keyof Repreneur] as string | string[] | boolean | null
+      answers[q.key] = q.key === "q3_industry_sectors" || q.key === "q11_target_sectors"
+        ? canonicalSectorSelections(Array.isArray(value) ? value : [])
+        : value
     }
     return answers
   }

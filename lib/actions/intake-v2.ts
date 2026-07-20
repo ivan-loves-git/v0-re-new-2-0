@@ -9,6 +9,7 @@ import { getTemplateSubject, getTemplateBody } from "@/lib/actions/emails"
 import { WelcomeEmail } from "@/lib/email/templates/welcome"
 import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
+import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 
 /**
  * Submit complete intake form v2
@@ -20,6 +21,11 @@ export async function submitIntakeV2(
   formData: IntakeV2FormData
 ): Promise<IntakeV2SubmissionResult> {
   try {
+    const targetSectors = canonicalSectorSelections(formData.q13_target_sectors_v2, false)
+    if (targetSectors.length === 0) {
+      return { success: false, error: "Sélectionnez au moins un secteur cible." }
+    }
+
     const supabase = createAdminClient()
 
     // Check if email already exists
@@ -52,7 +58,7 @@ export async function submitIntakeV2(
     const whenAnswers: WhenAnswers = {
       q11: formData.q11_project_status as WhenAnswers['q11'],
       q12: formData.q12_geo_zones,
-      q13: formData.q13_target_sectors_v2,
+      q13: targetSectors,
       q14: formData.q14_deal_size as WhenAnswers['q14'],
       q15: formData.q15_structure as WhenAnswers['q15'],
       q16: formData.q16_equity as WhenAnswers['q16'],
@@ -91,7 +97,7 @@ export async function submitIntakeV2(
       // WHEN answers (Q11-Q16)
       q11_project_status: formData.q11_project_status,
       q12_geo_zones: formData.q12_geo_zones,
-      q13_target_sectors_v2: formData.q13_target_sectors_v2,
+      q13_target_sectors_v2: targetSectors,
       q14_deal_size: formData.q14_deal_size,
       q15_structure: formData.q15_structure,
       q16_equity: formData.q16_equity,
@@ -110,7 +116,7 @@ export async function submitIntakeV2(
       recommendation: dualScore.recommendation,
 
       // Also set legacy sector_preferences for backward compatibility
-      sector_preferences: formData.q13_target_sectors_v2,
+      sector_preferences: targetSectors,
 
       // Status & metadata
       lifecycle_status: "lead" as const,

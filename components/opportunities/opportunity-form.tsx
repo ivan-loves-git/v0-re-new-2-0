@@ -19,7 +19,13 @@ import {
   type OpportunityIncompleteDataWarning,
   type OpportunityWithSource,
 } from "@/lib/types/opportunity"
-import { NEW_OPPORTUNITY_SECTORS, OTHER_SECTOR } from "@/lib/utils/opportunity-sector"
+import {
+  isAmbiguousLegacySector,
+  isSector,
+  NEW_OPPORTUNITY_SECTORS,
+  normalizeOpportunitySector,
+  OTHER_SECTOR,
+} from "@/lib/utils/opportunity-sector"
 
 const EDITABLE_OPPORTUNITY_STATUS_OPTIONS = OPPORTUNITY_STATUS_OPTIONS.filter((option) => option.value !== "closed")
 
@@ -35,7 +41,19 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [incompleteDataWarning, setIncompleteDataWarning] = useState<OpportunityIncompleteDataWarning | null>(null)
-  const [sectorChoice, setSectorChoice] = useState("")
+  const normalizedExistingSector = normalizeOpportunitySector(opportunity?.sector)
+  const existingSectorIsCustom = Boolean(
+    opportunity?.sector
+    && !isAmbiguousLegacySector(opportunity.sector)
+    && (!normalizedExistingSector || !isSector(normalizedExistingSector)),
+  )
+  const [sectorChoice, setSectorChoice] = useState(
+    normalizedExistingSector && isSector(normalizedExistingSector)
+      ? normalizedExistingSector
+      : existingSectorIsCustom
+        ? OTHER_SECTOR
+        : "",
+  )
   const isClosed = opportunity?.status === "closed"
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -154,11 +172,8 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
                 {errorFor("status")}
               </div>
               <div className="space-y-2">
-                <Label htmlFor={opportunity ? "sector" : "sector_choice"}>Secteur *</Label>
-                {opportunity ? (
-                  <Input id="sector" name="sector" defaultValue={opportunity.sector ?? ""} required />
-                ) : (
-                  <>
+                <Label htmlFor="sector_choice">Secteur *</Label>
+                <>
                     <Select
                       name="sector_choice"
                       value={sectorChoice}
@@ -183,6 +198,11 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
                       </SelectContent>
                     </Select>
                     {errorFor("sector_choice")}
+                    {opportunity?.sector && isAmbiguousLegacySector(opportunity.sector) && !sectorChoice ? (
+                      <p className="text-xs text-amber-700">
+                        The existing “{opportunity.sector}” category now has two possible sectors. Choose the precise sector before saving.
+                      </p>
+                    ) : null}
                     {sectorChoice === OTHER_SECTOR ? (
                       <div className="space-y-2 pt-1">
                         <Label htmlFor="sector_other">Précisez le secteur *</Label>
@@ -190,6 +210,7 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
                           id="sector_other"
                           name="sector_other"
                           placeholder="Ex. Économie sociale"
+                          defaultValue={existingSectorIsCustom ? opportunity?.sector ?? "" : ""}
                           maxLength={120}
                           aria-invalid={Boolean(fieldErrors.sector_other)}
                           required
@@ -197,9 +218,7 @@ export function OpportunityForm({ opportunity, action, submitLabel = "Save oppor
                         {errorFor("sector_other")}
                       </div>
                     ) : null}
-                  </>
-                )}
-                {opportunity ? errorFor("sector") : null}
+                </>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="activity">Activity</Label>

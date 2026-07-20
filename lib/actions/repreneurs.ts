@@ -15,6 +15,7 @@ import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
+import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 
 /**
  * Create a new repreneur from the admin form.
@@ -45,6 +46,7 @@ export async function createRepreneur(formData: FormData) {
       sector_preferences = sectorPrefsRaw.split(",").map((s) => s.trim()).filter(Boolean)
     }
   }
+  sector_preferences = canonicalSectorSelections(sector_preferences)
 
   // Parse target location (now sent as JSON array)
   const targetLocationRaw = formData.get("target_location") as string
@@ -128,6 +130,7 @@ export async function updateRepreneur(id: string, formData: FormData) {
       sector_preferences = sectorPrefsRaw.split(",").map((s) => s.trim()).filter(Boolean)
     }
   }
+  sector_preferences = canonicalSectorSelections(sector_preferences)
 
   // Parse target location (now sent as JSON array)
   const targetLocationRaw = formData.get("target_location") as string
@@ -811,6 +814,8 @@ export interface QuestionnaireInput {
  */
 export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
   const supabase = createAdminClient()
+  const industrySectors = canonicalSectorSelections(data.q3_industry_sectors)
+  const targetSectors = canonicalSectorSelections(data.q11_target_sectors)
 
   // Fetch scoring criteria from database (uses hardcoded fallback if DB fails)
   const scoringCriteria = await getTier1ScoringCriteria()
@@ -819,14 +824,14 @@ export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
   const scoringInput: Tier1ScoringInput = {
     q1_employment_status: data.q1_employment_status,
     q2_years_experience: data.q2_years_experience,
-    q3_industry_sectors: data.q3_industry_sectors,
+    q3_industry_sectors: industrySectors,
     q4_has_ma_experience: data.q4_has_ma_experience,
     q5_team_size: data.q5_team_size,
     q6_involved_in_ma: data.q6_involved_in_ma,
     q8_executive_roles: data.q8_executive_roles,
     q9_board_experience: data.q9_board_experience,
     q10_journey_stages: data.q10_journey_stages,
-    q11_target_sectors: data.q11_target_sectors,
+    q11_target_sectors: targetSectors,
     q12_has_identified_targets: data.q12_has_identified_targets,
     q14_investment_capacity: data.q14_investment_capacity,
     q15_funding_status: data.q15_funding_status,
@@ -843,7 +848,7 @@ export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
       // Questionnaire fields
       q1_employment_status: data.q1_employment_status,
       q2_years_experience: data.q2_years_experience,
-      q3_industry_sectors: data.q3_industry_sectors,
+      q3_industry_sectors: industrySectors,
       q4_has_ma_experience: data.q4_has_ma_experience,
       q5_team_size: data.q5_team_size,
       q6_involved_in_ma: data.q6_involved_in_ma,
@@ -851,7 +856,7 @@ export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
       q8_executive_roles: data.q8_executive_roles,
       q9_board_experience: data.q9_board_experience,
       q10_journey_stages: data.q10_journey_stages,
-      q11_target_sectors: data.q11_target_sectors,
+      q11_target_sectors: targetSectors,
       q12_has_identified_targets: data.q12_has_identified_targets,
       q13_target_details: data.q13_target_details,
       q14_investment_capacity: data.q14_investment_capacity,
@@ -1177,6 +1182,8 @@ export interface QuestionnaireV2Input {
  */
 export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input) {
   const supabase = createAdminClient()
+  const targetSectors = canonicalSectorSelections(data.q13_target_sectors_v2, false)
+  if (targetSectors.length === 0) throw new Error("Select at least one approved sector")
 
   // v3 penalties read q11_priority_choice + ldc_url. If the input doesn't include
   // priority_choice, fall back to the current DB value (profile-edit path may not
@@ -1206,7 +1213,7 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
   const whenAnswers: WhenAnswers = {
     q11: (data.q11_project_status || []) as WhenAnswers['q11'],
     q12: data.q12_geo_zones || [],
-    q13: data.q13_target_sectors_v2 || [],
+    q13: targetSectors,
     q14: (data.q14_deal_size || []) as WhenAnswers['q14'],
     q15: (data.q15_structure || []) as WhenAnswers['q15'],
     q16: (data.q16_equity || 'tbd') as WhenAnswers['q16'],
@@ -1235,7 +1242,7 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
       // WHEN answers
       q11_project_status: data.q11_project_status,
       q12_geo_zones: data.q12_geo_zones,
-      q13_target_sectors_v2: data.q13_target_sectors_v2,
+      q13_target_sectors_v2: targetSectors,
       q14_deal_size: data.q14_deal_size,
       q15_structure: data.q15_structure,
       q16_equity: data.q16_equity,
@@ -1247,7 +1254,7 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
       scoring_flags: dualScore.flags.flags,
       recommendation: dualScore.recommendation,
       // Also update sector_preferences for backward compatibility
-      sector_preferences: data.q13_target_sectors_v2,
+      sector_preferences: targetSectors,
       // Mark questionnaire as completed
       questionnaire_completed_at: new Date().toISOString(),
       // Clear needs_data_completion flag now that v2 data is saved

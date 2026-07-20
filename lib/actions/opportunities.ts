@@ -348,7 +348,15 @@ export async function createOpportunityFromDraft(draft: Opportunity_Insert): Pro
 
 export async function updateOpportunity(id: string, formData: FormData) {
   const { user } = await requireStaffAccess()
-  const validation = validateOpportunityForm(formData)
+  const sectorResolution = resolveNewOpportunitySector(
+    formData.get("sector_choice"),
+    formData.get("sector_other"),
+  )
+  const validation = validateOpportunityForm(
+    formData,
+    sectorResolution.value,
+    sectorResolution.fieldError,
+  )
   if (validation) return validation
 
   const incompleteFields = findIncompleteOpportunityDataFields(formData)
@@ -403,7 +411,7 @@ export async function updateOpportunity(id: string, formData: FormData) {
   }
 
   const sourceId = await upsertSourceFromForm(formData, user.id)
-  const payload = buildOpportunityPayload(formData, sourceId, undefined, currentStatus)
+  const payload = buildOpportunityPayload(formData, sourceId, sectorResolution.value, currentStatus)
 
   const { error } = await supabase.from("opportunities").update(payload).eq("id", id)
   if (error) throw new Error(error.message)

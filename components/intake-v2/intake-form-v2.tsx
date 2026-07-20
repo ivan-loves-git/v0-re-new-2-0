@@ -182,7 +182,7 @@ export function IntakeFormV2() {
       },
       4: {
         q12_geo_zones: ['ile-de-france', 'auvergne-rhone-alpes'],
-        q13_target_sectors_v2: ['industry', 'services'],
+        q13_target_sectors_v2: ['Industrie manufacturière', 'Services aux entreprises (B2B)'],
         q14_deal_size: ['1-3M', '3-5M'],
         q15_structure: ['majority_without_fund'],
         q16_equity: '251-350',

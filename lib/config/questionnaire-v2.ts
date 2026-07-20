@@ -1,3 +1,5 @@
+import { SECTOR_OPTIONS } from '@/lib/utils/opportunity-sector'
+
 /**
  * Questionnaire V2 Configuration
  *
@@ -177,19 +179,7 @@ export const WHEN_QUESTIONS = {
     labelEn: 'Which sector(s) are you targeting for your acquisition project?',
     required: true,
     type: 'checkbox' as const, // Multi-select
-    options: [
-      { value: 'all', label: 'Tous secteurs' },
-      { value: 'retail', label: 'Commerce / Distribution' },
-      { value: 'industry', label: 'Industrie' },
-      { value: 'services', label: 'Services' },
-      { value: 'construction', label: 'BTP / Construction' },
-      { value: 'healthcare', label: 'Santé' },
-      { value: 'tech', label: 'Tech / Digital' },
-      { value: 'environment', label: 'Environnement' },
-      { value: 'hospitality', label: 'Hôtellerie / Restauration' },
-      { value: 'transport', label: 'Transport / Logistique' },
-      { value: 'other', label: 'Autre' }
-    ]
+    options: SECTOR_OPTIONS
   },
   q14: {
     id: 'q14',

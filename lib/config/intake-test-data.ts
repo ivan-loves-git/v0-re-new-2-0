@@ -37,7 +37,7 @@ export const TEST_PROJECT_STATUS_DATA: Partial<IntakeV2FormData> = {
 // Step 4: WHEN Questions (Q12-Q16)
 export const TEST_WHEN_DATA: Partial<IntakeV2FormData> = {
   q12_geo_zones: ['ile_de_france', 'auvergne_rhone_alpes'],
-  q13_target_sectors_v2: ['industrie', 'services_b2b'],
+  q13_target_sectors_v2: ['Industrie manufacturière', 'Services aux entreprises (B2B)'],
   q14_deal_size: ['1-3M'],           // Good for solo
   q15_structure: ['majority_without_fund'], // Solo majority
   q16_equity: '>450',                // Best equity = GREEN fit
@@ -83,7 +83,7 @@ export const TEST_LOW_SCORE_DATA: Partial<IntakeV2FormData> = {
   q11_priority_choice: 'one_among_others', // -10 WHEN penalty
   q11_project_status: ['discovery'], // 0 pts
   q12_geo_zones: ['bretagne'],
-  q13_target_sectors_v2: ['commerce_detail'],
+  q13_target_sectors_v2: ['Commerce, Négoce & Distribution'],
   q14_deal_size: ['>5M'],            // Big deal
   q15_structure: ['havent_thought'], // Flag F3!
   q16_equity: 'tbd',                 // Flag F1! (>5M + TBD)

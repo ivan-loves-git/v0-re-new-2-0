@@ -1,6 +1,7 @@
 import type { OpportunityMatchRecommendation } from "@/lib/types/opportunity"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import { targetThesisMatchTerms } from "@/lib/repreneur-target-thesis"
+import { sectorCompatibilityValues } from "@/lib/utils/opportunity-sector"
 
 type ScoringRepreneur = {
   who_score?: number | null
@@ -132,7 +133,11 @@ export function calculateOpportunityMatchScore(
     reasons.push("Profile quality is not fully scored yet, so confidence is limited.")
   }
 
-  const opportunitySectorValues = normalizeList(opportunity.sector, opportunity.activity)
+  const opportunitySectorValues = normalizeList(
+    opportunity.sector,
+    opportunity.activity,
+    sectorCompatibilityValues(opportunity.sector),
+  )
   const repreneurSectorValues = targetThesisMatchTerms(
     preferredList(repreneur.q13_target_sectors_v2, repreneur.sector_preferences),
     WHEN_QUESTIONS.q13.options,
