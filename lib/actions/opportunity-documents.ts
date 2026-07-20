@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
 import type {
   OpportunityDocument,
   OpportunityDocumentType,
@@ -100,6 +101,8 @@ export async function registerOpportunityDocument(formData: FormData) {
 
   if (error) throw new Error(error.message)
 
+  await triggerOpportunityMemoNotification({ opportunityId })
+
   revalidatePath(`/opportunities/${opportunityId}`)
   revalidateOpportunityDashboardTags()
 }
@@ -116,8 +119,10 @@ export async function updateOpportunityDocumentVisibility(
     .from("opportunity_documents")
     .update({ visibility })
     .eq("id", documentId)
+    .eq("opportunity_id", opportunityId)
 
   if (error) throw new Error(error.message)
+  await triggerOpportunityMemoNotification({ opportunityId })
   revalidatePath(`/opportunities/${opportunityId}`)
   revalidateOpportunityDashboardTags()
 }

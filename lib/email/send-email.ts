@@ -241,11 +241,11 @@ export async function sendEmailDirect(params: {
   subject: string
   react: ReactElement
   idempotencyKey?: string
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; resendId?: string; error?: string }> {
   const { to, subject, react, idempotencyKey } = params
 
   try {
-    const { error } = await resend.emails.send(
+    const { data, error } = await resend.emails.send(
       {
         from: `${FROM_NAME} <${FROM_EMAIL}>`,
         to: [to],
@@ -259,7 +259,7 @@ export async function sendEmailDirect(params: {
       return { success: false, error: error.message }
     }
 
-    return { success: true }
+    return { success: true, resendId: data?.id }
   } catch (err) {
     console.error("Error sending test email:", err)
     return {

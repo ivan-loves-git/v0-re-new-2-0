@@ -5,6 +5,7 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { canMarkOpportunityInfoMemoReceived } from "@/lib/opportunity-confidentiality"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import type {
   OpportunityNdaStatus,
@@ -653,6 +654,11 @@ export async function validateOpportunityPursuit(matchId: string, opportunityId:
     createdBy: access.user.id,
   })
 
+  await triggerOpportunityMemoNotification({
+    opportunityId,
+    matchId,
+  })
+
   revalidateMatchPaths(opportunityId, matchId)
 }
 
@@ -845,6 +851,11 @@ export async function updateOpportunityPursuitNda(matchId: string, opportunityId
 
   if (error) throw new Error(error.message)
   if (!data) throw new Error("Only an active pursuit can have NDA status updated.")
+
+  await triggerOpportunityMemoNotification({
+    opportunityId,
+    matchId,
+  })
 
   revalidateMatchPaths(opportunityId, matchId)
 }
