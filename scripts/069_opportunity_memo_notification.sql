@@ -75,11 +75,25 @@ BEGIN
   FROM public.opportunity_matches om
   JOIN public.opportunities o ON o.id = om.opportunity_id
   JOIN public.repreneurs r ON r.id = om.repreneur_id
+  LEFT JOIN public.opportunity_memo_notifications n ON n.match_id = om.id
   WHERE om.opportunity_id = p_opportunity_id
     AND (p_match_id IS NULL OR om.id = p_match_id)
     AND om.status = 'active_pursuit'
     AND om.nda_status IN ('signed', 'waived')
     AND NULLIF(BTRIM(r.email), '') IS NOT NULL
+    AND (
+      n.match_id IS NULL
+      OR (
+        n.sent_at IS NULL
+        AND (
+          n.status IN ('pending', 'failed')
+          OR (
+            n.status = 'sending'
+            AND n.last_attempt_at < p_attempted_at - INTERVAL '15 minutes'
+          )
+        )
+      )
+    )
     AND EXISTS (
       SELECT 1
       FROM public.opportunity_documents d

@@ -101,3 +101,27 @@ export async function notifyOpportunityMemoAvailable(
     return { status: "failed", matchId: claim.matchId, error: message }
   }
 }
+
+export async function notifyOpportunityMemoCandidates(
+  input: {
+    opportunityId: string
+    matchIds: string[]
+    now: string
+  },
+  dependencies: {
+    store: OpportunityMemoNotificationStore
+    notifier: OpportunityMemoNotifier
+  },
+): Promise<OpportunityMemoNotificationOutcome[]> {
+  const outcomes: OpportunityMemoNotificationOutcome[] = []
+
+  for (const matchId of input.matchIds) {
+    outcomes.push(await notifyOpportunityMemoAvailable({
+      opportunityId: input.opportunityId,
+      matchId,
+      now: input.now,
+    }, dependencies))
+  }
+
+  return outcomes
+}

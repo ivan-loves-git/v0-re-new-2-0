@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { OpportunityMemoAvailableEmail } from "@/lib/email/templates/opportunity-memo-available"
 import {
   notifyOpportunityMemoAvailable,
+  notifyOpportunityMemoCandidates,
   opportunityMemoNotificationIdempotencyKey,
   type OpportunityMemoNotificationClaim,
   type OpportunityMemoNotificationStore,
@@ -17,6 +18,13 @@ const CLAIM: OpportunityMemoNotificationClaim = {
   repreneurFirstName: "Sophie",
   opportunityTitle: "Entreprise de mécanique de précision",
 }
+const SECOND_CLAIM: OpportunityMemoNotificationClaim = {
+  ...CLAIM,
+  matchId: "match-2",
+  repreneurId: "repreneur-2",
+  recipientEmail: "luc@example.com",
+  repreneurFirstName: "Luc",
+}
 
 function createStore(claim: OpportunityMemoNotificationClaim | null) {
   return {
@@ -29,7 +37,12 @@ function createStore(claim: OpportunityMemoNotificationClaim | null) {
 describe("opportunity memo availability notification", () => {
   it("does not send before the database confidentiality gate grants a claim", async () => {
     const store = createStore(null)
-    const notifier = { send: vi.fn(async () => ({ success: true })) }
+    const notifier = {
+      send: vi.fn(async (input: OpportunityMemoNotificationClaim & { idempotencyKey: string }) => {
+        void input
+        return { success: true }
+      }),
+    }
 
     const result = await notifyOpportunityMemoAvailable(
       { opportunityId: CLAIM.opportunityId, matchId: CLAIM.matchId, now: NOW },
@@ -99,26 +112,101 @@ describe("opportunity memo availability notification", () => {
     )
   })
 
-  it("does not resend after a later memo edit once the store reports delivery", async () => {
-    const store = createStore(CLAIM)
-    const notifier = { send: vi.fn(async () => ({ success: true })) }
+  it("notifies two eligible pursuits once and sends neither again after a later memo edit", async () => {
+    const sentMatchIds = new Set<string>()
+    const claims = [CLAIM, SECOND_CLAIM]
+    const store = {
+      claim: vi.fn(async ({ matchId }: { matchId?: string }) => (
+        claims.find((claim) => claim.matchId === matchId && !sentMatchIds.has(claim.matchId)) ?? null
+      )),
+      markSent: vi.fn(async ({ matchId }: { matchId: string }) => {
+        sentMatchIds.add(matchId)
+      }),
+      markFailed: vi.fn(async () => undefined),
+    } satisfies OpportunityMemoNotificationStore
+    const notifier = {
+      send: vi.fn(async (input: OpportunityMemoNotificationClaim & { idempotencyKey: string }) => {
+        void input
+        return { success: true }
+      }),
+    }
 
-    await notifyOpportunityMemoAvailable(
-      { opportunityId: CLAIM.opportunityId, matchId: CLAIM.matchId, now: NOW },
-      { store, notifier },
-    )
-    store.claim.mockResolvedValueOnce(null)
-    const editResult = await notifyOpportunityMemoAvailable(
+    const firstOutcomes = await notifyOpportunityMemoCandidates(
       {
         opportunityId: CLAIM.opportunityId,
-        matchId: CLAIM.matchId,
+        matchIds: [CLAIM.matchId, SECOND_CLAIM.matchId],
+        now: NOW,
+      },
+      { store, notifier },
+    )
+    const editOutcomes = await notifyOpportunityMemoCandidates(
+      {
+        opportunityId: CLAIM.opportunityId,
+        matchIds: [CLAIM.matchId, SECOND_CLAIM.matchId],
         now: "2026-07-20T10:00:00.000Z",
       },
       { store, notifier },
     )
 
-    expect(editResult).toEqual({ status: "not_claimed" })
+    expect(firstOutcomes).toEqual([
+      { status: "sent", matchId: CLAIM.matchId },
+      { status: "sent", matchId: SECOND_CLAIM.matchId },
+    ])
+    expect(editOutcomes).toEqual([
+      { status: "not_claimed" },
+      { status: "not_claimed" },
+    ])
+    expect(notifier.send).toHaveBeenCalledTimes(2)
+    expect(notifier.send.mock.calls.map(([input]) => input.matchId)).toEqual([
+      CLAIM.matchId,
+      SECOND_CLAIM.matchId,
+    ])
+  })
+
+  it("keeps an explicit match trigger single-pursuit", async () => {
+    const store = createStore(CLAIM)
+    const notifier = { send: vi.fn(async () => ({ success: true })) }
+
+    const outcomes = await notifyOpportunityMemoCandidates(
+      { opportunityId: CLAIM.opportunityId, matchIds: [CLAIM.matchId], now: NOW },
+      { store, notifier },
+    )
+
+    expect(outcomes).toEqual([{ status: "sent", matchId: CLAIM.matchId }])
+    expect(store.claim).toHaveBeenCalledTimes(1)
     expect(notifier.send).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not retry a failed candidate or prevent the next candidate", async () => {
+    const store = {
+      ...createStore(CLAIM),
+      claim: vi.fn(async ({ matchId }: { matchId?: string }) => (
+        matchId === SECOND_CLAIM.matchId ? SECOND_CLAIM : CLAIM
+      )),
+    } satisfies OpportunityMemoNotificationStore
+    const notifier = {
+      send: vi
+        .fn()
+        .mockResolvedValueOnce({ success: false, error: "test-safe failure" })
+        .mockResolvedValueOnce({ success: true }),
+    }
+
+    const outcomes = await notifyOpportunityMemoCandidates(
+      {
+        opportunityId: CLAIM.opportunityId,
+        matchIds: [CLAIM.matchId, SECOND_CLAIM.matchId],
+        now: NOW,
+      },
+      { store, notifier },
+    )
+
+    expect(outcomes).toEqual([
+      { status: "failed", matchId: CLAIM.matchId, error: "test-safe failure" },
+      { status: "sent", matchId: SECOND_CLAIM.matchId },
+    ])
+    expect(store.claim).toHaveBeenCalledTimes(2)
+    expect(notifier.send).toHaveBeenCalledTimes(2)
+    expect(store.markFailed).toHaveBeenCalledTimes(1)
   })
 
   it("renders only repreneur-safe public opportunity context", async () => {

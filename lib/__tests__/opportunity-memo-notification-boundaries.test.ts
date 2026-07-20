@@ -15,6 +15,14 @@ const documentActionSource = fs.readFileSync(
   path.join(root, "lib/actions/opportunity-documents.ts"),
   "utf8",
 )
+const notificationDataSource = fs.readFileSync(
+  path.join(root, "lib/data/opportunity-memo-notification.ts"),
+  "utf8",
+)
+const notificationTriggerSource = fs.readFileSync(
+  path.join(root, "lib/trigger-opportunity-memo-notification.ts"),
+  "utf8",
+)
 
 describe("opportunity memo notification boundaries", () => {
   it("claims only an active pursuit after NDA completion and a real approved memo", () => {
@@ -35,6 +43,14 @@ describe("opportunity memo notification boundaries", () => {
     expect(migrationSource).toContain("AND sent_at IS NULL")
   })
 
+  it("skips completed and leased pursuits before choosing the next candidate", () => {
+    expect(migrationSource).toContain("LEFT JOIN public.opportunity_memo_notifications n")
+    expect(migrationSource).toContain("n.match_id IS NULL")
+    expect(migrationSource).toContain("n.sent_at IS NULL")
+    expect(migrationSource).toContain("n.status IN ('pending', 'failed')")
+    expect(migrationSource).toContain("n.status = 'sending'")
+  })
+
   it("resolves only the active repreneur and public opportunity title", () => {
     expect(migrationSource).toContain("JOIN public.repreneurs r ON r.id = om.repreneur_id")
     expect(migrationSource).toContain("BTRIM(r.email)")
@@ -48,6 +64,13 @@ describe("opportunity memo notification boundaries", () => {
     expect(matchActionSource.match(/await triggerOpportunityMemoNotification/g)).toHaveLength(2)
     expect(matchActionSource).toContain("matchId,")
     expect(documentActionSource.match(/await triggerOpportunityMemoNotification/g)).toHaveLength(2)
+  })
+
+  it("evaluates every eligible pursuit when a memo becomes available", () => {
+    expect(notificationDataSource).toContain('.eq("status", "active_pursuit")')
+    expect(notificationDataSource).toContain('.in("nda_status", ["signed", "waived"])')
+    expect(notificationTriggerSource).toContain("notifyOpportunityMemoCandidates")
+    expect(notificationTriggerSource).toContain("matchIds,")
   })
 
   it("keeps the delivery records and functions service-role only", () => {

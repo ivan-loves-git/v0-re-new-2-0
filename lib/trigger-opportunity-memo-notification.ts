@@ -1,18 +1,25 @@
 import "server-only"
 
-import { createOpportunityMemoNotificationStore } from "@/lib/data/opportunity-memo-notification"
+import {
+  createOpportunityMemoNotificationStore,
+  listOpportunityMemoNotificationCandidateMatchIds,
+} from "@/lib/data/opportunity-memo-notification"
 import { sendOpportunityMemoAvailableEmail } from "@/lib/email/opportunity-memo-available"
-import { notifyOpportunityMemoAvailable } from "@/lib/opportunity-memo-notification"
+import { notifyOpportunityMemoCandidates } from "@/lib/opportunity-memo-notification"
 
 export async function triggerOpportunityMemoNotification(input: {
   opportunityId: string
   matchId?: string
 }) {
   try {
-    const outcome = await notifyOpportunityMemoAvailable(
+    const matchIds = input.matchId
+      ? [input.matchId]
+      : await listOpportunityMemoNotificationCandidateMatchIds(input.opportunityId)
+
+    const outcomes = await notifyOpportunityMemoCandidates(
       {
         opportunityId: input.opportunityId,
-        matchId: input.matchId,
+        matchIds,
         now: new Date().toISOString(),
       },
       {
@@ -21,10 +28,11 @@ export async function triggerOpportunityMemoNotification(input: {
       },
     )
 
-    if (outcome.status === "failed") {
+    for (const failed of outcomes) {
+      if (failed.status !== "failed") continue
       console.error("Failed to notify repreneur that an info memo is available", {
-        matchId: outcome.matchId,
-        error: outcome.error,
+        matchId: failed.matchId,
+        error: failed.error,
       })
     }
   } catch (error) {

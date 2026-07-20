@@ -19,6 +19,21 @@ function requireSuccessfulWrite(error: { message: string } | null, operation: st
   if (error) throw new Error(`${operation}: ${error.message}`)
 }
 
+export async function listOpportunityMemoNotificationCandidateMatchIds(
+  opportunityId: string,
+): Promise<string[]> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select("id")
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "active_pursuit")
+    .in("nda_status", ["signed", "waived"])
+
+  requireSuccessfulWrite(error, "Could not list info memo notification candidates")
+  return (data ?? []).map((row) => row.id)
+}
+
 export function createOpportunityMemoNotificationStore(): OpportunityMemoNotificationStore {
   return {
     async claim(input): Promise<OpportunityMemoNotificationClaim | null> {
