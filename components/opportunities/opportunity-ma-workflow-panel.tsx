@@ -43,6 +43,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
   const [body, setBody] = useState(selectedDraft?.body ?? "")
   const [isSending, setIsSending] = useState(false)
   const canSend = Boolean(workflow.recipientEmail && templateKey && subject.trim() && body.trim())
+  const recipientName = workflow.contactName || workflow.sourceName
 
   useEffect(() => {
     if (!selectedDraft) return
@@ -168,11 +169,29 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
               />
             </div>
 
-            {!workflow.recipientEmail ? (
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                Add an email address to the linked M&A source before sending.
-              </div>
-            ) : null}
+            {workflow.recipientEmail ? (
+              <Alert>
+                <Mail />
+                <AlertTitle>Recipient for this follow-up</AlertTitle>
+                <AlertDescription>
+                  <p>
+                    This email will be sent to <strong>{recipientName}</strong>
+                    {workflow.contactName ? ` from ${workflow.sourceName}` : ""} at <strong>{workflow.recipientEmail}</strong>.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+                <AlertTriangle />
+                <AlertTitle>Recipient missing</AlertTitle>
+                <AlertDescription className="text-amber-900">
+                  <p>
+                    No email address is linked to <strong>{recipientName}</strong>. Add one to the linked M&A source before
+                    sending.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="flex justify-end">
               <Button type="button" onClick={handleSend} disabled={!canSend || isSending}>
