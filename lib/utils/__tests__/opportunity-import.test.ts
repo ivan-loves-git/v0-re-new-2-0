@@ -5,6 +5,28 @@ import {
 } from "@/lib/utils/opportunity-import"
 
 describe("opportunity import", () => {
+  it("normalizes a safe one-row French workbook fixture before import", () => {
+    const rows = parseDelimitedOpportunityRows(
+      [
+        "Réf. Mandat\tCabinet\tSecteur\tLocalisation\tDescription\tCA M€\tEBE K€\tEffectif",
+        "DEMO-775-001\tCabinet Démo\tServices aux entreprises (B2B)\tLyon\tEntreprise de démonstration\t3,4\t620\t18",
+      ].join("\n"),
+    )
+
+    const [result] = normalizeOpportunityRows(rows)
+
+    expect(result.isValid).toBe(true)
+    expect(result.diagnostics).toEqual([])
+    expect(result.draft).toMatchObject({
+      reference: "DEMO-775-001",
+      source_label: "Cabinet Démo",
+      revenue_meur: 3.4,
+      ebitda_keur: 620,
+      headcount: 18,
+      headcount_range: "18",
+    })
+  })
+
   it("maps workbook headers with punctuation, accents, and monetary units", () => {
     const [result] = normalizeOpportunityRows([
       {
