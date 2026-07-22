@@ -283,7 +283,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
             <Input aria-label={language === 'fr' ? 'Chiffre d’affaires cible maximum' : 'Maximum target revenue'} type="number" min="0" step="0.1" placeholder="Max" value={data.target_revenue_max_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_max_meur', e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label className="text-sm">{language === 'fr' ? 'Marge EBITDA minimale (%)' : 'Minimum EBITDA margin (%)'}</Label>
+            <Label className="text-sm">{language === 'fr' ? 'Marge EBITDA mini (%)' : 'Minimum EBITDA margin (%)'}</Label>
             <Input aria-label={language === 'fr' ? 'Marge EBITDA minimale' : 'Minimum EBITDA margin'} type="number" min="0" max="100" step="0.1" placeholder="Min" value={data.target_ebitda_margin_min_pct ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_margin_min_pct', e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-2">
