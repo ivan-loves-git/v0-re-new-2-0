@@ -55,4 +55,11 @@ describe("opportunity confidentiality wall", () => {
     expect(documentActions).toContain("repreneur_approved_by: user.id")
     expect(documentActions).toContain("Existing records are never silently blessed")
   })
+
+  it("opens signed memo routes as documents instead of app-navigation prefetches", () => {
+    const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
+
+    expect(detail).toContain('<a href={documentHref}>')
+    expect(detail).not.toContain('<Link href={documentHref}>')
+  })
 })

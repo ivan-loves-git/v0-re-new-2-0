@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { CalendarDays, CheckCircle2, Download, FileText, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -228,10 +227,10 @@ export function RepreneurOpportunityDetail({
                     </div>
                     {documentHref ? (
                       <Button asChild variant="outline" size="sm">
-                        <Link href={documentHref}>
+                        <a href={documentHref}>
                           <Download data-icon="inline-start" />
                           Download
-                        </Link>
+                        </a>
                       </Button>
                     ) : (
                       <Button variant="outline" size="sm" disabled>
