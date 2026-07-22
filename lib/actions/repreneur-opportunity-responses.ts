@@ -71,7 +71,7 @@ async function updateMyOpportunityResponse(matchId: string, status: "interested"
     .from("opportunity_matches")
     .update({
       status,
-      decline_reason_categories: status === "declined" ? declineReasonCategories : null,
+      decline_reason_categories: status === "declined" ? declineReasonCategories : [],
       decline_reason_text: status === "declined" ? declineReasonText : null,
       reviewed_by: null,
       reviewed_at: null,

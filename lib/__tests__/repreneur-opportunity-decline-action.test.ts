@@ -41,6 +41,17 @@ describe("repreneur opportunity not-a-fit response", () => {
     expect(detail).not.toContain("declineMyOpportunity.bind")
   })
 
+  it("clears decline categories with an empty array for the interested response", () => {
+    const action = source("lib/actions/repreneur-opportunity-responses.ts")
+
+    expect(action).toContain(
+      'decline_reason_categories: status === "declined" ? declineReasonCategories : [],',
+    )
+    expect(action).not.toContain(
+      'decline_reason_categories: status === "declined" ? declineReasonCategories : null,',
+    )
+  })
+
   it("keeps client-invoked response actions in a dedicated async-only server module", () => {
     const action = source("lib/actions/repreneur-opportunity-responses.ts")
     const readModel = source("lib/actions/repreneur-opportunities.ts")
