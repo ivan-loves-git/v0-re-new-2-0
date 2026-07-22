@@ -38,7 +38,10 @@ type MaSourceQueryRow = Omit<MaSource, "contacts"> & {
   contacts?: MaSourceContact | MaSourceContact[] | null
 }
 
-type OpportunitySourceContactQueryRow = Omit<OpportunitySourceContact, "contact"> & {
+type OpportunitySourceContactQueryRow = Omit<
+  OpportunitySourceContact,
+  "contact"
+> & {
   contact?: MaSourceContact | MaSourceContact[] | null
 }
 
@@ -54,7 +57,10 @@ type OpportunityWorkSurfaceMatchRow = Record<string, unknown> & {
     | null
 }
 
-function readStatus(formData: FormData, fallback: OpportunityStatus = "draft"): OpportunityStatus {
+function readStatus(
+  formData: FormData,
+  fallback: OpportunityStatus = "draft",
+): OpportunityStatus {
   const value = readOpportunityFormString(formData, "status")
   return isOpportunityStatus(value) ? value : fallback
 }
@@ -64,11 +70,22 @@ function readVisibility(
   key: string,
   fallback: OpportunityVisibility,
 ): OpportunityVisibility {
-  return (readOpportunityFormString(formData, key) as OpportunityVisibility | null) ?? fallback
+  return (
+    (readOpportunityFormString(
+      formData,
+      key,
+    ) as OpportunityVisibility | null) ?? fallback
+  )
 }
 
-const MA_SOURCE_TYPES = new Set<MaSourceType>(["ma_firm", "broker", "direct", "other"])
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const MA_SOURCE_TYPES = new Set<MaSourceType>([
+  "ma_firm",
+  "broker",
+  "direct",
+  "other",
+])
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const OPPORTUNITY_WITH_SOURCE_SELECT = `
   *,
@@ -96,6 +113,9 @@ const OPPORTUNITY_WITH_SOURCE_SELECT = `
     source_id,
     contact_id,
     is_primary,
+    contact_name_snapshot,
+    contact_email_snapshot,
+    contact_phone_snapshot,
     created_by,
     created_at,
     contact:ma_source_contacts(
@@ -111,7 +131,9 @@ const OPPORTUNITY_WITH_SOURCE_SELECT = `
   )
 `
 
-function normalizeSource(source: MaSourceQueryRow | null | undefined): MaSource | null {
+function normalizeSource(
+  source: MaSourceQueryRow | null | undefined,
+): MaSource | null {
   if (!source) return null
   const contacts = Array.isArray(source.contacts)
     ? source.contacts
@@ -121,12 +143,27 @@ function normalizeSource(source: MaSourceQueryRow | null | undefined): MaSource 
   return { ...source, contacts }
 }
 
-function normalizeSourceContact(row: OpportunitySourceContactQueryRow): OpportunitySourceContact {
+function normalizeSourceContact(
+  row: OpportunitySourceContactQueryRow,
+): OpportunitySourceContact {
   const contact = Array.isArray(row.contact) ? row.contact[0] : row.contact
-  return { ...row, contact: contact ?? null }
+  return {
+    ...row,
+    contact: contact
+      ? {
+          ...contact,
+          source_id: row.source_id,
+          name: row.contact_name_snapshot ?? contact.name,
+          email: row.contact_email_snapshot ?? contact.email,
+          phone: row.contact_phone_snapshot ?? contact.phone,
+        }
+      : null,
+  }
 }
 
-function normalizeOpportunity(row: OpportunitySourceRow): OpportunityWithSource {
+function normalizeOpportunity(
+  row: OpportunitySourceRow,
+): OpportunityWithSource {
   const sourceRow = Array.isArray(row.source) ? row.source[0] : row.source
   return {
     ...row,
@@ -140,7 +177,9 @@ function normalizeOpportunity(row: OpportunitySourceRow): OpportunityWithSource 
 function normalizeWorkSurfaceMatch(
   row: OpportunityWorkSurfaceMatchRow,
 ): OpportunityWorkSurfaceMatch {
-  const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
+  const repreneur = Array.isArray(row.repreneur)
+    ? row.repreneur[0]
+    : row.repreneur
   return {
     ...row,
     repreneur: repreneur ?? null,
@@ -170,7 +209,8 @@ function validateOpportunityForm(
   ]
 
   for (const [field, message] of requiredTextFields) {
-    if (!readOpportunityFormString(formData, field)) fieldErrors[field] = message
+    if (!readOpportunityFormString(formData, field))
+      fieldErrors[field] = message
   }
 
   if (sectorFieldError) {
@@ -179,18 +219,27 @@ function validateOpportunityForm(
     fieldErrors.sector = "Secteur is required."
   }
 
-  const sourceEmail = readOpportunityFormString(formData, "new_source_contact_email")
+  const sourceEmail = readOpportunityFormString(
+    formData,
+    "new_source_contact_email",
+  )
   if (sourceEmail && !isValidEmail(sourceEmail)) {
     fieldErrors.new_source_contact_email = "M&A contact email must be valid."
   }
 
   const revenue = readOpportunityNumber(formData, "revenue_meur")
-  if (readOpportunityFormString(formData, "revenue_meur") !== null && revenue === null) {
+  if (
+    readOpportunityFormString(formData, "revenue_meur") !== null &&
+    revenue === null
+  ) {
     fieldErrors.revenue_meur = "CA M€ must be a number."
   }
 
   const ebitda = readOpportunityNumber(formData, "ebitda_keur")
-  if (readOpportunityFormString(formData, "ebitda_keur") !== null && ebitda === null) {
+  if (
+    readOpportunityFormString(formData, "ebitda_keur") !== null &&
+    ebitda === null
+  ) {
     fieldErrors.ebitda_keur = "EBE K€ must be a number."
   }
 
@@ -204,7 +253,10 @@ function validateOpportunityForm(
 }
 
 function readSourceType(formData: FormData): MaSourceType {
-  const value = readOpportunityFormString(formData, "source_type") as MaSourceType | null
+  const value = readOpportunityFormString(
+    formData,
+    "source_type",
+  ) as MaSourceType | null
   return value && MA_SOURCE_TYPES.has(value) ? value : "ma_firm"
 }
 
@@ -216,9 +268,11 @@ function validateActiveOpportunitySource(
 
   return {
     success: false,
-    message: "A verified M&A source is required before an opportunity can become active.",
+    message:
+      "A verified M&A source is required before an opportunity can become active.",
     fieldErrors: {
-      source_firm_name: "Select or add the verified M&A source before activating this opportunity.",
+      source_firm_name:
+        "Select or add the verified M&A source before activating this opportunity.",
     },
   }
 }
@@ -228,7 +282,8 @@ function readInitialContactPayload(formData: FormData) {
   const email = readOpportunityFormString(formData, "new_source_contact_email")
   const phone = readOpportunityFormString(formData, "new_source_contact_phone")
   if (!name && !email && !phone) return null
-  if (email && !isValidEmail(email)) throw new Error("M&A contact email must be valid.")
+  if (email && !isValidEmail(email))
+    throw new Error("M&A contact email must be valid.")
   return { name, email, phone }
 }
 
@@ -247,7 +302,8 @@ async function findSourceByFirmName(
 
   if (error) throw new Error(error.message)
   const match = (data ?? []).find(
-    (source) => normalizeFirmName(source.firm_name) === normalizeFirmName(firmName),
+    (source) =>
+      normalizeFirmName(source.firm_name) === normalizeFirmName(firmName),
   )
   return match?.id ?? null
 }
@@ -269,7 +325,10 @@ async function upsertSourceFromForm(
   const payload: MaSource_Insert & MaSource_Update = {
     firm_name: firmName,
     source_type: readSourceType(formData),
-    internal_notes: readOpportunityFormString(formData, "source_internal_notes"),
+    internal_notes: readOpportunityFormString(
+      formData,
+      "source_internal_notes",
+    ),
   }
   let resolvedSourceId = sourceId
 
@@ -300,7 +359,8 @@ async function upsertSourceFromForm(
   if (!resolvedSourceId) throw new Error("M&A source could not be resolved")
 
   const initialContact = readInitialContactPayload(formData)
-  if (!initialContact) return { sourceId: resolvedSourceId, initialContactId: null }
+  if (!initialContact)
+    return { sourceId: resolvedSourceId, initialContactId: null }
 
   const { data: contact, error: contactError } = await supabase
     .from("ma_source_contacts")
@@ -356,7 +416,11 @@ async function syncOpportunitySourceContacts({
 }) {
   const selectedContactIds = readSelectedContactIds(formData)
   const contactIds = [
-    ...new Set(initialContactId ? [...selectedContactIds, initialContactId] : selectedContactIds),
+    ...new Set(
+      initialContactId
+        ? [...selectedContactIds, initialContactId]
+        : selectedContactIds,
+    ),
   ]
 
   if (!sourceId || contactIds.length === 0) {
@@ -372,12 +436,17 @@ async function syncOpportunitySourceContacts({
 
   if (contactsError) throw new Error(contactsError.message)
   if ((contacts ?? []).length !== contactIds.length) {
-    throw new Error("Every selected M&A contact must belong to the opportunity's firm")
+    throw new Error(
+      "Every selected M&A contact must belong to the opportunity's firm",
+    )
   }
 
   await clearOpportunitySourceContacts(supabase, opportunityId)
 
-  const requestedPrimaryId = readOpportunityFormString(formData, "source_primary_contact_id")
+  const requestedPrimaryId = readOpportunityFormString(
+    formData,
+    "source_primary_contact_id",
+  )
   const primaryContactId =
     requestedPrimaryId && contactIds.includes(requestedPrimaryId)
       ? requestedPrimaryId
@@ -420,7 +489,11 @@ function buildOpportunityPayload(
     headcount: readOpportunityHeadcount(formData),
     headcount_range: readOpportunityFormString(formData, "headcount_range"),
     date_added: readOpportunityFormString(formData, "date_added"),
-    repreneur_exposure: readVisibility(formData, "repreneur_exposure", "anonymized"),
+    repreneur_exposure: readVisibility(
+      formData,
+      "repreneur_exposure",
+      "anonymized",
+    ),
     public_title: readOpportunityFormString(formData, "public_title"),
     teaser_summary: readOpportunityFormString(formData, "teaser_summary"),
     internal_notes: readOpportunityFormString(formData, "internal_notes"),
@@ -441,7 +514,9 @@ export async function listOpportunities(): Promise<OpportunityWithSource[]> {
   return (data ?? []).map(normalizeOpportunity)
 }
 
-export async function listOpportunityWorkSurfaceRecords(): Promise<OpportunityWorkSurfaceRecord[]> {
+export async function listOpportunityWorkSurfaceRecords(): Promise<
+  OpportunityWorkSurfaceRecord[]
+> {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
@@ -494,7 +569,9 @@ export async function listOpportunityWorkSurfaceRecords(): Promise<OpportunityWo
   }))
 }
 
-export async function getOpportunity(id: string): Promise<OpportunityWithSource | null> {
+export async function getOpportunity(
+  id: string,
+): Promise<OpportunityWithSource | null> {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
@@ -533,7 +610,8 @@ export async function createOpportunity(formData: FormData) {
   if (readStatus(formData) === "closed") {
     return {
       success: false,
-      message: "Choose a closure reason from the opportunity detail before closing it.",
+      message:
+        "Choose a closure reason from the opportunity detail before closing it.",
       fieldErrors: {
         status: "Use the dedicated closure control to close an opportunity.",
       },
@@ -552,7 +630,10 @@ export async function createOpportunity(formData: FormData) {
   if (validation) return validation
 
   const incompleteFields = findIncompleteOpportunityDataFields(formData)
-  if (incompleteFields.length > 0 && !isIncompleteOpportunityDataAcknowledged(formData)) {
+  if (
+    incompleteFields.length > 0 &&
+    !isIncompleteOpportunityDataAcknowledged(formData)
+  ) {
     return {
       success: false,
       message: "Incomplete data — this opportunity may not match correctly.",
@@ -570,7 +651,10 @@ export async function createOpportunity(formData: FormData) {
   }
 
   const source = await upsertSourceFromForm(formData, user.id)
-  const sourceValidation = validateActiveOpportunitySource(readStatus(formData), source.sourceId)
+  const sourceValidation = validateActiveOpportunitySource(
+    readStatus(formData),
+    source.sourceId,
+  )
   if (sourceValidation) return sourceValidation
 
   const payload: Opportunity_Insert = {
@@ -584,11 +668,16 @@ export async function createOpportunity(formData: FormData) {
   }
 
   const supabase = createAdminClient()
-  const { data, error } = await supabase.from("opportunities").insert(payload).select().single()
+  const { data, error } = await supabase
+    .from("opportunities")
+    .insert(payload)
+    .select()
+    .single()
   if (error) throw new Error(error.message)
 
   if (
-    readOpportunityFormString(formData, "source_contacts_submitted") === "true" ||
+    readOpportunityFormString(formData, "source_contacts_submitted") ===
+      "true" ||
     source.initialContactId
   ) {
     await syncOpportunitySourceContacts({
@@ -606,7 +695,9 @@ export async function createOpportunity(formData: FormData) {
   redirect(`/opportunities/${(data as Opportunity).id}`)
 }
 
-export async function createOpportunityFromDraft(draft: Opportunity_Insert): Promise<Opportunity> {
+export async function createOpportunityFromDraft(
+  draft: Opportunity_Insert,
+): Promise<Opportunity> {
   const { user } = await requireStaffAccess()
   const sourceValidation = validateActiveOpportunitySource(
     draft.status ?? "draft",
@@ -646,7 +737,10 @@ export async function updateOpportunity(id: string, formData: FormData) {
   if (validation) return validation
 
   const incompleteFields = findIncompleteOpportunityDataFields(formData)
-  if (incompleteFields.length > 0 && !isIncompleteOpportunityDataAcknowledged(formData)) {
+  if (
+    incompleteFields.length > 0 &&
+    !isIncompleteOpportunityDataAcknowledged(formData)
+  ) {
     return {
       success: false,
       message: "Incomplete data — this opportunity may not match correctly.",
@@ -664,13 +758,15 @@ export async function updateOpportunity(id: string, formData: FormData) {
   }
 
   const supabase = createAdminClient()
-  const { data: existingOpportunity, error: existingOpportunityError } = await supabase
-    .from("opportunities")
-    .select("status, source_id")
-    .eq("id", id)
-    .maybeSingle()
+  const { data: existingOpportunity, error: existingOpportunityError } =
+    await supabase
+      .from("opportunities")
+      .select("status, source_id")
+      .eq("id", id)
+      .maybeSingle()
 
-  if (existingOpportunityError) throw new Error(existingOpportunityError.message)
+  if (existingOpportunityError)
+    throw new Error(existingOpportunityError.message)
   if (!existingOpportunity) {
     return {
       success: false,
@@ -683,7 +779,8 @@ export async function updateOpportunity(id: string, formData: FormData) {
   if (currentStatus !== "closed" && requestedStatus === "closed") {
     return {
       success: false,
-      message: "Choose a closure reason from the opportunity detail before closing it.",
+      message:
+        "Choose a closure reason from the opportunity detail before closing it.",
       fieldErrors: {
         status: "Use the dedicated closure control to close an opportunity.",
       },
@@ -693,15 +790,20 @@ export async function updateOpportunity(id: string, formData: FormData) {
   if (currentStatus === "closed" && requestedStatus !== "closed") {
     return {
       success: false,
-      message: "Reopen this opportunity from its detail before changing its status.",
+      message:
+        "Reopen this opportunity from its detail before changing its status.",
       fieldErrors: {
-        status: "Use the dedicated reopen control to change a closed opportunity.",
+        status:
+          "Use the dedicated reopen control to change a closed opportunity.",
       },
     } satisfies OpportunityActionResult
   }
 
   const source = await upsertSourceFromForm(formData, user.id)
-  const sourceValidation = validateActiveOpportunitySource(requestedStatus, source.sourceId)
+  const sourceValidation = validateActiveOpportunitySource(
+    requestedStatus,
+    source.sourceId,
+  )
   if (sourceValidation) return sourceValidation
 
   if ((existingOpportunity.source_id as string | null) !== source.sourceId) {
@@ -714,11 +816,15 @@ export async function updateOpportunity(id: string, formData: FormData) {
     currentStatus,
   )
 
-  const { error } = await supabase.from("opportunities").update(payload).eq("id", id)
+  const { error } = await supabase
+    .from("opportunities")
+    .update(payload)
+    .eq("id", id)
   if (error) throw new Error(error.message)
 
   if (
-    readOpportunityFormString(formData, "source_contacts_submitted") === "true" ||
+    readOpportunityFormString(formData, "source_contacts_submitted") ===
+      "true" ||
     source.initialContactId
   ) {
     await syncOpportunitySourceContacts({
@@ -776,7 +882,9 @@ export async function closeOpportunity(
   }
 }
 
-export async function reopenOpportunity(id: string): Promise<OpportunityActionResult> {
+export async function reopenOpportunity(
+  id: string,
+): Promise<OpportunityActionResult> {
   await requireStaffAccess()
   const supabase = createAdminClient()
 

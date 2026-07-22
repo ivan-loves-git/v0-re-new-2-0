@@ -13,7 +13,8 @@ import {
   BarChart3,
   BookOpenCheck,
   Map,
-  Handshake,
+  Building2,
+  ContactRound,
   ChevronsUpDown,
   LogOut,
   Settings,
@@ -71,8 +72,12 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
   { name: "Groups", href: "/opportunities/groups", icon: FolderKanban },
   { name: "Find", href: "/opportunities/find", icon: Search },
-  { name: "M&A", href: "/opportunities/ma", icon: Handshake },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
+]
+
+const maNavigation: NavigationItem[] = [
+  { name: "Firms", href: "/opportunities/ma/firms", icon: Building2 },
+  { name: "Contacts", href: "/opportunities/ma/contacts", icon: ContactRound },
 ]
 
 const toolsNavigation: NavigationItem[] = [
@@ -129,8 +134,15 @@ export function AppSidebar({
     if (href === "/analytics_op") return pathname === "/analytics_op"
     if (href === "/opportunities/groups")
       return pathname === "/opportunities/groups"
-    if (href === "/opportunities/ma") return pathname === "/opportunities/ma"
-    if (href === "/opportunities/find") return pathname === "/opportunities/find"
+    if (href === "/opportunities/ma/firms")
+      return (
+        pathname === "/opportunities/ma/firms" ||
+        pathname === "/opportunities/ma"
+      )
+    if (href === "/opportunities/ma/contacts")
+      return pathname === "/opportunities/ma/contacts"
+    if (href === "/opportunities/find")
+      return pathname === "/opportunities/find"
     if (href === "/repreneurs") return pathname === "/repreneurs"
     return pathname.startsWith(href)
   }
@@ -187,11 +199,18 @@ export function AppSidebar({
               <Link href="/dashboard_re" {...linkWarmupProps("/dashboard_re")}>
                 <span className="relative grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.06] text-[#7dd3c7]">
                   <Waves className="size-[18px]" strokeWidth={2} />
-                  <span aria-hidden="true" className="absolute -bottom-px left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-[#58a6ff]" />
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-px left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-[#58a6ff]"
+                  />
                 </span>
                 <span className="grid min-w-0 flex-1 leading-tight">
-                  <span className="text-[13px] font-semibold tracking-[0.12em] text-white">WAVE</span>
-                  <span className="truncate text-[10px] text-sidebar-foreground/55">Re-New operating system</span>
+                  <span className="text-[13px] font-semibold tracking-[0.12em] text-white">
+                    WAVE
+                  </span>
+                  <span className="truncate text-[10px] text-sidebar-foreground/55">
+                    Re-New operating system
+                  </span>
                 </span>
               </Link>
             </SidebarMenuButton>
@@ -214,7 +233,11 @@ export function AppSidebar({
                     tooltip={`Repreneurs · ${item.name}`}
                     className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                   >
-                    <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
+                    <Link
+                      href={item.href}
+                      aria-current={getIsActive(item.href) ? "page" : undefined}
+                      {...linkWarmupProps(item.href)}
+                    >
                       <item.icon />
                       <span>{item.name}</span>
                       {item.badge && (
@@ -247,7 +270,11 @@ export function AppSidebar({
                     tooltip={`Opportunities · ${item.name}`}
                     className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                   >
-                    <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
+                    <Link
+                      href={item.href}
+                      aria-current={getIsActive(item.href) ? "page" : undefined}
+                      {...linkWarmupProps(item.href)}
+                    >
                       <item.icon />
                       <span>{item.name}</span>
                       {item.badge && (
@@ -255,6 +282,37 @@ export function AppSidebar({
                           {item.badge}
                         </span>
                       )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator className="opacity-60" />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>M&amp;A</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {maNavigation.map((item) => (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      getIsActive(item.href) || pendingHref === item.href
+                    }
+                    tooltip={`M&A · ${item.name}`}
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
+                  >
+                    <Link
+                      href={item.href}
+                      aria-current={getIsActive(item.href) ? "page" : undefined}
+                      {...linkWarmupProps(item.href)}
+                    >
+                      <item.icon />
+                      <span>{item.name}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -280,7 +338,11 @@ export function AppSidebar({
                     tooltip={`Tools · ${item.name}`}
                     className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                   >
-                    <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
+                    <Link
+                      href={item.href}
+                      aria-current={getIsActive(item.href) ? "page" : undefined}
+                      {...linkWarmupProps(item.href)}
+                    >
                       <item.icon />
                       <span>{item.name}</span>
                     </Link>
@@ -310,11 +372,20 @@ export function AppSidebar({
                       tooltip={`Project · ${item.name}`}
                       className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
                     >
-                      <Link href={item.href} aria-current={getIsActive(item.href) ? "page" : undefined} {...linkWarmupProps(item.href)}>
+                      <Link
+                        href={item.href}
+                        aria-current={
+                          getIsActive(item.href) ? "page" : undefined
+                        }
+                        {...linkWarmupProps(item.href)}
+                      >
                         <span className="relative inline-flex">
                           <item.icon className="size-4" />
                           {showRedDot && (
-                            <span className="absolute -top-1 -right-1 size-2 rounded-full bg-amber-400 ring-2 ring-sidebar" aria-label="Recently updated" />
+                            <span
+                              className="absolute -top-1 -right-1 size-2 rounded-full bg-amber-400 ring-2 ring-sidebar"
+                              aria-label="Recently updated"
+                            />
                           )}
                         </span>
                         <span>{item.name}</span>

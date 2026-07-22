@@ -139,6 +139,9 @@ const OPPORTUNITY_LIST_FIELDS = `
     source_id,
     contact_id,
     is_primary,
+    contact_name_snapshot,
+    contact_email_snapshot,
+    contact_phone_snapshot,
     created_by,
     created_at,
     contact:ma_source_contacts(
@@ -182,7 +185,11 @@ export interface RepreneurDashboardSnapshot {
       last_name: string | null
     } | null
   }>
-  chartRepreneurs: Array<{ id: string; created_at: string; lifecycle_status?: string | null }>
+  chartRepreneurs: Array<{
+    id: string
+    created_at: string
+    lifecycle_status?: string | null
+  }>
   chartActivities: Array<{ id: string; created_at: string }>
 }
 
@@ -205,16 +212,25 @@ type MaSourceQueryRow = Omit<MaSource, "contacts"> & {
   contacts?: MaSourceContact | MaSourceContact[] | null
 }
 
-type OpportunitySourceContactQueryRow = Omit<OpportunitySourceContact, "contact"> & {
+type OpportunitySourceContactQueryRow = Omit<
+  OpportunitySourceContact,
+  "contact"
+> & {
   contact?: MaSourceContact | MaSourceContact[] | null
 }
 
-type OpportunityQueryRow = Omit<OpportunityWithSource, "source" | "source_contacts"> & {
+type OpportunityQueryRow = Omit<
+  OpportunityWithSource,
+  "source" | "source_contacts"
+> & {
   source?: MaSourceQueryRow | MaSourceQueryRow[] | null
   source_contacts?: OpportunitySourceContactQueryRow[] | null
 }
 
-type OpportunityMatchQueryRow = Omit<OpportunityWorkSurfaceMatch, "repreneur"> & {
+type OpportunityMatchQueryRow = Omit<
+  OpportunityWorkSurfaceMatch,
+  "repreneur"
+> & {
   repreneur?:
     | OpportunityWorkSurfaceMatch["repreneur"]
     | OpportunityWorkSurfaceMatch["repreneur"][]
@@ -291,8 +307,21 @@ function normalizeOpportunity(row: OpportunityQueryRow): OpportunityWithSource {
     : null
   const sourceContacts = Array.isArray(row.source_contacts)
     ? row.source_contacts.map((relation) => {
-        const contact = Array.isArray(relation.contact) ? relation.contact[0] : relation.contact
-        return { ...relation, contact: contact ?? null }
+        const contact = Array.isArray(relation.contact)
+          ? relation.contact[0]
+          : relation.contact
+        return {
+          ...relation,
+          contact: contact
+            ? {
+                ...contact,
+                source_id: relation.source_id,
+                name: relation.contact_name_snapshot ?? contact.name,
+                email: relation.contact_email_snapshot ?? contact.email,
+                phone: relation.contact_phone_snapshot ?? contact.phone,
+              }
+            : null,
+        }
       })
     : []
   return {
@@ -305,7 +334,9 @@ function normalizeOpportunity(row: OpportunityQueryRow): OpportunityWithSource {
 function normalizeWorkSurfaceMatch(
   row: OpportunityMatchQueryRow,
 ): OpportunityWorkSurfaceMatch {
-  const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
+  const repreneur = Array.isArray(row.repreneur)
+    ? row.repreneur[0]
+    : row.repreneur
   return {
     ...row,
     repreneur: repreneur ?? null,
@@ -392,7 +423,8 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
         .order("completed_at", { ascending: false, nullsFirst: false }),
       supabase
         .from("activities")
-        .select(`
+        .select(
+          `
           id,
           activity_type,
           notes,
@@ -404,7 +436,8 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
             first_name,
             last_name
           )
-        `)
+        `,
+        )
         .order("created_at", { ascending: false })
         .limit(20),
       Promise.all([
@@ -434,8 +467,9 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
   return {
     repreneurs: (repreneursResult.data ?? []) as Repreneur[],
     assessments: assessmentsResult.data ?? [],
-    activities: ((activitiesResult.data ?? []) as DashboardActivityQueryRow[])
-      .map(normalizeDashboardActivity),
+    activities: (
+      (activitiesResult.data ?? []) as DashboardActivityQueryRow[]
+    ).map(normalizeDashboardActivity),
     chartRepreneurs: chartRepreneursResult.data ?? [],
     chartActivities: chartActivitiesResult.data ?? [],
   }
@@ -461,12 +495,16 @@ async function getCachedOpportunityWorkSurfaceSnapshot(): Promise<
   const opportunityIds = opportunities.map((opportunity) => opportunity.id)
 
   if (opportunityIds.length === 0) {
-    return opportunities.map((opportunity) => ({ ...opportunity, matches: [] }))
+    return opportunities.map((opportunity) => ({
+      ...opportunity,
+      matches: [],
+    }))
   }
 
   const { data: matchRows, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select(`
+    .select(
+      `
       id,
       opportunity_id,
       status,
@@ -483,7 +521,8 @@ async function getCachedOpportunityWorkSurfaceSnapshot(): Promise<
         who_score,
         when_score
       )
-    `)
+    `,
+    )
     .in("opportunity_id", opportunityIds)
     .order("updated_at", { ascending: false })
 

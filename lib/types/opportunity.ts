@@ -1,12 +1,27 @@
-export type OpportunityStatus = "draft" | "active" | "paused" | "archived" | "closed"
+export type OpportunityStatus =
+  | "draft"
+  | "active"
+  | "paused"
+  | "archived"
+  | "closed"
 
-export type OpportunityVisibility = "staff_only" | "anonymized" | "repreneur_visible"
+export type OpportunityVisibility =
+  | "staff_only"
+  | "anonymized"
+  | "repreneur_visible"
 
 export type MaSourceType = "ma_firm" | "broker" | "direct" | "other"
 
-export type OpportunityDocumentType = "teaser" | "deal_book" | "nda" | "external_analysis" | "other"
+export type OpportunityDocumentType =
+  | "teaser"
+  | "deal_book"
+  | "nda"
+  | "external_analysis"
+  | "other"
 
-export type OpportunityDocumentVisibility = "staff_only" | "approved_for_repreneur"
+export type OpportunityDocumentVisibility =
+  | "staff_only"
+  | "approved_for_repreneur"
 
 export type OpportunityMatchRecommendation =
   | "not_evaluated"
@@ -33,7 +48,12 @@ export type OpportunityPursuitStage =
   | "closed"
   | "dropped"
 
-export type OpportunityNdaStatus = "not_required" | "required" | "sent" | "signed" | "waived"
+export type OpportunityNdaStatus =
+  | "not_required"
+  | "required"
+  | "sent"
+  | "signed"
+  | "waived"
 
 /** Evidence recorded by staff for the confidentiality gate on one active pursuit. */
 export interface OpportunityConfidentialityGate {
@@ -77,7 +97,10 @@ export const OPPORTUNITY_CLOSURE_REASON_OPTIONS = [
   { value: "no_viable_match", label: "No viable match" },
   { value: "dd_disqualified", label: "Disqualified in due diligence" },
   { value: "duplicate", label: "Duplicate" },
-] as const satisfies ReadonlyArray<{ value: OpportunityClosureReason; label: string }>
+] as const satisfies ReadonlyArray<{
+  value: OpportunityClosureReason
+  label: string
+}>
 
 export const OPPORTUNITY_VISIBILITY_OPTIONS = [
   { value: "staff_only", label: "Staff only" },
@@ -93,7 +116,8 @@ export const OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS = [
   { value: "source_contact", label: "M&A contact" },
 ] as const
 
-export type OpportunityIncompleteDataField = (typeof OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS)[number]["value"]
+export type OpportunityIncompleteDataField =
+  (typeof OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS)[number]["value"]
 
 export interface OpportunityIncompleteDataWarning {
   missingFields: OpportunityIncompleteDataField[]
@@ -161,26 +185,39 @@ export const OPPORTUNITY_DECLINE_REASON_OPTIONS = [
   { value: "size_metrics", label: "Size / metrics" },
   { value: "business_model", label: "Business model" },
   { value: "other", label: "Other" },
-] as const satisfies ReadonlyArray<{ value: OpportunityDeclineReasonCategory; label: string }>
+] as const satisfies ReadonlyArray<{
+  value: OpportunityDeclineReasonCategory
+  label: string
+}>
 
 export function isOpportunityDeclineReasonCategory(
   value: unknown,
 ): value is OpportunityDeclineReasonCategory {
-  return OPPORTUNITY_DECLINE_REASON_OPTIONS.some((option) => option.value === value)
+  return OPPORTUNITY_DECLINE_REASON_OPTIONS.some(
+    (option) => option.value === value,
+  )
 }
 
-export function isOpportunityStatus(value: unknown): value is OpportunityStatus {
+export function isOpportunityStatus(
+  value: unknown,
+): value is OpportunityStatus {
   return OPPORTUNITY_STATUS_OPTIONS.some((option) => option.value === value)
 }
 
-export function isOpportunityClosureReason(value: unknown): value is OpportunityClosureReason {
-  return OPPORTUNITY_CLOSURE_REASON_OPTIONS.some((option) => option.value === value)
+export function isOpportunityClosureReason(
+  value: unknown,
+): value is OpportunityClosureReason {
+  return OPPORTUNITY_CLOSURE_REASON_OPTIONS.some(
+    (option) => option.value === value,
+  )
 }
 
 export interface MaSource {
   id: string
   firm_name: string
   source_type: MaSourceType
+  network_id?: string | null
+  network?: MaSourceNetwork | null
   internal_notes?: string | null
   created_by?: string | null
   created_at: string
@@ -191,6 +228,7 @@ export interface MaSource {
 export interface MaSource_Insert {
   firm_name: string
   source_type?: MaSourceType
+  network_id?: string | null
   internal_notes?: string | null
   created_by?: string | null
 }
@@ -198,6 +236,7 @@ export interface MaSource_Insert {
 export interface MaSource_Update {
   firm_name?: string
   source_type?: MaSourceType
+  network_id?: string | null
   internal_notes?: string | null
 }
 
@@ -224,6 +263,37 @@ export interface MaSourceContact_Update {
   name?: string | null
   email?: string | null
   phone?: string | null
+}
+
+export interface MaSourceNetwork {
+  id: string
+  name: string
+  internal_notes?: string | null
+  created_by?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MaSourceContactMove {
+  id: string
+  contact_id: string
+  old_source_id: string
+  new_source_id: string
+  old_name?: string | null
+  new_name?: string | null
+  old_email?: string | null
+  new_email?: string | null
+  old_phone?: string | null
+  new_phone?: string | null
+  moved_by: string
+  moved_at: string
+  old_source?: Pick<MaSource, "id" | "firm_name"> | null
+  new_source?: Pick<MaSource, "id" | "firm_name"> | null
+}
+
+export interface MaSourceContactDirectoryEntry extends MaSourceContact {
+  source: MaSource
+  move_history: MaSourceContactMove[]
 }
 
 export interface MaSourceDirectoryEntry extends MaSource {
@@ -291,6 +361,9 @@ export interface OpportunitySourceContact {
   source_id: string
   contact_id: string
   is_primary: boolean
+  contact_name_snapshot?: string | null
+  contact_email_snapshot?: string | null
+  contact_phone_snapshot?: string | null
   created_by?: string | null
   created_at: string
   contact?: MaSourceContact | null
@@ -507,7 +580,10 @@ export interface OpportunityMatchResponse {
   reviewed_by?: string | null
   reviewed_at?: string | null
   updated_at: string
-  opportunity?: Pick<Opportunity, "id" | "reference" | "public_title" | "sector" | "location"> | null
+  opportunity?: Pick<
+    Opportunity,
+    "id" | "reference" | "public_title" | "sector" | "location"
+  > | null
   repreneur?: OpportunityMatchRepreneur | null
   active_pursuit_match_id?: string | null
   active_pursuit_repreneur_id?: string | null
@@ -603,33 +679,73 @@ export interface RepreneurDealFlowOpportunity {
 }
 
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
-  return OPPORTUNITY_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+  return (
+    OPPORTUNITY_STATUS_OPTIONS.find((option) => option.value === status)
+      ?.label ?? status
+  )
 }
 
-export function getOpportunityClosureReasonLabel(reason: OpportunityClosureReason): string {
-  return OPPORTUNITY_CLOSURE_REASON_OPTIONS.find((option) => option.value === reason)?.label ?? reason
+export function getOpportunityClosureReasonLabel(
+  reason: OpportunityClosureReason,
+): string {
+  return (
+    OPPORTUNITY_CLOSURE_REASON_OPTIONS.find((option) => option.value === reason)
+      ?.label ?? reason
+  )
 }
 
-export function getOpportunityIncompleteDataFieldLabel(field: OpportunityIncompleteDataField): string {
-  return OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS.find((option) => option.value === field)?.label ?? field
+export function getOpportunityIncompleteDataFieldLabel(
+  field: OpportunityIncompleteDataField,
+): string {
+  return (
+    OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS.find(
+      (option) => option.value === field,
+    )?.label ?? field
+  )
 }
 
-export function getOpportunityVisibilityLabel(visibility: OpportunityVisibility): string {
-  return OPPORTUNITY_VISIBILITY_OPTIONS.find((option) => option.value === visibility)?.label ?? visibility
+export function getOpportunityVisibilityLabel(
+  visibility: OpportunityVisibility,
+): string {
+  return (
+    OPPORTUNITY_VISIBILITY_OPTIONS.find((option) => option.value === visibility)
+      ?.label ?? visibility
+  )
 }
 
-export function getOpportunityMatchRecommendationLabel(recommendation: OpportunityMatchRecommendation): string {
-  return OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.find((option) => option.value === recommendation)?.label ?? recommendation
+export function getOpportunityMatchRecommendationLabel(
+  recommendation: OpportunityMatchRecommendation,
+): string {
+  return (
+    OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.find(
+      (option) => option.value === recommendation,
+    )?.label ?? recommendation
+  )
 }
 
-export function getOpportunityMatchStatusLabel(status: OpportunityMatchStatus): string {
-  return OPPORTUNITY_MATCH_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+export function getOpportunityMatchStatusLabel(
+  status: OpportunityMatchStatus,
+): string {
+  return (
+    OPPORTUNITY_MATCH_STATUS_OPTIONS.find((option) => option.value === status)
+      ?.label ?? status
+  )
 }
 
-export function getOpportunityPursuitStageLabel(stage: OpportunityPursuitStage): string {
-  return OPPORTUNITY_PURSUIT_STAGE_OPTIONS.find((option) => option.value === stage)?.label ?? stage
+export function getOpportunityPursuitStageLabel(
+  stage: OpportunityPursuitStage,
+): string {
+  return (
+    OPPORTUNITY_PURSUIT_STAGE_OPTIONS.find((option) => option.value === stage)
+      ?.label ?? stage
+  )
 }
 
-export function getOpportunityNdaStatusLabel(status: OpportunityNdaStatus): string {
-  return OPPORTUNITY_NDA_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+export function getOpportunityNdaStatusLabel(
+  status: OpportunityNdaStatus,
+): string {
+  return (
+    OPPORTUNITY_NDA_STATUS_OPTIONS.find((option) => option.value === status)
+      ?.label ?? status
+  )
 }

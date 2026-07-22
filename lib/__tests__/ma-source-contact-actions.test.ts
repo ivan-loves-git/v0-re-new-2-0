@@ -29,7 +29,9 @@ import {
   updateMaSourceContact,
 } from "@/lib/actions/ma-sources"
 
-function contactForm(values: { name?: string; email?: string; phone?: string } = {}) {
+function contactForm(
+  values: { name?: string; email?: string; phone?: string } = {},
+) {
   const formData = new FormData()
   if (values.name) formData.set("contact_name", values.name)
   if (values.email) formData.set("contact_email", values.email)
@@ -44,7 +46,9 @@ describe("M&A source contact actions", () => {
   })
 
   it("keeps an initial firm contact in ma_source_contacts instead of firm fields", async () => {
-    const sourceSingle = vi.fn().mockResolvedValue({ data: { id: "source-001" }, error: null })
+    const sourceSingle = vi
+      .fn()
+      .mockResolvedValue({ data: { id: "source-001" }, error: null })
     const sourceSelect = vi.fn(() => ({ single: sourceSingle }))
     const sourceInsert = vi.fn(() => ({ select: sourceSelect }))
     const contactInsert = vi.fn().mockResolvedValue({ error: null })
@@ -72,6 +76,7 @@ describe("M&A source contact actions", () => {
     expect(sourceInsert).toHaveBeenCalledWith({
       firm_name: "Cabinet Atlantique",
       source_type: "ma_firm",
+      network_id: null,
       internal_notes: "Regional industrial opportunities",
       created_by: "staff-001",
     })
@@ -99,16 +104,10 @@ describe("M&A source contact actions", () => {
   })
 
   it("updates a contact only when it belongs to the supplied firm", async () => {
-    const maybeSingle = vi.fn().mockResolvedValue({ data: { id: "contact-001" }, error: null })
-    const select = vi.fn(() => ({ maybeSingle }))
-    const sourceEq = vi.fn(() => ({ select }))
-    const contactEq = vi.fn(() => ({ eq: sourceEq }))
-    const update = vi.fn(() => ({ eq: contactEq }))
-    const from = vi.fn((table: string) => {
-      if (table === "ma_source_contacts") return { update }
-      throw new Error(`Unexpected table: ${table}`)
-    })
-    mocks.createAdminClient.mockReturnValue({ from })
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: { id: "contact-001" }, error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
 
     await expect(
       updateMaSourceContact(
@@ -118,12 +117,36 @@ describe("M&A source contact actions", () => {
       ),
     ).resolves.toEqual({ success: true, message: "M&A contact updated" })
 
-    expect(update).toHaveBeenCalledWith({
-      name: "Camille Durand",
-      email: "camille@example.com",
-      phone: null,
+    expect(rpc).toHaveBeenCalledWith("move_ma_source_contact", {
+      p_contact_id: "contact-001",
+      p_expected_source_id: "source-001",
+      p_new_source_id: "source-001",
+      p_name: "Camille Durand",
+      p_email: "camille@example.com",
+      p_phone: null,
+      p_moved_by: "staff-001",
     })
-    expect(contactEq).toHaveBeenCalledWith("id", "contact-001")
-    expect(sourceEq).toHaveBeenCalledWith("source_id", "source-001")
+  })
+
+  it("moves a contact through the audited database function", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: { id: "contact-001" }, error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+    const formData = contactForm({ name: "Camille", email: "new@example.com" })
+    formData.set("target_source_id", "source-002")
+
+    await expect(
+      updateMaSourceContact("source-001", "contact-001", formData),
+    ).resolves.toEqual({ success: true, message: "M&A contact moved" })
+
+    expect(rpc).toHaveBeenCalledWith(
+      "move_ma_source_contact",
+      expect.objectContaining({
+        p_expected_source_id: "source-001",
+        p_new_source_id: "source-002",
+        p_email: "new@example.com",
+      }),
+    )
   })
 })

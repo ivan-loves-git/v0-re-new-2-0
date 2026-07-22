@@ -5,7 +5,10 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
-import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
+import {
+  MA_TEMPLATE_DEFAULT_BODIES,
+  TEMPLATE_METADATA,
+} from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
 import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
@@ -50,6 +53,9 @@ interface OpportunityWorkflowRow {
 interface OpportunityWorkflowContactRow {
   contact_id: string
   is_primary: boolean
+  contact_name_snapshot: string | null
+  contact_email_snapshot: string | null
+  contact_phone_snapshot: string | null
   contact?: {
     id: string
     name: string | null
@@ -133,7 +139,9 @@ function readString(formData: FormData, key: string): string | null {
 
 function normalizeSource(row: Record<string, unknown>): OpportunityWorkflowRow {
   const source = Array.isArray(row.source) ? row.source[0] : row.source
-  const sourceContacts = Array.isArray(row.source_contacts) ? row.source_contacts : []
+  const sourceContacts = Array.isArray(row.source_contacts)
+    ? row.source_contacts
+    : []
   return {
     ...row,
     source: source ?? null,
@@ -146,7 +154,17 @@ function normalizeSource(row: Record<string, unknown>): OpportunityWorkflowRow {
       const contact = Array.isArray(relationRow.contact)
         ? relationRow.contact[0]
         : relationRow.contact
-      return { ...relationRow, contact: contact ?? null }
+      return {
+        ...relationRow,
+        contact: contact
+          ? {
+              ...contact,
+              name: relationRow.contact_name_snapshot ?? contact.name,
+              email: relationRow.contact_email_snapshot ?? contact.email,
+              phone: relationRow.contact_phone_snapshot ?? contact.phone,
+            }
+          : null,
+      }
     }),
   } as OpportunityWorkflowRow
 }
@@ -170,7 +188,9 @@ function getWorkflowContacts(opportunity: OpportunityWorkflowRow) {
 
 function repreneurName(match: MatchRow | null) {
   const repreneur = match?.repreneur
-  const name = [repreneur?.first_name, repreneur?.last_name].filter(Boolean).join(" ")
+  const name = [repreneur?.first_name, repreneur?.last_name]
+    .filter(Boolean)
+    .join(" ")
   return name || repreneur?.email || "un repreneur qualifie"
 }
 
@@ -200,12 +220,20 @@ function formatRepreneurProfile(match: MatchRow | null) {
     compactLine("Score profil", repreneur.who_score),
     compactLine("Score projet", repreneur.when_score),
     compactLine("Zones ciblees", asList(repreneur.q12_geo_zones).join(", ")),
-    compactLine("Secteurs cibles", asList(repreneur.q13_target_sectors_v2).join(", ")),
-    compactLine("Taille de deal ciblee", asList(repreneur.q14_deal_size).join(", ")),
+    compactLine(
+      "Secteurs cibles",
+      asList(repreneur.q13_target_sectors_v2).join(", "),
+    ),
+    compactLine(
+      "Taille de deal ciblee",
+      asList(repreneur.q14_deal_size).join(", "),
+    ),
     compactLine("Apport personnel", repreneur.q16_equity),
   ].filter(Boolean)
 
-  return lines.length > 0 ? lines.join("\n") : "Profil repreneur a completer dans Re-New."
+  return lines.length > 0
+    ? lines.join("\n")
+    : "Profil repreneur a completer dans Re-New."
 }
 
 function bestMatch(matches: MatchRow[]) {
@@ -218,7 +246,8 @@ function bestMatch(matches: MatchRow[]) {
   ]
   return (
     [...matches].sort((a, b) => {
-      const priorityDiff = priority.indexOf(a.status) - priority.indexOf(b.status)
+      const priorityDiff =
+        priority.indexOf(a.status) - priority.indexOf(b.status)
       if (priorityDiff !== 0) return priorityDiff
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     })[0] ?? null
@@ -233,9 +262,14 @@ function opportunityTitle(opportunity: OpportunityWorkflowRow) {
   return opportunity.public_title || opportunity.sector || opportunity.reference
 }
 
-function substituteTemplateVariables(value: string, variables: Record<string, string>) {
+function substituteTemplateVariables(
+  value: string,
+  variables: Record<string, string>,
+) {
   return value.replace(/\{(\w+)\}/g, (match, key) => {
-    return Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : match
+    return Object.prototype.hasOwnProperty.call(variables, key)
+      ? variables[key]
+      : match
   })
 }
 
@@ -251,7 +285,9 @@ function escapeHtml(value: string) {
 function markdownToEmailHtml(body: string) {
   return body
     .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br />")}</p>`)
+    .map(
+      (paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br />")}</p>`,
+    )
     .join("")
 }
 
@@ -272,9 +308,14 @@ async function sendIntermediaryEmail({
     text: body,
   })
 
-  const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) => {
-    setTimeout(() => resolve({ error: { message: "Email provider timed out" } }), 15000)
-  })
+  const timeoutPromise = new Promise<{ error: { message: string } }>(
+    (resolve) => {
+      setTimeout(
+        () => resolve({ error: { message: "Email provider timed out" } }),
+        15000,
+      )
+    },
+  )
 
   const { error } = await Promise.race([sendPromise, timeoutPromise])
   return error ? { success: false, error: error.message } : { success: true }
@@ -306,6 +347,9 @@ async function loadOpportunityContext(opportunityId: string) {
         source_contacts:opportunity_source_contacts(
           contact_id,
           is_primary,
+          contact_name_snapshot,
+          contact_email_snapshot,
+          contact_phone_snapshot,
           contact:ma_source_contacts(id, name, email, phone)
         )
       `,
@@ -351,17 +395,23 @@ async function loadOpportunityContext(opportunityId: string) {
   const opportunity = normalizeSource(opportunityRow)
   const matches = ((matchRows ?? []) as MatchQueryRow[]).map((row) => ({
     ...row,
-    repreneur: Array.isArray(row.repreneur) ? (row.repreneur[0] ?? null) : (row.repreneur ?? null),
+    repreneur: Array.isArray(row.repreneur)
+      ? (row.repreneur[0] ?? null)
+      : (row.repreneur ?? null),
   })) as MatchRow[]
 
   const match = bestMatch(matches)
   const activeMatch = activePursuit(matches)
   const profileMatch = activeMatch ?? match
   const contacts = getWorkflowContacts(opportunity)
-  const defaultContact = contacts.find((contact) => contact.isPrimary) ?? contacts[0] ?? null
+  const defaultContact =
+    contacts.find((contact) => contact.isPrimary) ?? contacts[0] ?? null
   const variables = {
     firstName: defaultContact?.name?.split(/\s+/)[0] || "Bonjour",
-    firmName: opportunity.source?.firm_name || opportunity.source_label || "votre cabinet",
+    firmName:
+      opportunity.source?.firm_name ||
+      opportunity.source_label ||
+      "votre cabinet",
     opportunityTitle: opportunityTitle(opportunity),
     repreneurName: repreneurName(profileMatch),
     repreneurProfile: formatRepreneurProfile(profileMatch),
@@ -389,7 +439,9 @@ export async function getMaOpportunityWorkflow(
       const metadata = TEMPLATE_METADATA[templateKey]
       const subject = await getTemplateSubject(templateKey, metadata.name)
       const body =
-        (await getTemplateBody(templateKey)) || MA_TEMPLATE_DEFAULT_BODIES[templateKey] || ""
+        (await getTemplateBody(templateKey)) ||
+        MA_TEMPLATE_DEFAULT_BODIES[templateKey] ||
+        ""
       return {
         templateKey,
         name: metadata.name,
@@ -414,7 +466,9 @@ export async function getMaOpportunityWorkflow(
   if (activeMatch) {
     const { data: memoDocuments, error: memoDocumentsError } = await supabase
       .from("opportunity_documents")
-      .select("document_type, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
+      .select(
+        "document_type, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by",
+      )
       .eq("opportunity_id", opportunityId)
       .eq("document_type", "deal_book")
       .eq("visibility", "approved_for_repreneur")
@@ -436,7 +490,8 @@ export async function getMaOpportunityWorkflow(
     contacts,
     recipientContactId: defaultContact?.id ?? null,
     recipientEmail: defaultContact?.email ?? null,
-    sourceName: opportunity.source?.firm_name || opportunity.source_label || "No source",
+    sourceName:
+      opportunity.source?.firm_name || opportunity.source_label || "No source",
     contactName: defaultContact?.name ?? null,
     recommendedTemplateKey: recommendation?.templateKey ?? null,
     activePursuitName: activeMatch ? repreneurName(activeMatch) : null,
@@ -493,7 +548,8 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
     return {
       success: false,
-      message: "Validate a repreneur pursuit before requesting the M&A firm's NDA/info memo.",
+      message:
+        "Validate a repreneur pursuit before requesting the M&A firm's NDA/info memo.",
     }
   }
 
@@ -515,14 +571,16 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (!recipient) {
     return {
       success: false,
-      message: "Link an M&A contact to this opportunity before sending a follow-up.",
+      message:
+        "Link an M&A contact to this opportunity before sending a follow-up.",
     }
   }
   const recipientEmail = recipient.email
   if (!recipientEmail) {
     return {
       success: false,
-      message: "Add an email to the selected M&A contact before sending a follow-up.",
+      message:
+        "Add an email to the selected M&A contact before sending a follow-up.",
     }
   }
 
@@ -547,7 +605,9 @@ export async function sendMaSourceWorkflowEmailPayload(
     subject: renderedSubject,
     body_markdown: renderedBody,
     status,
-    error_message: result.success ? null : (result.error ?? "Email send failed"),
+    error_message: result.success
+      ? null
+      : (result.error ?? "Email send failed"),
     sent_at: result.success ? new Date().toISOString() : null,
   })
 
@@ -556,7 +616,8 @@ export async function sendMaSourceWorkflowEmailPayload(
       success: false,
       message: result.success
         ? "Email sent, but the interaction could not be logged."
-        : result.error || "Email failed and the interaction could not be logged.",
+        : result.error ||
+          "Email failed and the interaction could not be logged.",
     }
   }
 

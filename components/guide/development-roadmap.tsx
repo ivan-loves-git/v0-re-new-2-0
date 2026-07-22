@@ -26,6 +26,29 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Jul 22, 2026",
+    version: "0.9.28",
+    title: "M&A firms and contacts made easier to navigate and maintain",
+    isCompleted: true,
+    events: [
+      {
+        title: "Related intermediary firms stay together",
+        type: "feature",
+        description: "Staff can assign related firms to a named network and see those firms together, while independent firms remain in a simple ungrouped list.",
+      },
+      {
+        title: "Contact changes preserve the past",
+        type: "decision",
+        description: "A contact can move to a new firm or email without rewriting the source and contact details already attached to earlier opportunities; every old-to-new change remains visible in immutable staff history.",
+      },
+      {
+        title: "M&A now has dedicated Firms and Contacts pages",
+        type: "feature",
+        description: "The navigation separates firm management from the global contact directory, making it faster to search, edit, regroup, and move intermediary records.",
+      },
+    ],
+  },
+  {
+    period: "Jul 22, 2026",
     version: "0.9.27",
     title: "Intermediary relationships expanded behind a stricter confidentiality wall",
     isCompleted: true,

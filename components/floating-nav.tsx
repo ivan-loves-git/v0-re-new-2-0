@@ -17,6 +17,8 @@ const pathNames: Record<string, string> = {
   repreneurs: "Repreneurs",
   opportunities: "Opportunities",
   ma: "M&A",
+  firms: "Firms",
+  contacts: "Contacts",
   pipeline: "Pipeline",
   emails: "Emails",
   journey: "Journey",
@@ -51,24 +53,26 @@ export function FloatingNav() {
 
   // Filter out UUID segments and map to readable names
   const breadcrumbItems = segments
-    .filter(segment => !/^[0-9a-f-]{36}$/i.test(segment)) // Filter out UUIDs
+    .filter((segment) => !/^[0-9a-f-]{36}$/i.test(segment)) // Filter out UUIDs
     .map((segment, index, filtered) => {
       // Find the original index to build correct href
-      const originalIndex = segments.findIndex((s, i) =>
-        s === segment && segments.slice(0, i).filter(seg => !/^[0-9a-f-]{36}$/i.test(seg)).length === index
+      const originalIndex = segments.findIndex(
+        (s, i) =>
+          s === segment &&
+          segments.slice(0, i).filter((seg) => !/^[0-9a-f-]{36}$/i.test(seg))
+            .length === index,
       )
       const href = "/" + segments.slice(0, originalIndex + 1).join("/")
-      const name = pathNames[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
+      const name =
+        pathNames[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
       const isLast = index === filtered.length - 1
 
       return { href, name, isLast }
     })
-  const contextualRoot = segments.length === 1 ? topLevelContexts[segments[0]] : undefined
+  const contextualRoot =
+    segments.length === 1 ? topLevelContexts[segments[0]] : undefined
   const visibleBreadcrumbItems = contextualRoot
-    ? [
-        { ...contextualRoot, isLast: false },
-        ...breadcrumbItems,
-      ]
+    ? [{ ...contextualRoot, isLast: false }, ...breadcrumbItems]
     : breadcrumbItems
 
   return (
@@ -77,33 +81,51 @@ export function FloatingNav() {
         onClick={toggleSidebar}
         className={cn(
           "grid size-8 shrink-0 place-items-center rounded-md transition-colors hover:bg-muted",
-          "text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          "text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
-        aria-label={isMobile ? "Open navigation" : open ? "Collapse sidebar" : "Expand sidebar"}
+        aria-label={
+          isMobile
+            ? "Open navigation"
+            : open
+              ? "Collapse sidebar"
+              : "Expand sidebar"
+        }
       >
         <PanelLeft className="size-4" />
       </button>
 
-      <nav aria-label="Breadcrumb" className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav
+        aria-label="Breadcrumb"
+        className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <ol className="flex min-w-max items-center gap-1 text-xs text-muted-foreground">
-        {visibleBreadcrumbItems.map((item, index) => (
-          <li key={item.href} className="flex items-center gap-1">
-            {index > 0 && <ChevronRight className="size-3.5 text-muted-foreground/50" />}
-            {item.isLast ? (
-              <span aria-current="page" className="font-semibold text-foreground">{item.name}</span>
-            ) : (
-              <Link
-                href={item.href}
-                className="transition-colors hover:text-foreground"
-              >
-                {item.name}
-              </Link>
-            )}
-          </li>
-        ))}
+          {visibleBreadcrumbItems.map((item, index) => (
+            <li key={item.href} className="flex items-center gap-1">
+              {index > 0 && (
+                <ChevronRight className="size-3.5 text-muted-foreground/50" />
+              )}
+              {item.isLast ? (
+                <span
+                  aria-current="page"
+                  className="font-semibold text-foreground"
+                >
+                  {item.name}
+                </span>
+              ) : (
+                <Link
+                  href={item.href}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {item.name}
+                </Link>
+              )}
+            </li>
+          ))}
         </ol>
       </nav>
-      <span className="wave-micro-label ml-auto hidden shrink-0 font-mono sm:inline">Re-New workspace</span>
+      <span className="wave-micro-label ml-auto hidden shrink-0 font-mono sm:inline">
+        Re-New workspace
+      </span>
     </header>
   )
 }
