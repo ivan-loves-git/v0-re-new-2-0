@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 22, 2026",
+    version: "0.9.27",
+    title: "Intermediary relationships expanded behind a stricter confidentiality wall",
+    isCompleted: true,
+    events: [
+      {
+        title: "One intermediary can now involve several contacts",
+        type: "feature",
+        description: "Staff can keep one firm record, add the relevant people, link the right contacts to each opportunity, and choose the default recipient for intermediary follow-up without overwriting another deal's contact.",
+      },
+      {
+        title: "Live opportunities keep a verified source",
+        type: "decision",
+        description: "An opportunity can become active only when it points to a canonical M&A source, preserving provenance while keeping firm, contact, and internal context out of the repreneur experience.",
+      },
+      {
+        title: "Confidential access now depends on recorded evidence",
+        type: "fix",
+        description: "Raw internal teaser text is suppressed, browser roles cannot query staff-only opportunity records directly, and confidential deal books require both recorded NDA evidence and an explicit staff approval before a repreneur can open them.",
+      },
+    ],
+  },
+  {
     period: "Jul 20, 2026",
     version: "0.9.26",
     title: "Matching language aligned and memo access announced",
