@@ -68,8 +68,8 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
   const updateNdaAction = activeMatch ? updateOpportunityPursuitNda.bind(null, activeMatch.id, opportunityId) : null
   const ndaDocuments = documents.filter((document) => document.document_type === "nda")
   const linkedNdaDocument = ndaDocuments.find((document) => document.id === activeMatch?.nda_document_id) ?? null
-  const ndaComplete = hasCompletedNdaSignature(activeMatch?.nda_status)
-  const memoAvailable = documents.some((document) => canAccessOpportunityMemo(activeMatch?.nda_status, document))
+  const ndaComplete = hasCompletedNdaSignature(activeMatch)
+  const memoAvailable = documents.some((document) => canAccessOpportunityMemo(activeMatch, document))
   const showInfoMemoNextAction = Boolean(
     activeMatch && (!activeMatch.pursuit_stage || activeMatch.pursuit_stage === "interest"),
   )
@@ -138,7 +138,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
                     <FileText />
                     <AlertTitle>Info memo verification</AlertTitle>
                     <AlertDescription>
-                      “Info memo received” can be saved only after the NDA is signed or waived and an approved deal-book file is available.
+                      “Info memo received” can be saved only after NDA evidence is recorded and a staff-approved deal-book file is available.
                     </AlertDescription>
                   </Alert>
                   <div className="flex flex-col gap-2">
@@ -205,7 +205,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
                       {activeMatch.nda_received_at ? "NDA receipt recorded" : "NDA receipt not recorded"}
                     </Badge>
                     <Badge variant={ndaComplete ? "secondary" : "outline"}>
-                      {ndaComplete ? "NDA complete" : "Signature pending"}
+                      {ndaComplete ? "NDA evidence recorded" : "NDA evidence pending"}
                     </Badge>
                     <Badge variant={memoAvailable ? "secondary" : "outline"}>
                       {memoAvailable ? "Info memo available" : "Info memo unavailable"}
@@ -215,7 +215,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
                   <div>
                     <p className="font-medium">Memo access</p>
                     <p className="text-sm text-muted-foreground">
-                      Receiving an NDA never opens confidential material. The repreneur can receive the approved deal-book memo only after the NDA is signed or waived and its file is available.
+                      Receiving an NDA never opens confidential material. A signed NDA needs its recorded signature; a waiver needs its staff record; the deal book needs its own staff approval.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">

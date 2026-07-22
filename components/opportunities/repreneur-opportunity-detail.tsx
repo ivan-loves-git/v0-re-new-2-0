@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
 import { RepreneurOpportunityDeclineAction } from "@/components/opportunities/repreneur-opportunity-decline-action"
 import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity-responses"
-import { hasCompletedNdaSignature } from "@/lib/opportunity-confidentiality"
 import {
   getOpportunityMatchStatusLabel,
   getOpportunityNdaStatusLabel,
@@ -65,8 +64,7 @@ export function RepreneurOpportunityDetail({
   const interestAction = opportunity.match_id
     ? markMyOpportunityInterested.bind(null, opportunity.match_id)
     : null
-  const ndaComplete = hasCompletedNdaSignature(opportunity.nda_status)
-  const memoAvailable = ndaComplete && opportunity.visible_documents.length > 0
+  const memoAvailable = opportunity.visible_documents.length > 0
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
 
@@ -204,20 +202,14 @@ export function RepreneurOpportunityDetail({
             <CardDescription>NDA status: {getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {!ndaComplete && (
+            {!memoAvailable && (
               <Alert>
                 <FileText />
                 <AlertTitle>Memo locked</AlertTitle>
                 <AlertDescription>
-                  Re-New will make the info memo available after the NDA is signed or formally waived.
+                  Re-New will make the info memo available after the NDA evidence and document approval are recorded.
                 </AlertDescription>
               </Alert>
-            )}
-
-            {ndaComplete && !memoAvailable && (
-              <p className="text-sm text-muted-foreground">
-                The NDA is complete, but an approved info-memo file is not available yet.
-              </p>
             )}
 
             {memoAvailable &&

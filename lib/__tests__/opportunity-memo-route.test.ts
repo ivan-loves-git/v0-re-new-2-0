@@ -80,6 +80,8 @@ const approvedMemo = {
   external_url: null,
   storage_bucket: "opportunity-documents",
   storage_path: "opportunities/opportunity-1/info-memo.pdf",
+  repreneur_approved_at: "2026-07-22T08:00:00.000Z",
+  repreneur_approved_by: "qa-staff",
 }
 
 describe("repreneur info-memo download route", () => {
@@ -103,19 +105,38 @@ describe("repreneur info-memo download route", () => {
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it("denies a signed NDA when the approved memo has no file", async () => {
-    const { createSignedUrl } = setupAdminClient({
+  it("denies a signed label without recorded signature evidence before reading memo metadata", async () => {
+    const { createSignedUrl, documentSelect } = setupAdminClient({
       match: { ...activeMatch, nda_status: "signed" },
       document: { ...approvedMemo, storage_path: null },
+    })
+
+    expect((await requestMemo()).status).toBe(403)
+    expect(documentSelect).not.toHaveBeenCalled()
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("denies a recorded NDA when the memo lacks staff approval evidence", async () => {
+    const { createSignedUrl } = setupAdminClient({
+      match: {
+        ...activeMatch,
+        nda_status: "signed",
+        nda_signed_at: "2026-07-22T08:00:00.000Z",
+      },
+      document: { ...approvedMemo, repreneur_approved_by: null },
     })
 
     expect((await requestMemo()).status).toBe(404)
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it("permits a signed NDA with an approved memo file", async () => {
+  it("permits a recorded signed NDA with a staff-approved memo file", async () => {
     const { createSignedUrl } = setupAdminClient({
-      match: { ...activeMatch, nda_status: "signed" },
+      match: {
+        ...activeMatch,
+        nda_status: "signed",
+        nda_signed_at: "2026-07-22T08:00:00.000Z",
+      },
       document: approvedMemo,
     })
 

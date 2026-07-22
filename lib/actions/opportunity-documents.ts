@@ -85,6 +85,13 @@ export async function registerOpportunityDocument(formData: FormData) {
     if (uploadError) throw new Error(uploadError.message)
   }
 
+  const disclosureApproval = visibility === "approved_for_repreneur"
+    ? {
+        repreneur_approved_at: new Date().toISOString(),
+        repreneur_approved_by: user.id,
+      }
+    : {}
+
   const { error } = await supabase.from("opportunity_documents").insert({
     opportunity_id: opportunityId,
     title,
@@ -97,6 +104,7 @@ export async function registerOpportunityDocument(formData: FormData) {
     mime_type: mimeType,
     size_bytes: sizeBytes,
     uploaded_by: user.id,
+    ...disclosureApproval,
   })
 
   if (error) throw new Error(error.message)
@@ -112,12 +120,23 @@ export async function updateOpportunityDocumentVisibility(
   opportunityId: string,
   visibility: OpportunityDocumentVisibility
 ) {
-  await requireStaffAccess()
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
+
+  // Existing records are never silently blessed: moving a document into the
+  // repreneur-visible state records the staff actor and time for this specific
+  // approval. Returning to staff-only preserves that audit evidence while the
+  // visibility flag closes access immediately.
+  const disclosureApproval = visibility === "approved_for_repreneur"
+    ? {
+        repreneur_approved_at: new Date().toISOString(),
+        repreneur_approved_by: user.id,
+      }
+    : {}
 
   const { error } = await supabase
     .from("opportunity_documents")
-    .update({ visibility })
+    .update({ visibility, ...disclosureApproval })
     .eq("id", documentId)
     .eq("opportunity_id", opportunityId)
 

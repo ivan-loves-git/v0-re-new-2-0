@@ -733,7 +733,7 @@ export async function updateOpportunityPursuitStage(matchId: string, opportunity
 
   const { data: activeMatch, error: activeMatchError } = await supabase
     .from("opportunity_matches")
-    .select("id, repreneur_id, nda_status")
+    .select("id, repreneur_id, nda_status, nda_signed_at, nda_waived_at, nda_waived_by")
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
     .eq("status", "active_pursuit")
@@ -745,18 +745,18 @@ export async function updateOpportunityPursuitStage(matchId: string, opportunity
   if (stage === "info_memo_received") {
     const { data: documents, error: documentsError } = await supabase
       .from("opportunity_documents")
-      .select("document_type, visibility, storage_path, external_url")
+      .select("document_type, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
       .eq("opportunity_id", opportunityId)
       .eq("document_type", "deal_book")
       .eq("visibility", "approved_for_repreneur")
 
     if (documentsError) throw new Error(documentsError.message)
     const memoAvailable = (documents ?? []).some((document) =>
-      canMarkOpportunityInfoMemoReceived(activeMatch.nda_status, document),
+      canMarkOpportunityInfoMemoReceived(activeMatch, document),
     )
     if (!memoAvailable) {
       throw formError(
-        "A signed or waived NDA and an approved info memo file are required before marking Info memo received.",
+        "Recorded NDA evidence and a staff-approved info memo file are required before marking Info memo received.",
         "pursuit_stage",
       )
     }
@@ -818,7 +818,7 @@ export async function updateOpportunityPursuitNda(matchId: string, opportunityId
 
   const { data: activeMatch, error: activeMatchError } = await supabase
     .from("opportunity_matches")
-    .select("id, nda_received_at, nda_signed_at")
+    .select("id, nda_received_at, nda_signed_at, nda_waived_at, nda_waived_by")
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
     .eq("status", "active_pursuit")
@@ -829,6 +829,8 @@ export async function updateOpportunityPursuitNda(matchId: string, opportunityId
 
   const ndaReceivedAt = ndaReceived || ndaStatus === "signed" ? activeMatch.nda_received_at ?? now : null
   const ndaSignedAt = ndaStatus === "signed" ? activeMatch.nda_signed_at ?? now : null
+  const ndaWaivedAt = ndaStatus === "waived" ? activeMatch.nda_waived_at ?? now : null
+  const ndaWaivedBy = ndaStatus === "waived" ? activeMatch.nda_waived_by ?? access.user.id : null
 
   const { data, error } = await supabase
     .from("opportunity_matches")
@@ -838,6 +840,8 @@ export async function updateOpportunityPursuitNda(matchId: string, opportunityId
       nda_notes: ndaNotes,
       nda_received_at: ndaReceivedAt,
       nda_signed_at: ndaSignedAt,
+      nda_waived_at: ndaWaivedAt,
+      nda_waived_by: ndaWaivedBy,
       nda_updated_by: access.user.id,
       nda_updated_at: now,
       reviewed_by: access.user.id,

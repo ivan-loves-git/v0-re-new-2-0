@@ -18,7 +18,7 @@ export async function GET(
 
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select("id, opportunity_id, repreneur_id, status, nda_status")
+    .select("id, opportunity_id, repreneur_id, status, nda_status, nda_signed_at, nda_waived_at, nda_waived_by")
     .eq("id", matchId)
     .eq("repreneur_id", access.repreneurId)
     .maybeSingle()
@@ -27,13 +27,13 @@ export async function GET(
   if (!match || match.status !== "active_pursuit") {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
-  if (!hasCompletedNdaSignature(match.nda_status)) {
-    return NextResponse.json({ error: "NDA is required before documents can be downloaded." }, { status: 403 })
+  if (!hasCompletedNdaSignature(match)) {
+    return NextResponse.json({ error: "Recorded NDA evidence is required before documents can be downloaded." }, { status: 403 })
   }
 
   const { data: document, error: documentError } = await supabase
     .from("opportunity_documents")
-    .select("id, document_type, visibility, external_url, storage_bucket, storage_path")
+    .select("id, document_type, visibility, external_url, storage_bucket, storage_path, repreneur_approved_at, repreneur_approved_by")
     .eq("id", documentId)
     .eq("opportunity_id", match.opportunity_id)
     .eq("visibility", "approved_for_repreneur")
@@ -41,8 +41,8 @@ export async function GET(
 
   if (documentError) return NextResponse.json({ error: documentError.message }, { status: 500 })
   if (!document) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (!canAccessOpportunityMemo(match.nda_status, document)) {
-    return NextResponse.json({ error: "Info memo file is unavailable." }, { status: 404 })
+  if (!canAccessOpportunityMemo(match, document)) {
+    return NextResponse.json({ error: "Info memo disclosure is not approved." }, { status: 404 })
   }
 
   if (document.external_url) {

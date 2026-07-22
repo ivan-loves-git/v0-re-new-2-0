@@ -208,6 +208,21 @@ function readSourceType(formData: FormData): MaSourceType {
   return value && MA_SOURCE_TYPES.has(value) ? value : "ma_firm"
 }
 
+function validateActiveOpportunitySource(
+  status: OpportunityStatus,
+  sourceId: string | null,
+): OpportunityActionResult | null {
+  if (status !== "active" || sourceId) return null
+
+  return {
+    success: false,
+    message: "A verified M&A source is required before an opportunity can become active.",
+    fieldErrors: {
+      source_firm_name: "Select or add the verified M&A source before activating this opportunity.",
+    },
+  }
+}
+
 function readInitialContactPayload(formData: FormData) {
   const name = readOpportunityFormString(formData, "new_source_contact_name")
   const email = readOpportunityFormString(formData, "new_source_contact_email")
@@ -555,6 +570,9 @@ export async function createOpportunity(formData: FormData) {
   }
 
   const source = await upsertSourceFromForm(formData, user.id)
+  const sourceValidation = validateActiveOpportunitySource(readStatus(formData), source.sourceId)
+  if (sourceValidation) return sourceValidation
+
   const payload: Opportunity_Insert = {
     ...(buildOpportunityPayload(
       formData,
@@ -590,6 +608,12 @@ export async function createOpportunity(formData: FormData) {
 
 export async function createOpportunityFromDraft(draft: Opportunity_Insert): Promise<Opportunity> {
   const { user } = await requireStaffAccess()
+  const sourceValidation = validateActiveOpportunitySource(
+    draft.status ?? "draft",
+    draft.source_id ?? null,
+  )
+  if (sourceValidation) throw new Error(sourceValidation.message)
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -677,6 +701,9 @@ export async function updateOpportunity(id: string, formData: FormData) {
   }
 
   const source = await upsertSourceFromForm(formData, user.id)
+  const sourceValidation = validateActiveOpportunitySource(requestedStatus, source.sourceId)
+  if (sourceValidation) return sourceValidation
+
   if ((existingOpportunity.source_id as string | null) !== source.sourceId) {
     await clearOpportunitySourceContacts(supabase, id)
   }
@@ -752,6 +779,19 @@ export async function closeOpportunity(
 export async function reopenOpportunity(id: string): Promise<OpportunityActionResult> {
   await requireStaffAccess()
   const supabase = createAdminClient()
+
+  const { data: opportunity, error: opportunityError } = await supabase
+    .from("opportunities")
+    .select("id, source_id")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (opportunityError) throw new Error(opportunityError.message)
+  const sourceValidation = validateActiveOpportunitySource(
+    "active",
+    opportunity?.source_id ?? null,
+  )
+  if (sourceValidation) return sourceValidation
 
   const { data, error } = await supabase
     .from("opportunities")

@@ -8,7 +8,11 @@ import {
 } from "@/lib/data/portal-profile"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
-import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
+import {
+  canAccessOpportunityMemo,
+  safeRepreneurTeaserSummary,
+  type OpportunityNdaDisclosureEvidence,
+} from "@/lib/opportunity-confidentiality"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -47,6 +51,7 @@ interface PreviewOpportunityRow {
   repreneur_exposure: string | null
   public_title: string | null
   teaser_summary: string | null
+  description: string | null
   sector: string | null
   activity: string | null
   location: string | null
@@ -65,6 +70,9 @@ interface PreviewOpportunityMatchRow {
   pursuit_stage: RepreneurOpportunityExposure["pursuit_stage"]
   pursuit_stage_updated_at: string | null
   nda_status: RepreneurOpportunityExposure["nda_status"]
+  nda_signed_at: string | null
+  nda_waived_at: string | null
+  nda_waived_by: string | null
   nda_updated_at: string | null
   interest_expressed_at?: string | null
   interest_notification_sent_at?: string | null
@@ -76,6 +84,13 @@ type PortalMemoDocument = RepreneurOpportunityDocument & {
   visibility: "approved_for_repreneur"
   storage_path: string | null
   external_url: string | null
+  repreneur_approved_at: string | null
+  repreneur_approved_by: string | null
+}
+
+type PreviewExposureRecord = {
+  exposure: RepreneurOpportunityExposure
+  ndaEvidence: OpportunityNdaDisclosureEvidence
 }
 
 export interface StaffPortalPreviewOption {
@@ -121,7 +136,10 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     opportunity_id: opportunity.id,
     reference: opportunity.reference,
     public_title: opportunity.public_title,
-    teaser_summary: opportunity.teaser_summary,
+    teaser_summary: safeRepreneurTeaserSummary(
+      opportunity.teaser_summary,
+      opportunity.description,
+    ),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -142,6 +160,23 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
   }
 }
 
+function normalizeExposureWithDisclosure(
+  row: PreviewOpportunityMatchRow,
+): PreviewExposureRecord | null {
+  const exposure = normalizeExposure(row)
+  if (!exposure) return null
+
+  return {
+    exposure,
+    ndaEvidence: {
+      nda_status: row.nda_status,
+      nda_signed_at: row.nda_signed_at,
+      nda_waived_at: row.nda_waived_at,
+      nda_waived_by: row.nda_waived_by,
+    },
+  }
+}
+
 async function listApprovedMemoDocumentsByOpportunity(
   supabase: ReturnType<typeof createAdminClient>,
   opportunityIds: string[]
@@ -150,7 +185,7 @@ async function listApprovedMemoDocumentsByOpportunity(
 
   const { data, error } = await supabase
     .from("opportunity_documents")
-    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url")
+    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
     .in("opportunity_id", opportunityIds)
     .eq("document_type", "deal_book")
     .eq("visibility", "approved_for_repreneur")
@@ -171,6 +206,8 @@ async function listApprovedMemoDocumentsByOpportunity(
       visibility: document.visibility,
       storage_path: document.storage_path,
       external_url: document.external_url,
+      repreneur_approved_at: document.repreneur_approved_at,
+      repreneur_approved_by: document.repreneur_approved_by,
     } as PortalMemoDocument)
     documentsByOpportunity.set(document.opportunity_id, documents)
   }
@@ -180,12 +217,13 @@ async function listApprovedMemoDocumentsByOpportunity(
 
 function visibleMemoDocumentsForMatch(
   opportunity: RepreneurOpportunityExposure,
+  ndaEvidence: OpportunityNdaDisclosureEvidence,
   documents: PortalMemoDocument[] | undefined,
 ): RepreneurOpportunityDocument[] {
   if (opportunity.match_status !== "active_pursuit") return []
 
   return (documents ?? [])
-    .filter((document) => canAccessOpportunityMemo(opportunity.nda_status, document))
+    .filter((document) => canAccessOpportunityMemo(ndaEvidence, document))
     .map((document) => ({
       id: document.id,
       title: document.title,
@@ -250,6 +288,9 @@ async function listVisibleOpportunitiesForRepreneur(
       pursuit_stage,
       pursuit_stage_updated_at,
       nda_status,
+      nda_signed_at,
+      nda_waived_at,
+      nda_waived_by,
       nda_updated_at,
       updated_at,
       opportunity:opportunities(
@@ -259,6 +300,7 @@ async function listVisibleOpportunitiesForRepreneur(
         repreneur_exposure,
         public_title,
         teaser_summary,
+        description,
         sector,
         activity,
         location,
@@ -280,9 +322,10 @@ async function listVisibleOpportunitiesForRepreneur(
   const { data, error } = await query
   if (error) throw new Error(error.message)
 
-  const opportunities = (data ?? [])
-    .map(normalizeExposure)
-    .filter((exposure): exposure is RepreneurOpportunityExposure => Boolean(exposure))
+  const exposureRecords = (data ?? [])
+    .map((row) => normalizeExposureWithDisclosure(row as PreviewOpportunityMatchRow))
+    .filter((record): record is PreviewExposureRecord => Boolean(record))
+  const opportunities = exposureRecords.map((record) => record.exposure)
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
@@ -297,18 +340,19 @@ async function listVisibleOpportunitiesForRepreneur(
     opportunities.map((opportunity) => opportunity.match_id),
   )
 
-  return opportunities
-    .map((opportunity) => ({
-      ...opportunity,
-      ...interestStateByMatch.get(opportunity.match_id),
+  return exposureRecords
+    .map(({ exposure, ndaEvidence }) => ({
+      ...exposure,
+      ...interestStateByMatch.get(exposure.match_id),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
-        opportunity.opportunity_id,
+        exposure.opportunity_id,
         repreneurId,
         activeOwnerByOpportunity,
       ),
       visible_documents: visibleMemoDocumentsForMatch(
-        opportunity,
-        documentsByOpportunity.get(opportunity.opportunity_id),
+        exposure,
+        ndaEvidence,
+        documentsByOpportunity.get(exposure.opportunity_id),
       ),
     }))
 }

@@ -30,6 +30,7 @@ vi.mock("next/navigation", () => ({
 }))
 
 import {
+  createOpportunityFromDraft,
   createOpportunity,
   updateOpportunity,
 } from "@/lib/actions/opportunities"
@@ -189,6 +190,18 @@ describe("incomplete opportunity data warnings", () => {
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/opportunities/created-opportunity",
     )
+  })
+
+  it("does not persist an active opportunity draft without a verified source", async () => {
+    await expect(
+      createOpportunityFromDraft({
+        reference: "OPP-NO-SOURCE",
+        status: "active",
+        repreneur_exposure: "anonymized",
+      }),
+    ).rejects.toThrow("A verified M&A source is required before an opportunity can become active.")
+
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
   it("saves an acknowledged edit with unknown fields stored as null", async () => {

@@ -64,6 +64,9 @@ interface MatchRow {
   pursuit_stage: OpportunityPursuitStage | null
   pursuit_stage_updated_at: string | null
   nda_status: OpportunityNdaStatus | null
+  nda_signed_at: string | null
+  nda_waived_at: string | null
+  nda_waived_by: string | null
   updated_at: string
   repreneur?: {
     first_name: string | null
@@ -318,6 +321,9 @@ async function loadOpportunityContext(opportunityId: string) {
         pursuit_stage,
         pursuit_stage_updated_at,
         nda_status,
+        nda_signed_at,
+        nda_waived_at,
+        nda_waived_by,
         updated_at,
         repreneur:repreneurs(
           first_name,
@@ -408,14 +414,14 @@ export async function getMaOpportunityWorkflow(
   if (activeMatch) {
     const { data: memoDocuments, error: memoDocumentsError } = await supabase
       .from("opportunity_documents")
-      .select("document_type, visibility, storage_path, external_url")
+      .select("document_type, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
       .eq("opportunity_id", opportunityId)
       .eq("document_type", "deal_book")
       .eq("visibility", "approved_for_repreneur")
 
     if (memoDocumentsError) throw new Error(memoDocumentsError.message)
     memoAvailable = (memoDocuments ?? []).some((document) =>
-      canAccessOpportunityMemo(activeMatch.nda_status, document),
+      canAccessOpportunityMemo(activeMatch, document),
     )
   }
 

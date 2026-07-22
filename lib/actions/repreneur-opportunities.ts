@@ -3,7 +3,11 @@ import "server-only"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
-import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
+import {
+  canAccessOpportunityMemo,
+  safeRepreneurTeaserSummary,
+  type OpportunityNdaDisclosureEvidence,
+} from "@/lib/opportunity-confidentiality"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import {
   sortRepreneurDealFlow,
@@ -46,6 +50,7 @@ type RepreneurDealFlowOpportunityRow = {
   reference: string
   public_title: string | null
   teaser_summary: string | null
+  description: string | null
   sector: string | null
   activity: string | null
   location: string | null
@@ -61,6 +66,13 @@ type PortalMemoDocument = RepreneurOpportunityDocument & {
   visibility: "approved_for_repreneur"
   storage_path: string | null
   external_url: string | null
+  repreneur_approved_at: string | null
+  repreneur_approved_by: string | null
+}
+
+type PortalExposureRecord = {
+  exposure: RepreneurOpportunityExposure
+  ndaEvidence: OpportunityNdaDisclosureEvidence
 }
 
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
@@ -89,7 +101,10 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     opportunity_id: opportunity.id,
     reference: opportunity.reference,
     public_title: opportunity.public_title,
-    teaser_summary: opportunity.teaser_summary,
+    teaser_summary: safeRepreneurTeaserSummary(
+      opportunity.teaser_summary,
+      opportunity.description,
+    ),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -110,6 +125,23 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
   }
 }
 
+function normalizeExposureWithDisclosure(
+  row: OpportunityNdaDisclosureEvidence,
+): PortalExposureRecord | null {
+  const exposure = normalizeExposure(row)
+  if (!exposure) return null
+
+  return {
+    exposure,
+    ndaEvidence: {
+      nda_status: row.nda_status,
+      nda_signed_at: row.nda_signed_at,
+      nda_waived_at: row.nda_waived_at,
+      nda_waived_by: row.nda_waived_by,
+    },
+  }
+}
+
 async function listApprovedMemoDocumentsByOpportunity(
   supabase: ReturnType<typeof createAdminClient>,
   opportunityIds: string[]
@@ -118,7 +150,7 @@ async function listApprovedMemoDocumentsByOpportunity(
 
   const { data, error } = await supabase
     .from("opportunity_documents")
-    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url")
+    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
     .in("opportunity_id", opportunityIds)
     .eq("document_type", "deal_book")
     .eq("visibility", "approved_for_repreneur")
@@ -139,6 +171,8 @@ async function listApprovedMemoDocumentsByOpportunity(
       visibility: document.visibility,
       storage_path: document.storage_path,
       external_url: document.external_url,
+      repreneur_approved_at: document.repreneur_approved_at,
+      repreneur_approved_by: document.repreneur_approved_by,
     } as PortalMemoDocument)
     documentsByOpportunity.set(document.opportunity_id, documents)
   }
@@ -148,12 +182,13 @@ async function listApprovedMemoDocumentsByOpportunity(
 
 function visibleMemoDocumentsForMatch(
   opportunity: RepreneurOpportunityExposure,
+  ndaEvidence: OpportunityNdaDisclosureEvidence,
   documents: PortalMemoDocument[] | undefined,
 ): RepreneurOpportunityDocument[] {
   if (opportunity.match_status !== "active_pursuit") return []
 
   return (documents ?? [])
-    .filter((document) => canAccessOpportunityMemo(opportunity.nda_status, document))
+    .filter((document) => canAccessOpportunityMemo(ndaEvidence, document))
     .map((document) => ({
       id: document.id,
       title: document.title,
@@ -257,7 +292,10 @@ function toDealFlowOpportunity(
     opportunity_id: opportunity.id,
     reference: opportunity.reference,
     public_title: opportunity.public_title,
-    teaser_summary: opportunity.teaser_summary,
+    teaser_summary: safeRepreneurTeaserSummary(
+      opportunity.teaser_summary,
+      opportunity.description,
+    ),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -325,6 +363,9 @@ export async function listMyRepreneurOpportunities(): Promise<{
       pursuit_stage,
       pursuit_stage_updated_at,
       nda_status,
+      nda_signed_at,
+      nda_waived_at,
+      nda_waived_by,
       nda_updated_at,
       updated_at,
       opportunity:opportunities(
@@ -334,6 +375,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
         repreneur_exposure,
         public_title,
         teaser_summary,
+        description,
         sector,
         activity,
         location,
@@ -350,9 +392,10 @@ export async function listMyRepreneurOpportunities(): Promise<{
 
   if (error) throw new Error(error.message)
 
-  const opportunities = (data ?? [])
-    .map(normalizeExposure)
-    .filter((exposure): exposure is RepreneurOpportunityExposure => Boolean(exposure))
+  const exposureRecords = (data ?? [])
+    .map(normalizeExposureWithDisclosure)
+    .filter((record): record is PortalExposureRecord => Boolean(record))
+  const opportunities = exposureRecords.map((record) => record.exposure)
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
@@ -369,18 +412,19 @@ export async function listMyRepreneurOpportunities(): Promise<{
 
   return {
     repreneur,
-    opportunities: opportunities
-      .map((opportunity) => ({
-        ...opportunity,
-        ...interestStateByMatch.get(opportunity.match_id),
+    opportunities: exposureRecords
+      .map(({ exposure, ndaEvidence }) => ({
+        ...exposure,
+        ...interestStateByMatch.get(exposure.match_id),
         is_locked_for_other_repreneur: isLockedForOtherRepreneur(
-          opportunity.opportunity_id,
+          exposure.opportunity_id,
           repreneur.id,
           activeOwnerByOpportunity,
         ),
         visible_documents: visibleMemoDocumentsForMatch(
-          opportunity,
-          documentsByOpportunity.get(opportunity.opportunity_id),
+          exposure,
+          ndaEvidence,
+          documentsByOpportunity.get(exposure.opportunity_id),
         ),
       })),
   }
@@ -406,6 +450,9 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         pursuit_stage,
         pursuit_stage_updated_at,
         nda_status,
+        nda_signed_at,
+        nda_waived_at,
+        nda_waived_by,
         nda_updated_at,
         updated_at,
         opportunity:opportunities(
@@ -415,6 +462,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
           repreneur_exposure,
           public_title,
           teaser_summary,
+          description,
           sector,
           activity,
           location,
@@ -437,6 +485,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         repreneur_exposure,
         public_title,
         teaser_summary,
+        description,
         sector,
         activity,
         location,
@@ -454,9 +503,10 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   if (matchesResult.error) throw new Error(matchesResult.error.message)
   if (opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
 
-  const matchedOpportunities = (matchesResult.data ?? [])
-    .map(normalizeExposure)
-    .filter((opportunity): opportunity is RepreneurOpportunityExposure => Boolean(opportunity))
+  const matchedExposureRecords = (matchesResult.data ?? [])
+    .map(normalizeExposureWithDisclosure)
+    .filter((record): record is PortalExposureRecord => Boolean(record))
+  const matchedOpportunities = matchedExposureRecords.map((record) => record.exposure)
   const allOpportunities = opportunitiesResult.data ?? []
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
@@ -471,18 +521,19 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     matchedOpportunities.map((opportunity) => opportunity.match_id),
   )
 
-  const staffRecommended = matchedOpportunities
-    .map((opportunity) => ({
-      ...opportunity,
-      ...interestStateByMatch.get(opportunity.match_id),
+  const staffRecommended = matchedExposureRecords
+    .map(({ exposure, ndaEvidence }) => ({
+      ...exposure,
+      ...interestStateByMatch.get(exposure.match_id),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
-        opportunity.opportunity_id,
+        exposure.opportunity_id,
         repreneur.id,
         activeOwnerByOpportunity,
       ),
       visible_documents: visibleMemoDocumentsForMatch(
-        opportunity,
-        documentsByOpportunity.get(opportunity.opportunity_id),
+        exposure,
+        ndaEvidence,
+        documentsByOpportunity.get(exposure.opportunity_id),
       ),
     }))
     .map(withStaffRecommendation)
@@ -526,6 +577,9 @@ export async function getMyRepreneurOpportunity(
         pursuit_stage,
         pursuit_stage_updated_at,
         nda_status,
+        nda_signed_at,
+        nda_waived_at,
+        nda_waived_by,
         nda_updated_at,
         updated_at,
         opportunity:opportunities(
@@ -535,6 +589,7 @@ export async function getMyRepreneurOpportunity(
           repreneur_exposure,
           public_title,
           teaser_summary,
+          description,
           sector,
           activity,
           location,
@@ -558,6 +613,7 @@ export async function getMyRepreneurOpportunity(
         repreneur_exposure,
         public_title,
         teaser_summary,
+        description,
         sector,
         activity,
         location,
@@ -577,6 +633,14 @@ export async function getMyRepreneurOpportunity(
   if (matchResult.error) throw new Error(matchResult.error.message)
   if (opportunityResult.error) throw new Error(opportunityResult.error.message)
   const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null
+  const ndaEvidence: OpportunityNdaDisclosureEvidence = matchResult.data
+    ? {
+        nda_status: matchResult.data.nda_status,
+        nda_signed_at: matchResult.data.nda_signed_at,
+        nda_waived_at: matchResult.data.nda_waived_at,
+        nda_waived_by: matchResult.data.nda_waived_by,
+      }
+    : {}
 
   if (!exposure) {
     const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
@@ -602,6 +666,7 @@ export async function getMyRepreneurOpportunity(
     ),
     visible_documents: visibleMemoDocumentsForMatch(
       exposure,
+      ndaEvidence,
       documentsByOpportunity.get(exposure.opportunity_id),
     ),
   }

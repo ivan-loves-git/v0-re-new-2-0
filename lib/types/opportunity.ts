@@ -39,6 +39,8 @@ export type OpportunityNdaStatus = "not_required" | "required" | "sent" | "signe
 export interface OpportunityConfidentialityGate {
   nda_received_at?: string | null
   nda_signed_at?: string | null
+  nda_waived_at?: string | null
+  nda_waived_by?: string | null
 }
 
 export type OpportunityDeclineReasonCategory =
@@ -379,6 +381,8 @@ export interface OpportunityDocument {
   mime_type?: string | null
   size_bytes?: number | null
   uploaded_by?: string | null
+  repreneur_approved_at?: string | null
+  repreneur_approved_by?: string | null
   uploaded_at: string
   updated_at: string
 }
@@ -395,6 +399,8 @@ export interface OpportunityDocument_Insert {
   mime_type?: string | null
   size_bytes?: number | null
   uploaded_by?: string | null
+  repreneur_approved_at?: string | null
+  repreneur_approved_by?: string | null
 }
 
 export interface OpportunityDocument_Update {
@@ -406,6 +412,8 @@ export interface OpportunityDocument_Update {
   file_name?: string | null
   mime_type?: string | null
   size_bytes?: number | null
+  repreneur_approved_at?: string | null
+  repreneur_approved_by?: string | null
 }
 
 export interface OpportunityMatchRepreneur {

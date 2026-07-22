@@ -76,7 +76,7 @@ export function OpportunityDocumentsPanel({ opportunityId, documents }: Opportun
             <Upload className="size-5" />
             Add document
           </CardTitle>
-          <CardDescription>Documents stay staff-only unless visibility is changed explicitly.</CardDescription>
+          <CardDescription>Documents stay staff-only until a staff member records an explicit repreneur approval.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="grid gap-4 lg:grid-cols-[1fr_180px_220px_1fr_auto] lg:items-end">
@@ -177,6 +177,13 @@ export function OpportunityDocumentsPanel({ opportunityId, documents }: Opportun
                         <Badge variant={document.visibility === "staff_only" ? "secondary" : "default"}>
                           {document.visibility === "staff_only" ? "Staff only" : "Approved"}
                         </Badge>
+                        {document.visibility === "approved_for_repreneur" && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {document.repreneur_approved_at && document.repreneur_approved_by
+                              ? `Approval recorded ${formatDate(document.repreneur_approved_at)}`
+                              : "Approval evidence required before portal access"}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell>{formatBytes(document.size_bytes)}</TableCell>
                       <TableCell>{formatDate(document.uploaded_at)}</TableCell>
