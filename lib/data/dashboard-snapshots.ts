@@ -4,6 +4,9 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { Repreneur } from "@/lib/types/repreneur"
 import type {
+  MaSource,
+  MaSourceContact,
+  OpportunitySourceContact,
   OpportunityWithSource,
   OpportunityWorkSurfaceMatch,
   OpportunityWorkSurfaceRecord,
@@ -116,13 +119,38 @@ const OPPORTUNITY_LIST_FIELDS = `
     id,
     firm_name,
     source_type,
-    contact_name,
-    contact_email,
-    contact_phone,
     internal_notes,
     created_by,
     created_at,
-    updated_at
+    updated_at,
+    contacts:ma_source_contacts(
+      id,
+      source_id,
+      name,
+      email,
+      phone,
+      created_by,
+      created_at,
+      updated_at
+    )
+  ),
+  source_contacts:opportunity_source_contacts(
+    opportunity_id,
+    source_id,
+    contact_id,
+    is_primary,
+    created_by,
+    created_at,
+    contact:ma_source_contacts(
+      id,
+      source_id,
+      name,
+      email,
+      phone,
+      created_by,
+      created_at,
+      updated_at
+    )
   )
 `
 
@@ -173,8 +201,17 @@ type DashboardActivityQueryRow = Omit<DashboardActivity, "repreneurs"> & {
     | null
 }
 
-type OpportunityQueryRow = Omit<OpportunityWithSource, "source"> & {
-  source?: OpportunityWithSource["source"] | OpportunityWithSource["source"][] | null
+type MaSourceQueryRow = Omit<MaSource, "contacts"> & {
+  contacts?: MaSourceContact | MaSourceContact[] | null
+}
+
+type OpportunitySourceContactQueryRow = Omit<OpportunitySourceContact, "contact"> & {
+  contact?: MaSourceContact | MaSourceContact[] | null
+}
+
+type OpportunityQueryRow = Omit<OpportunityWithSource, "source" | "source_contacts"> & {
+  source?: MaSourceQueryRow | MaSourceQueryRow[] | null
+  source_contacts?: OpportunitySourceContactQueryRow[] | null
 }
 
 type OpportunityMatchQueryRow = Omit<OpportunityWorkSurfaceMatch, "repreneur"> & {
@@ -241,10 +278,27 @@ function normalizeRepreneurListRows(
 }
 
 function normalizeOpportunity(row: OpportunityQueryRow): OpportunityWithSource {
-  const source = Array.isArray(row.source) ? row.source[0] : row.source
+  const sourceRow = Array.isArray(row.source) ? row.source[0] : row.source
+  const source = sourceRow
+    ? {
+        ...sourceRow,
+        contacts: Array.isArray(sourceRow.contacts)
+          ? sourceRow.contacts
+          : sourceRow.contacts
+            ? [sourceRow.contacts]
+            : [],
+      }
+    : null
+  const sourceContacts = Array.isArray(row.source_contacts)
+    ? row.source_contacts.map((relation) => {
+        const contact = Array.isArray(relation.contact) ? relation.contact[0] : relation.contact
+        return { ...relation, contact: contact ?? null }
+      })
+    : []
   return {
     ...row,
-    source: source ?? null,
+    source,
+    source_contacts: sourceContacts,
   } as OpportunityWithSource
 }
 

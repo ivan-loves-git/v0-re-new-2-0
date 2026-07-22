@@ -365,6 +365,7 @@ export function OpportunityDetail({
             <MaSourcePanel
               source={opportunity.source}
               sourceLabel={opportunity.source_label}
+              sourceContacts={opportunity.source_contacts}
             />
           </div>
         </TabsContent>

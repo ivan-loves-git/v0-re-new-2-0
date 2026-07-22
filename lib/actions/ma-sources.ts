@@ -6,6 +6,7 @@ import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapsho
 import { createAdminClient } from "@/lib/supabase/admin"
 import type {
   MaSource,
+  MaSourceContact_Update,
   MaSourceDirectoryEntry,
   MaSourceType,
   MaSource_Insert,
@@ -42,18 +43,29 @@ function parseSourcePayload(formData: FormData): MaSource_Insert & MaSource_Upda
   const firmName = readString(formData, "firm_name")
   if (!firmName) throw new Error("Firm name is required")
 
+  return {
+    firm_name: firmName,
+    source_type: readSourceType(formData),
+    internal_notes: readString(formData, "internal_notes"),
+  }
+}
+
+function parseContactPayload(formData: FormData): MaSourceContact_Update {
+  const name = readString(formData, "contact_name")
   const contactEmail = readString(formData, "contact_email")
+  const phone = readString(formData, "contact_phone")
+
+  if (!name && !contactEmail && !phone) {
+    throw new Error("Add at least one contact detail")
+  }
   if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
     throw new Error("Contact email is not valid")
   }
 
   return {
-    firm_name: firmName,
-    source_type: readSourceType(formData),
-    contact_name: readString(formData, "contact_name"),
-    contact_email: contactEmail,
-    contact_phone: readString(formData, "contact_phone"),
-    internal_notes: readString(formData, "internal_notes"),
+    name,
+    email: contactEmail,
+    phone,
   }
 }
 
@@ -85,17 +97,32 @@ export async function listMaSourceDirectory(): Promise<MaSourceDirectoryEntry[]>
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const [{ data: sources, error: sourcesError }, { data: opportunities, error: opportunitiesError }] =
-    await Promise.all([
-      supabase.from("ma_sources").select("*").order("firm_name"),
-      supabase
-        .from("opportunities")
-        .select("source_id, reference, public_title, status, date_added, created_at")
-        .not("source_id", "is", null),
-    ])
+  const [
+    { data: sources, error: sourcesError },
+    { data: contacts, error: contactsError },
+    { data: opportunities, error: opportunitiesError },
+  ] = await Promise.all([
+    supabase.from("ma_sources").select("*").order("firm_name"),
+    supabase
+      .from("ma_source_contacts")
+      .select("*")
+      .order("name", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("opportunities")
+      .select("source_id, reference, public_title, status, date_added, created_at")
+      .not("source_id", "is", null),
+  ])
 
   if (sourcesError) throw new Error(sourcesError.message)
+  if (contactsError) throw new Error(contactsError.message)
   if (opportunitiesError) throw new Error(opportunitiesError.message)
+
+  const contactsBySource = new Map<string, MaSourceDirectoryEntry["contacts"]>()
+  for (const contact of (contacts ?? []) as MaSourceDirectoryEntry["contacts"]) {
+    const current = contactsBySource.get(contact.source_id) ?? []
+    current.push(contact)
+    contactsBySource.set(contact.source_id, current)
+  }
 
   const opportunitiesBySource = new Map<string, SourceOpportunityRow[]>()
   for (const opportunity of (opportunities ?? []) as SourceOpportunityRow[]) {
@@ -106,8 +133,11 @@ export async function listMaSourceDirectory(): Promise<MaSourceDirectoryEntry[]>
   }
 
   return ((sources ?? []) as MaSource[]).map((source) => {
+    const sourceContacts = contactsBySource.get(source.id) ?? []
     const linkedOpportunities = opportunitiesBySource.get(source.id) ?? []
-    const openOpportunities = linkedOpportunities.filter((opportunity) => OPEN_STATUSES.has(opportunity.status))
+    const openOpportunities = linkedOpportunities.filter((opportunity) =>
+      OPEN_STATUSES.has(opportunity.status),
+    )
     const staleOpportunityCount = openOpportunities.filter((opportunity) => {
       const ageDays = getAgeDays(opportunity.date_added ?? opportunity.created_at)
       return ageDays !== null && ageDays > STALE_DAYS
@@ -116,26 +146,48 @@ export async function listMaSourceDirectory(): Promise<MaSourceDirectoryEntry[]>
 
     return {
       ...source,
+      contacts: sourceContacts,
+      contact_count: sourceContacts.length,
       opportunity_count: linkedOpportunities.length,
       open_opportunity_count: openOpportunities.length,
       stale_opportunity_count: staleOpportunityCount,
       latest_opportunity_date: latestOpportunity ? latestDate(latestOpportunity) : null,
-      latest_opportunity_title: latestOpportunity?.public_title ?? latestOpportunity?.reference ?? null,
+      latest_opportunity_title:
+        latestOpportunity?.public_title ?? latestOpportunity?.reference ?? null,
     }
   })
 }
 
-export async function createMaSource(formData: FormData): Promise<{ success: boolean; message: string }> {
+export async function createMaSource(
+  formData: FormData,
+): Promise<{ success: boolean; message: string }> {
   const access = await requireStaffAccess()
 
   try {
     const payload = parseSourcePayload(formData)
+    const contactPayload = (() => {
+      const name = readString(formData, "contact_name")
+      const email = readString(formData, "contact_email")
+      const phone = readString(formData, "contact_phone")
+      return name || email || phone ? parseContactPayload(formData) : null
+    })()
     const supabase = createAdminClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("ma_sources")
       .insert({ ...payload, created_by: access.user.id })
+      .select("id")
+      .single()
 
     if (error) throw new Error(error.message)
+
+    if (contactPayload) {
+      const { error: contactError } = await supabase.from("ma_source_contacts").insert({
+        ...contactPayload,
+        source_id: (data as MaSource).id,
+        created_by: access.user.id,
+      })
+      if (contactError) throw new Error(contactError.message)
+    }
 
     revalidateMaSourceSurfaces()
     return { success: true, message: "M&A source created" }
@@ -166,6 +218,62 @@ export async function updateMaSource(
     return {
       success: false,
       message: error instanceof Error ? error.message : "Failed to update M&A source",
+    }
+  }
+}
+
+export async function createMaSourceContact(
+  sourceId: string,
+  formData: FormData,
+): Promise<{ success: boolean; message: string }> {
+  const access = await requireStaffAccess()
+
+  try {
+    const payload = parseContactPayload(formData)
+    const supabase = createAdminClient()
+    const { error } = await supabase
+      .from("ma_source_contacts")
+      .insert({ ...payload, source_id: sourceId, created_by: access.user.id })
+
+    if (error) throw new Error(error.message)
+
+    revalidateMaSourceSurfaces()
+    return { success: true, message: "M&A contact created" }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to create M&A contact",
+    }
+  }
+}
+
+export async function updateMaSourceContact(
+  sourceId: string,
+  contactId: string,
+  formData: FormData,
+): Promise<{ success: boolean; message: string }> {
+  await requireStaffAccess()
+
+  try {
+    const payload = parseContactPayload(formData)
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from("ma_source_contacts")
+      .update(payload)
+      .eq("id", contactId)
+      .eq("source_id", sourceId)
+      .select("id")
+      .maybeSingle()
+
+    if (error) throw new Error(error.message)
+    if (!data) throw new Error("M&A contact not found for this source")
+
+    revalidateMaSourceSurfaces()
+    return { success: true, message: "M&A contact updated" }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to update M&A contact",
     }
   }
 }

@@ -88,7 +88,7 @@ export const OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS = [
   { value: "ebitda_keur", label: "EBE K€" },
   { value: "headcount_range", label: "Effectif" },
   { value: "source_firm_name", label: "Source" },
-  { value: "source_contact_name", label: "M&A contact name" },
+  { value: "source_contact", label: "M&A contact" },
 ] as const
 
 export type OpportunityIncompleteDataField = (typeof OPPORTUNITY_INCOMPLETE_DATA_FIELD_OPTIONS)[number]["value"]
@@ -179,21 +179,16 @@ export interface MaSource {
   id: string
   firm_name: string
   source_type: MaSourceType
-  contact_name?: string | null
-  contact_email?: string | null
-  contact_phone?: string | null
   internal_notes?: string | null
   created_by?: string | null
   created_at: string
   updated_at: string
+  contacts?: MaSourceContact[]
 }
 
 export interface MaSource_Insert {
   firm_name: string
   source_type?: MaSourceType
-  contact_name?: string | null
-  contact_email?: string | null
-  contact_phone?: string | null
   internal_notes?: string | null
   created_by?: string | null
 }
@@ -201,13 +196,37 @@ export interface MaSource_Insert {
 export interface MaSource_Update {
   firm_name?: string
   source_type?: MaSourceType
-  contact_name?: string | null
-  contact_email?: string | null
-  contact_phone?: string | null
   internal_notes?: string | null
 }
 
+export interface MaSourceContact {
+  id: string
+  source_id: string
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+  created_by?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MaSourceContact_Insert {
+  source_id: string
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+  created_by?: string | null
+}
+
+export interface MaSourceContact_Update {
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+}
+
 export interface MaSourceDirectoryEntry extends MaSource {
+  contacts: MaSourceContact[]
+  contact_count: number
   opportunity_count: number
   open_opportunity_count: number
   stale_opportunity_count: number
@@ -219,6 +238,7 @@ export interface MaSourceInteraction {
   id: string
   opportunity_id: string
   source_id?: string | null
+  contact_id?: string | null
   template_key: string
   channel: "email" | string
   direction: "outbound" | string
@@ -261,6 +281,17 @@ export interface Opportunity {
 
 export interface OpportunityWithSource extends Opportunity {
   source?: MaSource | null
+  source_contacts?: OpportunitySourceContact[]
+}
+
+export interface OpportunitySourceContact {
+  opportunity_id: string
+  source_id: string
+  contact_id: string
+  is_primary: boolean
+  created_by?: string | null
+  created_at: string
+  contact?: MaSourceContact | null
 }
 
 export interface OpportunityClosureHistoryEntry {

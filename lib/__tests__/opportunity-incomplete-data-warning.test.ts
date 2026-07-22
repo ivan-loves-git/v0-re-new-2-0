@@ -44,7 +44,7 @@ const MISSING_FIELDS = [
   "ebitda_keur",
   "headcount_range",
   "source_firm_name",
-  "source_contact_name",
+  "source_contact",
 ]
 
 function validOpportunityForm() {
@@ -79,17 +79,21 @@ function setupUpdateClient() {
   const select = vi.fn(() => ({ eq: selectEq }))
   const updateEq = vi.fn().mockResolvedValue({ error: null })
   const update = vi.fn(() => ({ eq: updateEq }))
+  const deleteEq = vi.fn().mockResolvedValue({ error: null })
+  const remove = vi.fn(() => ({ eq: deleteEq }))
   const sourceSingle = vi
     .fn()
     .mockResolvedValue({ data: { id: "source-001" }, error: null })
   const sourceSelect = vi.fn(() => ({ single: sourceSingle }))
   const sourceInsert = vi.fn(() => ({ select: sourceSelect }))
+  const sourceUpdateEq = vi.fn().mockResolvedValue({ error: null })
+  const sourceUpdate = vi.fn(() => ({ eq: sourceUpdateEq }))
   const from = vi.fn((table: string) => {
-    if (table === "ma_sources") return { insert: sourceInsert }
-    return { select, update }
+    if (table === "ma_sources") return { insert: sourceInsert, update: sourceUpdate }
+    return { select, update, delete: remove }
   })
   mocks.createAdminClient.mockReturnValue({ from })
-  return { from, sourceInsert, update }
+  return { from, sourceInsert, sourceUpdate, update }
 }
 
 describe("incomplete opportunity data warnings", () => {
@@ -110,7 +114,7 @@ describe("incomplete opportunity data warnings", () => {
     zero.set("ebitda_keur", "0")
     zero.set("headcount_range", "0")
     zero.set("source_firm_name", "Source firm")
-    zero.set("source_contact_name", "Source contact")
+    zero.set("new_source_contact_name", "Source contact")
 
     expect(readOpportunityNumber(zero, "revenue_meur")).toBe(0)
     expect(readOpportunityNumber(zero, "ebitda_keur")).toBe(0)
@@ -212,9 +216,9 @@ describe("incomplete opportunity data warnings", () => {
     formData.set("ebitda_keur", "0")
     formData.set("headcount_range", "0")
     formData.set("source_firm_name", "Source firm")
-    formData.set("source_contact_name", "Source contact")
-    formData.set("source_contact_email", "source@example.com")
-    const { sourceInsert, update } = setupUpdateClient()
+    formData.set("source_id", "source-001")
+    formData.set("source_contact_ids", "00000000-0000-4000-8000-000000000001")
+    const { sourceUpdate, update } = setupUpdateClient()
 
     await expect(
       updateOpportunity("opportunity-001", formData),
@@ -223,7 +227,7 @@ describe("incomplete opportunity data warnings", () => {
       message: "Opportunity saved.",
     })
 
-    expect(sourceInsert).toHaveBeenCalled()
+    expect(sourceUpdate).not.toHaveBeenCalled()
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         revenue_meur: 0,

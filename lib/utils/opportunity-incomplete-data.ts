@@ -48,8 +48,16 @@ export function findIncompleteOpportunityDataFields(
     fields.push("headcount_range")
   if (readOpportunityFormString(formData, "source_firm_name") === null)
     fields.push("source_firm_name")
-  if (readOpportunityFormString(formData, "source_contact_name") === null)
-    fields.push("source_contact_name")
+  const hasSelectedContact = formData
+    .getAll("source_contact_ids")
+    .some((value) => typeof value === "string" && value.trim().length > 0)
+  const hasNewContact = [
+    "new_source_contact_name",
+    "new_source_contact_email",
+    "new_source_contact_phone",
+  ].some((key) => readOpportunityFormString(formData, key) !== null)
+  if (!hasSelectedContact && !hasNewContact)
+    fields.push("source_contact")
 
   return fields
 }

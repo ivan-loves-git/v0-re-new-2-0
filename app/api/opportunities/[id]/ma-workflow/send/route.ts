@@ -9,6 +9,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     templateKey: typeof body?.templateKey === "string" ? body.templateKey.trim() : null,
     subject: typeof body?.subject === "string" ? body.subject.trim() : null,
     body: typeof body?.body === "string" ? body.body.trim() : null,
+    contactId: typeof body?.contactId === "string" ? body.contactId.trim() : null,
   })
 
   return NextResponse.json(result, { status: result.success ? 200 : 400 })

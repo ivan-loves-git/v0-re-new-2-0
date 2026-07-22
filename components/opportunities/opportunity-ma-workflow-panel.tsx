@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { AlertTriangle, Mail, Send, UserRound } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -41,15 +41,20 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
   )
   const [subject, setSubject] = useState(selectedDraft?.subject ?? "")
   const [body, setBody] = useState(selectedDraft?.body ?? "")
+  const [recipientContactId, setRecipientContactId] = useState(workflow.recipientContactId ?? "")
   const [isSending, setIsSending] = useState(false)
-  const canSend = Boolean(workflow.recipientEmail && templateKey && subject.trim() && body.trim())
-  const recipientName = workflow.contactName || workflow.sourceName
+  const selectedRecipient = workflow.contacts.find((contact) => contact.id === recipientContactId) ?? null
+  const recipientEmail = selectedRecipient?.email ?? null
+  const canSend = Boolean(recipientEmail && templateKey && subject.trim() && body.trim())
+  const recipientName = selectedRecipient?.name || selectedRecipient?.email || selectedRecipient?.phone || workflow.sourceName
 
-  useEffect(() => {
-    if (!selectedDraft) return
-    setSubject(selectedDraft.subject)
-    setBody(selectedDraft.body)
-  }, [selectedDraft])
+  const selectTemplate = (value: string) => {
+    setTemplateKey(value)
+    const draft = workflow.drafts.find((candidate) => candidate.templateKey === value)
+    if (!draft) return
+    setSubject(draft.subject)
+    setBody(draft.body)
+  }
 
   const handleSend = async () => {
     if (!canSend || isSending) return
@@ -58,6 +63,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
     formData.set("template_key", templateKey)
     formData.set("subject", subject)
     formData.set("body_markdown", body)
+    formData.set("contact_id", recipientContactId)
 
     setIsSending(true)
     try {
@@ -68,6 +74,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
           templateKey: formData.get("template_key"),
           subject: formData.get("subject"),
           body: formData.get("body_markdown"),
+          contactId: formData.get("contact_id"),
         }),
       })
       const result = (await response.json()) as { success: boolean; message: string }
@@ -122,13 +129,13 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 <Label>Source</Label>
                 <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
                   <p className="font-medium">{workflow.sourceName}</p>
-                  <p className="text-muted-foreground">{workflow.recipientEmail ?? "No source email"}</p>
+                  <p className="text-muted-foreground">{workflow.contacts.length} linked contacts</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="ma_template">Template</Label>
-                <Select value={templateKey} onValueChange={(value) => setTemplateKey(value)}>
+                <Select value={templateKey} onValueChange={selectTemplate}>
                   <SelectTrigger id="ma_template">
                     <SelectValue placeholder="Choose template" />
                   </SelectTrigger>
@@ -146,6 +153,39 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                   <p className="text-xs text-muted-foreground">{selectedDraft.description}</p>
                 ) : null}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ma_recipient">Recipient</Label>
+              {workflow.contacts.length > 0 ? (
+                <Select value={recipientContactId} onValueChange={setRecipientContactId}>
+                  <SelectTrigger id="ma_recipient">
+                    <SelectValue placeholder="Choose a linked contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {workflow.contacts.map((contact) => {
+                        const label = contact.name || contact.email || contact.phone || "Unnamed contact"
+                        return (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.isPrimary ? `${label} (default)` : label}
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                  Link a contact to this opportunity before sending an intermediary follow-up.
+                </div>
+              )}
+              {selectedRecipient ? (
+                <p className="text-xs text-muted-foreground">
+                  {selectedRecipient.email ?? "No email"}
+                  {selectedRecipient.phone ? ` · ${selectedRecipient.phone}` : ""}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -169,14 +209,14 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
               />
             </div>
 
-            {workflow.recipientEmail ? (
+            {recipientEmail ? (
               <Alert>
                 <Mail />
                 <AlertTitle>Recipient for this follow-up</AlertTitle>
                 <AlertDescription>
                   <p>
                     This email will be sent to <strong>{recipientName}</strong>
-                    {workflow.contactName ? ` from ${workflow.sourceName}` : ""} at <strong>{workflow.recipientEmail}</strong>.
+                    {selectedRecipient?.name ? ` from ${workflow.sourceName}` : ""} at <strong>{recipientEmail}</strong>.
                   </p>
                 </AlertDescription>
               </Alert>
@@ -186,8 +226,13 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 <AlertTitle>Recipient missing</AlertTitle>
                 <AlertDescription className="text-amber-900">
                   <p>
-                    No email address is linked to <strong>{recipientName}</strong>. Add one to the linked M&A source before
-                    sending.
+                    {selectedRecipient ? (
+                      <>
+                        No email address is linked to <strong>{recipientName}</strong>. Add one from M&A before sending.
+                      </>
+                    ) : (
+                      <>Choose a contact linked to this opportunity before sending.</>
+                    )}
                   </p>
                 </AlertDescription>
               </Alert>
@@ -196,7 +241,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
             <div className="flex justify-end">
               <Button type="button" onClick={handleSend} disabled={!canSend || isSending}>
                 <Send data-icon="inline-start" />
-                {isSending ? "Sending..." : "Send to source"}
+                {isSending ? "Sending..." : "Send to contact"}
               </Button>
             </div>
           </div>
