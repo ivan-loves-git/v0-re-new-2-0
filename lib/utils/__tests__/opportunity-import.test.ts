@@ -20,6 +20,7 @@ describe("opportunity import", () => {
     expect(result.draft).toMatchObject({
       reference: "DEMO-775-001",
       source_label: "Cabinet Démo",
+      public_title: "Services aux entreprises (B2B) - Lyon",
       revenue_meur: 3.4,
       ebitda_keur: 620,
       headcount: 18,
@@ -59,6 +60,41 @@ describe("opportunity import", () => {
     expect(result.isValid).toBe(true)
     expect(result.draft.sector).toBe("Services")
     expect(result.draft.activity).toBe("Services")
+    expect(result.draft.public_title).toBe("Services - Paris")
+  })
+
+  it("uses a supplied public title and trims it before import", () => {
+    const [result] = normalizeOpportunityRows([
+      {
+        Reference: "OPP-PUBLIC-TITLE",
+        "Public title": "  Independent marine equipment business  ",
+        Sector: "Services",
+        Location: "Nantes",
+      },
+    ])
+
+    expect(result.isValid).toBe(true)
+    expect(result.draft.public_title).toBe(
+      "Independent marine equipment business",
+    )
+  })
+
+  it("blocks rows that cannot provide a public title", () => {
+    const [result] = normalizeOpportunityRows([
+      {
+        Reference: "OPP-NO-PUBLIC-TITLE",
+        Location: "Paris",
+        "Public title": "   ",
+      },
+    ])
+
+    expect(result.isValid).toBe(false)
+    expect(result.diagnostics).toContainEqual({
+      severity: "blocker",
+      field: "public_title",
+      message:
+        "Missing public title. Provide Public title or a sector/activity to derive one.",
+    })
   })
 
   it("converts euro and million-euro values to stored opportunity units", () => {

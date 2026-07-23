@@ -252,6 +252,18 @@ function validateOpportunityForm(
   }
 }
 
+function validateNewOpportunityPublicTitle(
+  publicTitle: string | null,
+): OpportunityActionResult | null {
+  if (publicTitle) return null
+
+  return {
+    success: false,
+    message: "Public title is required before creating an opportunity.",
+    fieldErrors: { public_title: "Public title is required." },
+  }
+}
+
 function readSourceType(formData: FormData): MaSourceType {
   const value = readOpportunityFormString(
     formData,
@@ -617,6 +629,11 @@ export async function createOpportunity(formData: FormData) {
     } satisfies OpportunityActionResult
   }
 
+  const publicTitleValidation = validateNewOpportunityPublicTitle(
+    readOpportunityFormString(formData, "public_title"),
+  )
+  if (publicTitleValidation) return publicTitleValidation
+
   const sectorResolution = resolveNewOpportunitySector(
     formData.get("sector_choice"),
     formData.get("sector_other"),
@@ -698,6 +715,10 @@ export async function createOpportunityFromDraft(
   draft: Opportunity_Insert,
 ): Promise<Opportunity> {
   const { user } = await requireStaffAccess()
+  const publicTitle =
+    typeof draft.public_title === "string" ? draft.public_title.trim() : null
+  if (!publicTitle) throw new Error("Public title is required before creating an opportunity.")
+
   const sourceValidation = validateActiveOpportunitySource(
     draft.status ?? "draft",
     draft.source_id ?? null,
@@ -710,6 +731,7 @@ export async function createOpportunityFromDraft(
     .from("opportunities")
     .insert({
       ...draft,
+      public_title: publicTitle,
       repreneur_exposure: draft.repreneur_exposure ?? "anonymized",
       created_by: draft.created_by ?? user.id,
     })

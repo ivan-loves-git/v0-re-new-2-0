@@ -109,9 +109,20 @@ export function OpportunityForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    setIsSubmitting(true)
     setFieldErrors({})
     setIncompleteDataWarning(null)
+
+    const publicTitle = formData.get("public_title")
+    if (
+      !opportunity &&
+      (typeof publicTitle !== "string" || publicTitle.trim().length === 0)
+    ) {
+      setFieldErrors({ public_title: "Public title is required." })
+      toast.error("Public title is required.")
+      return
+    }
+
+    setIsSubmitting(true)
     try {
       const result = await action(formData)
       if (result?.incompleteData) {
@@ -409,35 +420,41 @@ export function OpportunityForm({
                 Use anonymized content until disclosure is explicitly approved.
               </p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="repreneur_exposure">Repreneur exposure</Label>
-                <Select
-                  name="repreneur_exposure"
-                  defaultValue={opportunity?.repreneur_exposure ?? "anonymized"}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {OPPORTUNITY_VISIBILITY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="public_title">Public title</Label>
-                <Input
-                  id="public_title"
-                  name="public_title"
-                  defaultValue={opportunity?.public_title ?? ""}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="public_title">
+                Public title{!opportunity ? " *" : ""}
+              </Label>
+              <Input
+                id="public_title"
+                name="public_title"
+                defaultValue={opportunity?.public_title ?? ""}
+                required={!opportunity}
+                aria-invalid={Boolean(fieldErrors.public_title)}
+              />
+              <p className="text-xs text-muted-foreground">
+                This is the first identifier repreneurs see.
+              </p>
+              {errorFor("public_title")}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="repreneur_exposure">Repreneur exposure</Label>
+              <Select
+                name="repreneur_exposure"
+                defaultValue={opportunity?.repreneur_exposure ?? "anonymized"}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {OPPORTUNITY_VISIBILITY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="teaser_summary">Teaser summary</Label>

@@ -56,6 +56,14 @@ const FIELD_ALIASES = {
   ],
   sector: ["Secteur", "Sector", "Activité", "Activity", "secteur", "sector"],
   description: ["Description", "description", "Résumé", "Resume", "Summary"],
+  publicTitle: [
+    "Public title",
+    "Public Title",
+    "Titre public",
+    "Titre Public",
+    "Titre repreneur",
+    "public_title",
+  ],
   revenue: [
     "CA",
     "CA M€",
@@ -292,6 +300,7 @@ export function normalizeOpportunityRows(
     const sectorField = getField(row, FIELD_ALIASES.sector)
     const locationField = getField(row, FIELD_ALIASES.location)
     const descriptionField = getField(row, FIELD_ALIASES.description)
+    const publicTitleField = getField(row, FIELD_ALIASES.publicTitle)
     const revenueField = getField(row, FIELD_ALIASES.revenue)
     const ebitdaField = getField(row, FIELD_ALIASES.ebitda)
     const headcountField = getField(row, FIELD_ALIASES.headcount)
@@ -302,6 +311,9 @@ export function normalizeOpportunityRows(
     const sector = normalizeOpportunitySector(asString(sectorField.value))
     const location = asString(locationField.value)
     const description = asString(descriptionField.value)
+    const importedPublicTitle = asString(publicTitleField.value)
+    const publicTitle =
+      importedPublicTitle ?? (sector && location ? `${sector} - ${location}` : sector)
     const revenue = asMoneyNumber(revenueField, "meur")
     const ebitda = asMoneyNumber(ebitdaField, "keur")
     const headcountRaw = asString(headcountField.value)
@@ -334,6 +346,14 @@ export function normalizeOpportunityRows(
         severity: "warning",
         field: "description",
         message: "Missing description.",
+      })
+    }
+    if (!publicTitle) {
+      diagnostics.push({
+        severity: "blocker",
+        field: "public_title",
+        message:
+          "Missing public title. Provide Public title or a sector/activity to derive one.",
       })
     }
     if (revenueField.value !== null && revenue === null) {
@@ -372,7 +392,7 @@ export function normalizeOpportunityRows(
       headcount_range: headcountRaw,
       date_added: dateAdded,
       repreneur_exposure: "anonymized",
-      public_title: sector && location ? `${sector} - ${location}` : sector,
+      public_title: publicTitle,
       teaser_summary: description,
       imported_from: "Bertrand Excel review",
       imported_at: new Date().toISOString(),

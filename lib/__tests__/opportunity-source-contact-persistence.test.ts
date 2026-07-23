@@ -42,6 +42,7 @@ function completeForm() {
   formData.set("location", "Paris")
   formData.set("description", "A valid internal opportunity record.")
   formData.set("date_added", "2026-07-19")
+  formData.set("public_title", "An anonymized opportunity title")
   formData.set("teaser_summary", "An anonymized opportunity summary.")
   formData.set("revenue_meur", "1")
   formData.set("ebitda_keur", "100")

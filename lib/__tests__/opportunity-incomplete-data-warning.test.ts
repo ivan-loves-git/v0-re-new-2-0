@@ -57,6 +57,7 @@ function validOpportunityForm() {
   formData.set("location", "Paris")
   formData.set("description", "A valid internal opportunity record.")
   formData.set("date_added", "2026-07-19")
+  formData.set("public_title", "An anonymized opportunity title")
   formData.set("teaser_summary", "An anonymized opportunity summary.")
   return formData
 }
@@ -197,11 +198,48 @@ describe("incomplete opportunity data warnings", () => {
       createOpportunityFromDraft({
         reference: "OPP-NO-SOURCE",
         status: "active",
+        public_title: "An anonymized opportunity title",
         repreneur_exposure: "anonymized",
       }),
     ).rejects.toThrow("A verified M&A source is required before an opportunity can become active.")
 
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("rejects missing or whitespace-only public titles before creating", async () => {
+    for (const publicTitle of ["", "   "]) {
+      const formData = validOpportunityForm()
+      formData.set("public_title", publicTitle)
+
+      await expect(createOpportunity(formData)).resolves.toEqual({
+        success: false,
+        message: "Public title is required before creating an opportunity.",
+        fieldErrors: { public_title: "Public title is required." },
+      })
+    }
+
+    await expect(
+      createOpportunityFromDraft({
+        reference: "OPP-NO-TITLE",
+        public_title: "  ",
+      }),
+    ).rejects.toThrow("Public title is required before creating an opportunity.")
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("persists a trimmed public title for a valid create", async () => {
+    const formData = validOpportunityForm()
+    formData.set("public_title", "  Precision engineering business  ")
+    formData.set("acknowledge_incomplete_data", "true")
+    const { insert } = setupCreateClient()
+
+    await createOpportunity(formData)
+
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        public_title: "Precision engineering business",
+      }),
+    )
   })
 
   it("saves an acknowledged edit with unknown fields stored as null", async () => {
@@ -220,6 +258,22 @@ describe("incomplete opportunity data warnings", () => {
         source_id: null,
         source_label: null,
       }),
+    )
+  })
+
+  it("allows a legacy opportunity without a public title to be edited", async () => {
+    const formData = validOpportunityForm()
+    formData.delete("public_title")
+    formData.set("acknowledge_incomplete_data", "true")
+    const { update } = setupUpdateClient()
+
+    await expect(updateOpportunity("opportunity-001", formData)).resolves.toEqual({
+      success: true,
+      message: "Opportunity saved.",
+    })
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ public_title: null }),
     )
   })
 
@@ -288,6 +342,13 @@ describe("incomplete opportunity data warnings", () => {
     )
     expect(form).toContain("Save anyway")
     expect(form).toContain('name="acknowledge_incomplete_data"')
+    expect(form).toContain('name="public_title"')
+    expect(form).toContain('Public title{!opportunity ? " *" : ""}')
+    expect(form).toContain("!opportunity &&")
+    expect(form).toContain("required={!opportunity}")
+    expect(form.indexOf('name="public_title"')).toBeLessThan(
+      form.indexOf('name="repreneur_exposure"'),
+    )
     expect(form).not.toContain('htmlFor="activity"')
     expect(form).not.toContain('name="activity"')
   })
