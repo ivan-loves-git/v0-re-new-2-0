@@ -10,8 +10,8 @@ import type {
   OfferStatus,
   MilestoneType,
 } from "@/lib/types/offer"
-import type { OpportunityDeclineReasonCategory } from "@/lib/types/opportunity"
-import { isOpportunityDeclineReasonCategory } from "@/lib/types/opportunity"
+import type { DeclineReasonCategory } from "@/lib/types/repreneur"
+import { isDeclineReasonCategory } from "@/lib/types/repreneur"
 import { sendEmail } from "@/lib/email"
 import { OfferReceivedEmail } from "@/lib/email/templates/offer-received"
 import { OfferAcceptedEmail } from "@/lib/email/templates/offer-accepted"
@@ -168,16 +168,18 @@ export async function updateRepreneurOfferStatus(
   repreneurOfferId: string,
   newStatus: OfferStatus,
   repreneurId: string,
-  declineReasonCategory?: OpportunityDeclineReasonCategory,
+  declineReasonCategory?: DeclineReasonCategory,
   declineReasonText?: string,
 ) {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
+  // Engagement always supplies a reason. Keep legacy timeline/activity transitions
+  // compatible when they omit one, while rejecting every supplied invalid value.
   if (
     newStatus === "declined" &&
-    declineReasonCategory &&
-    !isOpportunityDeclineReasonCategory(declineReasonCategory)
+    declineReasonCategory !== undefined &&
+    !isDeclineReasonCategory(declineReasonCategory)
   ) {
     throw new Error("Select a valid decline reason.")
   }

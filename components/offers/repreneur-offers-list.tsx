@@ -35,9 +35,9 @@ import { updateRepreneurOfferStatus, deleteRepreneurOffer } from "@/lib/actions/
 import { toast } from "sonner"
 import type { Offer, RepreneurOffer, OfferStatus, OfferMilestone } from "@/lib/types/offer"
 import {
-  OPPORTUNITY_DECLINE_REASON_OPTIONS,
-  type OpportunityDeclineReasonCategory,
-} from "@/lib/types/opportunity"
+  DECLINE_REASON_OPTIONS,
+  type DeclineReasonCategory,
+} from "@/lib/types/repreneur"
 
 interface RepreneurOffersListProps {
   repreneurId: string
@@ -51,7 +51,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [viewingOffer, setViewingOffer] = useState<RepreneurOffer | null>(null)
   const [decliningOffer, setDecliningOffer] = useState<RepreneurOffer | null>(null)
-  const [declineReasonCategory, setDeclineReasonCategory] = useState<OpportunityDeclineReasonCategory | "">("")
+  const [declineReasonCategory, setDeclineReasonCategory] = useState<DeclineReasonCategory | "">("")
   const [declineReasonText, setDeclineReasonText] = useState("")
 
   // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
@@ -84,7 +84,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
   const handleStatusChange = async (
     repreneurOfferId: string,
     newStatus: OfferStatus,
-    declineReason?: OpportunityDeclineReasonCategory,
+    declineReason?: DeclineReasonCategory,
     declineDetails?: string,
   ) => {
     // Store original for potential revert
@@ -381,13 +381,13 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
             <Label htmlFor="engagement-decline-reason">Decline reason</Label>
             <Select
               value={declineReasonCategory}
-              onValueChange={(value) => setDeclineReasonCategory(value as OpportunityDeclineReasonCategory)}
+              onValueChange={(value) => setDeclineReasonCategory(value as DeclineReasonCategory)}
             >
               <SelectTrigger id="engagement-decline-reason">
                 <SelectValue placeholder="Select a reason..." />
               </SelectTrigger>
               <SelectContent>
-                {OPPORTUNITY_DECLINE_REASON_OPTIONS.map((option) => (
+                {DECLINE_REASON_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>

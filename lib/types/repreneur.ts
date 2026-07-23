@@ -20,6 +20,10 @@ export const DECLINE_REASON_OPTIONS = [
   { value: "other", label: "Other" },
 ] as const
 
+export function isDeclineReasonCategory(value: unknown): value is DeclineReasonCategory {
+  return DECLINE_REASON_OPTIONS.some((option) => option.value === value)
+}
+
 // Scoring accuracy ratings (post-interview manual assessment)
 export type ScoringAccuracy = "understated" | "accurate" | "overstated"
 
