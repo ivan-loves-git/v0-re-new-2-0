@@ -30,6 +30,7 @@ import {
   type RepreneurDealDiscoveryFilters,
   type RepreneurDealDiscoveryOpportunity,
 } from "@/lib/utils/repreneur-deal-discovery"
+import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
 
 type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
 
@@ -159,7 +160,7 @@ function DealCard({
           <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" />
-              {opportunity.location ?? "Location to confirm"}
+              {displayRepreneurOpportunityGeography(opportunity.location)}
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="size-4" />

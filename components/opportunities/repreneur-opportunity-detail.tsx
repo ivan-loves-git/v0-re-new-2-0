@@ -16,6 +16,7 @@ import {
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
 import { getEbitdaMarginPercentage, isStaffRecommended } from "@/lib/utils/repreneur-deal-discovery"
+import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
 
 type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
 
@@ -86,7 +87,7 @@ export function RepreneurOpportunityDetail({
           <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" />
-              {opportunity.location ?? "Location to confirm"}
+              {displayRepreneurOpportunityGeography(opportunity.location)}
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="size-4" />

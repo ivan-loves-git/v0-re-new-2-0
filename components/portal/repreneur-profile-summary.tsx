@@ -18,6 +18,7 @@ import { MILESTONES } from "@/lib/constants/tier-config"
 import type { PortalRepreneurProfile } from "@/lib/data/portal-profile"
 import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity"
 import { getEbitdaMarginPercentage } from "@/lib/utils/repreneur-deal-discovery"
+import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
 
 interface RepreneurProfileSummaryProps {
   repreneur: PortalRepreneurProfile | null
@@ -163,8 +164,8 @@ function DealGroup({
                       <dd className="font-mono text-foreground">{opportunity.reference}</dd>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <WaveMicroLabel asChild><dt>Location</dt></WaveMicroLabel>
-                      <dd className="text-foreground">{opportunity.location ?? "Location to confirm"}</dd>
+                      <WaveMicroLabel asChild><dt>Geography</dt></WaveMicroLabel>
+                      <dd className="text-foreground">{displayRepreneurOpportunityGeography(opportunity.location)}</dd>
                     </div>
                     <div className="flex flex-col gap-1">
                       <WaveMicroLabel asChild><dt>Sector</dt></WaveMicroLabel>
