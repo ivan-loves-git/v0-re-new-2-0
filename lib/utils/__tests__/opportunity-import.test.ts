@@ -47,6 +47,20 @@ describe("opportunity import", () => {
     expect(result.draft.sector).toBe("Hôtellerie, Restauration & Loisirs")
   })
 
+  it("keeps legacy Activity workbook imports compatible", () => {
+    const [result] = normalizeOpportunityRows([
+      {
+        Reference: "OPP-LEGACY-ACTIVITY",
+        Activity: "Services",
+        Location: "Paris",
+      },
+    ])
+
+    expect(result.isValid).toBe(true)
+    expect(result.draft.sector).toBe("Services")
+    expect(result.draft.activity).toBe("Services")
+  })
+
   it("converts euro and million-euro values to stored opportunity units", () => {
     const [result] = normalizeOpportunityRows([
       {

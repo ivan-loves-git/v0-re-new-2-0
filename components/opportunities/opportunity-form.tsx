@@ -339,10 +339,6 @@ export function OpportunityForm({
                 </>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="activity">Activity</Label>
-                <Input id="activity" name="activity" defaultValue={opportunity?.activity ?? ""} />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="location">Localisation *</Label>
                 <Input
                   id="location"

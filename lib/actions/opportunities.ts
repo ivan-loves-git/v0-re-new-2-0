@@ -481,7 +481,6 @@ function buildOpportunityPayload(
       readOpportunityFormString(formData, "source_label") ??
       readOpportunityFormString(formData, "source_firm_name"),
     sector: sectorValue,
-    activity: readOpportunityFormString(formData, "activity"),
     location: readOpportunityFormString(formData, "location"),
     description: readOpportunityFormString(formData, "description"),
     revenue_meur: readOpportunityNumber(formData, "revenue_meur"),

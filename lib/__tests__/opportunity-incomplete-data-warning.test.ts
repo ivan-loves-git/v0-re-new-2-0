@@ -251,6 +251,28 @@ describe("incomplete opportunity data warnings", () => {
     )
   })
 
+  it("does not overwrite legacy activity data when staff save without the removed field", async () => {
+    const createForm = validOpportunityForm()
+    createForm.set("acknowledge_incomplete_data", "true")
+    const { insert } = setupCreateClient()
+
+    await createOpportunity(createForm)
+
+    const createPayload = (insert.mock.calls as unknown as Array<[Record<string, unknown>]>)[0]?.[0]
+    expect(createPayload).toBeDefined()
+    expect(createPayload).not.toHaveProperty("activity")
+
+    const updateForm = validOpportunityForm()
+    updateForm.set("acknowledge_incomplete_data", "true")
+    const { update } = setupUpdateClient()
+
+    await updateOpportunity("opportunity-001", updateForm)
+
+    const updatePayload = (update.mock.calls as unknown as Array<[Record<string, unknown>]>)[0]?.[0]
+    expect(updatePayload).toBeDefined()
+    expect(updatePayload).not.toHaveProperty("activity")
+  })
+
   it("uses a client submit handler so warning acknowledgement retains uncontrolled values", () => {
     const form = readFileSync(
       `${process.cwd()}/components/opportunities/opportunity-form.tsx`,
@@ -266,5 +288,7 @@ describe("incomplete opportunity data warnings", () => {
     )
     expect(form).toContain("Save anyway")
     expect(form).toContain('name="acknowledge_incomplete_data"')
+    expect(form).not.toContain('htmlFor="activity"')
+    expect(form).not.toContain('name="activity"')
   })
 })
