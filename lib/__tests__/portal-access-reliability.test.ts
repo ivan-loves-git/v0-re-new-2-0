@@ -75,6 +75,44 @@ function mockRepreneur(repreneurEmail: string) {
   mocks.createAdminClient.mockReturnValue({ from })
 }
 
+function mockHealthyPortalAccess(email = "current@example.com") {
+  mockRepreneur(email)
+  mocks.pgQuery.mockImplementation(async (sql: string) => {
+    if (sql.includes("FROM public.app_user_roles")) {
+      return {
+        rows: [
+          {
+            id: "role-1",
+            user_id: "auth-current",
+            email,
+            role: "repreneur",
+            repreneur_id: "repreneur-1",
+            access_enabled_at: "2026-07-14T10:00:00.000Z",
+            last_access_email_sent_at: "2026-07-14T11:00:00.000Z",
+          },
+        ],
+      }
+    }
+    if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
+      return {
+        rows: [
+          { id: "auth-current", email, name: "Current Identity" },
+        ],
+      }
+    }
+    if (sql.includes('FROM "account"')) {
+      return { rows: [{ has_password: true }] }
+    }
+    if (sql.includes('FROM "session"')) {
+      return { rows: [{ count: "0" }] }
+    }
+    if (sql.includes("UPDATE public.app_user_roles")) {
+      return { rows: [{ id: "role-1" }] }
+    }
+    throw new Error(`Unexpected SQL in test: ${sql}`)
+  })
+}
+
 describe("repreneur portal access reliability", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -134,7 +172,7 @@ describe("repreneur portal access reliability", () => {
     expect(status.identityIssue).toBe("missing_auth_user")
   })
 
-  it("refuses to record a resend when the role and mailbox identity disagree", async () => {
+  it("reconciles a stale role to the current mailbox before resending", async () => {
     mockRepreneur("current@example.com")
     mocks.pgQuery.mockImplementation(async (sql: string) => {
       if (sql.includes("FROM public.app_user_roles")) {
@@ -172,13 +210,271 @@ describe("repreneur portal access reliability", () => {
       if (sql.includes('FROM "session"')) {
         return { rows: [{ count: "0" }] }
       }
+      if (sql.includes("UPDATE public.app_user_roles")) {
+        return { rows: [{ id: "role-1" }] }
+      }
+      throw new Error(`Unexpected SQL in test: ${sql}`)
+    })
+
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
+        return { rows: [] }
+      }
+      if (sql.includes("pg_advisory_xact_lock")) return { rows: [] }
+      if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
+        return { rows: [] }
+      }
+      if (sql.includes('INSERT INTO "user"')) {
+        return {
+          rows: [
+            {
+              id: "auth-current",
+              email: "current@example.com",
+              name: "Test Repreneur",
+            },
+          ],
+        }
+      }
+      if (sql.includes("FROM public.app_user_roles")) {
+        return {
+          rows: [
+            {
+              id: "role-1",
+              user_id: "auth-user-1",
+              email: "old@example.com",
+              role: "repreneur",
+              repreneur_id: "repreneur-1",
+            },
+          ],
+        }
+      }
+      if (sql.includes('FROM "account"')) return { rows: [] }
+      if (sql.includes('INSERT INTO "account"')) return { rows: [] }
+      if (sql.includes("UPDATE public.app_user_roles")) {
+        return { rows: [{ id: "role-1" }] }
+      }
+      throw new Error(`Unexpected transaction SQL in test: ${sql}`)
+    })
+
+    const result = await resendRepreneurPortalAccessLink("repreneur-1")
+
+    expect(result).toMatchObject({
+      success: true,
+      accessReady: true,
+      emailSent: true,
+      repaired: true,
+    })
+    expect(result.lastAccessEmailSentAt).toEqual(expect.any(String))
+    expect(mocks.requestPasswordReset).toHaveBeenCalledWith({
+      body: {
+        email: "current@example.com",
+        redirectTo: "/auth/reset-password?intent=portal",
+      },
+    })
+    expect(
+      mocks.clientQuery.mock.calls.some(([sql]) =>
+        String(sql).startsWith('UPDATE "account"'),
+      ),
+    ).toBe(false)
+    expect(
+      mocks.clientQuery.mock.calls.some(([sql]) =>
+        String(sql).startsWith('DELETE FROM "session"'),
+      ),
+    ).toBe(false)
+    expect(
+      mocks.pgQuery.mock.calls.some(([sql]) =>
+        String(sql).trim().startsWith("UPDATE public.app_user_roles"),
+      ),
+    ).toBe(true)
+  })
+
+  it("uses the credential-invalidating repair flow for a recoverable resend", async () => {
+    mockRepreneur("current@example.com")
+    mocks.pgQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM public.app_user_roles")) {
+        return {
+          rows: [
+            {
+              id: "role-1",
+              user_id: "auth-old",
+              email: "old@example.com",
+              role: "repreneur",
+              repreneur_id: "repreneur-1",
+              access_enabled_at: "2026-07-14T10:00:00.000Z",
+              last_access_email_sent_at: null,
+            },
+          ],
+        }
+      }
+      if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
+        return {
+          rows: [
+            {
+              id: "auth-current",
+              email: "current@example.com",
+              name: "Current Identity",
+            },
+          ],
+        }
+      }
+      if (sql.includes('FROM "user" WHERE id')) {
+        return {
+          rows: [
+            { id: "auth-old", email: "old@example.com", name: "Old Identity" },
+          ],
+        }
+      }
+      if (sql.includes('FROM "account"')) {
+        return { rows: [{ has_password: true }] }
+      }
+      if (sql.includes('FROM "session"')) {
+        return { rows: [{ count: "1" }] }
+      }
+      if (sql.includes("UPDATE public.app_user_roles")) {
+        return { rows: [{ id: "role-1" }] }
+      }
+      throw new Error(`Unexpected SQL in test: ${sql}`)
+    })
+
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
+        return { rows: [] }
+      }
+      if (sql.includes("pg_advisory_xact_lock")) return { rows: [] }
+      if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
+        return {
+          rows: [
+            {
+              id: "auth-current",
+              email: "current@example.com",
+              name: "Current Identity",
+            },
+          ],
+        }
+      }
+      if (sql.includes("FROM public.app_user_roles")) {
+        return {
+          rows: [
+            {
+              id: "role-1",
+              user_id: "auth-old",
+              email: "old@example.com",
+              role: "repreneur",
+              repreneur_id: "repreneur-1",
+            },
+          ],
+        }
+      }
+      if (sql.includes('SELECT id FROM "account"')) {
+        return { rows: [{ id: "account-current" }] }
+      }
+      if (sql.startsWith('UPDATE "account"')) return { rows: [] }
+      if (sql.startsWith('DELETE FROM "session"')) return { rows: [] }
+      if (sql.includes("UPDATE public.app_user_roles")) {
+        return { rows: [{ id: "role-1" }] }
+      }
+      throw new Error(`Unexpected transaction SQL in test: ${sql}`)
+    })
+
+    const result = await resendRepreneurPortalAccessLink("repreneur-1")
+
+    expect(result).toMatchObject({
+      accessReady: true,
+      emailSent: true,
+      repaired: true,
+    })
+    expect(
+      mocks.clientQuery.mock.calls.some(([sql]) =>
+        String(sql).startsWith('UPDATE "account"'),
+      ),
+    ).toBe(true)
+    expect(
+      mocks.clientQuery.mock.calls.some(([sql]) =>
+        String(sql).startsWith('DELETE FROM "session"'),
+      ),
+    ).toBe(true)
+    expect(
+      mocks.clientQuery.mock.calls.findIndex(([sql]) =>
+        String(sql).startsWith('UPDATE "account"'),
+      ),
+    ).toBeLessThan(
+      mocks.clientQuery.mock.calls.findIndex(([sql]) =>
+        String(sql).includes("UPDATE public.app_user_roles"),
+      ),
+    )
+  })
+
+  it("keeps a healthy resend idempotent and leaves credentials untouched", async () => {
+    mockHealthyPortalAccess()
+
+    const first = await resendRepreneurPortalAccessLink("repreneur-1")
+    const second = await resendRepreneurPortalAccessLink("repreneur-1")
+
+    expect(first).toMatchObject({ emailSent: true, repaired: false })
+    expect(second).toMatchObject({ emailSent: true, repaired: false })
+    expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(2)
+    expect(mocks.poolConnect).not.toHaveBeenCalled()
+    expect(
+      mocks.pgQuery.mock.calls.filter(([sql]) =>
+        String(sql).trim().startsWith("UPDATE public.app_user_roles"),
+      ),
+    ).toHaveLength(2)
+  })
+
+  it("does not turn a first-time resend into portal enablement", async () => {
+    mockRepreneur("current@example.com")
+    mocks.pgQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM public.app_user_roles")) return { rows: [] }
+      if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
+        return { rows: [] }
+      }
       throw new Error(`Unexpected SQL in test: ${sql}`)
     })
 
     await expect(
       resendRepreneurPortalAccessLink("repreneur-1"),
-    ).rejects.toThrow("Repair portal access before resending")
+    ).rejects.toThrow("Enable portal access before resending")
     expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    expect(mocks.poolConnect).not.toHaveBeenCalled()
+  })
+
+  it("refuses a resend that would cross the staff role boundary", async () => {
+    mockRepreneur("staff@example.com")
+    mocks.pgQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM public.app_user_roles")) {
+        return {
+          rows: [
+            {
+              id: "staff-role",
+              user_id: "staff-auth",
+              email: "staff@example.com",
+              role: "staff",
+              repreneur_id: null,
+            },
+          ],
+        }
+      }
+      if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
+        return {
+          rows: [
+            { id: "staff-auth", email: "staff@example.com", name: "Staff" },
+          ],
+        }
+      }
+      if (sql.includes('FROM "account"')) {
+        return { rows: [{ has_password: true }] }
+      }
+      if (sql.includes('FROM "session"')) {
+        return { rows: [{ count: "0" }] }
+      }
+      throw new Error(`Unexpected SQL in test: ${sql}`)
+    })
+
+    await expect(
+      resendRepreneurPortalAccessLink("repreneur-1"),
+    ).rejects.toThrow("cannot be reconciled safely")
+    expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    expect(mocks.poolConnect).not.toHaveBeenCalled()
   })
 
   it("reuses the repreneur role and removes only safe orphan duplicates", () => {

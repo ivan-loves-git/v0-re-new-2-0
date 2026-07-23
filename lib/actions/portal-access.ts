@@ -39,6 +39,8 @@ export interface PortalAccessActionResult {
   accessReady: boolean
   emailSent: boolean
   warning?: boolean
+  repaired?: boolean
+  lastAccessEmailSentAt?: string
   message: string
 }
 
@@ -488,12 +490,13 @@ export async function enableRepreneurPortalAccess(
   }
 
   let recorded = false
+  const sentAt = new Date().toISOString()
   try {
     recorded = await recordAccessEmailSent({
       roleId,
       repreneurId,
       userId: authUser.id,
-      sentAt: new Date().toISOString(),
+      sentAt,
     })
   } catch (error) {
     console.error(
@@ -517,6 +520,8 @@ export async function enableRepreneurPortalAccess(
     success: true,
     accessReady: true,
     emailSent: true,
+    repaired: wasRepair,
+    lastAccessEmailSentAt: sentAt,
     message: `Portal access ${wasRepair ? "repaired" : "enabled"} and setup link sent.`,
   }
 }
@@ -533,12 +538,32 @@ export async function resendRepreneurPortalAccessLink(
       "This repreneur needs an email before a portal access link can be sent.",
     )
   }
-  if (
-    !status.enabled ||
-    !status.roleId ||
-    !status.linkedUserId ||
-    status.identityIssue
-  ) {
+  const hasExistingPortalAccess = Boolean(
+    status.roleId ||
+      status.linkedUserId ||
+      status.hasAuthUser ||
+      status.hasCredentialAccount,
+  )
+  if (!hasExistingPortalAccess) {
+    throw new Error(
+      "Enable portal access before resending an access link.",
+    )
+  }
+
+  if (!status.enabled) {
+    if (!status.repairable) {
+      throw new Error(
+        "Portal access cannot be reconciled safely. Resolve the staff, duplicate-login, or cross-repreneur conflict before resending.",
+      )
+    }
+
+    // A recovery is an access repair, not an ordinary resend. Reuse the
+    // repair flow so an existing credential and its sessions are invalidated
+    // before the fresh setup link is sent.
+    return enableRepreneurPortalAccess(repreneurId)
+  }
+
+  if (!status.roleId || !status.linkedUserId || status.identityIssue) {
     throw new Error(
       "Repair portal access before resending. The current role and login identity do not resolve to the same repreneur email.",
     )
@@ -550,12 +575,13 @@ export async function resendRepreneurPortalAccessLink(
   )
 
   let recorded = false
+  const sentAt = new Date().toISOString()
   try {
     recorded = await recordAccessEmailSent({
       roleId: status.roleId,
       repreneurId,
       userId: status.linkedUserId,
-      sentAt: new Date().toISOString(),
+      sentAt,
     })
   } catch (error) {
     console.error(
@@ -564,12 +590,13 @@ export async function resendRepreneurPortalAccessLink(
     )
   }
 
-  revalidatePath(`/repreneurs/${repreneurId}`)
+  revalidatePortalAccess(repreneurId)
   if (!recorded) {
     return {
       success: true,
       accessReady: true,
       emailSent: true,
+      repaired: false,
       warning: true,
       message:
         "The access link was sent, but the delivery time could not be recorded. Do not resend unless the recipient did not receive it.",
@@ -580,6 +607,8 @@ export async function resendRepreneurPortalAccessLink(
     success: true,
     accessReady: true,
     emailSent: true,
+    repaired: false,
+    lastAccessEmailSentAt: sentAt,
     message: "Portal access link sent.",
   }
 }
