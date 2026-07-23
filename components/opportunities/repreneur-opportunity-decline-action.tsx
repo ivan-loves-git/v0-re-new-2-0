@@ -37,8 +37,7 @@ export function RepreneurOpportunityDeclineAction({
   )
   const [selectedReasons, setSelectedReasons] = useState(() => new Set(initialReasons))
   const [details, setDetails] = useState(initialDetails)
-  const otherSelected = selectedReasons.has("other")
-  const canSubmit = selectedReasons.size > 0 && (!otherSelected || details.trim().length > 0)
+  const canSubmit = selectedReasons.size > 0 && details.trim().length > 0
 
   function setReason(reason: OpportunityDeclineReasonCategory, checked: boolean) {
     setSelectedReasons((current) => {
@@ -55,7 +54,7 @@ export function RepreneurOpportunityDeclineAction({
         <div>
           <p className="text-sm font-medium">Not a fit?</p>
           <p className="text-sm text-muted-foreground">
-            Select at least one reason so Re-New can improve future recommendations.
+            Select at least one reason and add a brief rationale so Re-New can improve future recommendations.
           </p>
         </div>
 
@@ -85,15 +84,15 @@ export function RepreneurOpportunityDeclineAction({
         </fieldset>
 
         <label className="flex flex-col gap-2 text-sm">
-          <span className="font-medium">{otherSelected ? "Details (required for Other)" : "Details if useful"}</span>
+          <span className="font-medium">Why is this not a fit? (required)</span>
           <textarea
             name="decline_reason_text"
             value={details}
             onChange={(event) => setDetails(event.target.value)}
-            required={otherSelected}
+            required
             rows={3}
             className="min-h-20 rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="Add context if you selected Other or want to clarify the reason."
+            placeholder="Briefly explain why this opportunity is not a fit."
           />
         </label>
 

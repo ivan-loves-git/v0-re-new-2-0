@@ -23,9 +23,10 @@ describe("repreneur opportunity not-a-fit response", () => {
     const declineForm = source("components/opportunities/repreneur-opportunity-decline-action.tsx")
 
     expect(declineForm).toContain("useActionState(")
-    expect(declineForm).toContain("selectedReasons.size > 0")
-    expect(declineForm).toContain('selectedReasons.has("other")')
-    expect(declineForm).toContain("required={otherSelected}")
+    expect(declineForm).toContain("selectedReasons.size > 0 && details.trim().length > 0")
+    expect(declineForm).toContain("Why is this not a fit? (required)")
+    expect(declineForm).toContain("required\n            rows={3}")
+    expect(declineForm).not.toContain("required={otherSelected}")
     expect(declineForm).toContain('disabled={!canSubmit || pending}')
     expect(declineForm).toContain("Response not saved")
   })

@@ -63,8 +63,8 @@ async function updateMyOpportunityResponse(matchId: string, status: "interested"
     throw new RepreneurOpportunityResponseError("Choose at least one reason before marking this opportunity as not a fit.")
   }
 
-  if (status === "declined" && declineReasonCategories.includes("other") && !declineReasonText) {
-    throw new RepreneurOpportunityResponseError("Add details when selecting Other.")
+  if (status === "declined" && !declineReasonText) {
+    throw new RepreneurOpportunityResponseError("Add a written rationale before marking this opportunity as not a fit.")
   }
 
   const { error } = await supabase
