@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 24, 2026",
+    version: "0.9.29",
+    title: "Portal decisions and opportunity operations made more reliable",
+    isCompleted: true,
+    events: [
+      {
+        title: "Repreneurs can respond with confidence",
+        type: "fix",
+        description: "Interest signals now complete reliably, while declines capture both a consistent reason and the written context staff need to improve future matching.",
+      },
+      {
+        title: "Portal access can be resent without disruption",
+        type: "fix",
+        description: "Healthy accounts receive another access link without rotating credentials or sessions, while broken account mappings show one explicit repair path.",
+      },
+      {
+        title: "New opportunities start with a clear public identity",
+        type: "feature",
+        description: "Every new opportunity now has a prominent repreneur-facing title, simpler staff intake, and import diagnostics that prevent unclear records from entering the workspace.",
+      },
+      {
+        title: "Opportunity geography reflects what is actually known",
+        type: "decision",
+        description: "Portal cards and details preserve the attached geography label instead of assuming every location has regional precision.",
+      },
+    ],
+  },
+  {
     period: "Jul 22, 2026",
     version: "0.9.28",
     title: "M&A firms and contacts made easier to navigate and maintain",
