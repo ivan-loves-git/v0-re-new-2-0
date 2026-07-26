@@ -49,6 +49,7 @@ describe("canonical M&A data model documentation", () => {
       "Excel identifiers never remain in live firm, office, contact or opportunity records.",
       "Closed and archived opportunities preserve the source and contact history",
       "The atomic intake service cannot reopen a `closed` or `archived` opportunity.",
+      "Canonical firm intake serializes on the lower-trimmed name",
       "W-063 integrated-release dependency",
       "A cell containing several email addresses is never imported as one address",
       "WAVE data remains test data until then",

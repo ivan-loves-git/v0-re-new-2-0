@@ -100,9 +100,13 @@ describe("M&A operating-office foundation migration", () => {
     const saveStart = migration.indexOf(
       "CREATE OR REPLACE FUNCTION public.save_opportunity_office_context",
     )
+    const contactPrimitiveStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.create_or_affiliate_ma_contact",
+    )
     const createStart = migration.indexOf(
       "CREATE OR REPLACE FUNCTION public.create_opportunity_with_office_context",
     )
+    const identityDefinition = migration.slice(identityStart, contactPrimitiveStart)
     const saveDefinition = migration.slice(saveStart, createStart)
     const createDefinition = migration.slice(createStart)
 
@@ -114,6 +118,20 @@ describe("M&A operating-office foundation migration", () => {
     expect(migration).toContain("ma_real_office_name_required")
     expect(migration).toContain("ma_synthetic_default_office_must_use_firm_name")
     expect(migration).toContain("ma_identity_actor_required")
+    expect(identityDefinition).toContain(
+      "normalized_firm_name := LOWER(BTRIM(firm_name));",
+    )
+    expect(identityDefinition).toContain(
+      "pg_advisory_xact_lock(hashtextextended(normalized_firm_name, 76061));",
+    )
+    expect(identityDefinition).toContain(
+      "WHERE LOWER(BTRIM(firm.name)) = normalized_firm_name",
+    )
+    expect(identityDefinition).toContain("ma_firm_name_already_exists")
+    expect(identityDefinition.indexOf("ma_firm_name_already_exists")).toBeLessThan(
+      identityDefinition.indexOf("INSERT INTO public.ma_firms"),
+    )
+    expect(identityDefinition).not.toContain("INSERT INTO public.ma_sources")
 
     expect(saveDefinition).toContain(
       "p_opportunity_fields JSONB DEFAULT '{}'::JSONB",

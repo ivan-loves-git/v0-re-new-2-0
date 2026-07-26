@@ -1024,6 +1024,7 @@ AS $$
 DECLARE
   actor TEXT;
   firm_name TEXT;
+  normalized_firm_name TEXT;
   office_name TEXT;
   contact_first_name TEXT;
   contact_last_name TEXT;
@@ -1045,6 +1046,20 @@ BEGIN
 
   IF firm_name IS NULL THEN
     RAISE EXCEPTION 'ma_firm_name_required';
+  END IF;
+
+  -- Serialize canonical firm creation by the normalized business name. This
+  -- prevents two concurrent intake requests from passing the exact-match
+  -- check before either inserts a case or whitespace variant.
+  normalized_firm_name := LOWER(BTRIM(firm_name));
+  PERFORM pg_advisory_xact_lock(hashtextextended(normalized_firm_name, 76061));
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.ma_firms firm
+    WHERE LOWER(BTRIM(firm.name)) = normalized_firm_name
+  ) THEN
+    RAISE EXCEPTION 'ma_firm_name_already_exists';
   END IF;
 
   IF contact_first_name IS NULL AND contact_last_name IS NULL THEN
