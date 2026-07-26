@@ -213,6 +213,19 @@ function readUuid(formData: FormData, key: string) {
   return { value, error: null }
 }
 
+function readNormalizedFormStringEntries(formData: FormData, key: string) {
+  const entries = formData.getAll(key)
+  const values = entries
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+
+  return {
+    values,
+    hasNonStringEntries: values.length !== entries.length,
+    hasRepeatedEntries: entries.length > 1,
+  }
+}
+
 function readUuidList(formData: FormData, key: string) {
   const values = formData
     .getAll(key)
@@ -579,8 +592,17 @@ export async function createMaOfficeContact(
     }
   }
 
-  const existingContact = readUuid(formData, "existing_contact_id")
-  if (!usesExistingContact && (existingContact.value || existingContact.error)) {
+  const existingContactEntries = readNormalizedFormStringEntries(
+    formData,
+    "existing_contact_id",
+  )
+  const existingContact = existingContactEntries.values[0] ?? null
+
+  if (
+    !usesExistingContact &&
+    (existingContactEntries.hasNonStringEntries ||
+      existingContactEntries.values.some(Boolean))
+  ) {
     return {
       success: false,
       message:
@@ -602,7 +624,12 @@ export async function createMaOfficeContact(
     : readOpportunityFormString(formData, "contact_phone")
 
   if (usesExistingContact) {
-    if (existingContact.error || !existingContact.value) {
+    if (
+      existingContactEntries.hasNonStringEntries ||
+      existingContactEntries.hasRepeatedEntries ||
+      !existingContact ||
+      !UUID_PATTERN.test(existingContact)
+    ) {
       return {
         success: false,
         message: "Choose an active canonical contact to affiliate with this office.",
@@ -615,7 +642,14 @@ export async function createMaOfficeContact(
         "contact_last_name",
         "contact_email",
         "contact_phone",
-      ].some((field) => readOpportunityFormString(formData, field))
+      ].some((field) => {
+        const entries = readNormalizedFormStringEntries(formData, field)
+        return (
+          entries.hasNonStringEntries ||
+          entries.hasRepeatedEntries ||
+          entries.values.some(Boolean)
+        )
+      })
     ) {
       return {
         success: false,
@@ -641,7 +675,7 @@ export async function createMaOfficeContact(
     usesExistingContact
       ? {
           p_office_id: officeId,
-          p_existing_contact_id: existingContact.value,
+          p_existing_contact_id: existingContact,
           p_contact_job_title: jobTitle,
           p_actor: user.id,
         }
