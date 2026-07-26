@@ -138,11 +138,11 @@ describe("canonical opportunity contact persistence", () => {
     expect(payload.p_opportunity_fields).not.toHaveProperty("origin_channel")
   })
 
-  it("maps canonical activation errors to the field staff can repair", async () => {
+  it("maps the migration 076 usable-primary-email error to a staff repair", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: null,
       error: {
-        message: "opportunity_activation_requires_primary_contact_email",
+        message: "opportunity_activation_requires_usable_primary_email",
       },
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
@@ -152,10 +152,10 @@ describe("canonical opportunity contact persistence", () => {
     ).resolves.toEqual({
       success: false,
       message:
-        "The primary contact needs a usable email before activation or pause.",
+        "Choose or update a primary contact with a usable email before activating or pausing.",
       fieldErrors: {
         primary_affiliation_id:
-          "The primary contact needs a usable email before activation or pause.",
+          "Choose or update a primary contact with a usable email before activating or pausing.",
       },
     })
   })

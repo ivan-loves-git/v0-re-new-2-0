@@ -135,14 +135,10 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
     field: "primary_affiliation_id",
     message: "Choose exactly one primary contact before activating or pausing.",
   },
-  opportunity_activation_requires_primary_contact_name: {
-    field: "primary_affiliation_id",
-    message: "The primary contact needs a name before activation or pause.",
-  },
-  opportunity_activation_requires_primary_contact_email: {
+  opportunity_activation_requires_usable_primary_email: {
     field: "primary_affiliation_id",
     message:
-      "The primary contact needs a usable email before activation or pause.",
+      "Choose or update a primary contact with a usable email before activating or pausing.",
   },
   opportunity_contact_requires_source_office: {
     field: "source_office_id",
