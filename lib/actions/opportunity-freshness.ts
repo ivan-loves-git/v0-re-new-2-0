@@ -12,7 +12,7 @@ export interface OpportunityFreshnessReminder {
   id: string
   reference: string
   publicTitle: string | null
-  sourceLabel: string | null
+  sourceContextLabel: string | null
   location: string | null
   sector: string | null
   status: OpportunityStatus
@@ -35,6 +35,22 @@ interface OpportunityFreshnessRow {
   reference: string
   public_title: string | null
   source_label: string | null
+  source_office:
+    | {
+        name: string | null
+        firm:
+          | { name: string | null }
+          | Array<{ name: string | null }>
+          | null
+      }
+    | Array<{
+        name: string | null
+        firm:
+          | { name: string | null }
+          | Array<{ name: string | null }>
+          | null
+      }>
+    | null
   location: string | null
   sector: string | null
   status: OpportunityStatus
@@ -69,6 +85,28 @@ function formatMonth(date: Date) {
   }).format(date)
 }
 
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null)
+}
+
+function nonEmpty(value: string | null | undefined) {
+  const trimmed = value?.trim()
+  return trimmed || null
+}
+
+function sourceContextLabel(opportunity: OpportunityFreshnessRow) {
+  const office = firstRelation(opportunity.source_office)
+  const firm = firstRelation(office?.firm)
+  const firmName = nonEmpty(firm?.name)
+  const officeName = nonEmpty(office?.name)
+
+  if (firmName && officeName && firmName !== officeName) {
+    return `${firmName} · ${officeName}`
+  }
+
+  return firmName ?? officeName ?? nonEmpty(opportunity.source_label)
+}
+
 export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnessData> {
   await requireStaffAccess()
   const supabase = createAdminClient()
@@ -76,7 +114,9 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
   const [opportunitiesResult, activePursuitsResult] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, reference, public_title, source_label, location, sector, status, date_added, created_at")
+      .select(
+        "id, reference, public_title, source_label, location, sector, status, date_added, created_at, source_office:ma_offices(name, firm:ma_firms(name))",
+      )
       .in("status", OPEN_OPPORTUNITY_STATUSES)
       .order("date_added", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true }),
@@ -106,7 +146,7 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
         id: opportunity.id,
         reference: opportunity.reference,
         publicTitle: opportunity.public_title,
-        sourceLabel: opportunity.source_label,
+        sourceContextLabel: sourceContextLabel(opportunity),
         location: opportunity.location,
         sector: opportunity.sector,
         status: opportunity.status,

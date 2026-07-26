@@ -367,7 +367,10 @@ export function OpportunityForm({
                       value={status}
                       onValueChange={setStatus}
                     >
-                      <SelectTrigger aria-invalid={Boolean(fieldErrors.status)}>
+                      <SelectTrigger
+                        id="status"
+                        aria-invalid={Boolean(fieldErrors.status)}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

@@ -96,7 +96,9 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
                           </Link>
                           <p className="text-xs text-muted-foreground">{reminder.reference}</p>
                         </TableCell>
-                        <TableCell className="whitespace-normal">{reminder.sourceLabel ?? "No source"}</TableCell>
+                        <TableCell className="whitespace-normal">
+                          {reminder.sourceContextLabel ?? "No source"}
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
                             <span>{reminder.exactDateAdded ?? "No date"}</span>
