@@ -138,6 +138,13 @@ function normaliseOpportunity(
   invalidDate: boolean
 } {
   const rowKey = `opportunity:${row.temporaryId}`
+  const rawSelectedContactTemporaryIds = (row.contactTemporaryIds ?? [])
+    .map((contactId) => text(contactId))
+    .filter((contactId): contactId is string => contactId !== null)
+  const selectedContactTemporaryIds = [
+    ...new Set(rawSelectedContactTemporaryIds),
+  ]
+  const primaryContactTemporaryId = text(row.primaryContactTemporaryId)
   const targetStatus =
     row.targetStatus === null || row.targetStatus === undefined
       ? "active"
@@ -164,6 +171,30 @@ function normaliseOpportunity(
   const ebitda = parseTargetNumber(row.ebitdaKeur)
   const headcount = parseTargetInteger(row.headcount)
   const dateAdded = parseTargetDate(row.dateAdded)
+
+  if (selectedContactTemporaryIds.length === 0) {
+    addIssue(
+      issues,
+      rowKey,
+      "OPPORTUNITY_CONTACTS_REQUIRED",
+      "blocker",
+      "contactTemporaryIds",
+      "An opportunity requires at least one selected contact before activation.",
+    )
+  }
+  if (
+    primaryContactTemporaryId &&
+    !selectedContactTemporaryIds.includes(primaryContactTemporaryId)
+  ) {
+    addIssue(
+      issues,
+      rowKey,
+      "PRIMARY_CONTACT_NOT_SELECTED",
+      "blocker",
+      "primaryContactTemporaryId",
+      "The primary contact must be included in the opportunity’s selected contact set.",
+    )
+  }
 
   if (!text(row.reference)) {
     addIssue(
@@ -271,7 +302,8 @@ function normaliseOpportunity(
       temporaryId: row.temporaryId,
       reference: text(row.reference),
       sourceOfficeTemporaryId: text(row.sourceOfficeTemporaryId),
-      primaryContactTemporaryId: text(row.primaryContactTemporaryId),
+      selectedContactTemporaryIds,
+      primaryContactTemporaryId,
       description: text(row.description),
       targetStatus,
       sector,
@@ -449,6 +481,7 @@ export function reconcileSyntheticMaCutover(
     }
   }
 
+  let opportunityContactLinks = 0
   let primaryContactLinks = 0
   for (const { opportunity } of normalized) {
     const rowKey = `opportunity:${opportunity.temporaryId}`
@@ -477,7 +510,12 @@ export function reconcileSyntheticMaCutover(
     const primaryContact = opportunity.primaryContactTemporaryId
       ? contactById.get(opportunity.primaryContactTemporaryId)
       : undefined
-    if (!primaryContact || !contactHasOffice(primaryContact, officeId)) {
+    const primaryContactMapsToOffice = Boolean(
+      officeId &&
+        validOfficeIds.has(officeId) &&
+        contactHasOffice(primaryContact, officeId),
+    )
+    if (!primaryContactMapsToOffice) {
       addIssue(
         issues,
         rowKey,
@@ -486,44 +524,74 @@ export function reconcileSyntheticMaCutover(
         "primaryContactTemporaryId",
         "The primary contact must resolve to the same staged operating office.",
       )
-      continue
     }
 
-    const hasPrimaryIdentity = Boolean(
-      text(primaryContact.firstName) || text(primaryContact.lastName),
-    )
-    if (!hasPrimaryIdentity) {
-      addIssue(
-        issues,
-        rowKey,
-        "PRIMARY_CONTACT_IDENTITY_REQUIRED",
-        "blocker",
-        "primaryContactTemporaryId",
-        "The primary contact requires a first name or last name.",
+    for (const contactTemporaryId of opportunity.selectedContactTemporaryIds) {
+      const selectedContact = contactById.get(contactTemporaryId)
+      const selectedContactMapsToOffice = Boolean(
+        officeId &&
+          validOfficeIds.has(officeId) &&
+          contactHasOffice(selectedContact, officeId),
       )
+      if (!selectedContactMapsToOffice) {
+        if (contactTemporaryId !== opportunity.primaryContactTemporaryId) {
+          addIssue(
+            issues,
+            rowKey,
+            "OPPORTUNITY_CONTACT_MAPPING_UNRESOLVED",
+            "blocker",
+            "contactTemporaryIds",
+            "Every selected contact must resolve to the opportunity’s staged operating office.",
+          )
+        }
+        continue
+      }
+      opportunityContactLinks += 1
     }
 
-    const primaryEmail = text(primaryContact.email)
-    if (!primaryEmail) {
-      addIssue(
-        issues,
-        rowKey,
-        "PRIMARY_CONTACT_EMAIL_REQUIRED",
-        "blocker",
-        "primaryContactTemporaryId",
-        "The primary contact requires a usable email address.",
+    if (primaryContact && primaryContactMapsToOffice) {
+      const hasPrimaryIdentity = Boolean(
+        text(primaryContact.firstName) || text(primaryContact.lastName),
       )
-    } else if (!USABLE_EMAIL.test(primaryEmail)) {
-      addIssue(
-        issues,
-        rowKey,
-        "PRIMARY_CONTACT_EMAIL_INVALID",
-        "blocker",
-        "primaryContactTemporaryId",
-        "The primary contact email is malformed and cannot activate an opportunity.",
-      )
-    } else if (hasPrimaryIdentity) {
-      primaryContactLinks += 1
+      if (!hasPrimaryIdentity) {
+        addIssue(
+          issues,
+          rowKey,
+          "PRIMARY_CONTACT_IDENTITY_REQUIRED",
+          "blocker",
+          "primaryContactTemporaryId",
+          "The primary contact requires a first name or last name.",
+        )
+      }
+
+      const primaryEmail = text(primaryContact.email)
+      if (!primaryEmail) {
+        addIssue(
+          issues,
+          rowKey,
+          "PRIMARY_CONTACT_EMAIL_REQUIRED",
+          "blocker",
+          "primaryContactTemporaryId",
+          "The primary contact requires a usable email address.",
+        )
+      } else if (!USABLE_EMAIL.test(primaryEmail)) {
+        addIssue(
+          issues,
+          rowKey,
+          "PRIMARY_CONTACT_EMAIL_INVALID",
+          "blocker",
+          "primaryContactTemporaryId",
+          "The primary contact email is malformed and cannot activate an opportunity.",
+        )
+      } else if (
+        hasPrimaryIdentity &&
+        opportunity.primaryContactTemporaryId !== null &&
+        opportunity.selectedContactTemporaryIds.includes(
+          opportunity.primaryContactTemporaryId,
+        )
+      ) {
+        primaryContactLinks += 1
+      }
     }
   }
 
@@ -551,6 +619,7 @@ export function reconcileSyntheticMaCutover(
     resolvedMappings: {
       officeParents: validOfficeIds.size,
       contactOfficeAffiliations: resolvedContactOfficeKeys.size,
+      opportunityContactLinks,
       primaryContactLinks,
     },
     opportunityRows: {
@@ -627,6 +696,13 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       email: "marie.durand@example.test",
     },
     {
+      temporaryId: "contact-secondary",
+      officeTemporaryIds: ["office-paris"],
+      firstName: "Lina",
+      lastName: "Moreau",
+      email: "lina.moreau@example.test",
+    },
+    {
       temporaryId: "contact-no-name",
       officeTemporaryIds: ["office-paris"],
       firstName: null,
@@ -653,6 +729,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-valid-chain",
       reference: "SYN-001",
       sourceOfficeTemporaryId: "office-paris",
+      contactTemporaryIds: ["contact-valid", "contact-secondary"],
       primaryContactTemporaryId: "contact-valid",
       description: "Synthetic valid chain used only for cutover rehearsal.",
       sector: "Industrial services",
@@ -674,6 +751,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-duplicate-a",
       reference: "SYN-002",
       sourceOfficeTemporaryId: "office-paris",
+      contactTemporaryIds: ["contact-valid"],
       primaryContactTemporaryId: "contact-valid",
       description: "First duplicate reference for reconciliation coverage.",
     },
@@ -681,6 +759,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-duplicate-b",
       reference: "SYN-002",
       sourceOfficeTemporaryId: "office-paris",
+      contactTemporaryIds: ["contact-valid"],
       primaryContactTemporaryId: "contact-valid",
       description: "Second duplicate reference for reconciliation coverage.",
     },
@@ -688,6 +767,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-missing-office-description",
       reference: "SYN-003",
       sourceOfficeTemporaryId: null,
+      contactTemporaryIds: ["contact-valid"],
       primaryContactTemporaryId: "contact-valid",
       description: null,
     },
@@ -695,6 +775,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-primary-no-name",
       reference: "SYN-004",
       sourceOfficeTemporaryId: "office-paris",
+      contactTemporaryIds: ["contact-no-name"],
       primaryContactTemporaryId: "contact-no-name",
       description: "Primary identity validation rehearsal.",
     },
@@ -702,6 +783,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-primary-malformed-email",
       reference: "SYN-005",
       sourceOfficeTemporaryId: "office-paris",
+      contactTemporaryIds: ["contact-malformed-email"],
       primaryContactTemporaryId: "contact-malformed-email",
       description: "Primary email validation rehearsal.",
     },
@@ -709,6 +791,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-review-geography-null-metrics",
       reference: "SYN-006",
       sourceOfficeTemporaryId: "office-paris",
+      contactTemporaryIds: ["contact-valid"],
       primaryContactTemporaryId: "contact-valid",
       description: "Geography review and null numeric/date rehearsal.",
       location: "Nantes",
@@ -724,6 +807,7 @@ const SYNTHETIC_CUTOVER_FIXTURE: MaCutoverSyntheticFixture = {
       temporaryId: "opportunity-cross-sheet-parent-unmapped",
       reference: "SYN-007",
       sourceOfficeTemporaryId: "office-unmapped-parent",
+      contactTemporaryIds: ["contact-unmapped-office"],
       primaryContactTemporaryId: "contact-unmapped-office",
       description: "Cross-sheet parent mapping must block activation when unresolved.",
     },

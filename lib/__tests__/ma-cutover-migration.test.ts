@@ -106,6 +106,13 @@ describe("M&A one-time cutover staging migration", () => {
     expect(migration).not.toContain("p_repreneur_exposure")
   })
 
+  it("preserves the full staged affiliation set and keeps the primary inside it", () => {
+    expect(migration).toContain(
+      "JSONB_ARRAY_ELEMENTS_TEXT(stage_row.related_temporary_entity_ids)",
+    )
+    expect(migration).toContain("primary_affiliation_id = ANY(affiliation_ids)")
+  })
+
   it("passes only explicitly staged and manifest-approved optional fields", () => {
     expect(migration).toContain("approved_opportunity_fields")
     expect(migration).toContain("ma_cutover_approved_optional_fields_must_be_array")

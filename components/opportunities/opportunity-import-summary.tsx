@@ -20,7 +20,7 @@ export function OpportunityImportSummary({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <dt className="text-muted-foreground">Synthetic opportunity rows</dt>
             <dd className="mt-1 text-2xl font-semibold">
@@ -31,6 +31,12 @@ export function OpportunityImportSummary({
             <dt className="text-muted-foreground">Ready in the fixture</dt>
             <dd className="mt-1 text-2xl font-semibold">
               {summary.opportunityRows.readyForActivation}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Reconciled contact links</dt>
+            <dd className="mt-1 text-2xl font-semibold">
+              {summary.resolvedMappings.opportunityContactLinks}
             </dd>
           </div>
           <div>

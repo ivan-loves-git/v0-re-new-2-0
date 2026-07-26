@@ -59,7 +59,7 @@ export function OpportunityImportReview({
         </CardHeader>
         <CardContent>
           <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-            <li>A firm, operating office, named contact, and primary email form one valid chain.</li>
+            <li>The valid fixture keeps two selected contacts; every selected contact belongs to its operating office and the primary is one of them.</li>
             <li>Duplicate references, missing descriptions or offices, and invalid primary contacts block activation.</li>
             <li>Geography remains an explicit confirmed, review, or null decision; WAVE does not infer it.</li>
             <li>Missing financial values and dates may remain null; invalid supplied values block activation until corrected.</li>

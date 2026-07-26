@@ -20,6 +20,7 @@ describe("M&A cutover rehearsal", () => {
     expect(validChain).toMatchObject({
       reference: "SYN-001",
       sourceOfficeTemporaryId: "office-paris",
+      selectedContactTemporaryIds: ["contact-valid", "contact-secondary"],
       primaryContactTemporaryId: "contact-valid",
       sector: "Industrial services",
       activity: "Engineering services",
@@ -58,6 +59,7 @@ describe("M&A cutover rehearsal", () => {
     }
     expect(rehearsal.summary.opportunityRows.duplicateReferences).toBe(1)
     expect(rehearsal.summary.opportunityRows.readyForActivation).toBe(1)
+    expect(rehearsal.summary.resolvedMappings.opportunityContactLinks).toBe(7)
     const suppliedInvalidIssues = rehearsal.issues.filter((issue) =>
       [
         "INVALID_REVENUE_SUPPLIED",
@@ -98,6 +100,7 @@ describe("M&A cutover rehearsal", () => {
           temporaryId: "opportunity-2",
           reference: "SYN-2",
           sourceOfficeTemporaryId: "office-1",
+          contactTemporaryIds: ["contact-1"],
           primaryContactTemporaryId: "contact-1",
           description: "Second synthetic opportunity.",
         },
@@ -105,6 +108,7 @@ describe("M&A cutover rehearsal", () => {
           temporaryId: "opportunity-1",
           reference: "SYN-1",
           sourceOfficeTemporaryId: "office-1",
+          contactTemporaryIds: ["contact-1"],
           primaryContactTemporaryId: "contact-1",
           description: "First synthetic opportunity.",
         },
@@ -124,6 +128,79 @@ describe("M&A cutover rehearsal", () => {
     expect(second.summary).toEqual(first.summary)
     expect(second.issues).toEqual(first.issues)
     expect(second.normalizedOpportunities).toEqual(first.normalizedOpportunities)
+  })
+
+  it("requires every selected contact to be office-affiliated and the primary to be selected", () => {
+    const fixture: MaCutoverSyntheticFixture = {
+      id: "multi-contact-validation",
+      sourceFingerprint: "synthetic:multi-contact:v1",
+      firms: [{ temporaryId: "firm-1", name: "North Advisory" }],
+      offices: [
+        {
+          temporaryId: "office-a",
+          firmTemporaryId: "firm-1",
+          name: "North Paris",
+        },
+        {
+          temporaryId: "office-b",
+          firmTemporaryId: "firm-1",
+          name: "North Lyon",
+        },
+      ],
+      contacts: [
+        {
+          temporaryId: "contact-primary",
+          officeTemporaryIds: ["office-a"],
+          firstName: "Ari",
+          lastName: "Primary",
+          email: "ari.primary@example.test",
+        },
+        {
+          temporaryId: "contact-other-office",
+          officeTemporaryIds: ["office-b"],
+          firstName: "Bea",
+          lastName: "Other",
+          email: "bea.other@example.test",
+        },
+      ],
+      opportunities: [
+        {
+          temporaryId: "opportunity-primary-not-selected",
+          reference: "SYN-MULTI-1",
+          sourceOfficeTemporaryId: "office-a",
+          contactTemporaryIds: ["contact-other-office"],
+          primaryContactTemporaryId: "contact-primary",
+          description: "Primary-contact membership validation.",
+        },
+        {
+          temporaryId: "opportunity-selected-contact-wrong-office",
+          reference: "SYN-MULTI-2",
+          sourceOfficeTemporaryId: "office-a",
+          contactTemporaryIds: ["contact-primary", "contact-other-office"],
+          primaryContactTemporaryId: "contact-primary",
+          description: "Selected-contact office affiliation validation.",
+        },
+      ],
+    }
+
+    const rehearsal = reconcileSyntheticMaCutover(fixture)
+    const codesFor = (temporaryId: string) =>
+      rehearsal.issues
+        .filter((issue) => issue.rowKey === `opportunity:${temporaryId}`)
+        .map((issue) => issue.code)
+
+    expect(codesFor("opportunity-primary-not-selected")).toEqual(
+      expect.arrayContaining([
+        "PRIMARY_CONTACT_NOT_SELECTED",
+        "OPPORTUNITY_CONTACT_MAPPING_UNRESOLVED",
+      ]),
+    )
+    expect(codesFor("opportunity-selected-contact-wrong-office")).toContain(
+      "OPPORTUNITY_CONTACT_MAPPING_UNRESOLVED",
+    )
+    expect(rehearsal.summary.resolvedMappings.opportunityContactLinks).toBe(1)
+    expect(rehearsal.summary.resolvedMappings.primaryContactLinks).toBe(1)
+    expect(rehearsal.summary.opportunityRows.readyForActivation).toBe(0)
   })
 
   it("blocks a synthetic fallback alongside a real office regardless of temporary-ID order", () => {

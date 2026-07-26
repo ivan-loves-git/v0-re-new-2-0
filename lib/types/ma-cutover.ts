@@ -16,6 +16,9 @@ export const MA_CUTOVER_EXCEPTION_CODES = [
   "SYNTHETIC_DEFAULT_REQUIRES_UNKNOWN_OFFICE",
   "CONTACT_OFFICE_MAPPING_UNRESOLVED",
   "PRIMARY_CONTACT_MAPPING_UNRESOLVED",
+  "OPPORTUNITY_CONTACTS_REQUIRED",
+  "PRIMARY_CONTACT_NOT_SELECTED",
+  "OPPORTUNITY_CONTACT_MAPPING_UNRESOLVED",
   "PRIMARY_CONTACT_IDENTITY_REQUIRED",
   "PRIMARY_CONTACT_EMAIL_REQUIRED",
   "PRIMARY_CONTACT_EMAIL_INVALID",
@@ -69,6 +72,8 @@ export interface MaCutoverSyntheticOpportunityRow {
   temporaryId: string
   reference: string | null
   sourceOfficeTemporaryId: string | null
+  /** Full selected contact set for this opportunity; the primary must be one. */
+  contactTemporaryIds: string[]
   primaryContactTemporaryId: string | null
   description: string | null
   targetStatus?: MaCutoverTargetStatus | string | null
@@ -110,6 +115,7 @@ export interface MaCutoverNormalizedOpportunity {
   temporaryId: string
   reference: string | null
   sourceOfficeTemporaryId: string | null
+  selectedContactTemporaryIds: string[]
   primaryContactTemporaryId: string | null
   description: string | null
   targetStatus: MaCutoverTargetStatus | null
@@ -143,6 +149,7 @@ export interface MaCutoverReconciliationSummary {
   resolvedMappings: {
     officeParents: number
     contactOfficeAffiliations: number
+    opportunityContactLinks: number
     primaryContactLinks: number
   }
   opportunityRows: {
