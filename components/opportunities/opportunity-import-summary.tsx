@@ -1,66 +1,61 @@
-import { AlertCircle, CheckCircle2, CircleSlash, TriangleAlert } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { CircleAlert, ShieldCheck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { OpportunityImportCommitSummary, OpportunityImportPreview } from "@/lib/actions/opportunity-import"
+import type { MaCutoverRehearsal } from "@/lib/types/ma-cutover"
 
 interface OpportunityImportSummaryProps {
-  preview?: OpportunityImportPreview | null
-  commitSummary?: OpportunityImportCommitSummary | null
+  rehearsal: MaCutoverRehearsal
 }
 
-export function OpportunityImportSummary({ preview, commitSummary }: OpportunityImportSummaryProps) {
-  if (commitSummary) {
-    return (
-      <Alert>
-        <CheckCircle2 className="size-4" />
-        <AlertTitle>Import committed</AlertTitle>
-        <AlertDescription>
-          {commitSummary.created} created, {commitSummary.skipped} skipped, {commitSummary.blocked} blocked, {commitSummary.warnings} with warnings.
-        </AlertDescription>
-      </Alert>
-    )
-  }
-
-  if (!preview) return null
+export function OpportunityImportSummary({
+  rehearsal,
+}: OpportunityImportSummaryProps) {
+  const { summary } = rehearsal
 
   return (
-    <div className="grid gap-3 sm:grid-cols-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="size-4" />
-            Valid
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-2xl font-semibold">{preview.summary.valid}</CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <TriangleAlert className="size-4" />
-            Warnings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-2xl font-semibold">{preview.summary.warnings}</CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <CircleSlash className="size-4" />
-            Blocked
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-2xl font-semibold">{preview.summary.blocked}</CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <AlertCircle className="size-4" />
-            Total
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-2xl font-semibold">{preview.summary.total}</CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ShieldCheck className="size-4" />
+          Deterministic synthetic reconciliation
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <dt className="text-muted-foreground">Synthetic opportunity rows</dt>
+            <dd className="mt-1 text-2xl font-semibold">
+              {summary.sourceRows.opportunities}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Ready in the fixture</dt>
+            <dd className="mt-1 text-2xl font-semibold">
+              {summary.opportunityRows.readyForActivation}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Blockers surfaced</dt>
+            <dd className="mt-1 text-2xl font-semibold">
+              {summary.issues.blockers}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Warnings surfaced</dt>
+            <dd className="mt-1 text-2xl font-semibold">
+              {summary.issues.warnings}
+            </dd>
+          </div>
+        </dl>
+
+        <div className="mt-5 flex items-start gap-2 border-t pt-4 text-sm text-muted-foreground">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" />
+          <p>
+            Reconciliation is a rehearsal only. It uses a fixed in-repository
+            fixture, does not accept an external file or pasted data, and does
+            not create or update any WAVE record.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

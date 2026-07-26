@@ -116,12 +116,15 @@ describe("remaining security boundaries", () => {
     ).toContain("sent_by: user.id")
   })
 
-  it("caps opportunity imports and rejects invalid approved indexes", () => {
+  it("retires browser-driven opportunity imports instead of falling back to direct writes", () => {
     const importSource = source("lib/actions/opportunity-import.ts")
-    expect(importSource).toContain("MAX_OPPORTUNITY_IMPORT_ROWS = 500")
-    expect(importSource).toContain(
-      "Approved indexes must reference imported rows",
-    )
+    const importUtils = source("lib/utils/opportunity-import.ts")
+    expect(importSource).toContain("requireStaffAccess")
+    expect(importSource).toContain("OPPORTUNITY_DIRECT_IMPORT_DISABLED")
+    expect(importSource).not.toContain("createAdminClient")
+    expect(importSource).not.toContain(".insert(")
+    expect(importUtils).toContain("Direct opportunity import is disabled")
+    expect(importUtils).not.toContain("parseDelimitedLine")
   })
 
   it("requires a consumed intake capability before parsing public uploads", () => {

@@ -5,7 +5,7 @@
 | Item | Value |
 | --- | --- |
 | Status | Approved target contract |
-| Implementation status | Migration 076 is checked in but not yet applied to production. The live database remains on the interim firm-level model. |
+| Implementation status | Migration 076 is checked in but not yet applied to production. Migration 078 is also checked in but not yet applied to production. The live database remains on the interim firm-level model. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
@@ -408,15 +408,26 @@ The cutover mapper uses the workbook structure as input. The workbook does not d
 
 1. Excel remains operationally authoritative until Ivan announces the production switch. WAVE data remains test data until then.
 2. There is one production cutover import. A revised workbook before approval replaces the pending input; it does not create a recurring sync.
-3. Source rows and temporary mappings are staged outside the live domain tables. Missing or conflicting information is never invented.
+3. Source rows and temporary mappings are staged outside the live domain tables in `ma_cutover_runs`, `ma_cutover_stage_rows` and `ma_cutover_stage_issues`. Missing or conflicting information is never invented. Every staged firm, office, contact and affiliation has an explicit reviewed resolution: `create`, or `reuse` with its reviewed canonical WAVE ID. A matching name, email or office never auto-reuses a live record.
 4. An incomplete opportunity remains an import exception until it has a source office, description, named primary contact and usable primary email.
 5. Duplicate candidates are reviewed before activation. Missing financial values remain `null`.
-6. After row counts and relationships reconcile and Ivan approves the migration, temporary rows and every source workbook ID are deleted. Live records retain only WAVE IDs.
-7. Keep a cutover manifest with source file name, execution time, responsible staff member, record totals and exception decisions. The manifest is migration evidence, not another business entity or recurring import system.
-8. A cell containing several email addresses is never imported as one address:
+6. A service-role-only, security-invoker activation locks the approved run, receives and compares its immutable approval digest, requires zero unresolved blockers, creates a dependency-closed canonical firm, office, contact, affiliation and opportunity set, verifies the W-061 operational-validity rules, records aggregate results, then purges temporary rows and issues in the same transaction. Any error rolls back and leaves staging intact.
+7. After row counts and relationships reconcile and Ivan approves the migration, temporary rows and every source workbook ID are deleted. Live records retain only WAVE IDs.
+8. Keep a cutover manifest with a source hash or fingerprint, execution and approval times, responsible staff member, aggregate record totals, exception decisions and immutable approval digest. Its structured review decisions identify every optional opportunity field approved for this run. It retains no raw workbook bytes or Excel identifiers. The manifest is migration evidence, not another business entity or recurring import system.
+9. A cell containing several email addresses is never imported as one address:
    1. If the addresses belong to one named person, staff verifies one usable primary email. Other addresses remain in the cutover resolution note unless a future contact-method model is approved.
    2. If the addresses belong to different people, split them into separate contacts.
    3. If ownership is unclear or an address is malformed, keep the row as an exception.
+
+### W-020 cutover-rehearsal boundary
+
+Migration 078 is an unapplied cutover foundation, not an import launch. It adds staff-only staging and a service-role-only activation primitive; no browser role receives table or function access. The `/opportunities/import` route is staff-gated and displays a deterministic in-repository synthetic rehearsal only. It accepts no workbook, file, pasted CSV/TSV/JSON rows or other production input, has no direct database write, and exposes no activation server action.
+
+The approval digest binds the staged content and its structured `review_decisions`. `review_decisions.approved_opportunity_fields` is the only optional-field authorization and may contain only `sector`, `activity`, `location`, `revenue_meur`, `ebitda_keur`, `headcount`, `headcount_range`, `date_added`, `public_title`, `teaser_summary`, and `internal_notes`. Each field must be both explicitly staged and approved. A missing metric or date remains `null`; an invalid supplied metric or date is a blocker and activation rejects it until staff resolves the stage row.
+
+Staged geography retains only its source label and an explicit `confirmed`, `review` or `null` decision. WAVE does not infer a geography code in this scope. The existing `opportunities.location` text may be written only when both the manifest and that staged value explicitly approve it; otherwise it remains `null`. Cutover never makes an opportunity repreneur-visible.
+
+Every staged office also declares the boolean `isSyntheticDefault`. `true` means the W-061 synthetic fallback only: its staged name must equal the firm name and the firm must have no active real office. It is never a generic preferred office. An unknown office at a firm with real offices remains a review blocker until staff identifies the actual office or explicitly resolves the exception.
 
 ### Firm and office rows
 
@@ -426,6 +437,8 @@ The cutover mapper uses the workbook structure as input. The workbook does not d
 | Firm and office worksheet, parent ID column | Temporary parent mapping | Resolves the source row to its parent firm; delete after approval |
 | Firm and office worksheet, level column | Cutover classification | Distinguishes firm and office rows; do not retain it as a second hierarchy |
 | Firm or office name | `ma_firms.name` or `ma_offices.name` | Parent and level columns determine the split during staging |
+| `isSyntheticDefault` | `ma_offices.is_default` | Required explicit boolean; `true` only for an unknown-office fallback named after the firm, and never where an active real office exists |
+| Duplicate candidate | Staged `create` or `reuse` resolution | A reviewer binds a reuse to the canonical ID; matching text alone never merges records |
 | Optional network label | `ma_firms.network_label` | Informational only |
 | Firm category | `ma_firms.category` | Optional controlled value |
 | Region and geography confidence | `ma_offices.region_codes`, `geography_confidence` | Review non-confirmed values |
@@ -440,6 +453,7 @@ The cutover mapper uses the workbook structure as input. The workbook does not d
 | First and last name | `ma_contacts` | At least one name component required |
 | Job title | Affiliation `job_title` | Office-specific |
 | Managed offices | Additional affiliations | Split and validate each office |
+| Duplicate candidate | Staged `create` or `reuse` resolution | A reviewer binds a reuse to the canonical ID; matching name or email alone never merges a person |
 | Email, phone and LinkedIn | `ma_contacts` | Email is not globally unique; apply the multi-email exception rules above |
 | Repeated firm website and region | Derived from office | Do not duplicate on the contact |
 
@@ -450,19 +464,19 @@ The cutover mapper uses the workbook structure as input. The workbook does not d
 | Mandate reference | `opportunities.reference` | Required and unique |
 | Opportunities worksheet, column B | Temporary source office ID | Maps to `source_office_id`; required before activation and deleted after cutover |
 | Source name | Validation evidence | Do not retain a duplicate source relationship |
-| Location, geography code and confidence | Opportunity geography fields | Review non-confirmed classifications |
-| Sector, sector code and confidence | Opportunity sector fields | Review non-confirmed classifications |
+| Location and source geography label | `opportunities.location` plus temporary geography decision | Write location only when the staged value and manifest both approve it; retain only source label plus `confirmed`, `review` or `null` during cutover; do not infer a code |
+| Sector and activity | `opportunities.sector`, `activity` | Write only when explicitly staged and included in the approved manifest allowlist |
 | Description | `opportunities.description` | Required before activation |
-| Revenue, EBITDA and headcount | Opportunity metrics | Missing remains `null` |
-| Date added | `opportunities.date_added` | Optional source-reported business date; WAVE `created_at` records system creation |
-| Platform title | `opportunities.public_title` | Required before repreneur visibility |
+| Revenue, EBITDA, headcount and range | Opportunity metrics | Write only when explicitly staged and approved; missing remains `null`, while an invalid supplied value blocks activation |
+| Date added | `opportunities.date_added` | Write only when explicitly staged and approved; missing remains `null`, while an invalid supplied date blocks activation; WAVE `created_at` records system creation |
+| Platform title and teaser | `opportunities.public_title`, `teaser_summary` | Write only when explicitly staged and approved; this does not make it repreneur-visible |
 | Positioned repreneur | Existing match or pursuit | Never store as free text on the opportunity |
 | Associated contact email | Temporary contact matching evidence | Convert to an affiliation and opportunity contact; do not retain as the relationship |
-| Notes | `opportunities.internal_notes` | Staff only |
+| Notes | `opportunities.internal_notes` | Staff only; write only when explicitly staged and approved |
 
 ## Current implementation reconciliation
 
-Verified against the live Supabase schema and checked-in migrations 072 to 075 on 2026-07-26. Migration 076 is a checked-in, unapplied release candidate; do not describe its target tables as live until the production schema check runs after publication.
+Verified against the live Supabase schema and checked-in migrations 072 to 075 on 2026-07-26. Migrations 076 and 078 are checked-in, unapplied release candidates; do not describe their target tables or cutover path as live until the production schema check runs after publication.
 
 ### Reproducible verification
 
@@ -480,6 +494,7 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `ma_firms`, `ma_offices` | Not present in the live baseline | Migration 076 creates the canonical firm and operating-office tables, backfills one synthetic default office per legacy source, and preserves `ma_sources` as the compatibility bridge | Checked in, not live |
 | `ma_contacts`, `ma_contact_office_affiliations` | Not present in the live baseline | Migration 076 creates canonical people and current/historical office affiliations. A legacy email-only or phone-only row stays only in the bridge until staff supplies a name | Checked in, not live |
 | `opportunity_ma_contacts` | Not present in the live baseline | Migration 076 links opportunities through affiliations, snapshots contact attribution, and retains `opportunity_source_contacts` for existing history | Checked in, not live |
+| `ma_cutover_runs`, `ma_cutover_stage_rows`, `ma_cutover_stage_issues` | Not present in the live baseline | Migration 078 holds one-time, service-role-only staging rows and exceptions. The retained run manifest holds source fingerprint/hash, aggregate reconciliation, decisions, actor/times and immutable approval digest; temporary identifiers and rows are purged after successful activation | Checked in, not live |
 | `ma_source_networks` | Migration 074 and current staff UI create an optional grouping object for firms | Freeze it as compatibility grouping only. It cannot own workflow, scoring, reporting, contacts or opportunities. Collapse it to optional firm `network_label` in W-061 unless a real operating use case is approved | Current divergence; resolve in W-061 |
 | `ma_source_contacts` | Migration 072 supports several contacts per firm-level source; migration 075 allows a contact record to move between sources | Migrate to one contact identity plus one or more office affiliations | Legacy compatibility read only in the W-063 staff path; target gap remains until production cutover |
 | `ma_source_contact_moves` | Migration 075 keeps append-only old and new source and contact details | Supersede with end-dated office affiliation history while preserving the audit | Implemented interim model; target gap, W-061 |
@@ -508,6 +523,7 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `opportunity_documents.repreneur_approved_by`, `repreneur_approved_at` | Retain as required disclosure evidence when a document is approved for repreneur access |
 | `opportunities.repreneur_exposure` | Legacy compatibility field only. Do not expose it as a W-061 intake, import or target disclosure control. The atomic service writes `staff_only` for new records and draft transitions solely to prevent old portal reads from publishing them; it preserves existing visible active records. Visibility remains a separate match, staff-assignment and confidentiality decision |
 | `opportunities.origin_channel` or any sourcing-channel field | Not a W-061 target and not an import mapping. Do not add one without a new approved operating use case |
+| Cutover geography label and decision | Stay in temporary staging and aggregate manifest decisions. Do not infer a canonical geography code; write `opportunities.location` only when the approved manifest explicitly approves that text |
 
 The live baseline represents the current flat firm-level source model, multiple contacts, network grouping, contact moves and confidentiality wall. Migration 076 is the additive W-061 release candidate from that interim implementation to the target firm, office and affiliation model. Do not roll back current history or confidentiality controls.
 
@@ -568,6 +584,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-26 | 1.5 | Added the checked-in, unapplied W-020 one-time cutover rehearsal contract: explicit create/reuse resolution, digest-bound activation, manifest-controlled optional opportunity fields, transactional activation and purge, synthetic-only staff route, explicit geography/location decisions, and no browser import or activation path | W-020 and migration 078 |
 | 2026-07-26 | 1.4.4 | Added explicit post-release service-role privilege and ownership evidence plus the fail-closed 076/077 deployment sequence | W-063 release verification and migrations 076 to 077 |
 | 2026-07-26 | 1.4.3 | Completed the W-063 dashboard freshness canonical read: firm and office context now precede `source_label`, which remains a historical fallback only | W-063 and migration 076 release candidate |
 | 2026-07-26 | 1.4.2 | Retired database-granted mutations on the legacy M&A directory, network, contact-move and opportunity-contact bridge while retaining service-role historical reads | W-063 and migration 077 |
