@@ -32,11 +32,13 @@ import {
   createMaFirmOfficeContext,
   createMaOfficeContact,
   createOpportunityIntake,
+  listMaCanonicalContactOptions,
   updateOpportunityIntake,
 } from "@/lib/actions/opportunity-intake"
 
 const OFFICE_ID = "00000000-0000-4000-8000-000000000001"
 const AFFILIATION_ID = "00000000-0000-4000-8000-000000000002"
+const EXISTING_CONTACT_ID = "00000000-0000-4000-8000-000000000003"
 
 function activeForm() {
   const formData = new FormData()
@@ -196,6 +198,94 @@ describe("canonical opportunity contact persistence", () => {
       p_contact_job_title: "Partner",
       p_actor: "staff-001",
     })
+  })
+
+  it("affiliates an existing canonical contact without forwarding identity fields", async () => {
+    const formData = new FormData()
+    formData.set("contact_mode", "existing")
+    formData.set("existing_contact_id", EXISTING_CONTACT_ID)
+    formData.set("contact_job_title", "Partner")
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        {
+          contact_id: EXISTING_CONTACT_ID,
+          affiliation_id: "00000000-0000-4000-8000-000000000004",
+        },
+      ],
+      error: null,
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createMaOfficeContact(OFFICE_ID, formData)).resolves.toEqual({
+      success: true,
+      message: "Office contact added.",
+      contact: {
+        contact_id: EXISTING_CONTACT_ID,
+        affiliation_id: "00000000-0000-4000-8000-000000000004",
+        contact_name: null,
+        contact_email: null,
+        job_title: "Partner",
+      },
+    })
+
+    expect(rpc).toHaveBeenCalledWith("create_or_affiliate_ma_contact", {
+      p_office_id: OFFICE_ID,
+      p_existing_contact_id: EXISTING_CONTACT_ID,
+      p_contact_job_title: "Partner",
+      p_actor: "staff-001",
+    })
+    const payload = rpc.mock.calls[0]?.[1] as Record<string, unknown>
+    expect(payload).not.toHaveProperty("p_contact_first_name")
+    expect(payload).not.toHaveProperty("p_contact_last_name")
+    expect(payload).not.toHaveProperty("p_contact_email")
+    expect(payload).not.toHaveProperty("p_contact_phone")
+  })
+
+  it("rejects identity fields submitted alongside an existing canonical contact", async () => {
+    const formData = new FormData()
+    formData.set("contact_mode", "existing")
+    formData.set("existing_contact_id", EXISTING_CONTACT_ID)
+    formData.set("contact_first_name", "Forged")
+    const rpc = vi.fn()
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createMaOfficeContact(OFFICE_ID, formData)).resolves.toEqual({
+      success: false,
+      message:
+        "Existing canonical contacts cannot be submitted with new identity details.",
+    })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it("lists only active canonical people through a staff-authorized action", async () => {
+    const order = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: EXISTING_CONTACT_ID,
+          display_name: "Camille Durand",
+          email: "camille@example.com",
+        },
+      ],
+      error: null,
+    })
+    const eq = vi.fn().mockReturnValue({ order })
+    const select = vi.fn().mockReturnValue({ eq })
+    const from = vi.fn().mockReturnValue({ select })
+    mocks.createAdminClient.mockReturnValue({ from })
+
+    await expect(listMaCanonicalContactOptions()).resolves.toEqual([
+      {
+        contact_id: EXISTING_CONTACT_ID,
+        contact_name: "Camille Durand",
+        contact_email: "camille@example.com",
+      },
+    ])
+
+    expect(mocks.requireStaffAccess).toHaveBeenCalledTimes(1)
+    expect(from).toHaveBeenCalledWith("ma_contacts")
+    expect(select).toHaveBeenCalledWith("id, display_name, email")
+    expect(eq).toHaveBeenCalledWith("status", "active")
+    expect(order).toHaveBeenCalledWith("display_name")
   })
 
   it("maps duplicate firm creation to a select-existing-office instruction", async () => {

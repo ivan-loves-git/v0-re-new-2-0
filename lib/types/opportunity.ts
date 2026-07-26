@@ -362,6 +362,13 @@ export interface MaOfficeIntakeContact {
   job_title?: string | null
 }
 
+/** Staff-only canonical person available for affiliation to another office. */
+export interface MaCanonicalContactOption {
+  contact_id: string
+  contact_name: string
+  contact_email: string | null
+}
+
 /** One selectable office and its currently eligible contacts. */
 export interface MaOfficeIntakeOffice {
   office_id: string

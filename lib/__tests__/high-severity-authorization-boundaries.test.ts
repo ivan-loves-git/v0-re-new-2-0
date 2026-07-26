@@ -37,6 +37,7 @@ describe("high-severity authorization boundaries", () => {
   it("requires staff access before canonical intake and office-contact actions", () => {
     for (const functionName of [
       "listMaOfficeIntakeOptions",
+      "listMaCanonicalContactOptions",
       "createOpportunityIntake",
       "updateOpportunityIntake",
       "createMaFirmOfficeContext",

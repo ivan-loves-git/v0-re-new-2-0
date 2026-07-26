@@ -7,6 +7,7 @@ import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapsho
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
   isOpportunityStatus,
+  type MaCanonicalContactOption,
   type MaOfficeIntakeContact,
   type MaOfficeIntakeOffice,
   type Opportunity,
@@ -55,6 +56,12 @@ interface MaOfficeIntakeProjectionRow {
   contact_name: string | null
   contact_email: string | null
   job_title: string | null
+}
+
+interface MaCanonicalContactProjectionRow {
+  id: string
+  display_name: string
+  email: string | null
 }
 
 interface ParsedOpportunityIntake {
@@ -360,6 +367,31 @@ export async function listMaOfficeIntakeOptions(): Promise<
   return [...offices.values()]
 }
 
+/**
+ * Staff-only canonical identities available to affiliate with another office.
+ * This deliberately returns people, never an existing affiliation or any
+ * repreneur-facing data.
+ */
+export async function listMaCanonicalContactOptions(): Promise<
+  MaCanonicalContactOption[]
+> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("ma_contacts")
+    .select("id, display_name, email")
+    .eq("status", "active")
+    .order("display_name")
+
+  if (error) throw new Error(error.message)
+
+  return ((data ?? []) as MaCanonicalContactProjectionRow[]).map((contact) => ({
+    contact_id: contact.id,
+    contact_name: contact.display_name,
+    contact_email: contact.email,
+  }))
+}
+
 export async function createOpportunityIntake(
   formData: FormData,
 ): Promise<OpportunityActionResult | void> {
@@ -536,35 +568,105 @@ export async function createMaOfficeContact(
     }
   }
 
-  const firstName = readOpportunityFormString(formData, "contact_first_name")
-  const lastName = readOpportunityFormString(formData, "contact_last_name")
-  const email = readOpportunityFormString(formData, "contact_email")
-  const phone = readOpportunityFormString(formData, "contact_phone")
   const jobTitle = readOpportunityFormString(formData, "contact_job_title")
+  const contactMode = readOpportunityFormString(formData, "contact_mode") ?? "new"
+  const usesExistingContact = contactMode === "existing"
 
-  if (!firstName && !lastName) {
+  if (!usesExistingContact && contactMode !== "new") {
     return {
       success: false,
-      message: "Add a first name or last name for the contact.",
+      message: "Choose whether to affiliate an existing contact or create a new one.",
     }
   }
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { success: false, message: "Contact email must be valid." }
+
+  const existingContact = readUuid(formData, "existing_contact_id")
+  const firstName = usesExistingContact
+    ? null
+    : readOpportunityFormString(formData, "contact_first_name")
+  const lastName = usesExistingContact
+    ? null
+    : readOpportunityFormString(formData, "contact_last_name")
+  const email = usesExistingContact
+    ? null
+    : readOpportunityFormString(formData, "contact_email")
+  const phone = usesExistingContact
+    ? null
+    : readOpportunityFormString(formData, "contact_phone")
+
+  if (usesExistingContact) {
+    if (existingContact.error || !existingContact.value) {
+      return {
+        success: false,
+        message: "Choose an active canonical contact to affiliate with this office.",
+      }
+    }
+
+    if (
+      [
+        "contact_first_name",
+        "contact_last_name",
+        "contact_email",
+        "contact_phone",
+      ].some((field) => readOpportunityFormString(formData, field))
+    ) {
+      return {
+        success: false,
+        message:
+          "Existing canonical contacts cannot be submitted with new identity details.",
+      }
+    }
+  } else {
+    if (!firstName && !lastName) {
+      return {
+        success: false,
+        message: "Add a first name or last name for the contact.",
+      }
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, message: "Contact email must be valid." }
+    }
   }
 
   const supabase = createAdminClient()
-  const { data, error } = await supabase.rpc("create_or_affiliate_ma_contact", {
-    p_office_id: officeId,
-    p_existing_contact_id: null,
-    p_contact_first_name: firstName,
-    p_contact_last_name: lastName,
-    p_contact_email: email,
-    p_contact_phone: phone,
-    p_contact_job_title: jobTitle,
-    p_actor: user.id,
-  })
+  const { data, error } = await supabase.rpc(
+    "create_or_affiliate_ma_contact",
+    usesExistingContact
+      ? {
+          p_office_id: officeId,
+          p_existing_contact_id: existingContact.value,
+          p_contact_job_title: jobTitle,
+          p_actor: user.id,
+        }
+      : {
+          p_office_id: officeId,
+          p_existing_contact_id: null,
+          p_contact_first_name: firstName,
+          p_contact_last_name: lastName,
+          p_contact_email: email,
+          p_contact_phone: phone,
+          p_contact_job_title: jobTitle,
+          p_actor: user.id,
+        },
+  )
 
   if (error) {
+    if (error.message?.includes("ma_contact_office_affiliation_already_active")) {
+      return {
+        success: false,
+        message:
+          "This canonical contact is already affiliated with the selected office.",
+      }
+    }
+    if (
+      error.message?.includes("ma_contact_not_found") ||
+      error.message?.includes("ma_contact_affiliation_requires_active_contact")
+    ) {
+      return {
+        success: false,
+        message:
+          "The selected canonical contact is no longer active. Refresh and choose another contact.",
+      }
+    }
     return {
       success: false,
       message:
@@ -587,8 +689,10 @@ export async function createMaOfficeContact(
     contact: {
       affiliation_id: identity.affiliation_id as string,
       contact_id: identity.contact_id as string,
-      contact_name: [firstName, lastName].filter(Boolean).join(" ") || null,
-      contact_email: email,
+      contact_name: usesExistingContact
+        ? null
+        : [firstName, lastName].filter(Boolean).join(" ") || null,
+      contact_email: usesExistingContact ? null : email,
       job_title: jobTitle,
     },
   }
