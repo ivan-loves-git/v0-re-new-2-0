@@ -29,6 +29,7 @@ vi.mock("next/navigation", () => ({
 }))
 
 import {
+  createMaFirmOfficeContext,
   createMaOfficeContact,
   createOpportunityIntake,
   updateOpportunityIntake,
@@ -47,6 +48,16 @@ function activeForm() {
   formData.set("description", "A valid internal opportunity record.")
   formData.set("public_title", "An anonymized opportunity title")
   formData.set("teaser_summary", "An anonymized opportunity summary.")
+  return formData
+}
+
+function firmContextForm() {
+  const formData = new FormData()
+  formData.set("firm_name", "Acme Conseil")
+  formData.set("office_name", "Paris")
+  formData.set("contact_first_name", "Camille")
+  formData.set("contact_last_name", "Durand")
+  formData.set("contact_email", "camille@example.com")
   return formData
 }
 
@@ -183,6 +194,34 @@ describe("canonical opportunity contact persistence", () => {
       p_contact_email: "camille@example.com",
       p_contact_phone: null,
       p_contact_job_title: "Partner",
+      p_actor: "staff-001",
+    })
+  })
+
+  it("maps duplicate firm creation to a select-existing-office instruction", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "ma_firm_name_already_exists" },
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createMaFirmOfficeContext(firmContextForm())).resolves.toEqual({
+      success: false,
+      message: "This firm already exists; select its operating office.",
+      fieldErrors: {
+        firm_name: "This firm already exists; select its operating office.",
+      },
+    })
+
+    expect(rpc).toHaveBeenCalledWith("create_ma_firm_with_default_office", {
+      p_firm_name: "Acme Conseil",
+      p_contact_first_name: "Camille",
+      p_contact_last_name: "Durand",
+      p_office_name: "Paris",
+      p_is_synthetic_default: false,
+      p_contact_email: "camille@example.com",
+      p_contact_phone: null,
+      p_contact_job_title: null,
       p_actor: "staff-001",
     })
   })

@@ -70,6 +70,7 @@ interface ParsedOpportunityIntake {
 export interface CreateMaFirmOfficeContextResult {
   success: boolean
   message: string
+  fieldErrors?: Record<string, string>
   office?: MaOfficeIntakeOffice
 }
 
@@ -458,6 +459,15 @@ export async function createMaFirmOfficeContext(
   )
 
   if (error) {
+    if (error.message?.includes("ma_firm_name_already_exists")) {
+      const message = "This firm already exists; select its operating office."
+      return {
+        success: false,
+        message,
+        fieldErrors: { firm_name: message },
+      }
+    }
+
     return {
       success: false,
       message:

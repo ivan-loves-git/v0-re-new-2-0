@@ -108,6 +108,9 @@ export function OpportunityForm({
   >([])
   const [createOfficeDialogOpen, setCreateOfficeDialogOpen] = useState(false)
   const [isCreatingOffice, setIsCreatingOffice] = useState(false)
+  const [officeContextFieldErrors, setOfficeContextFieldErrors] = useState<
+    Record<string, string>
+  >({})
   const [createContactDialogOpen, setCreateContactDialogOpen] = useState(false)
   const [isCreatingContact, setIsCreatingContact] = useState(false)
   const [selectedAffiliationIds, setSelectedAffiliationIds] = useState(() =>
@@ -198,12 +201,14 @@ export function OpportunityForm({
 
   async function handleCreateOfficeContext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setOfficeContextFieldErrors({})
     setIsCreatingOffice(true)
     try {
       const result = await createMaFirmOfficeContext(
         new FormData(event.currentTarget),
       )
       if (!result.success || !result.office) {
+        setOfficeContextFieldErrors(result.fieldErrors ?? {})
         toast.error("M&A source not created", { description: result.message })
         return
       }
@@ -730,7 +735,10 @@ export function OpportunityForm({
       <Dialog
         open={createOfficeDialogOpen}
         onOpenChange={(open) => {
-          if (!isCreatingOffice) setCreateOfficeDialogOpen(open)
+          if (!isCreatingOffice) {
+            setCreateOfficeDialogOpen(open)
+            if (!open) setOfficeContextFieldErrors({})
+          }
         }}
       >
         <DialogContent className="sm:max-w-xl">
@@ -745,7 +753,17 @@ export function OpportunityForm({
           <form onSubmit={handleCreateOfficeContext} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="firm_name">M&A advisory firm *</Label>
-              <Input id="firm_name" name="firm_name" required />
+              <Input
+                id="firm_name"
+                name="firm_name"
+                required
+                aria-invalid={Boolean(officeContextFieldErrors.firm_name)}
+              />
+              {officeContextFieldErrors.firm_name ? (
+                <p className="text-xs text-destructive" role="alert">
+                  {officeContextFieldErrors.firm_name}
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="office_name">Operating office</Label>
