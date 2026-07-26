@@ -42,7 +42,7 @@ describe("canonical M&A data model documentation", () => {
 
   it("keeps the critical office, validity, visibility and cutover rules explicit", () => {
     for (const rule of [
-      "Every non-archived firm has one or more active offices. A firm may have at most one synthetic default office, and only while no real office is known.",
+      "Every non-archived firm has one or more active offices. A firm may have at most one synthetic default office. Once a real active office is known, that default is preserved only for historical attribution and cannot be selected for new or changed opportunity source contexts.",
       "Opportunities and interactions always anchor to an office.",
       "A valid opportunity has at least one active contact and exactly one primary contact.",
       "Source relationships, interactions and internal notes are staff only.",

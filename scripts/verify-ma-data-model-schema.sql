@@ -3,6 +3,10 @@
 
 WITH target_tables(table_name) AS (
   VALUES
+    ('ma_firms'),
+    ('ma_offices'),
+    ('ma_contacts'),
+    ('ma_contact_office_affiliations'),
     ('ma_source_networks'),
     ('ma_sources'),
     ('ma_source_contacts'),
@@ -10,6 +14,7 @@ WITH target_tables(table_name) AS (
     ('ma_source_interactions'),
     ('opportunities'),
     ('opportunity_source_contacts'),
+    ('opportunity_ma_contacts'),
     ('opportunity_documents')
 ),
 schema_evidence AS (
@@ -55,6 +60,72 @@ schema_evidence AS (
   FROM pg_indexes indexes
   JOIN target_tables t ON t.table_name = indexes.tablename
   WHERE indexes.schemaname = 'public'
+
+  UNION ALL
+
+  SELECT
+    'rls'::text AS evidence_type,
+    relation.relname AS table_name,
+    30000::bigint AS sort_order,
+    relation.relname AS object_name,
+    jsonb_build_object(
+      'enabled', relation.relrowsecurity,
+      'forced', relation.relforcerowsecurity
+    ) AS details
+  FROM pg_class relation
+  JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+  JOIN target_tables t ON t.table_name = relation.relname
+  WHERE namespace.nspname = 'public'
+    AND relation.relkind IN ('r', 'p')
+
+  UNION ALL
+
+  SELECT
+    'table_privilege'::text AS evidence_type,
+    grants.table_name,
+    31000::bigint AS sort_order,
+    grants.grantee || ':' || grants.privilege_type AS object_name,
+    jsonb_build_object('is_grantable', grants.is_grantable) AS details
+  FROM information_schema.role_table_grants grants
+  JOIN target_tables t ON t.table_name = grants.table_name
+  WHERE grants.table_schema = 'public'
+    AND grants.grantee IN ('anon', 'authenticated', 'service_role')
+
+  UNION ALL
+
+  SELECT
+    'routine'::text AS evidence_type,
+    'ma_office_foundation'::text AS table_name,
+    32000::bigint AS sort_order,
+    routine.proname || '(' || pg_get_function_identity_arguments(routine.oid) || ')' AS object_name,
+    jsonb_build_object(
+      'security_definer', routine.prosecdef,
+      'acl', COALESCE(routine.proacl::text, '')
+    ) AS details
+  FROM pg_proc routine
+  JOIN pg_namespace namespace ON namespace.oid = routine.pronamespace
+  WHERE namespace.nspname = 'public'
+    AND routine.proname IN (
+      'save_opportunity_office_context',
+      'create_opportunity_with_office_context',
+      'assert_opportunity_office_context'
+    )
+
+  UNION ALL
+
+  SELECT
+    'view'::text AS evidence_type,
+    'staff_ma_office_intake_projection'::text AS table_name,
+    33000::bigint AS sort_order,
+    view_class.relname AS object_name,
+    jsonb_build_object(
+      'definition', pg_get_viewdef(view_class.oid, true),
+      'reloptions', COALESCE(view_class.reloptions::text, '')
+    ) AS details
+  FROM pg_class view_class
+  JOIN pg_namespace namespace ON namespace.oid = view_class.relnamespace
+  WHERE namespace.nspname = 'public'
+    AND view_class.relname = 'staff_ma_office_intake_projection'
 )
 SELECT evidence_type, table_name, object_name, details
 FROM schema_evidence
