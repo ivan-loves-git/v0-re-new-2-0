@@ -4,12 +4,12 @@
 
 | Item | Value |
 | --- | --- |
-| Status | Approved target contract |
-| Implementation status | Migrations 076 to 078 are checked in and passed Gate 2 on a disposable Supabase-compatible database, but are not yet applied to production. The live database remains on the interim firm-level model. |
+| Status | Approved and live contract |
+| Implementation status | Migrations 076 to 078 were applied to production and schema-verified on 2026-07-26. The canonical office/contact model is live and the one-time cutover staging area is empty; no real workbook has been imported and Excel remains operationally authoritative until W-010. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
-| PDR scope | W-061, M&A office and contact identity foundation; W-062, M&A relationship history; W-063, canonical staff opportunity intake |
+| PDR scope | W-061, M&A office and contact identity foundation; W-062, M&A relationship history; W-063, canonical staff opportunity intake; W-020, controlled one-time cutover staging |
 | Last reviewed against live Supabase | 2026-07-26 |
 | Last reviewed against source workbook | 2026-07-26, `CRM Re-New for Wave.xlsx` |
 
@@ -422,7 +422,7 @@ The cutover mapper uses the workbook structure as input. The workbook does not d
 
 ### W-020 cutover-rehearsal boundary
 
-Migration 078 is an unapplied cutover foundation, not an import launch. It adds staff-only staging and a service-role-only activation primitive; no browser role receives table or function access. The `/opportunities/import` route is staff-gated and displays a deterministic in-repository synthetic rehearsal only. It accepts no workbook, file, pasted CSV/TSV/JSON rows or other production input, has no direct database write, and exposes no activation server action.
+Migration 078 is a live but empty cutover foundation, not an import launch. It adds staff-only staging and a service-role-only activation primitive; no browser role receives table or function access. The `/opportunities/import` route is staff-gated and displays a deterministic in-repository synthetic rehearsal only. It accepts no workbook, file, pasted CSV/TSV/JSON rows or other production input, has no direct database write, and exposes no activation server action.
 
 The approval digest is owned and recomputed by PostgreSQL with `pgcrypto` SHA-256 over a canonical, ordered serialization of the manifest, every staged row and every staged issue. It includes the algorithm-tagged source fingerprint, exact lowercase raw-content SHA-256 source hash, sanitized reconciliation summary and structured review decisions; the stored and activation-supplied digests must match that recomputation. An issue resolution timestamp is serialized as UTC-stable epoch microseconds, never a session-time-zone-dependent timestamp string. `review_decisions.approved_opportunity_fields` is the only optional-field authorization and may contain only `sector`, `activity`, `location`, `revenue_meur`, `ebitda_keur`, `headcount`, `headcount_range`, `date_added`, `public_title`, `teaser_summary`, and `internal_notes`. Each field must be both explicitly staged and approved. A missing metric or date remains `null`; an invalid supplied metric or date is a blocker, and approval as well as activation rejects unresolved blockers.
 
@@ -483,9 +483,11 @@ Every staged office also declares the boolean `isSyntheticDefault`. `true` means
 
 ## Current implementation reconciliation
 
-Verified against the live Supabase schema and checked-in migrations 072 to 075 on 2026-07-26. Migrations 076 to 078 are checked-in, unapplied release candidates; do not describe their target tables or cutover path as live until the production schema check runs after publication.
+Verified against the live Supabase schema through migrations 076 to 078 on 2026-07-26. Production contains the canonical firm, office, contact, affiliation and opportunity-contact model; the legacy M&A objects are read-only compatibility evidence. The cutover manifest and staging boundary are live but empty, and no real workbook activation has occurred.
 
-Gate 2 executed the final 076 to 078 sequence on 2026-07-26 in a disposable Supabase-compatible project whose six-table pre-076 M&A baseline was compared with the live schema catalog before any synthetic row was added. Runtime verification covered fail-closed invalid legacy data, current and historical contact bridging, email-only legacy retention, canonical and cutover privileges, lifecycle and digest rejection, two-contact activation with one primary, UTC/Rome digest equality, normalized-firm concurrency, stage-mutation and supersession serialization, transactional rollback and temporary-evidence purge. Gate 2 exposed and corrected an invalid legacy-affiliation backfill join in migration 076 and ambiguous activation-local identifiers in migration 078. This is non-production release evidence; it does not change the live implementation status.
+Gate 2 executed the final 076 to 078 sequence on 2026-07-26 in a disposable Supabase-compatible project whose six-table pre-076 M&A baseline was compared with the live schema catalog before any synthetic row was added. Runtime verification covered fail-closed invalid legacy data, current and historical contact bridging, email-only legacy retention, canonical and cutover privileges, lifecycle and digest rejection, two-contact activation with one primary, UTC/Rome digest equality, normalized-firm concurrency, stage-mutation and supersession serialization, transactional rollback and temporary-evidence purge. Gate 2 exposed and corrected an invalid legacy-affiliation backfill join in migration 076 and ambiguous activation-local identifiers in migration 078.
+
+Production application on 2026-07-26 preserved 21 legacy source firms as 21 canonical firms and offices, 20 named contacts and affiliations, and 18 valid active opportunity-contact relationships with exactly one primary each. One test opportunity that had no named source contact was explicitly returned to `draft` and `staff_only` before migration; its two match records were preserved. Post-migration checks found no active opportunity without a source office, no active office mismatch, no temporary cutover rows, no legacy service-role write grant, and no anonymous or authenticated canonical-table access.
 
 ### Reproducible verification
 
@@ -499,16 +501,16 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 
 | Current live and checked-in object | Current behavior | Target disposition | Status |
 | --- | --- | --- | --- |
-| `ma_sources` | Interim firm-level source record. Embedded contact fields are deprecated compatibility fields after migration 072 | Retain as a read-compatibility bridge for existing records only; do not create it as a condition of new opportunity activation | Legacy compatibility read only in the W-063 staff path; target foundation checked in, not live |
-| `ma_firms`, `ma_offices` | Not present in the live baseline | Migration 076 creates the canonical firm and operating-office tables, backfills one synthetic default office per legacy source, and preserves `ma_sources` as the compatibility bridge | Checked in, not live |
-| `ma_contacts`, `ma_contact_office_affiliations` | Not present in the live baseline | Migration 076 creates canonical people and current/historical office affiliations. A legacy email-only or phone-only row stays only in the bridge until staff supplies a name | Checked in, not live |
-| `opportunity_ma_contacts` | Not present in the live baseline | Migration 076 links opportunities through affiliations, snapshots contact attribution, and retains `opportunity_source_contacts` for existing history | Checked in, not live |
-| `ma_cutover_runs`, `ma_cutover_stage_rows`, `ma_cutover_stage_issues` | Not present in the live baseline | Migration 078 holds one-time, service-role-only staging rows and exceptions. The retained run manifest holds constrained source fingerprint/hash, sanitized aggregate reconciliation, allowlisted decisions, actor/times and immutable approval digest; temporary identifiers and rows are purged after successful activation or controlled supersession | Checked in, not live |
-| `ma_source_networks` | Migration 074 and current staff UI create an optional grouping object for firms | Freeze it as compatibility grouping only. It cannot own workflow, scoring, reporting, contacts or opportunities. Collapse it to optional firm `network_label` in W-061 unless a real operating use case is approved | Current divergence; resolve in W-061 |
-| `ma_source_contacts` | Migration 072 supports several contacts per firm-level source; migration 075 allows a contact record to move between sources | Migrate to one contact identity plus one or more office affiliations | Legacy compatibility read only in the W-063 staff path; target gap remains until production cutover |
-| `ma_source_contact_moves` | Migration 075 keeps append-only old and new source and contact details | Supersede with end-dated office affiliation history while preserving the audit | Implemented interim model; target gap, W-061 |
-| `opportunities.source_id` | Nullable firm-level source bridge. Migration 073 requires it for new or updated `active` opportunities | Migration 076 retires that live-source requirement in favour of `source_office_id`. Existing pre-076 values remain compatibility evidence, but canonical services do not populate or reconcile them. The atomic service enforces source office, description, named primary contact and usable email for `active` and `paused` opportunities | Checked in, not live |
-| `opportunity_source_contacts` | Migrations 072 and 075 support several contacts, at most one primary, source consistency and immutable contact snapshots after moves | Preserve as immutable compatibility history while `opportunity_ma_contacts` links through office affiliations and snapshots future links | Checked in, not live |
+| `ma_sources` | Interim firm-level source record. Embedded contact fields are deprecated compatibility fields after migration 072 | Retain as a read-compatibility bridge for existing records only; do not create it as a condition of new opportunity activation | Live, service-role read-only compatibility bridge |
+| `ma_firms`, `ma_offices` | Canonical firm and operating-office model live since migration 076 | Backfilled one synthetic default office per legacy source and preserve `ma_sources` only as compatibility evidence | Live and production-verified |
+| `ma_contacts`, `ma_contact_office_affiliations` | Canonical people and current/historical office affiliations live since migration 076 | A legacy email-only or phone-only row stays only in the bridge until staff supplies a name | Live and production-verified |
+| `opportunity_ma_contacts` | Canonical office-affiliation opportunity links live since migration 076 | Snapshot contact attribution and retain `opportunity_source_contacts` for existing history | Live and production-verified |
+| `ma_cutover_runs`, `ma_cutover_stage_rows`, `ma_cutover_stage_issues` | Live, service-role-only one-time cutover boundary; all three tables were empty after release | The retained run manifest holds constrained source fingerprint/hash, sanitized aggregate reconciliation, allowlisted decisions, actor/times and immutable approval digest; temporary identifiers and rows are purged after successful activation or controlled supersession | Live and empty; no real workbook imported |
+| `ma_source_networks` | Migration 074 created an optional grouping object for legacy firms | Keep it as read-only compatibility grouping. It cannot own workflow, scoring, reporting, contacts or opportunities; canonical firms use optional `network_label` | Legacy read-only compatibility bridge; canonical `network_label` live |
+| `ma_source_contacts` | Migration 072 supports several contacts per firm-level source; migration 075 allows a contact record to move between sources | Retain as read-only legacy evidence; canonical identity plus office affiliations own new relationships | Live, service-role read-only compatibility bridge |
+| `ma_source_contact_moves` | Migration 075 keeps append-only old and new source and contact details | Preserve the audit while canonical office affiliation history owns current relationships | Live, service-role read-only compatibility evidence; W-062 still owns interaction history |
+| `opportunities.source_id` | Nullable firm-level compatibility bridge | Migration 076 retired the live-source requirement in favour of `source_office_id`. Existing pre-076 values remain compatibility evidence, but canonical services do not populate or reconcile them. The atomic service enforces source office, description, named primary contact and usable email for `active` and `paused` opportunities | Canonical `source_office_id` live and production-verified |
+| `opportunity_source_contacts` | Migrations 072 and 075 support several contacts, at most one primary, source consistency and immutable contact snapshots after moves | Preserve as immutable compatibility history while `opportunity_ma_contacts` links through office affiliations and snapshots future links | Live, service-role read-only compatibility bridge |
 | `ma_source_interactions` | Opportunity remains required and history remains email-oriented. Migration 072 adds an optional contact link and preserves recipient evidence | Office required; contact and opportunity optional; support call, email, meeting and document | Partial contact linkage; target gap, W-062 |
 | `opportunity_documents` | Migration 073 adds staff approval evidence, NDA evidence checks and service-role-only browser access | Retain the current confidentiality wall and keep opportunity documents separate from staff-only relationship attachments | Implemented and live verified |
 
@@ -534,13 +536,13 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `opportunities.origin_channel` or any sourcing-channel field | Not a W-061 target and not an import mapping. Do not add one without a new approved operating use case |
 | Cutover geography label and decision | Stay in temporary staging and aggregate manifest decisions. Do not infer a canonical geography code; write `opportunities.location` only when the approved manifest explicitly approves that text |
 
-The live baseline represents the current flat firm-level source model, multiple contacts, network grouping, contact moves and confidentiality wall. Migration 076 is the additive W-061 release candidate from that interim implementation to the target firm, office and affiliation model. Do not roll back current history or confidentiality controls.
+The live model is now office-centred. The pre-076 firm-level source, contact and contact-move objects remain read-only compatibility evidence alongside the confidentiality wall; they are not a second write model. Do not roll back current history or confidentiality controls.
 
 ### W-063 staff intake reconciliation
 
 W-063 must route new firm identity creation through `create_ma_firm_with_default_office`, new or additional contact relationships through `create_or_affiliate_ma_contact`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.
 
-W-063 is checked in as an application release candidate and is not a statement about the live database until migration 076 and production browser verification are complete.
+The W-063 database primitives are live. The matching application release is complete only after the production build and staff/repreneur browser paths are verified against them.
 
 1. Staff create and edit forms load the `staff_ma_office_intake_projection`, select one canonical operating office and select one or more active office affiliations with exactly one primary affiliation.
 2. Draft creation requires only a mandate reference. `active` and `paused` saves are delegated to `create_opportunity_with_office_context` or `save_opportunity_office_context`; the database owns the lifecycle validation and atomic link replacement.
@@ -593,6 +595,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-26 | 1.5.7 | Recorded the production application and verification of migrations 076 to 078, including the explicit correction of one invalid test opportunity to a staff-only draft while preserving its match records; no real workbook was imported | W-061, W-063 and W-020 production release |
 | 2026-07-26 | 1.5.6 | Recorded disposable-database Gate 2 and corrected two runtime-only SQL defects found there: the migration-076 legacy affiliation backfill join and migration-078 activation identifier ambiguity; approved relationships, requiredness, visibility and retention are unchanged | W-061, W-063 and W-020 release verification |
 | 2026-07-26 | 1.5.5 | Hardened W-063 against repeated or non-string contact FormData values so neither contact mode can silently select, create or affiliate an ambiguous identity | W-063 corrective follow-up |
 | 2026-07-26 | 1.5.4 | Hardened the W-063 staff action against conflicting new-contact and existing-contact inputs, and made canonical-contact lookup failure invalidate stale selector data with an accessible retry state | W-063 corrective follow-up |
