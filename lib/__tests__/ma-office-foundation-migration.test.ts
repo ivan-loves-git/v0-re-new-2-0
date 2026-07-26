@@ -42,6 +42,28 @@ describe("M&A operating-office foundation migration", () => {
     expect(migration).toContain("capture_opportunity_ma_contact_snapshot")
   })
 
+  it("indexes every newly introduced child foreign key", () => {
+    for (const index of [
+      "idx_ma_sources_default_office_id",
+      "idx_ma_source_contacts_office_affiliation_id",
+      "idx_ma_contact_office_affiliations_contact_id",
+      "idx_opportunity_ma_contacts_affiliation_id",
+    ]) {
+      expect(migration).toContain(`CREATE INDEX IF NOT EXISTS ${index}`)
+    }
+
+    expect(migration).toContain("ON public.ma_sources (default_office_id);")
+    expect(migration).toContain(
+      "ON public.ma_source_contacts (office_affiliation_id);",
+    )
+    expect(migration).toContain(
+      "ON public.ma_contact_office_affiliations (contact_id);",
+    )
+    expect(migration).toContain(
+      "ON public.opportunity_ma_contacts (affiliation_id);",
+    )
+  })
+
   it("provides one staff-only projection and transactional draft or activation RPCs", () => {
     expect(migration).toContain("staff_ma_office_intake_projection")
     expect(migration).toContain("WITH (security_invoker = true)")
@@ -55,6 +77,92 @@ describe("M&A operating-office foundation migration", () => {
     expect(migration).toContain("NOT office.is_default")
     expect(migration.match(/opportunity_office_context_actor_required/g)).toHaveLength(2)
     expect(migration).toContain("Locks always follow opportunity")
+  })
+
+  it("keeps canonical identity and intake writes atomic without legacy creation", () => {
+    const identityStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.create_ma_firm_with_default_office",
+    )
+    const saveStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.save_opportunity_office_context",
+    )
+    const createStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.create_opportunity_with_office_context",
+    )
+    const saveDefinition = migration.slice(saveStart, createStart)
+    const createDefinition = migration.slice(createStart)
+
+    expect(identityStart).toBeGreaterThan(-1)
+    expect(migration).toContain("RETURNS TABLE (")
+    for (const field of ["firm_id UUID", "office_id UUID", "contact_id UUID", "affiliation_id UUID"]) {
+      expect(migration).toContain(field)
+    }
+    expect(migration).toContain("ma_real_office_name_required")
+    expect(migration).toContain("ma_synthetic_default_office_must_use_firm_name")
+    expect(migration).toContain("ma_identity_actor_required")
+
+    expect(saveDefinition).toContain(
+      "p_opportunity_fields JSONB DEFAULT '{}'::JSONB",
+    )
+    expect(createDefinition).toContain(
+      "p_opportunity_fields JSONB DEFAULT '{}'::JSONB",
+    )
+    expect(saveDefinition).not.toContain("INSERT INTO public.ma_sources")
+    expect(saveDefinition).not.toContain("source_id =")
+    expect(saveDefinition).not.toContain("source_label =")
+    expect(saveDefinition).toContain("FROM public.ma_firms")
+    expect(saveDefinition).toContain("FOR UPDATE;")
+    expect(saveDefinition).toContain("opportunity_intake_fields_contains_forbidden_key")
+    expect(saveDefinition).toContain("opportunity_intake_fields_contains_unsupported_key")
+    expect(saveDefinition).toContain("opportunity_intake_fields_has_invalid_value_type")
+    expect(saveDefinition).toContain(
+      "opportunity_office_context_cannot_change_historical_status",
+    )
+    expect(saveDefinition).toContain("revenue_meur")
+    expect(saveDefinition).toContain("teaser_summary")
+  })
+
+  it("provides one audited canonical primitive for additional or multi-office contacts", () => {
+    const contactPrimitiveStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.create_or_affiliate_ma_contact",
+    )
+    const saveStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.save_opportunity_office_context",
+    )
+    const contactPrimitive = migration.slice(contactPrimitiveStart, saveStart)
+
+    expect(contactPrimitiveStart).toBeGreaterThan(-1)
+    expect(contactPrimitive).toContain("contact_id UUID")
+    expect(contactPrimitive).toContain("affiliation_id UUID")
+    expect(contactPrimitive).toContain("p_existing_contact_id UUID DEFAULT NULL")
+    expect(contactPrimitive).toContain("p_contact_job_title TEXT DEFAULT NULL")
+    expect(contactPrimitive).toContain("ma_contact_affiliation_actor_required")
+    expect(contactPrimitive).toContain("ma_contact_affiliation_requires_active_office")
+    expect(contactPrimitive).toContain("ma_contact_affiliation_requires_non_archived_firm")
+    expect(contactPrimitive).toContain("ma_contact_affiliation_requires_active_contact")
+    expect(contactPrimitive).toContain(
+      "ma_existing_contact_affiliation_must_not_supply_identity_fields",
+    )
+    expect(contactPrimitive).toContain("ma_contact_office_affiliation_already_active")
+    expect(contactPrimitive).toContain("FOR UPDATE;")
+    expect(contactPrimitive).toContain("RETURN QUERY")
+    expect(contactPrimitive).not.toContain("public.ma_source_contacts")
+  })
+
+  it("guards firm archive and direct synthetic-default selection with deferred invariants", () => {
+    const historicalLifecycleExit = migration.indexOf(
+      "IF opportunity_row.status IN ('closed', 'archived') THEN",
+    )
+    const syntheticDefaultGuard = migration.indexOf(
+      "the invariant blocks a direct service mutation",
+    )
+
+    expect(migration).toContain("ma_firm_archive_requires_resolving_active_opportunities")
+    expect(migration).toContain("CREATE CONSTRAINT TRIGGER enforce_ma_firm_active_office_on_firm")
+    expect(migration).toContain(
+      "opportunities_active_or_paused_requires_source_office",
+    )
+    expect(syntheticDefaultGuard).toBeGreaterThan(historicalLifecycleExit)
   })
 
   it("preserves closed and archived attribution without requiring current affiliations", () => {
@@ -81,7 +189,10 @@ describe("M&A operating-office foundation migration", () => {
     expect(migration).toContain("TO service_role;")
     expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.save_opportunity_office_context")
     expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.create_opportunity_with_office_context")
+    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.create_ma_firm_with_default_office")
+    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.create_or_affiliate_ma_contact")
     expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.assert_opportunity_office_context(UUID) TO service_role;")
+    expect(migration).toContain("REVOKE DELETE ON TABLE")
   })
 
   it("records the approved exposure and sourcing exclusions in the contract", () => {
@@ -90,8 +201,14 @@ describe("M&A operating-office foundation migration", () => {
     expect(contract).toContain("Migration 076 is checked in but not yet applied to production")
     expect(contract).toContain("W-061 and migration 076")
     expect(contract).toContain("compatibility firewall")
+    expect(contract).toContain("W-063 integrated-release dependency")
+    expect(contract).toContain("p_opportunity_fields JSONB")
+    expect(contract).toContain("Reopening is a separate explicit workflow")
+    expect(contract).toContain("Canonical contact-affiliation write boundary")
+    expect(contract).toContain("create_or_affiliate_ma_contact")
     expect(migration).toContain("repreneur_exposure = 'staff_only'::public.opportunity_visibility")
     expect(migration).not.toContain("p_repreneur_exposure")
-    expect(migration).not.toContain("origin_channel")
+    expect(migration).not.toContain("p_origin_channel")
+    expect(migration).toContain("'origin_channel'")
   })
 })

@@ -147,6 +147,31 @@ ALTER TABLE public.opportunities
   ADD COLUMN IF NOT EXISTS source_office_id UUID REFERENCES public.ma_offices(id) ON DELETE RESTRICT,
   ADD COLUMN IF NOT EXISTS updated_by TEXT;
 
+-- Migration 073 made firm-level source_id mandatory for active opportunities.
+-- The canonical office model supersedes that rule: source_id stays a nullable
+-- compatibility bridge, while active and paused records require source_office_id.
+ALTER TABLE public.opportunities
+  DROP CONSTRAINT IF EXISTS opportunities_active_requires_source;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'opportunities_active_or_paused_requires_source_office'
+      AND conrelid = 'public.opportunities'::regclass
+  ) THEN
+    ALTER TABLE public.opportunities
+      ADD CONSTRAINT opportunities_active_or_paused_requires_source_office
+      CHECK (
+        status NOT IN ('active', 'paused')
+        OR source_office_id IS NOT NULL
+      )
+      NOT VALID;
+  END IF;
+END;
+$$;
+
 -- Indexes support the staff-only office selector, compatibility joins and
 -- constrained lifecycle checks. The partial uniqueness rules are deliberately
 -- on active relationships so historical rows stay preserved.
@@ -155,6 +180,10 @@ CREATE INDEX IF NOT EXISTS idx_ma_firms_name
 CREATE INDEX IF NOT EXISTS idx_ma_offices_firm
   ON public.ma_offices (firm_id, name)
   WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_ma_sources_default_office_id
+  ON public.ma_sources (default_office_id);
+CREATE INDEX IF NOT EXISTS idx_ma_source_contacts_office_affiliation_id
+  ON public.ma_source_contacts (office_affiliation_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_offices_one_synthetic_default
   ON public.ma_offices (firm_id)
   WHERE is_default;
@@ -170,11 +199,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_legacy_brid
     AND legacy_source_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_office
   ON public.ma_contact_office_affiliations (office_id, is_active, contact_id);
+CREATE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_contact_id
+  ON public.ma_contact_office_affiliations (contact_id);
 CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_opportunity
   ON public.opportunity_ma_contacts (opportunity_id, is_active DESC, is_primary DESC);
 CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_affiliation
   ON public.opportunity_ma_contacts (affiliation_id)
   WHERE is_active;
+CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_affiliation_id
+  ON public.opportunity_ma_contacts (affiliation_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_primary
   ON public.opportunity_ma_contacts (opportunity_id)
   WHERE is_active AND is_primary;
@@ -551,7 +584,24 @@ BEGIN
   FROM public.ma_firms
   WHERE id = p_firm_id;
 
-  IF firm_row.id IS NULL OR firm_row.status = 'archived' THEN
+  IF firm_row.id IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Archiving a firm is safe only after every live opportunity using one of
+  -- its offices has been closed, archived or moved in the same transaction.
+  IF firm_row.status = 'archived' THEN
+    IF EXISTS (
+      SELECT 1
+      FROM public.opportunities opportunity
+      JOIN public.ma_offices office
+        ON office.id = opportunity.source_office_id
+      WHERE office.firm_id = firm_row.id
+        AND opportunity.status IN ('active', 'paused')
+    ) THEN
+      RAISE EXCEPTION 'ma_firm_archive_requires_resolving_active_opportunities';
+    END IF;
+
     RETURN;
   END IF;
 
@@ -660,15 +710,10 @@ BEGIN
     RAISE EXCEPTION 'opportunity_source_office_not_found';
   END IF;
 
-  IF opportunity_row.source_id IS NOT NULL
-    AND NOT EXISTS (
-      SELECT 1
-      FROM public.ma_sources source
-      WHERE source.id = opportunity_row.source_id
-        AND source.firm_id = office_row.firm_id
-    ) THEN
-    RAISE EXCEPTION 'opportunity_source_office_firm_mismatch';
-  END IF;
+  -- source_id and source_label are pre-076 compatibility evidence only. They
+  -- do not determine or validate the canonical current source office, because
+  -- an old opportunity may later be moved through the office model without
+  -- rewriting its legacy history.
 
   IF EXISTS (
     SELECT 1
@@ -687,6 +732,20 @@ BEGIN
   -- blocking that historical lifecycle. Office/link consistency remains above.
   IF opportunity_row.status IN ('closed', 'archived') THEN
     RETURN;
+  END IF;
+
+  -- The view and save RPC hide/reject this already. Keeping the same rule in
+  -- the invariant blocks a direct service mutation from selecting a synthetic
+  -- default once a real active office exists for that firm.
+  IF office_row.is_default
+    AND EXISTS (
+      SELECT 1
+      FROM public.ma_offices real_office
+      WHERE real_office.firm_id = office_row.firm_id
+        AND real_office.status = 'active'
+        AND NOT real_office.is_default
+    ) THEN
+    RAISE EXCEPTION 'opportunity_source_office_requires_real_office_selection';
   END IF;
 
   IF EXISTS (
@@ -783,6 +842,9 @@ BEGIN
 END;
 $$;
 
+ALTER TABLE public.opportunities
+  VALIDATE CONSTRAINT opportunities_active_or_paused_requires_source_office;
+
 CREATE OR REPLACE FUNCTION public.enforce_opportunity_office_context()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -825,9 +887,11 @@ BEGIN
     END LOOP;
   ELSIF TG_TABLE_NAME = 'ma_offices' THEN
     FOR affected_opportunity_id IN
-      SELECT id
-      FROM public.opportunities
-      WHERE source_office_id = CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END
+      SELECT DISTINCT opportunity.id
+      FROM public.opportunities opportunity
+      JOIN public.ma_offices source_office
+        ON source_office.id = opportunity.source_office_id
+      WHERE source_office.firm_id = CASE WHEN TG_OP = 'DELETE' THEN OLD.firm_id ELSE NEW.firm_id END
     LOOP
       PERFORM public.assert_opportunity_office_context(affected_opportunity_id);
     END LOOP;
@@ -926,9 +990,291 @@ WHERE firm.status <> 'archived'
     )
   );
 
+-- Canonical staff identity primitive for W-063. It creates the smallest
+-- usable firm context in one transaction: firm, office, named person and the
+-- person's active affiliation. It never creates a legacy ma_sources row.
+CREATE OR REPLACE FUNCTION public.create_ma_firm_with_default_office(
+  p_firm_name TEXT,
+  p_contact_first_name TEXT,
+  p_contact_last_name TEXT,
+  p_office_name TEXT DEFAULT NULL,
+  p_is_synthetic_default BOOLEAN DEFAULT NULL,
+  p_contact_email TEXT DEFAULT NULL,
+  p_contact_phone TEXT DEFAULT NULL,
+  p_contact_job_title TEXT DEFAULT NULL,
+  p_actor TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  firm_id UUID,
+  office_id UUID,
+  contact_id UUID,
+  affiliation_id UUID
+)
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  actor TEXT;
+  firm_name TEXT;
+  office_name TEXT;
+  contact_first_name TEXT;
+  contact_last_name TEXT;
+  use_synthetic_default BOOLEAN;
+  created_firm_id UUID;
+  created_office_id UUID;
+  created_contact_id UUID;
+  created_affiliation_id UUID;
+BEGIN
+  actor := NULLIF(BTRIM(p_actor), '');
+  firm_name := NULLIF(BTRIM(p_firm_name), '');
+  office_name := NULLIF(BTRIM(p_office_name), '');
+  contact_first_name := NULLIF(BTRIM(p_contact_first_name), '');
+  contact_last_name := NULLIF(BTRIM(p_contact_last_name), '');
+
+  IF actor IS NULL THEN
+    RAISE EXCEPTION 'ma_identity_actor_required';
+  END IF;
+
+  IF firm_name IS NULL THEN
+    RAISE EXCEPTION 'ma_firm_name_required';
+  END IF;
+
+  IF contact_first_name IS NULL AND contact_last_name IS NULL THEN
+    RAISE EXCEPTION 'ma_contact_requires_name_component';
+  END IF;
+
+  -- Safe default: a missing office means the branch is genuinely unknown;
+  -- a supplied office name is real unless staff explicitly says otherwise.
+  use_synthetic_default := COALESCE(p_is_synthetic_default, office_name IS NULL);
+  IF use_synthetic_default THEN
+    IF office_name IS NOT NULL AND office_name <> firm_name THEN
+      RAISE EXCEPTION 'ma_synthetic_default_office_must_use_firm_name';
+    END IF;
+
+    office_name := firm_name;
+  ELSIF office_name IS NULL THEN
+    RAISE EXCEPTION 'ma_real_office_name_required';
+  END IF;
+
+  INSERT INTO public.ma_firms (
+    name,
+    created_by,
+    updated_by
+  ) VALUES (
+    firm_name,
+    actor,
+    actor
+  )
+  RETURNING id INTO created_firm_id;
+
+  INSERT INTO public.ma_offices (
+    firm_id,
+    name,
+    is_default,
+    created_by,
+    updated_by
+  ) VALUES (
+    created_firm_id,
+    office_name,
+    use_synthetic_default,
+    actor,
+    actor
+  )
+  RETURNING id INTO created_office_id;
+
+  INSERT INTO public.ma_contacts (
+    first_name,
+    last_name,
+    email,
+    phone,
+    created_by,
+    updated_by
+  ) VALUES (
+    contact_first_name,
+    contact_last_name,
+    NULLIF(BTRIM(p_contact_email), ''),
+    NULLIF(BTRIM(p_contact_phone), ''),
+    actor,
+    actor
+  )
+  RETURNING id INTO created_contact_id;
+
+  INSERT INTO public.ma_contact_office_affiliations (
+    contact_id,
+    office_id,
+    job_title,
+    created_by
+  ) VALUES (
+    created_contact_id,
+    created_office_id,
+    NULLIF(BTRIM(p_contact_job_title), ''),
+    actor
+  )
+  RETURNING id INTO created_affiliation_id;
+
+  RETURN QUERY
+  SELECT
+    created_firm_id,
+    created_office_id,
+    created_contact_id,
+    created_affiliation_id;
+END;
+$$;
+
+-- Canonical staff contact primitive for W-063. It adds a second person to an
+-- existing office or attaches one already-canonical person to another office.
+-- It deliberately never creates or mutates a legacy source-contact row.
+CREATE OR REPLACE FUNCTION public.create_or_affiliate_ma_contact(
+  p_office_id UUID,
+  p_existing_contact_id UUID DEFAULT NULL,
+  p_contact_first_name TEXT DEFAULT NULL,
+  p_contact_last_name TEXT DEFAULT NULL,
+  p_contact_email TEXT DEFAULT NULL,
+  p_contact_phone TEXT DEFAULT NULL,
+  p_contact_job_title TEXT DEFAULT NULL,
+  p_actor TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  contact_id UUID,
+  affiliation_id UUID
+)
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  actor TEXT;
+  contact_first_name TEXT;
+  contact_last_name TEXT;
+  contact_email TEXT;
+  contact_phone TEXT;
+  office_row public.ma_offices%ROWTYPE;
+  firm_row public.ma_firms%ROWTYPE;
+  contact_row public.ma_contacts%ROWTYPE;
+  resolved_contact_id UUID;
+  created_affiliation_id UUID;
+  existing_affiliation_id UUID;
+BEGIN
+  actor := NULLIF(BTRIM(p_actor), '');
+  contact_first_name := NULLIF(BTRIM(p_contact_first_name), '');
+  contact_last_name := NULLIF(BTRIM(p_contact_last_name), '');
+  contact_email := NULLIF(BTRIM(p_contact_email), '');
+  contact_phone := NULLIF(BTRIM(p_contact_phone), '');
+
+  IF actor IS NULL THEN
+    RAISE EXCEPTION 'ma_contact_affiliation_actor_required';
+  END IF;
+
+  -- Lock the office first so two calls cannot race past the active-pair
+  -- guard. The firm lock makes an office beneath an archived firm ineligible
+  -- for a new operational contact relationship.
+  SELECT *
+  INTO office_row
+  FROM public.ma_offices
+  WHERE id = p_office_id
+  FOR UPDATE;
+
+  IF office_row.id IS NULL THEN
+    RAISE EXCEPTION 'ma_contact_affiliation_office_not_found';
+  END IF;
+
+  IF office_row.status <> 'active' THEN
+    RAISE EXCEPTION 'ma_contact_affiliation_requires_active_office';
+  END IF;
+
+  SELECT *
+  INTO firm_row
+  FROM public.ma_firms
+  WHERE id = office_row.firm_id
+  FOR SHARE;
+
+  IF firm_row.id IS NULL OR firm_row.status = 'archived' THEN
+    RAISE EXCEPTION 'ma_contact_affiliation_requires_non_archived_firm';
+  END IF;
+
+  IF p_existing_contact_id IS NOT NULL THEN
+    -- This primitive affiliates an existing identity; it does not quietly
+    -- become a contact-profile editor. Updates are a separate audited action.
+    IF contact_first_name IS NOT NULL
+      OR contact_last_name IS NOT NULL
+      OR contact_email IS NOT NULL
+      OR contact_phone IS NOT NULL THEN
+      RAISE EXCEPTION 'ma_existing_contact_affiliation_must_not_supply_identity_fields';
+    END IF;
+
+    SELECT *
+    INTO contact_row
+    FROM public.ma_contacts
+    WHERE id = p_existing_contact_id
+    FOR UPDATE;
+
+    IF contact_row.id IS NULL THEN
+      RAISE EXCEPTION 'ma_contact_not_found';
+    END IF;
+
+    IF contact_row.status <> 'active' THEN
+      RAISE EXCEPTION 'ma_contact_affiliation_requires_active_contact';
+    END IF;
+
+    resolved_contact_id := contact_row.id;
+  ELSE
+    IF contact_first_name IS NULL AND contact_last_name IS NULL THEN
+      RAISE EXCEPTION 'ma_contact_requires_name_component';
+    END IF;
+
+    INSERT INTO public.ma_contacts (
+      first_name,
+      last_name,
+      email,
+      phone,
+      created_by,
+      updated_by
+    ) VALUES (
+      contact_first_name,
+      contact_last_name,
+      contact_email,
+      contact_phone,
+      actor,
+      actor
+    )
+    RETURNING id INTO resolved_contact_id;
+  END IF;
+
+  SELECT affiliation.id
+  INTO existing_affiliation_id
+  FROM public.ma_contact_office_affiliations affiliation
+  WHERE affiliation.contact_id = resolved_contact_id
+    AND affiliation.office_id = office_row.id
+    AND affiliation.is_active
+  FOR UPDATE;
+
+  IF existing_affiliation_id IS NOT NULL THEN
+    RAISE EXCEPTION 'ma_contact_office_affiliation_already_active';
+  END IF;
+
+  -- An earlier ended affiliation remains immutable relationship history. A
+  -- later return to the same office receives a new active relationship row.
+  INSERT INTO public.ma_contact_office_affiliations (
+    contact_id,
+    office_id,
+    job_title,
+    created_by
+  ) VALUES (
+    resolved_contact_id,
+    office_row.id,
+    NULLIF(BTRIM(p_contact_job_title), ''),
+    actor
+  )
+  RETURNING id INTO created_affiliation_id;
+
+  RETURN QUERY
+  SELECT resolved_contact_id, created_affiliation_id;
+END;
+$$;
+
 -- Atomic draft/save/activation primitive. Locks always follow opportunity →
--- office → selected affiliations → existing links. It preserves source_id and
--- source_label as compatibility fields. It never broadens repreneur disclosure:
+-- office → firm → selected affiliations → existing links. It writes only the
+-- canonical source_office_id; any pre-076 source_id/source_label remain
+-- untouched compatibility evidence. It never broadens repreneur disclosure:
 -- drafts and draft activations remain staff_only in the legacy field.
 CREATE OR REPLACE FUNCTION public.save_opportunity_office_context(
   p_opportunity_id UUID,
@@ -937,7 +1283,8 @@ CREATE OR REPLACE FUNCTION public.save_opportunity_office_context(
   p_primary_affiliation_id UUID DEFAULT NULL,
   p_description TEXT DEFAULT NULL,
   p_target_status public.opportunity_status DEFAULT NULL,
-  p_actor TEXT DEFAULT NULL
+  p_actor TEXT DEFAULT NULL,
+  p_opportunity_fields JSONB DEFAULT '{}'::JSONB
 )
 RETURNS public.opportunities
 LANGUAGE plpgsql
@@ -946,18 +1293,79 @@ AS $$
 DECLARE
   opportunity_row public.opportunities%ROWTYPE;
   office_row public.ma_offices%ROWTYPE;
+  firm_row public.ma_firms%ROWTYPE;
   saved_opportunity public.opportunities%ROWTYPE;
-  legacy_source_id UUID;
   requested_affiliation_ids UUID[];
   requested_affiliation_count INTEGER;
   active_affiliation_count INTEGER;
   target_status public.opportunity_status;
   actor TEXT;
-  office_label TEXT;
+  opportunity_fields JSONB;
 BEGIN
   actor := NULLIF(BTRIM(p_actor), '');
   IF actor IS NULL THEN
     RAISE EXCEPTION 'opportunity_office_context_actor_required';
+  END IF;
+
+  opportunity_fields := COALESCE(p_opportunity_fields, '{}'::JSONB);
+  IF jsonb_typeof(opportunity_fields) <> 'object' THEN
+    RAISE EXCEPTION 'opportunity_intake_fields_must_be_object';
+  END IF;
+
+  IF opportunity_fields ?| ARRAY[
+    'source_id',
+    'source_label',
+    'source_office_id',
+    'repreneur_exposure',
+    'origin_channel',
+    'imported_from',
+    'imported_at'
+  ] THEN
+    RAISE EXCEPTION 'opportunity_intake_fields_contains_forbidden_key';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_object_keys(opportunity_fields) AS supplied(key)
+    WHERE supplied.key NOT IN (
+      'sector',
+      'activity',
+      'location',
+      'revenue_meur',
+      'ebitda_keur',
+      'headcount',
+      'headcount_range',
+      'date_added',
+      'public_title',
+      'teaser_summary',
+      'internal_notes'
+    )
+  ) THEN
+    RAISE EXCEPTION 'opportunity_intake_fields_contains_unsupported_key';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_each(opportunity_fields) AS supplied(key, value)
+    WHERE (
+      supplied.key IN (
+        'sector',
+        'activity',
+        'location',
+        'headcount_range',
+        'date_added',
+        'public_title',
+        'teaser_summary',
+        'internal_notes'
+      )
+      AND jsonb_typeof(supplied.value) NOT IN ('string', 'null')
+    )
+    OR (
+      supplied.key IN ('revenue_meur', 'ebitda_keur', 'headcount')
+      AND jsonb_typeof(supplied.value) NOT IN ('number', 'string', 'null')
+    )
+  ) THEN
+    RAISE EXCEPTION 'opportunity_intake_fields_has_invalid_value_type';
   END IF;
 
   requested_affiliation_ids := COALESCE(
@@ -981,6 +1389,11 @@ BEGIN
   END IF;
 
   target_status := COALESCE(p_target_status, opportunity_row.status);
+  IF opportunity_row.status IN ('closed', 'archived')
+    AND target_status IN ('draft', 'active', 'paused') THEN
+    RAISE EXCEPTION 'opportunity_office_context_cannot_change_historical_status';
+  END IF;
+
   IF target_status NOT IN ('draft', 'active', 'paused') THEN
     RAISE EXCEPTION 'opportunity_office_context_supports_draft_active_or_paused_only';
   END IF;
@@ -1019,6 +1432,58 @@ BEGIN
         WHEN p_description IS NULL THEN description
         ELSE NULLIF(BTRIM(p_description), '')
       END,
+      sector = CASE
+        WHEN opportunity_fields ? 'sector' THEN NULLIF(BTRIM(opportunity_fields ->> 'sector'), '')
+        ELSE sector
+      END,
+      activity = CASE
+        WHEN opportunity_fields ? 'activity' THEN NULLIF(BTRIM(opportunity_fields ->> 'activity'), '')
+        ELSE activity
+      END,
+      location = CASE
+        WHEN opportunity_fields ? 'location' THEN NULLIF(BTRIM(opportunity_fields ->> 'location'), '')
+        ELSE location
+      END,
+      revenue_meur = CASE
+        WHEN opportunity_fields ? 'revenue_meur'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'revenue_meur'), '')::NUMERIC(12, 2)
+        ELSE revenue_meur
+      END,
+      ebitda_keur = CASE
+        WHEN opportunity_fields ? 'ebitda_keur'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'ebitda_keur'), '')::NUMERIC(12, 2)
+        ELSE ebitda_keur
+      END,
+      headcount = CASE
+        WHEN opportunity_fields ? 'headcount'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'headcount'), '')::INTEGER
+        ELSE headcount
+      END,
+      headcount_range = CASE
+        WHEN opportunity_fields ? 'headcount_range'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'headcount_range'), '')
+        ELSE headcount_range
+      END,
+      date_added = CASE
+        WHEN opportunity_fields ? 'date_added'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'date_added'), '')::DATE
+        ELSE date_added
+      END,
+      public_title = CASE
+        WHEN opportunity_fields ? 'public_title'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'public_title'), '')
+        ELSE public_title
+      END,
+      teaser_summary = CASE
+        WHEN opportunity_fields ? 'teaser_summary'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'teaser_summary'), '')
+        ELSE teaser_summary
+      END,
+      internal_notes = CASE
+        WHEN opportunity_fields ? 'internal_notes'
+          THEN NULLIF(BTRIM(opportunity_fields ->> 'internal_notes'), '')
+        ELSE internal_notes
+      END,
       status = 'draft',
       updated_by = actor
     WHERE id = opportunity_row.id
@@ -1052,14 +1517,15 @@ BEGIN
     RAISE EXCEPTION 'opportunity_source_office_requires_real_office_selection';
   END IF;
 
-  SELECT
-    CASE
-      WHEN BTRIM(office_row.name) = BTRIM(firm.name) THEN firm.name
-      ELSE firm.name || ' — ' || office_row.name
-    END
-  INTO office_label
-  FROM public.ma_firms firm
-  WHERE firm.id = office_row.firm_id;
+  SELECT *
+  INTO firm_row
+  FROM public.ma_firms
+  WHERE id = office_row.firm_id
+  FOR UPDATE;
+
+  IF firm_row.id IS NULL THEN
+    RAISE EXCEPTION 'opportunity_source_firm_not_found';
+  END IF;
 
   -- Lock selected affiliations in UUID order, then verify they are active and
   -- attached to the requested office. Generic mailbox/affiliation shortcuts
@@ -1086,35 +1552,6 @@ BEGIN
   IF p_primary_affiliation_id IS NOT NULL
     AND NOT (p_primary_affiliation_id = ANY(requested_affiliation_ids)) THEN
     RAISE EXCEPTION 'opportunity_primary_affiliation_must_be_selected';
-  END IF;
-
-  -- Keep the old firm-level source bridge live for current workflows. A new
-  -- target firm gets one compatibility source only when an office is selected.
-  SELECT source.id
-  INTO legacy_source_id
-  FROM public.ma_sources source
-  WHERE source.firm_id = office_row.firm_id
-  ORDER BY source.created_at, source.id
-  LIMIT 1
-  FOR KEY SHARE;
-
-  IF legacy_source_id IS NULL THEN
-    INSERT INTO public.ma_sources (
-      firm_name,
-      source_type,
-      internal_notes,
-      created_by,
-      firm_id
-    )
-    SELECT
-      firm.name,
-      'ma_firm'::public.ma_source_type,
-      firm.internal_notes,
-      actor,
-      firm.id
-    FROM public.ma_firms firm
-    WHERE firm.id = office_row.firm_id
-    RETURNING id INTO legacy_source_id;
   END IF;
 
   -- Lock current links after the selected source context. Clearing primary
@@ -1180,9 +1617,7 @@ BEGIN
 
   UPDATE public.opportunities
   SET
-    source_id = legacy_source_id,
     source_office_id = office_row.id,
-    source_label = office_label,
     repreneur_exposure = CASE
       WHEN opportunity_row.status = 'draft' OR target_status = 'draft'
         THEN 'staff_only'::public.opportunity_visibility
@@ -1191,6 +1626,58 @@ BEGIN
     description = CASE
       WHEN p_description IS NULL THEN description
       ELSE NULLIF(BTRIM(p_description), '')
+    END,
+    sector = CASE
+      WHEN opportunity_fields ? 'sector' THEN NULLIF(BTRIM(opportunity_fields ->> 'sector'), '')
+      ELSE sector
+    END,
+    activity = CASE
+      WHEN opportunity_fields ? 'activity' THEN NULLIF(BTRIM(opportunity_fields ->> 'activity'), '')
+      ELSE activity
+    END,
+    location = CASE
+      WHEN opportunity_fields ? 'location' THEN NULLIF(BTRIM(opportunity_fields ->> 'location'), '')
+      ELSE location
+    END,
+    revenue_meur = CASE
+      WHEN opportunity_fields ? 'revenue_meur'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'revenue_meur'), '')::NUMERIC(12, 2)
+      ELSE revenue_meur
+    END,
+    ebitda_keur = CASE
+      WHEN opportunity_fields ? 'ebitda_keur'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'ebitda_keur'), '')::NUMERIC(12, 2)
+      ELSE ebitda_keur
+    END,
+    headcount = CASE
+      WHEN opportunity_fields ? 'headcount'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'headcount'), '')::INTEGER
+      ELSE headcount
+    END,
+    headcount_range = CASE
+      WHEN opportunity_fields ? 'headcount_range'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'headcount_range'), '')
+      ELSE headcount_range
+    END,
+    date_added = CASE
+      WHEN opportunity_fields ? 'date_added'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'date_added'), '')::DATE
+      ELSE date_added
+    END,
+    public_title = CASE
+      WHEN opportunity_fields ? 'public_title'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'public_title'), '')
+      ELSE public_title
+    END,
+    teaser_summary = CASE
+      WHEN opportunity_fields ? 'teaser_summary'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'teaser_summary'), '')
+      ELSE teaser_summary
+    END,
+    internal_notes = CASE
+      WHEN opportunity_fields ? 'internal_notes'
+        THEN NULLIF(BTRIM(opportunity_fields ->> 'internal_notes'), '')
+      ELSE internal_notes
     END,
     status = target_status,
     updated_by = actor
@@ -1212,7 +1699,8 @@ CREATE OR REPLACE FUNCTION public.create_opportunity_with_office_context(
   p_primary_affiliation_id UUID DEFAULT NULL,
   p_description TEXT DEFAULT NULL,
   p_target_status public.opportunity_status DEFAULT 'draft',
-  p_actor TEXT DEFAULT NULL
+  p_actor TEXT DEFAULT NULL,
+  p_opportunity_fields JSONB DEFAULT '{}'::JSONB
 )
 RETURNS public.opportunities
 LANGUAGE plpgsql
@@ -1257,7 +1745,8 @@ BEGIN
     p_primary_affiliation_id,
     p_description,
     p_target_status,
-    p_actor
+    p_actor,
+    p_opportunity_fields
   );
 END;
 $$;
@@ -1277,13 +1766,23 @@ REVOKE ALL ON TABLE
   public.staff_ma_office_intake_projection
 FROM PUBLIC, anon, authenticated;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+-- Service-role writes remain available for the staged W-063/W-020 integration,
+-- but canonical rows are never hard-deleted. New firm intake should use the
+-- audited identity RPC and opportunity intake should use the atomic RPCs.
+GRANT SELECT, INSERT, UPDATE ON TABLE
   public.ma_firms,
   public.ma_offices,
   public.ma_contacts,
   public.ma_contact_office_affiliations,
   public.opportunity_ma_contacts
 TO service_role;
+REVOKE DELETE ON TABLE
+  public.ma_firms,
+  public.ma_offices,
+  public.ma_contacts,
+  public.ma_contact_office_affiliations,
+  public.opportunity_ma_contacts
+FROM service_role;
 GRANT SELECT ON TABLE public.staff_ma_office_intake_projection TO service_role;
 
 REVOKE ALL ON FUNCTION public.normalize_ma_contact_display_name() FROM PUBLIC, anon, authenticated;
@@ -1293,15 +1792,23 @@ REVOKE ALL ON FUNCTION public.assert_ma_firm_has_active_office(UUID) FROM PUBLIC
 REVOKE ALL ON FUNCTION public.enforce_ma_firm_active_office() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.assert_opportunity_office_context(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.enforce_opportunity_office_context() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)
+REVOKE ALL ON FUNCTION public.create_ma_firm_with_default_office(TEXT, TEXT, TEXT, TEXT, BOOLEAN, TEXT, TEXT, TEXT, TEXT)
   FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)
+REVOKE ALL ON FUNCTION public.create_or_affiliate_ma_contact(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT)
+  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT, JSONB)
+  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT, JSONB)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.assert_ma_firm_has_active_office(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.assert_opportunity_office_context(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)
+GRANT EXECUTE ON FUNCTION public.create_ma_firm_with_default_office(TEXT, TEXT, TEXT, TEXT, BOOLEAN, TEXT, TEXT, TEXT, TEXT)
   TO service_role;
-GRANT EXECUTE ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)
+GRANT EXECUTE ON FUNCTION public.create_or_affiliate_ma_contact(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT)
+  TO service_role;
+GRANT EXECUTE ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT, JSONB)
+  TO service_role;
+GRANT EXECUTE ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT, JSONB)
   TO service_role;
 
 COMMENT ON TABLE public.ma_firms IS
@@ -1315,10 +1822,14 @@ COMMENT ON TABLE public.ma_contact_office_affiliations IS
 COMMENT ON TABLE public.opportunity_ma_contacts IS
   'Staff-only canonical opportunity contacts linked through office affiliations. Legacy snapshots remain on opportunity_source_contacts.';
 COMMENT ON COLUMN public.opportunities.source_office_id IS
-  'Canonical operating office source. source_id and source_label remain compatibility fields during the office-model transition.';
-COMMENT ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT) IS
-  'Service-role-only atomic source-office/contact save. Drafts may be incomplete; active or paused records require description, one or more contacts, exactly one primary and a usable primary email. It never broadens repreneur disclosure; new records and draft transitions retain the legacy field as staff_only.';
-COMMENT ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT) IS
-  'Service-role-only atomic creation plus source-office/contact save. The legacy exposure field starts staff_only. Any active or paused validation failure rolls back the new draft.';
+  'Canonical operating office source. Pre-076 source_id and source_label remain untouched compatibility evidence during the office-model transition.';
+COMMENT ON FUNCTION public.create_ma_firm_with_default_office(TEXT, TEXT, TEXT, TEXT, BOOLEAN, TEXT, TEXT, TEXT, TEXT) IS
+  'Service-role-only audited canonical identity creation. Creates firm, real or synthetic initial office, named contact and active affiliation without creating a legacy directory record.';
+COMMENT ON FUNCTION public.create_or_affiliate_ma_contact(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) IS
+  'Service-role-only audited canonical contact creation or existing-contact affiliation for one active office. It rejects an active duplicate pair and never mutates legacy source-contact records.';
+COMMENT ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT, JSONB) IS
+  'Service-role-only atomic source-office/contact and allowlisted intake-field save. It writes source_office_id only and leaves pre-076 source_id/source_label untouched. Drafts may be incomplete; active or paused records require description, one or more contacts, exactly one primary and a usable primary email. It never broadens repreneur disclosure; new records and draft transitions retain the legacy field as staff_only.';
+COMMENT ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT, JSONB) IS
+  'Service-role-only atomic creation plus source-office/contact and allowlisted intake-field save. The legacy exposure field starts staff_only. Any active or paused validation failure rolls back the new draft.';
 
 COMMIT;

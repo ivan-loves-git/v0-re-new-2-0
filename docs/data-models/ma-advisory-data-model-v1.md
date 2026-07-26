@@ -91,7 +91,9 @@ Every non-archived firm has at least one active office. A firm without a known b
 2. Creating a firm without a known real office creates one synthetic default office with the same name.
 3. A firm may exist as a prospect without contacts or opportunities.
 4. A referenced firm is archived, never hard deleted.
-5. Firm name similarity may raise a duplicate warning but does not merge records automatically.
+5. A firm with an `active` or `paused` opportunity through any of its offices cannot be archived. Staff first closes, archives or moves those opportunities in the same transaction.
+6. New firm identity intake creates the firm, its real or synthetic initial office, a named contact and an active affiliation atomically. A real office is used whenever one is known; a synthetic default is used only when it is not.
+7. Firm name similarity may raise a duplicate warning but does not merge records automatically.
 
 ## 2. Operating office
 
@@ -157,6 +159,7 @@ Every non-archived firm has at least one active office. A firm without a known b
 4. Email is not globally unique. Repeated email raises a warning for review but does not block a legitimate multi-office relationship.
 5. A contact without a usable email may exist, but cannot be the primary contact of a valid opportunity.
 6. A referenced contact is archived, never hard deleted.
+7. Adding a second contact to an office, or affiliating an existing canonical contact to another office, uses the audited `create_or_affiliate_ma_contact` service. It creates no legacy contact or recurrent synchronization record.
 
 ## 4. Contact office affiliation
 
@@ -184,6 +187,11 @@ Every non-archived firm has at least one active office. A firm without a known b
 4. An affiliation cannot be deleted while referenced.
 5. An affiliation used by an `active` or `paused` opportunity may end only after staff links a replacement at the same office or closes or archives the opportunity.
 6. If the ending affiliation is primary, staff must identify the replacement primary contact before operational work can continue.
+7. The canonical contact-affiliation service rejects a duplicate active contact-and-office pair. If a person returns after an earlier affiliation ended, it creates a new active affiliation and retains the ended row as history.
+
+### Canonical contact-affiliation write boundary
+
+W-063 adds an additional person to an existing office, or links an existing canonical person to an additional office, through `create_or_affiliate_ma_contact`. It requires an actor and an active office beneath a non-archived firm. With `p_existing_contact_id`, it affiliates that active canonical contact and rejects contact profile fields; without it, it creates one named person from the supplied name fields. `p_contact_job_title` belongs to the affiliation in either mode. The service returns `contact_id` and `affiliation_id`, rejects an already-active pair, and never creates or mutates `ma_source_contacts`, `opportunity_source_contacts` or a recurrent legacy sync record.
 
 ## 5. Opportunity
 
@@ -228,6 +236,15 @@ Every non-archived firm has at least one active office. A firm without a known b
 8. A positioned repreneur is represented by the existing match and pursuit objects, never by free text on the opportunity.
 9. If an `active` or `paused` opportunity loses its usable primary contact email, WAVE blocks further operational mutations. Staff must correct the email, select another primary contact or close or archive the opportunity.
 10. Closing or archiving an opportunity preserves its historical source office and contact links even when those contacts later move or become inactive. Canonical opportunity links capture contact snapshots at the time of linking; the migration 072/075 snapshots remain immutable compatibility evidence.
+11. The atomic intake service cannot reopen a `closed` or `archived` opportunity. Reopening is a separate explicit workflow with its own audit and approval rules.
+
+### Atomic intake write boundary
+
+W-063 and W-020 save opportunity source context, contact selection, description, target status and optional intake fields through the audited `save_opportunity_office_context` and `create_opportunity_with_office_context` RPCs. Their final parameter is `p_opportunity_fields JSONB`, which accepts exactly:
+
+`sector`, `activity`, `location`, `revenue_meur`, `ebitda_keur`, `headcount`, `headcount_range`, `date_added`, `public_title`, `teaser_summary`, and `internal_notes`.
+
+An omitted key preserves the existing value; an explicit JSON `null` clears it. Numeric, integer and date values are parsed inside the same transaction, so a cast or validation failure rolls back source, contact, status and field changes together. The payload rejects unsupported keys and must never accept `source_id`, `source_label`, `source_office_id`, `repreneur_exposure`, `origin_channel`, `imported_from` or `imported_at`. Existing pre-076 `source_id` and `source_label` remain read-compatibility evidence only; the services neither populate nor reconcile them. Active and paused validity is defined by `source_office_id`.
 
 ## 6. Opportunity contact
 
@@ -362,6 +379,7 @@ These rules are part of the contract and should be enforced in the database wher
 10. Source relationships, interactions and internal notes are staff only.
 11. Excel identifiers never remain in live firm, office, contact or opportunity records.
 12. A staff-only draft may have no source office or contacts. Moving to `active` or `paused` happens through the atomic office-context service and requires the full valid-opportunity rules. Activation never broadens repreneur disclosure; the legacy exposure field stays `staff_only` for new records and draft transitions until the old portal reads are removed.
+13. An active or paused opportunity requires `source_office_id`; it does not require a legacy `source_id`.
 
 ## Repreneur visibility contract
 
@@ -453,14 +471,14 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 
 | Current live and checked-in object | Current behavior | Target disposition | Status |
 | --- | --- | --- | --- |
-| `ma_sources` | Interim firm-level source record. Embedded contact fields are deprecated compatibility fields after migration 072 | Split into firm and office; remove embedded contact fields after compatibility | Implemented interim model; target gap, W-061 |
+| `ma_sources` | Interim firm-level source record. Embedded contact fields are deprecated compatibility fields after migration 072 | Retain as a read-compatibility bridge for existing records only; do not create a legacy source as a condition of new opportunity activation | Implemented interim model; target gap, W-061 |
 | `ma_firms`, `ma_offices` | Not present in the live baseline | Migration 076 creates the canonical firm and operating-office tables, backfills one synthetic default office per legacy source, and preserves `ma_sources` as the compatibility bridge | Checked in, not live |
 | `ma_contacts`, `ma_contact_office_affiliations` | Not present in the live baseline | Migration 076 creates canonical people and current/historical office affiliations. A legacy email-only or phone-only row stays only in the bridge until staff supplies a name | Checked in, not live |
 | `opportunity_ma_contacts` | Not present in the live baseline | Migration 076 links opportunities through affiliations, snapshots contact attribution, and retains `opportunity_source_contacts` for existing history | Checked in, not live |
 | `ma_source_networks` | Migration 074 and current staff UI create an optional grouping object for firms | Freeze it as compatibility grouping only. It cannot own workflow, scoring, reporting, contacts or opportunities. Collapse it to optional firm `network_label` in W-061 unless a real operating use case is approved | Current divergence; resolve in W-061 |
 | `ma_source_contacts` | Migration 072 supports several contacts per firm-level source; migration 075 allows a contact record to move between sources | Migrate to one contact identity plus one or more office affiliations | Implemented interim model; target gap, W-061 |
 | `ma_source_contact_moves` | Migration 075 keeps append-only old and new source and contact details | Supersede with end-dated office affiliation history while preserving the audit | Implemented interim model; target gap, W-061 |
-| `opportunities.source_id` | Nullable for drafts and historical rows. Migration 073 requires a firm-level source for new or updated `active` opportunities only | Preserve as a compatibility bridge and add `source_office_id`. The migration 076 atomic service enforces source office, description, named primary contact and usable email for `active` and `paused` opportunities | Checked in, not live |
+| `opportunities.source_id` | Nullable firm-level source bridge. Migration 073 requires it for new or updated `active` opportunities | Migration 076 retires that live-source requirement in favour of `source_office_id`. Existing pre-076 values remain compatibility evidence, but canonical services do not populate or reconcile them. The atomic service enforces source office, description, named primary contact and usable email for `active` and `paused` opportunities | Checked in, not live |
 | `opportunity_source_contacts` | Migrations 072 and 075 support several contacts, at most one primary, source consistency and immutable contact snapshots after moves | Preserve as immutable compatibility history while `opportunity_ma_contacts` links through office affiliations and snapshots future links | Checked in, not live |
 | `ma_source_interactions` | Opportunity remains required and history remains email-oriented. Migration 072 adds an optional contact link and preserves recipient evidence | Office required; contact and opportunity optional; support call, email, meeting and document | Partial contact linkage; target gap, W-062 |
 | `opportunity_documents` | Migration 073 adds staff approval evidence, NDA evidence checks and service-role-only browser access | Retain the current confidentiality wall and keep opportunity documents separate from staff-only relationship attachments | Implemented and live verified |
@@ -469,9 +487,9 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 
 | Current field or group | Target disposition |
 | --- | --- |
-| `opportunities.activity` | Compatibility display only for existing data. Merge useful meaning into canonical sector or description during W-061, then remove |
+| `opportunities.activity` | Compatibility display only for existing data. It remains an allowlisted atomic intake field until useful meaning is merged into canonical sector or description, then remove |
 | `opportunities.date_added` | Retain as the optional source-reported or staff-entered business date; do not confuse it with `created_at` |
-| `opportunities.source_label` | Compatibility display only. Migration 076 writes a derived firm-and-office label during atomic source-context saves; staff displays should derive the label through canonical joins before this duplicate is removed |
+| `opportunities.source_label` | Compatibility display only for pre-076 records. Canonical source-context saves never write it; staff displays derive the label through canonical joins before this duplicate is removed |
 | `opportunities.imported_from`, `opportunities.imported_at` | Replace with the one-time cutover manifest and remove from live opportunity records after migration |
 | `ma_sources.contact_name`, `contact_email`, `contact_phone` | Deprecated compatibility fields. Read them only for migration fallback, then remove after the office backfill and compatibility period |
 | `ma_sources.network_id`, `ma_source_networks` | Interim grouping only. Collapse to optional `ma_firms.network_label` if the target contract remains unchanged |
@@ -487,6 +505,10 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `opportunities.origin_channel` or any sourcing-channel field | Not a W-061 target and not an import mapping. Do not add one without a new approved operating use case |
 
 The live baseline represents the current flat firm-level source model, multiple contacts, network grouping, contact moves and confidentiality wall. Migration 076 is the additive W-061 release candidate from that interim implementation to the target firm, office and affiliation model. Do not roll back current history or confidentiality controls.
+
+### W-063 integrated-release dependency
+
+W-063 must route new firm identity creation through `create_ma_firm_with_default_office`, new or additional contact relationships through `create_or_affiliate_ma_contact`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.
 
 ## Change protocol
 
@@ -530,5 +552,6 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-26 | 1.2 | Hardened the unapplied W-061 foundation with complete child-FK indexes, firm-archive protection, canonical firm/contact identity creation and affiliation, active/paused office-source validity, synthetic-default enforcement, allowlisted atomic opportunity intake fields, and the W-063 integrated-release routing dependency | W-061 and migration 076 |
 | 2026-07-26 | 1.1 | Added the checked-in, unapplied W-061 office identity foundation: firm, office, contact affiliation and canonical opportunity-contact bridge; transactional draft/activation service; staff-only intake projection; historical contact-move bridge; and explicit retirement of static exposure and sourcing-channel target behavior | W-061 and migration 076 |
 | 2026-07-26 | 1.0 | Created the approved office-centred target contract, field dictionary, cutover mapping and maintenance rules; reconciled it with the interim implementation | W-061, W-062 and migrations 072 to 075 |

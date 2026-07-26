@@ -106,6 +106,8 @@ schema_evidence AS (
   JOIN pg_namespace namespace ON namespace.oid = routine.pronamespace
   WHERE namespace.nspname = 'public'
     AND routine.proname IN (
+      'create_ma_firm_with_default_office',
+      'create_or_affiliate_ma_contact',
       'save_opportunity_office_context',
       'create_opportunity_with_office_context',
       'assert_opportunity_office_context'
