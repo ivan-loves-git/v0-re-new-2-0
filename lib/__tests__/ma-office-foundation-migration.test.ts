@@ -57,6 +57,25 @@ describe("M&A operating-office foundation migration", () => {
     expect(migration).toContain("Locks always follow opportunity")
   })
 
+  it("preserves closed and archived attribution without requiring current affiliations", () => {
+    const officeConsistencyGuard = migration.indexOf(
+      "opportunity_contact_affiliation_office_mismatch",
+    )
+    const historicalLifecycleExit = migration.indexOf(
+      "IF opportunity_row.status IN ('closed', 'archived') THEN",
+    )
+    const currentAffiliationGuard = migration.indexOf(
+      "opportunity_active_contact_affiliation_must_be_active",
+    )
+
+    expect(officeConsistencyGuard).toBeGreaterThan(-1)
+    expect(historicalLifecycleExit).toBeGreaterThan(officeConsistencyGuard)
+    expect(historicalLifecycleExit).toBeLessThan(currentAffiliationGuard)
+    expect(contract).toContain(
+      "They are not required to keep a currently active affiliation or usable current email.",
+    )
+  })
+
   it("keeps browser roles out and grants the service role only the required paths", () => {
     expect(migration).toContain("FROM PUBLIC, anon, authenticated;")
     expect(migration).toContain("TO service_role;")

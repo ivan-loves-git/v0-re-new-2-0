@@ -682,6 +682,13 @@ BEGIN
     RAISE EXCEPTION 'opportunity_contact_affiliation_office_mismatch';
   END IF;
 
+  -- Closed and archived records retain their source and contact attribution.
+  -- Their linked affiliation/contact may later end or archive without
+  -- blocking that historical lifecycle. Office/link consistency remains above.
+  IF opportunity_row.status IN ('closed', 'archived') THEN
+    RETURN;
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM public.opportunity_ma_contacts link
