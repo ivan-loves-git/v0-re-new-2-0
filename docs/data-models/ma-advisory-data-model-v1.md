@@ -5,11 +5,11 @@
 | Item | Value |
 | --- | --- |
 | Status | Approved and live contract |
-| Implementation status | Migrations 076 to 078 were applied to production and schema-verified on 2026-07-26. The canonical office/contact model is live and the one-time cutover staging area is empty; no real workbook has been imported and Excel remains operationally authoritative until W-010. |
+| Implementation status | Migrations 076 to 078 were applied to production and schema-verified on 2026-07-26. The canonical office/contact model is live and the one-time cutover staging area is empty; no real workbook has been imported and Excel remains operationally authoritative until W-010. The W-010 date-precision and test-data replacement rules are approved target gaps and must be implemented and production-verified before the real workbook is staged. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
-| PDR scope | W-061, M&A office and contact identity foundation; W-062, M&A relationship history; W-063, canonical staff opportunity intake; W-020, controlled one-time cutover staging |
+| PDR scope | W-061, M&A office and contact identity foundation; W-062, M&A relationship history; W-063, canonical staff opportunity intake; W-020, controlled one-time cutover staging; W-010, production activation and WAVE-only switch |
 | Last reviewed against live Supabase | 2026-07-26 |
 | Last reviewed against source workbook | 2026-07-26, `CRM Re-New for Wave.xlsx` |
 
@@ -218,6 +218,7 @@ W-063 adds an additional person to an existing office, or links an existing cano
 | `headcount` | Integer | Optional | Role appropriate | WAVE | Exact headcount when known |
 | `headcount_range` | Controlled text | Optional | Role appropriate | WAVE | Range when exact headcount is not known |
 | `date_added` | Date | Optional | Staff only | WAVE | Source-reported or staff-entered opportunity date; it is not the WAVE creation timestamp |
+| `date_added_precision` | `day`, `month` | Conditional | Staff only | WAVE | Required when `date_added` is present; preserves whether the source supplied a full calendar date or only month and year |
 | `public_title` | Text | Repreneur visible | Repreneur when visible | WAVE | Anonymized reader-facing title |
 | `teaser_summary` | Text | Repreneur visible | Repreneur when visible | WAVE | Approved anonymized summary |
 | `internal_notes` | Text | Optional | Staff only | WAVE | Operational notes; never exposed |
@@ -239,6 +240,8 @@ W-063 adds an additional person to an existing office, or links an existing cano
 10. Closing or archiving an opportunity preserves its historical source office and contact links even when those contacts later move or become inactive. Canonical opportunity links capture contact snapshots at the time of linking; the migration 072/075 snapshots remain immutable compatibility evidence.
 11. Staff create and edit use the atomic office-context services only. They do not write `source_id`, `source_label`, `opportunity_source_contacts`, `repreneur_exposure`, an origin channel or a separate source-contact relationship.
 12. The atomic intake service cannot reopen a `closed` or `archived` opportunity. Reopening is a separate explicit workflow with its own audit and approval rules.
+13. `date_added` and `date_added_precision` are both null when no source date is known. A known full calendar date uses precision `day`.
+14. A source value containing only month and year is stored technically as the first day of that month with precision `month`. The artificial day must never be displayed, exported, described as an event day or used for day-level age or service-level reasoning.
 
 ### Atomic intake write boundary
 
@@ -249,6 +252,8 @@ W-063 and W-020 save opportunity source context, contact selection, description,
 An omitted key preserves the existing value; an explicit JSON `null` clears it. Numeric, integer and date values are parsed inside the same transaction, so a cast or validation failure rolls back source, contact, status and field changes together. The payload rejects unsupported keys and must never accept `source_id`, `source_label`, `source_office_id`, `repreneur_exposure`, `origin_channel`, `imported_from` or `imported_at`. Existing pre-076 `source_id` and `source_label` remain read-compatibility evidence only; the services neither populate nor reconcile them. Active and paused validity is defined by `source_office_id`.
 
 Migration 076 explicitly revokes and drops any intermediate seven-argument opportunity save/create RPC overloads before it defines the final JSONB signatures. A rerun therefore cannot leave a granted pre-allowlist write path behind.
+
+Before W-010 stages the real workbook, the additive date-precision release must extend the atomic write contract so `date_added` and `date_added_precision` are validated and written together. The current production RPC allowlist above does not yet accept the companion field and must not be used to normalize month/year-only values.
 
 ## 6. Opportunity contact
 
@@ -415,7 +420,10 @@ The cutover mapper uses the workbook structure as input. The workbook does not d
 6. Approval is refused while any blocker is unresolved. A service-role-only, security-invoker activation locks the approved run, all staged rows and all issues, recomputes its database-owned immutable approval digest, compares it with the stored and supplied values, requires zero unresolved blockers, creates a dependency-closed canonical firm, office, contact, affiliation and opportunity set, verifies the W-061 operational-validity rules, records aggregate results, then purges temporary rows and issues in the same transaction. Any error rolls back and leaves staging intact.
 7. After row counts and relationships reconcile and Ivan approves the migration, temporary rows and every source workbook ID are deleted. The same temporary evidence is purged when a run is superseded. Live records retain only WAVE IDs.
 8. Keep a cutover manifest with a required lowercase SHA-256 raw-content source hash, a non-identifying `sha256:<64 lowercase hex>` source fingerprint, execution and approval times, responsible staff member, sanitized aggregate record totals, allowlisted review decisions and an immutable approval digest. PostgreSQL recomputes that digest from the ordered staged rows and issues plus the source hash/fingerprint, reconciliation and review decisions; a caller-supplied value can only be compared, never define the approval. The manifest retains no raw workbook bytes, file names, workbook IDs or Excel identifiers. It is migration evidence, not another business entity or recurring import system.
-9. A cell containing several email addresses is never imported as one address:
+9. Before replacing any live test opportunity or match, create an immutable backup and a separate replacement manifest containing its exact WAVE ID, object type and count. Only manifest-confirmed test records may be replaced or deleted. An ambiguous or real record blocks the run.
+10. Preserve raw source date text, parsed `date_added`, `date_added_precision` and the parsing decision in temporary staging and bind them into the approval digest. Reconcile source, `day`, `month`, null and parse-failure counts before activation. The 144 known month/year-only values are valid non-blocking inputs when represented with precision `month`; a precision mismatch is a blocker.
+11. Activation requires Colin's final-source and freeze confirmation, zero unresolved blockers, an attached replacement manifest and a passing staff workflow smoke test. Ivan's standing approval recorded on W-010 applies only when all four conditions are evidenced; otherwise the run stops.
+12. A cell containing several email addresses is never imported as one address:
    1. If the addresses belong to one named person, staff verifies one usable primary email. Other addresses remain in the cutover resolution note unless a future contact-method model is approved.
    2. If the addresses belong to different people, split them into separate contacts.
    3. If ownership is unclear or an address is malformed, keep the row as an exception.
@@ -425,6 +433,8 @@ The cutover mapper uses the workbook structure as input. The workbook does not d
 Migration 078 is a live but empty cutover foundation, not an import launch. It adds staff-only staging and a service-role-only activation primitive; no browser role receives table or function access. The `/opportunities/import` route is staff-gated and displays a deterministic in-repository synthetic rehearsal only. It accepts no workbook, file, pasted CSV/TSV/JSON rows or other production input, has no direct database write, and exposes no activation server action.
 
 The approval digest is owned and recomputed by PostgreSQL with `pgcrypto` SHA-256 over a canonical, ordered serialization of the manifest, every staged row and every staged issue. It includes the algorithm-tagged source fingerprint, exact lowercase raw-content SHA-256 source hash, sanitized reconciliation summary and structured review decisions; the stored and activation-supplied digests must match that recomputation. An issue resolution timestamp is serialized as UTC-stable epoch microseconds, never a session-time-zone-dependent timestamp string. `review_decisions.approved_opportunity_fields` is the only optional-field authorization and may contain only `sector`, `activity`, `location`, `revenue_meur`, `ebitda_keur`, `headcount`, `headcount_range`, `date_added`, `public_title`, `teaser_summary`, and `internal_notes`. Each field must be both explicitly staged and approved. A missing metric or date remains `null`; an invalid supplied metric or date is a blocker, and approval as well as activation rejects unresolved blockers.
+
+That paragraph describes the production-verified W-020 foundation. Before the real workbook is staged, an additive W-010 release must incorporate the derived `date_added_precision`, raw date parsing decision and exact test-data replacement manifest into the database-owned digest and activation checks. Documentation approval alone does not make those controls live.
 
 The source fingerprint must be exactly `sha256:<64 lowercase hexadecimal characters>` and must be computed before staging from a non-retained provenance representation; a literal filename, workbook ID or source identifier is invalid. The source hash is the separate raw-content SHA-256 checksum. Stage temporary IDs and relationship keys are bounded tokens; locators are bounded flat objects with only source workbook/sheet/row/key fields; and payloads are bounded flat objects whose keys are allowlisted by entity type. This prevents raw workbook blobs, arbitrary nested JSON and unbounded identifiers from being parked in staging. A stage issue that names a row uses the same-run composite foreign key, so it cannot point at a row belonging to another run; a null row reference remains valid for a run-level issue. The retained manifest keeps only the fingerprint/hash, actor and time fields, sanitized aggregate reconciliation, allowlisted review decisions, immutable digest and sanitized aggregate result. Stage locators, normalized payloads, temporary IDs and issues are temporary evidence only and are purged after activation or controlled supersession.
 
@@ -475,7 +485,7 @@ Every staged office also declares the boolean `isSyntheticDefault`. `true` means
 | Sector and activity | `opportunities.sector`, `activity` | Write only when explicitly staged and included in the approved manifest allowlist |
 | Description | `opportunities.description` | Required before activation |
 | Revenue, EBITDA, headcount and range | Opportunity metrics | Write only when explicitly staged and approved; missing remains `null`, while an invalid supplied value blocks activation |
-| Date added | `opportunities.date_added` | Write only when explicitly staged and approved; missing remains `null`, while an invalid supplied date blocks activation; WAVE `created_at` records system creation |
+| Date added | `opportunities.date_added`, `opportunities.date_added_precision` | A full date maps to precision `day`; month/year maps to the first of that month plus precision `month`. Both values must be staged, digest-bound and activated together; missing remains `null`, while invalid or mismatched precision blocks activation |
 | Platform title and teaser | `opportunities.public_title`, `teaser_summary` | Write only when explicitly staged and approved; this does not make it repreneur-visible |
 | Positioned repreneur | Existing match or pursuit | Never store as free text on the opportunity |
 | Associated contact email | Temporary contact matching evidence | Convert to an affiliation and opportunity contact; do not retain as the relationship |
@@ -506,6 +516,8 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `ma_contacts`, `ma_contact_office_affiliations` | Canonical people and current/historical office affiliations live since migration 076 | A legacy email-only or phone-only row stays only in the bridge until staff supplies a name | Live and production-verified |
 | `opportunity_ma_contacts` | Canonical office-affiliation opportunity links live since migration 076 | Snapshot contact attribution and retain `opportunity_source_contacts` for existing history | Live and production-verified |
 | `ma_cutover_runs`, `ma_cutover_stage_rows`, `ma_cutover_stage_issues` | Live, service-role-only one-time cutover boundary; all three tables were empty after release | The retained run manifest holds constrained source fingerprint/hash, sanitized aggregate reconciliation, allowlisted decisions, actor/times and immutable approval digest; temporary identifiers and rows are purged after successful activation or controlled supersession | Live and empty; no real workbook imported |
+| `opportunities.date_added_precision` | No companion precision field exists, so a first-of-month normalization would appear to be an exact source date | Add the controlled `day` or `month` field; update atomic writes, staging, digest, role-specific projections, display, exports and tests together | Approved target gap; blocks W-010 workbook staging |
+| W-010 test-data replacement manifest | The live W-020 cutover manifest does not inventory or back up existing production test opportunities and matches | Add an immutable backup plus an exact ID, object-type and count manifest before any replacement or deletion | Approved target gap; blocks W-010 activation |
 | `ma_source_networks` | Migration 074 created an optional grouping object for legacy firms | Keep it as read-only compatibility grouping. It cannot own workflow, scoring, reporting, contacts or opportunities; canonical firms use optional `network_label` | Legacy read-only compatibility bridge; canonical `network_label` live |
 | `ma_source_contacts` | Migration 072 supports several contacts per firm-level source; migration 075 allows a contact record to move between sources | Retain as read-only legacy evidence; canonical identity plus office affiliations own new relationships | Live, service-role read-only compatibility bridge |
 | `ma_source_contact_moves` | Migration 075 keeps append-only old and new source and contact details | Preserve the audit while canonical office affiliation history owns current relationships | Live, service-role read-only compatibility evidence; W-062 still owns interaction history |
@@ -519,7 +531,7 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | Current field or group | Target disposition |
 | --- | --- |
 | `opportunities.activity` | Compatibility display only for existing data. It remains an allowlisted atomic intake field until useful meaning is merged into canonical sector or description, then remove |
-| `opportunities.date_added` | Retain as the optional source-reported or staff-entered business date; do not confuse it with `created_at` |
+| `opportunities.date_added` | Retain as the optional source-reported or staff-entered business date; add `date_added_precision` and never expose a technical first-of-month value as an exact source date |
 | `opportunities.source_label` | Compatibility display only for pre-076 records. Canonical source-context saves never write it; staff displays derive the label through canonical joins before this duplicate is removed |
 | `opportunities.imported_from`, `opportunities.imported_at` | Replace with the one-time cutover manifest and remove from live opportunity records after migration |
 | `ma_sources.contact_name`, `contact_email`, `contact_phone` | Deprecated compatibility fields. Read them only for migration fallback, then remove after the office backfill and compatibility period |
@@ -572,7 +584,7 @@ Ordinary corrections to record values do not change this contract.
 
 1. Update this contract before or with the implementation.
 2. Record the business reason in the change log.
-3. Update the migration, TypeScript types, application validation and tests together.
+3. Update the migration, TypeScript types, importer, application validation, role-specific projections, display, exports and tests together.
 4. Keep the migration additive until the new structure is live and backfilled.
 5. Verify the released schema and role behavior.
 6. Update the implementation reconciliation table only after verification.
@@ -595,6 +607,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-26 | 1.6 | Approved explicit day/month precision for opportunity dates, backup-first replacement of test opportunities and matches, and evidence-gated standing activation authority; implementation remains required before the real workbook is staged | W-010 |
 | 2026-07-26 | 1.5.7 | Recorded the production application and verification of migrations 076 to 078, including the explicit correction of one invalid test opportunity to a staff-only draft while preserving its match records; no real workbook was imported | W-061, W-063 and W-020 production release |
 | 2026-07-26 | 1.5.6 | Recorded disposable-database Gate 2 and corrected two runtime-only SQL defects found there: the migration-076 legacy affiliation backfill join and migration-078 activation identifier ambiguity; approved relationships, requiredness, visibility and retention are unchanged | W-061, W-063 and W-020 release verification |
 | 2026-07-26 | 1.5.5 | Hardened W-063 against repeated or non-string contact FormData values so neither contact mode can silently select, create or affiliate an ambiguous identity | W-063 corrective follow-up |
