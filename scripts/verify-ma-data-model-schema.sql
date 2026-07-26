@@ -94,6 +94,68 @@ schema_evidence AS (
   UNION ALL
 
   SELECT
+    'legacy_role_capability'::text AS evidence_type,
+    relation.relname AS table_name,
+    31500::bigint AS sort_order,
+    'service_role'::text AS object_name,
+    jsonb_build_object(
+      'service_role_can_select',
+        has_table_privilege(
+          'service_role',
+          format('%I.%I', namespace.nspname, relation.relname),
+          'SELECT'
+        ),
+      'service_role_can_write',
+        has_table_privilege(
+          'service_role',
+          format('%I.%I', namespace.nspname, relation.relname),
+          'INSERT'
+        )
+        OR has_table_privilege(
+          'service_role',
+          format('%I.%I', namespace.nspname, relation.relname),
+          'UPDATE'
+        )
+        OR has_table_privilege(
+          'service_role',
+          format('%I.%I', namespace.nspname, relation.relname),
+          'DELETE'
+        )
+        OR has_table_privilege(
+          'service_role',
+          format('%I.%I', namespace.nspname, relation.relname),
+          'TRUNCATE'
+        )
+        OR has_table_privilege(
+          'service_role',
+          format('%I.%I', namespace.nspname, relation.relname),
+          'REFERENCES'
+        )
+        OR has_table_privilege(
+          'service_role',
+          format('%I.%I', namespace.nspname, relation.relname),
+          'TRIGGER'
+        ),
+      'owner', owner.rolname,
+      'service_role_inherits_owner',
+        pg_has_role('service_role', owner.rolname, 'MEMBER')
+    ) AS details
+  FROM pg_class relation
+  JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+  JOIN pg_roles owner ON owner.oid = relation.relowner
+  WHERE namespace.nspname = 'public'
+    AND relation.relname IN (
+      'ma_sources',
+      'ma_source_networks',
+      'ma_source_contacts',
+      'ma_source_contact_moves',
+      'opportunity_source_contacts'
+    )
+    AND relation.relkind IN ('r', 'p')
+
+  UNION ALL
+
+  SELECT
     'routine'::text AS evidence_type,
     'ma_office_foundation'::text AS table_name,
     32000::bigint AS sort_order,
@@ -110,7 +172,9 @@ schema_evidence AS (
       'create_or_affiliate_ma_contact',
       'save_opportunity_office_context',
       'create_opportunity_with_office_context',
-      'assert_opportunity_office_context'
+      'assert_opportunity_office_context',
+      'activate_ma_cutover_run',
+      'move_ma_source_contact'
     )
 
   UNION ALL

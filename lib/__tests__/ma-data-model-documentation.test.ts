@@ -50,7 +50,7 @@ describe("canonical M&A data model documentation", () => {
       "Closed and archived opportunities preserve the source and contact history",
       "The atomic intake service cannot reopen a `closed` or `archived` opportunity.",
       "Canonical firm intake serializes on the lower-trimmed name",
-      "W-063 integrated-release dependency",
+      "W-063 staff intake reconciliation",
       "A cell containing several email addresses is never imported as one address",
       "WAVE data remains test data until then",
       "scripts/verify-ma-data-model-schema.sql",

@@ -250,7 +250,7 @@ describe("M&A operating-office foundation migration", () => {
     expect(contract).toContain("Migration 076 is checked in but not yet applied to production")
     expect(contract).toContain("W-061 and migration 076")
     expect(contract).toContain("compatibility firewall")
-    expect(contract).toContain("W-063 integrated-release dependency")
+    expect(contract).toContain("W-063 staff intake reconciliation")
     expect(contract).toContain("p_opportunity_fields JSONB")
     expect(contract).toContain("Reopening is a separate explicit workflow")
     expect(contract).toContain("Canonical contact-affiliation write boundary")
