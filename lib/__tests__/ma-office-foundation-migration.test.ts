@@ -42,16 +42,21 @@ describe("M&A operating-office foundation migration", () => {
     expect(migration).toContain("capture_opportunity_ma_contact_snapshot")
   })
 
-  it("indexes every newly introduced child foreign key", () => {
+  it("indexes every migration-076 child foreign-key path that needs a full leftmost index", () => {
     for (const index of [
+      "idx_ma_offices_firm_id",
       "idx_ma_sources_default_office_id",
       "idx_ma_source_contacts_office_affiliation_id",
       "idx_ma_contact_office_affiliations_contact_id",
+      "idx_ma_contact_office_affiliations_legacy_source_contact_id",
+      "idx_ma_contact_office_affiliations_legacy_source_id",
       "idx_opportunity_ma_contacts_affiliation_id",
+      "idx_opportunity_ma_contacts_legacy_source_contact_id",
     ]) {
       expect(migration).toContain(`CREATE INDEX IF NOT EXISTS ${index}`)
     }
 
+    expect(migration).toContain("ON public.ma_offices (firm_id);")
     expect(migration).toContain("ON public.ma_sources (default_office_id);")
     expect(migration).toContain(
       "ON public.ma_source_contacts (office_affiliation_id);",
@@ -60,7 +65,16 @@ describe("M&A operating-office foundation migration", () => {
       "ON public.ma_contact_office_affiliations (contact_id);",
     )
     expect(migration).toContain(
+      "ON public.ma_contact_office_affiliations (legacy_source_contact_id);",
+    )
+    expect(migration).toContain(
+      "ON public.ma_contact_office_affiliations (legacy_source_id);",
+    )
+    expect(migration).toContain(
       "ON public.opportunity_ma_contacts (affiliation_id);",
+    )
+    expect(migration).toContain(
+      "ON public.opportunity_ma_contacts (legacy_source_contact_id);",
     )
   })
 
@@ -120,6 +134,23 @@ describe("M&A operating-office foundation migration", () => {
     )
     expect(saveDefinition).toContain("revenue_meur")
     expect(saveDefinition).toContain("teaser_summary")
+    expect(migration).toContain(
+      "to_regprocedure(\n    'public.save_opportunity_office_context(uuid,uuid,uuid[],uuid,text,public.opportunity_status,text)'",
+    )
+    expect(migration).toContain(
+      "DROP FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)",
+    )
+    expect(migration).toContain(
+      "REVOKE ALL ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT) FROM PUBLIC, anon, authenticated, service_role",
+    )
+    expect(migration).toContain(
+      "DROP FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)",
+    )
+    expect(migration).toContain(
+      "REVOKE ALL ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT) FROM PUBLIC, anon, authenticated, service_role",
+    )
+    expect(migration.indexOf("DROP FUNCTION public.save_opportunity_office_context")).toBeLessThan(saveStart)
+    expect(migration.indexOf("DROP FUNCTION public.create_opportunity_with_office_context")).toBeLessThan(saveStart)
   })
 
   it("provides one audited canonical primitive for additional or multi-office contacts", () => {

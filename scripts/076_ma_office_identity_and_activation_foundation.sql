@@ -180,6 +180,8 @@ CREATE INDEX IF NOT EXISTS idx_ma_firms_name
 CREATE INDEX IF NOT EXISTS idx_ma_offices_firm
   ON public.ma_offices (firm_id, name)
   WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_ma_offices_firm_id
+  ON public.ma_offices (firm_id);
 CREATE INDEX IF NOT EXISTS idx_ma_sources_default_office_id
   ON public.ma_sources (default_office_id);
 CREATE INDEX IF NOT EXISTS idx_ma_source_contacts_office_affiliation_id
@@ -201,6 +203,10 @@ CREATE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_office
   ON public.ma_contact_office_affiliations (office_id, is_active, contact_id);
 CREATE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_contact_id
   ON public.ma_contact_office_affiliations (contact_id);
+CREATE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_legacy_source_contact_id
+  ON public.ma_contact_office_affiliations (legacy_source_contact_id);
+CREATE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_legacy_source_id
+  ON public.ma_contact_office_affiliations (legacy_source_id);
 CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_opportunity
   ON public.opportunity_ma_contacts (opportunity_id, is_active DESC, is_primary DESC);
 CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_affiliation
@@ -208,6 +214,8 @@ CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_affiliation
   WHERE is_active;
 CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_affiliation_id
   ON public.opportunity_ma_contacts (affiliation_id);
+CREATE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_legacy_source_contact_id
+  ON public.opportunity_ma_contacts (legacy_source_contact_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_opportunity_ma_contacts_primary
   ON public.opportunity_ma_contacts (opportunity_id)
   WHERE is_active AND is_primary;
@@ -1268,6 +1276,31 @@ BEGIN
 
   RETURN QUERY
   SELECT resolved_contact_id, created_affiliation_id;
+END;
+$$;
+
+-- An intermediate 076 may have exposed seven-argument RPC overloads before
+-- JSONB intake fields were added. Retire them explicitly before defining the
+-- final signatures, so a rerun cannot leave a previously granted bypass.
+DO $$
+BEGIN
+  IF to_regprocedure(
+    'public.create_opportunity_with_office_context(text,uuid,uuid[],uuid,text,public.opportunity_status,text)'
+  ) IS NOT NULL THEN
+    EXECUTE
+      'REVOKE ALL ON FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT) FROM PUBLIC, anon, authenticated, service_role';
+    EXECUTE
+      'DROP FUNCTION public.create_opportunity_with_office_context(TEXT, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)';
+  END IF;
+
+  IF to_regprocedure(
+    'public.save_opportunity_office_context(uuid,uuid,uuid[],uuid,text,public.opportunity_status,text)'
+  ) IS NOT NULL THEN
+    EXECUTE
+      'REVOKE ALL ON FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT) FROM PUBLIC, anon, authenticated, service_role';
+    EXECUTE
+      'DROP FUNCTION public.save_opportunity_office_context(UUID, UUID, UUID[], UUID, TEXT, public.opportunity_status, TEXT)';
+  END IF;
 END;
 $$;
 
