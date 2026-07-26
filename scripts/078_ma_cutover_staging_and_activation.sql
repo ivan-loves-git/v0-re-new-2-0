@@ -10,6 +10,302 @@
 
 BEGIN;
 
+-- Supabase installs pgcrypto in `extensions`. The Gate 2 disposable-database
+-- check must prove this exact schema/function is available before this
+-- unapplied migration reaches a production release.
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
+-- Temporary staging may keep only flat, normalized values. These helpers make
+-- the database boundary reject raw workbook blobs, nested arbitrary JSON and
+-- unbounded source identifiers before an approval digest can be created.
+CREATE OR REPLACE FUNCTION public.ma_cutover_bounded_flat_object(
+  p_value JSONB,
+  p_allowed_keys TEXT[],
+  p_max_bytes INTEGER,
+  p_max_string_chars INTEGER
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+DECLARE
+  field RECORD;
+BEGIN
+  IF JSONB_TYPEOF(p_value) <> 'object'
+    OR pg_column_size(p_value) > p_max_bytes THEN
+    RETURN FALSE;
+  END IF;
+
+  FOR field IN SELECT key, value FROM JSONB_EACH(p_value)
+  LOOP
+    IF NOT (field.key = ANY(p_allowed_keys))
+      OR JSONB_TYPEOF(field.value) NOT IN ('string', 'number', 'boolean', 'null') THEN
+      RETURN FALSE;
+    END IF;
+
+    IF JSONB_TYPEOF(field.value) = 'string'
+      AND CHAR_LENGTH(field.value #>> '{}') > p_max_string_chars THEN
+      RETURN FALSE;
+    END IF;
+  END LOOP;
+
+  RETURN TRUE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ma_cutover_related_ids_are_bounded(
+  p_value JSONB
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+DECLARE
+  element JSONB;
+BEGIN
+  IF JSONB_TYPEOF(p_value) <> 'array'
+    OR pg_column_size(p_value) > 4096 THEN
+    RETURN FALSE;
+  END IF;
+
+  IF JSONB_ARRAY_LENGTH(p_value) > 64 THEN
+    RETURN FALSE;
+  END IF;
+
+  FOR element IN SELECT value FROM JSONB_ARRAY_ELEMENTS(p_value)
+  LOOP
+    IF JSONB_TYPEOF(element) <> 'string'
+      OR CHAR_LENGTH(element #>> '{}') > 160
+      OR element #>> '{}' !~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,159}$' THEN
+      RETURN FALSE;
+    END IF;
+  END LOOP;
+
+  RETURN TRUE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ma_cutover_payload_is_sanitized(
+  p_entity_kind TEXT,
+  p_payload JSONB
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+DECLARE
+  allowed_keys TEXT[];
+BEGIN
+  allowed_keys := CASE p_entity_kind
+    WHEN 'firm' THEN ARRAY[
+      'name', 'category', 'networkLabel', 'websiteUrl', 'internalNotes'
+    ]::TEXT[]
+    WHEN 'office' THEN ARRAY[
+      'name', 'isSyntheticDefault', 'city', 'internalNotes'
+    ]::TEXT[]
+    WHEN 'contact' THEN ARRAY[
+      'firstName', 'lastName', 'email', 'phone'
+    ]::TEXT[]
+    WHEN 'affiliation' THEN ARRAY['jobTitle']::TEXT[]
+    WHEN 'opportunity' THEN ARRAY[
+      'reference', 'description', 'targetStatus',
+      'primaryAffiliationTemporaryId', 'sector', 'activity', 'location',
+      'locationDecision', 'sourceGeographyLabel', 'geographyDecision',
+      'revenueMeur', 'ebitdaKeur', 'headcount', 'headcountRange',
+      'dateAdded', 'publicTitle', 'teaserSummary', 'internalNotes'
+    ]::TEXT[]
+    ELSE NULL
+  END;
+
+  IF allowed_keys IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  RETURN public.ma_cutover_bounded_flat_object(
+    p_payload,
+    allowed_keys,
+    8192,
+    2048
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ma_cutover_locator_is_sanitized(
+  p_locator JSONB
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+  SELECT public.ma_cutover_bounded_flat_object(
+    p_locator,
+    ARRAY[
+      'sourceWorkbookId', 'sourceSheet', 'sourceRow', 'sourceKey',
+      'sourceRowId', 'sheet', 'row', 'rowNumber'
+    ]::TEXT[],
+    1024,
+    256
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.ma_cutover_aggregate_value_is_sanitized(
+  p_value JSONB
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+DECLARE
+  child JSONB;
+BEGIN
+  CASE JSONB_TYPEOF(p_value)
+    WHEN 'null', 'boolean', 'number' THEN
+      RETURN TRUE;
+    WHEN 'array' THEN
+      FOR child IN SELECT value FROM JSONB_ARRAY_ELEMENTS(p_value)
+      LOOP
+        IF NOT public.ma_cutover_aggregate_value_is_sanitized(child) THEN
+          RETURN FALSE;
+        END IF;
+      END LOOP;
+      RETURN TRUE;
+    WHEN 'object' THEN
+      FOR child IN SELECT value FROM JSONB_EACH(p_value)
+      LOOP
+        IF NOT public.ma_cutover_aggregate_value_is_sanitized(child) THEN
+          RETURN FALSE;
+        END IF;
+      END LOOP;
+      RETURN TRUE;
+    ELSE
+      RETURN FALSE;
+  END CASE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ma_cutover_reconciliation_is_sanitized(
+  p_value JSONB
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+DECLARE
+  field RECORD;
+BEGIN
+  IF JSONB_TYPEOF(p_value) <> 'object' OR pg_column_size(p_value) > 4096 THEN
+    RETURN FALSE;
+  END IF;
+
+  FOR field IN SELECT key, value FROM JSONB_EACH(p_value)
+  LOOP
+    IF field.key NOT IN (
+      'source_rows', 'resolved_mappings', 'opportunity_rows', 'issues',
+      'geography', 'normalization'
+    ) OR NOT public.ma_cutover_aggregate_value_is_sanitized(field.value) THEN
+      RETURN FALSE;
+    END IF;
+  END LOOP;
+
+  RETURN TRUE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ma_cutover_review_decisions_are_sanitized(
+  p_value JSONB
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+DECLARE
+  field RECORD;
+  approved_field JSONB;
+BEGIN
+  IF JSONB_TYPEOF(p_value) <> 'object' OR pg_column_size(p_value) > 4096 THEN
+    RETURN FALSE;
+  END IF;
+
+  FOR field IN SELECT key, value FROM JSONB_EACH(p_value)
+  LOOP
+    IF field.key NOT IN (
+      'approved_opportunity_fields', 'geography_decision_counts',
+      'exception_resolution_counts', 'resolution_counts'
+    ) THEN
+      RETURN FALSE;
+    END IF;
+
+    IF field.key = 'approved_opportunity_fields' THEN
+      IF JSONB_TYPEOF(field.value) <> 'array' THEN
+        RETURN FALSE;
+      END IF;
+      IF JSONB_ARRAY_LENGTH(field.value) > 11 THEN
+        RETURN FALSE;
+      END IF;
+      FOR approved_field IN SELECT value FROM JSONB_ARRAY_ELEMENTS(field.value)
+      LOOP
+        IF JSONB_TYPEOF(approved_field) <> 'string'
+          OR approved_field #>> '{}' NOT IN (
+            'sector', 'activity', 'location', 'revenue_meur', 'ebitda_keur',
+            'headcount', 'headcount_range', 'date_added', 'public_title',
+            'teaser_summary', 'internal_notes'
+          ) THEN
+          RETURN FALSE;
+        END IF;
+      END LOOP;
+    ELSIF NOT public.ma_cutover_aggregate_value_is_sanitized(field.value) THEN
+      RETURN FALSE;
+    END IF;
+  END LOOP;
+
+  RETURN TRUE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ma_cutover_result_is_sanitized(
+  p_value JSONB
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = ''
+AS $$
+DECLARE
+  field RECORD;
+BEGIN
+  IF JSONB_TYPEOF(p_value) <> 'object' OR pg_column_size(p_value) > 1024 THEN
+    RETURN FALSE;
+  END IF;
+
+  FOR field IN SELECT key, value FROM JSONB_EACH(p_value)
+  LOOP
+    IF field.key NOT IN (
+      'firms_mapped', 'offices_mapped', 'contacts_mapped',
+      'affiliations_mapped', 'opportunities_created', 'staging_purged'
+    ) OR NOT public.ma_cutover_aggregate_value_is_sanitized(field.value) THEN
+      RETURN FALSE;
+    END IF;
+  END LOOP;
+
+  RETURN TRUE;
+END;
+$$;
+
 CREATE TABLE IF NOT EXISTS public.ma_cutover_runs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   status TEXT NOT NULL DEFAULT 'draft'
@@ -28,11 +324,11 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_runs (
   source_fingerprint TEXT NOT NULL,
   source_hash TEXT NOT NULL,
   reconciliation_summary JSONB NOT NULL DEFAULT '{}'::JSONB
-    CHECK (JSONB_TYPEOF(reconciliation_summary) = 'object'),
+    CHECK (public.ma_cutover_reconciliation_is_sanitized(reconciliation_summary)),
   -- Structured, signed review decisions include the explicit optional-field
   -- allowlist used at activation. A free-form array cannot authorize writes.
   review_decisions JSONB NOT NULL DEFAULT '{}'::JSONB
-    CHECK (JSONB_TYPEOF(review_decisions) = 'object'),
+    CHECK (public.ma_cutover_review_decisions_are_sanitized(review_decisions)),
   approval_digest TEXT,
   created_by TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -42,11 +338,22 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_runs (
   activation_started_at TIMESTAMPTZ,
   activated_by TEXT,
   activated_at TIMESTAMPTZ,
+  superseded_by TEXT,
+  superseded_at TIMESTAMPTZ,
   result_summary JSONB
-    CHECK (result_summary IS NULL OR JSONB_TYPEOF(result_summary) = 'object'),
+    CHECK (result_summary IS NULL OR public.ma_cutover_result_is_sanitized(result_summary)),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK (NULLIF(BTRIM(source_fingerprint), '') IS NOT NULL),
-  CHECK (NULLIF(BTRIM(source_hash), '') IS NOT NULL),
+  CHECK (
+    source_fingerprint = BTRIM(source_fingerprint)
+    AND source_fingerprint ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,255}$'
+  ),
+  CHECK (source_hash ~ '^[0-9a-f]{64}$'),
+  CHECK (approval_digest IS NULL OR approval_digest ~ '^[0-9a-f]{64}$'),
+  CHECK (CHAR_LENGTH(created_by) BETWEEN 1 AND 200),
+  CHECK (approved_by IS NULL OR CHAR_LENGTH(approved_by) BETWEEN 1 AND 200),
+  CHECK (activation_actor IS NULL OR CHAR_LENGTH(activation_actor) BETWEEN 1 AND 200),
+  CHECK (activated_by IS NULL OR CHAR_LENGTH(activated_by) BETWEEN 1 AND 200),
+  CHECK (superseded_by IS NULL OR CHAR_LENGTH(superseded_by) BETWEEN 1 AND 200),
   CHECK (
     status NOT IN ('approved', 'activating', 'activated')
     OR (
@@ -62,6 +369,25 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_runs (
       AND activated_at IS NOT NULL
       AND result_summary IS NOT NULL
     )
+  ),
+  CHECK (
+    (activation_actor IS NULL AND activation_started_at IS NULL)
+    OR status IN ('activating', 'activated')
+  ),
+  CHECK (
+    (activated_by IS NULL AND activated_at IS NULL AND result_summary IS NULL)
+    OR status = 'activated'
+  ),
+  CHECK (
+    status <> 'superseded'
+    OR (
+      NULLIF(BTRIM(superseded_by), '') IS NOT NULL
+      AND superseded_at IS NOT NULL
+    )
+  ),
+  CHECK (
+    (superseded_by IS NULL AND superseded_at IS NULL)
+    OR status = 'superseded'
   )
 );
 
@@ -80,19 +406,25 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_stage_rows (
   temporary_entity_id TEXT NOT NULL,
   parent_temporary_entity_id TEXT,
   related_temporary_entity_ids JSONB NOT NULL DEFAULT '[]'::JSONB
-    CHECK (JSONB_TYPEOF(related_temporary_entity_ids) = 'array'),
+    CHECK (public.ma_cutover_related_ids_are_bounded(related_temporary_entity_ids)),
   -- Row locator can contain sheet/row and cross-sheet source keys. It is never
   -- a raw workbook payload and it is deleted after successful activation.
   source_row_locator JSONB NOT NULL DEFAULT '{}'::JSONB
-    CHECK (JSONB_TYPEOF(source_row_locator) = 'object'),
+    CHECK (public.ma_cutover_locator_is_sanitized(source_row_locator)),
   -- Canonically shaped values only; raw workbook bytes are intentionally not
   -- stored anywhere in this migration.
   normalized_payload JSONB NOT NULL DEFAULT '{}'::JSONB
-    CHECK (JSONB_TYPEOF(normalized_payload) = 'object'),
+    CHECK (public.ma_cutover_payload_is_sanitized(entity_kind, normalized_payload)),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (run_id, entity_kind, temporary_entity_id),
-  CHECK (NULLIF(BTRIM(temporary_entity_id), '') IS NOT NULL),
+  CHECK (
+    temporary_entity_id ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,159}$'
+  ),
+  CHECK (
+    parent_temporary_entity_id IS NULL
+    OR parent_temporary_entity_id ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,159}$'
+  ),
   CHECK (
     (resolution_action = 'create' AND reuse_canonical_id IS NULL)
     OR (resolution_action = 'reuse' AND reuse_canonical_id IS NOT NULL)
@@ -112,8 +444,11 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_stage_issues (
   resolved_by TEXT,
   resolved_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK (NULLIF(BTRIM(code), '') IS NOT NULL),
-  CHECK (NULLIF(BTRIM(message), '') IS NOT NULL),
+  CHECK (NULLIF(BTRIM(code), '') IS NOT NULL AND CHAR_LENGTH(code) <= 128),
+  CHECK (NULLIF(BTRIM(message), '') IS NOT NULL AND CHAR_LENGTH(message) <= 1000),
+  CHECK (field_name IS NULL OR CHAR_LENGTH(field_name) <= 128),
+  CHECK (resolution_note IS NULL OR CHAR_LENGTH(resolution_note) <= 2000),
+  CHECK (resolved_by IS NULL OR CHAR_LENGTH(resolved_by) <= 200),
   CHECK (
     (resolved_at IS NULL AND resolved_by IS NULL)
     OR (resolved_at IS NOT NULL AND NULLIF(BTRIM(resolved_by), '') IS NOT NULL)
@@ -130,6 +465,156 @@ CREATE INDEX IF NOT EXISTS idx_ma_cutover_stage_issues_run_id
 CREATE INDEX IF NOT EXISTS idx_ma_cutover_stage_issues_stage_row_id
   ON public.ma_cutover_stage_issues (stage_row_id);
 
+-- This transaction-local marker is created only by the activation function.
+-- It prevents an HTTP/service-role client from directly promoting a run or
+-- purging blockers through PostgREST. Service role remains trusted to stage
+-- and review rows before approval; it is not trusted to mimic activation.
+CREATE OR REPLACE FUNCTION public.ma_cutover_activation_guard_present(
+  p_run_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  guard_present BOOLEAN;
+BEGIN
+  IF pg_catalog.to_regclass('pg_temp.ma_cutover_activation_guard') IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  EXECUTE
+    'SELECT EXISTS (SELECT 1 FROM pg_temp.ma_cutover_activation_guard WHERE run_id = $1)'
+  INTO guard_present
+  USING p_run_id;
+
+  RETURN COALESCE(guard_present, FALSE);
+END;
+$$;
+
+-- Supersession keeps the immutable run manifest for audit while clearing the
+-- temporary workbook evidence. Like the activation marker, this is a
+-- PostgREST/service-role boundary rather than a claim that a raw database
+-- superuser cannot create a temporary table.
+CREATE OR REPLACE FUNCTION public.ma_cutover_supersession_guard_present(
+  p_run_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  guard_present BOOLEAN;
+BEGIN
+  IF pg_catalog.to_regclass('pg_temp.ma_cutover_supersession_guard') IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  EXECUTE
+    'SELECT EXISTS (SELECT 1 FROM pg_temp.ma_cutover_supersession_guard WHERE run_id = $1)'
+  INTO guard_present
+  USING p_run_id;
+
+  RETURN COALESCE(guard_present, FALSE);
+END;
+$$;
+
+-- The persisted digest is never caller-defined. PostgreSQL serializes the
+-- reviewed manifest and the complete temporary stage in a fixed order, then
+-- hashes that canonical representation with pgcrypto SHA-256.
+CREATE OR REPLACE FUNCTION public.compute_ma_cutover_approval_digest(
+  p_run_id UUID
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  manifest JSONB;
+  staged_rows JSONB;
+  staged_issues JSONB;
+  digest_input JSONB;
+BEGIN
+  SELECT JSONB_BUILD_OBJECT(
+    'run_id', run.id,
+    'source_fingerprint', run.source_fingerprint,
+    'source_hash', run.source_hash,
+    'reconciliation_summary', run.reconciliation_summary,
+    'review_decisions', run.review_decisions
+  )
+  INTO manifest
+  FROM public.ma_cutover_runs run
+  WHERE run.id = p_run_id;
+
+  IF manifest IS NULL THEN
+    RAISE EXCEPTION 'ma_cutover_run_not_found';
+  END IF;
+
+  SELECT COALESCE(
+    JSONB_AGG(
+      JSONB_BUILD_OBJECT(
+        'id', row.id,
+        'entity_kind', row.entity_kind,
+        'resolution_action', row.resolution_action,
+        'reuse_canonical_id', row.reuse_canonical_id,
+        'temporary_entity_id', row.temporary_entity_id,
+        'parent_temporary_entity_id', row.parent_temporary_entity_id,
+        'related_temporary_entity_ids', row.related_temporary_entity_ids,
+        'source_row_locator', row.source_row_locator,
+        'normalized_payload', row.normalized_payload
+      )
+      ORDER BY row.entity_kind, row.temporary_entity_id, row.id
+    ),
+    '[]'::JSONB
+  )
+  INTO staged_rows
+  FROM public.ma_cutover_stage_rows row
+  WHERE row.run_id = p_run_id;
+
+  SELECT COALESCE(
+    JSONB_AGG(
+      JSONB_BUILD_OBJECT(
+        'id', issue.id,
+        'stage_row_id', issue.stage_row_id,
+        'severity', issue.severity,
+        'code', issue.code,
+        'field_name', issue.field_name,
+        'message', issue.message,
+        'resolution_note', issue.resolution_note,
+        'resolved_by', issue.resolved_by,
+        'resolved_at', issue.resolved_at
+      )
+      ORDER BY
+        COALESCE(issue.stage_row_id::TEXT, ''),
+        issue.severity,
+        issue.code,
+        COALESCE(issue.field_name, ''),
+        issue.id
+    ),
+    '[]'::JSONB
+  )
+  INTO staged_issues
+  FROM public.ma_cutover_stage_issues issue
+  WHERE issue.run_id = p_run_id;
+
+  digest_input := JSONB_BUILD_OBJECT(
+    'version', 'ma-cutover-approval-digest-v1',
+    'manifest', manifest,
+    'stage_rows', staged_rows,
+    'stage_issues', staged_issues
+  );
+
+  RETURN pg_catalog.encode(
+    extensions.digest(digest_input::TEXT, 'sha256'),
+    'hex'
+  );
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.update_ma_cutover_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -137,6 +622,35 @@ SET search_path = ''
 AS $$
 BEGIN
   NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+-- A run can be created only as an open, pre-approval manifest. Otherwise a
+-- service-role INSERT could bypass the lifecycle guard that protects UPDATE.
+CREATE OR REPLACE FUNCTION public.guard_ma_cutover_run_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.status NOT IN ('draft', 'staged', 'review_required') THEN
+    RAISE EXCEPTION 'ma_cutover_run_must_start_open';
+  END IF;
+
+  IF NEW.approval_digest IS NOT NULL
+    OR NEW.approved_by IS NOT NULL
+    OR NEW.approved_at IS NOT NULL
+    OR NEW.activation_actor IS NOT NULL
+    OR NEW.activation_started_at IS NOT NULL
+    OR NEW.activated_by IS NOT NULL
+    OR NEW.activated_at IS NOT NULL
+    OR NEW.superseded_by IS NOT NULL
+    OR NEW.superseded_at IS NOT NULL
+    OR NEW.result_summary IS NOT NULL THEN
+    RAISE EXCEPTION 'ma_cutover_run_must_start_without_lifecycle_evidence';
+  END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -149,14 +663,96 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
+DECLARE
+  computed_digest TEXT;
 BEGIN
-  IF OLD.status = 'activated' THEN
-    RAISE EXCEPTION 'ma_cutover_activated_run_is_immutable';
+  IF OLD.status IN ('activated', 'superseded') THEN
+    RAISE EXCEPTION 'ma_cutover_closed_run_is_immutable';
   END IF;
 
-  IF NEW.approval_digest IS NOT NULL
+  IF NEW.status IN ('activating', 'activated')
+    AND NEW.status IS DISTINCT FROM OLD.status
+    AND NOT public.ma_cutover_activation_guard_present(OLD.id) THEN
+    RAISE EXCEPTION 'ma_cutover_lifecycle_transition_requires_activation';
+  END IF;
+
+  IF NEW.status = 'activating' AND OLD.status <> 'approved' THEN
+    RAISE EXCEPTION 'ma_cutover_activating_transition_requires_approved_status';
+  END IF;
+
+  IF NEW.status = 'activated' AND OLD.status <> 'activating' THEN
+    RAISE EXCEPTION 'ma_cutover_activated_transition_requires_activating_status';
+  END IF;
+
+  IF NEW.status = 'superseded'
+    AND NEW.status IS DISTINCT FROM OLD.status
+    AND NOT public.ma_cutover_supersession_guard_present(OLD.id) THEN
+    RAISE EXCEPTION 'ma_cutover_lifecycle_transition_requires_supersession';
+  END IF;
+
+  IF NEW.status = 'superseded'
+    AND OLD.status NOT IN ('draft', 'staged', 'review_required', 'approved') THEN
+    RAISE EXCEPTION 'ma_cutover_superseded_transition_requires_open_status';
+  END IF;
+
+  IF (
+    NEW.activation_actor IS DISTINCT FROM OLD.activation_actor
+    OR NEW.activation_started_at IS DISTINCT FROM OLD.activation_started_at
+    OR NEW.activated_by IS DISTINCT FROM OLD.activated_by
+    OR NEW.activated_at IS DISTINCT FROM OLD.activated_at
+    OR NEW.result_summary IS DISTINCT FROM OLD.result_summary
+  ) AND NOT public.ma_cutover_activation_guard_present(OLD.id) THEN
+    RAISE EXCEPTION 'ma_cutover_activation_evidence_requires_activation';
+  END IF;
+
+  IF (
+    NEW.superseded_by IS DISTINCT FROM OLD.superseded_by
+    OR NEW.superseded_at IS DISTINCT FROM OLD.superseded_at
+  ) AND NOT public.ma_cutover_supersession_guard_present(OLD.id) THEN
+    RAISE EXCEPTION 'ma_cutover_supersession_evidence_requires_supersession';
+  END IF;
+
+  IF OLD.approval_digest IS NULL
+    AND NEW.approval_digest IS NOT NULL
     AND NEW.status NOT IN ('approved', 'activating', 'activated') THEN
     RAISE EXCEPTION 'ma_cutover_approval_digest_requires_approved_status';
+  END IF;
+
+  IF OLD.approval_digest IS NOT NULL
+    AND NEW.status NOT IN ('approved', 'activating', 'activated', 'superseded') THEN
+    RAISE EXCEPTION 'ma_cutover_approved_status_is_immutable';
+  END IF;
+
+  -- Approval is a separate update after staging. Keeping the manifest stable
+  -- here lets the database recompute against the exact stored rows and issues.
+  IF NEW.status = 'approved' AND OLD.status <> 'approved' THEN
+    IF NEW.source_fingerprint IS DISTINCT FROM OLD.source_fingerprint
+      OR NEW.source_hash IS DISTINCT FROM OLD.source_hash
+      OR NEW.reconciliation_summary IS DISTINCT FROM OLD.reconciliation_summary
+      OR NEW.review_decisions IS DISTINCT FROM OLD.review_decisions THEN
+      RAISE EXCEPTION 'ma_cutover_approval_requires_stable_manifest';
+    END IF;
+
+    IF NULLIF(BTRIM(NEW.approved_by), '') IS NULL OR NEW.approved_at IS NULL THEN
+      RAISE EXCEPTION 'ma_cutover_approval_actor_and_time_required';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM public.ma_cutover_stage_issues issue
+      WHERE issue.run_id = NEW.id
+        AND issue.severity = 'blocker'
+        AND issue.resolved_at IS NULL
+    ) THEN
+      RAISE EXCEPTION 'ma_cutover_approval_has_unresolved_blockers';
+    END IF;
+
+    computed_digest := public.compute_ma_cutover_approval_digest(NEW.id);
+    IF NEW.approval_digest IS NOT NULL
+      AND BTRIM(NEW.approval_digest) IS DISTINCT FROM computed_digest THEN
+      RAISE EXCEPTION 'ma_cutover_supplied_approval_digest_mismatch';
+    END IF;
+    NEW.approval_digest := computed_digest;
   END IF;
 
   IF OLD.approval_digest IS NOT NULL
@@ -180,9 +776,21 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.prevent_ma_cutover_run_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  RAISE EXCEPTION 'ma_cutover_runs_are_never_deletable';
+END;
+$$;
+
 -- Staging remains editable only before approval. An activation changes status
 -- to `activating` in the same transaction, then may delete the temporary rows
--- and issues but may not rewrite them.
+-- and issues but may not rewrite them. A supersession purges the same
+-- temporary evidence before closing its retained manifest. Pre-approval stage
+-- rows remain replaceable so a revised workbook can be rehearsed safely.
 CREATE OR REPLACE FUNCTION public.guard_ma_cutover_stage_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -202,22 +810,38 @@ BEGIN
   INTO run_status
   FROM public.ma_cutover_runs
   WHERE id = target_run_id
-  FOR KEY SHARE;
+  FOR UPDATE;
 
   IF run_status IS NULL THEN
     RAISE EXCEPTION 'ma_cutover_run_not_found';
   END IF;
 
-  IF run_status = 'approved' OR run_status = 'activated' THEN
+  IF TG_OP = 'DELETE' THEN
+    IF run_status = 'activating' THEN
+      IF NOT public.ma_cutover_activation_guard_present(target_run_id) THEN
+        RAISE EXCEPTION 'ma_cutover_stage_delete_requires_activation_guard';
+      END IF;
+      RETURN OLD;
+    END IF;
+
+    IF run_status = 'approved'
+      AND public.ma_cutover_supersession_guard_present(target_run_id) THEN
+      RETURN OLD;
+    END IF;
+
+    IF run_status IN ('approved', 'activated', 'superseded') THEN
+      RAISE EXCEPTION 'ma_cutover_stage_is_immutable_after_approval';
+    END IF;
+
+    RETURN OLD;
+  END IF;
+
+  IF run_status IN ('approved', 'activated', 'superseded') THEN
     RAISE EXCEPTION 'ma_cutover_stage_is_immutable_after_approval';
   END IF;
 
-  IF run_status = 'activating' AND TG_OP <> 'DELETE' THEN
+  IF run_status = 'activating' THEN
     RAISE EXCEPTION 'ma_cutover_stage_is_locked_during_activation';
-  END IF;
-
-  IF TG_OP = 'DELETE' THEN
-    RETURN OLD;
   END IF;
 
   RETURN NEW;
@@ -230,6 +854,12 @@ CREATE TRIGGER update_ma_cutover_runs_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_ma_cutover_updated_at();
 
+DROP TRIGGER IF EXISTS guard_ma_cutover_run_insert ON public.ma_cutover_runs;
+CREATE TRIGGER guard_ma_cutover_run_insert
+  BEFORE INSERT ON public.ma_cutover_runs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.guard_ma_cutover_run_insert();
+
 DROP TRIGGER IF EXISTS update_ma_cutover_stage_rows_updated_at ON public.ma_cutover_stage_rows;
 CREATE TRIGGER update_ma_cutover_stage_rows_updated_at
   BEFORE UPDATE ON public.ma_cutover_stage_rows
@@ -241,6 +871,12 @@ CREATE TRIGGER guard_ma_cutover_runs
   BEFORE UPDATE ON public.ma_cutover_runs
   FOR EACH ROW
   EXECUTE FUNCTION public.guard_ma_cutover_run_immutability();
+
+DROP TRIGGER IF EXISTS prevent_ma_cutover_run_delete ON public.ma_cutover_runs;
+CREATE TRIGGER prevent_ma_cutover_run_delete
+  BEFORE DELETE ON public.ma_cutover_runs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.prevent_ma_cutover_run_delete();
 
 DROP TRIGGER IF EXISTS guard_ma_cutover_stage_rows ON public.ma_cutover_stage_rows;
 CREATE TRIGGER guard_ma_cutover_stage_rows
@@ -300,6 +936,7 @@ DECLARE
   mapped_contacts INTEGER;
   mapped_affiliations INTEGER;
   created_opportunities INTEGER := 0;
+  computed_approval_digest TEXT;
   result JSONB;
 BEGIN
   IF NULLIF(BTRIM(p_actor), '') IS NULL THEN
@@ -328,10 +965,6 @@ BEGIN
     OR NULLIF(BTRIM(run_row.approved_by), '') IS NULL
     OR run_row.approved_at IS NULL THEN
     RAISE EXCEPTION 'ma_cutover_run_requires_immutable_approval_digest';
-  END IF;
-
-  IF BTRIM(p_approval_digest) IS DISTINCT FROM BTRIM(run_row.approval_digest) THEN
-    RAISE EXCEPTION 'ma_cutover_activation_digest_mismatch';
   END IF;
 
   approved_optional_fields := COALESCE(
@@ -378,6 +1011,19 @@ BEGIN
   ORDER BY issue.id
   FOR UPDATE;
 
+  -- The digest is recomputed only after the run, every staged row and every
+  -- issue are locked. This compares the persisted approval with the exact
+  -- snapshot that activation is about to consume.
+  computed_approval_digest := public.compute_ma_cutover_approval_digest(run_row.id);
+
+  IF BTRIM(run_row.approval_digest) IS DISTINCT FROM computed_approval_digest THEN
+    RAISE EXCEPTION 'ma_cutover_stored_approval_digest_mismatch';
+  END IF;
+
+  IF BTRIM(p_approval_digest) IS DISTINCT FROM computed_approval_digest THEN
+    RAISE EXCEPTION 'ma_cutover_activation_digest_mismatch';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM public.ma_cutover_stage_issues issue
@@ -406,6 +1052,13 @@ BEGIN
   IF expected_firms = 0 OR expected_offices = 0 OR expected_opportunities = 0 THEN
     RAISE EXCEPTION 'ma_cutover_run_requires_dependency_closed_stage';
   END IF;
+
+  CREATE TEMP TABLE IF NOT EXISTS ma_cutover_activation_guard (
+    run_id UUID PRIMARY KEY
+  ) ON COMMIT DROP;
+  INSERT INTO ma_cutover_activation_guard (run_id)
+  VALUES (run_row.id)
+  ON CONFLICT (run_id) DO NOTHING;
 
   UPDATE public.ma_cutover_runs
   SET
@@ -456,7 +1109,7 @@ BEGIN
       END IF;
     ELSE
       PERFORM pg_catalog.pg_advisory_xact_lock(
-        pg_catalog.hashtext('ma_cutover_firm:' || LOWER(normalized_name))
+        pg_catalog.hashtextextended(LOWER(BTRIM(normalized_name)), 76061)
       );
 
       IF EXISTS (
@@ -1076,6 +1729,86 @@ BEGIN
 END;
 $$;
 
+-- A revised workbook must not leave the old run's source locators and
+-- temporary identifiers stranded after approval. This controlled close path
+-- retains the sanitized run manifest and its actor/timestamp while purging
+-- stage rows and issues atomically. It does not alter live domain records.
+CREATE OR REPLACE FUNCTION public.supersede_ma_cutover_run(
+  p_run_id UUID,
+  p_actor TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  run_row public.ma_cutover_runs%ROWTYPE;
+  purged_stage_rows INTEGER := 0;
+  purged_stage_issues INTEGER := 0;
+BEGIN
+  IF NULLIF(BTRIM(p_actor), '') IS NULL THEN
+    RAISE EXCEPTION 'ma_cutover_supersession_actor_required';
+  END IF;
+
+  SELECT *
+  INTO run_row
+  FROM public.ma_cutover_runs
+  WHERE id = p_run_id
+  FOR UPDATE;
+
+  IF run_row.id IS NULL THEN
+    RAISE EXCEPTION 'ma_cutover_run_not_found';
+  END IF;
+
+  IF run_row.status NOT IN ('draft', 'staged', 'review_required', 'approved') THEN
+    RAISE EXCEPTION 'ma_cutover_supersession_requires_open_run';
+  END IF;
+
+  -- Lock the same rows before their controlled purge. Stage mutations first
+  -- lock the run, so this serializes a revision/review operation with close.
+  PERFORM 1
+  FROM public.ma_cutover_stage_rows row
+  WHERE row.run_id = run_row.id
+  ORDER BY row.entity_kind, row.temporary_entity_id, row.id
+  FOR UPDATE;
+
+  PERFORM 1
+  FROM public.ma_cutover_stage_issues issue
+  WHERE issue.run_id = run_row.id
+  ORDER BY issue.id
+  FOR UPDATE;
+
+  CREATE TEMP TABLE IF NOT EXISTS ma_cutover_supersession_guard (
+    run_id UUID PRIMARY KEY
+  ) ON COMMIT DROP;
+  INSERT INTO ma_cutover_supersession_guard (run_id)
+  VALUES (run_row.id)
+  ON CONFLICT (run_id) DO NOTHING;
+
+  DELETE FROM public.ma_cutover_stage_issues
+  WHERE run_id = run_row.id;
+  GET DIAGNOSTICS purged_stage_issues = ROW_COUNT;
+
+  DELETE FROM public.ma_cutover_stage_rows
+  WHERE run_id = run_row.id;
+  GET DIAGNOSTICS purged_stage_rows = ROW_COUNT;
+
+  UPDATE public.ma_cutover_runs
+  SET
+    status = 'superseded',
+    superseded_by = BTRIM(p_actor),
+    superseded_at = NOW()
+  WHERE id = run_row.id;
+
+  RETURN JSONB_BUILD_OBJECT(
+    'status', 'superseded',
+    'stage_rows_purged', purged_stage_rows,
+    'stage_issues_purged', purged_stage_issues
+  );
+END;
+$$;
+
 ALTER TABLE public.ma_cutover_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ma_cutover_stage_rows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ma_cutover_stage_issues ENABLE ROW LEVEL SECURITY;
@@ -1093,18 +1826,47 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
 TO service_role;
 
 REVOKE ALL ON FUNCTION public.update_ma_cutover_updated_at() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.guard_ma_cutover_run_insert() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.guard_ma_cutover_run_immutability() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.guard_ma_cutover_stage_mutation() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.prevent_ma_cutover_run_delete() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_bounded_flat_object(JSONB, TEXT[], INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_related_ids_are_bounded(JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_payload_is_sanitized(TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_locator_is_sanitized(JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_aggregate_value_is_sanitized(JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_reconciliation_is_sanitized(JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_review_decisions_are_sanitized(JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_result_is_sanitized(JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_activation_guard_present(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ma_cutover_supersession_guard_present(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.compute_ma_cutover_approval_digest(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.activate_ma_cutover_run(UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.supersede_ma_cutover_run(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.ma_cutover_bounded_flat_object(JSONB, TEXT[], INTEGER, INTEGER) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_related_ids_are_bounded(JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_payload_is_sanitized(TEXT, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_locator_is_sanitized(JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_aggregate_value_is_sanitized(JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_reconciliation_is_sanitized(JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_review_decisions_are_sanitized(JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_result_is_sanitized(JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_activation_guard_present(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ma_cutover_supersession_guard_present(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.compute_ma_cutover_approval_digest(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.activate_ma_cutover_run(UUID, TEXT, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.supersede_ma_cutover_run(UUID, TEXT) TO service_role;
 
 COMMENT ON TABLE public.ma_cutover_runs IS
-  'Service-role-only one-time cutover manifest. Retains source fingerprint/hash, aggregate reconciliation, decisions, actor/times and immutable approval digest; never workbook bytes or source row identifiers.';
+  'Service-role-only one-time cutover manifest. Retains source fingerprint/hash, sanitized aggregate reconciliation, allowlisted decisions, actor/times and immutable approval digest; never workbook bytes or source row identifiers. A superseded manifest remains after its temporary staging is purged.';
 COMMENT ON TABLE public.ma_cutover_stage_rows IS
-  'Temporary service-role-only normalized cutover rows. Holds source row identifiers and cross-sheet mapping only until transactional activation succeeds.';
+  'Temporary service-role-only normalized cutover rows. Holds bounded source row identifiers and cross-sheet mapping only until transactional activation or supersession succeeds.';
 COMMENT ON TABLE public.ma_cutover_stage_issues IS
-  'Temporary service-role-only cutover exceptions. Unresolved blockers prohibit activation and all rows are purged after a successful activation.';
+  'Temporary service-role-only cutover exceptions. Unresolved blockers prohibit approval and activation; all rows are purged after a successful activation or supersession.';
 COMMENT ON FUNCTION public.activate_ma_cutover_run(UUID, TEXT, TEXT) IS
-  'Security-invoker, service-role-only one-time cutover activation. It receives and compares the approved immutable digest, locks the manifest, rejects unresolved blockers, creates the canonical dependency chain through W-061 primitives, verifies validity and purges stage rows/issues atomically.';
+  'Security-invoker, service-role-only one-time cutover activation. It locks the manifest, staged rows and issues, recomputes the database-owned SHA-256 approval digest, rejects unresolved blockers, creates the canonical dependency chain through W-061 primitives, verifies validity and purges stage rows/issues atomically.';
+COMMENT ON FUNCTION public.supersede_ma_cutover_run(UUID, TEXT) IS
+  'Security-invoker, service-role-only controlled close for a revised cutover input. It retains the sanitized manifest and audit actor/time while purging all temporary stage rows and issues atomically.';
 
 COMMIT;

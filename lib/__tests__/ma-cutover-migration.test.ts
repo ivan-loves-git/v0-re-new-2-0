@@ -32,22 +32,89 @@ describe("M&A one-time cutover staging migration", () => {
     expect(migration).toContain("related_temporary_entity_ids JSONB")
     expect(migration).toContain("resolution_action TEXT NOT NULL")
     expect(migration).toContain("reuse_canonical_id UUID")
+    expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;")
+    expect(migration).toContain("source_hash ~ '^[0-9a-f]{64}$'")
+    expect(migration).toContain(
+      "source_fingerprint ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,255}$'",
+    )
     expect(migration).toContain("idx_ma_cutover_stage_issues_run_id")
     expect(migration).toContain("idx_ma_cutover_stage_issues_stage_row_id")
+  })
+
+  it("recomputes the approval digest in PostgreSQL from a deterministic reviewed snapshot", () => {
+    const digest = migration.match(
+      /CREATE OR REPLACE FUNCTION public\.compute_ma_cutover_approval_digest\([\s\S]*?\n\$\$;/,
+    )?.[0]
+
+    expect(digest).toBeDefined()
+    expect(digest).toContain("RETURNS TEXT")
+    expect(digest).toContain("STABLE")
+    expect(digest).toContain("'source_fingerprint', run.source_fingerprint")
+    expect(digest).toContain("'source_hash', run.source_hash")
+    expect(digest).toContain("'reconciliation_summary', run.reconciliation_summary")
+    expect(digest).toContain("'review_decisions', run.review_decisions")
+    expect(digest).toContain("ORDER BY row.entity_kind, row.temporary_entity_id, row.id")
+    expect(digest).toContain("COALESCE(issue.stage_row_id::TEXT, '')")
+    expect(digest).toContain("'version', 'ma-cutover-approval-digest-v1'")
+    expect(digest).toContain("extensions.digest(digest_input::TEXT, 'sha256')")
+
+    const runGuard = migration.match(
+      /CREATE OR REPLACE FUNCTION public\.guard_ma_cutover_run_immutability\(\)[\s\S]*?\n\$\$;/,
+    )?.[0]
+    expect(runGuard).toBeDefined()
+    expect(
+      runGuard?.match(
+        /computed_digest := public\.compute_ma_cutover_approval_digest\(NEW\.id\);/g,
+      ),
+    ).toHaveLength(1)
+    expect(runGuard).toContain("ma_cutover_supplied_approval_digest_mismatch")
+    expect(runGuard).toContain("NEW.approval_digest := computed_digest")
   })
 
   it("binds approval to immutable staging and locks activation before mutation", () => {
     expect(migration).toContain("approval_digest")
     expect(migration).toContain("p_approval_digest TEXT")
     expect(migration).toContain("ma_cutover_activation_digest_mismatch")
+    expect(migration).toContain("ma_cutover_stored_approval_digest_mismatch")
     expect(migration).toContain("ma_cutover_approval_digest_is_immutable")
     expect(migration).toContain("ma_cutover_approved_manifest_is_immutable")
+    expect(migration).toContain("ma_cutover_approval_has_unresolved_blockers")
     expect(migration).toContain("ma_cutover_stage_is_immutable_after_approval")
-    expect(migration).toContain("FOR UPDATE;")
     expect(migration).toContain("ma_cutover_run_has_unresolved_blockers")
     expect(migration).toContain("issue.severity = 'blocker'")
     expect(migration).toContain("issue.resolved_at IS NULL")
     expect(migration).toContain("ma_cutover_activation_count_reconciliation_failed")
+
+    const activation = migration.match(
+      /CREATE OR REPLACE FUNCTION public\.activate_ma_cutover_run\([\s\S]*?\n\$\$;/,
+    )?.[0]
+    expect(activation).toBeDefined()
+    expect(
+      activation?.match(
+        /computed_approval_digest := public\.compute_ma_cutover_approval_digest\(run_row\.id\);/g,
+      ),
+    ).toHaveLength(1)
+    expect(activation).toContain("CREATE TEMP TABLE IF NOT EXISTS ma_cutover_activation_guard")
+    expect(activation?.indexOf("FROM public.ma_cutover_stage_rows row")).toBeLessThan(
+      activation?.indexOf(
+        "computed_approval_digest := public.compute_ma_cutover_approval_digest(run_row.id);",
+      ) ?? -1,
+    )
+    expect(activation?.indexOf("FROM public.ma_cutover_stage_issues issue")).toBeLessThan(
+      activation?.indexOf(
+        "computed_approval_digest := public.compute_ma_cutover_approval_digest(run_row.id);",
+      ) ?? -1,
+    )
+    expect(
+      activation?.indexOf(
+        "computed_approval_digest := public.compute_ma_cutover_approval_digest(run_row.id);",
+      ),
+    ).toBeLessThan(
+      activation?.indexOf("CREATE TEMP TABLE IF NOT EXISTS ma_cutover_activation_guard") ?? -1,
+    )
+    expect(
+      activation?.indexOf("CREATE TEMP TABLE IF NOT EXISTS ma_cutover_activation_guard"),
+    ).toBeLessThan(activation?.indexOf("status = 'activating'") ?? -1)
   })
 
   it("keeps the stage-mutation trigger function structurally well-formed", () => {
@@ -59,6 +126,59 @@ describe("M&A one-time cutover staging migration", () => {
     expect(guard).toMatch(/RETURN NEW;\s*END;\s*\$\$;/)
     expect(guard).not.toMatch(/RETURN NEW;\s*END;\s*END;\s*\$\$;/)
     expect(guard).toContain("ma_cutover_stage_run_id_is_immutable")
+    expect(guard).toContain("FOR UPDATE;")
+    expect(guard).not.toContain("FOR KEY SHARE;")
+    expect(guard).toContain("ma_cutover_stage_delete_requires_activation_guard")
+    expect(guard).toContain("ma_cutover_supersession_guard_present")
+    expect(guard).toMatch(
+      /IF run_status IN \('approved', 'activated', 'superseded'\) THEN[\s\S]*?END IF;\s*\n\s*RETURN OLD;/,
+    )
+  })
+
+  it("prevents direct lifecycle and manifest deletion bypasses while retaining a controlled supersession purge", () => {
+    const runGuard = migration.match(
+      /CREATE OR REPLACE FUNCTION public\.guard_ma_cutover_run_immutability\(\)[\s\S]*?\n\$\$;/,
+    )?.[0]
+    expect(runGuard).toBeDefined()
+    expect(runGuard).toContain("ma_cutover_lifecycle_transition_requires_activation")
+    expect(runGuard).toContain("ma_cutover_lifecycle_transition_requires_supersession")
+    expect(runGuard).toContain("ma_cutover_activation_evidence_requires_activation")
+    expect(runGuard).toContain("ma_cutover_supersession_evidence_requires_supersession")
+    expect(runGuard).toContain("ma_cutover_approved_status_is_immutable")
+    expect(runGuard).toContain("ma_cutover_closed_run_is_immutable")
+    expect(migration).toContain("ma_cutover_run_must_start_open")
+    expect(migration).toContain("ma_cutover_run_must_start_without_lifecycle_evidence")
+    expect(migration).toContain("CREATE TRIGGER guard_ma_cutover_run_insert")
+    expect(migration).toContain("ma_cutover_runs_are_never_deletable")
+    expect(migration).toContain("CREATE TRIGGER prevent_ma_cutover_run_delete")
+    expect(migration).toContain("CREATE OR REPLACE FUNCTION public.supersede_ma_cutover_run(")
+    expect(migration).toContain("CREATE TEMP TABLE IF NOT EXISTS ma_cutover_supersession_guard")
+    expect(migration).toContain("ma_cutover_supersession_requires_open_run")
+    expect(migration).toContain("'stage_rows_purged', purged_stage_rows")
+    expect(migration).toContain("'stage_issues_purged', purged_stage_issues")
+  })
+
+  it("bounds temporary evidence and retains only sanitized aggregate manifest fields", () => {
+    for (const helper of [
+      "ma_cutover_bounded_flat_object",
+      "ma_cutover_related_ids_are_bounded",
+      "ma_cutover_payload_is_sanitized",
+      "ma_cutover_locator_is_sanitized",
+      "ma_cutover_reconciliation_is_sanitized",
+      "ma_cutover_review_decisions_are_sanitized",
+      "ma_cutover_result_is_sanitized",
+    ]) {
+      expect(migration).toContain(`public.${helper}`)
+    }
+    expect(migration).toContain("pg_column_size(p_value) > p_max_bytes")
+    expect(migration).toContain("    8192,\n    2048")
+    expect(migration).toContain("'sourceWorkbookId', 'sourceSheet', 'sourceRow', 'sourceKey'")
+    expect(migration).toContain("'primaryAffiliationTemporaryId'")
+    expect(migration).toContain("temporary_entity_id ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,159}$'")
+    expect(migration).toContain("parent_temporary_entity_id ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,159}$'")
+    expect(migration).toContain("CHECK (public.ma_cutover_reconciliation_is_sanitized(reconciliation_summary))")
+    expect(migration).toContain("CHECK (public.ma_cutover_review_decisions_are_sanitized(review_decisions))")
+    expect(migration).toContain("public.ma_cutover_result_is_sanitized(result_summary)")
   })
 
   it("requires an explicit reviewed create-or-reuse resolution", () => {
@@ -74,6 +194,9 @@ describe("M&A one-time cutover staging migration", () => {
     )?.[0]
     expect(firmCreateCollision).toBeDefined()
     expect(firmCreateCollision).not.toContain("firm.status <> 'archived'")
+    expect(migration).toContain(
+      "pg_catalog.hashtextextended(LOWER(BTRIM(normalized_name)), 76061)",
+    )
   })
 
   it("treats a synthetic default as an explicit unknown-office fallback", () => {
@@ -168,6 +291,9 @@ describe("M&A one-time cutover staging migration", () => {
     expect(migration).toContain(
       "GRANT EXECUTE ON FUNCTION public.activate_ma_cutover_run(UUID, TEXT, TEXT) TO service_role;",
     )
+    expect(migration).toContain(
+      "GRANT EXECUTE ON FUNCTION public.supersede_ma_cutover_run(UUID, TEXT) TO service_role;",
+    )
     expect(migration).not.toMatch(
       /GRANT EXECUTE ON FUNCTION public\.activate_ma_cutover_run[\s\S]*TO (anon|authenticated)/i,
     )
@@ -182,5 +308,8 @@ describe("M&A one-time cutover staging migration", () => {
     expect(contract).toContain("matching name, email or office never auto-reuses")
     expect(contract).toContain("approved_opportunity_fields")
     expect(contract).toContain("W-020 and migration 078")
+    expect(contract).toContain("PostgreSQL recomputes that digest")
+    expect(contract).toContain("controlled supersession")
+    expect(contract).toContain("Gate 2 must execute migration 078")
   })
 })
