@@ -318,9 +318,10 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_runs (
       'activated',
       'superseded'
     )),
-  -- The retained manifest contains only a fingerprint/hash, aggregate counts
-  -- and decisions. It deliberately has no file name, workbook bytes or source
-  -- row identifiers.
+  -- The retained manifest contains only non-identifying hashes, aggregate
+  -- counts and decisions. `source_fingerprint` is an algorithm-tagged digest,
+  -- never a file name, workbook ID or source-row identifier. `source_hash` is
+  -- the raw-content SHA-256 checksum.
   source_fingerprint TEXT NOT NULL,
   source_hash TEXT NOT NULL,
   reconciliation_summary JSONB NOT NULL DEFAULT '{}'::JSONB
@@ -344,10 +345,10 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_runs (
     CHECK (result_summary IS NULL OR public.ma_cutover_result_is_sanitized(result_summary)),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK (
-    source_fingerprint = BTRIM(source_fingerprint)
-    AND source_fingerprint ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,255}$'
+    CHAR_LENGTH(source_fingerprint) = 71
+    AND source_fingerprint ~ '^sha256:[0-9a-f]{64}$'
   ),
-  CHECK (source_hash ~ '^[0-9a-f]{64}$'),
+  CHECK (CHAR_LENGTH(source_hash) = 64 AND source_hash ~ '^[0-9a-f]{64}$'),
   CHECK (approval_digest IS NULL OR approval_digest ~ '^[0-9a-f]{64}$'),
   CHECK (CHAR_LENGTH(created_by) BETWEEN 1 AND 200),
   CHECK (approved_by IS NULL OR CHAR_LENGTH(approved_by) BETWEEN 1 AND 200),
@@ -418,6 +419,9 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_stage_rows (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (run_id, entity_kind, temporary_entity_id),
+  -- `id` is globally unique, but this paired unique key is the target of the
+  -- issue foreign key below so an issue cannot name a row from another run.
+  UNIQUE (run_id, id),
   CHECK (
     temporary_entity_id ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,159}$'
   ),
@@ -435,7 +439,10 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_stage_rows (
 CREATE TABLE IF NOT EXISTS public.ma_cutover_stage_issues (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   run_id UUID NOT NULL REFERENCES public.ma_cutover_runs(id) ON DELETE RESTRICT,
-  stage_row_id UUID REFERENCES public.ma_cutover_stage_rows(id) ON DELETE CASCADE,
+  -- MATCH SIMPLE keeps a run-level issue valid with a null stage_row_id.
+  -- When a row is named, the composite FK requires that it belongs to run_id
+  -- and cascades the issue when that temporary stage row is removed.
+  stage_row_id UUID,
   severity TEXT NOT NULL CHECK (severity IN ('blocker', 'warning')),
   code TEXT NOT NULL,
   field_name TEXT,
@@ -452,7 +459,12 @@ CREATE TABLE IF NOT EXISTS public.ma_cutover_stage_issues (
   CHECK (
     (resolved_at IS NULL AND resolved_by IS NULL)
     OR (resolved_at IS NOT NULL AND NULLIF(BTRIM(resolved_by), '') IS NOT NULL)
-  )
+  ),
+  CONSTRAINT ma_cutover_stage_issues_stage_row_same_run_fkey
+    FOREIGN KEY (run_id, stage_row_id)
+    REFERENCES public.ma_cutover_stage_rows (run_id, id)
+    MATCH SIMPLE
+    ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_ma_cutover_stage_rows_run_kind
@@ -466,9 +478,11 @@ CREATE INDEX IF NOT EXISTS idx_ma_cutover_stage_issues_stage_row_id
   ON public.ma_cutover_stage_issues (stage_row_id);
 
 -- This transaction-local marker is created only by the activation function.
--- It prevents an HTTP/service-role client from directly promoting a run or
--- purging blockers through PostgREST. Service role remains trusted to stage
--- and review rows before approval; it is not trusted to mimic activation.
+-- It prevents a PostgREST application client from directly promoting a run or
+-- purging blockers. It is not a defense against a principal with arbitrary
+-- raw-SQL access to service-role database credentials who can create matching
+-- pg_temp objects; that capability is outside this application boundary.
+-- Service role remains trusted to stage and review rows before approval.
 CREATE OR REPLACE FUNCTION public.ma_cutover_activation_guard_present(
   p_run_id UUID
 )
@@ -495,8 +509,8 @@ $$;
 
 -- Supersession keeps the immutable run manifest for audit while clearing the
 -- temporary workbook evidence. Like the activation marker, this is a
--- PostgREST/service-role boundary rather than a claim that a raw database
--- superuser cannot create a temporary table.
+-- PostgREST application boundary rather than a claim that arbitrary raw-SQL
+-- access to service-role database credentials cannot create a temporary table.
 CREATE OR REPLACE FUNCTION public.ma_cutover_supersession_guard_present(
   p_run_id UUID
 )
@@ -586,7 +600,12 @@ BEGIN
         'message', issue.message,
         'resolution_note', issue.resolution_note,
         'resolved_by', issue.resolved_by,
-        'resolved_at', issue.resolved_at
+        -- A timestamptz-to-JSON conversion is session-TimeZone dependent.
+        -- Canonical epoch microseconds keep the digest stable across sessions.
+        'resolved_at_epoch_us', CASE
+          WHEN issue.resolved_at IS NULL THEN NULL
+          ELSE (EXTRACT(EPOCH FROM issue.resolved_at) * 1000000)::BIGINT
+        END
       )
       ORDER BY
         COALESCE(issue.stage_row_id::TEXT, ''),
@@ -1767,6 +1786,9 @@ BEGIN
 
   -- Lock the same rows before their controlled purge. Stage mutations first
   -- lock the run, so this serializes a revision/review operation with close.
+  -- Gate 2 exercises concurrent staging and supersession; this SQL keeps the
+  -- shared run → stage-row → issue lock order rather than claiming a static
+  -- proof of runtime contention behavior.
   PERFORM 1
   FROM public.ma_cutover_stage_rows row
   WHERE row.run_id = run_row.id
@@ -1859,7 +1881,7 @@ GRANT EXECUTE ON FUNCTION public.activate_ma_cutover_run(UUID, TEXT, TEXT) TO se
 GRANT EXECUTE ON FUNCTION public.supersede_ma_cutover_run(UUID, TEXT) TO service_role;
 
 COMMENT ON TABLE public.ma_cutover_runs IS
-  'Service-role-only one-time cutover manifest. Retains source fingerprint/hash, sanitized aggregate reconciliation, allowlisted decisions, actor/times and immutable approval digest; never workbook bytes or source row identifiers. A superseded manifest remains after its temporary staging is purged.';
+  'Service-role-only one-time cutover manifest. Retains an algorithm-tagged non-identifying source fingerprint, raw-content hash, sanitized aggregate reconciliation, allowlisted decisions, actor/times and immutable approval digest; never workbook bytes, file names, workbook IDs or source row identifiers. A superseded manifest remains after its temporary staging is purged.';
 COMMENT ON TABLE public.ma_cutover_stage_rows IS
   'Temporary service-role-only normalized cutover rows. Holds bounded source row identifiers and cross-sheet mapping only until transactional activation or supersession succeeds.';
 COMMENT ON TABLE public.ma_cutover_stage_issues IS

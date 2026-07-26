@@ -34,9 +34,10 @@ describe("M&A one-time cutover staging migration", () => {
     expect(migration).toContain("reuse_canonical_id UUID")
     expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;")
     expect(migration).toContain("source_hash ~ '^[0-9a-f]{64}$'")
-    expect(migration).toContain(
-      "source_fingerprint ~ '^[A-Za-z0-9][-A-Za-z0-9._:/@+]{0,255}$'",
-    )
+    expect(migration).toContain("CHAR_LENGTH(source_hash) = 64")
+    expect(migration).toContain("CHAR_LENGTH(source_fingerprint) = 71")
+    expect(migration).toContain("source_fingerprint ~ '^sha256:[0-9a-f]{64}$'")
+    expect(migration).not.toContain("source_fingerprint ~ '^[A-Za-z0-9]")
     expect(migration).toContain("idx_ma_cutover_stage_issues_run_id")
     expect(migration).toContain("idx_ma_cutover_stage_issues_stage_row_id")
   })
@@ -55,6 +56,9 @@ describe("M&A one-time cutover staging migration", () => {
     expect(digest).toContain("'review_decisions', run.review_decisions")
     expect(digest).toContain("ORDER BY row.entity_kind, row.temporary_entity_id, row.id")
     expect(digest).toContain("COALESCE(issue.stage_row_id::TEXT, '')")
+    expect(digest).toContain("'resolved_at_epoch_us', CASE")
+    expect(digest).toContain("EXTRACT(EPOCH FROM issue.resolved_at) * 1000000")
+    expect(digest).not.toContain("'resolved_at', issue.resolved_at")
     expect(digest).toContain("'version', 'ma-cutover-approval-digest-v1'")
     expect(digest).toContain("extensions.digest(digest_input::TEXT, 'sha256')")
 
@@ -179,6 +183,15 @@ describe("M&A one-time cutover staging migration", () => {
     expect(migration).toContain("CHECK (public.ma_cutover_reconciliation_is_sanitized(reconciliation_summary))")
     expect(migration).toContain("CHECK (public.ma_cutover_review_decisions_are_sanitized(review_decisions))")
     expect(migration).toContain("public.ma_cutover_result_is_sanitized(result_summary)")
+    expect(migration).toContain("UNIQUE (run_id, id)")
+    expect(migration).toContain("FOREIGN KEY (run_id, stage_row_id)")
+    expect(migration).toContain(
+      "REFERENCES public.ma_cutover_stage_rows (run_id, id)",
+    )
+    expect(migration).toContain("MATCH SIMPLE\n    ON DELETE CASCADE")
+    expect(migration).not.toContain(
+      "stage_row_id UUID REFERENCES public.ma_cutover_stage_rows(id)",
+    )
   })
 
   it("requires an explicit reviewed create-or-reuse resolution", () => {
@@ -302,7 +315,9 @@ describe("M&A one-time cutover staging migration", () => {
   it("keeps the canonical contract synchronized with W-020 retention and route boundaries", () => {
     expect(contract).toContain("Migration 078 is an unapplied cutover foundation")
     expect(contract).toContain("immutable approval digest")
-    expect(contract).toContain("no raw workbook bytes or Excel identifiers")
+    expect(contract).toContain(
+      "no raw workbook bytes, file names, workbook IDs or Excel identifiers",
+    )
     expect(contract).toContain("synthetic rehearsal only")
     expect(contract).toContain("WAVE does not infer a geography code")
     expect(contract).toContain("matching name, email or office never auto-reuses")
@@ -311,5 +326,11 @@ describe("M&A one-time cutover staging migration", () => {
     expect(contract).toContain("PostgreSQL recomputes that digest")
     expect(contract).toContain("controlled supersession")
     expect(contract).toContain("Gate 2 must execute migration 078")
+    expect(contract).toContain("UTC-stable epoch microseconds")
+    expect(contract).toContain("UTC and Europe/Rome session time zones")
+    expect(contract).toContain("sha256:<64 lowercase hexadecimal characters>")
+    expect(contract).toContain("same-run composite foreign key")
+    expect(contract).toContain("arbitrary raw SQL with service-role database credentials")
+    expect(contract).toContain("concurrent stage-mutation and supersession attempt")
   })
 })
