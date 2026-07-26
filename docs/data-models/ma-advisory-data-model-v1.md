@@ -5,7 +5,7 @@
 | Item | Value |
 | --- | --- |
 | Status | Approved target contract |
-| Implementation status | Migration 076 is checked in but not yet applied to production. Migration 078 is also checked in but not yet applied to production. The live database remains on the interim firm-level model. |
+| Implementation status | Migrations 076 to 078 are checked in and passed Gate 2 on a disposable Supabase-compatible database, but are not yet applied to production. The live database remains on the interim firm-level model. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
@@ -483,7 +483,9 @@ Every staged office also declares the boolean `isSyntheticDefault`. `true` means
 
 ## Current implementation reconciliation
 
-Verified against the live Supabase schema and checked-in migrations 072 to 075 on 2026-07-26. Migrations 076 and 078 are checked-in, unapplied release candidates; do not describe their target tables or cutover path as live until the production schema check runs after publication.
+Verified against the live Supabase schema and checked-in migrations 072 to 075 on 2026-07-26. Migrations 076 to 078 are checked-in, unapplied release candidates; do not describe their target tables or cutover path as live until the production schema check runs after publication.
+
+Gate 2 executed the final 076 to 078 sequence on 2026-07-26 in a disposable Supabase-compatible project whose six-table pre-076 M&A baseline was compared with the live schema catalog before any synthetic row was added. Runtime verification covered fail-closed invalid legacy data, current and historical contact bridging, email-only legacy retention, canonical and cutover privileges, lifecycle and digest rejection, two-contact activation with one primary, UTC/Rome digest equality, normalized-firm concurrency, stage-mutation and supersession serialization, transactional rollback and temporary-evidence purge. Gate 2 exposed and corrected an invalid legacy-affiliation backfill join in migration 076 and ambiguous activation-local identifiers in migration 078. This is non-production release evidence; it does not change the live implementation status.
 
 ### Reproducible verification
 
@@ -591,6 +593,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-26 | 1.5.6 | Recorded disposable-database Gate 2 and corrected two runtime-only SQL defects found there: the migration-076 legacy affiliation backfill join and migration-078 activation identifier ambiguity; approved relationships, requiredness, visibility and retention are unchanged | W-061, W-063 and W-020 release verification |
 | 2026-07-26 | 1.5.5 | Hardened W-063 against repeated or non-string contact FormData values so neither contact mode can silently select, create or affiliate an ambiguous identity | W-063 corrective follow-up |
 | 2026-07-26 | 1.5.4 | Hardened the W-063 staff action against conflicting new-contact and existing-contact inputs, and made canonical-contact lookup failure invalidate stale selector data with an accessible retry state | W-063 corrective follow-up |
 | 2026-07-26 | 1.5.3 | Closed the W-063 staff-intake gap: staff can select an active canonical person by contact identity to create an additional office affiliation, without submitting new person fields; current-office active affiliations are excluded and the canonical service remains the duplicate-pair backstop | W-063 corrective implementation |

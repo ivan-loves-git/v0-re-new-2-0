@@ -400,8 +400,9 @@ FROM public.ma_contacts contact
 JOIN public.ma_contact_office_affiliations affiliation
   ON affiliation.contact_id = contact.id
   AND affiliation.is_active
-JOIN public.ma_sources source ON source.id = legacy_contact.source_id
+JOIN public.ma_sources source ON source.id = affiliation.legacy_source_id
 WHERE contact.legacy_source_contact_id = legacy_contact.id
+  AND source.id = legacy_contact.source_id
   AND affiliation.legacy_source_contact_id = legacy_contact.id
   AND affiliation.legacy_source_id = source.id
   AND affiliation.office_id = source.default_office_id

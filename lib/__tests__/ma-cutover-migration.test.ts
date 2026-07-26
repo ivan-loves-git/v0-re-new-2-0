@@ -224,7 +224,9 @@ describe("M&A one-time cutover staging migration", () => {
       "ma_cutover_stage_synthetic_default_requires_unknown_office",
     )
     expect(migration).toContain("JOIN pg_temp.ma_cutover_identity_map staged_parent_firm")
-    expect(migration).toContain("staged_parent_firm.canonical_id = firm_id")
+    expect(migration).toContain(
+      "staged_parent_firm.canonical_id = resolved_firm_id",
+    )
     expect(migration).toContain("staged_office.id <> stage_row.id")
     expect(migration).not.toContain("->> 'isDefault'")
   })
@@ -246,7 +248,9 @@ describe("M&A one-time cutover staging migration", () => {
     expect(migration).toContain(
       "JSONB_ARRAY_ELEMENTS_TEXT(stage_row.related_temporary_entity_ids)",
     )
-    expect(migration).toContain("primary_affiliation_id = ANY(affiliation_ids)")
+    expect(migration).toContain(
+      "resolved_primary_affiliation_id = ANY(resolved_affiliation_ids)",
+    )
   })
 
   it("passes only explicitly staged and manifest-approved optional fields", () => {
@@ -284,7 +288,7 @@ describe("M&A one-time cutover staging migration", () => {
   it("keeps the opportunity office mapping and contact lock declarations singular", () => {
     expect(migration).toMatch(/normalized_contact_key TEXT;/)
     const officeMap = migration.match(
-      /SELECT map\.canonical_id\s+INTO office_id\s+FROM pg_temp\.ma_cutover_identity_map map[\s\S]*?;\n\n    SELECT ARRAY_AGG/,
+      /SELECT map\.canonical_id\s+INTO resolved_office_id\s+FROM pg_temp\.ma_cutover_identity_map map[\s\S]*?;\n\n    SELECT ARRAY_AGG/,
     )?.[0]
 
     expect(officeMap).toBeDefined()

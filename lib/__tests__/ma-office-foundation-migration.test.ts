@@ -34,12 +34,31 @@ describe("M&A operating-office foundation migration", () => {
   })
 
   it("backfills synthetic defaults while preserving historical contact moves", () => {
+    const affiliationBackfillStart = migration.indexOf(
+      "UPDATE public.ma_source_contacts legacy_contact\nSET office_affiliation_id",
+    )
+    const affiliationBackfill = migration.slice(
+      affiliationBackfillStart,
+      migration.indexOf(
+        "INSERT INTO public.opportunity_ma_contacts",
+        affiliationBackfillStart,
+      ),
+    )
+
     expect(migration).toContain("one synthetic default office")
     expect(migration).toContain("idx_ma_offices_one_synthetic_default")
     expect(migration).toContain("legacy_link.source_id IS DISTINCT FROM legacy_contact.source_id")
     expect(migration).toContain("idx_ma_contact_office_affiliations_legacy_bridge")
     expect(migration).toContain("contact_email_snapshot")
     expect(migration).toContain("capture_opportunity_ma_contact_snapshot")
+    expect(affiliationBackfillStart).toBeGreaterThan(-1)
+    expect(affiliationBackfill).toContain(
+      "JOIN public.ma_sources source ON source.id = affiliation.legacy_source_id",
+    )
+    expect(affiliationBackfill).toContain("AND source.id = legacy_contact.source_id")
+    expect(affiliationBackfill).not.toContain(
+      "JOIN public.ma_sources source ON source.id = legacy_contact.source_id",
+    )
   })
 
   it("indexes every migration-076 child foreign-key path that needs a full leftmost index", () => {
@@ -247,7 +266,10 @@ describe("M&A operating-office foundation migration", () => {
   it("records the approved exposure and sourcing exclusions in the contract", () => {
     expect(contract).toContain("retires `opportunities.repreneur_exposure` from the target operating model")
     expect(contract).toContain("does not add an opportunity sourcing channel")
-    expect(contract).toContain("Migration 076 is checked in but not yet applied to production")
+    expect(contract).toContain(
+      "Migrations 076 to 078 are checked in and passed Gate 2",
+    )
+    expect(contract).toContain("not yet applied to production")
     expect(contract).toContain("W-061 and migration 076")
     expect(contract).toContain("compatibility firewall")
     expect(contract).toContain("W-063 staff intake reconciliation")

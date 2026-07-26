@@ -927,12 +927,12 @@ DECLARE
   run_row public.ma_cutover_runs%ROWTYPE;
   stage_row public.ma_cutover_stage_rows%ROWTYPE;
   contact_stage public.ma_cutover_stage_rows%ROWTYPE;
-  firm_id UUID;
-  office_id UUID;
-  contact_id UUID;
-  affiliation_id UUID;
-  primary_affiliation_id UUID;
-  affiliation_ids UUID[];
+  resolved_firm_id UUID;
+  resolved_office_id UUID;
+  resolved_contact_id UUID;
+  resolved_affiliation_id UUID;
+  resolved_primary_affiliation_id UUID;
+  resolved_affiliation_ids UUID[];
   created_opportunity public.opportunities%ROWTYPE;
   target_status public.opportunity_status;
   firm_name TEXT;
@@ -1113,17 +1113,17 @@ BEGIN
       RAISE EXCEPTION 'ma_cutover_stage_firm_name_required';
     END IF;
 
-    firm_id := NULL;
+    resolved_firm_id := NULL;
     IF stage_row.resolution_action = 'reuse' THEN
       SELECT firm.id
-      INTO firm_id
+      INTO resolved_firm_id
       FROM public.ma_firms firm
       WHERE firm.id = stage_row.reuse_canonical_id
         AND firm.status <> 'archived'
         AND LOWER(BTRIM(firm.name)) = LOWER(normalized_name)
       FOR UPDATE;
 
-      IF firm_id IS NULL THEN
+      IF resolved_firm_id IS NULL THEN
         RAISE EXCEPTION 'ma_cutover_stage_firm_reuse_resolution_invalid';
       END IF;
     ELSE
@@ -1159,14 +1159,14 @@ BEGIN
         BTRIM(p_actor),
         BTRIM(p_actor)
       )
-      RETURNING id INTO firm_id;
+      RETURNING id INTO resolved_firm_id;
     END IF;
 
     INSERT INTO pg_temp.ma_cutover_identity_map (
       entity_kind,
       temporary_entity_id,
       canonical_id
-    ) VALUES ('firm', stage_row.temporary_entity_id, firm_id);
+    ) VALUES ('firm', stage_row.temporary_entity_id, resolved_firm_id);
   END LOOP;
 
   FOR stage_row IN
@@ -1177,13 +1177,13 @@ BEGIN
     ORDER BY row.temporary_entity_id, row.id
   LOOP
     SELECT map.canonical_id
-    INTO firm_id
+    INTO resolved_firm_id
     FROM pg_temp.ma_cutover_identity_map map
     WHERE map.entity_kind = 'firm'
       AND map.temporary_entity_id = stage_row.parent_temporary_entity_id;
 
     normalized_name := NULLIF(BTRIM(stage_row.normalized_payload ->> 'name'), '');
-    IF firm_id IS NULL OR normalized_name IS NULL THEN
+    IF resolved_firm_id IS NULL OR normalized_name IS NULL THEN
       RAISE EXCEPTION 'ma_cutover_stage_office_parent_or_name_required';
     END IF;
 
@@ -1196,7 +1196,7 @@ BEGIN
     SELECT firm.name
     INTO firm_name
     FROM public.ma_firms firm
-    WHERE firm.id = firm_id
+    WHERE firm.id = resolved_firm_id
     FOR KEY SHARE;
 
     IF firm_name IS NULL THEN
@@ -1212,7 +1212,7 @@ BEGIN
       AND EXISTS (
         SELECT 1
         FROM public.ma_offices office
-        WHERE office.firm_id = firm_id
+        WHERE office.firm_id = resolved_firm_id
           AND office.status = 'active'
           AND NOT office.is_default
         FOR KEY SHARE
@@ -1233,7 +1233,7 @@ BEGIN
         WHERE staged_office.run_id = run_row.id
           AND staged_office.entity_kind = 'office'
           AND staged_office.id <> stage_row.id
-          AND staged_parent_firm.canonical_id = firm_id
+          AND staged_parent_firm.canonical_id = resolved_firm_id
           AND COALESCE(
             CASE
               WHEN JSONB_TYPEOF(staged_office.normalized_payload -> 'isSyntheticDefault') = 'boolean'
@@ -1246,32 +1246,32 @@ BEGIN
       RAISE EXCEPTION 'ma_cutover_stage_synthetic_default_requires_unknown_office';
     END IF;
 
-    office_id := NULL;
+    resolved_office_id := NULL;
     IF stage_row.resolution_action = 'reuse' THEN
       SELECT office.id
-      INTO office_id
+      INTO resolved_office_id
       FROM public.ma_offices office
       WHERE office.id = stage_row.reuse_canonical_id
-        AND office.firm_id = firm_id
+        AND office.firm_id = resolved_firm_id
         AND office.status = 'active'
         AND office.is_default = use_synthetic_default
         AND LOWER(BTRIM(office.name)) = LOWER(normalized_name)
       FOR UPDATE;
 
-      IF office_id IS NULL THEN
+      IF resolved_office_id IS NULL THEN
         RAISE EXCEPTION 'ma_cutover_stage_office_reuse_resolution_invalid';
       END IF;
     ELSE
       PERFORM pg_catalog.pg_advisory_xact_lock(
         pg_catalog.hashtext(
-          'ma_cutover_office:' || firm_id::TEXT || ':' || LOWER(normalized_name)
+          'ma_cutover_office:' || resolved_firm_id::TEXT || ':' || LOWER(normalized_name)
         )
       );
 
       IF EXISTS (
         SELECT 1
         FROM public.ma_offices office
-        WHERE office.firm_id = firm_id
+        WHERE office.firm_id = resolved_firm_id
           AND LOWER(BTRIM(office.name)) = LOWER(normalized_name)
           AND office.status = 'active'
         FOR KEY SHARE
@@ -1289,7 +1289,7 @@ BEGIN
         created_by,
         updated_by
       ) VALUES (
-        firm_id,
+        resolved_firm_id,
         normalized_name,
         'active',
         use_synthetic_default,
@@ -1298,14 +1298,14 @@ BEGIN
         BTRIM(p_actor),
         BTRIM(p_actor)
       )
-      RETURNING id INTO office_id;
+      RETURNING id INTO resolved_office_id;
     END IF;
 
     INSERT INTO pg_temp.ma_cutover_identity_map (
       entity_kind,
       temporary_entity_id,
       canonical_id
-    ) VALUES ('office', stage_row.temporary_entity_id, office_id);
+    ) VALUES ('office', stage_row.temporary_entity_id, resolved_office_id);
   END LOOP;
 
   FOR stage_row IN
@@ -1316,12 +1316,12 @@ BEGIN
     ORDER BY row.temporary_entity_id, row.id
   LOOP
     SELECT map.canonical_id
-    INTO office_id
+    INTO resolved_office_id
     FROM pg_temp.ma_cutover_identity_map map
     WHERE map.entity_kind = 'office'
       AND map.temporary_entity_id = stage_row.related_temporary_entity_ids ->> 0;
 
-    IF office_id IS NULL
+    IF resolved_office_id IS NULL
       OR JSONB_ARRAY_LENGTH(stage_row.related_temporary_entity_ids) <> 1 THEN
       RAISE EXCEPTION 'ma_cutover_stage_affiliation_mapping_required';
     END IF;
@@ -1344,14 +1344,14 @@ BEGIN
     END IF;
 
     SELECT map.canonical_id
-    INTO contact_id
+    INTO resolved_contact_id
     FROM pg_temp.ma_cutover_identity_map map
     WHERE map.entity_kind = 'contact'
       AND map.temporary_entity_id = contact_stage.temporary_entity_id;
 
-    IF contact_id IS NULL AND contact_stage.resolution_action = 'reuse' THEN
+    IF resolved_contact_id IS NULL AND contact_stage.resolution_action = 'reuse' THEN
       SELECT contact.id
-      INTO contact_id
+      INTO resolved_contact_id
       FROM public.ma_contacts contact
       WHERE contact.id = contact_stage.reuse_canonical_id
         AND contact.status = 'active'
@@ -1369,7 +1369,7 @@ BEGIN
         )
       FOR UPDATE;
 
-      IF contact_id IS NULL THEN
+      IF resolved_contact_id IS NULL THEN
         RAISE EXCEPTION 'ma_cutover_stage_contact_reuse_resolution_invalid';
       END IF;
 
@@ -1377,27 +1377,27 @@ BEGIN
         entity_kind,
         temporary_entity_id,
         canonical_id
-      ) VALUES ('contact', contact_stage.temporary_entity_id, contact_id);
+      ) VALUES ('contact', contact_stage.temporary_entity_id, resolved_contact_id);
     END IF;
 
     IF stage_row.resolution_action = 'reuse' THEN
-      IF contact_id IS NULL THEN
+      IF resolved_contact_id IS NULL THEN
         RAISE EXCEPTION 'ma_cutover_stage_affiliation_reuse_requires_reused_contact';
       END IF;
 
       SELECT affiliation.id
-      INTO affiliation_id
+      INTO resolved_affiliation_id
       FROM public.ma_contact_office_affiliations affiliation
       WHERE affiliation.id = stage_row.reuse_canonical_id
-        AND affiliation.contact_id = contact_id
-        AND affiliation.office_id = office_id
+        AND affiliation.contact_id = resolved_contact_id
+        AND affiliation.office_id = resolved_office_id
         AND affiliation.is_active
       FOR UPDATE;
 
-      IF affiliation_id IS NULL THEN
+      IF resolved_affiliation_id IS NULL THEN
         RAISE EXCEPTION 'ma_cutover_stage_affiliation_reuse_resolution_invalid';
       END IF;
-    ELSIF contact_id IS NULL THEN
+    ELSIF resolved_contact_id IS NULL THEN
       -- New contacts never auto-reuse a person merely because an email or name
       -- resembles one. The reviewer must stage an explicit reuse resolution.
       normalized_contact_key := CASE
@@ -1437,9 +1437,9 @@ BEGIN
       END IF;
 
       SELECT created.contact_id, created.affiliation_id
-      INTO contact_id, affiliation_id
+      INTO resolved_contact_id, resolved_affiliation_id
       FROM public.create_or_affiliate_ma_contact(
-        office_id,
+        resolved_office_id,
         NULL,
         NULLIF(BTRIM(contact_stage.normalized_payload ->> 'firstName'), ''),
         NULLIF(BTRIM(contact_stage.normalized_payload ->> 'lastName'), ''),
@@ -1453,13 +1453,13 @@ BEGIN
         entity_kind,
         temporary_entity_id,
         canonical_id
-      ) VALUES ('contact', contact_stage.temporary_entity_id, contact_id);
+      ) VALUES ('contact', contact_stage.temporary_entity_id, resolved_contact_id);
     ELSE
       IF EXISTS (
         SELECT 1
         FROM public.ma_contact_office_affiliations affiliation
-        WHERE affiliation.contact_id = contact_id
-          AND affiliation.office_id = office_id
+        WHERE affiliation.contact_id = resolved_contact_id
+          AND affiliation.office_id = resolved_office_id
           AND affiliation.is_active
         FOR KEY SHARE
       ) THEN
@@ -1467,10 +1467,10 @@ BEGIN
       END IF;
 
       SELECT created.contact_id, created.affiliation_id
-      INTO contact_id, affiliation_id
+      INTO resolved_contact_id, resolved_affiliation_id
       FROM public.create_or_affiliate_ma_contact(
-        office_id,
-        contact_id,
+        resolved_office_id,
+        resolved_contact_id,
         NULL,
         NULL,
         NULL,
@@ -1484,7 +1484,7 @@ BEGIN
       entity_kind,
       temporary_entity_id,
       canonical_id
-    ) VALUES ('affiliation', stage_row.temporary_entity_id, affiliation_id);
+    ) VALUES ('affiliation', stage_row.temporary_entity_id, resolved_affiliation_id);
   END LOOP;
 
   FOR stage_row IN
@@ -1495,28 +1495,28 @@ BEGIN
     ORDER BY row.temporary_entity_id, row.id
   LOOP
     SELECT map.canonical_id
-    INTO office_id
+    INTO resolved_office_id
     FROM pg_temp.ma_cutover_identity_map map
     WHERE map.entity_kind = 'office'
       AND map.temporary_entity_id = stage_row.parent_temporary_entity_id;
 
     SELECT ARRAY_AGG(map.canonical_id ORDER BY map.canonical_id)
-    INTO affiliation_ids
+    INTO resolved_affiliation_ids
     FROM JSONB_ARRAY_ELEMENTS_TEXT(stage_row.related_temporary_entity_ids) relation(temporary_entity_id)
     JOIN pg_temp.ma_cutover_identity_map map
       ON map.entity_kind = 'affiliation'
       AND map.temporary_entity_id = relation.temporary_entity_id;
 
     SELECT map.canonical_id
-    INTO primary_affiliation_id
+    INTO resolved_primary_affiliation_id
     FROM pg_temp.ma_cutover_identity_map map
     WHERE map.entity_kind = 'affiliation'
       AND map.temporary_entity_id = stage_row.normalized_payload ->> 'primaryAffiliationTemporaryId';
 
-    IF office_id IS NULL
-      OR COALESCE(CARDINALITY(affiliation_ids), 0) <> JSONB_ARRAY_LENGTH(stage_row.related_temporary_entity_ids)
-      OR primary_affiliation_id IS NULL
-      OR NOT (primary_affiliation_id = ANY(affiliation_ids)) THEN
+    IF resolved_office_id IS NULL
+      OR COALESCE(CARDINALITY(resolved_affiliation_ids), 0) <> JSONB_ARRAY_LENGTH(stage_row.related_temporary_entity_ids)
+      OR resolved_primary_affiliation_id IS NULL
+      OR NOT (resolved_primary_affiliation_id = ANY(resolved_affiliation_ids)) THEN
       RAISE EXCEPTION 'ma_cutover_stage_opportunity_contact_mapping_required';
     END IF;
 
@@ -1686,9 +1686,9 @@ BEGIN
     INTO created_opportunity
     FROM public.create_opportunity_with_office_context(
       BTRIM(stage_row.normalized_payload ->> 'reference'),
-      office_id,
-      affiliation_ids,
-      primary_affiliation_id,
+      resolved_office_id,
+      resolved_affiliation_ids,
+      resolved_primary_affiliation_id,
       BTRIM(stage_row.normalized_payload ->> 'description'),
       target_status,
       BTRIM(p_actor),
