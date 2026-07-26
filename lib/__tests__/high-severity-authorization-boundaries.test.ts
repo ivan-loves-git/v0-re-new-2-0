@@ -12,19 +12,44 @@ function functionSource(relativePath: string, functionName: string) {
 }
 
 describe("high-severity authorization boundaries", () => {
-  it("requires staff access before opportunity reads and writes", () => {
+  it("requires staff access before opportunity reads, closures, and retired shortcuts", () => {
     for (const functionName of [
       "listOpportunities",
       "listOpportunityWorkSurfaceRecords",
       "getOpportunity",
-      "createOpportunity",
       "createOpportunityFromDraft",
-      "updateOpportunity",
+      "closeOpportunity",
+      "reopenOpportunity",
       "archiveOpportunity",
     ]) {
-      const source = functionSource("lib/actions/opportunities.ts", functionName)
+      const source = functionSource(
+        "lib/actions/opportunities.ts",
+        functionName,
+      )
       expect(source.indexOf("requireStaffAccess")).toBeGreaterThanOrEqual(0)
-      expect(source.indexOf("requireStaffAccess")).toBeLessThan(source.indexOf("createAdminClient"))
+      const clientIndex = source.indexOf("createAdminClient")
+      if (clientIndex >= 0) {
+        expect(source.indexOf("requireStaffAccess")).toBeLessThan(clientIndex)
+      }
+    }
+  })
+
+  it("requires staff access before canonical intake and office-contact actions", () => {
+    for (const functionName of [
+      "listMaOfficeIntakeOptions",
+      "createOpportunityIntake",
+      "updateOpportunityIntake",
+      "createMaFirmOfficeContext",
+      "createMaOfficeContact",
+    ]) {
+      const source = functionSource(
+        "lib/actions/opportunity-intake.ts",
+        functionName,
+      )
+      expect(source.indexOf("requireStaffAccess")).toBeGreaterThanOrEqual(0)
+      expect(source.indexOf("requireStaffAccess")).toBeLessThan(
+        source.indexOf("createAdminClient"),
+      )
     }
   })
 
@@ -35,9 +60,14 @@ describe("high-severity authorization boundaries", () => {
       "updateOpportunityDocumentVisibility",
       "removeOpportunityDocument",
     ]) {
-      const source = functionSource("lib/actions/opportunity-documents.ts", functionName)
+      const source = functionSource(
+        "lib/actions/opportunity-documents.ts",
+        functionName,
+      )
       expect(source.indexOf("requireStaffAccess")).toBeGreaterThanOrEqual(0)
-      expect(source.indexOf("requireStaffAccess")).toBeLessThan(source.indexOf("createAdminClient"))
+      expect(source.indexOf("requireStaffAccess")).toBeLessThan(
+        source.indexOf("createAdminClient"),
+      )
     }
   })
 
@@ -50,7 +80,10 @@ describe("high-severity authorization boundaries", () => {
       const source = functionSource("lib/actions/emails.ts", functionName)
       expect(source.indexOf("requireStaffAccess")).toBeGreaterThanOrEqual(0)
       expect(source.indexOf("requireStaffAccess")).toBeLessThan(
-        Math.max(source.indexOf("createAdminClient"), source.indexOf("sendEmailDirect")),
+        Math.max(
+          source.indexOf("createAdminClient"),
+          source.indexOf("sendEmailDirect"),
+        ),
       )
     }
   })
@@ -73,9 +106,17 @@ describe("high-severity authorization boundaries", () => {
     expect(repreneurMigration).not.toMatch(/WITH CHECK\s*\(true\)/i)
     expect(roleMigration).not.toMatch(/USING\s*\(true\)/i)
     expect(roleMigration).not.toMatch(/WITH CHECK\s*\(true\)/i)
-    expect(correctiveMigration).toContain('DROP POLICY IF EXISTS "Allow authenticated users to read repreneurs"')
-    expect(correctiveMigration).toContain('DROP POLICY IF EXISTS "Authenticated users can view all repreneurs"')
-    expect(correctiveMigration).toContain('DROP POLICY IF EXISTS "authenticated_read_all"')
-    expect(correctiveMigration).toContain('DROP POLICY IF EXISTS "Authenticated users can view app user roles"')
+    expect(correctiveMigration).toContain(
+      'DROP POLICY IF EXISTS "Allow authenticated users to read repreneurs"',
+    )
+    expect(correctiveMigration).toContain(
+      'DROP POLICY IF EXISTS "Authenticated users can view all repreneurs"',
+    )
+    expect(correctiveMigration).toContain(
+      'DROP POLICY IF EXISTS "authenticated_read_all"',
+    )
+    expect(correctiveMigration).toContain(
+      'DROP POLICY IF EXISTS "Authenticated users can view app user roles"',
+    )
   })
 })

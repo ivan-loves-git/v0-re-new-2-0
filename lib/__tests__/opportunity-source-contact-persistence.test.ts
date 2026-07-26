@@ -28,146 +28,162 @@ vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
 }))
 
-import { createOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
+import {
+  createMaOfficeContact,
+  createOpportunityIntake,
+  updateOpportunityIntake,
+} from "@/lib/actions/opportunity-intake"
 
-const SOURCE_ID = "00000000-0000-4000-8000-000000000001"
-const CONTACT_ID = "00000000-0000-4000-8000-000000000002"
+const OFFICE_ID = "00000000-0000-4000-8000-000000000001"
+const AFFILIATION_ID = "00000000-0000-4000-8000-000000000002"
 
-function completeForm() {
+function activeForm() {
   const formData = new FormData()
   formData.set("reference", "OPP-001")
   formData.set("status", "active")
-  formData.set("sector_choice", "Tech & Digital")
-  formData.set("sector", "Tech & Digital")
-  formData.set("location", "Paris")
+  formData.set("source_office_id", OFFICE_ID)
+  formData.append("affiliation_ids", AFFILIATION_ID)
+  formData.set("primary_affiliation_id", AFFILIATION_ID)
   formData.set("description", "A valid internal opportunity record.")
-  formData.set("date_added", "2026-07-19")
   formData.set("public_title", "An anonymized opportunity title")
   formData.set("teaser_summary", "An anonymized opportunity summary.")
-  formData.set("revenue_meur", "1")
-  formData.set("ebitda_keur", "100")
-  formData.set("headcount_range", "12")
-  formData.set("source_id", SOURCE_ID)
-  formData.set("source_label", "Original confidential source label")
-  formData.set("source_firm_name", "Cabinet Atlantique")
-  formData.set("source_type", "ma_firm")
-  formData.set("source_contacts_submitted", "true")
-  formData.set("source_contact_ids", CONTACT_ID)
-  formData.set("source_primary_contact_id", CONTACT_ID)
   return formData
 }
 
-describe("opportunity source-contact persistence", () => {
+describe("canonical opportunity contact persistence", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-001" } })
   })
 
-  it("replaces only this opportunity's links and stores a selected primary contact", async () => {
-    const existingMaybeSingle = vi.fn().mockResolvedValue({
-      data: { status: "active", source_id: SOURCE_ID },
-      error: null,
-    })
-    const existingEq = vi.fn(() => ({ maybeSingle: existingMaybeSingle }))
-    const opportunitySelect = vi.fn(() => ({ eq: existingEq }))
-    const opportunityUpdateEq = vi.fn().mockResolvedValue({ error: null })
-    const opportunityUpdate = vi.fn(() => ({ eq: opportunityUpdateEq }))
-
-    const sourceUpdateEq = vi.fn().mockResolvedValue({ error: null })
-    const sourceUpdate = vi.fn(() => ({ eq: sourceUpdateEq }))
-
-    const contactIn = vi.fn().mockResolvedValue({ data: [{ id: CONTACT_ID }], error: null })
-    const contactSourceEq = vi.fn(() => ({ in: contactIn }))
-    const contactSelect = vi.fn(() => ({ eq: contactSourceEq }))
-
-    const relationDeleteEq = vi.fn().mockResolvedValue({ error: null })
-    const relationDelete = vi.fn(() => ({ eq: relationDeleteEq }))
-    const relationInsert = vi.fn().mockResolvedValue({ error: null })
-
-    const from = vi.fn((table: string) => {
-      if (table === "opportunities") return { select: opportunitySelect, update: opportunityUpdate }
-      if (table === "ma_sources") return { update: sourceUpdate }
-      if (table === "ma_source_contacts") return { select: contactSelect }
-      if (table === "opportunity_source_contacts")
-        return { delete: relationDelete, insert: relationInsert }
-      throw new Error(`Unexpected table: ${table}`)
-    })
-    mocks.createAdminClient.mockReturnValue({ from })
-
-    await expect(updateOpportunity("opportunity-001", completeForm())).resolves.toEqual({
-      success: true,
-      message: "Opportunity saved.",
-    })
-
-    expect(relationDeleteEq).toHaveBeenCalledWith("opportunity_id", "opportunity-001")
-    expect(contactSourceEq).toHaveBeenCalledWith("source_id", SOURCE_ID)
-    expect(contactIn).toHaveBeenCalledWith("id", [CONTACT_ID])
-    expect(contactIn.mock.invocationCallOrder[0]).toBeLessThan(
-      relationDeleteEq.mock.invocationCallOrder[0],
-    )
-    expect(opportunityUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source_label: "Original confidential source label",
-      }),
-    )
-    expect(relationInsert).toHaveBeenCalledWith([
-      {
-        opportunity_id: "opportunity-001",
-        source_id: SOURCE_ID,
-        contact_id: CONTACT_ID,
-        is_primary: true,
-        created_by: "staff-001",
-      },
-    ])
-  })
-
-  it("reuses a selected existing firm contact without modifying that firm's shared fields", async () => {
-    const sourceUpdateEq = vi.fn().mockResolvedValue({ error: null })
-    const sourceUpdate = vi.fn(() => ({ eq: sourceUpdateEq }))
-
-    const opportunitySingle = vi.fn().mockResolvedValue({
+  it("creates through one canonical RPC with office affiliations, never legacy delete/reinsert", async () => {
+    const rpc = vi.fn().mockResolvedValue({
       data: { id: "opportunity-created" },
       error: null,
     })
-    const opportunitySelect = vi.fn(() => ({ single: opportunitySingle }))
-    const opportunityInsert = vi.fn(() => ({ select: opportunitySelect }))
+    mocks.createAdminClient.mockReturnValue({ rpc })
 
-    const contactIn = vi.fn().mockResolvedValue({ data: [{ id: CONTACT_ID }], error: null })
-    const contactSourceEq = vi.fn(() => ({ in: contactIn }))
-    const contactSelect = vi.fn(() => ({ eq: contactSourceEq }))
-    const contactInsert = vi.fn()
+    await expect(createOpportunityIntake(activeForm())).resolves.toBeUndefined()
 
-    const relationDeleteEq = vi.fn().mockResolvedValue({ error: null })
-    const relationDelete = vi.fn(() => ({ eq: relationDeleteEq }))
-    const relationInsert = vi.fn().mockResolvedValue({ error: null })
-
-    const from = vi.fn((table: string) => {
-      if (table === "ma_sources") return { update: sourceUpdate }
-      if (table === "opportunities") return { insert: opportunityInsert }
-      if (table === "ma_source_contacts") return { select: contactSelect, insert: contactInsert }
-      if (table === "opportunity_source_contacts") {
-        return { delete: relationDelete, insert: relationInsert }
-      }
-      throw new Error(`Unexpected table: ${table}`)
+    expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
+      p_reference: "OPP-001",
+      p_source_office_id: OFFICE_ID,
+      p_affiliation_ids: [AFFILIATION_ID],
+      p_primary_affiliation_id: AFFILIATION_ID,
+      p_description: "A valid internal opportunity record.",
+      p_target_status: "active",
+      p_actor: "staff-001",
+      p_opportunity_fields: expect.objectContaining({
+        public_title: "An anonymized opportunity title",
+        teaser_summary: "An anonymized opportunity summary.",
+      }),
     })
-    mocks.createAdminClient.mockReturnValue({ from })
-
-    await expect(createOpportunity(completeForm())).resolves.toBeUndefined()
-
-    expect(sourceUpdate).not.toHaveBeenCalled()
-    expect(contactInsert).not.toHaveBeenCalled()
-    expect(opportunityInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ source_id: SOURCE_ID }),
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/opportunities/opportunity-created",
     )
-    expect(contactIn).toHaveBeenCalledWith("id", [CONTACT_ID])
-    expect(relationInsert).toHaveBeenCalledWith([
-      {
-        opportunity_id: "opportunity-created",
-        source_id: SOURCE_ID,
-        contact_id: CONTACT_ID,
-        is_primary: true,
-        created_by: "staff-001",
+  })
+
+  it("saves an edit through the canonical office-context RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(
+      updateOpportunityIntake("opportunity-001", activeForm()),
+    ).resolves.toEqual({ success: true, message: "Opportunity saved." })
+
+    expect(rpc).toHaveBeenCalledWith("save_opportunity_office_context", {
+      p_opportunity_id: "opportunity-001",
+      p_source_office_id: OFFICE_ID,
+      p_affiliation_ids: [AFFILIATION_ID],
+      p_primary_affiliation_id: AFFILIATION_ID,
+      p_description: "A valid internal opportunity record.",
+      p_target_status: "active",
+      p_actor: "staff-001",
+      p_opportunity_fields: expect.any(Object),
+    })
+  })
+
+  it("keeps forged portal exposure and origin inputs outside the RPC payload", async () => {
+    const formData = activeForm()
+    formData.set("repreneur_exposure", "repreneur_visible")
+    formData.set("origin_channel", "forged")
+    const rpc = vi.fn().mockResolvedValue({
+      data: { id: "opportunity-created" },
+      error: null,
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await createOpportunityIntake(formData)
+
+    const payload = rpc.mock.calls[0]?.[1] as Record<string, unknown>
+    expect(payload).not.toHaveProperty("p_repreneur_exposure")
+    expect(payload).not.toHaveProperty("p_origin_channel")
+    expect(payload.p_opportunity_fields).not.toHaveProperty(
+      "repreneur_exposure",
+    )
+    expect(payload.p_opportunity_fields).not.toHaveProperty("origin_channel")
+  })
+
+  it("maps canonical activation errors to the field staff can repair", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        message: "opportunity_activation_requires_primary_contact_email",
       },
-    ])
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(
+      updateOpportunityIntake("opportunity-001", activeForm()),
+    ).resolves.toEqual({
+      success: false,
+      message:
+        "The primary contact needs a usable email before activation or pause.",
+      fieldErrors: {
+        primary_affiliation_id:
+          "The primary contact needs a usable email before activation or pause.",
+      },
+    })
+  })
+
+  it("adds a second contact through the canonical office-affiliation RPC", async () => {
+    const formData = new FormData()
+    formData.set("contact_first_name", "Camille")
+    formData.set("contact_last_name", "Durand")
+    formData.set("contact_email", "camille@example.com")
+    formData.set("contact_job_title", "Partner")
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        {
+          contact_id: "00000000-0000-4000-8000-000000000003",
+          affiliation_id: "00000000-0000-4000-8000-000000000004",
+        },
+      ],
+      error: null,
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createMaOfficeContact(OFFICE_ID, formData)).resolves.toEqual({
+      success: true,
+      message: "Office contact added.",
+      contact: {
+        contact_id: "00000000-0000-4000-8000-000000000003",
+        affiliation_id: "00000000-0000-4000-8000-000000000004",
+        contact_name: "Camille Durand",
+        contact_email: "camille@example.com",
+        job_title: "Partner",
+      },
+    })
+
+    expect(rpc).toHaveBeenCalledWith("create_or_affiliate_ma_contact", {
+      p_office_id: OFFICE_ID,
+      p_existing_contact_id: null,
+      p_contact_first_name: "Camille",
+      p_contact_last_name: "Durand",
+      p_contact_email: "camille@example.com",
+      p_contact_phone: null,
+      p_contact_job_title: "Partner",
+      p_actor: "staff-001",
+    })
   })
 })

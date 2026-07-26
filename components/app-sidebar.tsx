@@ -13,8 +13,6 @@ import {
   BarChart3,
   BookOpenCheck,
   Map,
-  Building2,
-  ContactRound,
   ChevronsUpDown,
   LogOut,
   Settings,
@@ -75,11 +73,6 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
 ]
 
-const maNavigation: NavigationItem[] = [
-  { name: "Firms", href: "/opportunities/ma/firms", icon: Building2 },
-  { name: "Contacts", href: "/opportunities/ma/contacts", icon: ContactRound },
-]
-
 const toolsNavigation: NavigationItem[] = [
   { name: "Emails", href: "/emails", icon: Mail },
   { name: "Wavy", href: "/tools/wavy", icon: Waves },
@@ -134,13 +127,6 @@ export function AppSidebar({
     if (href === "/analytics_op") return pathname === "/analytics_op"
     if (href === "/opportunities/groups")
       return pathname === "/opportunities/groups"
-    if (href === "/opportunities/ma/firms")
-      return (
-        pathname === "/opportunities/ma/firms" ||
-        pathname === "/opportunities/ma"
-      )
-    if (href === "/opportunities/ma/contacts")
-      return pathname === "/opportunities/ma/contacts"
     if (href === "/opportunities/find")
       return pathname === "/opportunities/find"
     if (href === "/repreneurs") return pathname === "/repreneurs"
@@ -282,37 +268,6 @@ export function AppSidebar({
                           {item.badge}
                         </span>
                       )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator className="opacity-60" />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>M&amp;A</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {maNavigation.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={
-                      getIsActive(item.href) || pendingHref === item.href
-                    }
-                    tooltip={`M&A · ${item.name}`}
-                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
-                  >
-                    <Link
-                      href={item.href}
-                      aria-current={getIsActive(item.href) ? "page" : undefined}
-                      {...linkWarmupProps(item.href)}
-                    >
-                      <item.icon />
-                      <span>{item.name}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

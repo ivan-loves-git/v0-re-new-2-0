@@ -329,6 +329,7 @@ export interface Opportunity {
   reference: string
   status: OpportunityStatus
   source_id?: string | null
+  source_office_id?: string | null
   source_label?: string | null
   sector?: string | null
   activity?: string | null
@@ -347,13 +348,69 @@ export interface Opportunity {
   imported_at?: string | null
   archived_at?: string | null
   created_by?: string | null
+  updated_by?: string | null
   created_at: string
   updated_at: string
+}
+
+/** Staff-only canonical operating-office context used by Opportunity Intake. */
+export interface MaOfficeIntakeContact {
+  affiliation_id: string
+  contact_id: string
+  contact_name: string | null
+  contact_email: string | null
+  job_title?: string | null
+}
+
+/** One selectable office and its currently eligible contacts. */
+export interface MaOfficeIntakeOffice {
+  office_id: string
+  firm_id: string
+  firm_name: string
+  office_name: string
+  office_label: string
+  contacts: MaOfficeIntakeContact[]
+}
+
+/** Canonical staff-only source office resolved through the firm relationship. */
+export interface OpportunitySourceOffice {
+  id: string
+  name: string
+  is_default?: boolean
+  firm?: {
+    id: string
+    name: string
+  } | null
+}
+
+/** Canonical staff-only opportunity contact, anchored to an office affiliation. */
+export interface OpportunityMaContact {
+  id?: string
+  opportunity_id: string
+  affiliation_id: string
+  is_primary: boolean
+  is_active: boolean
+  contact_name_snapshot?: string | null
+  contact_email_snapshot?: string | null
+  contact_phone_snapshot?: string | null
+  affiliation?: {
+    id: string
+    office_id: string
+    contact?: {
+      id: string
+      display_name: string
+      email?: string | null
+      phone?: string | null
+      status?: string | null
+    } | null
+  } | null
 }
 
 export interface OpportunityWithSource extends Opportunity {
   source?: MaSource | null
   source_contacts?: OpportunitySourceContact[]
+  source_office?: OpportunitySourceOffice | null
+  office_contacts?: OpportunityMaContact[]
 }
 
 export interface OpportunitySourceContact {
@@ -401,6 +458,7 @@ export interface Opportunity_Insert {
   reference: string
   status?: OpportunityStatus
   source_id?: string | null
+  source_office_id?: string | null
   source_label?: string | null
   sector?: string | null
   activity?: string | null
@@ -424,6 +482,7 @@ export interface Opportunity_Update {
   reference?: string
   status?: OpportunityStatus
   source_id?: string | null
+  source_office_id?: string | null
   source_label?: string | null
   sector?: string | null
   activity?: string | null

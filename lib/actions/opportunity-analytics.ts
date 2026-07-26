@@ -8,7 +8,12 @@ import {
   type OpportunityPursuitStage,
 } from "@/lib/types/opportunity"
 
-const INTRODUCTION_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
+const INTRODUCTION_STATUSES: OpportunityMatchStatus[] = [
+  "proposed",
+  "interested",
+  "declined",
+  "active_pursuit",
+]
 const INTERMEDIARY_SOURCE_TYPES = new Set(["ma_firm", "broker"])
 
 export interface OpportunityKpiStageRow {
@@ -46,16 +51,44 @@ function percentage(numerator: number, denominator: number) {
   return Math.round((numerator / denominator) * 100)
 }
 
-function sourceType(row: { source?: { source_type?: string | null } | { source_type?: string | null }[] | null }) {
+function sourceType(row: {
+  source?:
+    | { source_type?: string | null }
+    | { source_type?: string | null }[]
+    | null
+}) {
   const source = Array.isArray(row.source) ? row.source[0] : row.source
   return source?.source_type ?? null
+}
+
+function canonicalFirmId(row: {
+  source_office?:
+    | { firm?: { id?: string | null } | { id?: string | null }[] | null }
+    | Array<{ firm?: { id?: string | null } | { id?: string | null }[] | null }>
+    | null
+}) {
+  const office = Array.isArray(row.source_office)
+    ? row.source_office[0]
+    : row.source_office
+  const firm = Array.isArray(office?.firm) ? office.firm[0] : office?.firm
+  return firm?.id ?? null
 }
 
 function intermediaryKey(opportunity: {
   source_id?: string | null
   source_label?: string | null
-  source?: { source_type?: string | null } | { source_type?: string | null }[] | null
+  source?:
+    | { source_type?: string | null }
+    | { source_type?: string | null }[]
+    | null
+  source_office?:
+    | { firm?: { id?: string | null } | { id?: string | null }[] | null }
+    | Array<{ firm?: { id?: string | null } | { id?: string | null }[] | null }>
+    | null
 }) {
+  const firmId = canonicalFirmId(opportunity)
+  if (firmId) return `firm:${firmId}`
+
   const type = sourceType(opportunity)
   if (opportunity.source_id && (!type || INTERMEDIARY_SOURCE_TYPES.has(type))) {
     return `source:${opportunity.source_id}`
@@ -69,19 +102,21 @@ export async function getOpportunityKpiData(): Promise<OpportunityKpiData> {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const [opportunitiesResult, matchesResult, documentsResult] = await Promise.all([
-    supabase
-      .from("opportunities")
-      .select("id, status, source_id, source_label, source:ma_sources(source_type)"),
-    supabase
-      .from("opportunity_matches")
-      .select("id, status, pursuit_stage, nda_status, reviewed_at"),
-    supabase
-      .from("opportunity_documents")
-      .select("id, visibility"),
-  ])
+  const [opportunitiesResult, matchesResult, documentsResult] =
+    await Promise.all([
+      supabase
+        .from("opportunities")
+        .select(
+          "id, status, source_id, source_label, source:ma_sources(source_type), source_office:ma_offices(firm:ma_firms(id))",
+        ),
+      supabase
+        .from("opportunity_matches")
+        .select("id, status, pursuit_stage, nda_status, reviewed_at"),
+      supabase.from("opportunity_documents").select("id, visibility"),
+    ])
 
-  if (opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
+  if (opportunitiesResult.error)
+    throw new Error(opportunitiesResult.error.message)
   if (matchesResult.error) throw new Error(matchesResult.error.message)
   if (documentsResult.error) throw new Error(documentsResult.error.message)
 
@@ -89,45 +124,70 @@ export async function getOpportunityKpiData(): Promise<OpportunityKpiData> {
   const matches = matchesResult.data ?? []
   const documents = documentsResult.data ?? []
 
-  const activeOpportunities = opportunities.filter((opportunity) => opportunity.status === "active")
-  const openOpportunities = opportunities.filter((opportunity) => !["archived", "closed"].includes(opportunity.status))
+  const activeOpportunities = opportunities.filter(
+    (opportunity) => opportunity.status === "active",
+  )
+  const openOpportunities = opportunities.filter(
+    (opportunity) => !["archived", "closed"].includes(opportunity.status),
+  )
   const activeIntermediaryKeys = new Set(
     activeOpportunities
       .map(intermediaryKey)
-      .filter((key): key is string => Boolean(key))
+      .filter((key): key is string => Boolean(key)),
   )
 
-  const introducedMatches = matches.filter((match) => INTRODUCTION_STATUSES.includes(match.status as OpportunityMatchStatus))
-  const activePursuitMatches = matches.filter((match) => match.status === "active_pursuit")
+  const introducedMatches = matches.filter((match) =>
+    INTRODUCTION_STATUSES.includes(match.status as OpportunityMatchStatus),
+  )
+  const activePursuitMatches = matches.filter(
+    (match) => match.status === "active_pursuit",
+  )
   const pendingReviews = matches.filter(
-    (match) => ["interested", "declined"].includes(match.status) && !match.reviewed_at
+    (match) =>
+      ["interested", "declined"].includes(match.status) && !match.reviewed_at,
   ).length
 
   const stageRows = OPPORTUNITY_PURSUIT_STAGE_OPTIONS.map((option) => ({
     stage: option.value,
     label: option.label,
-    count: matches.filter((match) => match.pursuit_stage === option.value).length,
+    count: matches.filter((match) => match.pursuit_stage === option.value)
+      .length,
   }))
 
-  const sellerMeetings = stageRows.find((row) => row.stage === "seller_meeting")?.count ?? 0
+  const sellerMeetings =
+    stageRows.find((row) => row.stage === "seller_meeting")?.count ?? 0
   const lois = stageRows.find((row) => row.stage === "loi")?.count ?? 0
-  const droppedDeals = matches.filter((match) => match.status === "dropped" || match.pursuit_stage === "dropped").length
-  const closedDeals = matches.filter((match) => match.pursuit_stage === "closed").length
-  const ndaBlockedPursuits = activePursuitMatches.filter((match) => ["required", "sent"].includes(match.nda_status ?? "")).length
-  const approvedDocuments = documents.filter((document) => document.visibility === "approved_for_repreneur").length
+  const droppedDeals = matches.filter(
+    (match) => match.status === "dropped" || match.pursuit_stage === "dropped",
+  ).length
+  const closedDeals = matches.filter(
+    (match) => match.pursuit_stage === "closed",
+  ).length
+  const ndaBlockedPursuits = activePursuitMatches.filter((match) =>
+    ["required", "sent"].includes(match.nda_status ?? ""),
+  ).length
+  const approvedDocuments = documents.filter(
+    (document) => document.visibility === "approved_for_repreneur",
+  ).length
 
   const funnelRows: OpportunityKpiFunnelRow[] = [
     {
       label: "Introductions becoming active pursuits",
       numerator: activePursuitMatches.length,
       denominator: introducedMatches.length,
-      percent: percentage(activePursuitMatches.length, introducedMatches.length),
+      percent: percentage(
+        activePursuitMatches.length,
+        introducedMatches.length,
+      ),
     },
     {
       label: "Active pursuits reaching seller meeting",
       numerator: sellerMeetings + lois + closedDeals,
       denominator: activePursuitMatches.length + closedDeals + droppedDeals,
-      percent: percentage(sellerMeetings + lois + closedDeals, activePursuitMatches.length + closedDeals + droppedDeals),
+      percent: percentage(
+        sellerMeetings + lois + closedDeals,
+        activePursuitMatches.length + closedDeals + droppedDeals,
+      ),
     },
     {
       label: "LOIs becoming closed deals",

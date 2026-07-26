@@ -42,12 +42,24 @@ interface OpportunityWorkflowRow {
   created_at: string
   updated_at: string
   source_id: string | null
+  source_office_id: string | null
   source_label: string | null
   source?: {
     id: string
     firm_name: string
   } | null
   source_contacts?: OpportunityWorkflowContactRow[]
+  source_office?: OpportunityWorkflowOfficeRow | null
+  office_contacts?: OpportunityWorkflowCanonicalContactRow[]
+}
+
+interface OpportunityWorkflowOfficeRow {
+  id: string
+  name: string
+  firm?: {
+    id: string
+    name: string
+  } | null
 }
 
 interface OpportunityWorkflowContactRow {
@@ -61,6 +73,27 @@ interface OpportunityWorkflowContactRow {
     name: string | null
     email: string | null
     phone: string | null
+  } | null
+}
+
+interface OpportunityWorkflowCanonicalContactRow {
+  id: string
+  affiliation_id: string
+  legacy_source_contact_id: string | null
+  is_primary: boolean
+  is_active: boolean
+  contact_name_snapshot: string | null
+  contact_email_snapshot: string | null
+  contact_phone_snapshot: string | null
+  affiliation?: {
+    id: string
+    office_id: string
+    contact?: {
+      id: string
+      display_name: string | null
+      email: string | null
+      phone: string | null
+    } | null
   } | null
 }
 
@@ -108,6 +141,7 @@ export interface MaWorkflowContact {
   email: string | null
   phone: string | null
   isPrimary: boolean
+  legacySourceContactId?: string | null
 }
 
 export interface MaOpportunityWorkflow {
@@ -139,12 +173,19 @@ function readString(formData: FormData, key: string): string | null {
 
 function normalizeSource(row: Record<string, unknown>): OpportunityWorkflowRow {
   const source = Array.isArray(row.source) ? row.source[0] : row.source
+  const sourceOffice = Array.isArray(row.source_office)
+    ? row.source_office[0]
+    : row.source_office
   const sourceContacts = Array.isArray(row.source_contacts)
     ? row.source_contacts
+    : []
+  const officeContacts = Array.isArray(row.office_contacts)
+    ? row.office_contacts
     : []
   return {
     ...row,
     source: source ?? null,
+    source_office: sourceOffice ?? null,
     source_contacts: sourceContacts.map((relation) => {
       const relationRow = relation as OpportunityWorkflowContactRow & {
         contact?:
@@ -166,12 +207,65 @@ function normalizeSource(row: Record<string, unknown>): OpportunityWorkflowRow {
           : null,
       }
     }),
+    office_contacts: officeContacts.map((relation) => {
+      const relationRow = relation as OpportunityWorkflowCanonicalContactRow & {
+        affiliation?:
+          | OpportunityWorkflowCanonicalContactRow["affiliation"]
+          | OpportunityWorkflowCanonicalContactRow["affiliation"][]
+      }
+      const affiliation = Array.isArray(relationRow.affiliation)
+        ? relationRow.affiliation[0]
+        : relationRow.affiliation
+      const contact = Array.isArray(affiliation?.contact)
+        ? affiliation.contact[0]
+        : affiliation?.contact
+      return {
+        ...relationRow,
+        affiliation: affiliation
+          ? {
+              ...affiliation,
+              contact: contact ?? null,
+            }
+          : null,
+      }
+    }),
   } as OpportunityWorkflowRow
 }
 
-function getWorkflowContacts(opportunity: OpportunityWorkflowRow) {
-  return (opportunity.source_contacts ?? [])
+function getWorkflowContacts(
+  opportunity: OpportunityWorkflowRow,
+): MaWorkflowContact[] {
+  const canonicalContacts: MaWorkflowContact[] = (opportunity.office_contacts ?? [])
+    .filter((relation) => relation.is_active)
     .map((relation) => {
+      return {
+        id: relation.id,
+        name:
+          relation.contact_name_snapshot ??
+          relation.affiliation?.contact?.display_name ??
+          null,
+        email:
+          relation.contact_email_snapshot ??
+          relation.affiliation?.contact?.email ??
+          null,
+        phone:
+          relation.contact_phone_snapshot ??
+          relation.affiliation?.contact?.phone ??
+          null,
+        isPrimary: relation.is_primary,
+        legacySourceContactId: relation.legacy_source_contact_id,
+      }
+    })
+
+  if (canonicalContacts.length > 0) {
+    return canonicalContacts.sort(
+      (left, right) => Number(right.isPrimary) - Number(left.isPrimary),
+    )
+  }
+
+  const legacyContacts: Array<MaWorkflowContact | null> = (
+    opportunity.source_contacts ?? []
+  ).map((relation) => {
       const contact = relation.contact
       if (!contact) return null
       return {
@@ -180,8 +274,11 @@ function getWorkflowContacts(opportunity: OpportunityWorkflowRow) {
         email: contact.email,
         phone: contact.phone,
         isPrimary: relation.is_primary,
+        legacySourceContactId: relation.contact_id,
       }
     })
+
+  return legacyContacts
     .filter((contact): contact is MaWorkflowContact => contact !== null)
     .sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary))
 }
@@ -342,6 +439,7 @@ async function loadOpportunityContext(opportunityId: string) {
         created_at,
         updated_at,
         source_id,
+        source_office_id,
         source_label,
         source:ma_sources(id, firm_name),
         source_contacts:opportunity_source_contacts(
@@ -351,6 +449,26 @@ async function loadOpportunityContext(opportunityId: string) {
           contact_email_snapshot,
           contact_phone_snapshot,
           contact:ma_source_contacts(id, name, email, phone)
+        ),
+        source_office:ma_offices(
+          id,
+          name,
+          firm:ma_firms(id, name)
+        ),
+        office_contacts:opportunity_ma_contacts(
+          id,
+          affiliation_id,
+          legacy_source_contact_id,
+          is_primary,
+          is_active,
+          contact_name_snapshot,
+          contact_email_snapshot,
+          contact_phone_snapshot,
+          affiliation:ma_contact_office_affiliations(
+            id,
+            office_id,
+            contact:ma_contacts(id, display_name, email, phone)
+          )
         )
       `,
       )
@@ -409,6 +527,7 @@ async function loadOpportunityContext(opportunityId: string) {
   const variables = {
     firstName: defaultContact?.name?.split(/\s+/)[0] || "Bonjour",
     firmName:
+      opportunity.source_office?.firm?.name ||
       opportunity.source?.firm_name ||
       opportunity.source_label ||
       "votre cabinet",
@@ -491,7 +610,10 @@ export async function getMaOpportunityWorkflow(
     recipientContactId: defaultContact?.id ?? null,
     recipientEmail: defaultContact?.email ?? null,
     sourceName:
-      opportunity.source?.firm_name || opportunity.source_label || "No source",
+      opportunity.source_office?.firm?.name ||
+      opportunity.source?.firm_name ||
+      opportunity.source_label ||
+      "No source",
     contactName: defaultContact?.name ?? null,
     recommendedTemplateKey: recommendation?.templateKey ?? null,
     activePursuitName: activeMatch ? repreneurName(activeMatch) : null,
@@ -553,7 +675,11 @@ export async function sendMaSourceWorkflowEmailPayload(
     }
   }
 
-  if (!opportunity.source_id || !opportunity.source) {
+  if (
+    !opportunity.source_office &&
+    !opportunity.source_id &&
+    !opportunity.source
+  ) {
     return {
       success: false,
       message: "This opportunity is not linked to an M&A source yet.",
@@ -597,7 +723,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   const { error } = await supabase.from("ma_source_interactions").insert({
     opportunity_id: opportunity.id,
     source_id: opportunity.source_id,
-    contact_id: recipient.id,
+    contact_id: recipient.legacySourceContactId ?? null,
     template_key: templateKey,
     channel: "email",
     direction: "outbound",

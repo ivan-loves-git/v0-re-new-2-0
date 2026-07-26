@@ -6,6 +6,8 @@ import type { Repreneur } from "@/lib/types/repreneur"
 import type {
   MaSource,
   MaSourceContact,
+  OpportunityMaContact,
+  OpportunitySourceOffice,
   OpportunitySourceContact,
   OpportunityWithSource,
   OpportunityWorkSurfaceMatch,
@@ -95,6 +97,7 @@ const OPPORTUNITY_LIST_FIELDS = `
   reference,
   status,
   source_id,
+  source_office_id,
   source_label,
   sector,
   activity,
@@ -153,6 +156,36 @@ const OPPORTUNITY_LIST_FIELDS = `
       created_by,
       created_at,
       updated_at
+    )
+  ),
+  source_office:ma_offices(
+    id,
+    name,
+    is_default,
+    firm:ma_firms(
+      id,
+      name
+    )
+  ),
+  office_contacts:opportunity_ma_contacts(
+    id,
+    opportunity_id,
+    affiliation_id,
+    is_primary,
+    is_active,
+    contact_name_snapshot,
+    contact_email_snapshot,
+    contact_phone_snapshot,
+    affiliation:ma_contact_office_affiliations(
+      id,
+      office_id,
+      contact:ma_contacts(
+        id,
+        display_name,
+        email,
+        phone,
+        status
+      )
     )
   )
 `
@@ -219,12 +252,34 @@ type OpportunitySourceContactQueryRow = Omit<
   contact?: MaSourceContact | MaSourceContact[] | null
 }
 
+type OpportunityOfficeContactQueryRow = Omit<
+  OpportunityMaContact,
+  "affiliation"
+> & {
+  affiliation?:
+    | NonNullable<OpportunityMaContact["affiliation"]>
+    | NonNullable<OpportunityMaContact["affiliation"]>[]
+    | null
+}
+
+type OpportunitySourceOfficeQueryRow = Omit<OpportunitySourceOffice, "firm"> & {
+  firm?:
+    | NonNullable<OpportunitySourceOffice["firm"]>
+    | NonNullable<OpportunitySourceOffice["firm"]>[]
+    | null
+}
+
 type OpportunityQueryRow = Omit<
   OpportunityWithSource,
-  "source" | "source_contacts"
+  "source" | "source_contacts" | "source_office" | "office_contacts"
 > & {
   source?: MaSourceQueryRow | MaSourceQueryRow[] | null
   source_contacts?: OpportunitySourceContactQueryRow[] | null
+  source_office?:
+    | OpportunitySourceOfficeQueryRow
+    | OpportunitySourceOfficeQueryRow[]
+    | null
+  office_contacts?: OpportunityOfficeContactQueryRow[] | null
 }
 
 type OpportunityMatchQueryRow = Omit<
@@ -293,8 +348,40 @@ function normalizeRepreneurListRows(
   })
 }
 
+function normalizeOfficeContact(
+  row: OpportunityOfficeContactQueryRow,
+): OpportunityMaContact {
+  const affiliation = Array.isArray(row.affiliation)
+    ? row.affiliation[0]
+    : row.affiliation
+  const contact = Array.isArray(affiliation?.contact)
+    ? affiliation.contact[0]
+    : affiliation?.contact
+
+  return {
+    ...row,
+    affiliation: affiliation
+      ? {
+          ...affiliation,
+          contact: contact ?? null,
+        }
+      : null,
+  }
+}
+
+function normalizeSourceOffice(
+  row: OpportunitySourceOfficeQueryRow | null | undefined,
+): OpportunitySourceOffice | null {
+  if (!row) return null
+  const firm = Array.isArray(row.firm) ? row.firm[0] : row.firm
+  return { ...row, firm: firm ?? null }
+}
+
 function normalizeOpportunity(row: OpportunityQueryRow): OpportunityWithSource {
   const sourceRow = Array.isArray(row.source) ? row.source[0] : row.source
+  const sourceOffice = Array.isArray(row.source_office)
+    ? row.source_office[0]
+    : row.source_office
   const source = sourceRow
     ? {
         ...sourceRow,
@@ -328,6 +415,10 @@ function normalizeOpportunity(row: OpportunityQueryRow): OpportunityWithSource {
     ...row,
     source,
     source_contacts: sourceContacts,
+    source_office: normalizeSourceOffice(sourceOffice),
+    office_contacts: Array.isArray(row.office_contacts)
+      ? row.office_contacts.map(normalizeOfficeContact)
+      : [],
   } as OpportunityWithSource
 }
 

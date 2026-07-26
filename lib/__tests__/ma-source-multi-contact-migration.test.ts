@@ -7,81 +7,70 @@ function source(relativePath: string) {
   return readFileSync(`${platformRoot}/${relativePath}`, "utf8")
 }
 
-describe("multi-contact M&A migration", () => {
-  it("creates canonical contact and opportunity-link tables with one primary recipient", () => {
-    const migration = source("scripts/072_enable_multiple_ma_source_contacts.sql")
+describe("canonical multi-contact M&A intake", () => {
+  it("keeps the legacy contact migration as historical compatibility evidence", () => {
+    const migration = source(
+      "scripts/072_enable_multiple_ma_source_contacts.sql",
+    )
 
-    expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.ma_source_contacts")
-    expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.opportunity_source_contacts")
-    expect(migration).toContain("FOREIGN KEY (contact_id, source_id)")
-    expect(migration).toContain("REFERENCES public.ma_source_contacts(id, source_id)")
-    expect(migration).toContain("idx_opportunity_source_contacts_primary")
-    expect(migration).toContain("WHERE is_primary")
-  })
-
-  it("backfills legacy contact values and links existing opportunities idempotently", () => {
-    const migration = source("scripts/072_enable_multiple_ma_source_contacts.sql")
-
-    expect(migration).toContain("legacy_source_id")
-    expect(migration).toContain("idx_ma_source_contacts_legacy_source_id")
     expect(migration).toContain(
-      "ON CONFLICT (legacy_source_id) WHERE legacy_source_id IS NOT NULL DO NOTHING",
+      "CREATE TABLE IF NOT EXISTS public.ma_source_contacts",
     )
-    expect(migration).toContain("NULLIF(BTRIM(s.contact_name), '')")
-    expect(migration).toContain("INSERT INTO public.opportunity_source_contacts")
-    expect(migration).toContain("first_backfilled_contact")
-    expect(migration).toContain("AND NOT EXISTS")
+    expect(migration).toContain(
+      "CREATE TABLE IF NOT EXISTS public.opportunity_source_contacts",
+    )
+    expect(migration).toContain(
+      "recipient_email remains the immutable outbound recipient snapshot",
+    )
   })
 
-  it("preserves existing firm identities while carrying interaction recipient snapshots forward", () => {
-    const migration = source("scripts/072_enable_multiple_ma_source_contacts.sql")
+  it("uses the office and affiliation RPCs for new staff source context", () => {
+    const actions = source("lib/actions/opportunity-intake.ts")
+    const form = source("components/opportunities/opportunity-form.tsx")
 
-    expect(migration).not.toContain("DELETE FROM public.ma_sources")
-    expect(migration).not.toContain("UPDATE public.opportunities o\nSET source_id")
-    expect(migration).toContain("ADD COLUMN IF NOT EXISTS contact_id")
-    expect(migration).toContain("recipient_email remains the immutable outbound recipient snapshot")
+    expect(actions).toContain("create_opportunity_with_office_context")
+    expect(actions).toContain("save_opportunity_office_context")
+    expect(actions).toContain("create_ma_firm_with_default_office")
+    expect(actions).toContain("create_or_affiliate_ma_contact")
+    expect(form).toContain('name="source_office_id"')
+    expect(form).toContain('name="affiliation_ids"')
+    expect(form).toContain('name="primary_affiliation_id"')
+    expect(form).toContain("Add office contact")
   })
 
-  it("keeps firm-level legacy contact fields out of current staff and portal reads", () => {
-    const opportunityActions = source("lib/actions/opportunities.ts")
-    const workflowActions = source("lib/actions/ma-workflows.ts")
-    const snapshots = source("lib/data/dashboard-snapshots.ts")
-    const portalActions = source("lib/actions/repreneur-opportunities.ts")
-    const portalTypes = source("lib/types/opportunity.ts").slice(
-      source("lib/types/opportunity.ts").indexOf("export interface RepreneurOpportunityExposure"),
+  it("does not make repreneur exposure or origin a form-controlled intake field", () => {
+    const form = source("components/opportunities/opportunity-form.tsx")
+    const actions = source("lib/actions/opportunity-intake.ts")
+
+    expect(form).not.toContain('name="repreneur_exposure"')
+    expect(form).not.toContain('name="origin_channel"')
+    expect(actions).toContain("p_opportunity_fields")
+    expect(actions).not.toContain("p_repreneur_exposure")
+    expect(actions).not.toContain("p_origin_channel")
+  })
+
+  it("retires legacy directory mutation routes and removes their sidebar entry", () => {
+    const sidebar = source("components/app-sidebar.tsx")
+    const legacyActions = source("lib/actions/ma-sources.ts")
+    const firmRoute = source("app/(dashboard)/opportunities/ma/firms/page.tsx")
+    const contactRoute = source(
+      "app/(dashboard)/opportunities/ma/contacts/page.tsx",
     )
 
-    for (const implementation of [opportunityActions, workflowActions, snapshots]) {
-      expect(implementation).not.toMatch(/ma_sources\([^)]*contact_(name|email|phone)/)
-      expect(implementation).not.toContain("source?.contact_")
-    }
-    expect(portalActions).not.toContain("ma_source_contacts")
-    expect(portalActions).not.toContain("opportunity_source_contacts")
-    expect(portalTypes).not.toContain("source_contacts")
+    expect(sidebar).not.toContain('href: "/opportunities/ma/firms"')
+    expect(sidebar).not.toContain('href: "/opportunities/ma/contacts"')
+    expect(legacyActions).toContain("Legacy M&A directory editing is retired")
+    expect(legacyActions).not.toContain("move_ma_source_contact")
+    expect(firmRoute).toContain('redirect("/opportunities/new")')
+    expect(contactRoute).toContain('redirect("/opportunities/new")')
   })
 
-  it("lets staff choose an existing firm and its contacts while creating an opportunity", () => {
-    const newOpportunityPage = source("app/(dashboard)/opportunities/new/page.tsx")
-    const opportunityForm = source("components/opportunities/opportunity-form.tsx")
-
-    expect(newOpportunityPage).toContain("listMaSourceDirectory")
-    expect(newOpportunityPage).toContain("sourceOptions={sourceOptions}")
-    expect(opportunityForm).toContain("Existing M&A firm")
-    expect(opportunityForm).toContain("Choose a known firm to select its existing contacts")
-    expect(opportunityForm).toContain('name="source_contact_ids"')
-    expect(opportunityForm).toContain("value={selectedSourceId}")
-  })
-
-  it("makes the workflow recipient an opportunity-linked contact and logs its id", () => {
+  it("uses canonical contacts for workflow recipients while preserving legacy logs only as fallback", () => {
     const workflowActions = source("lib/actions/ma-workflows.ts")
-    const workflowPanel = source("components/opportunities/opportunity-ma-workflow-panel.tsx")
-    const route = source("app/api/opportunities/[id]/ma-workflow/send/route.ts")
 
-    expect(workflowActions).toContain("contacts.find((contact) => contact.id === contactId)")
-    expect(workflowActions).toContain("Choose a contact linked to this opportunity")
-    expect(workflowActions).toContain("contact_id: recipient.id")
-    expect(workflowPanel).toContain("ma_recipient")
-    expect(workflowPanel).toContain('contactId: formData.get("contact_id")')
-    expect(route).toContain("contactId")
+    expect(workflowActions).toContain("office_contacts:opportunity_ma_contacts")
+    expect(workflowActions).toContain("source_office:ma_offices")
+    expect(workflowActions).toContain("legacySourceContactId ?? null")
+    expect(workflowActions).toContain("recipient_email: recipientEmail")
   })
 })

@@ -12,11 +12,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { archiveOpportunity } from "@/lib/actions/opportunities"
-import { OPPORTUNITY_STATUS_OPTIONS, type OpportunityStatus, type OpportunityWithSource } from "@/lib/types/opportunity"
-import { OpportunityStatusBadge, OpportunityVisibilityBadge } from "@/components/opportunities/opportunity-status-badge"
+import {
+  OPPORTUNITY_STATUS_OPTIONS,
+  type OpportunityStatus,
+  type OpportunityWithSource,
+} from "@/lib/types/opportunity"
+import {
+  OpportunityStatusBadge,
+  OpportunityVisibilityBadge,
+} from "@/components/opportunities/opportunity-status-badge"
 
 interface OpportunityTableProps {
   opportunities: OpportunityWithSource[]
@@ -36,13 +57,34 @@ function parseDate(value: string | null | undefined) {
 function formatExactDate(value: string | null | undefined) {
   const date = parseDate(value)
   if (!date) return "-"
-  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(date)
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date)
 }
 
 function formatMonth(value: string | null | undefined) {
   const date = parseDate(value)
   if (!date) return "-"
-  return new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date)
+  return new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric",
+  }).format(date)
+}
+
+function sourceContextLabel(opportunity: OpportunityWithSource) {
+  const firmName =
+    opportunity.source_office?.firm?.name ??
+    opportunity.source?.firm_name ??
+    opportunity.source_label ??
+    null
+  const officeName = opportunity.source_office?.name ?? null
+
+  if (firmName && officeName && firmName !== officeName) {
+    return `${firmName} · ${officeName}`
+  }
+  return firmName ?? officeName ?? "No source yet"
 }
 
 export function OpportunityTable({ opportunities }: OpportunityTableProps) {
@@ -63,6 +105,8 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
         opportunity.sector,
         opportunity.activity,
         opportunity.location,
+        opportunity.source_office?.firm?.name,
+        opportunity.source_office?.name,
         opportunity.source?.firm_name,
         opportunity.source_label,
       ]
@@ -89,7 +133,12 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
               className="pl-10"
             />
           </div>
-          <Select value={status} onValueChange={(value) => setStatus(value as OpportunityStatus | "all")}>
+          <Select
+            value={status}
+            onValueChange={(value) =>
+              setStatus(value as OpportunityStatus | "all")
+            }
+          >
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
@@ -105,7 +154,12 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
             </SelectContent>
           </Select>
         </div>
-        <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">{filtered.length}</span> of {opportunities.length} opportunities</p>
+        <p className="text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">
+            {filtered.length}
+          </span>{" "}
+          of {opportunities.length} opportunities
+        </p>
       </div>
 
       <div className="overflow-hidden">
@@ -117,7 +171,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
               <TableHead>Location</TableHead>
               <TableHead className="text-right">Revenue</TableHead>
               <TableHead className="text-right">EBITDA</TableHead>
-                  <TableHead className="text-right">Effectif</TableHead>
+              <TableHead className="text-right">Effectif</TableHead>
               <TableHead>Added</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Visibility</TableHead>
@@ -127,7 +181,10 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={10}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No opportunities found.
                 </TableCell>
               </TableRow>
@@ -135,32 +192,53 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
               filtered.map((opportunity) => (
                 <TableRow key={opportunity.id}>
                   <TableCell>
-                    <Link href={`/opportunities/${opportunity.id}`} className="font-medium hover:underline">
+                    <Link
+                      href={`/opportunities/${opportunity.id}`}
+                      className="font-medium hover:underline"
+                    >
                       {opportunity.reference}
                     </Link>
-                    <p className="text-xs text-muted-foreground">{opportunity.source?.firm_name ?? opportunity.source_label ?? "No source"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {sourceContextLabel(opportunity)}
+                    </p>
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[220px]">
                       <p>{opportunity.sector ?? "-"}</p>
-                      {opportunity.activity && <p className="truncate text-xs text-muted-foreground">{opportunity.activity}</p>}
+                      {opportunity.activity && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {opportunity.activity}
+                        </p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{opportunity.location ?? "-"}</TableCell>
-                  <TableCell className="text-right">{formatNumber(opportunity.revenue_meur, "M")}</TableCell>
-                  <TableCell className="text-right">{formatNumber(opportunity.ebitda_keur, "K")}</TableCell>
-                  <TableCell className="text-right">{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(opportunity.revenue_meur, "M")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(opportunity.ebitda_keur, "K")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {opportunity.headcount_range ??
+                      opportunity.headcount ??
+                      "-"}
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <span>{formatExactDate(opportunity.date_added)}</span>
-                      <span className="text-xs text-muted-foreground">Month: {formatMonth(opportunity.date_added)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Month: {formatMonth(opportunity.date_added)}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <OpportunityStatusBadge status={opportunity.status} />
                   </TableCell>
                   <TableCell>
-                    <OpportunityVisibilityBadge visibility={opportunity.repreneur_exposure} />
+                    <OpportunityVisibilityBadge
+                      visibility={opportunity.repreneur_exposure}
+                    />
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -176,7 +254,9 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                             View
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleArchive(opportunity.id)}>
+                        <DropdownMenuItem
+                          onClick={() => handleArchive(opportunity.id)}
+                        >
                           <Archive className="size-4" />
                           Archive
                         </DropdownMenuItem>

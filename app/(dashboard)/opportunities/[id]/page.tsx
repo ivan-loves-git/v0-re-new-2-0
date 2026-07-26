@@ -6,10 +6,21 @@ import { Button } from "@/components/ui/button"
 import { OpportunityDetail } from "@/components/opportunities/opportunity-detail"
 import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
-import { listOpportunityMatchCandidates, listOpportunityMatches, listOpportunityPursuitEvents } from "@/lib/actions/opportunity-matches"
-import { closeOpportunity, getOpportunity, getOpportunityClosureHistory, reopenOpportunity, updateOpportunity } from "@/lib/actions/opportunities"
+import {
+  listOpportunityMatchCandidates,
+  listOpportunityMatches,
+  listOpportunityPursuitEvents,
+} from "@/lib/actions/opportunity-matches"
+import {
+  closeOpportunity,
+  getOpportunity,
+  getOpportunityClosureHistory,
+} from "@/lib/actions/opportunities"
+import {
+  listMaOfficeIntakeOptions,
+  updateOpportunityIntake,
+} from "@/lib/actions/opportunity-intake"
 import type { OpportunityClosureReason } from "@/lib/types/opportunity"
-
 
 export default function OpportunityDetailPage({
   params,
@@ -34,7 +45,16 @@ async function OpportunityDetailContent({
 }) {
   const { id } = await params
   const { tab } = await searchParams
-  const [opportunity, documents, matches, matchCandidates, pursuitEvents, maWorkflow, closureHistory] = await Promise.all([
+  const [
+    opportunity,
+    documents,
+    matches,
+    matchCandidates,
+    pursuitEvents,
+    maWorkflow,
+    closureHistory,
+    officeOptions,
+  ] = await Promise.all([
     getOpportunity(id),
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
@@ -42,6 +62,7 @@ async function OpportunityDetailContent({
     listOpportunityPursuitEvents(id),
     getMaOpportunityWorkflow(id),
     getOpportunityClosureHistory(id),
+    listMaOfficeIntakeOptions(),
   ])
 
   if (!opportunity) {
@@ -50,17 +71,12 @@ async function OpportunityDetailContent({
 
   async function updateAction(formData: FormData) {
     "use server"
-    return updateOpportunity(id, formData)
+    return updateOpportunityIntake(id, formData)
   }
 
   async function closeAction(reason: OpportunityClosureReason) {
     "use server"
     return closeOpportunity(id, reason)
-  }
-
-  async function reopenAction() {
-    "use server"
-    return reopenOpportunity(id)
   }
 
   return (
@@ -82,7 +98,7 @@ async function OpportunityDetailContent({
         updateAction={updateAction}
         closureHistory={closureHistory}
         closeAction={closeAction}
-        reopenAction={reopenAction}
+        officeOptions={officeOptions}
         defaultTab={tab}
       />
     </div>
