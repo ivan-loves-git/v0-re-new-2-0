@@ -19,6 +19,9 @@ describe("OpportunityForm office contact mode", () => {
 
     expect(dialog).toContain('value="existing"')
     expect(dialog).toContain('value="new"')
+    expect(dialog).toContain('aria-labelledby="office_contact_mode_label"')
+    expect(dialog).toContain('id="office_contact_mode_label"')
+    expect(dialog).toContain("Contact type")
     expect(existingModeStart).toBeGreaterThanOrEqual(0)
     expect(newModeStart).toBeGreaterThan(existingModeStart)
 
@@ -50,6 +53,9 @@ describe("OpportunityForm office contact mode", () => {
     expect(component).toContain("loadCanonicalContactOptions")
     expect(component).toContain("selectedOffice?.contacts.map")
     expect(component).toContain("!selectedOfficeContactIds.has(contact.contact_id)")
+    expect(component).toContain("setCanonicalContactOptions([])")
+    expect(component).toContain("canonicalContactLookupFailed")
+    expect(component).toContain("Retry loading contacts")
     expect(action).toContain(
       "This canonical contact is already affiliated with the selected office.",
     )

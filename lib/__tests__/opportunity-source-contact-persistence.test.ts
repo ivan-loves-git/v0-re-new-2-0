@@ -257,6 +257,28 @@ describe("canonical opportunity contact persistence", () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
+  it("rejects a supplied existing contact ID in new-contact mode", async () => {
+    for (const existingContactId of [
+      EXISTING_CONTACT_ID,
+      "not-a-canonical-contact-id",
+    ]) {
+      const formData = new FormData()
+      formData.set("contact_mode", "new")
+      formData.set("existing_contact_id", existingContactId)
+      formData.set("contact_first_name", "Camille")
+
+      await expect(
+        createMaOfficeContact(OFFICE_ID, formData),
+      ).resolves.toEqual({
+        success: false,
+        message:
+          "Choose either an existing canonical contact or a new contact, not both.",
+      })
+    }
+
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
   it("lists only active canonical people through a staff-authorized action", async () => {
     const order = vi.fn().mockResolvedValue({
       data: [

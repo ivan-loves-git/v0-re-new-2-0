@@ -192,7 +192,7 @@ Every non-archived firm has at least one active office. A firm without a known b
 
 ### Canonical contact-affiliation write boundary
 
-W-063 adds an additional person to an existing office, or links an existing canonical person to an additional office, through `create_or_affiliate_ma_contact`. It requires an actor and an active office beneath a non-archived firm. With `p_existing_contact_id`, it affiliates that active canonical contact and rejects contact profile fields; without it, it creates one named person from the supplied name fields. `p_contact_job_title` belongs to the affiliation in either mode. The service returns `contact_id` and `affiliation_id`, rejects an already-active pair, and never creates or mutates `ma_source_contacts`, `opportunity_source_contacts` or a recurrent legacy sync record.
+W-063 adds an additional person to an existing office, or links an existing canonical person to an additional office, through `create_or_affiliate_ma_contact`. It requires an actor and an active office beneath a non-archived firm. With `p_existing_contact_id`, it affiliates that active canonical contact and rejects contact profile fields; without it, it creates one named person from the supplied name fields. The staff action treats those modes as mutually exclusive: a new-person submission rejects every non-empty existing-contact ID, whether valid or malformed. `p_contact_job_title` belongs to the affiliation in either mode. The service returns `contact_id` and `affiliation_id`, rejects an already-active pair, and never creates or mutates `ma_source_contacts`, `opportunity_source_contacts` or a recurrent legacy sync record.
 
 ## 5. Opportunity
 
@@ -591,6 +591,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-26 | 1.5.4 | Hardened the W-063 staff action against conflicting new-contact and existing-contact inputs, and made canonical-contact lookup failure invalidate stale selector data with an accessible retry state | W-063 corrective follow-up |
 | 2026-07-26 | 1.5.3 | Closed the W-063 staff-intake gap: staff can select an active canonical person by contact identity to create an additional office affiliation, without submitting new person fields; current-office active affiliations are excluded and the canonical service remains the duplicate-pair backstop | W-063 corrective implementation |
 | 2026-07-26 | 1.5.2 | Hardened W-020 re-review gaps: UTC-stable digest timestamp serialization, same-run issue foreign-key integrity, non-identifying algorithm-tagged retained fingerprints, and explicit Gate 2 timezone, raw-SQL-boundary and concurrency checks | W-020 and migration 078 |
 | 2026-07-26 | 1.5.1 | Hardened the unapplied W-020 cutover boundary: PostgreSQL-owned SHA-256 approval digest, serialized approval/stage lifecycle, blocker gate before approval, bounded and allowlisted temporary evidence, guarded activation, and controlled supersession purge with retained sanitized manifest | W-020 and migration 078 |

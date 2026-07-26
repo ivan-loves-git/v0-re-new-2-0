@@ -580,6 +580,14 @@ export async function createMaOfficeContact(
   }
 
   const existingContact = readUuid(formData, "existing_contact_id")
+  if (!usesExistingContact && (existingContact.value || existingContact.error)) {
+    return {
+      success: false,
+      message:
+        "Choose either an existing canonical contact or a new contact, not both.",
+    }
+  }
+
   const firstName = usesExistingContact
     ? null
     : readOpportunityFormString(formData, "contact_first_name")

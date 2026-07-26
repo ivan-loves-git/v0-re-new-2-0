@@ -126,6 +126,8 @@ export function OpportunityForm({
   >([])
   const [isLoadingCanonicalContacts, setIsLoadingCanonicalContacts] =
     useState(false)
+  const [canonicalContactLookupFailed, setCanonicalContactLookupFailed] =
+    useState(false)
   const [selectedAffiliationIds, setSelectedAffiliationIds] = useState(() =>
     currentAffiliationIds(opportunity),
   )
@@ -223,10 +225,15 @@ export function OpportunityForm({
   async function loadCanonicalContactOptions() {
     if (isLoadingCanonicalContacts) return
 
+    setCanonicalContactOptions([])
+    setExistingContactId("")
+    setCanonicalContactLookupFailed(false)
     setIsLoadingCanonicalContacts(true)
     try {
       setCanonicalContactOptions(await listMaCanonicalContactOptions())
     } catch (error) {
+      setCanonicalContactOptions([])
+      setCanonicalContactLookupFailed(true)
       toast.error(
         error instanceof Error
           ? error.message
@@ -241,12 +248,19 @@ export function OpportunityForm({
     const nextMode: OfficeContactMode = value === "existing" ? "existing" : "new"
     setContactMode(nextMode)
     setExistingContactId("")
-    if (nextMode === "existing") void loadCanonicalContactOptions()
+    if (nextMode === "existing") {
+      void loadCanonicalContactOptions()
+    } else {
+      setCanonicalContactOptions([])
+      setCanonicalContactLookupFailed(false)
+    }
   }
 
   function openCreateContactDialog() {
     setContactMode("new")
     setExistingContactId("")
+    setCanonicalContactOptions([])
+    setCanonicalContactLookupFailed(false)
     setCreateContactDialogOpen(true)
   }
 
@@ -352,6 +366,8 @@ export function OpportunityForm({
       setCreateContactDialogOpen(false)
       setContactMode("new")
       setExistingContactId("")
+      setCanonicalContactOptions([])
+      setCanonicalContactLookupFailed(false)
       toast.success(result.message)
     } catch (error) {
       toast.error(
@@ -894,6 +910,8 @@ export function OpportunityForm({
             if (!open) {
               setContactMode("new")
               setExistingContactId("")
+              setCanonicalContactOptions([])
+              setCanonicalContactLookupFailed(false)
             }
           }
         }}
@@ -910,7 +928,11 @@ export function OpportunityForm({
           </DialogHeader>
           <form onSubmit={handleCreateOfficeContact} className="space-y-4">
             <input type="hidden" name="contact_mode" value={contactMode} />
+            <p id="office_contact_mode_label" className="text-sm font-medium">
+              Contact type
+            </p>
             <RadioGroup
+              aria-labelledby="office_contact_mode_label"
               value={contactMode}
               onValueChange={chooseContactMode}
               disabled={isCreatingContact}
@@ -973,7 +995,11 @@ export function OpportunityForm({
                       value === NO_CANONICAL_CONTACT_OPTION_VALUE ? "" : value,
                     )
                   }
-                  disabled={isCreatingContact || isLoadingCanonicalContacts}
+                  disabled={
+                    isCreatingContact ||
+                    isLoadingCanonicalContacts ||
+                    canonicalContactLookupFailed
+                  }
                 >
                   <SelectTrigger id="existing_contact_id" className="w-full">
                     <SelectValue placeholder="Choose a canonical contact" />
@@ -1004,6 +1030,20 @@ export function OpportunityForm({
                   <p className="text-xs text-muted-foreground">
                     Loading canonical contacts…
                   </p>
+                ) : canonicalContactLookupFailed ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs text-destructive">
+                      Canonical contacts could not be loaded.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void loadCanonicalContactOptions()}
+                    >
+                      Retry loading contacts
+                    </Button>
+                  </div>
                 ) : affiliateableCanonicalContacts.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
                     No other active canonical contacts are available for this
