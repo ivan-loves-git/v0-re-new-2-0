@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 26, 2026",
+    version: "0.9.30",
+    title: "Opportunity intake moved to one authoritative M&A relationship model",
+    isCompleted: true,
+    events: [
+      {
+        title: "Operating offices now anchor opportunity sources",
+        type: "product",
+        description: "Staff work from one firm, operating-office, and contact structure instead of maintaining a second firm-level source relationship.",
+      },
+      {
+        title: "Draft early, activate only when the relationship is usable",
+        type: "feature",
+        description: "A reference is enough to start a staff-only draft, while active and paused opportunities require a source office, description, named contacts, one primary contact, and a usable primary email.",
+      },
+      {
+        title: "Several contacts can stay attached to one opportunity",
+        type: "feature",
+        description: "Staff can select several people affiliated with the same operating office and choose exactly one primary recipient without merging or overwriting the others.",
+      },
+      {
+        title: "The workbook switch remains controlled and separate",
+        type: "decision",
+        description: "The old browser importer is retired and a synthetic rehearsal now proves the one-time cutover rules. No real workbook has been imported, and Excel remains authoritative until the separately approved switch.",
+      },
+    ],
+  },
+  {
     period: "Jul 24, 2026",
     version: "0.9.29",
     title: "Portal decisions and opportunity operations made more reliable",
