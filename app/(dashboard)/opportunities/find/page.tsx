@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Plus, Search, Upload } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import { OpportunityWorkSurfaceTable } from "@/components/opportunities/opportunity-work-surface-table"
 import { Button } from "@/components/ui/button"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
@@ -17,12 +17,6 @@ export default async function OpportunityFindPage() {
         tone="opportunity"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/opportunities/import">
-                <Upload data-icon="inline-start" />
-                Import
-              </Link>
-            </Button>
             <Button asChild size="sm">
               <Link href="/opportunities/new">
                 <Plus data-icon="inline-start" />
