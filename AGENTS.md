@@ -170,6 +170,15 @@ Impeccable is the mandatory implementation-quality gate for every UI change. It 
 - **Repreneur_Offer:** Junction tracking offer status per repreneur
 - **Note:** Free-text notes with author tracking
 
+## Canonical M&A Data Contract
+
+- `docs/data-models/ma-advisory-data-model-v1.md` is the only human-readable source of truth for M&A firms, offices, contacts, affiliations, opportunities, interactions, visibility and cutover mapping.
+- Any change to the M&A schema, business validation, visibility rule or import mapping must update that document in the same commit before release.
+- This rule applies to relevant SQL migrations, opportunity and M&A types, server actions, form validation, import code, exports and role-specific API or UI projections.
+- `pnpm data-model:check` runs inside lint and blocks a relevant M&A code or SQL change when the contract is missing from the same change.
+- Supabase enforces the released implementation; the document owns the approved business meaning and target model. If they disagree, stop the release and reconcile the difference explicitly.
+- W-061 owns the data foundation and W-062 owns relationship history. Do not create a parallel M&A model document.
+
 ## Verification
 
 After code changes:

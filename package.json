@@ -8,9 +8,10 @@
   },
   "scripts": {
     "build": "next build",
+    "data-model:check": "node scripts/check-ma-data-model-sync.mjs",
     "design:check": "node scripts/check-wave-visual-policy.mjs && node .agents/skills/impeccable/scripts/detect.mjs app components styles",
     "dev": "next dev",
-    "lint": "eslint .",
+    "lint": "pnpm data-model:check && eslint .",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
