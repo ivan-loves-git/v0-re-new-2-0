@@ -327,7 +327,7 @@ SELECT
     'service_can_begin',
       has_function_privilege(
         'service_role',
-        'public.begin_ma_interaction_email_send(uuid,uuid,uuid,text,text,text,text,text,uuid)',
+        'public.begin_ma_interaction_email_send(uuid,uuid,uuid,text,text,text,text,text,uuid,text,uuid)',
         'EXECUTE'
       ),
     'service_can_finalize',

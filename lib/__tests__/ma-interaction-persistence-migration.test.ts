@@ -10,6 +10,9 @@ function source(relativePath: string) {
 describe("W-062 canonical interaction persistence", () => {
   const migration = source("scripts/080_ma_interaction_persistence.sql")
   const workflow = source("lib/actions/ma-workflows.ts")
+  const sendRoute = source(
+    "app/api/opportunities/[id]/ma-workflow/send/route.ts",
+  )
   const rehearsal = source("scripts/rehearse-ma-interaction-persistence.sql")
   const verifier = source("scripts/verify-ma-data-model-schema.sql")
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
@@ -41,7 +44,10 @@ describe("W-062 canonical interaction persistence", () => {
     expect(action).toContain('"begin_ma_interaction_email_send"')
     expect(action).toContain('"finalize_ma_interaction_email_send"')
     expect(action).toContain("idempotencyKey")
-    expect(action).toContain("pending reconciliation; do not retry")
+    expect(action).toContain("Retry the same unchanged email within 23 hours")
+    expect(action).toContain("fingerprintResendDeliveryRequest")
+    expect(action).toContain("p_client_operation_key")
+    expect(action).toContain("p_provider_request_fingerprint")
     expect(action).not.toContain("Promise.race")
     expect(action).not.toContain('.from("ma_interactions").insert')
     expect(action).not.toContain('.from("ma_source_interactions").insert')
@@ -64,6 +70,10 @@ describe("W-062 canonical interaction persistence", () => {
       "ma_interaction_history_blocks_source_office_change",
       "ma_source_office_change_blocked_during_email_send",
       "GRANT EXECUTE ON FUNCTION public.verify_ma_interaction_owner(UUID, TEXT) TO service_role;",
+      "client_operation_key",
+      "provider_request_fingerprint",
+      "ma_interaction_email_replay_requires_exact_request",
+      "ma_interaction_email_replay_window_expired",
     ]) {
       expect(migration).toContain(required)
     }
@@ -78,6 +88,10 @@ describe("W-062 canonical interaction persistence", () => {
       /interaction\.owner_verification_state\s*===\s*"provisional"/,
     )
     expect(historyPanel).toContain("Owner to verify")
+    expect(historyPanel).toContain("sessionStorage")
+    expect(historyPanel).toContain("crypto.randomUUID()")
+    expect(historyPanel).toContain("clientOperationKey")
+    expect(sendRoute).toContain("clientOperationKey")
   })
 
   it("keeps a production-shaped disposable migration rehearsal", () => {
@@ -96,6 +110,15 @@ describe("W-062 canonical interaction persistence", () => {
     )
     expect(rehearsal).toContain("w062_provider_delivery_event_evidence_missing")
     expect(rehearsal).toContain("w062_pending_delivery_duplicate_guard_missing")
+    expect(rehearsal).toContain(
+      "w062_same_operation_key_replay_created_duplicate",
+    )
+    expect(rehearsal).toContain(
+      "w062_same_request_fingerprint_replay_created_duplicate",
+    )
+    expect(rehearsal).toContain(
+      "w062_finalized_response_loss_replay_created_duplicate",
+    )
     expect(rehearsal).toContain("w062_parent_office_move_guard_missing")
     expect(rehearsal).toContain("w062_reservation_source_move_guard_missing")
     expect(rehearsal).toContain("w062_direct_verified_insert_denial_missing")

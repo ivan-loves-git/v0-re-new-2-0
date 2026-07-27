@@ -6,6 +6,12 @@ import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapsho
 import { createAdminClient } from "@/lib/supabase/admin"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import {
+  classifyResendDeliveryOutcome,
+  fingerprintResendDeliveryRequest,
+  type ResendDeliveryOutcome,
+  type ResendDeliveryRequest,
+} from "@/lib/email/resend-delivery-outcome"
+import {
   MA_TEMPLATE_DEFAULT_BODIES,
   TEMPLATE_METADATA,
 } from "@/lib/email/templates"
@@ -30,6 +36,8 @@ const MA_TEMPLATE_KEYS = [
 ] as const satisfies readonly EmailTemplateKey[]
 
 type MaTemplateKey = (typeof MA_TEMPLATE_KEYS)[number]
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 interface OpportunityWorkflowRow {
   id: string
@@ -395,29 +403,14 @@ function markdownToEmailHtml(body: string) {
 }
 
 async function sendIntermediaryEmail({
-  to,
-  subject,
-  body,
+  request,
   idempotencyKey,
 }: {
-  to: string
-  subject: string
-  body: string
+  request: ResendDeliveryRequest
   idempotencyKey: string
-}): Promise<{ success: boolean; error?: string; providerMessageId?: string }> {
-  const { data, error } = await resend.emails.send(
-    {
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: [to],
-      subject,
-      html: markdownToEmailHtml(body),
-      text: body,
-    },
-    { idempotencyKey },
-  )
-  return error
-    ? { success: false, error: error.message }
-    : { success: true, providerMessageId: data?.id }
+}): Promise<ResendDeliveryOutcome> {
+  const response = await resend.emails.send(request, { idempotencyKey })
+  return classifyResendDeliveryOutcome(response)
 }
 
 async function loadOpportunityContext(opportunityId: string) {
@@ -655,12 +648,14 @@ export async function sendMaSourceWorkflowEmail(
   const subject = readString(formData, "subject")
   const body = readString(formData, "body_markdown")
   const contactId = readString(formData, "contact_id")
+  const clientOperationKey = readString(formData, "client_operation_key")
 
   return sendMaSourceWorkflowEmailPayload(opportunityId, {
     templateKey,
     subject,
     body,
     contactId,
+    clientOperationKey,
   })
 }
 
@@ -671,16 +666,23 @@ export async function sendMaSourceWorkflowEmailPayload(
     subject: string | null
     body: string | null
     contactId?: string | null
+    clientOperationKey: string | null
   },
 ): Promise<{ success: boolean; message: string }> {
   const { user } = await requireStaffAccess()
-  const { templateKey, subject, body, contactId } = payload
+  const { templateKey, subject, body, contactId, clientOperationKey } = payload
 
   if (!templateKey || !isMaTemplateKey(templateKey)) {
     return { success: false, message: "Choose an M&A email template." }
   }
   if (!subject) return { success: false, message: "Subject is required." }
   if (!body) return { success: false, message: "Message body is required." }
+  if (!clientOperationKey || !UUID_PATTERN.test(clientOperationKey)) {
+    return {
+      success: false,
+      message: "A valid email operation key is required.",
+    }
+  }
 
   const supabase = createAdminClient()
   const { data: sourceReviewRequired, error: sourceReviewError } =
@@ -786,6 +788,15 @@ export async function sendMaSourceWorkflowEmailPayload(
 
   const renderedSubject = substituteTemplateVariables(subject, variables)
   const renderedBody = substituteTemplateVariables(body, variables)
+  const providerRequest: ResendDeliveryRequest = {
+    from: `${FROM_NAME} <${FROM_EMAIL}>`,
+    to: [recipientEmail],
+    subject: renderedSubject,
+    html: markdownToEmailHtml(renderedBody),
+    text: renderedBody,
+  }
+  const providerRequestFingerprint =
+    fingerprintResendDeliveryRequest(providerRequest)
 
   const {
     data: emailReservationRefreshed,
@@ -815,6 +826,8 @@ export async function sendMaSourceWorkflowEmailPayload(
       p_recipient_email: recipientEmail,
       p_title: renderedSubject,
       p_body_markdown: renderedBody,
+      p_client_operation_key: clientOperationKey,
+      p_provider_request_fingerprint: providerRequestFingerprint,
       p_reservation_token: emailReservationToken,
     },
   )
@@ -823,6 +836,8 @@ export async function sendMaSourceWorkflowEmailPayload(
     : pendingRows
   const interactionId = pendingInteraction?.interaction_id
   const idempotencyKey = pendingInteraction?.provider_idempotency_key
+  const existingDeliveryStatus = pendingInteraction?.delivery_status
+  const existingDeliveryError = pendingInteraction?.delivery_error
 
   if (
     beginError ||
@@ -832,24 +847,58 @@ export async function sendMaSourceWorkflowEmailPayload(
     await releaseReservation()
     return {
       success: false,
+      message: beginError?.message?.includes(
+        "ma_interaction_email_replay_window_expired",
+      )
+        ? "The earlier email result needs manual reconciliation because its safe provider replay window has expired."
+        : "Email blocked because a canonical delivery record could not be started or safely replayed.",
+    }
+  }
+
+  if (existingDeliveryStatus === "sent") {
+    await releaseReservation()
+    return {
+      success: true,
+      message: `Email was already sent to ${recipientEmail}`,
+    }
+  }
+  if (existingDeliveryStatus === "failed") {
+    await releaseReservation()
+    return {
+      success: false,
       message:
-        "Email blocked because a canonical delivery record could not be started.",
+        existingDeliveryError || "The provider previously rejected this email.",
+    }
+  }
+  if (existingDeliveryStatus !== "pending") {
+    await releaseReservation()
+    return {
+      success: false,
+      message: "Email blocked because its canonical delivery state is invalid.",
     }
   }
 
   let result: Awaited<ReturnType<typeof sendIntermediaryEmail>>
   try {
     result = await sendIntermediaryEmail({
-      to: recipientEmail,
-      subject: renderedSubject,
-      body: renderedBody,
+      request: providerRequest,
       idempotencyKey,
     })
   } catch {
+    await releaseReservation()
     return {
       success: false,
       message:
-        "Email delivery has an unknown provider result. Its canonical record is pending reconciliation; do not retry.",
+        "Email delivery is still pending. Retry the same unchanged email within 23 hours; WAVE will reuse its safe delivery key.",
+    }
+  }
+
+  if (result.outcome === "pending") {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Email delivery is still pending. Retry the same unchanged email within 23 hours; WAVE will reuse its safe delivery key.",
     }
   }
 
@@ -858,20 +907,20 @@ export async function sendMaSourceWorkflowEmailPayload(
     {
       p_interaction_id: interactionId,
       p_actor: user.id,
-      p_delivery_status: result.success ? "sent" : "failed",
-      p_provider_message_id: result.providerMessageId ?? null,
-      p_delivery_error: result.success
-        ? null
-        : (result.error ?? "Email provider failed"),
+      p_delivery_status: result.outcome,
+      p_provider_message_id:
+        result.outcome === "sent" ? result.providerMessageId : null,
+      p_delivery_error: result.outcome === "failed" ? result.error : null,
     },
   )
 
   if (finalizeError) {
     return {
       success: false,
-      message: result.success
-        ? "Email provider accepted the message, but delivery evidence is pending reconciliation. Do not retry."
-        : "Email delivery failed, but its canonical evidence could not be finalized. Do not retry until reconciled.",
+      message:
+        result.outcome === "sent"
+          ? "Email provider accepted the message, but delivery evidence is pending reconciliation. Do not retry."
+          : "Email delivery failed, but its canonical evidence could not be finalized. Do not retry until reconciled.",
     }
   }
 
@@ -890,8 +939,8 @@ export async function sendMaSourceWorkflowEmailPayload(
   revalidatePath("/emails")
   revalidateOpportunityDashboardTags()
 
-  if (!result.success) {
-    return { success: false, message: result.error || "Email failed." }
+  if (result.outcome === "failed") {
+    return { success: false, message: result.error }
   }
 
   return { success: true, message: `Email sent to ${recipientEmail}` }

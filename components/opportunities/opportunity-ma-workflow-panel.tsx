@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { AlertTriangle, Mail, Send, UserRound } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -31,6 +31,11 @@ function formatDate(value: string | null | undefined) {
   }).format(date)
 }
 
+async function fingerprintClientSend(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
 export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: OpportunityMaWorkflowPanelProps) {
   const router = useRouter()
   const firstDraft = workflow.drafts[0]
@@ -43,6 +48,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
   const [body, setBody] = useState(selectedDraft?.body ?? "")
   const [recipientContactId, setRecipientContactId] = useState(workflow.recipientContactId ?? "")
   const [isSending, setIsSending] = useState(false)
+  const sendOperationRef = useRef<{ fingerprint: string; key: string } | null>(null)
   const selectedRecipient = workflow.contacts.find((contact) => contact.id === recipientContactId) ?? null
   const recipientEmail = selectedRecipient?.email ?? null
   const canSend = Boolean(recipientEmail && templateKey && subject.trim() && body.trim())
@@ -59,14 +65,39 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
   const handleSend = async () => {
     if (!canSend || isSending) return
 
-    const formData = new FormData()
-    formData.set("template_key", templateKey)
-    formData.set("subject", subject)
-    formData.set("body_markdown", body)
-    formData.set("contact_id", recipientContactId)
-
     setIsSending(true)
     try {
+      const formData = new FormData()
+      formData.set("template_key", templateKey)
+      formData.set("subject", subject)
+      formData.set("body_markdown", body)
+      formData.set("contact_id", recipientContactId)
+      const operationFingerprint = await fingerprintClientSend(
+        JSON.stringify({
+          templateKey,
+          subject,
+          body,
+          contactId: recipientContactId,
+        }),
+      )
+      const storageKey = `renew:ma-email-operation:${opportunityId}`
+      let storedOperation: { fingerprint: string; key: string } | null = null
+      try {
+        storedOperation = JSON.parse(sessionStorage.getItem(storageKey) ?? "null")
+      } catch {
+        storedOperation = null
+      }
+      const sendOperation =
+        sendOperationRef.current?.fingerprint === operationFingerprint
+          ? sendOperationRef.current
+          : storedOperation?.fingerprint === operationFingerprint
+            ? storedOperation
+            : { fingerprint: operationFingerprint, key: crypto.randomUUID() }
+      sendOperationRef.current = sendOperation
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(sendOperation))
+      } catch {}
+
       const response = await fetch(`/api/opportunities/${opportunityId}/ma-workflow/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,6 +106,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
           subject: formData.get("subject"),
           body: formData.get("body_markdown"),
           contactId: formData.get("contact_id"),
+          clientOperationKey: sendOperation.key,
         }),
       })
       const result = (await response.json()) as {
@@ -85,6 +117,10 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
         toast.error("M&A email not sent", { description: result.message })
         return
       }
+      sendOperationRef.current = null
+      try {
+        sessionStorage.removeItem(storageKey)
+      } catch {}
       toast.success("M&A email sent", { description: result.message })
       router.refresh()
     } catch (error) {

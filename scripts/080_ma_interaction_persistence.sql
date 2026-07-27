@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS public.ma_interactions (
   body_markdown TEXT,
   delivery_status TEXT CHECK (delivery_status IN ('pending', 'sent', 'failed')),
   delivery_error TEXT,
+  client_operation_key UUID,
   provider_idempotency_key TEXT,
+  provider_request_fingerprint TEXT,
   provider_message_id TEXT,
   delivery_finalized_at TIMESTAMPTZ,
   sent_at TIMESTAMPTZ,
@@ -60,6 +62,13 @@ CREATE TABLE IF NOT EXISTS public.ma_interactions (
   CHECK ((delivery_status <> 'sent') OR sent_at IS NOT NULL),
   CHECK ((delivery_status <> 'pending') OR delivery_finalized_at IS NULL),
   CHECK ((delivery_status = 'pending') OR delivery_finalized_at IS NOT NULL),
+  CHECK (
+    delivery_status <> 'pending'
+    OR (
+      client_operation_key IS NOT NULL
+      AND provider_request_fingerprint ~ '^[0-9a-f]{64}$'
+    )
+  ),
   CHECK (
     channel <> 'email'
     OR NULLIF(BTRIM(provider_idempotency_key), '') IS NOT NULL
@@ -130,6 +139,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_interactions_pending_opportunity
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_interactions_provider_idempotency_key
   ON public.ma_interactions (provider_idempotency_key)
   WHERE provider_idempotency_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_interactions_client_operation_key
+  ON public.ma_interactions (client_operation_key)
+  WHERE client_operation_key IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION public.enforce_ma_interaction_office_context()
 RETURNS TRIGGER
@@ -195,6 +207,11 @@ BEGIN
     OR NEW.body_markdown IS DISTINCT FROM OLD.body_markdown
     OR NEW.delivery_status IS DISTINCT FROM OLD.delivery_status
     OR NEW.delivery_error IS DISTINCT FROM OLD.delivery_error
+    OR NEW.client_operation_key IS DISTINCT FROM OLD.client_operation_key
+    OR NEW.provider_idempotency_key IS DISTINCT FROM OLD.provider_idempotency_key
+    OR NEW.provider_request_fingerprint IS DISTINCT FROM OLD.provider_request_fingerprint
+    OR NEW.provider_message_id IS DISTINCT FROM OLD.provider_message_id
+    OR NEW.delivery_finalized_at IS DISTINCT FROM OLD.delivery_finalized_at
     OR NEW.sent_at IS DISTINCT FROM OLD.sent_at
     OR NEW.created_by IS DISTINCT FROM OLD.created_by
     OR NEW.created_at IS DISTINCT FROM OLD.created_at
@@ -229,6 +246,7 @@ BEGIN
       OR NEW.template_key IS DISTINCT FROM OLD.template_key
       OR NEW.recipient_email_snapshot IS DISTINCT FROM OLD.recipient_email_snapshot
       OR NEW.body_markdown IS DISTINCT FROM OLD.body_markdown
+      OR NEW.client_operation_key IS DISTINCT FROM OLD.client_operation_key
       OR NEW.created_by IS DISTINCT FROM OLD.created_by
       OR NEW.created_at IS DISTINCT FROM OLD.created_at
       OR NEW.updated_by IS DISTINCT FROM OLD.updated_by
@@ -236,6 +254,7 @@ BEGIN
       OR OLD.delivery_status <> 'pending'
       OR NEW.delivery_status NOT IN ('sent', 'failed')
       OR NEW.provider_idempotency_key IS DISTINCT FROM OLD.provider_idempotency_key
+      OR NEW.provider_request_fingerprint IS DISTINCT FROM OLD.provider_request_fingerprint
       OR NEW.delivery_finalized_at IS NULL
       OR (NEW.delivery_status = 'sent' AND (NEW.sent_at IS NULL OR NULLIF(BTRIM(NEW.provider_message_id), '') IS NULL))
       OR (NEW.delivery_status = 'failed' AND NULLIF(BTRIM(NEW.delivery_error), '') IS NULL) THEN
@@ -384,6 +403,9 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.begin_ma_interaction_email_send(
+  UUID, UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID
+);
 CREATE OR REPLACE FUNCTION public.begin_ma_interaction_email_send(
   p_opportunity_id UUID,
   p_office_id UUID,
@@ -393,9 +415,17 @@ CREATE OR REPLACE FUNCTION public.begin_ma_interaction_email_send(
   p_recipient_email TEXT,
   p_title TEXT,
   p_body_markdown TEXT,
+  p_client_operation_key UUID,
+  p_provider_request_fingerprint TEXT,
   p_reservation_token UUID
 )
-RETURNS TABLE (interaction_id UUID, provider_idempotency_key TEXT)
+RETURNS TABLE (
+  interaction_id UUID,
+  provider_idempotency_key TEXT,
+  delivery_status TEXT,
+  provider_message_id TEXT,
+  delivery_error TEXT
+)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
@@ -413,7 +443,9 @@ BEGIN
     OR NULLIF(BTRIM(p_template_key), '') IS NULL
     OR NULLIF(BTRIM(p_recipient_email), '') IS NULL
     OR NULLIF(BTRIM(p_title), '') IS NULL
-    OR NULLIF(BTRIM(p_body_markdown), '') IS NULL THEN
+    OR NULLIF(BTRIM(p_body_markdown), '') IS NULL
+    OR p_client_operation_key IS NULL
+    OR p_provider_request_fingerprint !~ '^[0-9a-f]{64}$' THEN
     RAISE EXCEPTION 'ma_interaction_email_begin_requires_complete_staff_evidence';
   END IF;
 
@@ -458,12 +490,68 @@ BEGIN
     RAISE EXCEPTION 'ma_interaction_email_begin_requires_active_reservation';
   END IF;
 
+  SELECT * INTO interaction_row
+  FROM public.ma_interactions interaction
+  WHERE interaction.client_operation_key = p_client_operation_key
+    OR (
+      interaction.opportunity_id = opportunity_row.id
+      AND interaction.provider_request_fingerprint = p_provider_request_fingerprint
+      AND (
+        interaction.delivery_status = 'pending'
+        OR (
+          interaction.delivery_status = 'sent'
+          AND interaction.created_at > NOW() - INTERVAL '23 hours'
+        )
+      )
+    )
+  ORDER BY
+    (interaction.client_operation_key = p_client_operation_key) DESC,
+    interaction.created_at DESC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF interaction_row.id IS NOT NULL THEN
+    IF interaction_row.opportunity_id IS DISTINCT FROM opportunity_row.id
+      OR interaction_row.office_id IS DISTINCT FROM p_office_id
+      OR interaction_row.affiliation_id IS DISTINCT FROM p_affiliation_id
+      OR interaction_row.owner_staff_user_id IS DISTINCT FROM normalized_actor
+      OR interaction_row.created_by IS DISTINCT FROM normalized_actor
+      OR interaction_row.template_key IS DISTINCT FROM BTRIM(p_template_key)
+      OR interaction_row.recipient_email_snapshot IS DISTINCT FROM BTRIM(p_recipient_email)
+      OR interaction_row.title IS DISTINCT FROM BTRIM(p_title)
+      OR interaction_row.body_markdown IS DISTINCT FROM p_body_markdown
+      OR interaction_row.provider_request_fingerprint IS DISTINCT FROM p_provider_request_fingerprint THEN
+      RAISE EXCEPTION 'ma_interaction_email_replay_requires_exact_request';
+    END IF;
+
+    IF interaction_row.delivery_status = 'pending' THEN
+      IF interaction_row.created_at <= NOW() - INTERVAL '23 hours' THEN
+        RAISE EXCEPTION 'ma_interaction_email_replay_window_expired';
+      END IF;
+
+      INSERT INTO public.ma_interaction_delivery_events (
+        interaction_id, event_kind, actor, provider_idempotency_key
+      ) VALUES (
+        interaction_row.id, 'pending', normalized_actor, interaction_row.provider_idempotency_key
+      );
+    END IF;
+
+    RETURN QUERY
+    SELECT
+      interaction_row.id,
+      interaction_row.provider_idempotency_key,
+      interaction_row.delivery_status,
+      interaction_row.provider_message_id,
+      interaction_row.delivery_error;
+    RETURN;
+  END IF;
+
   IF EXISTS (
     SELECT 1 FROM public.ma_interactions interaction
     WHERE interaction.opportunity_id = opportunity_row.id
       AND interaction.delivery_status = 'pending'
   ) THEN
-    RAISE EXCEPTION 'ma_interaction_email_pending_delivery_requires_reconciliation';
+    RAISE EXCEPTION 'ma_interaction_email_pending_delivery_requires_exact_replay';
   END IF;
 
   new_interaction_id := gen_random_uuid();
@@ -471,11 +559,13 @@ BEGIN
     id, office_id, affiliation_id, opportunity_id, channel, direction, occurred_at,
     owner_staff_user_id, owner_verification_state, owner_verified_by,
     owner_verified_at, title, template_key, recipient_email_snapshot,
-    body_markdown, delivery_status, provider_idempotency_key, created_by
+    body_markdown, delivery_status, client_operation_key,
+    provider_idempotency_key, provider_request_fingerprint, created_by
   ) VALUES (
     new_interaction_id, p_office_id, p_affiliation_id, opportunity_row.id, 'email', 'outbound', NOW(),
     normalized_actor, 'verified', normalized_actor, NOW(), BTRIM(p_title), BTRIM(p_template_key),
-    BTRIM(p_recipient_email), p_body_markdown, 'pending', new_interaction_id::TEXT, normalized_actor
+    BTRIM(p_recipient_email), p_body_markdown, 'pending', p_client_operation_key,
+    new_interaction_id::TEXT, p_provider_request_fingerprint, normalized_actor
   ) RETURNING * INTO interaction_row;
 
   INSERT INTO public.ma_interaction_delivery_events (
@@ -484,7 +574,13 @@ BEGIN
     interaction_row.id, 'pending', normalized_actor, interaction_row.provider_idempotency_key
   );
 
-  RETURN QUERY SELECT interaction_row.id, interaction_row.id::TEXT;
+  RETURN QUERY
+  SELECT
+    interaction_row.id,
+    interaction_row.provider_idempotency_key,
+    interaction_row.delivery_status,
+    interaction_row.provider_message_id,
+    interaction_row.delivery_error;
 END;
 $$;
 
@@ -813,10 +909,10 @@ REVOKE ALL ON FUNCTION public.prevent_ma_interaction_owner_verification_event_mu
 REVOKE ALL ON FUNCTION public.prevent_ma_interaction_delivery_event_mutation() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.guard_ma_interaction_opportunity_source_office() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.verify_ma_interaction_owner(UUID, TEXT) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.begin_ma_interaction_email_send(UUID, UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.begin_ma_interaction_email_send(UUID, UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, UUID) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.finalize_ma_interaction_email_send(UUID, TEXT, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.verify_ma_interaction_owner(UUID, TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.begin_ma_interaction_email_send(UUID, UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.begin_ma_interaction_email_send(UUID, UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.finalize_ma_interaction_email_send(UUID, TEXT, TEXT, TEXT, TEXT) TO service_role;
 
 COMMENT ON TABLE public.ma_interactions IS

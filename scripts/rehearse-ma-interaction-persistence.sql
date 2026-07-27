@@ -283,6 +283,8 @@ FROM public.begin_ma_interaction_email_send(
   'contact@example.test',
   'Synthetic failed send',
   'Synthetic failed body',
+  '00000000-0000-4000-8000-000000000101'::UUID,
+  REPEAT('a', 64),
   (SELECT reservation_token
     FROM public.ma_source_email_send_reservations
     WHERE opportunity_id = (
@@ -292,7 +294,66 @@ FROM public.begin_ma_interaction_email_send(
 );
 
 DO $$
+DECLARE
+  original_interaction_id UUID;
+  replayed_interaction_id UUID;
 BEGIN
+  SELECT id INTO original_interaction_id
+  FROM public.ma_interactions
+  WHERE title = 'Synthetic failed send';
+
+  SELECT interaction_id INTO replayed_interaction_id
+  FROM public.begin_ma_interaction_email_send(
+    (SELECT opportunity_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    (SELECT office_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    (SELECT affiliation_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    'bertrand-staff-user',
+    'ma_process_follow_up',
+    'contact@example.test',
+    'Synthetic failed send',
+    'Synthetic failed body',
+    '00000000-0000-4000-8000-000000000101'::UUID,
+    REPEAT('a', 64),
+    (SELECT reservation_token
+      FROM public.ma_source_email_send_reservations
+      WHERE opportunity_id = (
+        SELECT opportunity_id FROM public.ma_interactions
+        WHERE id = '00000000-0000-0000-0000-000000000002'::UUID
+      ))
+  );
+  IF replayed_interaction_id IS DISTINCT FROM original_interaction_id THEN
+    RAISE EXCEPTION 'w062_same_operation_key_replay_created_duplicate';
+  END IF;
+
+  SELECT interaction_id INTO replayed_interaction_id
+  FROM public.begin_ma_interaction_email_send(
+    (SELECT opportunity_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    (SELECT office_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    (SELECT affiliation_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    'bertrand-staff-user',
+    'ma_process_follow_up',
+    'contact@example.test',
+    'Synthetic failed send',
+    'Synthetic failed body',
+    '00000000-0000-4000-8000-000000000199'::UUID,
+    REPEAT('a', 64),
+    (SELECT reservation_token
+      FROM public.ma_source_email_send_reservations
+      WHERE opportunity_id = (
+        SELECT opportunity_id FROM public.ma_interactions
+        WHERE id = '00000000-0000-0000-0000-000000000002'::UUID
+      ))
+  );
+  IF replayed_interaction_id IS DISTINCT FROM original_interaction_id THEN
+    RAISE EXCEPTION 'w062_same_request_fingerprint_replay_created_duplicate';
+  END IF;
+
   BEGIN
     PERFORM public.begin_ma_interaction_email_send(
       (SELECT opportunity_id FROM public.ma_interactions
@@ -306,6 +367,8 @@ BEGIN
       'contact@example.test',
       'Synthetic duplicate send',
       'Synthetic duplicate body',
+      '00000000-0000-4000-8000-000000000102'::UUID,
+      REPEAT('c', 64),
       (SELECT reservation_token
         FROM public.ma_source_email_send_reservations
         WHERE opportunity_id = (
@@ -315,7 +378,7 @@ BEGIN
     );
     RAISE EXCEPTION 'w062_pending_delivery_duplicate_guard_missing';
   EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM NOT LIKE '%ma_interaction_email_pending_delivery_requires_reconciliation%' THEN RAISE; END IF;
+    IF SQLERRM NOT LIKE '%ma_interaction_email_pending_delivery_requires_exact_replay%' THEN RAISE; END IF;
   END;
 END;
 $$;
@@ -341,6 +404,8 @@ FROM public.begin_ma_interaction_email_send(
   'contact@example.test',
   'Synthetic sent send',
   'Synthetic sent body',
+  '00000000-0000-4000-8000-000000000103'::UUID,
+  REPEAT('b', 64),
   (SELECT reservation_token
     FROM public.ma_source_email_send_reservations
     WHERE opportunity_id = (
@@ -356,6 +421,47 @@ SELECT public.finalize_ma_interaction_email_send(
   'provider-message-synthetic',
   NULL
 );
+
+DO $$
+DECLARE
+  original_interaction_id UUID;
+  replayed_interaction_id UUID;
+  replayed_delivery_status TEXT;
+BEGIN
+  SELECT id INTO original_interaction_id
+  FROM public.ma_interactions
+  WHERE title = 'Synthetic sent send';
+
+  SELECT interaction_id, delivery_status
+  INTO replayed_interaction_id, replayed_delivery_status
+  FROM public.begin_ma_interaction_email_send(
+    (SELECT opportunity_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000003'::UUID),
+    (SELECT office_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000003'::UUID),
+    (SELECT affiliation_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000003'::UUID),
+    'bertrand-staff-user',
+    'ma_process_follow_up',
+    'contact@example.test',
+    'Synthetic sent send',
+    'Synthetic sent body',
+    '00000000-0000-4000-8000-000000000103'::UUID,
+    REPEAT('b', 64),
+    (SELECT reservation_token
+      FROM public.ma_source_email_send_reservations
+      WHERE opportunity_id = (
+        SELECT opportunity_id FROM public.ma_interactions
+        WHERE id = '00000000-0000-0000-0000-000000000003'::UUID
+      ))
+  );
+
+  IF replayed_interaction_id IS DISTINCT FROM original_interaction_id
+    OR replayed_delivery_status <> 'sent' THEN
+    RAISE EXCEPTION 'w062_finalized_response_loss_replay_created_duplicate';
+  END IF;
+END;
+$$;
 RESET ROLE;
 
 DO $$
@@ -365,7 +471,9 @@ BEGIN
     WHERE title = 'Synthetic failed send'
       AND delivery_status = 'failed'
       AND delivery_error = 'Synthetic provider failure'
+      AND client_operation_key = '00000000-0000-4000-8000-000000000101'::UUID
       AND provider_idempotency_key = id::TEXT
+      AND provider_request_fingerprint = REPEAT('a', 64)
       AND delivery_finalized_at IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'w062_canonical_failed_delivery_evidence_missing';
@@ -374,14 +482,16 @@ BEGIN
     SELECT 1 FROM public.ma_interactions
     WHERE title = 'Synthetic sent send'
       AND delivery_status = 'sent'
+      AND client_operation_key = '00000000-0000-4000-8000-000000000103'::UUID
       AND provider_message_id = 'provider-message-synthetic'
       AND provider_idempotency_key = id::TEXT
+      AND provider_request_fingerprint = REPEAT('b', 64)
       AND sent_at IS NOT NULL
       AND delivery_finalized_at IS NOT NULL
   ) OR (
     SELECT COUNT(*) FROM public.ma_interaction_delivery_events
     WHERE event_kind = 'pending'
-  ) <> 2 OR (
+  ) <> 4 OR (
     SELECT COUNT(*) FROM public.ma_interaction_delivery_events
     WHERE event_kind IN ('sent', 'failed')
   ) <> 2 THEN

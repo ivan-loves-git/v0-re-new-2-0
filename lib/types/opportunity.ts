@@ -353,6 +353,8 @@ export interface MaInteraction {
   delivery_status?: "pending" | "sent" | "failed" | null | string
   delivery_error?: string | null
   provider_idempotency_key?: string | null
+  provider_request_fingerprint?: string | null
+  client_operation_key?: string | null
   provider_message_id?: string | null
   delivery_finalized_at?: string | null
   sent_at?: string | null
