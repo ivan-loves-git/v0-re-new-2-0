@@ -13,7 +13,7 @@ describe("canonical M&A data model documentation", () => {
 
   it("keeps one field-level contract with the required governance metadata", () => {
     expect(contract).toContain("# WAVE M&A Data Model and Dictionary v1")
-    expect(contract).toContain("Status | Approved target contract")
+    expect(contract).toContain("Status | Approved and live contract")
     expect(contract).toContain("Last reviewed against live Supabase")
     expect(contract).toContain(
       "Any change to the M&A schema, business validation, visibility rule or import mapping must update this document in the same commit before release.",
@@ -45,7 +45,7 @@ describe("canonical M&A data model documentation", () => {
       "Every non-archived firm has one or more active offices. A firm may have at most one synthetic default office. Once a real active office is known, that default is preserved only for historical attribution and cannot be selected for new or changed opportunity source contexts.",
       "Opportunities and interactions always anchor to an office.",
       "A valid opportunity has at least one active contact and exactly one primary contact.",
-      "Source relationships, interactions and internal notes are staff only.",
+      "Source relationships, interactions, audit metadata and internal notes are staff only, except for the tightly gated source-identity disclosure",
       "Excel identifiers never remain in live firm, office, contact or opportunity records.",
       "Closed and archived opportunities preserve the source and contact history",
       "The atomic intake service cannot reopen a `closed` or `archived` opportunity.",
@@ -54,6 +54,28 @@ describe("canonical M&A data model documentation", () => {
       "A cell containing several email addresses is never imported as one address",
       "WAVE data remains test data until then",
       "scripts/verify-ma-data-model-schema.sql",
+    ]) {
+      expect(contract).toContain(rule)
+    }
+  })
+
+  it("keeps the W-001 lifecycle authority, provisional-source and disclosure rules explicit", () => {
+    for (const rule of [
+      "## Lifecycle action and evidence authority matrix",
+      "Assign provisional Acme source context",
+      "Resolve or correct provisional source",
+      "Source identity disclosure approval",
+      "Repreneur-signed pursuit copy",
+      "both signed NDAs remain valid",
+      "Gate 2 passed",
+      "Source identity visible",
+      "access is revoked on NDA expiry, staff revocation or pursuit closure",
+      "Acme is never renamed into an actual intermediary",
+      "an Acme-linked opportunity cannot close",
+      "an Acme-linked opportunity cannot archive",
+      "Acme exception remains a blocker",
+      "W-001 requires no data migration",
+      "W-001 has no standalone roadmap entry",
     ]) {
       expect(contract).toContain(rule)
     }
