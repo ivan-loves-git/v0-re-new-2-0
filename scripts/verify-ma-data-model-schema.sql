@@ -7,6 +7,8 @@ WITH target_tables(table_name) AS (
     ('ma_offices'),
     ('ma_contacts'),
     ('ma_contact_office_affiliations'),
+    ('ma_provisional_source_contexts'),
+    ('ma_provisional_source_review_events'),
     ('ma_source_networks'),
     ('ma_sources'),
     ('ma_source_contacts'),
@@ -173,6 +175,9 @@ schema_evidence AS (
       'save_opportunity_office_context',
       'create_opportunity_with_office_context',
       'assert_opportunity_office_context',
+      'assign_acme_provisional_source',
+      'resolve_acme_provisional_source',
+      'ma_opportunity_source_review_required',
       'activate_ma_cutover_run',
       'move_ma_source_contact'
     )
