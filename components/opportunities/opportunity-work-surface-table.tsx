@@ -313,6 +313,11 @@ function OpportunityRow({
             <span className="truncate text-xs text-muted-foreground">
               {sourceContextLabel(opportunity)}
             </span>
+            {opportunity.source_review_required ? (
+              <Badge variant="outline" className="w-fit border-amber-500/60 bg-amber-50 text-amber-900">
+                Source review required
+              </Badge>
+            ) : null}
           </div>
         </TableCell>
         <TableCell className="w-[20%]">
