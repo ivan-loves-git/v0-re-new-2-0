@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Archive, Eye, MoreHorizontal, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,6 +92,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<OpportunityStatus | "all">("all")
+  const [sourceReview, setSourceReview] = useState<"all" | "required" | "clear">("all")
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim()
@@ -98,6 +100,8 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
     return opportunities.filter((opportunity) => {
       const matchesStatus = status === "all" || opportunity.status === status
       if (!matchesStatus) return false
+      if (sourceReview === "required" && !opportunity.source_review_required) return false
+      if (sourceReview === "clear" && opportunity.source_review_required) return false
       if (!query) return true
 
       return [
@@ -113,7 +117,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query))
     })
-  }, [opportunities, search, status])
+  }, [opportunities, search, sourceReview, status])
 
   async function handleArchive(id: string) {
     await archiveOpportunity(id)
@@ -150,6 +154,18 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                     {option.label}
                   </SelectItem>
                 ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select value={sourceReview} onValueChange={(value) => setSourceReview(value as "all" | "required" | "clear")}>
+            <SelectTrigger className="w-full sm:w-[190px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">All source reviews</SelectItem>
+                <SelectItem value="required">Source review required</SelectItem>
+                <SelectItem value="clear">Source review clear</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -201,6 +217,11 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                     <p className="text-xs text-muted-foreground">
                       {sourceContextLabel(opportunity)}
                     </p>
+                    {opportunity.source_review_required ? (
+                      <Badge variant="outline" className="mt-1 border-amber-500/60 bg-amber-50 text-amber-900">
+                        Source review required
+                      </Badge>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[220px]">
@@ -254,12 +275,19 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                             View
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleArchive(opportunity.id)}
-                        >
-                          <Archive className="size-4" />
-                          Archive
-                        </DropdownMenuItem>
+                        {opportunity.source_review_required ? (
+                          <DropdownMenuItem disabled>
+                            <Archive className="size-4" />
+                            Source review required before archive
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() => handleArchive(opportunity.id)}
+                          >
+                            <Archive className="size-4" />
+                            Archive
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

@@ -418,6 +418,8 @@ export interface OpportunityWithSource extends Opportunity {
   source_contacts?: OpportunitySourceContact[]
   source_office?: OpportunitySourceOffice | null
   office_contacts?: OpportunityMaContact[]
+  /** Staff-only computed W-064 review state; never project this to repreneurs. */
+  source_review_required?: boolean
 }
 
 export interface OpportunitySourceContact {

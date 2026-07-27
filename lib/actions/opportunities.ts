@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
+import { withStaffSourceReviewState } from "@/lib/data/provisional-source-review"
 import {
   createOpportunityIntake,
   updateOpportunityIntake,
@@ -227,7 +228,7 @@ export async function listOpportunities(): Promise<OpportunityWithSource[]> {
     .order("created_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(normalizeOpportunity)
+  return withStaffSourceReviewState(supabase, (data ?? []).map(normalizeOpportunity))
 }
 
 export async function listOpportunityWorkSurfaceRecords(): Promise<
@@ -244,7 +245,10 @@ export async function listOpportunityWorkSurfaceRecords(): Promise<
 
   if (error) throw new Error(error.message)
 
-  const opportunities = (data ?? []).map(normalizeOpportunity)
+  const opportunities = await withStaffSourceReviewState(
+    supabase,
+    (data ?? []).map(normalizeOpportunity),
+  )
   const opportunityIds = opportunities.map((opportunity) => opportunity.id)
 
   if (opportunityIds.length === 0) {
@@ -302,7 +306,7 @@ export async function getOpportunity(
     throw new Error(error.message)
   }
 
-  return normalizeOpportunity(data)
+  return (await withStaffSourceReviewState(supabase, [normalizeOpportunity(data)]))[0]
 }
 
 export async function getOpportunityClosureHistory(
@@ -363,6 +367,12 @@ export async function closeOpportunity(
     if (error.message.includes("opportunity_not_open_for_closure")) {
       return { success: false, message: "This opportunity is already closed." }
     }
+    if (error.message.includes("ma_provisional_source_review_blocks_opportunity_lifecycle_exit")) {
+      return {
+        success: false,
+        message: "Close is unavailable until the provisional source is corrected.",
+      }
+    }
     throw new Error(error.message)
   }
 
@@ -400,7 +410,12 @@ export async function archiveOpportunity(id: string) {
     .update({ status: "archived", archived_at: new Date().toISOString() })
     .eq("id", id)
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    if (error.message.includes("ma_provisional_source_review_blocks_opportunity_lifecycle_exit")) {
+      throw new Error("Archive is unavailable until the provisional source is corrected.")
+    }
+    throw new Error(error.message)
+  }
 
   revalidatePath("/opportunities")
   revalidatePath(`/opportunities/${id}`)

@@ -25,6 +25,7 @@ import { OpportunityDocumentsPanel } from "@/components/opportunities/opportunit
 import { OpportunityForm } from "@/components/opportunities/opportunity-form"
 import { OpportunityMatchesPanel } from "@/components/opportunities/opportunity-matches-panel"
 import { OpportunityPursuitPanel } from "@/components/opportunities/opportunity-pursuit-panel"
+import { OpportunitySourceReviewPanel } from "@/components/opportunities/opportunity-source-review-panel"
 import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
@@ -65,6 +66,7 @@ interface OpportunityDetailProps {
   pursuitEvents: OpportunityPursuitEvent[]
   maWorkflow: MaOpportunityWorkflow
   updateAction: (formData: FormData) => Promise<OpportunityActionResult | void>
+  resolveSourceAction: (formData: FormData) => Promise<OpportunityActionResult>
   closureHistory: OpportunityClosureHistoryEntry[]
   closeAction: (
     reason: OpportunityClosureReason,
@@ -145,6 +147,7 @@ export function OpportunityDetail({
   pursuitEvents,
   maWorkflow,
   updateAction,
+  resolveSourceAction,
   closureHistory,
   closeAction,
   officeOptions,
@@ -238,6 +241,14 @@ export function OpportunityDetail({
         </Button>
       </header>
 
+      {opportunity.source_review_required ? (
+        <OpportunitySourceReviewPanel
+          opportunity={opportunity}
+          officeOptions={officeOptions}
+          action={resolveSourceAction}
+        />
+      ) : null}
+
       <OpportunityDetailTabs
         defaultValue={initialTab}
         validTabs={OPPORTUNITY_DETAIL_TAB_VALUES}
@@ -288,6 +299,7 @@ export function OpportunityDetail({
 
           <OpportunityClosureControls
             opportunityStatus={opportunity.status}
+            sourceReviewRequired={opportunity.source_review_required === true}
             closureHistory={closureHistory}
             closeAction={closeAction}
           />

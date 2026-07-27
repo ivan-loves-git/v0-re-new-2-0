@@ -18,6 +18,7 @@ import {
 } from "@/lib/actions/opportunities"
 import {
   listMaOfficeIntakeOptions,
+  resolveAcmeProvisionalSource,
   updateOpportunityIntake,
 } from "@/lib/actions/opportunity-intake"
 import type { OpportunityClosureReason } from "@/lib/types/opportunity"
@@ -53,7 +54,6 @@ async function OpportunityDetailContent({
     pursuitEvents,
     maWorkflow,
     closureHistory,
-    officeOptions,
   ] = await Promise.all([
     getOpportunity(id),
     listOpportunityDocuments(id),
@@ -62,12 +62,17 @@ async function OpportunityDetailContent({
     listOpportunityPursuitEvents(id),
     getMaOpportunityWorkflow(id),
     getOpportunityClosureHistory(id),
-    listMaOfficeIntakeOptions(),
   ])
 
   if (!opportunity) {
     notFound()
   }
+
+  const officeOptions = await listMaOfficeIntakeOptions({
+    includeCurrentProvisionalOfficeId: opportunity.source_review_required
+      ? opportunity.source_office_id
+      : null,
+  })
 
   async function updateAction(formData: FormData) {
     "use server"
@@ -77,6 +82,11 @@ async function OpportunityDetailContent({
   async function closeAction(reason: OpportunityClosureReason) {
     "use server"
     return closeOpportunity(id, reason)
+  }
+
+  async function resolveSourceAction(formData: FormData) {
+    "use server"
+    return resolveAcmeProvisionalSource(id, formData)
   }
 
   return (
@@ -96,6 +106,7 @@ async function OpportunityDetailContent({
         pursuitEvents={pursuitEvents}
         maWorkflow={maWorkflow}
         updateAction={updateAction}
+        resolveSourceAction={resolveSourceAction}
         closureHistory={closureHistory}
         closeAction={closeAction}
         officeOptions={officeOptions}

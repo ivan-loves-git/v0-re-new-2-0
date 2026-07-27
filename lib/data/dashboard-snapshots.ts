@@ -2,6 +2,7 @@ import { cacheLife, cacheTag, revalidateTag } from "next/cache"
 import { connection } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { withStaffSourceReviewState } from "@/lib/data/provisional-source-review"
 import type { Repreneur } from "@/lib/types/repreneur"
 import type {
   MaSource,
@@ -582,7 +583,10 @@ async function getCachedOpportunityWorkSurfaceSnapshot(): Promise<
 
   if (error) throw new Error(error.message)
 
-  const opportunities = (data ?? []).map(normalizeOpportunity)
+  const opportunities = await withStaffSourceReviewState(
+    supabase,
+    (data ?? []).map(normalizeOpportunity),
+  )
   const opportunityIds = opportunities.map((opportunity) => opportunity.id)
 
   if (opportunityIds.length === 0) {

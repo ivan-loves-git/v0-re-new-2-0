@@ -32,6 +32,7 @@ import {
 
 interface OpportunityClosureControlsProps {
   opportunityStatus: OpportunityStatus
+  sourceReviewRequired: boolean
   closureHistory: OpportunityClosureHistoryEntry[]
   closeAction: (
     reason: OpportunityClosureReason,
@@ -52,6 +53,7 @@ function formatClosureTimestamp(value: string) {
 
 export function OpportunityClosureControls({
   opportunityStatus,
+  sourceReviewRequired,
   closureHistory,
   closeAction,
 }: OpportunityClosureControlsProps) {
@@ -97,7 +99,9 @@ export function OpportunityClosureControls({
         <CardDescription>
           {isHistorical
             ? "Reopening is unavailable until a dedicated canonical office and primary-contact workflow is released."
-            : "A required canonical reason creates an immutable internal closure record."}
+            : sourceReviewRequired
+              ? "Source review is required before this opportunity can be closed."
+              : "A required canonical reason creates an immutable internal closure record."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 py-5">
@@ -105,6 +109,10 @@ export function OpportunityClosureControls({
           <p className="text-sm text-muted-foreground">
             The recorded source and closure context is retained as history and
             cannot be changed from this screen.
+          </p>
+        ) : sourceReviewRequired ? (
+          <p className="text-sm text-amber-700">
+            Close is unavailable until the provisional source is corrected in the source-review banner above.
           </p>
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

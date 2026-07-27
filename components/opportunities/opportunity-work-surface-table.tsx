@@ -52,6 +52,7 @@ import {
 type WorkSurfaceMode = "find" | "groups"
 type FreshnessFilter = "all" | "fresh" | "stale" | "no_date"
 type ActivePursuitFilter = "all" | "active" | "none"
+type SourceReviewFilter = "all" | "required" | "clear"
 type OpportunityGroupKey =
   | "draft"
   | "inventory"
@@ -361,9 +362,16 @@ function OpportunityRow({
         </div>
       </TableCell>
       <TableCell>
-        <span className="block max-w-[190px] truncate text-sm">
-          {sourceContextLabel(opportunity)}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className="block max-w-[190px] truncate text-sm">
+            {sourceContextLabel(opportunity)}
+          </span>
+          {opportunity.source_review_required ? (
+            <Badge variant="outline" className="w-fit border-amber-500/60 bg-amber-50 text-amber-900">
+              Source review required
+            </Badge>
+          ) : null}
+        </div>
       </TableCell>
       <TableCell>
         <OpportunityJourneyBadge journey={item.journey} />
@@ -505,6 +513,14 @@ export function OpportunityWorkSurfaceTable({
           { value: "none", label: "No active pursuit" },
         ],
       },
+      {
+        key: "sourceReview",
+        label: "Source review",
+        options: [
+          { value: "required", label: "Required" },
+          { value: "clear", label: "Clear" },
+        ],
+      },
     ],
     [locations, sourceFirms],
   )
@@ -529,6 +545,7 @@ export function OpportunityWorkSurfaceTable({
   const freshnessFilter = (filters.values.freshness || "all") as FreshnessFilter
   const activePursuitFilter = (filters.values.pursuit ||
     "all") as ActivePursuitFilter
+  const sourceReviewFilter = (filters.values.sourceReview || "all") as SourceReviewFilter
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim()
@@ -562,6 +579,8 @@ export function OpportunityWorkSurfaceTable({
       }
       if (activePursuitFilter === "active" && !item.activeMatch) return false
       if (activePursuitFilter === "none" && item.activeMatch) return false
+      if (sourceReviewFilter === "required" && !opportunity.source_review_required) return false
+      if (sourceReviewFilter === "clear" && opportunity.source_review_required) return false
       if (!freshnessMatches(item, freshnessFilter)) return false
       if (!query) return true
 
@@ -590,6 +609,7 @@ export function OpportunityWorkSurfaceTable({
     search,
     sectorFilter,
     sourceFirmFilter,
+    sourceReviewFilter,
     statusFilter,
     visibilityFilter,
   ])

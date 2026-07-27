@@ -168,6 +168,31 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
     message:
       "Historical opportunity records cannot be changed through Opportunity Intake.",
   },
+  ma_provisional_source_resolution_requires_real_office: {
+    field: "source_office_id",
+    message: "Choose the real operating office to replace the provisional source.",
+  },
+  ma_provisional_source_resolution_supports_draft_active_or_paused_only: {
+    field: "status",
+    message:
+      "Closed and archived opportunities retain their source history and cannot be corrected here.",
+  },
+  ma_provisional_source_change_blocked_during_email_send: {
+    field: "source_office_id",
+    message: "A source email is being sent. Wait for it to finish, then try again.",
+  },
+  ma_provisional_source_resolution_requires_current_acme_source: {
+    field: "source_office_id",
+    message: "Source review state changed. Refresh this opportunity and try again.",
+  },
+  ma_provisional_source_resolution_requires_assignment_evidence: {
+    field: "source_office_id",
+    message: "Source review state changed. Refresh this opportunity and try again.",
+  },
+  opportunity_not_found: {
+    field: "source_office_id",
+    message: "This opportunity is no longer available. Refresh the page and try again.",
+  },
 }
 
 function actionFailure(
@@ -333,24 +358,42 @@ function revalidateOpportunityIntake(id?: string) {
   revalidateOpportunityDashboardTags()
 }
 
-export async function listMaOfficeIntakeOptions(): Promise<
-  MaOfficeIntakeOffice[]
-> {
+export async function listMaOfficeIntakeOptions(options?: {
+  includeCurrentProvisionalOfficeId?: string | null
+}): Promise<MaOfficeIntakeOffice[]> {
   await requireStaffAccess()
   const supabase = createAdminClient()
-  const { data, error } = await supabase
-    .from("staff_ma_office_intake_projection")
-    .select(
-      "office_id, firm_id, firm_name, office_name, office_label, affiliation_id, contact_id, contact_name, contact_email, job_title",
-    )
-    .order("firm_name")
-    .order("office_name")
-    .order("contact_name", { nullsFirst: false })
+  const [projectionResult, provisionalContextResult] = await Promise.all([
+    supabase
+      .from("staff_ma_office_intake_projection")
+      .select(
+        "office_id, firm_id, firm_name, office_name, office_label, affiliation_id, contact_id, contact_name, contact_email, job_title",
+      )
+      .order("firm_name")
+      .order("office_name")
+      .order("contact_name", { nullsFirst: false }),
+    supabase
+      .from("ma_provisional_source_contexts")
+      .select("office_id")
+      .eq("context_key", "acme_co_paris")
+      .maybeSingle(),
+  ])
 
-  if (error) throw new Error(error.message)
+  if (projectionResult.error) throw new Error(projectionResult.error.message)
+  if (provisionalContextResult.error) {
+    throw new Error(provisionalContextResult.error.message)
+  }
+  const provisionalOfficeId = provisionalContextResult.data?.office_id ?? null
+  const mayIncludeCurrentProvisionalOffice =
+    Boolean(provisionalOfficeId) &&
+    options?.includeCurrentProvisionalOfficeId === provisionalOfficeId
 
   const offices = new Map<string, MaOfficeIntakeOffice>()
-  for (const row of (data ?? []) as MaOfficeIntakeProjectionRow[]) {
+  for (const row of (projectionResult.data ?? []) as MaOfficeIntakeProjectionRow[]) {
+    // Acme may only be assigned through the audited W-064 assignment action.
+    // Hiding it here prevents ordinary intake from offering a path that the
+    // deferred database invariant will reject anyway.
+    if (row.office_id === provisionalOfficeId && !mayIncludeCurrentProvisionalOffice) continue
     const office = offices.get(row.office_id) ?? {
       office_id: row.office_id,
       firm_id: row.firm_id,
@@ -456,6 +499,57 @@ export async function updateOpportunityIntake(
 
   revalidateOpportunityIntake(opportunityId)
   return { success: true, message: "Opportunity saved." }
+}
+
+/** Staff-only W-065 correction through the immutable W-064 resolver. */
+export async function resolveAcmeProvisionalSource(
+  opportunityId: string,
+  formData: FormData,
+): Promise<OpportunityActionResult> {
+  const { user } = await requireStaffAccess()
+  if (!UUID_PATTERN.test(opportunityId)) {
+    return actionFailure("This opportunity is no longer available for source review.")
+  }
+
+  const sourceOffice = readUuid(formData, "source_office_id")
+  const affiliations = readUuidList(formData, "affiliation_ids")
+  const primaryAffiliation = readUuid(formData, "primary_affiliation_id")
+  const reason = readOpportunityFormString(formData, "source_review_reason")
+  const fieldErrors: Record<string, string> = {}
+  if (!sourceOffice.value || sourceOffice.error) {
+    fieldErrors.source_office_id = sourceOffice.error ?? "Choose the real operating office."
+  }
+  if (affiliations.error || affiliations.value.length === 0) {
+    fieldErrors.affiliation_ids = affiliations.error ?? "Select at least one contact at the real office."
+  }
+  if (!primaryAffiliation.value || primaryAffiliation.error) {
+    fieldErrors.primary_affiliation_id = primaryAffiliation.error ?? "Choose one primary contact."
+  }
+  if (!reason) {
+    fieldErrors.source_review_reason = "Record why this is the verified source."
+  } else if (reason.length > 4096) {
+    fieldErrors.source_review_reason = "Keep the correction reason under 4,096 characters."
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return actionFailure("Complete the source correction details.", fieldErrors)
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.rpc("resolve_acme_provisional_source", {
+    p_opportunity_id: opportunityId,
+    p_replacement_office_id: sourceOffice.value,
+    p_affiliation_ids: affiliations.value,
+    p_primary_affiliation_id: primaryAffiliation.value,
+    p_actor: user.id,
+    p_reason: reason,
+  })
+  if (error) return normalizeDbError(error)
+
+  revalidateOpportunityIntake(opportunityId)
+  return {
+    success: true,
+    message: "Source corrected. The provisional assignment and this correction are retained in staff-only evidence.",
+  }
 }
 
 export async function createMaFirmOfficeContext(

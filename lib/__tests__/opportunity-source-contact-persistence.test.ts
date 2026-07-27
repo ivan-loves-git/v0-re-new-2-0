@@ -33,6 +33,7 @@ import {
   createMaOfficeContact,
   createOpportunityIntake,
   listMaCanonicalContactOptions,
+  resolveAcmeProvisionalSource,
   updateOpportunityIntake,
 } from "@/lib/actions/opportunity-intake"
 
@@ -61,6 +62,15 @@ function firmContextForm() {
   formData.set("contact_first_name", "Camille")
   formData.set("contact_last_name", "Durand")
   formData.set("contact_email", "camille@example.com")
+  return formData
+}
+
+function sourceCorrectionForm() {
+  const formData = new FormData()
+  formData.set("source_office_id", OFFICE_ID)
+  formData.append("affiliation_ids", AFFILIATION_ID)
+  formData.set("primary_affiliation_id", AFFILIATION_ID)
+  formData.set("source_review_reason", "Verified against the intermediary's confirmed office details.")
   return formData
 }
 
@@ -158,6 +168,55 @@ describe("canonical opportunity contact persistence", () => {
           "Choose or update a primary contact with a usable email before activating or pausing.",
       },
     })
+  })
+
+  it("resolves a provisional source only through the immutable W-064 correction primitive", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(
+      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
+    ).resolves.toMatchObject({ success: true })
+
+    expect(rpc).toHaveBeenCalledWith("resolve_acme_provisional_source", {
+      p_opportunity_id: "00000000-0000-4000-8000-000000000099",
+      p_replacement_office_id: OFFICE_ID,
+      p_affiliation_ids: [AFFILIATION_ID],
+      p_primary_affiliation_id: AFFILIATION_ID,
+      p_actor: "staff-001",
+      p_reason: "Verified against the intermediary's confirmed office details.",
+    })
+  })
+
+  it("rejects incomplete, same-provisional, stale, and terminal source corrections safely", async () => {
+    const rpc = vi.fn()
+    mocks.createAdminClient.mockReturnValue({ rpc })
+    await expect(
+      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", new FormData()),
+    ).resolves.toMatchObject({
+      success: false,
+      fieldErrors: {
+        source_office_id: expect.any(String),
+        affiliation_ids: expect.any(String),
+        primary_affiliation_id: expect.any(String),
+        source_review_reason: expect.any(String),
+      },
+    })
+
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "ma_provisional_source_resolution_requires_real_office" } })
+    await expect(
+      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
+    ).resolves.toMatchObject({ success: false, fieldErrors: { source_office_id: expect.any(String) } })
+
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "ma_provisional_source_resolution_requires_current_acme_source" } })
+    await expect(
+      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
+    ).resolves.toMatchObject({ success: false, message: "Source review state changed. Refresh this opportunity and try again." })
+
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "ma_provisional_source_resolution_supports_draft_active_or_paused_only" } })
+    await expect(
+      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
+    ).resolves.toMatchObject({ success: false, fieldErrors: { status: expect.any(String) } })
   })
 
   it("adds a second contact through the canonical office-affiliation RPC", async () => {
