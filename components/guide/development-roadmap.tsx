@@ -26,6 +26,34 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Jul 27, 2026",
+    version: "0.9.32",
+    title: "M&A relationship history is now one usable staff workspace",
+    isCompleted: true,
+    events: [
+      {
+        title: "One timeline follows the relationship, not only the opportunity",
+        type: "product",
+        description: "Staff can review calls, emails, meetings, documents and other activity in one chronological record, including work that starts before an opportunity exists.",
+      },
+      {
+        title: "Existing intermediary emails kept their original evidence",
+        type: "decision",
+        description: "The four existing records retain their source, office, contact, recipient and delivery history, while Bertrand can personally verify the provisional ownership recorded during migration.",
+      },
+      {
+        title: "New activity can be recorded without accidentally sending anything",
+        type: "feature",
+        description: "Manual relationship capture is staff-only, requires consistent office and contact context, and treats an email entry as evidence of a communication that already happened rather than a send command.",
+      },
+      {
+        title: "Source corrections and relationship history cannot contradict each other",
+        type: "fix",
+        description: "Unresolved provisional sources must be corrected before permanent opportunity-linked history is added, and concurrent source changes are serialized so the office record stays consistent.",
+      },
+    ],
+  },
+  {
+    period: "Jul 27, 2026",
     version: "0.9.31",
     title: "Provisional M&A sources now have a controlled staff review path",
     isCompleted: true,

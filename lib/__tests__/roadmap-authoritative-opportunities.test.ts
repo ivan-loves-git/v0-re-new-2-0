@@ -11,6 +11,22 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("groups canonical interaction persistence and the staff Relationships workspace", () => {
+    expect(roadmap).toContain('version: "0.9.32"')
+    expect(roadmap).toContain(
+      "One timeline follows the relationship, not only the opportunity",
+    )
+    expect(roadmap).toContain(
+      "Existing intermediary emails kept their original evidence",
+    )
+    expect(roadmap).toContain(
+      "New activity can be recorded without accidentally sending anything",
+    )
+    expect(roadmap).toContain(
+      "Source corrections and relationship history cannot contradict each other",
+    )
+  })
+
   it("groups the provisional-source foundation and staff review workflow", () => {
     expect(roadmap).toContain('version: "0.9.31"')
     expect(roadmap).toContain(
