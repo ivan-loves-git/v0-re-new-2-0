@@ -50,6 +50,7 @@ import {
   type MaRelationshipTimelineItem,
   type MaRelationshipWorkspace,
 } from "@/lib/actions/ma-relationships"
+import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
 
 const CHANNELS: Array<{ value: MaInteractionChannel; label: string }> = [
   { value: "call", label: "Call" },
@@ -129,20 +130,10 @@ export function MaRelationshipWorkspace({
   )
   const filteredInteractions = useMemo(
     () =>
-      workspace.interactions.filter((interaction) => {
-        if (officeFilter !== "all" && interaction.officeId !== officeFilter)
-          return false
-        if (
-          contactFilter !== "all" &&
-          interaction.affiliationId !== contactFilter
-        )
-          return false
-        if (
-          opportunityFilter !== "all" &&
-          interaction.opportunityId !== opportunityFilter
-        )
-          return false
-        return true
+      filterMaRelationshipTimeline(workspace.interactions, {
+        officeId: officeFilter === "all" ? null : officeFilter,
+        contactId: contactFilter === "all" ? null : contactFilter,
+        opportunityId: opportunityFilter === "all" ? null : opportunityFilter,
       }),
     [contactFilter, officeFilter, opportunityFilter, workspace.interactions],
   )
@@ -265,14 +256,7 @@ export function MaRelationshipWorkspace({
         <CardContent className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="relationship-office-filter">Office</Label>
-            <Select
-              value={officeFilter}
-              onValueChange={(value) => {
-                setOfficeFilter(value)
-                setContactFilter("all")
-                setOpportunityFilter("all")
-              }}
-            >
+            <Select value={officeFilter} onValueChange={setOfficeFilter}>
               <SelectTrigger id="relationship-office-filter">
                 <SelectValue placeholder="All offices" />
               </SelectTrigger>
@@ -294,22 +278,11 @@ export function MaRelationshipWorkspace({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All contacts</SelectItem>
-                {workspace.offices
-                  .filter(
-                    (office) =>
-                      officeFilter === "all" || office.id === officeFilter,
-                  )
-                  .flatMap((office) =>
-                    office.contacts.map((contact) => ({
-                      ...contact,
-                      officeLabel: office.label,
-                    })),
-                  )
-                  .map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.label} · {contact.officeLabel}
-                    </SelectItem>
-                  ))}
+                {workspace.contacts.map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -324,17 +297,11 @@ export function MaRelationshipWorkspace({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All opportunities</SelectItem>
-                {workspace.opportunities
-                  .filter(
-                    (opportunity) =>
-                      officeFilter === "all" ||
-                      opportunity.officeId === officeFilter,
-                  )
-                  .map((opportunity) => (
-                    <SelectItem key={opportunity.id} value={opportunity.id}>
-                      {opportunity.label}
-                    </SelectItem>
-                  ))}
+                {workspace.opportunities.map((opportunity) => (
+                  <SelectItem key={opportunity.id} value={opportunity.id}>
+                    {opportunity.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -521,7 +488,10 @@ export function MaRelationshipWorkspace({
                 <SelectContent>
                   <SelectItem value="none">No specific contact</SelectItem>
                   {selectedOffice?.contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
+                    <SelectItem
+                      key={contact.affiliationId}
+                      value={contact.affiliationId}
+                    >
                       {contact.label}
                       {contact.email ? ` · ${contact.email}` : ""}
                     </SelectItem>

@@ -119,6 +119,11 @@ BEGIN
     AND normalized_recipient_email IS NULL THEN
     RAISE EXCEPTION 'ma_relationship_interaction_outbound_email_requires_recipient';
   END IF;
+  IF normalized_channel = 'email'
+    AND normalized_direction = 'outbound'
+    AND normalized_recipient_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' THEN
+    RAISE EXCEPTION 'ma_relationship_interaction_outbound_email_requires_valid_recipient';
+  END IF;
   IF normalized_channel NOT IN ('call', 'email')
     AND normalized_direction IS NOT NULL THEN
     RAISE EXCEPTION 'ma_relationship_interaction_direction_not_supported';
@@ -155,6 +160,9 @@ BEGIN
     WHERE opportunity.id = p_opportunity_id;
     IF opportunity_office_id IS DISTINCT FROM p_office_id THEN
       RAISE EXCEPTION 'ma_relationship_interaction_opportunity_must_match_office';
+    END IF;
+    IF public.ma_opportunity_source_review_required(p_opportunity_id) THEN
+      RAISE EXCEPTION 'ma_provisional_source_review_blocks_relationship_interaction';
     END IF;
   END IF;
 

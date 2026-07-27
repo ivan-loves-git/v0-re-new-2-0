@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
+import { withStaffSourceReviewState } from "@/lib/data/provisional-source-review"
+import { isValidMaRelationshipEmail } from "@/lib/ma-relationship-validation"
 import { createAdminClient } from "@/lib/supabase/admin"
+import type { OpportunityWithSource } from "@/lib/types/opportunity"
 
 export type MaInteractionChannel =
   | "call"
@@ -12,10 +15,18 @@ export type MaInteractionChannel =
   | "other"
 export type MaInteractionDirection = "inbound" | "outbound"
 
-export interface MaRelationshipContactOption {
+export interface MaRelationshipOfficeContactOption {
+  id: string
+  affiliationId: string
+  label: string
+  email: string | null
+}
+
+export interface MaRelationshipContactFilterOption {
   id: string
   label: string
   email: string | null
+  officeIds: string[]
 }
 
 export interface MaRelationshipOfficeOption {
@@ -23,7 +34,7 @@ export interface MaRelationshipOfficeOption {
   firmName: string
   officeName: string
   label: string
-  contacts: MaRelationshipContactOption[]
+  contacts: MaRelationshipOfficeContactOption[]
 }
 
 export interface MaRelationshipOpportunityOption {
@@ -38,6 +49,7 @@ export interface MaRelationshipTimelineItem {
   officeId: string
   officeLabel: string
   affiliationId: string | null
+  contactId: string | null
   contactLabel: string | null
   contactEmail: string | null
   opportunityId: string | null
@@ -62,6 +74,7 @@ export interface MaRelationshipTimelineItem {
 export interface MaRelationshipWorkspace {
   currentUserId: string
   offices: MaRelationshipOfficeOption[]
+  contacts: MaRelationshipContactFilterOption[]
   opportunities: MaRelationshipOpportunityOption[]
   interactions: MaRelationshipTimelineItem[]
 }
@@ -149,7 +162,12 @@ function optionalString(value: string | null | undefined) {
   return trimmed ? trimmed : null
 }
 
-function opportunityLabel(row: OpportunityRow) {
+function opportunityLabel(
+  row: Pick<OpportunityRow, "reference"> & {
+    public_title?: string | null
+    activity?: string | null
+  },
+) {
   return [row.reference, row.public_title ?? row.activity]
     .filter(Boolean)
     .join(" · ")
@@ -176,6 +194,7 @@ function interactionTimelineItem(
       [firm?.name, office?.name].filter(Boolean).join(" · ") ||
       "Unknown office",
     affiliationId: row.affiliation_id,
+    contactId: contact?.id ?? null,
     contactLabel: contact ? contactLabel(contact) : null,
     contactEmail: contact?.email ?? null,
     opportunityId: row.opportunity_id,
@@ -264,17 +283,32 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
   if (affiliationResult.error) throw new Error(affiliationResult.error.message)
   if (opportunityResult.error) throw new Error(opportunityResult.error.message)
 
-  const contactsByOffice = new Map<string, MaRelationshipContactOption[]>()
+  const contactsByOffice = new Map<
+    string,
+    MaRelationshipOfficeContactOption[]
+  >()
+  const contactsById = new Map<string, MaRelationshipContactFilterOption>()
   for (const relation of (affiliationResult.data ??
     []) as unknown as AffiliationRow[]) {
     const contact = one(relation.contact)
+    if (!contact) continue
     const contacts = contactsByOffice.get(relation.office_id) ?? []
     contacts.push({
-      id: relation.id,
+      id: contact.id,
+      affiliationId: relation.id,
       label: contactLabel(contact),
-      email: contact?.email ?? null,
+      email: contact.email,
     })
     contactsByOffice.set(relation.office_id, contacts)
+    const existing = contactsById.get(contact.id)
+    contactsById.set(contact.id, {
+      id: contact.id,
+      label: contactLabel(contact),
+      email: contact.email,
+      officeIds: existing
+        ? [...new Set([...existing.officeIds, relation.office_id])]
+        : [relation.office_id],
+    })
   }
 
   const offices = ((officeResult.data ?? []) as unknown as OfficeRow[])
@@ -292,10 +326,13 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     })
     .sort((left, right) => left.label.localeCompare(right.label))
 
-  const opportunities = (
-    (opportunityResult.data ?? []) as unknown as OpportunityRow[]
+  const opportunitiesWithReview = await withStaffSourceReviewState(
+    supabase,
+    (opportunityResult.data ?? []) as unknown as OpportunityWithSource[],
   )
+  const opportunities = opportunitiesWithReview
     .filter((opportunity) => Boolean(opportunity.source_office_id))
+    .filter((opportunity) => !opportunity.source_review_required)
     .map((opportunity) => ({
       id: opportunity.id,
       officeId: opportunity.source_office_id!,
@@ -303,7 +340,17 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       status: opportunity.status,
     }))
 
-  return { currentUserId: user.id, offices, opportunities, interactions }
+  const contacts = [...contactsById.values()].sort((left, right) =>
+    left.label.localeCompare(right.label),
+  )
+
+  return {
+    currentUserId: user.id,
+    offices,
+    contacts,
+    opportunities,
+    interactions,
+  }
 }
 
 function normaliseCreateError(message: string): string {
@@ -323,6 +370,20 @@ function normaliseCreateError(message: string): string {
     )
   ) {
     return "The selected opportunity belongs to another office."
+  }
+  if (
+    message.includes(
+      "ma_provisional_source_review_blocks_relationship_interaction",
+    )
+  ) {
+    return "Resolve this opportunity's source review before linking permanent relationship history."
+  }
+  if (
+    message.includes(
+      "ma_relationship_interaction_outbound_email_requires_valid_recipient",
+    )
+  ) {
+    return "Enter a valid recipient email address for an outbound email record."
   }
   if (
     message.includes(
@@ -369,6 +430,19 @@ export async function createMaRelationshipInteraction(
     return {
       success: false,
       message: "An outbound email record needs the recipient email.",
+    }
+  }
+  if (
+    input.channel === "email" &&
+    input.direction === "outbound" &&
+    !isValidMaRelationshipEmail(
+      optionalString(input.recipientEmailSnapshot ?? null) ?? "",
+    )
+  ) {
+    return {
+      success: false,
+      message:
+        "Enter a valid recipient email address for an outbound email record.",
     }
   }
 

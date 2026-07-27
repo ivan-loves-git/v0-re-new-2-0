@@ -1,5 +1,8 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
+import { isValidMaRelationshipEmail } from "@/lib/ma-relationship-validation"
+import type { MaRelationshipTimelineItem } from "@/lib/actions/ma-relationships"
 
 const root = process.cwd()
 
@@ -63,6 +66,12 @@ describe("W-066 staff relationship workspace", () => {
     expect(migration).toContain(
       "ma_relationship_interaction_outbound_email_requires_recipient",
     )
+    expect(migration).toContain(
+      "ma_relationship_interaction_outbound_email_requires_valid_recipient",
+    )
+    expect(migration).toContain(
+      "ma_provisional_source_review_blocks_relationship_interaction",
+    )
     expect(migration).toContain("normalized_recipient_email := NULL")
     expect(verifier).toContain("service_can_create_relationship_interaction")
     expect(rehearsal).toContain(
@@ -74,6 +83,16 @@ describe("W-066 staff relationship workspace", () => {
     )
     expect(rehearsal).toContain(
       "w066_outbound_email_recipient_rejection_missing",
+    )
+    expect(rehearsal).toContain(
+      "w066_outbound_email_invalid_recipient_rejection_missing",
+    )
+    expect(rehearsal).toContain(
+      "w066_acme_linked_interaction_rejection_missing",
+    )
+    expect(rehearsal).toContain("w066_acme_resolution_remains_possible_missing")
+    expect(rehearsal).toContain(
+      "w066_canonical_contact_multi_affiliation_fixture_missing",
     )
     expect(rehearsal).toContain(
       "w066_cross_office_affiliation_rejection_missing",
@@ -92,5 +111,30 @@ describe("W-066 staff relationship workspace", () => {
     expect(contract).toContain("create_ma_relationship_interaction")
     expect(contract).toContain("A manually recorded email is evidence")
     expect(contract).toContain("W-066 implementation candidate")
+  })
+
+  it("filters one canonical contact across affiliations while composing office", () => {
+    const interactions = [
+      { id: "paris", officeId: "paris", contactId: "contact-1" },
+      { id: "lyon", officeId: "lyon", contactId: "contact-1" },
+      { id: "other", officeId: "paris", contactId: "contact-2" },
+    ] as MaRelationshipTimelineItem[]
+
+    expect(
+      filterMaRelationshipTimeline(interactions, {
+        contactId: "contact-1",
+      }).map((interaction) => interaction.id),
+    ).toEqual(["paris", "lyon"])
+    expect(
+      filterMaRelationshipTimeline(interactions, {
+        contactId: "contact-1",
+        officeId: "lyon",
+      }).map((interaction) => interaction.id),
+    ).toEqual(["lyon"])
+  })
+
+  it("rejects malformed manual outbound recipient evidence before the RPC", () => {
+    expect(isValidMaRelationshipEmail("recipient@example.test")).toBe(true)
+    expect(isValidMaRelationshipEmail("not-an-email")).toBe(false)
   })
 })

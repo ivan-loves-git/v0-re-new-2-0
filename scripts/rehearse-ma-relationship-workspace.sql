@@ -2,6 +2,51 @@
 -- empty disposable database; the W-062 rehearsal builds the canonical fixture.
 
 \ir rehearse-ma-interaction-persistence.sql
+
+-- Mirror the W-064/W-065 computed review predicate in this intentionally
+-- compact fixture. The production migration calls the released function, not
+-- a UI-provided review flag.
+CREATE TABLE public.ma_provisional_source_contexts (
+  context_key TEXT PRIMARY KEY,
+  office_id UUID NOT NULL REFERENCES public.ma_offices(id)
+);
+CREATE TABLE public.ma_provisional_source_review_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  opportunity_id UUID NOT NULL REFERENCES public.opportunities(id),
+  provisional_office_id UUID NOT NULL REFERENCES public.ma_offices(id),
+  event_kind TEXT NOT NULL,
+  related_assignment_id UUID
+);
+CREATE OR REPLACE FUNCTION public.ma_opportunity_source_review_required(
+  p_opportunity_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.ma_provisional_source_contexts context
+    JOIN public.opportunities opportunity ON opportunity.id = p_opportunity_id
+    WHERE context.context_key = 'acme_co_paris'
+      AND opportunity.source_office_id = context.office_id
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.ma_provisional_source_review_events assignment
+    JOIN public.ma_provisional_source_contexts context
+      ON context.context_key = 'acme_co_paris'
+      AND context.office_id = assignment.provisional_office_id
+    WHERE assignment.opportunity_id = p_opportunity_id
+      AND assignment.event_kind = 'assigned'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.ma_provisional_source_review_events resolution
+        WHERE resolution.event_kind = 'resolved'
+          AND resolution.related_assignment_id = assignment.id
+      )
+  );
+$$;
 \ir 081_ma_relationship_workspace.sql
 
 SET ROLE service_role;
@@ -65,6 +110,10 @@ DECLARE
   other_office UUID;
   other_firm UUID;
   active_affiliation UUID;
+  other_affiliation UUID;
+  acme_firm UUID;
+  acme_office UUID;
+  acme_opportunity UUID;
 BEGIN
   SELECT office_id, id INTO first_office, active_affiliation
   FROM public.ma_contact_office_affiliations
@@ -77,6 +126,23 @@ BEGIN
   INSERT INTO public.ma_offices (firm_id, name)
   VALUES (other_firm, 'W066 alternate office')
   RETURNING id INTO other_office;
+  INSERT INTO public.ma_contact_office_affiliations (contact_id, office_id)
+  SELECT contact_id, other_office
+  FROM public.ma_contact_office_affiliations
+  WHERE id = active_affiliation
+  RETURNING id INTO other_affiliation;
+
+  INSERT INTO public.ma_firms (name)
+  VALUES ('W066 Acme provisional fixture')
+  RETURNING id INTO acme_firm;
+  INSERT INTO public.ma_offices (firm_id, name)
+  VALUES (acme_firm, 'W066 Acme provisional office')
+  RETURNING id INTO acme_office;
+  INSERT INTO public.ma_provisional_source_contexts (context_key, office_id)
+  VALUES ('acme_co_paris', acme_office);
+  INSERT INTO public.opportunities (reference, source_office_id)
+  VALUES ('W066-ACME-REVIEW', acme_office)
+  RETURNING id INTO acme_opportunity;
 
   IF NOT EXISTS (
     SELECT 1 FROM public.ma_interactions
@@ -139,6 +205,56 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE '%ma_relationship_interaction_affiliation_must_match_active_office%' THEN RAISE; END IF;
   END;
+
+  BEGIN
+    SET LOCAL ROLE service_role;
+    PERFORM public.create_ma_relationship_interaction(
+      first_office, NULL, NULL, 'email', 'outbound', NOW(),
+      'Invalid outbound recipient', 'This must be rejected.', NULL, NULL, NULL,
+      'not-an-email', 'bertrand-staff-user'
+    );
+    RAISE EXCEPTION 'w066_outbound_email_invalid_recipient_rejection_missing';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_relationship_interaction_outbound_email_requires_valid_recipient%' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    SET LOCAL ROLE service_role;
+    PERFORM public.create_ma_relationship_interaction(
+      acme_office, NULL, acme_opportunity, 'meeting', NULL, NOW(),
+      'Blocked Acme-linked activity', 'This must be rejected.', NULL, NULL, NULL,
+      NULL, 'bertrand-staff-user'
+    );
+    RAISE EXCEPTION 'w066_acme_linked_interaction_rejection_missing';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_provisional_source_review_blocks_relationship_interaction%' THEN RAISE; END IF;
+  END;
+
+  UPDATE public.opportunities
+  SET source_office_id = first_office
+  WHERE id = acme_opportunity;
+  IF (SELECT source_office_id FROM public.opportunities WHERE id = acme_opportunity)
+    IS DISTINCT FROM first_office THEN
+    RAISE EXCEPTION 'w066_acme_resolution_remains_possible_missing';
+  END IF;
+
+  SET LOCAL ROLE service_role;
+  PERFORM public.create_ma_relationship_interaction(
+    other_office, other_affiliation, NULL, 'call', 'outbound', NOW(),
+    'Same contact at another office', 'Canonical contact filter regression fixture.', NULL, NULL, NULL,
+    NULL, 'bertrand-staff-user'
+  );
+  RESET ROLE;
+  IF (SELECT COUNT(DISTINCT interaction.affiliation_id)
+      FROM public.ma_interactions interaction
+      JOIN public.ma_contact_office_affiliations affiliation
+        ON affiliation.id = interaction.affiliation_id
+      WHERE affiliation.contact_id = (
+        SELECT contact_id FROM public.ma_contact_office_affiliations
+        WHERE id = active_affiliation
+      )) < 2 THEN
+    RAISE EXCEPTION 'w066_canonical_contact_multi_affiliation_fixture_missing';
+  END IF;
 END;
 $$;
 
@@ -152,4 +268,4 @@ BEGIN
 END;
 $$;
 
-SELECT 'W-066 relationship creation, manual-email boundary, same-office and clean-rerun checks passed' AS rehearsal_result;
+SELECT 'W-066 relationship creation, Acme/source-resolution, manual-email, same-office and canonical-contact checks passed' AS rehearsal_result;
