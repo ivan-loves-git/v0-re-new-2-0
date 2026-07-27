@@ -77,7 +77,10 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
           contactId: formData.get("contact_id"),
         }),
       })
-      const result = (await response.json()) as { success: boolean; message: string }
+      const result = (await response.json()) as {
+        success: boolean
+        message: string
+      }
       if (!result.success) {
         toast.error("M&A email not sent", { description: result.message })
         return
@@ -101,9 +104,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
             <Mail className="size-5" />
             Intermediary follow-up
           </CardTitle>
-          <CardDescription>
-            Send a contextual M&A template to the linked source without leaving this opportunity.
-          </CardDescription>
+          <CardDescription>Send a contextual M&A template to the linked source without leaving this opportunity.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -149,9 +150,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                {selectedDraft?.description ? (
-                  <p className="text-xs text-muted-foreground">{selectedDraft.description}</p>
-                ) : null}
+                {selectedDraft?.description ? <p className="text-xs text-muted-foreground">{selectedDraft.description}</p> : null}
               </div>
             </div>
 
@@ -190,12 +189,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
 
             <div className="space-y-2">
               <Label htmlFor="ma_subject">Subject</Label>
-              <Input
-                id="ma_subject"
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-                placeholder="Example: Opportunity still active?"
-              />
+              <Input id="ma_subject" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Example: Opportunity still active?" />
             </div>
 
             <div className="space-y-2">
@@ -262,12 +256,10 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 <div key={interaction.id} className="rounded-lg border p-3 text-sm">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Badge variant={interaction.status === "sent" ? "default" : "destructive"}>
+                      <Badge variant={interaction.status === "sent" ? "default" : interaction.status === "failed" ? "destructive" : "outline"}>
                         {interaction.status}
                       </Badge>
-                      {interaction.owner_verification_state === "provisional" ? (
-                        <Badge variant="outline">Owner to verify</Badge>
-                      ) : null}
+                      {interaction.owner_verification_state === "provisional" ? <Badge variant="outline">Owner to verify</Badge> : null}
                     </div>
                     <span className="text-xs text-muted-foreground">{formatDate(interaction.sent_at ?? interaction.created_at)}</span>
                   </div>
@@ -276,9 +268,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                     <UserRound className="size-3" />
                     {interaction.recipient_email}
                   </div>
-                  {interaction.error_message ? (
-                    <p className="mt-2 text-xs text-destructive">{interaction.error_message}</p>
-                  ) : null}
+                  {interaction.error_message ? <p className="mt-2 text-xs text-destructive">{interaction.error_message}</p> : null}
                 </div>
               ))}
             </div>

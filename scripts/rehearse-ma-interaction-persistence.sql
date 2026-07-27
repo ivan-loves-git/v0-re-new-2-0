@@ -1,7 +1,8 @@
 -- Synthetic, production-shaped prerequisite fixture for migration 080 only.
 -- Values are invented and no body is printed by this rehearsal.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
 DO $$
 BEGIN
@@ -41,7 +42,11 @@ CREATE TABLE public.ma_contacts (
 CREATE TABLE public.ma_contact_office_affiliations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   contact_id UUID NOT NULL REFERENCES public.ma_contacts(id),
-  office_id UUID NOT NULL REFERENCES public.ma_offices(id)
+  office_id UUID NOT NULL REFERENCES public.ma_offices(id),
+  legacy_source_contact_id UUID,
+  legacy_source_id UUID,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  ended_at TIMESTAMPTZ
 );
 CREATE TABLE public.opportunities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,6 +71,24 @@ CREATE TABLE public.ma_source_interactions (
   created_by UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE public.ma_source_email_send_reservations (
+  opportunity_id UUID PRIMARY KEY REFERENCES public.opportunities(id),
+  reservation_token UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  actor TEXT NOT NULL,
+  source_office_id UUID NOT NULL REFERENCES public.ma_offices(id),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION public.ma_opportunity_source_review_required(
+  p_opportunity_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT FALSE;
+$$;
 
 -- Mirror the released canonical office foundation: service actions can resolve
 -- the foreign-key context used by the interaction trigger, while browser roles
@@ -77,7 +100,8 @@ GRANT SELECT ON TABLE
   public.ma_source_contacts,
   public.ma_contacts,
   public.ma_contact_office_affiliations,
-  public.opportunities
+  public.opportunities,
+  public.ma_source_email_send_reservations
 TO service_role;
 
 INSERT INTO public.app_user_roles (user_id, email, role)
@@ -97,9 +121,11 @@ WITH firm AS (
   INSERT INTO public.ma_contacts (legacy_source_contact_id, display_name)
   SELECT id, 'Synthetic Contact' FROM legacy_contact RETURNING id, legacy_source_contact_id
 ), affiliation AS (
-  INSERT INTO public.ma_contact_office_affiliations (contact_id, office_id)
-  SELECT contact.id, source.default_office_id FROM contact
-  JOIN source ON TRUE RETURNING id
+  INSERT INTO public.ma_contact_office_affiliations (
+    contact_id, office_id, legacy_source_contact_id, legacy_source_id
+  )
+  SELECT contact.id, source.default_office_id, contact.legacy_source_contact_id, source.id
+  FROM contact JOIN source ON TRUE RETURNING id
 ), opportunities AS (
   INSERT INTO public.opportunities (reference, source_id, source_office_id)
   SELECT 'W062-SYN-' || n, source.id, source.default_office_id
@@ -197,6 +223,19 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE '%ma_interaction_opportunity_must_match_office%' THEN RAISE; END IF;
   END;
+
+  BEGIN
+    UPDATE public.opportunities
+    SET source_office_id = other_office_id
+    WHERE id = (
+      SELECT opportunity_id
+      FROM public.ma_interactions
+      WHERE id = interaction_id
+    );
+    RAISE EXCEPTION 'w062_parent_office_move_guard_missing';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_interaction_history_blocks_source_office_change%' THEN RAISE; END IF;
+  END;
 END;
 $$;
 
@@ -217,19 +256,106 @@ BEGIN
 END;
 $$;
 
--- A current workflow-shaped failed email is recorded canonically with its
--- failure evidence. Browser-role direct reads are denied by grants and RLS.
-SET ROLE service_role;
-INSERT INTO public.ma_interactions (
-  office_id, affiliation_id, opportunity_id, channel, direction, occurred_at,
-  owner_staff_user_id, title, recipient_email_snapshot, body_markdown,
-  delivery_status, delivery_error, created_by
+-- Canonical email persistence begins before delivery, uses the interaction UUID
+-- as provider idempotency, blocks a second unresolved attempt and finalizes
+-- through append-only delivery evidence.
+INSERT INTO public.ma_source_email_send_reservations (
+  opportunity_id, actor, source_office_id, expires_at
 )
-SELECT office_id, affiliation_id, opportunity_id, 'email', 'outbound', NOW(),
-  'bertrand-staff-user', 'Synthetic failed send', 'contact@example.test',
-  'Synthetic failed body', 'failed', 'Synthetic provider failure', 'bertrand-staff-user'
+SELECT opportunity_id, 'bertrand-staff-user', office_id, NOW() + INTERVAL '2 minutes'
 FROM public.ma_interactions
-WHERE id = '00000000-0000-0000-0000-000000000002'::UUID;
+WHERE id IN (
+  '00000000-0000-0000-0000-000000000002'::UUID,
+  '00000000-0000-0000-0000-000000000003'::UUID
+);
+
+SET ROLE service_role;
+SELECT *
+FROM public.begin_ma_interaction_email_send(
+  (SELECT opportunity_id FROM public.ma_interactions
+    WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+  (SELECT office_id FROM public.ma_interactions
+    WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+  (SELECT affiliation_id FROM public.ma_interactions
+    WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+  'bertrand-staff-user',
+  'ma_process_follow_up',
+  'contact@example.test',
+  'Synthetic failed send',
+  'Synthetic failed body',
+  (SELECT reservation_token
+    FROM public.ma_source_email_send_reservations
+    WHERE opportunity_id = (
+      SELECT opportunity_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID
+    ))
+);
+
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public.begin_ma_interaction_email_send(
+      (SELECT opportunity_id FROM public.ma_interactions
+        WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+      (SELECT office_id FROM public.ma_interactions
+        WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+      (SELECT affiliation_id FROM public.ma_interactions
+        WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+      'bertrand-staff-user',
+      'ma_process_follow_up',
+      'contact@example.test',
+      'Synthetic duplicate send',
+      'Synthetic duplicate body',
+      (SELECT reservation_token
+        FROM public.ma_source_email_send_reservations
+        WHERE opportunity_id = (
+          SELECT opportunity_id FROM public.ma_interactions
+          WHERE id = '00000000-0000-0000-0000-000000000002'::UUID
+        ))
+    );
+    RAISE EXCEPTION 'w062_pending_delivery_duplicate_guard_missing';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_interaction_email_pending_delivery_requires_reconciliation%' THEN RAISE; END IF;
+  END;
+END;
+$$;
+
+SELECT public.finalize_ma_interaction_email_send(
+  (SELECT id FROM public.ma_interactions WHERE title = 'Synthetic failed send'),
+  'bertrand-staff-user',
+  'failed',
+  NULL,
+  'Synthetic provider failure'
+);
+
+SELECT *
+FROM public.begin_ma_interaction_email_send(
+  (SELECT opportunity_id FROM public.ma_interactions
+    WHERE id = '00000000-0000-0000-0000-000000000003'::UUID),
+  (SELECT office_id FROM public.ma_interactions
+    WHERE id = '00000000-0000-0000-0000-000000000003'::UUID),
+  (SELECT affiliation_id FROM public.ma_interactions
+    WHERE id = '00000000-0000-0000-0000-000000000003'::UUID),
+  'bertrand-staff-user',
+  'ma_process_follow_up',
+  'contact@example.test',
+  'Synthetic sent send',
+  'Synthetic sent body',
+  (SELECT reservation_token
+    FROM public.ma_source_email_send_reservations
+    WHERE opportunity_id = (
+      SELECT opportunity_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000003'::UUID
+    ))
+);
+
+SELECT public.finalize_ma_interaction_email_send(
+  (SELECT id FROM public.ma_interactions WHERE title = 'Synthetic sent send'),
+  'bertrand-staff-user',
+  'sent',
+  'provider-message-synthetic',
+  NULL
+);
 RESET ROLE;
 
 DO $$
@@ -239,8 +365,27 @@ BEGIN
     WHERE title = 'Synthetic failed send'
       AND delivery_status = 'failed'
       AND delivery_error = 'Synthetic provider failure'
+      AND provider_idempotency_key = id::TEXT
+      AND delivery_finalized_at IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'w062_canonical_failed_delivery_evidence_missing';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.ma_interactions
+    WHERE title = 'Synthetic sent send'
+      AND delivery_status = 'sent'
+      AND provider_message_id = 'provider-message-synthetic'
+      AND provider_idempotency_key = id::TEXT
+      AND sent_at IS NOT NULL
+      AND delivery_finalized_at IS NOT NULL
+  ) OR (
+    SELECT COUNT(*) FROM public.ma_interaction_delivery_events
+    WHERE event_kind = 'pending'
+  ) <> 2 OR (
+    SELECT COUNT(*) FROM public.ma_interaction_delivery_events
+    WHERE event_kind IN ('sent', 'failed')
+  ) <> 2 THEN
+    RAISE EXCEPTION 'w062_provider_delivery_event_evidence_missing';
   END IF;
 
   BEGIN
@@ -250,6 +395,21 @@ BEGIN
     ) SELECT gen_random_uuid(), id, 'x', 'x@example.test', 'x', 'sent'
       FROM public.opportunities LIMIT 1;
     RAISE EXCEPTION 'w062_legacy_write_retirement_missing';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
+  BEGIN
+    SET LOCAL ROLE service_role;
+    INSERT INTO public.ma_interactions (
+      office_id, channel, direction, occurred_at, owner_staff_user_id,
+      owner_verification_state, owner_verified_by, owner_verified_at,
+      summary, created_by
+    )
+    SELECT id, 'call', 'outbound', NOW(), 'not-a-staff-user',
+      'verified', 'not-a-staff-user', NOW(), 'Forbidden direct insert', NULL
+    FROM public.ma_offices
+    LIMIT 1;
+    RAISE EXCEPTION 'w062_direct_verified_insert_denial_missing';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
 
@@ -271,6 +431,46 @@ BEGIN
 END;
 $$;
 
+-- Generic opportunity source changes are blocked both by an active W-064 send
+-- reservation and by already-linked immutable interaction history.
+DO $$
+DECLARE
+  original_office_id UUID;
+  other_office_id UUID;
+  reserved_opportunity_id UUID;
+BEGIN
+  SELECT id INTO original_office_id
+  FROM public.ma_offices
+  ORDER BY name
+  LIMIT 1;
+  SELECT id INTO other_office_id
+  FROM public.ma_offices
+  WHERE id <> original_office_id
+  ORDER BY name
+  LIMIT 1;
+
+  INSERT INTO public.opportunities (reference, source_office_id)
+  VALUES ('W062-RESERVATION-GUARD', original_office_id)
+  RETURNING id INTO reserved_opportunity_id;
+
+  INSERT INTO public.ma_source_email_send_reservations (
+    opportunity_id, actor, source_office_id, expires_at
+  ) VALUES (
+    reserved_opportunity_id, 'bertrand-staff-user', original_office_id,
+    NOW() + INTERVAL '2 minutes'
+  );
+
+  BEGIN
+    UPDATE public.opportunities
+    SET source_office_id = other_office_id
+    WHERE id = reserved_opportunity_id;
+    RAISE EXCEPTION 'w062_reservation_source_move_guard_missing';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_source_office_change_blocked_during_email_send%' THEN RAISE; END IF;
+  END;
+END;
+$$;
+
 \ir 080_ma_interaction_persistence.sql
 
 DO $$
@@ -281,4 +481,4 @@ BEGIN
 END;
 $$;
 
-SELECT 'W-062 migration rerun, manifest, ownership, privilege and same-office checks passed' AS rehearsal_result;
+SELECT 'W-062 migration rerun, manifest, owner, provider, privilege, reservation and same-office checks passed' AS rehearsal_result;

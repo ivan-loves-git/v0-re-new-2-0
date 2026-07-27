@@ -352,6 +352,9 @@ export interface MaInteraction {
   body_markdown?: string | null
   delivery_status?: "pending" | "sent" | "failed" | null | string
   delivery_error?: string | null
+  provider_idempotency_key?: string | null
+  provider_message_id?: string | null
+  delivery_finalized_at?: string | null
   sent_at?: string | null
   created_by?: string | null
   created_at: string

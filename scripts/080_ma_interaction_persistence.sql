@@ -7,6 +7,9 @@
 
 BEGIN;
 
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 CREATE TABLE IF NOT EXISTS public.ma_interactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   office_id UUID NOT NULL REFERENCES public.ma_offices(id) ON DELETE RESTRICT,
@@ -30,6 +33,9 @@ CREATE TABLE IF NOT EXISTS public.ma_interactions (
   body_markdown TEXT,
   delivery_status TEXT CHECK (delivery_status IN ('pending', 'sent', 'failed')),
   delivery_error TEXT,
+  provider_idempotency_key TEXT,
+  provider_message_id TEXT,
+  delivery_finalized_at TIMESTAMPTZ,
   sent_at TIMESTAMPTZ,
   created_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -52,6 +58,12 @@ CREATE TABLE IF NOT EXISTS public.ma_interactions (
     OR NULLIF(BTRIM(delivery_error), '') IS NOT NULL
   ),
   CHECK ((delivery_status <> 'sent') OR sent_at IS NOT NULL),
+  CHECK ((delivery_status <> 'pending') OR delivery_finalized_at IS NULL),
+  CHECK ((delivery_status = 'pending') OR delivery_finalized_at IS NOT NULL),
+  CHECK (
+    channel <> 'email'
+    OR NULLIF(BTRIM(provider_idempotency_key), '') IS NOT NULL
+  ),
   CHECK (
     (owner_verification_state = 'provisional'
       AND owner_verified_by IS NULL AND owner_verified_at IS NULL)
@@ -77,6 +89,21 @@ CREATE TABLE IF NOT EXISTS public.ma_interaction_owner_verification_events (
   CHECK (NULLIF(BTRIM(verified_by), '') IS NOT NULL)
 );
 
+CREATE TABLE IF NOT EXISTS public.ma_interaction_delivery_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  interaction_id UUID NOT NULL REFERENCES public.ma_interactions(id) ON DELETE RESTRICT,
+  event_kind TEXT NOT NULL CHECK (event_kind IN ('pending', 'sent', 'failed')),
+  actor TEXT NOT NULL,
+  provider_idempotency_key TEXT NOT NULL,
+  provider_message_id TEXT,
+  delivery_error TEXT,
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (NULLIF(BTRIM(actor), '') IS NOT NULL),
+  CHECK (NULLIF(BTRIM(provider_idempotency_key), '') IS NOT NULL),
+  CHECK ((event_kind <> 'failed') OR NULLIF(BTRIM(delivery_error), '') IS NOT NULL),
+  CHECK ((event_kind <> 'sent') OR NULLIF(BTRIM(provider_message_id), '') IS NOT NULL)
+);
+
 CREATE TABLE IF NOT EXISTS public.ma_interaction_legacy_migration_manifest (
   legacy_interaction_id UUID PRIMARY KEY,
   legacy_evidence_digest TEXT NOT NULL CHECK (legacy_evidence_digest ~ '^[0-9a-f]{64}$'),
@@ -95,6 +122,14 @@ CREATE INDEX IF NOT EXISTS idx_ma_interactions_affiliation_occurred_at
   WHERE affiliation_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_ma_interaction_owner_verification_events_interaction
   ON public.ma_interaction_owner_verification_events (interaction_id, verified_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_ma_interaction_delivery_events_interaction
+  ON public.ma_interaction_delivery_events (interaction_id, occurred_at DESC, id DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_interactions_pending_opportunity
+  ON public.ma_interactions (opportunity_id)
+  WHERE delivery_status = 'pending' AND opportunity_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_interactions_provider_idempotency_key
+  ON public.ma_interactions (provider_idempotency_key)
+  WHERE provider_idempotency_key IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION public.enforce_ma_interaction_office_context()
 RETURNS TRIGGER
@@ -138,11 +173,11 @@ SET search_path = ''
 AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
-    RAISE EXCEPTION 'ma_interactions_are_append_only_except_owner_verification';
+    RAISE EXCEPTION 'ma_interactions_are_append_only';
   END IF;
 
-  IF current_setting('app.ma_interaction_owner_verification', true) IS DISTINCT FROM 'true'
-    OR NEW.id IS DISTINCT FROM OLD.id
+  IF current_setting('app.ma_interaction_owner_verification', true) = 'true' THEN
+    IF NEW.id IS DISTINCT FROM OLD.id
     OR NEW.office_id IS DISTINCT FROM OLD.office_id
     OR NEW.affiliation_id IS DISTINCT FROM OLD.affiliation_id
     OR NEW.opportunity_id IS DISTINCT FROM OLD.opportunity_id
@@ -169,10 +204,47 @@ BEGIN
     OR NEW.owner_verification_state <> 'verified'
     OR NEW.owner_verified_by IS NULL
     OR NEW.owner_verified_at IS NULL THEN
-    RAISE EXCEPTION 'ma_interactions_are_append_only_except_owner_verification';
+      RAISE EXCEPTION 'ma_interactions_are_append_only_except_owner_verification';
+    END IF;
+    RETURN NEW;
   END IF;
 
-  RETURN NEW;
+  IF current_setting('app.ma_interaction_delivery_finalization', true) = 'true' THEN
+    IF NEW.id IS DISTINCT FROM OLD.id
+      OR NEW.office_id IS DISTINCT FROM OLD.office_id
+      OR NEW.affiliation_id IS DISTINCT FROM OLD.affiliation_id
+      OR NEW.opportunity_id IS DISTINCT FROM OLD.opportunity_id
+      OR NEW.channel IS DISTINCT FROM OLD.channel
+      OR NEW.direction IS DISTINCT FROM OLD.direction
+      OR NEW.occurred_at IS DISTINCT FROM OLD.occurred_at
+      OR NEW.owner_staff_user_id IS DISTINCT FROM OLD.owner_staff_user_id
+      OR NEW.owner_verification_state IS DISTINCT FROM OLD.owner_verification_state
+      OR NEW.owner_verified_by IS DISTINCT FROM OLD.owner_verified_by
+      OR NEW.owner_verified_at IS DISTINCT FROM OLD.owner_verified_at
+      OR NEW.title IS DISTINCT FROM OLD.title
+      OR NEW.summary IS DISTINCT FROM OLD.summary
+      OR NEW.outcome IS DISTINCT FROM OLD.outcome
+      OR NEW.next_action IS DISTINCT FROM OLD.next_action
+      OR NEW.next_action_due_at IS DISTINCT FROM OLD.next_action_due_at
+      OR NEW.template_key IS DISTINCT FROM OLD.template_key
+      OR NEW.recipient_email_snapshot IS DISTINCT FROM OLD.recipient_email_snapshot
+      OR NEW.body_markdown IS DISTINCT FROM OLD.body_markdown
+      OR NEW.created_by IS DISTINCT FROM OLD.created_by
+      OR NEW.created_at IS DISTINCT FROM OLD.created_at
+      OR NEW.updated_by IS DISTINCT FROM OLD.updated_by
+      OR NEW.updated_at IS DISTINCT FROM OLD.updated_at
+      OR OLD.delivery_status <> 'pending'
+      OR NEW.delivery_status NOT IN ('sent', 'failed')
+      OR NEW.provider_idempotency_key IS DISTINCT FROM OLD.provider_idempotency_key
+      OR NEW.delivery_finalized_at IS NULL
+      OR (NEW.delivery_status = 'sent' AND (NEW.sent_at IS NULL OR NULLIF(BTRIM(NEW.provider_message_id), '') IS NULL))
+      OR (NEW.delivery_status = 'failed' AND NULLIF(BTRIM(NEW.delivery_error), '') IS NULL) THEN
+      RAISE EXCEPTION 'ma_interactions_are_append_only_except_delivery_finalization';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RAISE EXCEPTION 'ma_interactions_are_append_only';
 END;
 $$;
 
@@ -186,10 +258,54 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.prevent_ma_interaction_delivery_event_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  RAISE EXCEPTION 'ma_interaction_delivery_events_are_append_only';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.guard_ma_interaction_opportunity_source_office()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.source_office_id IS DISTINCT FROM OLD.source_office_id THEN
+    IF EXISTS (
+      SELECT 1
+      FROM public.ma_source_email_send_reservations reservation
+      WHERE reservation.opportunity_id = OLD.id
+        AND reservation.expires_at > NOW()
+    ) THEN
+      RAISE EXCEPTION 'ma_source_office_change_blocked_during_email_send';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM public.ma_interactions interaction
+      WHERE interaction.opportunity_id = OLD.id
+        AND interaction.office_id IS DISTINCT FROM NEW.source_office_id
+    ) THEN
+      RAISE EXCEPTION 'ma_interaction_history_blocks_source_office_change';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
 DROP TRIGGER IF EXISTS enforce_ma_interaction_office_context ON public.ma_interactions;
 DROP TRIGGER IF EXISTS guard_ma_interaction_mutation ON public.ma_interactions;
 DROP TRIGGER IF EXISTS prevent_ma_interaction_owner_verification_event_mutation
   ON public.ma_interaction_owner_verification_events;
+DROP TRIGGER IF EXISTS prevent_ma_interaction_delivery_event_mutation
+  ON public.ma_interaction_delivery_events;
+DROP TRIGGER IF EXISTS guard_ma_interaction_opportunity_source_office
+  ON public.opportunities;
 CREATE TRIGGER enforce_ma_interaction_office_context
   BEFORE INSERT OR UPDATE ON public.ma_interactions
   FOR EACH ROW EXECUTE FUNCTION public.enforce_ma_interaction_office_context();
@@ -199,6 +315,12 @@ CREATE TRIGGER guard_ma_interaction_mutation
 CREATE TRIGGER prevent_ma_interaction_owner_verification_event_mutation
   BEFORE UPDATE OR DELETE ON public.ma_interaction_owner_verification_events
   FOR EACH ROW EXECUTE FUNCTION public.prevent_ma_interaction_owner_verification_event_mutation();
+CREATE TRIGGER prevent_ma_interaction_delivery_event_mutation
+  BEFORE UPDATE OR DELETE ON public.ma_interaction_delivery_events
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_ma_interaction_delivery_event_mutation();
+CREATE TRIGGER guard_ma_interaction_opportunity_source_office
+  BEFORE UPDATE OF source_office_id ON public.opportunities
+  FOR EACH ROW EXECUTE FUNCTION public.guard_ma_interaction_opportunity_source_office();
 
 CREATE OR REPLACE FUNCTION public.verify_ma_interaction_owner(
   p_interaction_id UUID,
@@ -262,10 +384,184 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.begin_ma_interaction_email_send(
+  p_opportunity_id UUID,
+  p_office_id UUID,
+  p_affiliation_id UUID,
+  p_actor TEXT,
+  p_template_key TEXT,
+  p_recipient_email TEXT,
+  p_title TEXT,
+  p_body_markdown TEXT,
+  p_reservation_token UUID
+)
+RETURNS TABLE (interaction_id UUID, provider_idempotency_key TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  normalized_actor TEXT;
+  opportunity_row public.opportunities%ROWTYPE;
+  affiliation_office_id UUID;
+  interaction_row public.ma_interactions%ROWTYPE;
+  new_interaction_id UUID;
+  staff_count INTEGER;
+BEGIN
+  normalized_actor := NULLIF(BTRIM(p_actor), '');
+  IF normalized_actor IS NULL
+    OR NULLIF(BTRIM(p_template_key), '') IS NULL
+    OR NULLIF(BTRIM(p_recipient_email), '') IS NULL
+    OR NULLIF(BTRIM(p_title), '') IS NULL
+    OR NULLIF(BTRIM(p_body_markdown), '') IS NULL THEN
+    RAISE EXCEPTION 'ma_interaction_email_begin_requires_complete_staff_evidence';
+  END IF;
+
+  SELECT COUNT(*) INTO staff_count
+  FROM public.app_user_roles role
+  WHERE role.role = 'staff' AND role.user_id = normalized_actor;
+  IF staff_count <> 1 THEN
+    RAISE EXCEPTION 'ma_interaction_email_begin_requires_exact_staff_actor';
+  END IF;
+
+  SELECT * INTO opportunity_row
+  FROM public.opportunities opportunity
+  WHERE opportunity.id = p_opportunity_id
+  FOR UPDATE;
+  IF opportunity_row.id IS NULL
+    OR opportunity_row.source_office_id IS DISTINCT FROM p_office_id THEN
+    RAISE EXCEPTION 'ma_interaction_email_begin_requires_current_opportunity_office';
+  END IF;
+
+  SELECT affiliation.office_id INTO affiliation_office_id
+  FROM public.ma_contact_office_affiliations affiliation
+  WHERE affiliation.id = p_affiliation_id
+    AND affiliation.is_active
+    AND affiliation.ended_at IS NULL;
+  IF affiliation_office_id IS DISTINCT FROM p_office_id THEN
+    RAISE EXCEPTION 'ma_interaction_email_begin_requires_same_office_affiliation';
+  END IF;
+
+  IF public.ma_opportunity_source_review_required(opportunity_row.id) THEN
+    RAISE EXCEPTION 'ma_provisional_source_review_blocks_external_email';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.ma_source_email_send_reservations reservation
+    WHERE reservation.opportunity_id = opportunity_row.id
+      AND reservation.reservation_token = p_reservation_token
+      AND reservation.actor = normalized_actor
+      AND reservation.source_office_id = p_office_id
+      AND reservation.expires_at > NOW()
+  ) THEN
+    RAISE EXCEPTION 'ma_interaction_email_begin_requires_active_reservation';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.ma_interactions interaction
+    WHERE interaction.opportunity_id = opportunity_row.id
+      AND interaction.delivery_status = 'pending'
+  ) THEN
+    RAISE EXCEPTION 'ma_interaction_email_pending_delivery_requires_reconciliation';
+  END IF;
+
+  new_interaction_id := gen_random_uuid();
+  INSERT INTO public.ma_interactions (
+    id, office_id, affiliation_id, opportunity_id, channel, direction, occurred_at,
+    owner_staff_user_id, owner_verification_state, owner_verified_by,
+    owner_verified_at, title, template_key, recipient_email_snapshot,
+    body_markdown, delivery_status, provider_idempotency_key, created_by
+  ) VALUES (
+    new_interaction_id, p_office_id, p_affiliation_id, opportunity_row.id, 'email', 'outbound', NOW(),
+    normalized_actor, 'verified', normalized_actor, NOW(), BTRIM(p_title), BTRIM(p_template_key),
+    BTRIM(p_recipient_email), p_body_markdown, 'pending', new_interaction_id::TEXT, normalized_actor
+  ) RETURNING * INTO interaction_row;
+
+  INSERT INTO public.ma_interaction_delivery_events (
+    interaction_id, event_kind, actor, provider_idempotency_key
+  ) VALUES (
+    interaction_row.id, 'pending', normalized_actor, interaction_row.provider_idempotency_key
+  );
+
+  RETURN QUERY SELECT interaction_row.id, interaction_row.id::TEXT;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.finalize_ma_interaction_email_send(
+  p_interaction_id UUID,
+  p_actor TEXT,
+  p_delivery_status TEXT,
+  p_provider_message_id TEXT DEFAULT NULL,
+  p_delivery_error TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  normalized_actor TEXT;
+  interaction_row public.ma_interactions%ROWTYPE;
+  staff_count INTEGER;
+BEGIN
+  normalized_actor := NULLIF(BTRIM(p_actor), '');
+  IF normalized_actor IS NULL OR p_delivery_status NOT IN ('sent', 'failed') THEN
+    RAISE EXCEPTION 'ma_interaction_email_finalize_requires_valid_input';
+  END IF;
+
+  SELECT COUNT(*) INTO staff_count
+  FROM public.app_user_roles role
+  WHERE role.role = 'staff' AND role.user_id = normalized_actor;
+  IF staff_count <> 1 THEN
+    RAISE EXCEPTION 'ma_interaction_email_finalize_requires_exact_staff_actor';
+  END IF;
+
+  SELECT * INTO interaction_row
+  FROM public.ma_interactions interaction
+  WHERE interaction.id = p_interaction_id
+  FOR UPDATE;
+  IF interaction_row.id IS NULL
+    OR interaction_row.owner_staff_user_id IS DISTINCT FROM normalized_actor
+    OR interaction_row.created_by IS DISTINCT FROM normalized_actor
+    OR interaction_row.delivery_status <> 'pending' THEN
+    RAISE EXCEPTION 'ma_interaction_email_finalize_requires_owned_pending_interaction';
+  END IF;
+  IF p_delivery_status = 'sent' AND NULLIF(BTRIM(p_provider_message_id), '') IS NULL THEN
+    RAISE EXCEPTION 'ma_interaction_email_finalize_requires_provider_message_id';
+  END IF;
+  IF p_delivery_status = 'failed' AND NULLIF(BTRIM(p_delivery_error), '') IS NULL THEN
+    RAISE EXCEPTION 'ma_interaction_email_finalize_requires_delivery_error';
+  END IF;
+
+  PERFORM set_config('app.ma_interaction_delivery_finalization', 'true', true);
+  UPDATE public.ma_interactions
+  SET delivery_status = p_delivery_status,
+      provider_message_id = NULLIF(BTRIM(p_provider_message_id), ''),
+      delivery_error = CASE WHEN p_delivery_status = 'failed' THEN BTRIM(p_delivery_error) ELSE NULL END,
+      sent_at = CASE WHEN p_delivery_status = 'sent' THEN NOW() ELSE NULL END,
+      delivery_finalized_at = NOW()
+  WHERE id = interaction_row.id;
+
+  INSERT INTO public.ma_interaction_delivery_events (
+    interaction_id, event_kind, actor, provider_idempotency_key,
+    provider_message_id, delivery_error
+  ) VALUES (
+    interaction_row.id, p_delivery_status, normalized_actor, interaction_row.provider_idempotency_key,
+    NULLIF(BTRIM(p_provider_message_id), ''),
+    CASE WHEN p_delivery_status = 'failed' THEN BTRIM(p_delivery_error) ELSE NULL END
+  );
+
+  RETURN TRUE;
+END;
+$$;
+
 -- The production preflight established exactly four historical rows. Recheck
 -- the complete shape inside this transaction, derive every canonical relation
 -- from current canonical evidence, and fail before any target write if reality
 -- has changed. No message or manifest stores an email body in plain text.
+LOCK TABLE public.ma_source_interactions IN SHARE ROW EXCLUSIVE MODE;
+
 DO $$
 DECLARE
   legacy_count INTEGER;
@@ -305,7 +601,9 @@ BEGIN
   LEFT JOIN public.ma_contacts contact
     ON contact.legacy_source_contact_id = interaction.contact_id
   LEFT JOIN public.ma_contact_office_affiliations affiliation
-    ON affiliation.contact_id = contact.id
+    ON affiliation.legacy_source_contact_id = interaction.contact_id
+    AND affiliation.legacy_source_id = source.id
+    AND affiliation.contact_id = contact.id
     AND affiliation.office_id = source.default_office_id
   LEFT JOIN public.opportunities opportunity ON opportunity.id = interaction.opportunity_id
   WHERE interaction.source_id IS NULL
@@ -324,6 +622,14 @@ BEGIN
     OR legacy_contact.source_id IS DISTINCT FROM source.id
     OR contact.id IS NULL
     OR affiliation.id IS NULL
+    OR 1 <> (
+      SELECT COUNT(*)
+      FROM public.ma_contact_office_affiliations bridge
+      WHERE bridge.legacy_source_contact_id = interaction.contact_id
+        AND bridge.legacy_source_id = source.id
+        AND bridge.contact_id = contact.id
+        AND bridge.office_id = source.default_office_id
+    )
     OR opportunity.id IS NULL
     OR opportunity.source_id IS DISTINCT FROM source.id
     OR opportunity.source_office_id IS DISTINCT FROM source.default_office_id;
@@ -355,7 +661,7 @@ WITH legacy_rows AS (
     interaction.sent_at,
     interaction.created_by::TEXT AS created_by,
     interaction.created_at,
-    encode(digest(jsonb_build_object(
+    encode(extensions.digest(jsonb_build_object(
       'id', interaction.id,
       'source_id', interaction.source_id,
       'office_id', source.default_office_id,
@@ -366,7 +672,7 @@ WITH legacy_rows AS (
       'direction', interaction.direction,
       'recipient_email', interaction.recipient_email,
       'subject', interaction.subject,
-      'body_sha256', encode(digest(interaction.body_markdown, 'sha256'), 'hex'),
+      'body_sha256', encode(extensions.digest(interaction.body_markdown, 'sha256'), 'hex'),
       'template_key', interaction.template_key,
       'status', interaction.status,
       'error_message', interaction.error_message,
@@ -378,7 +684,9 @@ WITH legacy_rows AS (
   JOIN public.ma_sources source ON source.id = interaction.source_id
   JOIN public.ma_contacts contact ON contact.legacy_source_contact_id = interaction.contact_id
   JOIN public.ma_contact_office_affiliations affiliation
-    ON affiliation.contact_id = contact.id
+    ON affiliation.legacy_source_contact_id = interaction.contact_id
+    AND affiliation.legacy_source_id = source.id
+    AND affiliation.contact_id = contact.id
     AND affiliation.office_id = source.default_office_id
   JOIN public.app_user_roles owner_role
     ON owner_role.role = 'staff'
@@ -388,13 +696,14 @@ INSERT INTO public.ma_interactions (
     id, office_id, affiliation_id, opportunity_id, channel, direction,
     occurred_at, owner_staff_user_id, owner_verification_state, title,
     template_key, recipient_email_snapshot, body_markdown, delivery_status,
-    delivery_error, sent_at, created_by, created_at
+    delivery_error, provider_idempotency_key, sent_at, delivery_finalized_at,
+    created_by, created_at
 )
 SELECT
   id, office_id, affiliation_id, opportunity_id, channel, direction,
-  occurred_at, owner_staff_user_id, 'provisional', title,
-  template_key, recipient_email_snapshot, body_markdown, delivery_status,
-  delivery_error, sent_at, created_by, created_at
+    occurred_at, owner_staff_user_id, 'provisional', title,
+    template_key, recipient_email_snapshot, body_markdown, delivery_status,
+    delivery_error, 'legacy:' || id::TEXT, sent_at, sent_at, created_by, created_at
 FROM legacy_rows
 ON CONFLICT (id) DO NOTHING;
 
@@ -403,7 +712,7 @@ INSERT INTO public.ma_interaction_legacy_migration_manifest (
 )
 SELECT
   interaction.id,
-  encode(digest(jsonb_build_object(
+  encode(extensions.digest(jsonb_build_object(
     'id', interaction.id,
     'source_id', interaction.source_id,
     'office_id', source.default_office_id,
@@ -414,7 +723,7 @@ SELECT
     'direction', interaction.direction,
     'recipient_email', interaction.recipient_email,
     'subject', interaction.subject,
-    'body_sha256', encode(digest(interaction.body_markdown, 'sha256'), 'hex'),
+    'body_sha256', encode(extensions.digest(interaction.body_markdown, 'sha256'), 'hex'),
     'template_key', interaction.template_key,
     'status', interaction.status,
     'error_message', interaction.error_message,
@@ -422,7 +731,7 @@ SELECT
     'created_by', interaction.created_by,
     'created_at', interaction.created_at
   )::TEXT, 'sha256'), 'hex'),
-  encode(digest(jsonb_build_object(
+  encode(extensions.digest(jsonb_build_object(
     'id', canonical.id,
     'source_id', interaction.source_id,
     'office_id', canonical.office_id,
@@ -433,7 +742,7 @@ SELECT
     'direction', canonical.direction,
     'recipient_email', canonical.recipient_email_snapshot,
     'subject', canonical.title,
-    'body_sha256', encode(digest(canonical.body_markdown, 'sha256'), 'hex'),
+    'body_sha256', encode(extensions.digest(canonical.body_markdown, 'sha256'), 'hex'),
     'template_key', canonical.template_key,
     'status', canonical.delivery_status,
     'error_message', canonical.delivery_error,
@@ -445,7 +754,9 @@ FROM public.ma_source_interactions interaction
 JOIN public.ma_sources source ON source.id = interaction.source_id
 JOIN public.ma_contacts contact ON contact.legacy_source_contact_id = interaction.contact_id
 JOIN public.ma_contact_office_affiliations affiliation
-  ON affiliation.contact_id = contact.id
+  ON affiliation.legacy_source_contact_id = interaction.contact_id
+  AND affiliation.legacy_source_id = source.id
+  AND affiliation.contact_id = contact.id
   AND affiliation.office_id = source.default_office_id
 JOIN public.ma_interactions canonical ON canonical.id = interaction.id
 ON CONFLICT (legacy_interaction_id) DO UPDATE
@@ -474,6 +785,7 @@ $$;
 
 ALTER TABLE public.ma_interactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ma_interaction_owner_verification_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ma_interaction_delivery_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ma_interaction_legacy_migration_manifest ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ma_source_interactions ENABLE ROW LEVEL SECURITY;
 
@@ -483,12 +795,14 @@ DROP POLICY IF EXISTS "Authenticated users can insert ma source interactions" ON
 REVOKE ALL ON TABLE
   public.ma_interactions,
   public.ma_interaction_owner_verification_events,
+  public.ma_interaction_delivery_events,
   public.ma_interaction_legacy_migration_manifest,
   public.ma_source_interactions
 FROM PUBLIC, anon, authenticated, service_role;
-GRANT SELECT, INSERT ON TABLE public.ma_interactions TO service_role;
+GRANT SELECT ON TABLE public.ma_interactions TO service_role;
 GRANT SELECT ON TABLE
   public.ma_interaction_owner_verification_events,
+  public.ma_interaction_delivery_events,
   public.ma_interaction_legacy_migration_manifest,
   public.ma_source_interactions
 TO service_role;
@@ -496,13 +810,21 @@ TO service_role;
 REVOKE ALL ON FUNCTION public.enforce_ma_interaction_office_context() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.guard_ma_interaction_mutation() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.prevent_ma_interaction_owner_verification_event_mutation() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.prevent_ma_interaction_delivery_event_mutation() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.guard_ma_interaction_opportunity_source_office() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.verify_ma_interaction_owner(UUID, TEXT) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.begin_ma_interaction_email_send(UUID, UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.finalize_ma_interaction_email_send(UUID, TEXT, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.verify_ma_interaction_owner(UUID, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.begin_ma_interaction_email_send(UUID, UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.finalize_ma_interaction_email_send(UUID, TEXT, TEXT, TEXT, TEXT) TO service_role;
 
 COMMENT ON TABLE public.ma_interactions IS
-  'Staff-only canonical office-anchored M&A relationship history. Inserts are service-only; all later owner verification is audited.';
+  'Staff-only canonical office-anchored M&A relationship history. Email delivery and owner verification use narrow audited service functions; direct table mutation is denied.';
 COMMENT ON TABLE public.ma_interaction_owner_verification_events IS
   'Append-only staff-owner verification evidence for canonical M&A interactions.';
+COMMENT ON TABLE public.ma_interaction_delivery_events IS
+  'Append-only pending/sent/failed provider delivery evidence for canonical M&A emails.';
 COMMENT ON TABLE public.ma_interaction_legacy_migration_manifest IS
   'Four-row SHA-256 before/after evidence manifest for the W-062 legacy interaction cutover; bodies are never copied into this manifest.';
 COMMENT ON TABLE public.ma_source_interactions IS

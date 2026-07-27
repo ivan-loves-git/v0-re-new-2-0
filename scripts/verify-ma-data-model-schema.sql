@@ -17,6 +17,7 @@ WITH target_tables(table_name) AS (
     ('ma_source_interactions'),
     ('ma_interactions'),
     ('ma_interaction_owner_verification_events'),
+    ('ma_interaction_delivery_events'),
     ('ma_interaction_legacy_migration_manifest'),
     ('opportunities'),
     ('opportunity_source_contacts'),
@@ -159,6 +160,7 @@ schema_evidence AS (
       'ma_source_interactions',
       'ma_interactions',
       'ma_interaction_owner_verification_events',
+      'ma_interaction_delivery_events',
       'ma_interaction_legacy_migration_manifest'
     )
     AND relation.relkind IN ('r', 'p')
@@ -192,6 +194,8 @@ schema_evidence AS (
       'release_ma_source_email_send',
       'refresh_ma_source_email_send',
       'verify_ma_interaction_owner',
+      'begin_ma_interaction_email_send',
+      'finalize_ma_interaction_email_send',
       'activate_ma_cutover_run',
       'move_ma_source_contact'
     )
@@ -215,3 +219,121 @@ schema_evidence AS (
 SELECT evidence_type, table_name, object_name, details
 FROM schema_evidence
 ORDER BY table_name, sort_order, object_name;
+
+-- Aggregate-only W-062 release evidence. This proves the exact migrated
+-- four-row manifest, provisional Bertrand ownership and effective role denial
+-- without returning UUIDs, recipients, subjects or message bodies.
+SELECT
+  'w062_release_evidence'::TEXT AS evidence_type,
+  JSONB_BUILD_OBJECT(
+    'legacy_rows',
+      (SELECT COUNT(*) FROM public.ma_source_interactions),
+    'legacy_distinct_ids',
+      (SELECT COUNT(DISTINCT id) FROM public.ma_source_interactions),
+    'manifest_rows',
+      (SELECT COUNT(*) FROM public.ma_interaction_legacy_migration_manifest),
+    'manifest_digest_mismatches',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_interaction_legacy_migration_manifest
+        WHERE legacy_evidence_digest <> canonical_evidence_digest
+      ),
+    'manifest_missing_canonical_uuid',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_interaction_legacy_migration_manifest manifest
+        LEFT JOIN public.ma_interactions interaction
+          ON interaction.id = manifest.legacy_interaction_id
+        WHERE interaction.id IS NULL
+      ),
+    'migrated_provisional_bertrand_owner',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_interaction_legacy_migration_manifest manifest
+        JOIN public.ma_interactions interaction
+          ON interaction.id = manifest.legacy_interaction_id
+        JOIN public.app_user_roles role
+          ON role.user_id = interaction.owner_staff_user_id
+        WHERE role.role = 'staff'
+          AND LOWER(BTRIM(role.email)) = 'bertrand.galas@edu.escp.eu'
+          AND interaction.owner_verification_state = 'provisional'
+          AND interaction.owner_verified_by IS NULL
+          AND interaction.owner_verified_at IS NULL
+      ),
+    'migrated_delivery_evidence',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_interaction_legacy_migration_manifest manifest
+        JOIN public.ma_interactions interaction
+          ON interaction.id = manifest.legacy_interaction_id
+        WHERE interaction.delivery_status = 'sent'
+          AND interaction.sent_at IS NOT NULL
+          AND interaction.delivery_finalized_at = interaction.sent_at
+          AND interaction.provider_idempotency_key = 'legacy:' || interaction.id::TEXT
+          AND interaction.provider_message_id IS NULL
+      ),
+    'legacy_service_can_write',
+      (
+        has_table_privilege(
+          'service_role',
+          'public.ma_source_interactions',
+          'INSERT,UPDATE,DELETE'
+        )
+      ),
+    'canonical_service_can_write',
+      (
+        EXISTS (
+          SELECT 1
+          FROM (
+            VALUES
+              ('ma_interactions'),
+              ('ma_interaction_owner_verification_events'),
+              ('ma_interaction_delivery_events'),
+              ('ma_interaction_legacy_migration_manifest')
+          ) AS target(table_name)
+          WHERE has_table_privilege(
+            'service_role',
+            'public.' || target.table_name,
+            'INSERT,UPDATE,DELETE'
+          )
+        )
+      ),
+    'browser_interaction_access',
+      (
+        EXISTS (
+          SELECT 1
+          FROM (VALUES ('anon'), ('authenticated')) AS browser(role_name)
+          CROSS JOIN (
+            VALUES
+              ('ma_source_interactions'),
+              ('ma_interactions'),
+              ('ma_interaction_owner_verification_events'),
+              ('ma_interaction_delivery_events'),
+              ('ma_interaction_legacy_migration_manifest')
+          ) AS target(table_name)
+          WHERE has_table_privilege(
+            browser.role_name,
+            'public.' || target.table_name,
+            'SELECT,INSERT,UPDATE,DELETE'
+          )
+        )
+      ),
+    'service_can_verify_owner',
+      has_function_privilege(
+        'service_role',
+        'public.verify_ma_interaction_owner(uuid,text)',
+        'EXECUTE'
+      ),
+    'service_can_begin',
+      has_function_privilege(
+        'service_role',
+        'public.begin_ma_interaction_email_send(uuid,uuid,uuid,text,text,text,text,text,uuid)',
+        'EXECUTE'
+      ),
+    'service_can_finalize',
+      has_function_privilege(
+        'service_role',
+        'public.finalize_ma_interaction_email_send(uuid,text,text,text,text)',
+        'EXECUTE'
+      )
+  ) AS details;

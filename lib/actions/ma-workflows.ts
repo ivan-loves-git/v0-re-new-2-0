@@ -237,7 +237,9 @@ function normalizeSource(row: Record<string, unknown>): OpportunityWorkflowRow {
 function getWorkflowContacts(
   opportunity: OpportunityWorkflowRow,
 ): MaWorkflowContact[] {
-  const canonicalContacts: MaWorkflowContact[] = (opportunity.office_contacts ?? [])
+  const canonicalContacts: MaWorkflowContact[] = (
+    opportunity.office_contacts ?? []
+  )
     .filter((relation) => relation.is_active)
     .map((relation) => {
       return {
@@ -269,18 +271,18 @@ function getWorkflowContacts(
   const legacyContacts: Array<MaWorkflowContact | null> = (
     opportunity.source_contacts ?? []
   ).map((relation) => {
-      const contact = relation.contact
-      if (!contact) return null
-      return {
-        id: relation.contact_id,
-        affiliationId: null,
-        name: contact.name,
-        email: contact.email,
-        phone: contact.phone,
-        isPrimary: relation.is_primary,
-        legacySourceContactId: relation.contact_id,
-      }
-    })
+    const contact = relation.contact
+    if (!contact) return null
+    return {
+      id: relation.contact_id,
+      affiliationId: null,
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone,
+      isPrimary: relation.is_primary,
+      legacySourceContactId: relation.contact_id,
+    }
+  })
 
   return legacyContacts
     .filter((contact): contact is MaWorkflowContact => contact !== null)
@@ -396,30 +398,26 @@ async function sendIntermediaryEmail({
   to,
   subject,
   body,
+  idempotencyKey,
 }: {
   to: string
   subject: string
   body: string
-}): Promise<{ success: boolean; error?: string }> {
-  const sendPromise = resend.emails.send({
-    from: `${FROM_NAME} <${FROM_EMAIL}>`,
-    to: [to],
-    subject,
-    html: markdownToEmailHtml(body),
-    text: body,
-  })
-
-  const timeoutPromise = new Promise<{ error: { message: string } }>(
-    (resolve) => {
-      setTimeout(
-        () => resolve({ error: { message: "Email provider timed out" } }),
-        15000,
-      )
+  idempotencyKey: string
+}): Promise<{ success: boolean; error?: string; providerMessageId?: string }> {
+  const { data, error } = await resend.emails.send(
+    {
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      to: [to],
+      subject,
+      html: markdownToEmailHtml(body),
+      text: body,
     },
+    { idempotencyKey },
   )
-
-  const { error } = await Promise.race([sendPromise, timeoutPromise])
-  return error ? { success: false, error: error.message } : { success: true }
+  return error
+    ? { success: false, error: error.message }
+    : { success: true, providerMessageId: data?.id }
 }
 
 async function loadOpportunityContext(opportunityId: string) {
@@ -713,131 +711,188 @@ export async function sendMaSourceWorkflowEmailPayload(
     }
   }
 
-  try {
-    const { opportunity, variables, activeMatch, contacts, defaultContact } =
-      await loadOpportunityContext(opportunityId)
-
-    if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
-      return {
-        success: false,
-        message:
-          "Validate a repreneur pursuit before requesting the M&A firm's NDA/info memo.",
-      }
-    }
-
-    if (
-      !opportunity.source_office &&
-      !opportunity.source_id &&
-      !opportunity.source
-    ) {
-      return {
-        success: false,
-        message: "This opportunity is not linked to an M&A source yet.",
-      }
-    }
-    const recipient = contactId
-      ? (contacts.find((contact) => contact.id === contactId) ?? null)
-      : defaultContact
-    if (contactId && !recipient) {
-      return {
-        success: false,
-        message: "Choose a contact linked to this opportunity.",
-      }
-    }
-    if (!recipient) {
-      return {
-        success: false,
-        message:
-          "Link an M&A contact to this opportunity before sending a follow-up.",
-      }
-    }
-    const recipientEmail = recipient.email
-    if (!recipientEmail) {
-      return {
-        success: false,
-        message:
-          "Add an email to the selected M&A contact before sending a follow-up.",
-      }
-    }
-    if (!opportunity.source_office_id || !recipient.affiliationId) {
-      return {
-        success: false,
-        message:
-          "Link this opportunity and selected contact through the canonical office before sending a follow-up.",
-      }
-    }
-
-    const renderedSubject = substituteTemplateVariables(subject, variables)
-    const renderedBody = substituteTemplateVariables(body, variables)
-
-    const {
-      data: emailReservationRefreshed,
-      error: emailReservationRefreshError,
-    } = await supabase.rpc("refresh_ma_source_email_send", {
+  const releaseReservation = () =>
+    supabase.rpc("release_ma_source_email_send", {
       p_opportunity_id: opportunityId,
       p_reservation_token: emailReservationToken,
     })
 
-    if (emailReservationRefreshError || emailReservationRefreshed !== true) {
-      return {
-        success: false,
-        message:
-          "Email blocked because the source context changed before delivery.",
-      }
-    }
+  let workflowContext: Awaited<ReturnType<typeof loadOpportunityContext>>
+  try {
+    workflowContext = await loadOpportunityContext(opportunityId)
+  } catch (error) {
+    await releaseReservation()
+    throw error
+  }
 
-    const result = await sendIntermediaryEmail({
+  const { opportunity, variables, activeMatch, contacts, defaultContact } =
+    workflowContext
+
+  if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Validate a repreneur pursuit before requesting the M&A firm's NDA/info memo.",
+    }
+  }
+
+  if (
+    !opportunity.source_office &&
+    !opportunity.source_id &&
+    !opportunity.source
+  ) {
+    await releaseReservation()
+    return {
+      success: false,
+      message: "This opportunity is not linked to an M&A source yet.",
+    }
+  }
+  const recipient = contactId
+    ? (contacts.find((contact) => contact.id === contactId) ?? null)
+    : defaultContact
+  if (contactId && !recipient) {
+    await releaseReservation()
+    return {
+      success: false,
+      message: "Choose a contact linked to this opportunity.",
+    }
+  }
+  if (!recipient) {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Link an M&A contact to this opportunity before sending a follow-up.",
+    }
+  }
+  const recipientEmail = recipient.email
+  if (!recipientEmail) {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Add an email to the selected M&A contact before sending a follow-up.",
+    }
+  }
+  if (!opportunity.source_office_id || !recipient.affiliationId) {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Link this opportunity and selected contact through the canonical office before sending a follow-up.",
+    }
+  }
+
+  const renderedSubject = substituteTemplateVariables(subject, variables)
+  const renderedBody = substituteTemplateVariables(body, variables)
+
+  const {
+    data: emailReservationRefreshed,
+    error: emailReservationRefreshError,
+  } = await supabase.rpc("refresh_ma_source_email_send", {
+    p_opportunity_id: opportunityId,
+    p_reservation_token: emailReservationToken,
+  })
+
+  if (emailReservationRefreshError || emailReservationRefreshed !== true) {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Email blocked because the source context changed before delivery.",
+    }
+  }
+
+  const { data: pendingRows, error: beginError } = await supabase.rpc(
+    "begin_ma_interaction_email_send",
+    {
+      p_opportunity_id: opportunity.id,
+      p_office_id: opportunity.source_office_id,
+      p_affiliation_id: recipient.affiliationId,
+      p_actor: user.id,
+      p_template_key: templateKey,
+      p_recipient_email: recipientEmail,
+      p_title: renderedSubject,
+      p_body_markdown: renderedBody,
+      p_reservation_token: emailReservationToken,
+    },
+  )
+  const pendingInteraction = Array.isArray(pendingRows)
+    ? pendingRows[0]
+    : pendingRows
+  const interactionId = pendingInteraction?.interaction_id
+  const idempotencyKey = pendingInteraction?.provider_idempotency_key
+
+  if (
+    beginError ||
+    typeof interactionId !== "string" ||
+    typeof idempotencyKey !== "string"
+  ) {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Email blocked because a canonical delivery record could not be started.",
+    }
+  }
+
+  let result: Awaited<ReturnType<typeof sendIntermediaryEmail>>
+  try {
+    result = await sendIntermediaryEmail({
       to: recipientEmail,
       subject: renderedSubject,
       body: renderedBody,
+      idempotencyKey,
     })
-
-    const status = result.success ? "sent" : "failed"
-    const { error } = await supabase.from("ma_interactions").insert({
-      opportunity_id: opportunity.id,
-      office_id: opportunity.source_office_id,
-      affiliation_id: recipient.affiliationId,
-      template_key: templateKey,
-      channel: "email",
-      direction: "outbound",
-      occurred_at: new Date().toISOString(),
-      owner_staff_user_id: user.id,
-      owner_verification_state: "provisional",
-      recipient_email_snapshot: recipientEmail,
-      title: renderedSubject,
-      body_markdown: renderedBody,
-      delivery_status: status,
-      delivery_error: result.success
-        ? null
-        : (result.error ?? "Email send failed"),
-      sent_at: result.success ? new Date().toISOString() : null,
-      created_by: user.id,
-    })
-
-    if (error) {
-      return {
-        success: false,
-        message: result.success
-          ? "Email sent, but the interaction could not be logged."
-          : result.error ||
-            "Email failed and the interaction could not be logged.",
-      }
+  } catch {
+    return {
+      success: false,
+      message:
+        "Email delivery has an unknown provider result. Its canonical record is pending reconciliation; do not retry.",
     }
-
-    revalidatePath(`/opportunities/${opportunityId}`)
-    revalidatePath("/opportunities/ma")
-    revalidatePath("/emails")
-    revalidateOpportunityDashboardTags()
-
-    if (!result.success) {
-      return { success: false, message: result.error || "Email failed." }
-    }
-
-    return { success: true, message: `Email sent to ${recipientEmail}` }
-  } finally {
-    await supabase.rpc("release_ma_source_email_send", {
-      p_opportunity_id: opportunityId,
-      p_reservation_token: emailReservationToken,
-    })
   }
+
+  const { error: finalizeError } = await supabase.rpc(
+    "finalize_ma_interaction_email_send",
+    {
+      p_interaction_id: interactionId,
+      p_actor: user.id,
+      p_delivery_status: result.success ? "sent" : "failed",
+      p_provider_message_id: result.providerMessageId ?? null,
+      p_delivery_error: result.success
+        ? null
+        : (result.error ?? "Email provider failed"),
+    },
+  )
+
+  if (finalizeError) {
+    return {
+      success: false,
+      message: result.success
+        ? "Email provider accepted the message, but delivery evidence is pending reconciliation. Do not retry."
+        : "Email delivery failed, but its canonical evidence could not be finalized. Do not retry until reconciled.",
+    }
+  }
+
+  const { error: releaseError } = await releaseReservation()
+
+  if (releaseError) {
+    return {
+      success: false,
+      message:
+        "Email delivery is finalized, but the send lock could not be released. Do not retry until it expires.",
+    }
+  }
+
+  revalidatePath(`/opportunities/${opportunityId}`)
+  revalidatePath("/opportunities/ma")
+  revalidatePath("/emails")
+  revalidateOpportunityDashboardTags()
+
+  if (!result.success) {
+    return { success: false, message: result.error || "Email failed." }
+  }
+
+  return { success: true, message: `Email sent to ${recipientEmail}` }
 }

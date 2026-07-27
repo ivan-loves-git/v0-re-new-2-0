@@ -65,12 +65,17 @@ describe("canonical multi-contact M&A intake", () => {
     expect(contactRoute).toContain('redirect("/opportunities/new")')
   })
 
-  it("uses canonical contacts for workflow recipients while preserving legacy logs only as fallback", () => {
+  it("uses canonical contacts and interaction persistence for workflow email evidence", () => {
     const workflowActions = source("lib/actions/ma-workflows.ts")
 
     expect(workflowActions).toContain("office_contacts:opportunity_ma_contacts")
     expect(workflowActions).toContain("source_office:ma_offices")
-    expect(workflowActions).toContain("legacySourceContactId ?? null")
-    expect(workflowActions).toContain("recipient_email: recipientEmail")
+    expect(workflowActions).toContain("affiliationId: relation.affiliation_id")
+    expect(workflowActions).toContain("p_recipient_email: recipientEmail")
+    expect(workflowActions).toContain("recipient_email_snapshot")
+    expect(workflowActions).toContain("begin_ma_interaction_email_send")
+    expect(workflowActions).not.toContain(
+      '.from("ma_source_interactions").insert',
+    )
   })
 })

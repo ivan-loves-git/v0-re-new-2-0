@@ -53,9 +53,10 @@ describe("W-064 provisional Acme source foundation", () => {
     const reservationRefresh = action.indexOf(
       '.rpc("refresh_ma_source_email_send"',
     )
+    const canonicalBegin = action.indexOf('"begin_ma_interaction_email_send"')
     const send = action.indexOf("await sendIntermediaryEmail")
-    const interactionInsert = action.indexOf(
-      '.from("ma_interactions").insert',
+    const canonicalFinalize = action.indexOf(
+      '"finalize_ma_interaction_email_send"',
     )
 
     expect(actionStart).toBeGreaterThan(-1)
@@ -68,13 +69,15 @@ describe("W-064 provisional Acme source foundation", () => {
     )
     expect(reservation).toBeGreaterThan(reviewCheck)
     expect(action).toContain('.rpc("release_ma_source_email_send"')
-    expect(action).toContain("} finally {")
     expect(reviewCheck).toBeLessThan(contextLoad)
     expect(reservation).toBeLessThan(contextLoad)
     expect(reservationRefresh).toBeGreaterThan(contextLoad)
-    expect(reservationRefresh).toBeLessThan(send)
+    expect(reservationRefresh).toBeLessThan(canonicalBegin)
+    expect(canonicalBegin).toBeLessThan(send)
+    expect(send).toBeLessThan(canonicalFinalize)
     expect(reviewCheck).toBeLessThan(send)
-    expect(reviewCheck).toBeLessThan(interactionInsert)
+    expect(action).not.toContain('.from("ma_interactions").insert')
+    expect(action).not.toContain("Promise.race")
     expect(migration).toContain(
       "GRANT EXECUTE ON FUNCTION public.ma_opportunity_source_review_required(UUID) TO service_role;",
     )
@@ -241,8 +244,12 @@ describe("W-064 provisional Acme source foundation", () => {
 
   it("keeps the implementation and a synthetic-only rehearsal visible in the canonical contract", () => {
     expect(contract).toContain("W-064, provisional source foundation")
-    expect(contract).toContain("Migrations 076 to 079 are live and schema-verified")
-    expect(contract).toContain("Live and production-verified on 2026-07-27")
+    expect(contract).toContain(
+      "Migrations 076 to 079 are live and schema-verified",
+    )
+    expect(contract).toContain(
+      "W-064 and W-065 live and production-verified on 2026-07-27",
+    )
     expect(contract).toContain("W-064 and migration 079")
 
     const fixture = source(
