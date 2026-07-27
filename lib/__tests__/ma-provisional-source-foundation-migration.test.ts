@@ -9,6 +9,9 @@ function source(relativePath: string) {
 
 describe("W-064 provisional Acme source foundation", () => {
   const migration = source("scripts/079_provisional_acme_source_foundation.sql")
+  const officeContactFoundation = source(
+    "scripts/076_ma_office_identity_and_activation_foundation.sql",
+  )
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
   const workflowAction = source("lib/actions/ma-workflows.ts")
   const emailActions = source("lib/actions/emails.ts")
@@ -185,6 +188,36 @@ describe("W-064 provisional Acme source foundation", () => {
     ]) {
       expect(migration).toContain(invariant)
     }
+
+    const contactGuardStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.guard_ma_provisional_bertrand_contact_identity",
+    )
+    const affiliationGuardStart = migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.guard_ma_provisional_bertrand_affiliation_identity",
+    )
+    const contactGuard = migration.slice(
+      contactGuardStart,
+      affiliationGuardStart,
+    )
+
+    expect(officeContactFoundation).toContain(
+      "CREATE TRIGGER normalize_ma_contact_display_name",
+    )
+    expect(contactGuardStart).toBeGreaterThan(-1)
+    expect(affiliationGuardStart).toBeGreaterThan(contactGuardStart)
+    expect(contactGuard).toContain("effective_display_name := BTRIM(CONCAT_WS(")
+    expect(contactGuard).toContain(
+      "LOWER(effective_display_name) = 'bertrand galas'",
+    )
+    expect(contactGuard).toContain(
+      "LOWER(BTRIM(NEW.display_name)) = 'bertrand galas'",
+    )
+    expect(contactGuard).toContain(
+      "effective_display_name IS DISTINCT FROM 'Bertrand Galas'",
+    )
+    expect(contactGuard).toContain(
+      "NEW.display_name IS DISTINCT FROM 'Bertrand Galas'",
+    )
   })
 
   it("keeps the new objects service-role-only and out of repreneur paths", () => {
@@ -221,6 +254,21 @@ describe("W-064 provisional Acme source foundation", () => {
     expect(fixture).toContain("w064_fixture_privilege_assertion_failed")
     expect(fixture).toContain("SET CONSTRAINTS ALL IMMEDIATE")
     expect(fixture).toContain("SET LOCAL ROLE service_role")
+    expect(fixture).toContain(
+      "CREATE TRIGGER normalize_ma_contact_display_name",
+    )
+    expect(fixture).toContain(
+      "w064_fixture_contact_component_mutation_should_have_failed",
+    )
+    expect(fixture).toContain(
+      "w064_fixture_contact_component_collision_should_have_failed",
+    )
+    expect(fixture).toContain(
+      "w064_fixture_contact_display_mutation_should_have_failed",
+    )
+    expect(fixture).toContain(
+      "w064_fixture_contact_display_collision_should_have_failed",
+    )
     expect(runner).toContain("/private/tmp/renew-w064-postgres")
     expect(runner).toContain("expect_collision_failure")
     expect(runner).toContain(

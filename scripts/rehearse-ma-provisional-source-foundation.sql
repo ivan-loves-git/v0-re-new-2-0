@@ -99,6 +99,32 @@ CREATE TABLE public.ma_contacts (
   CHECK (status <> 'archived' OR archived_at IS NOT NULL)
 );
 
+-- Match migration 076's production trigger stack. Its alphabetically later
+-- BEFORE trigger rewrites display_name from the effective name components.
+CREATE OR REPLACE FUNCTION public.normalize_ma_contact_display_name()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  NEW.first_name := NULLIF(BTRIM(NEW.first_name), '');
+  NEW.last_name := NULLIF(BTRIM(NEW.last_name), '');
+
+  IF NEW.first_name IS NULL AND NEW.last_name IS NULL THEN
+    RAISE EXCEPTION 'ma_contact_requires_name_component';
+  END IF;
+
+  NEW.display_name := BTRIM(CONCAT_WS(' ', NEW.first_name, NEW.last_name));
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER normalize_ma_contact_display_name
+  BEFORE INSERT OR UPDATE OF first_name, last_name
+  ON public.ma_contacts
+  FOR EACH ROW
+  EXECUTE FUNCTION public.normalize_ma_contact_display_name();
+
 CREATE TABLE public.ma_contact_office_affiliations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   contact_id UUID NOT NULL REFERENCES public.ma_contacts(id),
@@ -802,6 +828,96 @@ BEGIN
       RAISE;
     END IF;
   END;
+
+  -- Under the real migration 076 trigger stack, guard_* fires before
+  -- normalize_*. The guard must still reject a component change that would
+  -- otherwise rewrite the fixed contact's display_name to Alice Example.
+  BEGIN
+    UPDATE public.ma_contacts
+    SET
+      first_name = 'Alice',
+      last_name = 'Example'
+    WHERE id = context_row.contact_id;
+    RAISE EXCEPTION 'w064_fixture_contact_component_mutation_should_have_failed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ma_provisional_bertrand_contact_is_immutable' THEN
+      RAISE;
+    END IF;
+  END;
+
+  -- A display-name-only UPDATE does not invoke migration 076's normalizer, so
+  -- the stored value remains an independently protected identity field.
+  BEGIN
+    UPDATE public.ma_contacts
+    SET display_name = 'Alice Example'
+    WHERE id = context_row.contact_id;
+    RAISE EXCEPTION 'w064_fixture_contact_display_mutation_should_have_failed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ma_provisional_bertrand_contact_is_immutable' THEN
+      RAISE;
+    END IF;
+  END;
+
+  -- The supplied display_name is immaterial because migration 076 normalizes
+  -- it after this alphabetically earlier guard. The effective components must
+  -- still be rejected as a Bertrand identity collision.
+  BEGIN
+    INSERT INTO public.ma_contacts (
+      first_name,
+      last_name,
+      display_name,
+      status,
+      email
+    ) VALUES (
+      'Bertrand',
+      'Galas',
+      'Harmless Display',
+      'active',
+      'harmless@example.test'
+    );
+    RAISE EXCEPTION 'w064_fixture_contact_component_collision_should_have_failed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ma_provisional_bertrand_contact_identity_collision' THEN
+      RAISE;
+    END IF;
+  END;
+
+  -- Preserve the supplied display-name collision guard as well: UPDATEs of
+  -- display_name alone are not normalized by migration 076.
+  BEGIN
+    INSERT INTO public.ma_contacts (
+      first_name,
+      last_name,
+      display_name,
+      status,
+      email
+    ) VALUES (
+      'Other',
+      'Person',
+      'Bertrand Galas',
+      'active',
+      'other.bertrand-collision@example.test'
+    );
+    RAISE EXCEPTION 'w064_fixture_contact_display_collision_should_have_failed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ma_provisional_bertrand_contact_identity_collision' THEN
+      RAISE;
+    END IF;
+  END;
+
+  IF (
+    SELECT contact.display_name
+    FROM public.ma_contacts contact
+    WHERE contact.id = context_row.contact_id
+  ) <> 'Bertrand Galas'
+    OR EXISTS (
+      SELECT 1
+      FROM public.ma_contacts contact
+      WHERE LOWER(BTRIM(contact.display_name)) = 'alice example'
+        OR LOWER(BTRIM(contact.display_name)) = 'harmless display'
+    ) THEN
+    RAISE EXCEPTION 'w064_fixture_contact_trigger_stack_assertion_failed';
+  END IF;
 
   BEGIN
     UPDATE public.ma_contact_office_affiliations

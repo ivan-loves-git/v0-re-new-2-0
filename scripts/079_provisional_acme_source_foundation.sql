@@ -416,6 +416,7 @@ SET search_path = ''
 AS $$
 DECLARE
   fixed_contact_id UUID;
+  effective_display_name TEXT;
 BEGIN
   SELECT contact_id
   INTO fixed_contact_id
@@ -429,8 +430,19 @@ BEGIN
     RETURN OLD;
   END IF;
 
+  -- Migration 076 derives display_name from first_name and last_name in its
+  -- own BEFORE trigger. PostgreSQL fires same-kind triggers by name, so this
+  -- guard must derive the effective value itself instead of depending on the
+  -- normalize trigger having run first.
+  effective_display_name := BTRIM(CONCAT_WS(
+    ' ',
+    NULLIF(BTRIM(NEW.first_name), ''),
+    NULLIF(BTRIM(NEW.last_name), '')
+  ));
+
   IF (
     LOWER(BTRIM(NEW.display_name)) = 'bertrand galas'
+    OR LOWER(effective_display_name) = 'bertrand galas'
     OR LOWER(BTRIM(NEW.email)) = 'bertrand.galas@edu.escp.eu'
   ) AND NEW.id IS DISTINCT FROM fixed_contact_id THEN
     RAISE EXCEPTION 'ma_provisional_bertrand_contact_identity_collision';
@@ -443,6 +455,7 @@ BEGIN
   IF OLD.id = fixed_contact_id
     AND (
       NEW.display_name IS DISTINCT FROM 'Bertrand Galas'
+      OR effective_display_name IS DISTINCT FROM 'Bertrand Galas'
       OR LOWER(BTRIM(NEW.email)) IS DISTINCT FROM 'bertrand.galas@edu.escp.eu'
       OR NEW.status IS DISTINCT FROM 'active'
       OR NEW.archived_at IS NOT NULL
