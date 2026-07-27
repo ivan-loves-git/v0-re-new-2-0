@@ -541,7 +541,7 @@ Every staged office also declares the boolean `isSyntheticDefault`. `true` means
 
 ## Current implementation reconciliation
 
-Verified against the live Supabase schema through migrations 076 to 078 on 2026-07-26. Production contains the canonical firm, office, contact, affiliation and opportunity-contact model; the legacy M&A objects are read-only compatibility evidence. The cutover manifest and staging boundary are live but empty, and no real workbook activation has occurred.
+Verified against the live Supabase schema through migrations 076 to 078 on 2026-07-26. Migrations 076 to 078 were applied to production and schema-verified on 2026-07-26. Production contains the canonical firm, office, contact, affiliation and opportunity-contact model; the legacy M&A objects are read-only compatibility evidence. The cutover manifest and staging boundary are live but empty, and no real workbook activation has occurred.
 
 Gate 2 executed the final 076 to 078 sequence on 2026-07-26 in a disposable Supabase-compatible project whose six-table pre-076 M&A baseline was compared with the live schema catalog before any synthetic row was added. Runtime verification covered fail-closed invalid legacy data, current and historical contact bridging, email-only legacy retention, canonical and cutover privileges, lifecycle and digest rejection, two-contact activation with one primary, UTC/Rome digest equality, normalized-firm concurrency, stage-mutation and supersession serialization, transactional rollback and temporary-evidence purge. Gate 2 exposed and corrected an invalid legacy-affiliation backfill join in migration 076 and ambiguous activation-local identifiers in migration 078.
 
