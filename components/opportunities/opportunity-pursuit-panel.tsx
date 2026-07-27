@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
+import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
 import { updateOpportunityPursuitNda, updateOpportunityPursuitStage } from "@/lib/actions/opportunity-matches"
 import { canAccessOpportunityMemo, hasCompletedNdaSignature } from "@/lib/opportunity-confidentiality"
 import {
@@ -20,6 +21,7 @@ import {
   type OpportunityDocument,
   type OpportunityMatch,
   type OpportunityMatchCandidate,
+  type OpportunityNdaArtifact,
   type OpportunityPursuitEvent,
   type OpportunityPursuitStage,
 } from "@/lib/types/opportunity"
@@ -29,6 +31,7 @@ interface OpportunityPursuitPanelProps {
   matches: OpportunityMatch[]
   events: OpportunityPursuitEvent[]
   documents: OpportunityDocument[]
+  ndaArtifacts: OpportunityNdaArtifact[]
 }
 
 const EDITABLE_STAGE_OPTIONS = OPPORTUNITY_PURSUIT_STAGE_OPTIONS.filter((option) => option.value !== "dropped")
@@ -59,7 +62,13 @@ function stageLabel(stage: OpportunityPursuitStage | null | undefined) {
   return stage ? getOpportunityPursuitStageLabel(stage) : "Not started"
 }
 
-export function OpportunityPursuitPanel({ opportunityId, matches, events, documents }: OpportunityPursuitPanelProps) {
+export function OpportunityPursuitPanel({
+  opportunityId,
+  matches,
+  events,
+  documents,
+  ndaArtifacts,
+}: OpportunityPursuitPanelProps) {
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
   const latestDroppedMatch =
     matches.find((match) => match.status === "dropped" && match.pursuit_stage === "dropped") ?? null
@@ -182,11 +191,20 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck data-icon="inline-start" />
-            NDA and document gate
+            NDA artifacts and compatibility gate
           </CardTitle>
-          <CardDescription>Keep receipt, completed NDA, and actual info-memo availability as separate checks.</CardDescription>
+          <CardDescription>
+            Retain canonical NDA versions while the existing gate fields remain
+            compatibility-only.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
+          <OpportunityNdaArtifactManager
+            opportunityId={opportunityId}
+            activeMatchId={activeMatch?.id ?? null}
+            artifacts={ndaArtifacts}
+          />
+
           {!activeMatch && (
             <Alert>
               <FileText />
@@ -229,8 +247,17 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
               </div>
 
               <form action={updateNdaAction} className="flex flex-col gap-4 rounded-md border p-4">
+                <Alert>
+                  <History />
+                  <AlertTitle>Legacy compatibility fields</AlertTitle>
+                  <AlertDescription>
+                    These values keep the current workflow operating. They do not
+                    create canonical NDA evidence or complete the future Gate 1
+                    or Gate 2 validation.
+                  </AlertDescription>
+                </Alert>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="nda_status">NDA status</Label>
+                  <Label htmlFor="nda_status">Legacy NDA status</Label>
                   <Select name="nda_status" defaultValue={activeMatch.nda_status ?? "not_required"}>
                     <SelectTrigger id="nda_status" className="w-full">
                       <SelectValue />
@@ -260,7 +287,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, events, docume
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="nda_document_id">Linked NDA document</Label>
+                  <Label htmlFor="nda_document_id">Legacy linked NDA document</Label>
                   <Select name="nda_document_id" defaultValue={activeMatch.nda_document_id ?? NO_NDA_DOCUMENT_VALUE}>
                     <SelectTrigger id="nda_document_id" className="w-full">
                       <SelectValue />

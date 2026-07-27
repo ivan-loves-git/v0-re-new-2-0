@@ -32,6 +32,7 @@ import {
 interface OpportunityDocumentsPanelProps {
   opportunityId: string
   documents: OpportunityDocument[]
+  canonicalNdaDocumentIds?: string[]
 }
 
 function formatBytes(bytes: number | null | undefined) {
@@ -44,9 +45,14 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
 }
 
-export function OpportunityDocumentsPanel({ opportunityId, documents }: OpportunityDocumentsPanelProps) {
+export function OpportunityDocumentsPanel({
+  opportunityId,
+  documents,
+  canonicalNdaDocumentIds = [],
+}: OpportunityDocumentsPanelProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const canonicalNdaDocumentIdSet = new Set(canonicalNdaDocumentIds)
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -159,7 +165,10 @@ export function OpportunityDocumentsPanel({ opportunityId, documents }: Opportun
                     </TableCell>
                   </TableRow>
                 ) : (
-                  documents.map((document) => (
+                  documents.map((document) => {
+                    const isCanonicalNdaArtifact =
+                      canonicalNdaDocumentIdSet.has(document.id)
+                    return (
                     <TableRow key={document.id}>
                       <TableCell>
                         <div className="font-medium">{document.title}</div>
@@ -177,6 +186,11 @@ export function OpportunityDocumentsPanel({ opportunityId, documents }: Opportun
                         <Badge variant={document.visibility === "staff_only" ? "secondary" : "default"}>
                           {document.visibility === "staff_only" ? "Staff only" : "Approved"}
                         </Badge>
+                        {isCanonicalNdaArtifact && (
+                          <Badge variant="outline" className="ml-2">
+                            Retained NDA evidence
+                          </Badge>
+                        )}
                         {document.visibility === "approved_for_repreneur" && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             {document.repreneur_approved_at && document.repreneur_approved_by
@@ -188,6 +202,9 @@ export function OpportunityDocumentsPanel({ opportunityId, documents }: Opportun
                       <TableCell>{formatBytes(document.size_bytes)}</TableCell>
                       <TableCell>{formatDate(document.uploaded_at)}</TableCell>
                       <TableCell>
+                        {isCanonicalNdaArtifact ? (
+                          <span className="text-xs text-muted-foreground">Locked</span>
+                        ) : (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="size-8">
@@ -207,9 +224,11 @@ export function OpportunityDocumentsPanel({ opportunityId, documents }: Opportun
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
-                  ))
+                    )
+                  })
                 )}
               </TableBody>
             </Table>

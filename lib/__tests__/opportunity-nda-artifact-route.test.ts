@@ -1,0 +1,134 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+const mocks = vi.hoisted(() => ({
+  createAdminClient: vi.fn(),
+  requireStaffAccess: vi.fn(),
+}))
+
+vi.mock("@/lib/access-control", () => ({
+  requireStaffAccess: mocks.requireStaffAccess,
+}))
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: mocks.createAdminClient,
+}))
+
+import { GET } from "@/app/(dashboard)/opportunities/[id]/nda-artifacts/[artifactId]/route"
+
+function setupAdminClient({
+  artifact = { document_id: "document-1" },
+  document = {
+    storage_bucket: "opportunity-documents",
+    storage_path: "opportunity-1/nda-artifacts/blank_template/blank.pdf",
+  },
+}: {
+  artifact?: { document_id: string } | null
+  document?: {
+    storage_bucket: string
+    storage_path: string | null
+  } | null
+} = {}) {
+  const artifactMaybeSingle = vi.fn().mockResolvedValue({
+    data: artifact,
+    error: null,
+  })
+  const artifactOpportunityEq = vi.fn(() => ({
+    maybeSingle: artifactMaybeSingle,
+  }))
+  const artifactIdEq = vi.fn(() => ({ eq: artifactOpportunityEq }))
+  const artifactSelect = vi.fn(() => ({ eq: artifactIdEq }))
+
+  const documentMaybeSingle = vi.fn().mockResolvedValue({
+    data: document,
+    error: null,
+  })
+  const documentVisibilityEq = vi.fn(() => ({
+    maybeSingle: documentMaybeSingle,
+  }))
+  const documentTypeEq = vi.fn(() => ({ eq: documentVisibilityEq }))
+  const documentOpportunityEq = vi.fn(() => ({ eq: documentTypeEq }))
+  const documentIdEq = vi.fn(() => ({ eq: documentOpportunityEq }))
+  const documentSelect = vi.fn(() => ({ eq: documentIdEq }))
+
+  const createSignedUrl = vi.fn().mockResolvedValue({
+    data: { signedUrl: "https://storage.example.test/signed-nda" },
+    error: null,
+  })
+
+  mocks.createAdminClient.mockReturnValue({
+    from: vi.fn((table: string) => {
+      if (table === "opportunity_nda_artifacts") {
+        return { select: artifactSelect }
+      }
+      if (table === "opportunity_documents") {
+        return { select: documentSelect }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    }),
+    storage: {
+      from: vi.fn(() => ({ createSignedUrl })),
+    },
+  })
+
+  return { createSignedUrl, documentSelect }
+}
+
+function requestArtifact() {
+  return GET(new Request("http://localhost/opportunities/opportunity-1/nda-artifacts/artifact-1"), {
+    params: Promise.resolve({
+      id: "opportunity-1",
+      artifactId: "artifact-1",
+    }),
+  })
+}
+
+describe("staff NDA artifact route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.requireStaffAccess.mockResolvedValue({
+      role: "staff",
+      user: { id: "staff-1", email: "staff@example.test" },
+    })
+  })
+
+  it("requires staff before reading canonical artifact metadata", async () => {
+    setupAdminClient()
+
+    await requestArtifact()
+
+    expect(mocks.requireStaffAccess).toHaveBeenCalledOnce()
+  })
+
+  it("returns not found when the artifact is outside the opportunity", async () => {
+    const { documentSelect, createSignedUrl } = setupAdminClient({
+      artifact: null,
+    })
+
+    expect((await requestArtifact()).status).toBe(404)
+    expect(documentSelect).not.toHaveBeenCalled()
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("redirects a retained private PDF through a short signed URL", async () => {
+    const { createSignedUrl } = setupAdminClient()
+
+    const response = await requestArtifact()
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get("location")).toBe("https://storage.example.test/signed-nda")
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.pdf", 60)
+  })
+
+  it("refuses a canonical artifact without retained private storage", async () => {
+    const { createSignedUrl } = setupAdminClient({
+      document: {
+        storage_bucket: "opportunity-documents",
+        storage_path: null,
+      },
+    })
+
+    expect((await requestArtifact()).status).toBe(404)
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+})

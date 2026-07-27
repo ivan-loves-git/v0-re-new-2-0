@@ -22,7 +22,8 @@ WITH target_tables(table_name) AS (
     ('opportunities'),
     ('opportunity_source_contacts'),
     ('opportunity_ma_contacts'),
-    ('opportunity_documents')
+    ('opportunity_documents'),
+    ('opportunity_nda_artifacts')
 ),
 schema_evidence AS (
   SELECT
@@ -161,7 +162,8 @@ schema_evidence AS (
       'ma_interactions',
       'ma_interaction_owner_verification_events',
       'ma_interaction_delivery_events',
-      'ma_interaction_legacy_migration_manifest'
+      'ma_interaction_legacy_migration_manifest',
+      'opportunity_nda_artifacts'
     )
     AND relation.relkind IN ('r', 'p')
 
@@ -198,7 +200,8 @@ schema_evidence AS (
       'begin_ma_interaction_email_send',
       'finalize_ma_interaction_email_send',
       'activate_ma_cutover_run',
-      'move_ma_source_contact'
+      'move_ma_source_contact',
+      'register_opportunity_nda_artifact'
     )
 
   UNION ALL
@@ -341,6 +344,127 @@ SELECT
       has_function_privilege(
         'service_role',
         'public.finalize_ma_interaction_email_send(uuid,text,text,text,text)',
+        'EXECUTE'
+      )
+  ) AS details;
+
+-- Aggregate-only W-043 release evidence. This deliberately returns no document
+-- names, paths, URLs, people or opportunity identifiers.
+SELECT
+  'w043_release_evidence'::TEXT AS evidence_type,
+  JSONB_BUILD_OBJECT(
+    'artifact_rows',
+      (SELECT COUNT(*) FROM public.opportunity_nda_artifacts),
+    'scope_violations',
+      (
+        SELECT COUNT(*)
+        FROM public.opportunity_nda_artifacts
+        WHERE (artifact_role = 'blank_template' AND match_id IS NOT NULL)
+          OR (
+            artifact_role IN ('renew_signed_copy', 'repreneur_signed_copy')
+            AND match_id IS NULL
+          )
+      ),
+    'document_boundary_violations',
+      (
+        SELECT COUNT(*)
+        FROM public.opportunity_nda_artifacts artifact
+        JOIN public.opportunity_documents document
+          ON document.id = artifact.document_id
+        WHERE document.opportunity_id <> artifact.opportunity_id
+          OR document.document_type <> 'nda'
+          OR document.visibility <> 'staff_only'
+          OR document.storage_path IS NULL
+          OR document.external_url IS NOT NULL
+          OR document.file_name IS NULL
+          OR LOWER(document.file_name) NOT LIKE '%.pdf'
+          OR document.mime_type <> 'application/pdf'
+          OR document.size_bytes IS NULL
+          OR document.size_bytes <= 0
+          OR document.storage_path NOT LIKE (
+            artifact.opportunity_id::TEXT
+            || '/nda-artifacts/'
+            || artifact.artifact_role::TEXT
+            || '/%'
+          )
+      ),
+    'invalid_content_digests',
+      (
+        SELECT COUNT(*)
+        FROM public.opportunity_nda_artifacts
+        WHERE content_sha256 !~ '^[0-9a-f]{64}$'
+      ),
+    'reused_storage_paths',
+      (
+        SELECT COUNT(*)
+        FROM (
+          SELECT document.storage_bucket, document.storage_path
+          FROM public.opportunity_nda_artifacts artifact
+          JOIN public.opportunity_documents document
+            ON document.id = artifact.document_id
+          GROUP BY document.storage_bucket, document.storage_path
+          HAVING COUNT(*) > 1
+        ) duplicate_paths
+      ),
+    'pursuit_boundary_violations',
+      (
+        SELECT COUNT(*)
+        FROM public.opportunity_nda_artifacts artifact
+        JOIN public.opportunity_matches match
+          ON match.id = artifact.match_id
+        WHERE match.opportunity_id <> artifact.opportunity_id
+      ),
+    'version_chain_violations',
+      (
+        SELECT COUNT(*)
+        FROM public.opportunity_nda_artifacts artifact
+        LEFT JOIN public.opportunity_nda_artifacts prior
+          ON prior.id = artifact.supersedes_artifact_id
+        WHERE
+          (
+            artifact.version_number = 1
+            AND artifact.supersedes_artifact_id IS NOT NULL
+          )
+          OR (
+            artifact.version_number > 1
+            AND (
+              prior.id IS NULL
+              OR prior.opportunity_id <> artifact.opportunity_id
+              OR prior.match_id IS DISTINCT FROM artifact.match_id
+              OR prior.artifact_role <> artifact.artifact_role
+              OR prior.version_number <> artifact.version_number - 1
+            )
+          )
+      ),
+    'legacy_links_promoted',
+      (
+        SELECT COUNT(*)
+        FROM public.opportunity_matches match
+        JOIN public.opportunity_nda_artifacts artifact
+          ON artifact.document_id = match.nda_document_id
+      ),
+    'browser_artifact_access',
+      (
+        EXISTS (
+          SELECT 1
+          FROM (VALUES ('anon'), ('authenticated')) AS browser(role_name)
+          WHERE has_table_privilege(
+            browser.role_name,
+            'public.opportunity_nda_artifacts',
+            'SELECT,INSERT,UPDATE,DELETE'
+          )
+        )
+      ),
+    'service_artifact_direct_write',
+      has_table_privilege(
+        'service_role',
+        'public.opportunity_nda_artifacts',
+        'INSERT,UPDATE,DELETE'
+      ),
+    'service_can_register_artifact',
+      has_function_privilege(
+        'service_role',
+        'public.register_opportunity_nda_artifact(uuid,uuid,text,text,text,text,bigint,text,text)',
         'EXECUTE'
       )
   ) AS details;

@@ -55,6 +55,11 @@ export type OpportunityNdaStatus =
   | "signed"
   | "waived"
 
+export type OpportunityNdaArtifactRole =
+  | "blank_template"
+  | "renew_signed_copy"
+  | "repreneur_signed_copy"
+
 /** Evidence recorded by staff for the confidentiality gate on one active pursuit. */
 export interface OpportunityConfidentialityGate {
   nda_received_at?: string | null
@@ -596,6 +601,21 @@ export interface OpportunityDocument_Update {
   size_bytes?: number | null
   repreneur_approved_at?: string | null
   repreneur_approved_by?: string | null
+}
+
+/** Immutable staff-only NDA evidence. A newer version supersedes but never deletes history. */
+export interface OpportunityNdaArtifact {
+  id: string
+  opportunity_id: string
+  match_id?: string | null
+  document_id: string
+  artifact_role: OpportunityNdaArtifactRole
+  version_number: number
+  content_sha256: string
+  supersedes_artifact_id?: string | null
+  recorded_by: string
+  recorded_at: string
+  document?: OpportunityDocument | null
 }
 
 export interface OpportunityMatchRepreneur {

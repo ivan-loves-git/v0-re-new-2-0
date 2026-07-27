@@ -39,6 +39,7 @@ import type {
   MaOfficeIntakeOffice,
   OpportunityMatch,
   OpportunityMatchCandidate,
+  OpportunityNdaArtifact,
   OpportunityPursuitEvent,
   OpportunityWithSource,
 } from "@/lib/types/opportunity"
@@ -61,6 +62,7 @@ const OPPORTUNITY_DETAIL_TABS = new Set(OPPORTUNITY_DETAIL_TAB_VALUES)
 interface OpportunityDetailProps {
   opportunity: OpportunityWithSource
   documents: OpportunityDocument[]
+  ndaArtifacts: OpportunityNdaArtifact[]
   matches: OpportunityMatch[]
   matchCandidates: OpportunityMatchCandidate[]
   pursuitEvents: OpportunityPursuitEvent[]
@@ -142,6 +144,7 @@ function recommendationVariant(
 export function OpportunityDetail({
   opportunity,
   documents,
+  ndaArtifacts,
   matches,
   matchCandidates,
   pursuitEvents,
@@ -566,6 +569,7 @@ export function OpportunityDetail({
             matches={matches}
             events={pursuitEvents}
             documents={documents}
+            ndaArtifacts={ndaArtifacts}
           />
         </TabsContent>
 
@@ -589,6 +593,9 @@ export function OpportunityDetail({
           <OpportunityDocumentsPanel
             opportunityId={opportunity.id}
             documents={documents}
+            canonicalNdaDocumentIds={ndaArtifacts.map(
+              (artifact) => artifact.document_id,
+            )}
           />
         </TabsContent>
       </OpportunityDetailTabs>

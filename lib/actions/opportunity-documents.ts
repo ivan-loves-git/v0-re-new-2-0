@@ -30,6 +30,24 @@ function safeFileName(fileName: string) {
   return cleaned || "document"
 }
 
+async function assertDocumentIsNotCanonicalNdaArtifact(
+  documentId: string,
+) {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("opportunity_nda_artifacts")
+    .select("id")
+    .eq("document_id", documentId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (data) {
+    throw new Error(
+      "Canonical NDA artifacts are retained evidence. Register a new version instead.",
+    )
+  }
+}
+
 export async function listOpportunityDocuments(opportunityId: string): Promise<OpportunityDocument[]> {
   await requireStaffAccess()
   const supabase = createAdminClient()
@@ -121,6 +139,7 @@ export async function updateOpportunityDocumentVisibility(
   visibility: OpportunityDocumentVisibility
 ) {
   const { user } = await requireStaffAccess()
+  await assertDocumentIsNotCanonicalNdaArtifact(documentId)
   const supabase = createAdminClient()
 
   // Existing records are never silently blessed: moving a document into the
@@ -148,12 +167,14 @@ export async function updateOpportunityDocumentVisibility(
 
 export async function removeOpportunityDocument(documentId: string, opportunityId: string) {
   await requireStaffAccess()
+  await assertDocumentIsNotCanonicalNdaArtifact(documentId)
   const supabase = createAdminClient()
 
   const { data: document, error: fetchError } = await supabase
     .from("opportunity_documents")
     .select("storage_path")
     .eq("id", documentId)
+    .eq("opportunity_id", opportunityId)
     .single()
 
   if (fetchError) throw new Error(fetchError.message)
@@ -167,7 +188,11 @@ export async function removeOpportunityDocument(documentId: string, opportunityI
     if (storageError) throw new Error(storageError.message)
   }
 
-  const { error } = await supabase.from("opportunity_documents").delete().eq("id", documentId)
+  const { error } = await supabase
+    .from("opportunity_documents")
+    .delete()
+    .eq("id", documentId)
+    .eq("opportunity_id", opportunityId)
   if (error) throw new Error(error.message)
 
   revalidatePath(`/opportunities/${opportunityId}`)

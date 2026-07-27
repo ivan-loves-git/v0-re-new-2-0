@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { OpportunityDetail } from "@/components/opportunities/opportunity-detail"
 import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
+import { listOpportunityNdaArtifacts } from "@/lib/actions/opportunity-nda-artifacts"
 import {
   listOpportunityMatchCandidates,
   listOpportunityMatches,
@@ -54,6 +55,7 @@ async function OpportunityDetailContent({
     pursuitEvents,
     maWorkflow,
     closureHistory,
+    ndaArtifacts,
   ] = await Promise.all([
     getOpportunity(id),
     listOpportunityDocuments(id),
@@ -62,6 +64,7 @@ async function OpportunityDetailContent({
     listOpportunityPursuitEvents(id),
     getMaOpportunityWorkflow(id),
     getOpportunityClosureHistory(id),
+    listOpportunityNdaArtifacts(id),
   ])
 
   if (!opportunity) {
@@ -101,6 +104,7 @@ async function OpportunityDetailContent({
       <OpportunityDetail
         opportunity={opportunity}
         documents={documents}
+        ndaArtifacts={ndaArtifacts}
         matches={matches}
         matchCandidates={matchCandidates}
         pursuitEvents={pursuitEvents}
