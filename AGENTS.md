@@ -104,37 +104,24 @@ emba--renew-platform/
 
 To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` to `.env.local` and restart dev server. This shows yellow "Autofill" buttons on each form step for quick testing with dummy data. **Must be off in production** (it is off by default since build 335).
 
-## Task Management
+## Current implementation authority
 
-Per-project work → `TASKS.md` in this folder. Cross-session items Ivan is tracking → `/to-COS`. Never use Codex's native Codex native task tools (retired 2026-04-23).
+Use this order. If two sources disagree, stop and reconcile the higher-authority source before implementation.
 
-## Notion Boundary and Product Progress
+1. The live WAVE Strategic PDR at `https://codex-sites-test-flight-20260715.ivanpaudice.chatgpt.site/` is the canonical source for current Goals, Milestones, accepted scope, Work Cards, owners, dependencies, status and stakeholder decisions.
+2. `docs/data-models/ma-advisory-data-model-v1.md` is the canonical released business and data contract for M&A records, confidentiality, visibility and cutover mapping.
+3. This file owns technical, security, QA and release guardrails.
+4. `.planning/`, `TASKS.md`, old PDR drafts, dated backlogs, proposals, launch plans and action plans are historical evidence only. Do not execute or update their old queues unless a current PDR Work Card explicitly cites them as implementation evidence.
 
-Use Notion only for the Re-New product pipeline:
+Notion and Linear are inactive for Re-New product planning. Do not consult, update, mirror to, or link them unless Ivan explicitly reactivates one of them.
 
-- Product updates.
-- Product requests.
-- Testing asks and feedback.
-- Development progress that changes the product.
-- Product decisions, blockers, parking-lot scope, and status tracking.
+GSD may be used to create a bounded implementation plan only after a current PDR Work Card authorizes the work. A GSD plan never changes PDR scope, status, ownership or stakeholder approval by itself.
 
-Do not use Notion for meta notes, AI instructions, generic memory, internal process explanations, or personal reminders. If project progress needs to be saved outside code, update local project files such as `docs/project-status.md`, `.planning/STATE.md`, or the relevant GSD phase files.
+Problem Proposals, `Ready for decision` items and `Review` Work Cards are not implementation or release authority. A proposal must be accepted and converted to scope; a review card must pass its stated human or UAT gate.
 
-For Re-New work, check `claude_mem` when available for existing project memory before making product or Notion changes. If `claude_mem` write access is unavailable in the current runtime, say so and persist the durable rule or progress update in local project files instead.
+Founder calls, emails and supplied documents are important evidence inputs, but they change current scope only after the decision is recorded in the PDR and, for a material data or operating rule, in the canonical artifact.
 
-## GSD and Linear
-
-GSD is the shared execution system for Claude Code and Codex. Use the repo `.planning/` folder as the common GSD memory: requirements, roadmap, phases, decisions, state, verification notes.
-
-Linear is the team-facing project tracker. Mirror GSD into Linear with this mapping:
-
-- GSD milestone → Linear project milestone.
-- GSD phase → Linear parent issue or milestone workstream.
-- GSD implementation task → Linear issue.
-- GSD verification or UAT item → Linear issue checklist/comment, or a separate issue when it can block release.
-- GSD deferred scope → Linear backlog issue labelled as postponed/V3, not mixed into the June build.
-
-Do not let Linear replace GSD planning files. Do not let GSD hide team commitments from Linear. When a phase is planned, executed, verified, blocked, or descoped, update the matching Linear item or status update.
+Cross-session Pushapp commitments may still be surfaced through `/to-COS`, but product scope and delivery state remain in the PDR.
 
 ## shadcn UI
 
@@ -156,12 +143,9 @@ Impeccable is the mandatory implementation-quality gate for every UI change. It 
 - Impeccable is forbidden from proposing or changing product logic, KPIs, workflows, hierarchy, information architecture, filters, or strategy. Its authority ends at implementation-level visual polish.
 - After corrections, perform browser QA on the actual changed surfaces at desktop and mobile widths. The detector passing is necessary, not sufficient.
 
-## Open Questions (Waiting on Bertrand)
+## External decisions
 
-- Notes structure: free text vs structured (call/email/meeting + outcome)
-- Flatchr export format and fields
-- Current offers/packages details
-- Repreneur acquisition journey mapping
+Current founder and operator decisions live only in PDR Work Cards or decision items with a named owner. Do not rely on a static question list in this repository, and do not infer approval from an old meeting note, email, Notion page or completed implementation card.
 
 ## Data Model Summary
 

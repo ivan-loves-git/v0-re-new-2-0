@@ -1,5 +1,7 @@
 # Roadmap: Re-New Platform V2
 
+> **HISTORICAL JUNE ROADMAP.** Completed phase evidence is retained below, but this file is not the current roadmap or implementation queue. The live WAVE Strategic PDR is authoritative. See `.planning/AGENTS.md`.
+
 ## Overview
 
 June V2 should ship the first usable deal-flow operating layer: opportunity data, basic matching, repreneur opportunity actions, deal progress tracking, document handling, and simple reporting. The roadmap deliberately postpones high-complexity work until the core workflow is validated.

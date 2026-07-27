@@ -14,6 +14,8 @@ progress:
   percent: 100
 ---
 
+> **HISTORICAL SNAPSHOT — 2026-06-18.** This is not current project state. The live WAVE Strategic PDR owns current scope, status, owners, dependencies and decisions. See `.planning/AGENTS.md`.
+
 # Project State
 
 ## Project Reference

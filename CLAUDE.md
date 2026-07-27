@@ -106,23 +106,24 @@ emba--renew-platform/
 
 To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` to `.env.local` and restart dev server. This shows yellow "Autofill" buttons on each form step for quick testing with dummy data. **Must be off in production** (it is off by default since build 335).
 
-## Task Management
+## Current implementation authority
 
-Per-project work → `TASKS.md` in this folder. Cross-session items Ivan is tracking → `/to-COS`. Never use Claude Code's native TaskCreate/TaskList (retired 2026-04-23).
+Use this order. If two sources disagree, stop and reconcile the higher-authority source before implementation.
 
-## GSD and Linear
+1. The live WAVE Strategic PDR at `https://codex-sites-test-flight-20260715.ivanpaudice.chatgpt.site/` is the canonical source for current Goals, Milestones, accepted scope, Work Cards, owners, dependencies, status and stakeholder decisions.
+2. `docs/data-models/ma-advisory-data-model-v1.md` is the canonical released business and data contract for M&A records, confidentiality, visibility and cutover mapping.
+3. `AGENTS.md` and this file own technical, security, QA and release guardrails.
+4. `.planning/`, `TASKS.md`, old PDR drafts, dated backlogs, proposals, launch plans and action plans are historical evidence only. Do not execute or update their old queues unless a current PDR Work Card explicitly cites them as implementation evidence.
 
-GSD is the shared execution system for Claude Code and Codex. Use the repo `.planning/` folder as the common GSD memory: requirements, roadmap, phases, decisions, state, verification notes.
+Notion and Linear are inactive for Re-New product planning. Do not consult, update, mirror to, or link them unless Ivan explicitly reactivates one of them.
 
-Linear is the team-facing project tracker. Mirror GSD into Linear with this mapping:
+GSD may be used to create a bounded implementation plan only after a current PDR Work Card authorizes the work. A GSD plan never changes PDR scope, status, ownership or stakeholder approval by itself.
 
-- GSD milestone → Linear project milestone.
-- GSD phase → Linear parent issue or milestone workstream.
-- GSD implementation task → Linear issue.
-- GSD verification or UAT item → Linear issue checklist/comment, or a separate issue when it can block release.
-- GSD deferred scope → Linear backlog issue labelled as postponed/V3, not mixed into the June build.
+Problem Proposals, `Ready for decision` items and `Review` Work Cards are not implementation or release authority. A proposal must be accepted and converted to scope; a review card must pass its stated human or UAT gate.
 
-Do not let Linear replace GSD planning files. Do not let GSD hide team commitments from Linear. When a phase is planned, executed, verified, blocked, or descoped, update the matching Linear item or status update.
+Founder calls, emails and supplied documents are important evidence inputs, but they change current scope only after the decision is recorded in the PDR and, for a material data or operating rule, in the canonical artifact.
+
+Cross-session Pushapp commitments may still be surfaced through `/to-COS`, but product scope and delivery state remain in the PDR.
 
 ## shadcn UI
 
@@ -130,12 +131,9 @@ Use shadcn/ui for new feature surfaces and dashboard sections. Check installed `
 
 For dashboards and operational pages, prefer shadcn `Card`, `Table`, `Badge`, `Tabs`, `Sheet`, `Dialog`, `Select`, `Input`, `Button`, `Skeleton`, `Tooltip`, `DropdownMenu`, and `Chart` over custom markup.
 
-## Open Questions (Waiting on Bertrand)
+## External decisions
 
-- Notes structure: free text vs structured (call/email/meeting + outcome)
-- Flatchr export format and fields
-- Current offers/packages details
-- Repreneur acquisition journey mapping
+Current founder and operator decisions live only in PDR Work Cards or decision items with a named owner. Do not rely on a static question list in this repository, and do not infer approval from an old meeting note, email, Notion page or completed implementation card.
 
 ## Data Model Summary
 

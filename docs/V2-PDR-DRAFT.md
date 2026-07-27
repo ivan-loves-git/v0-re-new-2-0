@@ -1,6 +1,6 @@
 # V2 Product Development Requirements — Draft
 
-> **Status:** Draft for founder review
+> **Status:** Historical superseded draft. Do not use it as current scope, requirements or an open-decision list. The live WAVE Strategic PDR is authoritative; current M&A implementation meaning lives in `docs/data-models/ma-advisory-data-model-v1.md`.
 > **Author:** Ivan (with Wave AI assistance)
 > **Date:** 2026-05-13
 

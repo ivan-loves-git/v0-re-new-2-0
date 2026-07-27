@@ -1,5 +1,7 @@
 # Re-New Platform V2
 
+> **HISTORICAL JUNE SCOPE.** This document records the V2 build assumptions used at the time. It does not authorize current work or override the live WAVE Strategic PDR and the released M&A data contract. See `.planning/AGENTS.md`.
+
 ## What This Is
 
 Re-New Platform V2 turns Wave from an internal repreneur CRM into the operating layer for deal flow. It adds opportunities, basic matching, repreneur-facing opportunity actions, deal progress tracking, document handling, and operational reporting.

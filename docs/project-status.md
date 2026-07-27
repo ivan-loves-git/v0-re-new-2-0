@@ -1,67 +1,26 @@
-# Re-New Project Status
+# Re-New project status routing
 
-**Last updated:** 2026-05-31
-**Scope:** Non-code product progress memory for the Re-New platform
+**Last updated:** 2026-07-27
+**Purpose:** Prevent historical project files from competing with the live WAVE Strategic PDR.
 
-## Current Operating Setup
+## Current authority
 
-Notion is only for the product pipeline: requests, testing asks, product feedback, product decisions, blockers, parking-lot scope, and product-relevant development progress.
+1. The live WAVE Strategic PDR owns current Goals, Milestones, accepted scope, Work Cards, owners, dependencies, status and stakeholder decisions.
+2. `docs/data-models/ma-advisory-data-model-v1.md` owns the released business meaning for M&A firms, offices, contacts, opportunities, interactions, confidentiality, visibility and cutover mapping.
+3. `AGENTS.md` and `CLAUDE.md` own technical, security, QA and release guardrails.
 
-Notion is not for AI notes, internal process explanations, generic memory, or personal reminders.
+Notion and Linear are inactive for Re-New product planning. Do not consult, update, mirror to, or link them unless Ivan explicitly reactivates one of them.
 
-The local project files are the durable non-code memory for how the project is progressing outside the app code. Use this file for human-readable project status. Use `.planning/` for GSD execution state and implementation details.
+The `.planning/` tree, `TASKS.md`, `docs/V2-PDR-DRAFT.md` and dated backlog files are historical evidence only. A current PDR Work Card may cite them, but they do not authorize work or change current state.
 
-## Product Pipeline
+## Operating rules
 
-The working product tracker is in Notion:
+- A Problem Proposal is not accepted scope.
+- A `Ready for decision` item still needs the named human decision.
+- A Work Card in `Review` is a human or UAT gate, not permission to release.
+- Material product, data, operating-model or governance decisions close only when the canonical contract is updated, affected cards link to it, rules and migration treatment are explicit, and acceptance tests trace to the approved contract.
+- Product changes, stakeholder decisions and delivery status are recorded in the PDR, not in this file.
 
-- Hub: https://www.notion.so/36d36d8dca88813aba3cec53187b0773
-- Tracker: https://www.notion.so/5ab7539e0bb5485d928e09b26f42ae1c
+## Historical note
 
-The tracker views are:
-
-- **1. Today:** active work and items needing attention now.
-- **2. Needs Bertrand / Colin:** decisions, testing asks, feedback, or operational input.
-- **3. Ready to Test:** items ready for product validation.
-- **4. Done / Product Story:** completed product changes and accepted progress.
-- **All items:** full tracker.
-- **Parking Lot:** future scope that should not distract current delivery.
-- **Roadmap by Phase:** phase-level view.
-
-## Operating Rules
-
-Every new product request, feedback point, demo comment, bug, or operational question should become a tracker item.
-
-Each tracker item should have a clear summary, status, owner, next ask, priority, review flag, and reviewer when needed.
-
-Built work that needs validation should move to **3. Ready to Test**.
-
-Founder-level product direction, scope, business rules, and strategic tradeoffs go to Bertrand.
-
-Testing, operational choices, Wave setup, workflow clarity, and design choices go to Colin, with Bertrand added when his feedback is also relevant.
-
-The Dev team owns implementation and technical cleanup. Technical cleanup should stay out of Bertrand and Colin's review queue unless it changes the product workflow.
-
-## Current Product Story
-
-The Product Development Hub and Product Development Tracker were created to replace scattered product follow-up with one product-facing pipeline.
-
-The old PDR remains preserved as source material. The tracker is the live operating place for current requests, testing, decisions, development progress, and future scope.
-
-The team update introducing the hub and tracker was sent to Bertrand on 2026-05-31.
-
-## Maintenance Rhythm
-
-Daily or during active build work:
-
-- Add new product requests and feedback to the tracker.
-- Move completed build-side items to **3. Ready to Test** if Bertrand or Colin need to validate them.
-- Move accepted work to **4. Done / Product Story**.
-- Move future scope to **Parking Lot**.
-
-Weekly or before team updates:
-
-- Review aging open items.
-- Check **2. Needs Bertrand / Colin** for stalled decisions or testing asks.
-- Keep the tracker focused on closing tickets in reasonable time on each side.
-- Update this file only when the project operating setup or high-level product story changes.
+This file previously described the Notion Product Development Tracker introduced on 2026-05-31. That tracker and its Today, Needs Bertrand/Colin, Ready to Test, Done, Parking Lot and Roadmap views are retained only as project history. They are not a fallback source of truth.

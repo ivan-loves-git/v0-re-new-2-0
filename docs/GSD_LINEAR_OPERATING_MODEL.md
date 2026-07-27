@@ -1,5 +1,7 @@
 # GSD and Linear Operating Model
 
+> **RETIRED OPERATING MODEL.** This file records the May 2026 workflow and must not be followed for current work. The live WAVE Strategic PDR is authoritative; Notion and Linear are inactive unless Ivan explicitly reactivates them. See `AGENTS.md`.
+
 Last updated: 2026-05-16
 
 ## Purpose
