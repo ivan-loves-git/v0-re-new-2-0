@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 27, 2026",
+    version: "0.9.31",
+    title: "Provisional M&A sources now have a controlled staff review path",
+    isCompleted: true,
+    events: [
+      {
+        title: "Incomplete source data can enter active work without becoming permanent history",
+        type: "product",
+        description: "One controlled Acme Co. / Acme Paris context can support Draft, Active and Paused work while terminal and cutover treatment remain blocked until staff verifies the real source.",
+      },
+      {
+        title: "Staff can see and correct every provisional source",
+        type: "feature",
+        description: "Find, Groups and opportunity detail surface one staff-only review signal, and the correction workflow atomically replaces Acme with the real office and valid contacts.",
+      },
+      {
+        title: "Corrections preserve immutable evidence",
+        type: "decision",
+        description: "Each assignment and resolution retains actor, time, reason, old source and new source without recreating the opportunity or rewriting its history.",
+      },
+      {
+        title: "Provisional context stays outside the repreneur portal",
+        type: "fix",
+        description: "Acme, review metadata and correction evidence remain staff-only, while external intermediary email fails closed until the source is resolved.",
+      },
+    ],
+  },
+  {
     period: "Jul 26, 2026",
     version: "0.9.30",
     title: "Opportunity intake moved to one authoritative M&A relationship model",

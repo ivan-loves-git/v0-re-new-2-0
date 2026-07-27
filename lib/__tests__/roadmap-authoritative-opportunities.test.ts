@@ -11,6 +11,19 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("groups the provisional-source foundation and staff review workflow", () => {
+    expect(roadmap).toContain('version: "0.9.31"')
+    expect(roadmap).toContain(
+      "Staff can see and correct every provisional source",
+    )
+    expect(roadmap).toContain(
+      "Corrections preserve immutable evidence",
+    )
+    expect(roadmap).toContain(
+      "Provisional context stays outside the repreneur portal",
+    )
+  })
+
   it("records the office-first intake outcome without claiming a workbook cutover", () => {
     expect(roadmap).toContain('version: "0.9.30"')
     expect(roadmap).toContain(
@@ -23,6 +36,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-07-26")')
+    expect(roadmapStatus).toContain('new Date("2026-07-27")')
   })
 })
