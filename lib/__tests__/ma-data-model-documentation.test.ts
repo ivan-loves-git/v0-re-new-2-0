@@ -59,37 +59,78 @@ describe("canonical M&A data model documentation", () => {
     }
   })
 
-  it("keeps the W-001 lifecycle authority, provisional-source and disclosure rules explicit", () => {
+  it("keeps the complete E4 to E8 sequence distinct and evidence-gated", () => {
     for (const rule of [
-      "## Lifecycle action and evidence authority matrix",
-      "Assign provisional Acme source context",
-      "Resolve or correct provisional source",
-      "E4 fires on every mutual-interest validation",
-      "E4 always requests intermediary qualification",
-      "requests the opportunity-level blank NDA only when the opportunity does not already hold it",
-      "Blank-NDA reuse never reuses intermediary qualification or Gate 1 staff access approval",
+      "E4 fires once for each distinct mutual-interest-validation event",
+      "A retry of the same validation event deduplicates",
+      "A later distinct validation creates its own E4 and qualification request",
+      "the opportunity-level blank NDA only if absent at that later event",
       "the intermediary qualification for that repreneur is validated",
       "| E6 — repreneur NDA-ready notice |",
       "E6 does not create or validate either pursuit-specific signed copy",
       "| Re-New-signed pursuit copy |",
-      "Source identity disclosure approval",
-      "Repreneur-signed pursuit copy",
+      "| Repreneur-signed pursuit copy |",
       "Gate 2 requires two validated pursuit-specific signed copies",
+      "an already recorded `Gate 2 passed` event remains valid",
       "E7 sends to the intermediary, transmits or references both signed pursuit copies, and requests the information memo",
       "E8 requires both a passed staff Gate 2 and an actual approved memo; neither condition alone may fire E8",
-      "both signed NDAs remain valid",
-      "Gate 2 passed",
-      "Source identity visible",
+    ]) {
+      expect(contract).toContain(rule)
+    }
+  })
+
+  it("requires a validated two-party mutual-interest event before E4", () => {
+    for (const rule of [
+      "Repreneur records their own response",
+      "staff records and validates the intermediary/counterparty response with reliable evidence",
+      "Only the validated response pair creates a distinct mutual-interest-validation immutable event; only that event may trigger E4",
+    ]) {
+      expect(contract).toContain(rule)
+    }
+  })
+
+  it("keeps the source-disclosure conjunction and revocation explicit", () => {
+    for (const rule of [
+      "both valid pursuit-specific signed copies",
+      "a recorded Gate 2 pass",
+      "an explicit staff disclosure approval",
       "access is revoked on NDA expiry, staff revocation or pursuit closure",
+      "Source-review metadata, correction evidence, audit metadata and M&A relationship history are always staff-only",
+    ]) {
+      expect(contract).toContain(rule)
+    }
+  })
+
+  it("keeps Acme storage and correction retention on canonical evidence", () => {
+    for (const rule of [
+      "existing canonical `source_office_id` link to Acme's office",
+      "“Source review required” is computed, never stored as a parallel review status",
+      "retain it after later resolution",
+      "retains the Acme assignment and reason in immutable correction evidence",
+      "if none exists, add an additive migration before that implementation release",
       "Acme is never renamed into an actual intermediary",
       "an Acme-linked opportunity cannot close",
       "an Acme-linked opportunity cannot archive",
       "Acme exception remains a blocker",
-      "W-001 requires no data migration",
-      "W-001 has no standalone roadmap entry",
     ]) {
       expect(contract).toContain(rule)
     }
+  })
+
+  it("distinguishes opportunity and pursuit closure authority", () => {
+    expect(contract).toContain("| Close opportunity |")
+    expect(contract).toContain("| Close pursuit |")
+    expect(contract).toContain("an unresolved Acme source does not block this action")
+    expect(contract).toContain("closure immediately revokes any source-identity disclosure")
+  })
+
+  it("does not restore superseded absolute visibility or projection policy", () => {
+    expect(contract).not.toContain(
+      "Source firm, source office, source contacts, relationship history and internal notes remain staff only at every stage.",
+    )
+    expect(contract).not.toContain(
+      "Repreneur projections continue to exclude firm, office, contact and affiliation data.",
+    )
   })
 
   it("is referenced by both agent operating contracts", () => {
