@@ -78,9 +78,7 @@ describe("W-062 canonical interaction persistence", () => {
       expect(migration).toContain(required)
     }
 
-    expect(contract).toContain(
-      "Migration 080 is a checked-in W-062 implementation candidate only",
-    )
+    expect(contract).toContain("W-062 live and production-verified")
     expect(contract).toContain(
       "Attachments and general interaction create/edit UI remain deferred to W-066",
     )

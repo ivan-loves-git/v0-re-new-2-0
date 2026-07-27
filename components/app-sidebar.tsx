@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   Search,
+  UsersRound,
   GitBranch,
   Mail,
   Package,
@@ -70,6 +71,7 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
   { name: "Groups", href: "/opportunities/groups", icon: FolderKanban },
   { name: "Find", href: "/opportunities/find", icon: Search },
+  { name: "Relationships", href: "/opportunities/ma", icon: UsersRound },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
 ]
 

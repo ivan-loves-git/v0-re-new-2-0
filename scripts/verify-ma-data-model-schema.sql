@@ -194,6 +194,7 @@ schema_evidence AS (
       'release_ma_source_email_send',
       'refresh_ma_source_email_send',
       'verify_ma_interaction_owner',
+      'create_ma_relationship_interaction',
       'begin_ma_interaction_email_send',
       'finalize_ma_interaction_email_send',
       'activate_ma_cutover_run',
@@ -322,6 +323,12 @@ SELECT
       has_function_privilege(
         'service_role',
         'public.verify_ma_interaction_owner(uuid,text)',
+        'EXECUTE'
+      ),
+    'service_can_create_relationship_interaction',
+      has_function_privilege(
+        'service_role',
+        'public.create_ma_relationship_interaction(uuid,uuid,uuid,text,text,timestamptz,text,text,text,text,timestamptz,text,text)',
         'EXECUTE'
       ),
     'service_can_begin',

@@ -299,14 +299,16 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 <div key={interaction.id} className="rounded-lg border p-3 text-sm">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
+                      <Badge variant="outline">{interaction.channel}</Badge>
                       <Badge variant={interaction.status === "sent" ? "default" : interaction.status === "failed" ? "destructive" : "outline"}>
                         {interaction.status}
                       </Badge>
                       {interaction.owner_verification_state === "provisional" ? <Badge variant="outline">Owner to verify</Badge> : null}
                     </div>
-                    <span className="text-xs text-muted-foreground">{formatDate(interaction.sent_at ?? interaction.created_at)}</span>
+                    <span className="text-xs text-muted-foreground">{formatDate(interaction.sent_at ?? interaction.occurred_at ?? interaction.created_at)}</span>
                   </div>
                   <p className="font-medium">{interaction.subject}</p>
+                  {interaction.body_markdown ? <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{interaction.body_markdown}</p> : null}
                   <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                     <UserRound className="size-3" />
                     {interaction.recipient_email}

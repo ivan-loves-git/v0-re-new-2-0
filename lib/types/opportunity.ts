@@ -324,6 +324,7 @@ export interface MaSourceInteraction {
   body_markdown?: string | null
   status: "sent" | "failed" | string
   error_message?: string | null
+  occurred_at?: string | null
   sent_at?: string | null
   owner_verification_state?: "provisional" | "verified" | string | null
   created_by?: string | null

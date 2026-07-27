@@ -46,7 +46,7 @@ describe("M&A networks and contact history", () => {
 
   it("retires legacy staff firm and contact routes in favor of canonical intake", () => {
     const sidebar = source("components/app-sidebar.tsx")
-    const legacyRoute = source("app/(dashboard)/opportunities/ma/page.tsx")
+    const relationshipsRoute = source("app/(dashboard)/opportunities/ma/page.tsx")
     const firmsPage = source("app/(dashboard)/opportunities/ma/firms/page.tsx")
     const contactsPage = source(
       "app/(dashboard)/opportunities/ma/contacts/page.tsx",
@@ -54,7 +54,8 @@ describe("M&A networks and contact history", () => {
 
     expect(sidebar).not.toContain('href: "/opportunities/ma/firms"')
     expect(sidebar).not.toContain('href: "/opportunities/ma/contacts"')
-    for (const route of [legacyRoute, firmsPage, contactsPage]) {
+    expect(relationshipsRoute).toContain("MaRelationshipWorkspace")
+    for (const route of [firmsPage, contactsPage]) {
       expect(route).toContain('redirect("/opportunities/new")')
     }
   })
