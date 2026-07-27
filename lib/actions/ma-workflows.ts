@@ -36,6 +36,11 @@ const MA_TEMPLATE_KEYS = [
 ] as const satisfies readonly EmailTemplateKey[]
 
 type MaTemplateKey = (typeof MA_TEMPLATE_KEYS)[number]
+export interface MaEmailSendResult {
+  success: boolean
+  message: string
+  operationState?: "pending" | "failed" | "sent"
+}
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -643,7 +648,7 @@ export async function getMaOpportunityWorkflow(
 export async function sendMaSourceWorkflowEmail(
   opportunityId: string,
   formData: FormData,
-): Promise<{ success: boolean; message: string }> {
+): Promise<MaEmailSendResult> {
   const templateKey = readString(formData, "template_key")
   const subject = readString(formData, "subject")
   const body = readString(formData, "body_markdown")
@@ -668,7 +673,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     contactId?: string | null
     clientOperationKey: string | null
   },
-): Promise<{ success: boolean; message: string }> {
+): Promise<MaEmailSendResult> {
   const { user } = await requireStaffAccess()
   const { templateKey, subject, body, contactId, clientOperationKey } = payload
 
@@ -860,6 +865,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     return {
       success: true,
       message: `Email was already sent to ${recipientEmail}`,
+      operationState: "sent",
     }
   }
   if (existingDeliveryStatus === "failed") {
@@ -868,6 +874,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       success: false,
       message:
         existingDeliveryError || "The provider previously rejected this email.",
+      operationState: "failed",
     }
   }
   if (existingDeliveryStatus !== "pending") {
@@ -890,6 +897,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       success: false,
       message:
         "Email delivery is still pending. Retry the same unchanged email within 23 hours; WAVE will reuse its safe delivery key.",
+      operationState: "pending",
     }
   }
 
@@ -899,6 +907,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       success: false,
       message:
         "Email delivery is still pending. Retry the same unchanged email within 23 hours; WAVE will reuse its safe delivery key.",
+      operationState: "pending",
     }
   }
 
@@ -921,6 +930,7 @@ export async function sendMaSourceWorkflowEmailPayload(
         result.outcome === "sent"
           ? "Email provider accepted the message, but delivery evidence is pending reconciliation. Do not retry."
           : "Email delivery failed, but its canonical evidence could not be finalized. Do not retry until reconciled.",
+      operationState: "pending",
     }
   }
 
@@ -931,6 +941,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       success: false,
       message:
         "Email delivery is finalized, but the send lock could not be released. Do not retry until it expires.",
+      operationState: result.outcome,
     }
   }
 
@@ -940,8 +951,16 @@ export async function sendMaSourceWorkflowEmailPayload(
   revalidateOpportunityDashboardTags()
 
   if (result.outcome === "failed") {
-    return { success: false, message: result.error }
+    return {
+      success: false,
+      message: result.error,
+      operationState: "failed",
+    }
   }
 
-  return { success: true, message: `Email sent to ${recipientEmail}` }
+  return {
+    success: true,
+    message: `Email sent to ${recipientEmail}`,
+    operationState: "sent",
+  }
 }

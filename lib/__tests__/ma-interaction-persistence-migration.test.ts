@@ -91,6 +91,9 @@ describe("W-062 canonical interaction persistence", () => {
     expect(historyPanel).toContain("sessionStorage")
     expect(historyPanel).toContain("crypto.randomUUID()")
     expect(historyPanel).toContain("clientOperationKey")
+    expect(historyPanel).toContain('result.operationState !== "pending"')
+    expect(workflow).toContain('operationState: "pending"')
+    expect(workflow).toContain('operationState: "failed"')
     expect(sendRoute).toContain("clientOperationKey")
   })
 
@@ -118,6 +121,9 @@ describe("W-062 canonical interaction persistence", () => {
     )
     expect(rehearsal).toContain(
       "w062_finalized_response_loss_replay_created_duplicate",
+    )
+    expect(rehearsal).toContain(
+      "w062_finalized_failure_did_not_create_safe_retry",
     )
     expect(rehearsal).toContain("w062_parent_office_move_guard_missing")
     expect(rehearsal).toContain("w062_reservation_source_move_guard_missing")

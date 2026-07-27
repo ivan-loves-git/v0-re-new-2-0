@@ -384,11 +384,60 @@ END;
 $$;
 
 SELECT public.finalize_ma_interaction_email_send(
-  (SELECT id FROM public.ma_interactions WHERE title = 'Synthetic failed send'),
+  (SELECT id FROM public.ma_interactions
+    WHERE client_operation_key = '00000000-0000-4000-8000-000000000101'::UUID),
   'bertrand-staff-user',
   'failed',
   NULL,
   'Synthetic provider failure'
+);
+
+DO $$
+DECLARE
+  failed_interaction_id UUID;
+  retry_interaction_id UUID;
+BEGIN
+  SELECT id INTO failed_interaction_id
+  FROM public.ma_interactions
+  WHERE client_operation_key = '00000000-0000-4000-8000-000000000101'::UUID;
+
+  SELECT interaction_id INTO retry_interaction_id
+  FROM public.begin_ma_interaction_email_send(
+    (SELECT opportunity_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    (SELECT office_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    (SELECT affiliation_id FROM public.ma_interactions
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID),
+    'bertrand-staff-user',
+    'ma_process_follow_up',
+    'contact@example.test',
+    'Synthetic failed send',
+    'Synthetic failed body',
+    '00000000-0000-4000-8000-000000000104'::UUID,
+    REPEAT('a', 64),
+    (SELECT reservation_token
+      FROM public.ma_source_email_send_reservations
+      WHERE opportunity_id = (
+        SELECT opportunity_id FROM public.ma_interactions
+        WHERE id = '00000000-0000-0000-0000-000000000002'::UUID
+      ))
+  );
+
+  IF retry_interaction_id IS NULL
+    OR retry_interaction_id = failed_interaction_id THEN
+    RAISE EXCEPTION 'w062_finalized_failure_did_not_create_safe_retry';
+  END IF;
+END;
+$$;
+
+SELECT public.finalize_ma_interaction_email_send(
+  (SELECT id FROM public.ma_interactions
+    WHERE client_operation_key = '00000000-0000-4000-8000-000000000104'::UUID),
+  'bertrand-staff-user',
+  'failed',
+  NULL,
+  'Synthetic provider failure after safe retry'
 );
 
 SELECT *
@@ -491,10 +540,10 @@ BEGIN
   ) OR (
     SELECT COUNT(*) FROM public.ma_interaction_delivery_events
     WHERE event_kind = 'pending'
-  ) <> 4 OR (
+  ) <> 5 OR (
     SELECT COUNT(*) FROM public.ma_interaction_delivery_events
     WHERE event_kind IN ('sent', 'failed')
-  ) <> 2 THEN
+  ) <> 3 THEN
     RAISE EXCEPTION 'w062_provider_delivery_event_evidence_missing';
   END IF;
 

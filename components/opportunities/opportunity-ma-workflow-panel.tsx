@@ -112,8 +112,15 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
       const result = (await response.json()) as {
         success: boolean
         message: string
+        operationState?: "pending" | "failed" | "sent"
       }
       if (!result.success) {
+        if (result.operationState !== "pending") {
+          sendOperationRef.current = null
+          try {
+            sessionStorage.removeItem(storageKey)
+          } catch {}
+        }
         toast.error("M&A email not sent", { description: result.message })
         return
       }
