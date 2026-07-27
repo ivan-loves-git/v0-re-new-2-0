@@ -137,6 +137,26 @@ BEGIN
     RAISE EXCEPTION 'ma_relationship_interaction_requires_exact_staff_actor';
   END IF;
 
+  -- Source assignment and resolution take the opportunity row first, then
+  -- validate their selected office/context. Take that same row lock before
+  -- reading either office relationship or provisional-review state so one
+  -- transaction cannot create immutable history from a stale source office.
+  IF p_opportunity_id IS NOT NULL THEN
+    SELECT opportunity.source_office_id INTO opportunity_office_id
+    FROM public.opportunities opportunity
+    WHERE opportunity.id = p_opportunity_id
+    FOR UPDATE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'ma_relationship_interaction_opportunity_not_found';
+    END IF;
+    IF opportunity_office_id IS DISTINCT FROM p_office_id THEN
+      RAISE EXCEPTION 'ma_relationship_interaction_opportunity_must_match_office';
+    END IF;
+    IF public.ma_opportunity_source_review_required(p_opportunity_id) THEN
+      RAISE EXCEPTION 'ma_provisional_source_review_blocks_relationship_interaction';
+    END IF;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM public.ma_offices office WHERE office.id = p_office_id
   ) THEN
@@ -151,18 +171,6 @@ BEGIN
       AND affiliation.ended_at IS NULL;
     IF affiliation_office_id IS DISTINCT FROM p_office_id THEN
       RAISE EXCEPTION 'ma_relationship_interaction_affiliation_must_match_active_office';
-    END IF;
-  END IF;
-
-  IF p_opportunity_id IS NOT NULL THEN
-    SELECT opportunity.source_office_id INTO opportunity_office_id
-    FROM public.opportunities opportunity
-    WHERE opportunity.id = p_opportunity_id;
-    IF opportunity_office_id IS DISTINCT FROM p_office_id THEN
-      RAISE EXCEPTION 'ma_relationship_interaction_opportunity_must_match_office';
-    END IF;
-    IF public.ma_opportunity_source_review_required(p_opportunity_id) THEN
-      RAISE EXCEPTION 'ma_provisional_source_review_blocks_relationship_interaction';
     END IF;
   END IF;
 

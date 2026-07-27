@@ -268,4 +268,35 @@ BEGIN
 END;
 $$;
 
+INSERT INTO public.opportunities (reference, source_office_id)
+SELECT fixture.reference, office.id
+FROM (
+  VALUES
+    ('W066-RACE-CREATE-FIRST'),
+    ('W066-RACE-SOURCE-FIRST')
+) AS fixture(reference)
+CROSS JOIN LATERAL (
+  SELECT affiliation.office_id AS id
+  FROM public.ma_contact_office_affiliations affiliation
+  WHERE affiliation.is_active AND affiliation.ended_at IS NULL
+  ORDER BY affiliation.id
+  LIMIT 1
+) office
+ON CONFLICT (reference) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.w066_pause_after_relationship_lock()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.title = 'Concurrent create-first' THEN
+    PERFORM pg_sleep(6);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER w066_pause_after_relationship_lock
+BEFORE INSERT ON public.ma_interactions
+FOR EACH ROW EXECUTE FUNCTION public.w066_pause_after_relationship_lock();
+
 SELECT 'W-066 relationship creation, Acme/source-resolution, manual-email, same-office and canonical-contact checks passed' AS rehearsal_result;

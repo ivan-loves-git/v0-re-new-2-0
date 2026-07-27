@@ -72,6 +72,10 @@ describe("W-066 staff relationship workspace", () => {
     expect(migration).toContain(
       "ma_provisional_source_review_blocks_relationship_interaction",
     )
+    expect(migration).toContain(
+      "Source assignment and resolution take the opportunity row first",
+    )
+    expect(migration).toContain("WHERE opportunity.id = p_opportunity_id\n    FOR UPDATE")
     expect(migration).toContain("normalized_recipient_email := NULL")
     expect(verifier).toContain("service_can_create_relationship_interaction")
     expect(rehearsal).toContain(
@@ -93,6 +97,13 @@ describe("W-066 staff relationship workspace", () => {
     expect(rehearsal).toContain("w066_acme_resolution_remains_possible_missing")
     expect(rehearsal).toContain(
       "w066_canonical_contact_multi_affiliation_fixture_missing",
+    )
+    expect(rehearsal).toContain("w066_pause_after_relationship_lock")
+    const raceRunner = source("scripts/rehearse-ma-relationship-workspace.sh")
+    expect(raceRunner).toContain("W-066 two-session source-change races passed")
+    expect(raceRunner).toContain("ma_interaction_history_blocks_source_office_change")
+    expect(raceRunner).toContain(
+      "ma_relationship_interaction_opportunity_must_match_office",
     )
     expect(rehearsal).toContain(
       "w066_cross_office_affiliation_rejection_missing",
