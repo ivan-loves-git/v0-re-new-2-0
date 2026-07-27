@@ -61,6 +61,7 @@ describe("canonical M&A data model documentation", () => {
 
   it("keeps the complete E4 to E8 sequence distinct and evidence-gated", () => {
     for (const rule of [
+      "## Lifecycle action and evidence authority matrix",
       "E4 fires once for each distinct mutual-interest-validation event",
       "A retry of the same validation event deduplicates",
       "A later distinct validation creates its own E4 and qualification request",
@@ -91,7 +92,7 @@ describe("canonical M&A data model documentation", () => {
 
   it("keeps the source-disclosure conjunction and revocation explicit", () => {
     for (const rule of [
-      "both valid pursuit-specific signed copies",
+      "both pursuit-specific signed copies remain valid",
       "a recorded Gate 2 pass",
       "an explicit staff disclosure approval",
       "access is revoked on NDA expiry, staff revocation or pursuit closure",
@@ -112,9 +113,17 @@ describe("canonical M&A data model documentation", () => {
       "an Acme-linked opportunity cannot close",
       "an Acme-linked opportunity cannot archive",
       "Acme exception remains a blocker",
+      "W-001 requires no data migration",
+      "W-001 has no standalone roadmap entry",
     ]) {
       expect(contract).toContain(rule)
     }
+  })
+
+  it("links the authority and disclosure cards from the canonical scope", () => {
+    expect(contract).toContain(
+      "PDR scope | W-001, repreneur action and staff-verified transition authority; W-021, conditional source-identity disclosure",
+    )
   })
 
   it("distinguishes opportunity and pursuit closure authority", () => {
