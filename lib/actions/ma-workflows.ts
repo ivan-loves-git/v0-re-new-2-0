@@ -654,7 +654,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     contactId?: string | null
   },
 ): Promise<{ success: boolean; message: string }> {
-  await requireStaffAccess()
+  const { user } = await requireStaffAccess()
   const { templateKey, subject, body, contactId } = payload
 
   if (!templateKey || !isMaTemplateKey(templateKey)) {
@@ -664,97 +664,148 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (!body) return { success: false, message: "Message body is required." }
 
   const supabase = createAdminClient()
-  const { opportunity, variables, activeMatch, contacts, defaultContact } =
-    await loadOpportunityContext(opportunityId)
+  const { data: sourceReviewRequired, error: sourceReviewError } =
+    await supabase.rpc("ma_opportunity_source_review_required", {
+      p_opportunity_id: opportunityId,
+    })
 
-  if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
+  if (sourceReviewError || sourceReviewRequired !== false) {
+    return {
+      success: false,
+      message: sourceReviewError
+        ? "Email blocked because the source review status could not be verified."
+        : "Email blocked until the provisional Acme source is reviewed and resolved.",
+    }
+  }
+
+  const { data: emailReservationToken, error: emailReservationError } =
+    await supabase.rpc("reserve_ma_source_email_send", {
+      p_opportunity_id: opportunityId,
+      p_actor: user.id,
+    })
+
+  if (emailReservationError || typeof emailReservationToken !== "string") {
     return {
       success: false,
       message:
-        "Validate a repreneur pursuit before requesting the M&A firm's NDA/info memo.",
+        "Email blocked because the source context changed or another send is already in progress.",
     }
   }
 
-  if (
-    !opportunity.source_office &&
-    !opportunity.source_id &&
-    !opportunity.source
-  ) {
-    return {
-      success: false,
-      message: "This opportunity is not linked to an M&A source yet.",
+  try {
+    const { opportunity, variables, activeMatch, contacts, defaultContact } =
+      await loadOpportunityContext(opportunityId)
+
+    if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
+      return {
+        success: false,
+        message:
+          "Validate a repreneur pursuit before requesting the M&A firm's NDA/info memo.",
+      }
     }
-  }
-  const recipient = contactId
-    ? (contacts.find((contact) => contact.id === contactId) ?? null)
-    : defaultContact
-  if (contactId && !recipient) {
-    return {
-      success: false,
-      message: "Choose a contact linked to this opportunity.",
+
+    if (
+      !opportunity.source_office &&
+      !opportunity.source_id &&
+      !opportunity.source
+    ) {
+      return {
+        success: false,
+        message: "This opportunity is not linked to an M&A source yet.",
+      }
     }
-  }
-  if (!recipient) {
-    return {
-      success: false,
-      message:
-        "Link an M&A contact to this opportunity before sending a follow-up.",
+    const recipient = contactId
+      ? (contacts.find((contact) => contact.id === contactId) ?? null)
+      : defaultContact
+    if (contactId && !recipient) {
+      return {
+        success: false,
+        message: "Choose a contact linked to this opportunity.",
+      }
     }
-  }
-  const recipientEmail = recipient.email
-  if (!recipientEmail) {
-    return {
-      success: false,
-      message:
-        "Add an email to the selected M&A contact before sending a follow-up.",
+    if (!recipient) {
+      return {
+        success: false,
+        message:
+          "Link an M&A contact to this opportunity before sending a follow-up.",
+      }
     }
-  }
-
-  const renderedSubject = substituteTemplateVariables(subject, variables)
-  const renderedBody = substituteTemplateVariables(body, variables)
-
-  const result = await sendIntermediaryEmail({
-    to: recipientEmail,
-    subject: renderedSubject,
-    body: renderedBody,
-  })
-
-  const status = result.success ? "sent" : "failed"
-  const { error } = await supabase.from("ma_source_interactions").insert({
-    opportunity_id: opportunity.id,
-    source_id: opportunity.source_id,
-    contact_id: recipient.legacySourceContactId ?? null,
-    template_key: templateKey,
-    channel: "email",
-    direction: "outbound",
-    recipient_email: recipientEmail,
-    subject: renderedSubject,
-    body_markdown: renderedBody,
-    status,
-    error_message: result.success
-      ? null
-      : (result.error ?? "Email send failed"),
-    sent_at: result.success ? new Date().toISOString() : null,
-  })
-
-  if (error) {
-    return {
-      success: false,
-      message: result.success
-        ? "Email sent, but the interaction could not be logged."
-        : result.error ||
-          "Email failed and the interaction could not be logged.",
+    const recipientEmail = recipient.email
+    if (!recipientEmail) {
+      return {
+        success: false,
+        message:
+          "Add an email to the selected M&A contact before sending a follow-up.",
+      }
     }
+
+    const renderedSubject = substituteTemplateVariables(subject, variables)
+    const renderedBody = substituteTemplateVariables(body, variables)
+
+    const {
+      data: emailReservationRefreshed,
+      error: emailReservationRefreshError,
+    } = await supabase.rpc("refresh_ma_source_email_send", {
+      p_opportunity_id: opportunityId,
+      p_reservation_token: emailReservationToken,
+    })
+
+    if (emailReservationRefreshError || emailReservationRefreshed !== true) {
+      return {
+        success: false,
+        message:
+          "Email blocked because the source context changed before delivery.",
+      }
+    }
+
+    const result = await sendIntermediaryEmail({
+      to: recipientEmail,
+      subject: renderedSubject,
+      body: renderedBody,
+    })
+
+    const status = result.success ? "sent" : "failed"
+    const { error } = await supabase.from("ma_source_interactions").insert({
+      opportunity_id: opportunity.id,
+      source_id: opportunity.source_id,
+      contact_id: recipient.legacySourceContactId ?? null,
+      template_key: templateKey,
+      channel: "email",
+      direction: "outbound",
+      recipient_email: recipientEmail,
+      subject: renderedSubject,
+      body_markdown: renderedBody,
+      status,
+      error_message: result.success
+        ? null
+        : (result.error ?? "Email send failed"),
+      sent_at: result.success ? new Date().toISOString() : null,
+    })
+
+    if (error) {
+      return {
+        success: false,
+        message: result.success
+          ? "Email sent, but the interaction could not be logged."
+          : result.error ||
+            "Email failed and the interaction could not be logged.",
+      }
+    }
+
+    revalidatePath(`/opportunities/${opportunityId}`)
+    revalidatePath("/opportunities/ma")
+    revalidatePath("/emails")
+    revalidateOpportunityDashboardTags()
+
+    if (!result.success) {
+      return { success: false, message: result.error || "Email failed." }
+    }
+
+    return { success: true, message: `Email sent to ${recipientEmail}` }
+  } finally {
+    await supabase.rpc("release_ma_source_email_send", {
+      p_opportunity_id: opportunityId,
+      p_reservation_token: emailReservationToken,
+    })
   }
-
-  revalidatePath(`/opportunities/${opportunityId}`)
-  revalidatePath("/opportunities/ma")
-  revalidatePath("/emails")
-  revalidateOpportunityDashboardTags()
-
-  if (!result.success) {
-    return { success: false, message: result.error || "Email failed." }
-  }
-
-  return { success: true, message: `Email sent to ${recipientEmail}` }
 }

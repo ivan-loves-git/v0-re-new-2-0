@@ -9,6 +9,7 @@ WITH target_tables(table_name) AS (
     ('ma_contact_office_affiliations'),
     ('ma_provisional_source_contexts'),
     ('ma_provisional_source_review_events'),
+    ('ma_source_email_send_reservations'),
     ('ma_source_networks'),
     ('ma_sources'),
     ('ma_source_contacts'),
@@ -177,7 +178,12 @@ schema_evidence AS (
       'assert_opportunity_office_context',
       'assign_acme_provisional_source',
       'resolve_acme_provisional_source',
+      'assert_ma_provisional_source_context_integrity',
+      'assert_ma_provisional_source_review_state',
       'ma_opportunity_source_review_required',
+      'reserve_ma_source_email_send',
+      'release_ma_source_email_send',
+      'refresh_ma_source_email_send',
       'activate_ma_cutover_run',
       'move_ma_source_contact'
     )

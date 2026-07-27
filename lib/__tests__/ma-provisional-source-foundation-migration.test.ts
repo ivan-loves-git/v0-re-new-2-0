@@ -10,6 +10,11 @@ function source(relativePath: string) {
 describe("W-064 provisional Acme source foundation", () => {
   const migration = source("scripts/079_provisional_acme_source_foundation.sql")
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
+  const workflowAction = source("lib/actions/ma-workflows.ts")
+  const emailActions = source("lib/actions/emails.ts")
+  const manualEmailSurface = source(
+    "app/(dashboard)/emails/components/manual-send.tsx",
+  )
 
   it("provisions exactly one real Acme office with the existing Bertrand contact", () => {
     expect(migration).toContain(
@@ -30,6 +35,60 @@ describe("W-064 provisional Acme source foundation", () => {
     )
     expect(migration).toContain("ma_provisional_acme_identity_collision")
     expect(migration).not.toContain("UPDATE public.ma_contacts")
+  })
+
+  it("fails closed before the existing external email path can load, send, or log", () => {
+    const actionStart = workflowAction.indexOf(
+      "export async function sendMaSourceWorkflowEmailPayload",
+    )
+    const action = workflowAction.slice(actionStart)
+    const reviewCheck = action.indexOf(
+      '.rpc("ma_opportunity_source_review_required"',
+    )
+    const reservation = action.indexOf('.rpc("reserve_ma_source_email_send"')
+    const contextLoad = action.indexOf("await loadOpportunityContext")
+    const reservationRefresh = action.indexOf(
+      '.rpc("refresh_ma_source_email_send"',
+    )
+    const send = action.indexOf("await sendIntermediaryEmail")
+    const interactionInsert = action.indexOf(
+      '.from("ma_source_interactions").insert',
+    )
+
+    expect(actionStart).toBeGreaterThan(-1)
+    expect(reviewCheck).toBeGreaterThan(-1)
+    expect(action).toContain(
+      "sourceReviewError || sourceReviewRequired !== false",
+    )
+    expect(action).toContain(
+      "Email blocked until the provisional Acme source is reviewed and resolved.",
+    )
+    expect(reservation).toBeGreaterThan(reviewCheck)
+    expect(action).toContain('.rpc("release_ma_source_email_send"')
+    expect(action).toContain("} finally {")
+    expect(reviewCheck).toBeLessThan(contextLoad)
+    expect(reservation).toBeLessThan(contextLoad)
+    expect(reservationRefresh).toBeGreaterThan(contextLoad)
+    expect(reservationRefresh).toBeLessThan(send)
+    expect(reviewCheck).toBeLessThan(send)
+    expect(reviewCheck).toBeLessThan(interactionInsert)
+    expect(migration).toContain(
+      "GRANT EXECUTE ON FUNCTION public.ma_opportunity_source_review_required(UUID) TO service_role;",
+    )
+    expect(migration).toContain(
+      "CREATE TABLE IF NOT EXISTS public.ma_source_email_send_reservations",
+    )
+    expect(migration).toContain(
+      "ma_provisional_source_change_blocked_during_email_send",
+    )
+    expect(emailActions).toContain("export async function sendTestEmail")
+    expect(emailActions).toContain(
+      "Does NOT log to database - for testing only",
+    )
+    expect(manualEmailSurface).toContain(
+      "Test Mode: Emails are sent directly without logging",
+    )
+    expect(action).not.toContain("sendTestEmail")
   })
 
   it("uses append-only snapshots rather than a mutable review status", () => {
@@ -70,8 +129,21 @@ describe("W-064 provisional Acme source foundation", () => {
     expect(resolve).toContain("FOR UPDATE;")
     expect(assign).toContain("public.save_opportunity_office_context")
     expect(resolve).toContain("public.save_opportunity_office_context")
-    expect(assign).toContain("ma_provisional_source_assignment_supports_draft_active_or_paused_only")
-    expect(resolve).toContain("ma_provisional_source_resolution_requires_assignment_evidence")
+    expect(assign).toContain(
+      "hashtextextended('ma-provisional-source-cutover-readiness', 76064)",
+    )
+    expect(resolve).toContain(
+      "public.assert_ma_provisional_source_context_integrity()",
+    )
+    expect(assign).toContain(
+      "ma_provisional_source_assignment_blocked_by_cutover",
+    )
+    expect(assign).toContain(
+      "ma_provisional_source_assignment_supports_draft_active_or_paused_only",
+    )
+    expect(resolve).toContain(
+      "ma_provisional_source_resolution_requires_assignment_evidence",
+    )
   })
 
   it("blocks opportunity terminal states and cutover treatment without blocking pursuit work", () => {
@@ -81,8 +153,38 @@ describe("W-064 provisional Acme source foundation", () => {
     expect(migration).toContain(
       "ma_provisional_source_review_blocks_cutover_treatment",
     )
-    expect(migration).toContain("NEW.status IN ('approved', 'activating', 'activated')")
+    expect(migration).toContain(
+      "NEW.status IN ('approved', 'activating', 'activated')",
+    )
+    expect(migration).toContain(
+      "CREATE TRIGGER guard_ma_provisional_source_cutover_on_run",
+    )
+    expect(migration).toContain("BEFORE UPDATE OF status")
     expect(migration).not.toContain("opportunity_pursuits")
+  })
+
+  it("protects the fixed identity chain and validates every normalized collision on rerun", () => {
+    expect(migration).toContain("hashtextextended('acme co.', 76061)")
+    expect(
+      migration.indexOf("hashtextextended('acme co.', 76061)"),
+    ).toBeLessThan(
+      migration.indexOf(
+        "hashtextextended('ma-provisional-source-context:acme_co_paris', 76064)",
+      ),
+    )
+    for (const invariant of [
+      "ma_provisional_acme_requires_exactly_one_firm",
+      "ma_provisional_acme_requires_exactly_one_office",
+      "ma_provisional_acme_requires_one_bertrand_contact",
+      "ma_provisional_acme_requires_one_bertrand_staff_identity",
+      "ma_provisional_source_context_is_immutable",
+      "ma_provisional_acme_firm_is_immutable",
+      "ma_provisional_acme_office_is_immutable",
+      "ma_provisional_bertrand_contact_is_immutable",
+      "ma_provisional_bertrand_affiliation_is_immutable",
+    ]) {
+      expect(migration).toContain(invariant)
+    }
   })
 
   it("keeps the new objects service-role-only and out of repreneur paths", () => {
@@ -109,11 +211,21 @@ describe("W-064 provisional Acme source foundation", () => {
     expect(contract).toContain("Migration 079 is the checked-in")
     expect(contract).toContain("W-064 and migration 079")
 
-    const fixture = source("scripts/rehearse-ma-provisional-source-foundation.sql")
-    const runner = source("scripts/rehearse-ma-provisional-source-foundation.sh")
+    const fixture = source(
+      "scripts/rehearse-ma-provisional-source-foundation.sql",
+    )
+    const runner = source(
+      "scripts/rehearse-ma-provisional-source-foundation.sh",
+    )
     expect(fixture).toContain("W-064 disposable rehearsal passed")
     expect(fixture).toContain("w064_fixture_privilege_assertion_failed")
+    expect(fixture).toContain("SET CONSTRAINTS ALL IMMEDIATE")
+    expect(fixture).toContain("SET LOCAL ROLE service_role")
     expect(runner).toContain("/private/tmp/renew-w064-postgres")
+    expect(runner).toContain("expect_collision_failure")
+    expect(runner).toContain(
+      "Concurrent cutover approval unexpectedly succeeded",
+    )
     expect(runner).not.toContain(".env")
   })
 })

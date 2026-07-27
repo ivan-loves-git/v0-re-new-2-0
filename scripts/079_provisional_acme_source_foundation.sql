@@ -46,6 +46,17 @@ CREATE TABLE IF NOT EXISTS public.ma_provisional_source_review_events (
   )
 );
 
+CREATE TABLE IF NOT EXISTS public.ma_source_email_send_reservations (
+  opportunity_id UUID PRIMARY KEY REFERENCES public.opportunities(id) ON DELETE RESTRICT,
+  reservation_token UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  source_office_id UUID REFERENCES public.ma_offices(id) ON DELETE RESTRICT,
+  actor TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  CHECK (NULLIF(BTRIM(actor), '') IS NOT NULL),
+  CHECK (expires_at > created_at)
+);
+
 CREATE INDEX IF NOT EXISTS idx_ma_provisional_source_review_events_opportunity
   ON public.ma_provisional_source_review_events (opportunity_id, occurred_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_ma_provisional_source_review_events_related_assignment
@@ -54,22 +65,127 @@ CREATE INDEX IF NOT EXISTS idx_ma_provisional_source_review_events_related_assig
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_provisional_source_review_events_one_resolution
   ON public.ma_provisional_source_review_events (related_assignment_id)
   WHERE event_kind = 'resolved';
+CREATE INDEX IF NOT EXISTS idx_ma_source_email_send_reservations_expiry
+  ON public.ma_source_email_send_reservations (expires_at);
 
--- The preflight established exactly one canonical contact and staff identity.
--- A rerun validates the already provisioned context; a new name collision is
--- deliberately a hard stop rather than an automatic merge or reinterpretation.
+-- The fixed context is validated by every write primitive and by every rerun.
+-- Separate email/name counts prevent an ambiguous Bertrand record from being
+-- accepted merely because one row happens to match both fields.
+CREATE OR REPLACE FUNCTION public.assert_ma_provisional_source_context_integrity()
+RETURNS VOID
+LANGUAGE plpgsql
+STABLE
+SET search_path = ''
+AS $$
+DECLARE
+  context_row public.ma_provisional_source_contexts%ROWTYPE;
+  context_count INTEGER;
+  firm_count INTEGER;
+  office_count INTEGER;
+  contact_email_count INTEGER;
+  contact_name_count INTEGER;
+  staff_identity_count INTEGER;
+BEGIN
+  SELECT COUNT(*)
+  INTO context_count
+  FROM public.ma_provisional_source_contexts
+  WHERE context_key = 'acme_co_paris';
+
+  IF context_count <> 1 THEN
+    RAISE EXCEPTION 'ma_provisional_acme_requires_exactly_one_context';
+  END IF;
+
+  SELECT *
+  INTO context_row
+  FROM public.ma_provisional_source_contexts
+  WHERE context_key = 'acme_co_paris';
+
+  SELECT COUNT(*)
+  INTO firm_count
+  FROM public.ma_firms firm
+  WHERE LOWER(BTRIM(firm.name)) = 'acme co.';
+
+  SELECT COUNT(*)
+  INTO office_count
+  FROM public.ma_offices office
+  WHERE LOWER(BTRIM(office.name)) = 'acme paris';
+
+  SELECT COUNT(*)
+  INTO contact_email_count
+  FROM public.ma_contacts contact
+  WHERE LOWER(BTRIM(contact.email)) = 'bertrand.galas@edu.escp.eu';
+
+  SELECT COUNT(*)
+  INTO contact_name_count
+  FROM public.ma_contacts contact
+  WHERE LOWER(BTRIM(contact.display_name)) = 'bertrand galas';
+
+  SELECT COUNT(*)
+  INTO staff_identity_count
+  FROM public.app_user_roles role
+  WHERE role.role = 'staff'
+    AND LOWER(BTRIM(role.email)) = 'bertrand.galas@edu.escp.eu';
+
+  IF firm_count <> 1 THEN
+    RAISE EXCEPTION 'ma_provisional_acme_requires_exactly_one_firm';
+  END IF;
+  IF office_count <> 1 THEN
+    RAISE EXCEPTION 'ma_provisional_acme_requires_exactly_one_office';
+  END IF;
+  IF contact_email_count <> 1 OR contact_name_count <> 1 THEN
+    RAISE EXCEPTION 'ma_provisional_acme_requires_one_bertrand_contact';
+  END IF;
+  IF staff_identity_count <> 1 THEN
+    RAISE EXCEPTION 'ma_provisional_acme_requires_one_bertrand_staff_identity';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.ma_firms firm
+    JOIN public.ma_offices office ON office.id = context_row.office_id
+    JOIN public.ma_contacts contact ON contact.id = context_row.contact_id
+    JOIN public.ma_contact_office_affiliations affiliation
+      ON affiliation.id = context_row.affiliation_id
+    WHERE firm.id = context_row.firm_id
+      AND firm.name = 'Acme Co.'
+      AND firm.status = 'active'
+      AND firm.archived_at IS NULL
+      AND office.firm_id = firm.id
+      AND office.name = 'Acme Paris'
+      AND office.city = 'Paris'
+      AND office.status = 'active'
+      AND office.archived_at IS NULL
+      AND NOT office.is_default
+      AND contact.display_name = 'Bertrand Galas'
+      AND LOWER(BTRIM(contact.email)) = 'bertrand.galas@edu.escp.eu'
+      AND contact.status = 'active'
+      AND contact.archived_at IS NULL
+      AND affiliation.contact_id = contact.id
+      AND affiliation.office_id = office.id
+      AND affiliation.is_active
+      AND affiliation.ended_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'ma_provisional_acme_context_integrity_mismatch';
+  END IF;
+END;
+$$;
+
+-- Match migration 076's normalized-firm lock before taking the narrower W-064
+-- context lock. This preserves the global identity creation order.
 DO $$
 DECLARE
   existing_context public.ma_provisional_source_contexts%ROWTYPE;
   canonical_contact_id UUID;
   staff_identity_count INTEGER;
-  matching_contact_count INTEGER;
+  contact_email_count INTEGER;
+  contact_name_count INTEGER;
   matching_firm_count INTEGER;
   matching_office_count INTEGER;
   acme_firm_id UUID;
   acme_office_id UUID;
   acme_affiliation_id UUID;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended('acme co.', 76061));
   PERFORM pg_advisory_xact_lock(
     hashtextextended('ma-provisional-source-context:acme_co_paris', 76064)
   );
@@ -81,28 +197,7 @@ BEGIN
   FOR KEY SHARE;
 
   IF existing_context.context_key IS NOT NULL THEN
-    IF NOT EXISTS (
-      SELECT 1
-      FROM public.ma_firms firm
-      JOIN public.ma_offices office ON office.id = existing_context.office_id
-      JOIN public.ma_contacts contact ON contact.id = existing_context.contact_id
-      JOIN public.ma_contact_office_affiliations affiliation
-        ON affiliation.id = existing_context.affiliation_id
-      WHERE firm.id = existing_context.firm_id
-        AND BTRIM(firm.name) = 'Acme Co.'
-        AND office.firm_id = firm.id
-        AND BTRIM(office.name) = 'Acme Paris'
-        AND office.city = 'Paris'
-        AND office.status = 'active'
-        AND NOT office.is_default
-        AND affiliation.contact_id = contact.id
-        AND affiliation.office_id = office.id
-        AND affiliation.is_active
-        AND LOWER(BTRIM(contact.display_name)) = 'bertrand galas'
-        AND LOWER(BTRIM(contact.email)) = 'bertrand.galas@edu.escp.eu'
-    ) THEN
-      RAISE EXCEPTION 'ma_provisional_acme_context_integrity_mismatch';
-    END IF;
+    PERFORM public.assert_ma_provisional_source_context_integrity();
     RETURN;
   END IF;
 
@@ -117,13 +212,16 @@ BEGIN
   END IF;
 
   SELECT COUNT(*)
-  INTO matching_contact_count
+  INTO contact_email_count
   FROM public.ma_contacts contact
-  WHERE contact.status = 'active'
-    AND LOWER(BTRIM(contact.display_name)) = 'bertrand galas'
-    AND LOWER(BTRIM(contact.email)) = 'bertrand.galas@edu.escp.eu';
+  WHERE LOWER(BTRIM(contact.email)) = 'bertrand.galas@edu.escp.eu';
 
-  IF matching_contact_count <> 1 THEN
+  SELECT COUNT(*)
+  INTO contact_name_count
+  FROM public.ma_contacts contact
+  WHERE LOWER(BTRIM(contact.display_name)) = 'bertrand galas';
+
+  IF contact_email_count <> 1 OR contact_name_count <> 1 THEN
     RAISE EXCEPTION 'ma_provisional_acme_requires_one_bertrand_contact';
   END IF;
 
@@ -206,6 +304,191 @@ BEGIN
     canonical_contact_id,
     acme_affiliation_id
   );
+
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.guard_ma_provisional_source_context_identity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  RAISE EXCEPTION 'ma_provisional_source_context_is_immutable';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.guard_ma_provisional_acme_firm_identity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  fixed_firm_id UUID;
+BEGIN
+  SELECT firm_id
+  INTO fixed_firm_id
+  FROM public.ma_provisional_source_contexts
+  WHERE context_key = 'acme_co_paris';
+
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.id = fixed_firm_id THEN
+      RAISE EXCEPTION 'ma_provisional_acme_firm_is_immutable';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF LOWER(BTRIM(NEW.name)) = 'acme co.'
+    AND NEW.id IS DISTINCT FROM fixed_firm_id THEN
+    RAISE EXCEPTION 'ma_provisional_acme_firm_identity_collision';
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    RETURN NEW;
+  END IF;
+
+  IF OLD.id = fixed_firm_id
+    AND (
+      NEW.name IS DISTINCT FROM 'Acme Co.'
+      OR NEW.status IS DISTINCT FROM 'active'
+      OR NEW.archived_at IS NOT NULL
+      OR NEW.archived_by IS NOT NULL
+    ) THEN
+    RAISE EXCEPTION 'ma_provisional_acme_firm_is_immutable';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.guard_ma_provisional_acme_office_identity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  fixed_firm_id UUID;
+  fixed_office_id UUID;
+BEGIN
+  SELECT firm_id, office_id
+  INTO fixed_firm_id, fixed_office_id
+  FROM public.ma_provisional_source_contexts
+  WHERE context_key = 'acme_co_paris';
+
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.id = fixed_office_id THEN
+      RAISE EXCEPTION 'ma_provisional_acme_office_is_immutable';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF LOWER(BTRIM(NEW.name)) = 'acme paris'
+    AND NEW.id IS DISTINCT FROM fixed_office_id THEN
+    RAISE EXCEPTION 'ma_provisional_acme_office_identity_collision';
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    RETURN NEW;
+  END IF;
+
+  IF OLD.id = fixed_office_id
+    AND (
+      NEW.firm_id IS DISTINCT FROM fixed_firm_id
+      OR NEW.name IS DISTINCT FROM 'Acme Paris'
+      OR NEW.city IS DISTINCT FROM 'Paris'
+      OR NEW.status IS DISTINCT FROM 'active'
+      OR NEW.is_default IS DISTINCT FROM FALSE
+      OR NEW.archived_at IS NOT NULL
+      OR NEW.archived_by IS NOT NULL
+    ) THEN
+    RAISE EXCEPTION 'ma_provisional_acme_office_is_immutable';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.guard_ma_provisional_bertrand_contact_identity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  fixed_contact_id UUID;
+BEGIN
+  SELECT contact_id
+  INTO fixed_contact_id
+  FROM public.ma_provisional_source_contexts
+  WHERE context_key = 'acme_co_paris';
+
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.id = fixed_contact_id THEN
+      RAISE EXCEPTION 'ma_provisional_bertrand_contact_is_immutable';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF (
+    LOWER(BTRIM(NEW.display_name)) = 'bertrand galas'
+    OR LOWER(BTRIM(NEW.email)) = 'bertrand.galas@edu.escp.eu'
+  ) AND NEW.id IS DISTINCT FROM fixed_contact_id THEN
+    RAISE EXCEPTION 'ma_provisional_bertrand_contact_identity_collision';
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    RETURN NEW;
+  END IF;
+
+  IF OLD.id = fixed_contact_id
+    AND (
+      NEW.display_name IS DISTINCT FROM 'Bertrand Galas'
+      OR LOWER(BTRIM(NEW.email)) IS DISTINCT FROM 'bertrand.galas@edu.escp.eu'
+      OR NEW.status IS DISTINCT FROM 'active'
+      OR NEW.archived_at IS NOT NULL
+      OR NEW.archived_by IS NOT NULL
+    ) THEN
+    RAISE EXCEPTION 'ma_provisional_bertrand_contact_is_immutable';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.guard_ma_provisional_bertrand_affiliation_identity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  fixed_contact_id UUID;
+  fixed_office_id UUID;
+  fixed_affiliation_id UUID;
+BEGIN
+  SELECT contact_id, office_id, affiliation_id
+  INTO fixed_contact_id, fixed_office_id, fixed_affiliation_id
+  FROM public.ma_provisional_source_contexts
+  WHERE context_key = 'acme_co_paris';
+
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.id = fixed_affiliation_id THEN
+      RAISE EXCEPTION 'ma_provisional_bertrand_affiliation_is_immutable';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF OLD.id = fixed_affiliation_id
+    AND (
+      NEW.contact_id IS DISTINCT FROM fixed_contact_id
+      OR NEW.office_id IS DISTINCT FROM fixed_office_id
+      OR NEW.is_active IS DISTINCT FROM TRUE
+      OR NEW.ended_at IS NOT NULL
+      OR NEW.ended_by IS NOT NULL
+    ) THEN
+    RAISE EXCEPTION 'ma_provisional_bertrand_affiliation_is_immutable';
+  END IF;
+
+  RETURN NEW;
 END;
 $$;
 
@@ -265,11 +548,14 @@ CREATE OR REPLACE FUNCTION public.ma_opportunity_source_review_required(
   p_opportunity_id UUID
 )
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SET search_path = ''
 AS $$
-  SELECT EXISTS (
+BEGIN
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+
+  RETURN EXISTS (
     SELECT 1
     FROM public.ma_provisional_source_contexts context
     JOIN public.opportunities opportunity ON opportunity.id = p_opportunity_id
@@ -290,6 +576,118 @@ AS $$
           AND resolution.related_assignment_id = assignment.id
       )
   );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reserve_ma_source_email_send(
+  p_opportunity_id UUID,
+  p_actor TEXT
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  opportunity_row public.opportunities%ROWTYPE;
+  reservation_id UUID;
+  actor TEXT;
+BEGIN
+  actor := NULLIF(BTRIM(p_actor), '');
+  IF actor IS NULL THEN
+    RAISE EXCEPTION 'ma_source_email_reservation_actor_required';
+  END IF;
+
+  SELECT *
+  INTO opportunity_row
+  FROM public.opportunities
+  WHERE id = p_opportunity_id
+  FOR UPDATE;
+
+  IF opportunity_row.id IS NULL THEN
+    RAISE EXCEPTION 'opportunity_not_found';
+  END IF;
+
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+  IF public.ma_opportunity_source_review_required(opportunity_row.id) THEN
+    RAISE EXCEPTION 'ma_provisional_source_review_blocks_external_email';
+  END IF;
+
+  DELETE FROM public.ma_source_email_send_reservations reservation
+  WHERE reservation.opportunity_id = opportunity_row.id
+    AND reservation.expires_at <= NOW();
+
+  INSERT INTO public.ma_source_email_send_reservations (
+    opportunity_id,
+    source_office_id,
+    actor,
+    expires_at
+  ) VALUES (
+    opportunity_row.id,
+    opportunity_row.source_office_id,
+    actor,
+    NOW() + INTERVAL '2 minutes'
+  )
+  ON CONFLICT (opportunity_id) DO NOTHING
+  RETURNING reservation_token INTO reservation_id;
+
+  IF reservation_id IS NULL THEN
+    RAISE EXCEPTION 'ma_source_email_send_already_in_progress';
+  END IF;
+
+  RETURN reservation_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.release_ma_source_email_send(
+  p_opportunity_id UUID,
+  p_reservation_token UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  DELETE FROM public.ma_source_email_send_reservations reservation
+  WHERE reservation.opportunity_id = p_opportunity_id
+    AND reservation.reservation_token = p_reservation_token;
+
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.refresh_ma_source_email_send(
+  p_opportunity_id UUID,
+  p_reservation_token UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  opportunity_row public.opportunities%ROWTYPE;
+BEGIN
+  SELECT *
+  INTO opportunity_row
+  FROM public.opportunities
+  WHERE id = p_opportunity_id
+  FOR UPDATE;
+
+  IF opportunity_row.id IS NULL
+    OR public.ma_opportunity_source_review_required(opportunity_row.id) THEN
+    RETURN FALSE;
+  END IF;
+
+  UPDATE public.ma_source_email_send_reservations reservation
+  SET expires_at = NOW() + INTERVAL '2 minutes'
+  WHERE reservation.opportunity_id = opportunity_row.id
+    AND reservation.reservation_token = p_reservation_token
+    AND reservation.source_office_id IS NOT DISTINCT FROM opportunity_row.source_office_id;
+
+  RETURN FOUND;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.guard_ma_provisional_source_review_event()
@@ -301,6 +699,8 @@ DECLARE
   context_row public.ma_provisional_source_contexts%ROWTYPE;
   assignment_row public.ma_provisional_source_review_events%ROWTYPE;
 BEGIN
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+
   SELECT *
   INTO context_row
   FROM public.ma_provisional_source_contexts
@@ -379,6 +779,8 @@ DECLARE
   opportunity_row public.opportunities%ROWTYPE;
   unresolved_assignment_count INTEGER;
 BEGIN
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+
   SELECT *
   INTO context_row
   FROM public.ma_provisional_source_contexts
@@ -433,6 +835,11 @@ LANGUAGE plpgsql
 SET search_path = ''
 AS $$
 BEGIN
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('ma-provisional-source-cutover-readiness', 76064)
+  );
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+
   IF NEW.status IN ('approved', 'activating', 'activated')
     AND EXISTS (
       SELECT 1
@@ -495,8 +902,24 @@ BEGIN
     RAISE EXCEPTION 'ma_provisional_source_reason_required';
   END IF;
 
-  -- Preserve the existing office-context lock order: opportunity first, then
-  -- the selected office, firm, affiliations and current links inside the W-063 RPC.
+  -- A shared transaction lock makes Acme assignment and cutover readiness
+  -- mutually exclusive. Approved/activating runs block a new assignment, while
+  -- activated historical runs do not permanently disable ordinary Acme use.
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('ma-provisional-source-cutover-readiness', 76064)
+  );
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.ma_cutover_runs run
+    WHERE run.status IN ('approved', 'activating')
+  ) THEN
+    RAISE EXCEPTION 'ma_provisional_source_assignment_blocked_by_cutover';
+  END IF;
+
+  -- Preserve the existing office-context lock order after the readiness lock:
+  -- opportunity, selected office, firm, affiliations, then current links.
   SELECT *
   INTO opportunity_row
   FROM public.opportunities
@@ -506,6 +929,19 @@ BEGIN
   IF opportunity_row.id IS NULL THEN
     RAISE EXCEPTION 'opportunity_not_found';
   END IF;
+
+  DELETE FROM public.ma_source_email_send_reservations reservation
+  WHERE reservation.opportunity_id = opportunity_row.id
+    AND reservation.expires_at <= NOW();
+  IF EXISTS (
+    SELECT 1
+    FROM public.ma_source_email_send_reservations reservation
+    WHERE reservation.opportunity_id = opportunity_row.id
+      AND reservation.expires_at > NOW()
+  ) THEN
+    RAISE EXCEPTION 'ma_provisional_source_change_blocked_during_email_send';
+  END IF;
+
   IF opportunity_row.status NOT IN ('draft', 'active', 'paused') THEN
     RAISE EXCEPTION 'ma_provisional_source_assignment_supports_draft_active_or_paused_only';
   END IF;
@@ -602,6 +1038,11 @@ BEGIN
     RAISE EXCEPTION 'ma_provisional_source_resolution_requires_real_office';
   END IF;
 
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('ma-provisional-source-cutover-readiness', 76064)
+  );
+  PERFORM public.assert_ma_provisional_source_context_integrity();
+
   SELECT *
   INTO opportunity_row
   FROM public.opportunities
@@ -611,6 +1052,19 @@ BEGIN
   IF opportunity_row.id IS NULL THEN
     RAISE EXCEPTION 'opportunity_not_found';
   END IF;
+
+  DELETE FROM public.ma_source_email_send_reservations reservation
+  WHERE reservation.opportunity_id = opportunity_row.id
+    AND reservation.expires_at <= NOW();
+  IF EXISTS (
+    SELECT 1
+    FROM public.ma_source_email_send_reservations reservation
+    WHERE reservation.opportunity_id = opportunity_row.id
+      AND reservation.expires_at > NOW()
+  ) THEN
+    RAISE EXCEPTION 'ma_provisional_source_change_blocked_during_email_send';
+  END IF;
+
   IF opportunity_row.status NOT IN ('draft', 'active', 'paused') THEN
     RAISE EXCEPTION 'ma_provisional_source_resolution_supports_draft_active_or_paused_only';
   END IF;
@@ -697,6 +1151,37 @@ $$;
 
 ALTER TABLE public.ma_provisional_source_contexts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ma_provisional_source_review_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ma_source_email_send_reservations ENABLE ROW LEVEL SECURITY;
+
+DROP TRIGGER IF EXISTS guard_ma_provisional_source_context_identity
+  ON public.ma_provisional_source_contexts;
+CREATE TRIGGER guard_ma_provisional_source_context_identity
+  BEFORE UPDATE OR DELETE ON public.ma_provisional_source_contexts
+  FOR EACH ROW EXECUTE FUNCTION public.guard_ma_provisional_source_context_identity();
+
+DROP TRIGGER IF EXISTS guard_ma_provisional_acme_firm_identity
+  ON public.ma_firms;
+CREATE TRIGGER guard_ma_provisional_acme_firm_identity
+  BEFORE INSERT OR UPDATE OR DELETE ON public.ma_firms
+  FOR EACH ROW EXECUTE FUNCTION public.guard_ma_provisional_acme_firm_identity();
+
+DROP TRIGGER IF EXISTS guard_ma_provisional_acme_office_identity
+  ON public.ma_offices;
+CREATE TRIGGER guard_ma_provisional_acme_office_identity
+  BEFORE INSERT OR UPDATE OR DELETE ON public.ma_offices
+  FOR EACH ROW EXECUTE FUNCTION public.guard_ma_provisional_acme_office_identity();
+
+DROP TRIGGER IF EXISTS guard_ma_provisional_bertrand_contact_identity
+  ON public.ma_contacts;
+CREATE TRIGGER guard_ma_provisional_bertrand_contact_identity
+  BEFORE INSERT OR UPDATE OR DELETE ON public.ma_contacts
+  FOR EACH ROW EXECUTE FUNCTION public.guard_ma_provisional_bertrand_contact_identity();
+
+DROP TRIGGER IF EXISTS guard_ma_provisional_bertrand_affiliation_identity
+  ON public.ma_contact_office_affiliations;
+CREATE TRIGGER guard_ma_provisional_bertrand_affiliation_identity
+  BEFORE UPDATE OR DELETE ON public.ma_contact_office_affiliations
+  FOR EACH ROW EXECUTE FUNCTION public.guard_ma_provisional_bertrand_affiliation_identity();
 
 DROP TRIGGER IF EXISTS guard_ma_provisional_source_review_event_insert
   ON public.ma_provisional_source_review_events;
@@ -732,14 +1217,14 @@ CREATE CONSTRAINT TRIGGER enforce_ma_provisional_source_review_on_event
 
 DROP TRIGGER IF EXISTS guard_ma_provisional_source_cutover_on_run
   ON public.ma_cutover_runs;
-CREATE CONSTRAINT TRIGGER guard_ma_provisional_source_cutover_on_run
-  AFTER UPDATE OF status ON public.ma_cutover_runs
-  DEFERRABLE INITIALLY DEFERRED
+CREATE TRIGGER guard_ma_provisional_source_cutover_on_run
+  BEFORE UPDATE OF status ON public.ma_cutover_runs
   FOR EACH ROW EXECUTE FUNCTION public.guard_ma_provisional_source_cutover();
 
 REVOKE ALL ON TABLE
   public.ma_provisional_source_contexts,
-  public.ma_provisional_source_review_events
+  public.ma_provisional_source_review_events,
+  public.ma_source_email_send_reservations
 FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE
   public.ma_provisional_source_contexts,
@@ -749,6 +1234,15 @@ TO service_role;
 REVOKE ALL ON FUNCTION public.ma_opportunity_source_snapshot(UUID) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.ma_opportunity_contact_snapshot(UUID) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.ma_opportunity_source_review_required(UUID) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.reserve_ma_source_email_send(UUID, TEXT) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.release_ma_source_email_send(UUID, UUID) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.refresh_ma_source_email_send(UUID, UUID) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.assert_ma_provisional_source_context_integrity() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.guard_ma_provisional_source_context_identity() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.guard_ma_provisional_acme_firm_identity() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.guard_ma_provisional_acme_office_identity() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.guard_ma_provisional_bertrand_contact_identity() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.guard_ma_provisional_bertrand_affiliation_identity() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.guard_ma_provisional_source_review_event() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.prevent_ma_provisional_source_review_event_mutation() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.assert_ma_provisional_source_review_state(UUID) FROM PUBLIC, anon, authenticated, service_role;
@@ -757,7 +1251,19 @@ REVOKE ALL ON FUNCTION public.enforce_ma_provisional_source_review_on_opportunit
 REVOKE ALL ON FUNCTION public.enforce_ma_provisional_source_review_on_event() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.assign_acme_provisional_source(UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.resolve_acme_provisional_source(UUID, UUID, UUID[], UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.assert_ma_provisional_source_context_integrity() TO service_role;
 GRANT EXECUTE ON FUNCTION public.ma_opportunity_source_review_required(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.reserve_ma_source_email_send(UUID, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.release_ma_source_email_send(UUID, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.refresh_ma_source_email_send(UUID, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.guard_ma_provisional_acme_firm_identity() TO service_role;
+GRANT EXECUTE ON FUNCTION public.guard_ma_provisional_acme_office_identity() TO service_role;
+GRANT EXECUTE ON FUNCTION public.guard_ma_provisional_bertrand_contact_identity() TO service_role;
+GRANT EXECUTE ON FUNCTION public.guard_ma_provisional_bertrand_affiliation_identity() TO service_role;
+GRANT EXECUTE ON FUNCTION public.assert_ma_provisional_source_review_state(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.guard_ma_provisional_source_cutover() TO service_role;
+GRANT EXECUTE ON FUNCTION public.enforce_ma_provisional_source_review_on_opportunity() TO service_role;
+GRANT EXECUTE ON FUNCTION public.enforce_ma_provisional_source_review_on_event() TO service_role;
 GRANT EXECUTE ON FUNCTION public.assign_acme_provisional_source(UUID, TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.resolve_acme_provisional_source(UUID, UUID, UUID[], UUID, TEXT, TEXT) TO service_role;
 
@@ -765,6 +1271,8 @@ COMMENT ON TABLE public.ma_provisional_source_contexts IS
   'Staff-only fixed W-064 provisional source context. Acme Co. and Acme Paris are operational context, not test data and never an intermediary alias.';
 COMMENT ON TABLE public.ma_provisional_source_review_events IS
   'Staff-only immutable W-064 provisional source assignment and resolution evidence. Review required is computed; no mutable review status exists.';
+COMMENT ON TABLE public.ma_source_email_send_reservations IS
+  'Service-only short-lived reservation that closes the external-email review-check race. It stores no recipient, subject, body or delivery content.';
 COMMENT ON FUNCTION public.assign_acme_provisional_source(UUID, TEXT, TEXT) IS
   'Service-role-only W-064 audited Acme assignment. Reuses canonical office/contact validation and creates immutable before/after evidence.';
 COMMENT ON FUNCTION public.resolve_acme_provisional_source(UUID, UUID, UUID[], UUID, TEXT, TEXT) IS
