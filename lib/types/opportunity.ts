@@ -307,6 +307,11 @@ export interface MaSourceDirectoryEntry extends MaSource {
 }
 
 export interface MaSourceInteraction {
+  /**
+   * Compatibility projection used by the existing opportunity history panel.
+   * New records are stored in ma_interactions; the legacy names keep the
+   * reminder and rendering contract stable during the W-062 cutover.
+   */
   id: string
   opportunity_id: string
   source_id?: string | null
@@ -320,8 +325,38 @@ export interface MaSourceInteraction {
   status: "sent" | "failed" | string
   error_message?: string | null
   sent_at?: string | null
+  owner_verification_state?: "provisional" | "verified" | string | null
   created_by?: string | null
   created_at: string
+}
+
+export interface MaInteraction {
+  id: string
+  office_id: string
+  affiliation_id?: string | null
+  opportunity_id?: string | null
+  channel: "call" | "email" | "meeting" | "document" | "other" | string
+  direction?: "inbound" | "outbound" | null
+  occurred_at: string
+  owner_staff_user_id: string
+  owner_verification_state: "provisional" | "verified" | string
+  owner_verified_by?: string | null
+  owner_verified_at?: string | null
+  title?: string | null
+  summary?: string | null
+  outcome?: string | null
+  next_action?: string | null
+  next_action_due_at?: string | null
+  template_key?: string | null
+  recipient_email_snapshot?: string | null
+  body_markdown?: string | null
+  delivery_status?: "pending" | "sent" | "failed" | null | string
+  delivery_error?: string | null
+  sent_at?: string | null
+  created_by?: string | null
+  created_at: string
+  updated_by?: string | null
+  updated_at: string
 }
 
 export interface Opportunity {

@@ -55,7 +55,7 @@ describe("W-064 provisional Acme source foundation", () => {
     )
     const send = action.indexOf("await sendIntermediaryEmail")
     const interactionInsert = action.indexOf(
-      '.from("ma_source_interactions").insert',
+      '.from("ma_interactions").insert',
     )
 
     expect(actionStart).toBeGreaterThan(-1)

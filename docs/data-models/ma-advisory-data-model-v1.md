@@ -5,7 +5,7 @@
 | Item | Value |
 | --- | --- |
 | Status | Approved and live contract |
-| Implementation status | Migrations 076 to 079 are live and schema-verified. The canonical office/contact model, one-time cutover staging area and W-064 provisional Acme foundation are present; Acme is not assigned to any opportunity, review evidence and email reservations are empty, no real workbook has been imported, and Excel remains operationally authoritative until W-010. The W-010 date-precision and test-data replacement rules remain approved target gaps and must be implemented and production-verified before the real workbook is staged. |
+| Implementation status | Migrations 076 to 079 are live and schema-verified. Migration 080 is a checked-in W-062 implementation candidate only: it has not been applied to production. The canonical office/contact model, one-time cutover staging area and W-064 provisional Acme foundation are present; Acme is not assigned to any opportunity, review evidence and email reservations are empty, no real workbook has been imported, and Excel remains operationally authoritative until W-010. The W-010 date-precision and test-data replacement rules remain approved target gaps and must be implemented and production-verified before the real workbook is staged. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
@@ -301,6 +301,8 @@ W-065 is a staff-only application boundary over the live W-064 evidence model. O
 | `direction` | `inbound`, `outbound` | Conditional | Staff only | WAVE | Required for email and call; optional for other channels |
 | `occurred_at` | Timestamp | Always | Staff only | WAVE | When the interaction happened |
 | `owner_staff_user_id` | Staff ID | Always | Staff only | WAVE | Staff member responsible for the interaction |
+| `owner_verification_state` | `provisional`, `verified` | Always | Staff only | WAVE | Migrated rows start `provisional` and visibly require the assigned owner to verify them; verification is an append-only staff action |
+| `owner_verified_by`, `owner_verified_at` | Staff ID, timestamp | Conditional | Staff only | WAVE | Required only after the owner has verified their provisional assignment |
 | `title` | Text | Optional | Staff only | WAVE | Short label or email subject |
 | `summary` | Text | Conditional | Staff only | WAVE | Required unless at least one attachment or stored email body provides the evidence |
 | `outcome` | Text | Optional | Staff only | WAVE | Result of the interaction |
@@ -324,6 +326,8 @@ W-065 is a staff-only application boundary over the live W-064 evidence model. O
 5. Interactions are staff only and remain in chronological history.
 6. A sent email preserves recipient, subject and body evidence even if the contact later changes email.
 7. Corrections are audited. Interactions are not silently overwritten or hard deleted.
+8. The four migrated historical email rows retain their legacy UUIDs, exact current source/office/contact/opportunity/recipient evidence and content evidence. Their owner is Bertrand's unique staff `app_user_roles.user_id`, marked `provisional` until Bertrand confirms it through the audited service-only verification action.
+9. New workflow email sends write only `ma_interactions`, including a `failed` delivery attempt and its error evidence. `ma_source_interactions` is not a dual-write target after W-062.
 
 ## 8. Interaction attachment
 
@@ -572,7 +576,8 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `ma_source_contact_moves` | Migration 075 keeps append-only old and new source and contact details | Preserve the audit while canonical office affiliation history owns current relationships | Live, service-role read-only compatibility evidence; W-062 still owns interaction history |
 | `opportunities.source_id` | Nullable firm-level compatibility bridge | Migration 076 retired the live-source requirement in favour of `source_office_id`. Existing pre-076 values remain compatibility evidence, but canonical services do not populate or reconcile them. The atomic service enforces source office, description, named primary contact and usable email for `active` and `paused` opportunities | Canonical `source_office_id` live and production-verified |
 | `opportunity_source_contacts` | Migrations 072 and 075 support several contacts, at most one primary, source consistency and immutable contact snapshots after moves | Preserve as immutable compatibility history while `opportunity_ma_contacts` links through office affiliations and snapshots future links | Live, service-role read-only compatibility bridge |
-| `ma_source_interactions` | Opportunity remains required and history remains email-oriented. Migration 072 adds an optional contact link and preserves recipient evidence | Office required; contact and opportunity optional; support call, email, meeting and document | Partial contact linkage; target gap, W-062 |
+| `ma_source_interactions` | Four legacy email rows, retained after W-062 only as service-role read-only evidence | No new writes; canonical `ma_interactions` is office required with optional affiliation and opportunity | W-062 implementation candidate; production migration remains unapplied |
+| `ma_interactions`, `ma_interaction_owner_verification_events`, `ma_interaction_legacy_migration_manifest` | Migration 080 candidate creates staff-only canonical history, append-only owner confirmation evidence and content-free before/after digests | Keep attachments and general interaction create/edit UI deferred to W-066 | W-062 implementation candidate; not live |
 | `opportunity_documents` | Migration 073 adds staff approval evidence, NDA evidence checks and service-role-only browser access | Retain the current confidentiality wall and keep opportunity documents separate from staff-only relationship attachments | Implemented and live verified |
 
 ### Current field disposition
@@ -587,11 +592,12 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `ma_sources.network_id`, `ma_source_networks` | Interim grouping only. Collapse to optional `ma_firms.network_label` if the target contract remains unchanged |
 | `ma_source_contacts.source_id`, `opportunity_source_contacts.source_id` | Interim firm-level relationships. Replace with office affiliations and office-anchored opportunity contacts in W-061 |
 | `opportunity_source_contacts.contact_name_snapshot`, `contact_email_snapshot`, `contact_phone_snapshot` | Preserve as historical attribution when migrating the opportunity-contact relationship |
-| `ma_source_interactions.template_key` | Retain as optional template provenance for generated emails |
-| `ma_source_interactions.channel`, `direction` | Retain and expand under the interaction contract |
-| `ma_source_interactions.contact_id` | Interim contact link. Migrate to `affiliation_id` while preserving the contact and recipient snapshot |
-| `ma_source_interactions.recipient_email`, `subject`, `body_markdown` | Map to recipient snapshot, title and body while preserving sent evidence |
-| `ma_source_interactions.status`, `error_message`, `sent_at` | Map to delivery status, delivery error and sent timestamp |
+| `ma_source_interactions.*` | Retain every legacy row and field as service-role read-only compatibility evidence; no post-W-062 writer may target it |
+| `ma_interactions.template_key`, `channel`, `direction` | Retain optional generated-email provenance and enforce direction for email and call |
+| `ma_interactions.affiliation_id` | Canonical optional contact link; it must belong to the interaction office |
+| `ma_interactions.recipient_email_snapshot`, `title`, `body_markdown` | Preserve outbound recipient, subject and body evidence independently of later contact changes |
+| `ma_interactions.delivery_status`, `delivery_error`, `sent_at` | Preserve sent and failed delivery evidence; email attempts always have a status |
+| `ma_interactions.owner_staff_user_id`, `owner_verification_state` | Owner uses `app_user_roles.user_id` text; imported ownership is provisional until self-verified in immutable staff evidence |
 | `opportunity_documents.repreneur_approved_by`, `repreneur_approved_at` | Retain as required disclosure evidence when a document is approved for repreneur access |
 | `opportunities.repreneur_exposure` | Legacy compatibility field only. Do not expose it as a W-061 intake, import or target disclosure control. The atomic service writes `staff_only` for new records and draft transitions solely to prevent old portal reads from publishing them; it preserves existing visible active records. Visibility remains a separate match, staff-assignment and confidentiality decision |
 | `opportunities.origin_channel` or any sourcing-channel field | Not a W-061 target and not an import mapping. Do not add one without a new approved operating use case |
@@ -656,6 +662,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-27 | 2.1.4 | Added the checked-in W-062 implementation candidate: additive office-anchored `ma_interactions`, same-office database enforcement, staff-only grants/RLS, an append-only owner-verification event, a fail-closed four-row UUID-preserving legacy migration with content-free SHA-256 before/after evidence, and canonical-only workflow email writes including failed-delivery evidence. Attachments and general interaction create/edit UI remain deferred to W-066. This migration is not applied to production. | W-062 implementation candidate; migration 080 |
 | 2026-07-27 | 2.1.3 | Added the W-065 staff-only source-review application boundary: computed review boolean on staff detail and lists, staff badge/filter, and correction through the existing W-064 resolver with canonical real-office affiliations, primary contact, reason, immutable evidence and no UUID recreation. No migration, repreneur projection, email path or roadmap entry is introduced. | W-065 implementation candidate |
 | 2026-07-27 | 2.1.2 | Applied migration 079 to production and verified the single Acme Co. / Acme Paris context, reuse of Bertrand's canonical contact, null unavailable office details, empty assignment/review/reservation state, 11 enabled guards, RLS on all three new tables and no browser-role exposure. No opportunity was assigned and no email was sent. | W-064 production release |
 | 2026-07-27 | 2.1.1 | Corrected the migration 079 Bertrand contact guard to derive the effective normalized display name from first/last-name components instead of depending on migration 076's later-named BEFORE trigger. The production-shaped rehearsal now proves service-role UPDATE cannot rename the fixed contact and INSERT cannot normalize into a Bertrand name collision. | W-064 and migration 079 |

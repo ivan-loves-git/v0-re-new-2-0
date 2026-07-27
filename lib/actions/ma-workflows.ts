@@ -14,6 +14,7 @@ import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
 import type { EmailTemplateKey } from "@/lib/types/email"
 import type {
+  MaInteraction,
   MaSourceInteraction,
   OpportunityMatchStatus,
   OpportunityNdaStatus,
@@ -137,6 +138,7 @@ export interface MaWorkflowDraft {
 
 export interface MaWorkflowContact {
   id: string
+  affiliationId?: string | null
   name: string | null
   email: string | null
   phone: string | null
@@ -240,6 +242,7 @@ function getWorkflowContacts(
     .map((relation) => {
       return {
         id: relation.id,
+        affiliationId: relation.affiliation_id,
         name:
           relation.contact_name_snapshot ??
           relation.affiliation?.contact?.display_name ??
@@ -270,6 +273,7 @@ function getWorkflowContacts(
       if (!contact) return null
       return {
         id: relation.contact_id,
+        affiliationId: null,
         name: contact.name,
         email: contact.email,
         phone: contact.phone,
@@ -572,14 +576,31 @@ export async function getMaOpportunityWorkflow(
   )
 
   const { data, error } = await supabase
-    .from("ma_source_interactions")
+    .from("ma_interactions")
     .select("*")
     .eq("opportunity_id", opportunityId)
-    .order("created_at", { ascending: false })
+    .order("occurred_at", { ascending: false })
     .limit(8)
 
-  if (error && error.code !== "42P01") throw new Error(error.message)
-  const interactions = (data ?? []) as MaSourceInteraction[]
+  if (error) throw new Error(error.message)
+  const interactions = ((data ?? []) as MaInteraction[]).map(
+    (interaction): MaSourceInteraction => ({
+      id: interaction.id,
+      opportunity_id: interaction.opportunity_id ?? opportunityId,
+      template_key: interaction.template_key ?? "",
+      channel: interaction.channel,
+      direction: interaction.direction ?? "outbound",
+      recipient_email: interaction.recipient_email_snapshot ?? "",
+      subject: interaction.title ?? "M&A interaction",
+      body_markdown: interaction.body_markdown ?? null,
+      status: interaction.delivery_status ?? "pending",
+      error_message: interaction.delivery_error ?? null,
+      sent_at: interaction.sent_at ?? null,
+      owner_verification_state: interaction.owner_verification_state,
+      created_by: interaction.created_by ?? null,
+      created_at: interaction.created_at,
+    }),
+  )
 
   let memoAvailable = false
   if (activeMatch) {
@@ -738,6 +759,13 @@ export async function sendMaSourceWorkflowEmailPayload(
           "Add an email to the selected M&A contact before sending a follow-up.",
       }
     }
+    if (!opportunity.source_office_id || !recipient.affiliationId) {
+      return {
+        success: false,
+        message:
+          "Link this opportunity and selected contact through the canonical office before sending a follow-up.",
+      }
+    }
 
     const renderedSubject = substituteTemplateVariables(subject, variables)
     const renderedBody = substituteTemplateVariables(body, variables)
@@ -765,21 +793,25 @@ export async function sendMaSourceWorkflowEmailPayload(
     })
 
     const status = result.success ? "sent" : "failed"
-    const { error } = await supabase.from("ma_source_interactions").insert({
+    const { error } = await supabase.from("ma_interactions").insert({
       opportunity_id: opportunity.id,
-      source_id: opportunity.source_id,
-      contact_id: recipient.legacySourceContactId ?? null,
+      office_id: opportunity.source_office_id,
+      affiliation_id: recipient.affiliationId,
       template_key: templateKey,
       channel: "email",
       direction: "outbound",
-      recipient_email: recipientEmail,
-      subject: renderedSubject,
+      occurred_at: new Date().toISOString(),
+      owner_staff_user_id: user.id,
+      owner_verification_state: "provisional",
+      recipient_email_snapshot: recipientEmail,
+      title: renderedSubject,
       body_markdown: renderedBody,
-      status,
-      error_message: result.success
+      delivery_status: status,
+      delivery_error: result.success
         ? null
         : (result.error ?? "Email send failed"),
       sent_at: result.success ? new Date().toISOString() : null,
+      created_by: user.id,
     })
 
     if (error) {

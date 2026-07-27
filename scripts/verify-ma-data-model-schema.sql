@@ -15,6 +15,9 @@ WITH target_tables(table_name) AS (
     ('ma_source_contacts'),
     ('ma_source_contact_moves'),
     ('ma_source_interactions'),
+    ('ma_interactions'),
+    ('ma_interaction_owner_verification_events'),
+    ('ma_interaction_legacy_migration_manifest'),
     ('opportunities'),
     ('opportunity_source_contacts'),
     ('opportunity_ma_contacts'),
@@ -152,7 +155,11 @@ schema_evidence AS (
       'ma_source_networks',
       'ma_source_contacts',
       'ma_source_contact_moves',
-      'opportunity_source_contacts'
+      'opportunity_source_contacts',
+      'ma_source_interactions',
+      'ma_interactions',
+      'ma_interaction_owner_verification_events',
+      'ma_interaction_legacy_migration_manifest'
     )
     AND relation.relkind IN ('r', 'p')
 
@@ -184,6 +191,7 @@ schema_evidence AS (
       'reserve_ma_source_email_send',
       'release_ma_source_email_send',
       'refresh_ma_source_email_send',
+      'verify_ma_interaction_owner',
       'activate_ma_cutover_run',
       'move_ma_source_contact'
     )

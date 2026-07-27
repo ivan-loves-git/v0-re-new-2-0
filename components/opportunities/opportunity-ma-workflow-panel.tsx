@@ -261,9 +261,14 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
               {workflow.interactions.map((interaction) => (
                 <div key={interaction.id} className="rounded-lg border p-3 text-sm">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <Badge variant={interaction.status === "sent" ? "default" : "destructive"}>
-                      {interaction.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={interaction.status === "sent" ? "default" : "destructive"}>
+                        {interaction.status}
+                      </Badge>
+                      {interaction.owner_verification_state === "provisional" ? (
+                        <Badge variant="outline">Owner to verify</Badge>
+                      ) : null}
+                    </div>
                     <span className="text-xs text-muted-foreground">{formatDate(interaction.sent_at ?? interaction.created_at)}</span>
                   </div>
                   <p className="font-medium">{interaction.subject}</p>
