@@ -317,7 +317,7 @@ describe("M&A one-time cutover staging migration", () => {
   })
 
   it("keeps the canonical contract synchronized with W-020 retention and route boundaries", () => {
-    expect(contract).toContain("Migration 078 is an unapplied cutover foundation")
+    expect(contract).toContain("Migration 078 is a live but empty cutover foundation")
     expect(contract).toContain("immutable approval digest")
     expect(contract).toContain(
       "no raw workbook bytes, file names, workbook IDs or Excel identifiers",
