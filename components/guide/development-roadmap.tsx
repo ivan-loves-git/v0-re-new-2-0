@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 28, 2026",
+    version: "0.9.33",
+    title: "WAVE is now the operating source of truth for opportunities",
+    isCompleted: true,
+    events: [
+      {
+        title: "Colin's final workbook is now live in WAVE",
+        type: "product",
+        description: "All 148 opportunity references were reconciled into the platform alongside 229 firms, 431 offices and 575 named contacts, so the team can now run the opportunity base from one shared workspace.",
+      },
+      {
+        title: "Existing work and history were preserved",
+        type: "decision",
+        description: "The switch updated 111 existing opportunities in place and added 37 missing records as staff-only drafts without replacing public titles, matches, documents or relationship history.",
+      },
+      {
+        title: "Uncertain data remains visible review work",
+        type: "decision",
+        description: "Missing public titles, broad sector labels, unresolved geography and ambiguous repreneur positioning remain explicit staff queues instead of being guessed during import.",
+      },
+      {
+        title: "Excel is now read-only",
+        type: "product",
+        description: "WAVE is authoritative for this workbook snapshot. Corrections and ongoing opportunity work should happen in the platform so the team does not create two competing records.",
+      },
+    ],
+  },
+  {
     period: "Jul 27, 2026",
     version: "0.9.32",
     title: "M&A relationship history is now one usable staff workspace",
