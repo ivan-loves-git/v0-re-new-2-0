@@ -5,11 +5,11 @@
 | Item | Value |
 | --- | --- |
 | Status | Approved and live contract |
-| Implementation status | Migrations 076 to 082 are live and schema-verified. W-043 provides immutable, versioned staff-only NDA artifacts. It does not validate Gate 1 or Gate 2, disclose source identity or activate E4/E6/E7. The canonical office/contact model, one-time cutover staging area, W-064 provisional Acme foundation, W-062 canonical interaction persistence and W-066 staff Relationships workspace are present. The four legacy email interactions retain their UUIDs and exact evidence in the canonical model with Bertrand recorded as provisional owner; staff can record new manual relationship activity without sending email, while the legacy table is service-read-only compatibility evidence and browser roles cannot access either model. Acme is not assigned to any opportunity, review evidence and email reservations are empty, no real workbook has been imported, and Excel remains operationally authoritative until W-010. The W-010 date-precision and test-data replacement rules remain approved target gaps and must be implemented and production-verified before the real workbook is staged. |
+| Implementation status | Migrations 076 to 082 are live and schema-verified. W-043 provides immutable, versioned staff-only NDA artifacts. It does not validate Gate 1 or Gate 2, disclose source identity or activate E4/E6/E7. The canonical office/contact model, one-time cutover staging area, W-064 provisional Acme foundation, W-062 canonical interaction persistence and W-066 staff Relationships workspace are present. The four legacy email interactions retain their UUIDs and exact evidence in the canonical model with Bertrand recorded as provisional owner; staff can record new manual relationship activity without sending email, while the legacy table is service-read-only compatibility evidence and browser roles cannot access either model. Acme is not assigned to any opportunity, review evidence and email reservations are empty, no real workbook has been imported, and Excel remains operationally authoritative until W-010. The W-010 date-precision and test-data replacement rules remain approved target gaps and must be implemented and production-verified before the real workbook is staged. W-069's separate, permanently staff-only source-teaser retention rule is approved target behavior and is not yet implemented. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
-| PDR scope | W-001, repreneur action and staff-verified transition authority; W-021, conditional source-identity disclosure; W-043, canonical NDA artifact foundation; W-061, M&A office and contact identity foundation; W-062, canonical interaction persistence; W-066, staff relationship timeline and interaction capture; W-063, canonical staff opportunity intake; W-064, provisional source foundation; W-065, staff review workflow; W-020, controlled one-time cutover staging; W-010, production activation and WAVE-only switch |
+| PDR scope | W-001, repreneur action and staff-verified transition authority; W-021, conditional source-identity disclosure; W-043, canonical NDA artifact foundation; W-061, M&A office and contact identity foundation; W-062, canonical interaction persistence; W-066, staff relationship timeline and interaction capture; W-063, canonical staff opportunity intake; W-064, provisional source foundation; W-065, staff review workflow; W-069, separate permanently staff-only source teaser; W-020, controlled one-time cutover staging; W-010, production activation and WAVE-only switch |
 | Last reviewed against live Supabase | 2026-07-27 |
 | Last reviewed against source workbook | 2026-07-26, `CRM Re-New for Wave.xlsx` |
 
@@ -380,7 +380,7 @@ W-065 is a staff-only application boundary over the live W-064 evidence model. O
 | `id` | UUID | System | Staff only | WAVE | Stable document identity |
 | `opportunity_id` | UUID | Always | Staff only | WAVE | Parent opportunity |
 | `title` | Text | Always | Role appropriate | WAVE | Human-readable title |
-| `document_type` | `teaser`, `deal_book`, `nda`, `external_analysis`, `other` | Always | Role appropriate | WAVE | Controlled document category |
+| `document_type` | `source_teaser`, `teaser`, `deal_book`, `nda`, `external_analysis`, `other` | Always | Role appropriate | WAVE | `source_teaser` is the retained original evidence; `teaser` is a separately controlled repreneur-facing document |
 | `visibility` | `staff_only`, `approved_for_repreneur` | Always | Role appropriate | WAVE | Defaults to `staff_only`; existing confidentiality gates still apply |
 | `storage_bucket` | Text | Always | Staff only | WAVE | Private storage bucket |
 | `storage_path` | Text | Conditional | Staff only | WAVE | Required unless an external URL is used |
@@ -396,6 +396,7 @@ W-065 is a staff-only application boundary over the live W-064 evidence model. O
 2. `approved_for_repreneur` requires a recorded approving staff member and timestamp.
 3. Delivery to a repreneur additionally requires the existing signed or explicitly waived NDA evidence. Visibility alone is never sufficient.
 4. Browser roles never receive direct database or storage access to staff-only source and document records. Approved delivery uses the existing server-side confidentiality path.
+5. A `source_teaser` preserves the original file separately from `opportunities.teaser_summary` and any later repreneur-facing `teaser`. It is permanently `staff_only`, cannot transition to `approved_for_repreneur`, and is retained as source evidence rather than overwritten by an anonymized or edited derivative.
 
 ### Canonical NDA artifact versions
 
@@ -450,6 +451,7 @@ These rules are part of the contract and should be enforced in the database wher
 | Interaction history, source-review evidence and audit metadata | Yes | Never |
 | Opportunity internal description and notes | Yes | Never |
 | Opportunity public title, teaser, sector, location and approved metrics | Yes | Only when the opportunity visibility and confidentiality gates allow it |
+| Original source teaser document | Yes | Never |
 | Opportunity documents | Yes | Only when explicitly approved and the NDA gate allows it |
 | Cutover mappings and issues | Yes | Never |
 
@@ -707,6 +709,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-28 | 3.0 | Approved the original source teaser as a separate retained `source_teaser` document that is permanently staff-only, cannot be promoted for repreneur access, and never replaces the anonymized summary or a separately controlled repreneur-facing teaser; implementation remains required | W-069 |
 | 2026-07-27 | 2.5.1 | Applied migration 082 and released application commit `d9bee7b` through Vercel deployment `dpl_DGYZPx2XGVLyJ2PFd1C1USDmg9fy`. Production has the expected forced-RLS table, enum, registration service and immutability guards; browser access and direct service writes are denied, all release integrity counts are zero, no legacy NDA link was promoted and no artifact was created during release. Staff desktop/mobile QA showed all three retained roles and compatibility separation; repreneur desktop/mobile access redirected to `/portal/deals`, with no upload, email or operational mutation. | W-043 production release; migration 082 |
 | 2026-07-27 | 2.5 | Added the checked-in W-043 implementation candidate: immutable, versioned staff-only blank-template, Re-New-signed and repreneur-signed NDA artifacts; private PDF-only registration with unique non-overwriting object paths and SHA-256 evidence; retained linked documents; no legacy promotion; and explicit separation from Gate 1, Gate 2, source disclosure and E4/E6/E7. Migration 082 is not applied to production. | W-043 foundation; migration 082 |
 | 2026-07-27 | 2.4 | Applied migration 081 and released the staff Relationships workspace at application commit `bc08195` through Vercel deployment `dpl_hWUtoyFHcpe7em7PDmv2M73KEQQM`. Production retained four exact canonical legacy interactions, four provisional owners, zero manual, pending, delivery or owner-verification events, zero evidence-digest mismatches and zero interaction/opportunity office mismatches. Staff desktop and mobile QA showed the canonical timeline, all five manual activity types, valid outbound-recipient evidence and inbound recipient clearing without submitting a record; the repreneur persona redirected to `/portal/deals`. Browser/direct table access remains denied and no email was sent. | W-066 production release; migration 081 |
