@@ -26,10 +26,14 @@ describe("W-066 staff relationship workspace", () => {
     expect(page).toContain("getMaRelationshipWorkspace")
     expect(page).toContain("MaRelationshipWorkspace")
     expect(page).not.toContain("redirect(")
+    expect(page).toContain('view === "firms" || view === "contacts"')
+    expect(page).toContain("initialView={initialView}")
     expect(workspace).toContain("One chronological M&A relationship record")
-    expect(workspace).toContain("relationship-office-filter")
-    expect(workspace).toContain("relationship-contact-filter")
-    expect(workspace).toContain("relationship-opportunity-filter")
+    expect(workspace).toContain('idPrefix="desktop"')
+    expect(workspace).toContain('idPrefix="mobile"')
+    expect(workspace).toContain("relationship-${idPrefix}-office-filter")
+    expect(workspace).toContain("relationship-${idPrefix}-contact-filter")
+    expect(workspace).toContain("relationship-${idPrefix}-opportunity-filter")
     expect(workspace).toContain("Record activity")
   })
 
@@ -75,7 +79,9 @@ describe("W-066 staff relationship workspace", () => {
     expect(migration).toContain(
       "Source assignment and resolution take the opportunity row first",
     )
-    expect(migration).toContain("WHERE opportunity.id = p_opportunity_id\n    FOR UPDATE")
+    expect(migration).toContain(
+      "WHERE opportunity.id = p_opportunity_id\n    FOR UPDATE",
+    )
     expect(migration).toContain("normalized_recipient_email := NULL")
     expect(verifier).toContain("service_can_create_relationship_interaction")
     expect(rehearsal).toContain(
@@ -94,25 +100,66 @@ describe("W-066 staff relationship workspace", () => {
     expect(rehearsal).toContain(
       "w066_acme_linked_interaction_rejection_missing",
     )
-    expect(rehearsal).toContain("w066_acme_resolution_remains_possible_missing")
+    expect(rehearsal).toContain(
+      "w066_acme_resolution_remains_possible_missing",
+    )
     expect(rehearsal).toContain(
       "w066_canonical_contact_multi_affiliation_fixture_missing",
     )
     expect(rehearsal).toContain("w066_pause_after_relationship_lock")
     const raceRunner = source("scripts/rehearse-ma-relationship-workspace.sh")
-    expect(raceRunner).toContain("W-066 two-session source-change races passed")
-    expect(raceRunner).toContain("ma_interaction_history_blocks_source_office_change")
+    expect(raceRunner).toContain(
+      "W-066 two-session source-change races passed",
+    )
+    expect(raceRunner).toContain(
+      "ma_interaction_history_blocks_source_office_change",
+    )
     expect(raceRunner).toContain(
       "ma_relationship_interaction_opportunity_must_match_office",
     )
     expect(rehearsal).toContain(
       "w066_cross_office_affiliation_rejection_missing",
     )
-    expect(rehearsal).toContain("w066_clean_rerun_changed_relationship_history")
-    expect(workspace).toContain("Verify mine")
-    expect(workspace).toContain(
-      "interaction.ownerStaffUserId === workspace.currentUserId",
+    expect(rehearsal).toContain(
+      "w066_clean_rerun_changed_relationship_history",
     )
+    expect(workspace).toContain("Verify mine")
+    expect(workspace).toMatch(
+      /interaction\.ownerStaffUserId\s*===\s*workspace\.currentUserId/,
+    )
+  })
+
+  it("keeps canonical directories reachable and makes mobile timeline-first", () => {
+    expect(workspace).toContain('value="timeline"')
+    expect(workspace).toContain('value="firms"')
+    expect(workspace).toContain('value="contacts"')
+    expect(workspace).toContain("value={activeView}")
+    expect(workspace).toContain("onValueChange={selectView}")
+    expect(workspace).toContain("router.replace(")
+    expect(page).toContain("key={initialView}")
+    expect(workspace).toContain("RelationshipFirmsDirectory")
+    expect(workspace).toContain("RelationshipContactsDirectory")
+    expect(workspace).toContain("workspace.offices")
+    expect(workspace).toContain("workspace.contacts")
+    expect(workspace).toContain("Search firms or offices")
+    expect(workspace).toContain("Search contacts, email or office")
+    expect(workspace).toContain("byFirm")
+    expect(workspace).toContain("officeLabels")
+    expect(workspace).toContain("All filters")
+    expect(workspace).toContain("All offices, contacts and opportunities")
+    expect(workspace).toContain("order-2 md:order-1")
+    expect(workspace).toContain("order-1 md:order-2")
+  })
+
+  it("progressively discloses optional activity fields without changing recording semantics", () => {
+    expect(workspace).toContain("Optional details")
+    expect(workspace).toContain("optionalFieldsOpen")
+    expect(workspace).toContain("max-h-[90vh]")
+    expect(workspace).toContain("overflow-y-auto")
+    expect(workspace).toContain("border-t bg-background")
+    expect(workspace).toContain("createMaRelationshipInteraction(input)")
+    expect(workspace).toContain("Owner to verify")
+    expect(workspace).toContain("text-warning")
   })
 
   it("keeps opportunity history on the same canonical interaction ledger", () => {

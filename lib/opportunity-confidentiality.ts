@@ -1,6 +1,7 @@
 import type {
   OpportunityDocument,
   OpportunityNdaStatus,
+  RepreneurMemoAvailability,
 } from "@/lib/types/opportunity"
 
 export type OpportunityNdaDisclosureEvidence = Pick<
@@ -67,6 +68,29 @@ export function canAccessOpportunityMemo(
   document: MemoDocument | null | undefined,
 ) {
   return hasCompletedNdaSignature(evidence) && isEligibleOpportunityMemoDocument(document)
+}
+
+/**
+ * Returns only a client-safe explanation of why a memo is not currently
+ * exposed. The underlying evidence and document records remain server-only.
+ */
+export function getRepreneurMemoAvailability(
+  evidence: OpportunityNdaDisclosureEvidence | null | undefined,
+  documents: Array<MemoDocument | null | undefined>,
+): RepreneurMemoAvailability {
+  if (documents.some((document) => canAccessOpportunityMemo(evidence, document))) {
+    return "available"
+  }
+
+  if (evidence?.nda_status === "not_required") {
+    return "no_nda_required"
+  }
+
+  if (!hasCompletedNdaSignature(evidence)) {
+    return "awaiting_confidentiality"
+  }
+
+  return "awaiting_document_approval"
 }
 
 export function canMarkOpportunityInfoMemoReceived(

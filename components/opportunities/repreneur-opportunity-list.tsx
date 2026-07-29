@@ -6,7 +6,7 @@ import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin } from "lucide-reac
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
@@ -133,11 +133,13 @@ function DealCard({
   detailHref,
   detailLabel,
   readOnly,
+  position,
 }: {
   opportunity: RepreneurOpportunityListItem
   detailHref: string | null
   detailLabel: string
   readOnly: boolean
+  position: number
 }) {
   const staffRecommended = isStaffRecommended(opportunity)
   const isDeclined = opportunity.match_status === "declined"
@@ -145,19 +147,23 @@ function DealCard({
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
 
   return (
-    <Card className="gap-0 py-0 md:grid md:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
-      <CardHeader className="gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+    <Card className="rounded-lg border bg-card py-0 shadow-none">
+      <CardContent className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs tabular-nums text-muted-foreground" aria-label={`Position ${position}`}>
+              {String(position).padStart(2, "0")}
+            </span>
           {staffRecommended && !isDeclined ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status ? <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge> : null}
           {opportunity.pursuit_stage ? <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge> : null}
           {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge> : null}
           {publicRelevance ? <Badge variant="outline">Relevance: {getOpportunityMatchRecommendationLabel(publicRelevance)}</Badge> : null}
-        </div>
-        <div className="flex flex-col gap-1">
-          <CardTitle>{opportunityTitle(opportunity)}</CardTitle>
-          <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          </div>
+          <div className="mt-2 flex min-w-0 flex-col gap-1">
+            <p className="truncate text-base font-semibold tracking-tight">{opportunityTitle(opportunity)}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" />
               {displayRepreneurOpportunityGeography(opportunity.location)}
@@ -166,58 +172,51 @@ function DealCard({
               <CalendarDays className="size-4" />
               Added {formatDate(opportunity.date_added)}
             </span>
-          </CardDescription>
+            </div>
+          </div>
+          <dl className="mt-3 grid grid-cols-2 border-y py-2.5 text-sm sm:grid-cols-4">
+            <div className="min-w-0 border-r pr-3 sm:px-3 sm:first:pl-0">
+              <WaveMicroLabel asChild><dt>Revenue</dt></WaveMicroLabel>
+              <dd className="mt-1 font-medium">{formatNumber(opportunity.revenue_meur, "M EUR")}</dd>
+            </div>
+            <div className="min-w-0 pl-3 sm:border-r sm:px-3">
+              <WaveMicroLabel asChild><dt>EBITDA</dt></WaveMicroLabel>
+              <dd className="mt-1 font-medium">{formatNumber(opportunity.ebitda_keur, "K EUR")}</dd>
+            </div>
+            <div className="mt-3 min-w-0 border-r pr-3 sm:mt-0 sm:px-3">
+              <WaveMicroLabel asChild><dt>Margin</dt></WaveMicroLabel>
+              <dd className="mt-1 font-medium">{formatEbitdaMargin(opportunity)}</dd>
+            </div>
+            <div className="mt-3 min-w-0 pl-3 sm:mt-0 sm:px-3 sm:pr-0">
+              <WaveMicroLabel asChild><dt>Team</dt></WaveMicroLabel>
+              <dd className="mt-1 font-medium">{opportunity.headcount_range ?? opportunity.headcount ?? "—"}</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">
+            <span className="font-mono text-foreground">{opportunity.reference}</span>
+            <span aria-hidden="true"> · </span>
+            {opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}
+          </p>
         </div>
-        <dl className="grid gap-2 text-xs sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <WaveMicroLabel asChild><dt>Re-New ref</dt></WaveMicroLabel>
-            <dd className="font-mono text-foreground">{opportunity.reference}</dd>
-          </div>
-          <div className="flex flex-col gap-1">
-            <WaveMicroLabel asChild><dt>Sector</dt></WaveMicroLabel>
-            <dd className="text-foreground">{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</dd>
-          </div>
-        </dl>
-      </CardHeader>
-      <CardContent className="flex flex-col justify-between gap-4 border-t py-5 md:border-l md:border-t-0">
-        <p className="line-clamp-3 text-sm text-muted-foreground">
-          {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
-        </p>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex flex-col gap-1">
-            <WaveMicroLabel asChild><span>Revenue</span></WaveMicroLabel>
-            <span className="font-medium">{formatNumber(opportunity.revenue_meur, "M EUR")}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <WaveMicroLabel asChild><span>EBITDA</span></WaveMicroLabel>
-            <span className="font-medium">{formatNumber(opportunity.ebitda_keur, "K EUR")}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <WaveMicroLabel asChild><span>EBITDA margin</span></WaveMicroLabel>
-            <span className="font-medium">{formatEbitdaMargin(opportunity)}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <WaveMicroLabel asChild><span>Employees</span></WaveMicroLabel>
-            <span className="font-medium">{opportunity.headcount_range ?? opportunity.headcount ?? "—"}</span>
-          </div>
+        <div className="flex flex-col gap-3 lg:items-end">
+          {lockedForAnotherRepreneur ? (
+            <LockedOpportunityInterestAction
+              opportunityId={opportunity.opportunity_id}
+              interestRecorded={Boolean(opportunity.interest_expressed_at)}
+              notificationSent={Boolean(opportunity.interest_notification_sent_at)}
+              readOnly={readOnly}
+            />
+          ) : null}
+          {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
+          {detailHref ? (
+            <Button asChild variant="outline" className="w-full lg:w-auto">
+              <Link href={detailHref}>
+                {isDeclined ? "Review and reconsider" : detailLabel}
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          ) : null}
         </div>
-        {lockedForAnotherRepreneur ? (
-          <LockedOpportunityInterestAction
-            opportunityId={opportunity.opportunity_id}
-            interestRecorded={Boolean(opportunity.interest_expressed_at)}
-            notificationSent={Boolean(opportunity.interest_notification_sent_at)}
-            readOnly={readOnly}
-          />
-        ) : null}
-        {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
-        {detailHref ? (
-          <Button asChild variant="outline" className="w-fit">
-            <Link href={detailHref}>
-              {isDeclined ? "Review and reconsider" : detailLabel}
-              <ArrowRight data-icon="inline-end" />
-            </Link>
-          </Button>
-        ) : null}
       </CardContent>
     </Card>
   )
@@ -247,13 +246,14 @@ function DealSection({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="grid gap-3">
-        {opportunities.map((opportunity) => (
+        {opportunities.map((opportunity, index) => (
           <DealCard
             key={opportunity.match_id ?? opportunity.opportunity_id}
             opportunity={opportunity}
             detailHref={detailHrefForOpportunity(opportunity)}
             detailLabel={detailLabel}
             readOnly={readOnly}
+            position={index + 1}
           />
         ))}
       </div>

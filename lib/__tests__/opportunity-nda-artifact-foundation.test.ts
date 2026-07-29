@@ -110,6 +110,18 @@ describe("W-043 canonical NDA artifact foundation", () => {
     expect(contract).toContain("does not validate Gate 1 or Gate 2")
   })
 
+  it("keeps blank NDA recording available while signed-copy controls wait for an active pursuit", () => {
+    expect(manager).toContain('const isLockedSignedCopy = requiresPursuit && !activeMatchId')
+    expect(manager).toContain("Available when an active pursuit starts")
+    expect(manager).toContain("Signed copies belong to a specific pursuit")
+    expect(manager).toContain("retained versions from earlier pursuits remain available below")
+    expect(manager).toContain("{isLockedSignedCopy ? (")
+    expect(manager).toContain('role: "blank_template"')
+    expect(manager).toContain('disabled={pendingRole === definition.role}')
+    expect(manager).not.toContain("disabled={!canRegister}")
+    expect(manager).not.toContain("disabled={!canRegister || pendingRole === definition.role}")
+  })
+
   it("protects canonical documents before generic storage deletion or visibility change", () => {
     const visibilityStart = genericDocuments.indexOf("export async function updateOpportunityDocumentVisibility")
     const removalStart = genericDocuments.indexOf("export async function removeOpportunityDocument")

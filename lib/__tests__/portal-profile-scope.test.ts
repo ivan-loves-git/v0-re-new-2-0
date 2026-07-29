@@ -66,26 +66,27 @@ describe("repreneur portal profile scope", () => {
     }
   })
 
-  it("renders the complete anonymized opportunity facts on every portal list surface", () => {
+  it("keeps the deal flow compact while retaining complete facts in profile and detail", () => {
     const dealList = source("components/opportunities/repreneur-opportunity-list.tsx")
     const profileSummary = source("components/portal/repreneur-profile-summary.tsx")
+    const dealDetail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
-    for (const surface of [dealList, profileSummary]) {
-      for (const field of [
-        "Re-New ref",
-        "Sector",
-        "Revenue",
-        "EBITDA",
-        "EBITDA margin",
-        "Employees",
-      ]) {
-        expect(surface).toContain(field)
-      }
-      expect(surface).toContain("teaser_summary")
-      expect(surface).toMatch(/line-clamp-[23]/)
-      expect(surface).toContain("View detail")
+    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
+      expect(profileSummary).toContain(field)
     }
+    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Team"]) {
+      expect(dealDetail).toContain(field)
+    }
+    expect(profileSummary).toContain("teaser_summary")
+    expect(dealDetail).toContain("teaser_summary")
 
+    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
+      expect(dealList).toContain(field)
+    }
+    expect(dealList).not.toContain("teaser_summary")
+    expect(dealList).not.toMatch(/line-clamp-[23]/)
+    expect(dealList).toContain("View detail")
+    expect(profileSummary).toContain("View detail")
     expect(dealList).toContain("Added {formatDate(opportunity.date_added)}")
     expect(dealList).toContain("opportunity.match_id ?? opportunity.opportunity_id")
     expect(profileSummary).toContain("Date added")

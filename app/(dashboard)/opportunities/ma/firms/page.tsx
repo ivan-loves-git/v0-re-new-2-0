@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
 export default function MaFirmsPage() {
-  redirect("/opportunities/new")
+  redirect("/opportunities/ma?view=firms")
 }

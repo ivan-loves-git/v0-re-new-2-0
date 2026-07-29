@@ -25,6 +25,39 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 29, 2026",
+    version: "0.9.34",
+    title: "WAVE’s newest workflows are now easier to scan and act on",
+    isCompleted: true,
+    events: [
+      {
+        title: "Relationships now brings the directory and timeline together",
+        type: "feature",
+        description: "Staff can move between the relationship timeline, intermediary firms and contacts in one workspace, while mobile keeps the latest activity ahead of optional filters.",
+      },
+      {
+        title: "Recording activity starts with the evidence that matters",
+        type: "style",
+        description: "Required activity details now come first, optional follow-up information stays available on demand, and the save action remains visible on desktop and mobile.",
+      },
+      {
+        title: "Repreneurs can compare more opportunities at a glance",
+        type: "style",
+        description: "The deal flow now uses compact, ranked rows that preserve the core title, geography, status and financial context while leaving the full narrative in deal detail.",
+      },
+      {
+        title: "Portal decisions and document gates explain the next step",
+        type: "fix",
+        description: "Memo availability now follows the verified NDA and document state, while decline reasons appear only after a repreneur chooses Not a fit.",
+      },
+      {
+        title: "Inactive NDA evidence no longer looks actionable",
+        type: "decision",
+        description: "The reusable blank NDA remains available at all times; pursuit-specific signed copies stay as compact history summaries until an active pursuit exists.",
+      },
+    ],
+  },
+  {
     period: "Jul 28, 2026",
     version: "0.9.33",
     title: "WAVE is now the operating source of truth for opportunities",

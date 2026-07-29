@@ -29,6 +29,22 @@ describe("repreneur opportunity not-a-fit response", () => {
     expect(declineForm).not.toContain("required={otherSelected}")
     expect(declineForm).toContain('disabled={!canSubmit || pending}')
     expect(declineForm).toContain("Response not saved")
+    expect(declineForm).toContain("type=\"button\" variant=\"outline\" onClick={() => setIsExpanded(true)}")
+    expect(declineForm).toContain("firstReasonRef.current?.focus()")
+    expect(declineForm).toContain("Confirm not a fit")
+    expect(declineForm).toContain("Cancel")
+  })
+
+  it("keeps interested primary and defers decline reasons until the secondary action is chosen", () => {
+    const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
+    const declineForm = source("components/opportunities/repreneur-opportunity-decline-action.tsx")
+
+    expect(detail.indexOf("I'm interested")).toBeLessThan(
+      detail.indexOf("<RepreneurOpportunityDeclineAction"),
+    )
+    expect(declineForm.indexOf("if (!isExpanded)")).toBeLessThan(
+      declineForm.indexOf("<fieldset"),
+    )
   })
 
   it("keeps the decline control scoped to an owned opportunity match", () => {

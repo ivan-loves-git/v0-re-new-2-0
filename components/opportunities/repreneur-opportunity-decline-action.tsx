@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useActionState, useEffect, useRef, useState } from "react"
 import { CircleAlert, XCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -35,9 +35,15 @@ export function RepreneurOpportunityDeclineAction({
     declineMyOpportunity.bind(null, matchId),
     INITIAL_REPRENEUR_OPPORTUNITY_DECLINE_STATE,
   )
+  const [isExpanded, setIsExpanded] = useState(false)
   const [selectedReasons, setSelectedReasons] = useState(() => new Set(initialReasons))
   const [details, setDetails] = useState(initialDetails)
+  const firstReasonRef = useRef<HTMLInputElement>(null)
   const canSubmit = selectedReasons.size > 0 && details.trim().length > 0
+
+  useEffect(() => {
+    if (isExpanded) firstReasonRef.current?.focus()
+  }, [isExpanded])
 
   function setReason(reason: OpportunityDeclineReasonCategory, checked: boolean) {
     setSelectedReasons((current) => {
@@ -48,11 +54,20 @@ export function RepreneurOpportunityDeclineAction({
     })
   }
 
+  if (!isExpanded) {
+    return (
+      <Button type="button" variant="outline" onClick={() => setIsExpanded(true)}>
+        <XCircle data-icon="inline-start" />
+        Not a fit
+      </Button>
+    )
+  }
+
   return (
-    <form action={formAction} className="rounded-md border p-4">
+    <form action={formAction} className="rounded-lg border p-4">
       <div className="flex flex-col gap-4">
-        <div>
-          <p className="text-sm font-medium">Not a fit?</p>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium">Tell Re-New why this is not a fit</p>
           <p className="text-sm text-muted-foreground">
             Select at least one reason and add a brief rationale so Re-New can improve future recommendations.
           </p>
@@ -71,6 +86,7 @@ export function RepreneurOpportunityDeclineAction({
           {OPPORTUNITY_DECLINE_REASON_OPTIONS.map((option) => (
             <label key={option.value} className="flex items-start gap-2 text-sm">
               <input
+                ref={option === OPPORTUNITY_DECLINE_REASON_OPTIONS[0] ? firstReasonRef : undefined}
                 type="checkbox"
                 name="decline_reason_categories"
                 value={option.value}
@@ -96,10 +112,15 @@ export function RepreneurOpportunityDeclineAction({
           />
         </label>
 
-        <Button type="submit" variant="outline" className="w-fit" disabled={!canSubmit || pending}>
-          {pending ? <Spinner data-icon="inline-start" /> : <XCircle data-icon="inline-start" />}
-          {pending ? "Saving response..." : "Not a fit"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="ghost" onClick={() => setIsExpanded(false)} disabled={pending}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="outline" disabled={!canSubmit || pending}>
+            {pending ? <Spinner data-icon="inline-start" /> : <XCircle data-icon="inline-start" />}
+            {pending ? "Saving response..." : "Confirm not a fit"}
+          </Button>
+        </div>
       </div>
     </form>
   )

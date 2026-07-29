@@ -12,6 +12,7 @@ import {
   getOpportunityPursuitStageLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type RepreneurDealFlowOpportunity,
+  type RepreneurMemoAvailability,
   type RepreneurOpportunityDocument,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
@@ -56,6 +57,19 @@ function canRespond(status: RepreneurOpportunityDetailItem["match_status"]) {
   return status === "proposed" || status === "interested" || status === "declined"
 }
 
+function memoLockedDescription(availability: RepreneurMemoAvailability | undefined) {
+  switch (availability) {
+    case "no_nda_required":
+      return "NDA marked not required. Re-New must still record an explicit waiver before approving memo access."
+    case "awaiting_confidentiality":
+      return "Memo awaiting completion of the confidentiality checks and Re-New document approval."
+    case "awaiting_document_approval":
+      return "Memo awaiting Re-New document approval."
+    default:
+      return "Re-New will make the info memo available after the confidentiality checks and document approval are recorded."
+  }
+}
+
 export function RepreneurOpportunityDetail({
   opportunity,
   readOnly = false,
@@ -65,6 +79,7 @@ export function RepreneurOpportunityDetail({
     ? markMyOpportunityInterested.bind(null, opportunity.match_id)
     : null
   const memoAvailable = opportunity.visible_documents.length > 0
+  const memoAvailability = opportunity.memo_availability
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
 
@@ -199,7 +214,7 @@ export function RepreneurOpportunityDetail({
               <ShieldCheck className="size-5" />
               Documents
             </CardTitle>
-            <CardDescription>NDA status: {getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</CardDescription>
+            <CardDescription>Documents are released through the confidentiality and Re-New approval gate.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {!memoAvailable && (
@@ -207,7 +222,7 @@ export function RepreneurOpportunityDetail({
                 <FileText />
                 <AlertTitle>Memo locked</AlertTitle>
                 <AlertDescription>
-                  Re-New will make the info memo available after the NDA evidence and document approval are recorded.
+                  {memoLockedDescription(memoAvailability)}
                 </AlertDescription>
               </Alert>
             )}

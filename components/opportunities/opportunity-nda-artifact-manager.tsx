@@ -121,7 +121,7 @@ export function OpportunityNdaArtifactManager({
         const roleArtifacts = artifacts.filter((artifact) => artifact.artifact_role === definition.role)
         const current = currentArtifact(definition.role, roleArtifacts, activeMatchId)
         const requiresPursuit = definition.role !== "blank_template"
-        const canRegister = !requiresPursuit || Boolean(activeMatchId)
+        const isLockedSignedCopy = requiresPursuit && !activeMatchId
         const roleMessage = message?.role === definition.role ? message : null
 
         return (
@@ -138,50 +138,58 @@ export function OpportunityNdaArtifactManager({
               )}
             </div>
 
-            {!canRegister && (
-              <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-                Start an active pursuit before recording this signed copy. Retained versions from earlier pursuits
-                remain listed below.
-              </p>
+            {isLockedSignedCopy ? (
+              <div className="rounded-md border bg-muted/40 px-3 py-3">
+                <div className="flex items-start gap-2">
+                  <LockKeyhole className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Available when an active pursuit starts</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Signed copies belong to a specific pursuit. Start an active pursuit to record a new version;
+                      retained versions from earlier pursuits remain available below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <form
+                  action={handleRegister.bind(null, definition.role)}
+                  className="grid gap-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_auto] lg:items-end"
+                >
+                  <input type="hidden" name="opportunity_id" value={opportunityId} />
+                  <input type="hidden" name="artifact_role" value={definition.role} />
+                  {requiresPursuit && activeMatchId && <input type="hidden" name="match_id" value={activeMatchId} />}
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor={`${definition.role}-title`}>Title</Label>
+                    <Input
+                      id={`${definition.role}-title`}
+                      name="title"
+                      defaultValue={definition.defaultTitle}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor={`${definition.role}-file`}>PDF file</Label>
+                    <Input
+                      id={`${definition.role}-file`}
+                      name="file"
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      required
+                    />
+                  </div>
+                  <Button type="submit" disabled={pendingRole === definition.role}>
+                    <Upload data-icon="inline-start" />
+                    {pendingRole === definition.role ? "Recording..." : "Record version"}
+                  </Button>
+                </form>
+
+                <p className="text-xs text-muted-foreground">
+                  Upload one retained PDF file. Files are limited to 4 MB.
+                </p>
+              </>
             )}
-
-            <form
-              action={handleRegister.bind(null, definition.role)}
-              className="grid gap-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_auto] lg:items-end"
-            >
-              <input type="hidden" name="opportunity_id" value={opportunityId} />
-              <input type="hidden" name="artifact_role" value={definition.role} />
-              {requiresPursuit && activeMatchId && <input type="hidden" name="match_id" value={activeMatchId} />}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor={`${definition.role}-title`}>Title</Label>
-                <Input
-                  id={`${definition.role}-title`}
-                  name="title"
-                  defaultValue={definition.defaultTitle}
-                  disabled={!canRegister}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor={`${definition.role}-file`}>PDF file</Label>
-                <Input
-                  id={`${definition.role}-file`}
-                  name="file"
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  disabled={!canRegister}
-                  required
-                />
-              </div>
-              <Button type="submit" disabled={!canRegister || pendingRole === definition.role}>
-                <Upload data-icon="inline-start" />
-                {pendingRole === definition.role ? "Recording..." : "Record version"}
-              </Button>
-            </form>
-
-            <p className="text-xs text-muted-foreground">
-              Upload one retained PDF file. Files are limited to 4 MB.
-            </p>
 
             {roleMessage && (
               <p

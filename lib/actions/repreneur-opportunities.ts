@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import {
   canAccessOpportunityMemo,
+  getRepreneurMemoAvailability,
   safeRepreneurTeaserSummary,
   type OpportunityNdaDisclosureEvidence,
 } from "@/lib/opportunity-confidentiality"
@@ -63,7 +64,7 @@ type RepreneurDealFlowOpportunityRow = {
 }
 
 type PortalMemoDocument = RepreneurOpportunityDocument & {
-  visibility: "approved_for_repreneur"
+  visibility: "staff_only" | "approved_for_repreneur"
   storage_path: string | null
   external_url: string | null
   repreneur_approved_at: string | null
@@ -142,7 +143,7 @@ function normalizeExposureWithDisclosure(
   }
 }
 
-async function listApprovedMemoDocumentsByOpportunity(
+async function listMemoDocumentsByOpportunity(
   supabase: ReturnType<typeof createAdminClient>,
   opportunityIds: string[]
 ): Promise<Map<string, PortalMemoDocument[]>> {
@@ -153,7 +154,6 @@ async function listApprovedMemoDocumentsByOpportunity(
     .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
     .in("opportunity_id", opportunityIds)
     .eq("document_type", "deal_book")
-    .eq("visibility", "approved_for_repreneur")
     .order("uploaded_at", { ascending: false })
 
   if (error) throw new Error(error.message)
@@ -197,6 +197,15 @@ function visibleMemoDocumentsForMatch(
       size_bytes: document.size_bytes,
       uploaded_at: document.uploaded_at,
     }))
+}
+
+function memoAvailabilityForMatch(
+  opportunity: RepreneurOpportunityExposure,
+  ndaEvidence: OpportunityNdaDisclosureEvidence,
+  documents: PortalMemoDocument[] | undefined,
+) {
+  if (opportunity.match_status !== "active_pursuit") return undefined
+  return getRepreneurMemoAvailability(ndaEvidence, documents ?? [])
 }
 
 async function getActivePursuitOwners(
@@ -401,7 +410,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
-  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(
+  const documentsByOpportunity = await listMemoDocumentsByOpportunity(
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
@@ -422,6 +431,11 @@ export async function listMyRepreneurOpportunities(): Promise<{
           activeOwnerByOpportunity,
         ),
         visible_documents: visibleMemoDocumentsForMatch(
+          exposure,
+          ndaEvidence,
+          documentsByOpportunity.get(exposure.opportunity_id),
+        ),
+        memo_availability: memoAvailabilityForMatch(
           exposure,
           ndaEvidence,
           documentsByOpportunity.get(exposure.opportunity_id),
@@ -512,7 +526,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     supabase,
     allOpportunities.map((opportunity) => opportunity.id),
   )
-  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(
+  const documentsByOpportunity = await listMemoDocumentsByOpportunity(
     supabase,
     matchedOpportunities.map((opportunity) => opportunity.opportunity_id),
   )
@@ -531,6 +545,11 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         activeOwnerByOpportunity,
       ),
       visible_documents: visibleMemoDocumentsForMatch(
+        exposure,
+        ndaEvidence,
+        documentsByOpportunity.get(exposure.opportunity_id),
+      ),
+      memo_availability: memoAvailabilityForMatch(
         exposure,
         ndaEvidence,
         documentsByOpportunity.get(exposure.opportunity_id),
@@ -654,7 +673,7 @@ export async function getMyRepreneurOpportunity(
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
 
-  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(supabase, [exposure.opportunity_id])
+  const documentsByOpportunity = await listMemoDocumentsByOpportunity(supabase, [exposure.opportunity_id])
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(supabase, [exposure.match_id])
   return {
     ...exposure,
@@ -665,6 +684,11 @@ export async function getMyRepreneurOpportunity(
       activeOwnerByOpportunity,
     ),
     visible_documents: visibleMemoDocumentsForMatch(
+      exposure,
+      ndaEvidence,
+      documentsByOpportunity.get(exposure.opportunity_id),
+    ),
+    memo_availability: memoAvailabilityForMatch(
       exposure,
       ndaEvidence,
       documentsByOpportunity.get(exposure.opportunity_id),

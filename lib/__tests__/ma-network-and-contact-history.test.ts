@@ -56,7 +56,7 @@ describe("M&A networks and contact history", () => {
     expect(sidebar).not.toContain('href: "/opportunities/ma/contacts"')
     expect(relationshipsRoute).toContain("MaRelationshipWorkspace")
     for (const route of [firmsPage, contactsPage]) {
-      expect(route).toContain('redirect("/opportunities/new")')
+      expect(route).toContain('redirect("/opportunities/ma?view=')
     }
   })
 })

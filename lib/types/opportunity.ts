@@ -748,6 +748,17 @@ export interface RepreneurOpportunityDocument {
   uploaded_at: string
 }
 
+/**
+ * A portal-safe explanation of the current memo gate. This is computed by the
+ * server from confidentiality evidence and document eligibility; it must not
+ * be inferred in the browser from raw NDA fields or an empty document list.
+ */
+export type RepreneurMemoAvailability =
+  | "available"
+  | "no_nda_required"
+  | "awaiting_confidentiality"
+  | "awaiting_document_approval"
+
 export interface RepreneurOpportunityExposure {
   match_id: string
   match_status: OpportunityMatchStatus
@@ -756,6 +767,7 @@ export interface RepreneurOpportunityExposure {
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
+  memo_availability?: RepreneurMemoAvailability
   opportunity_id: string
   reference: string
   public_title?: string | null
@@ -784,6 +796,7 @@ export interface RepreneurDealFlowOpportunity {
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
+  memo_availability?: RepreneurMemoAvailability
   opportunity_id: string
   reference: string
   public_title?: string | null

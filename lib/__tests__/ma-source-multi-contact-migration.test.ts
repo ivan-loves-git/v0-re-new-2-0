@@ -61,8 +61,8 @@ describe("canonical multi-contact M&A intake", () => {
     expect(sidebar).not.toContain('href: "/opportunities/ma/contacts"')
     expect(legacyActions).toContain("Legacy M&A directory editing is retired")
     expect(legacyActions).not.toContain("move_ma_source_contact")
-    expect(firmRoute).toContain('redirect("/opportunities/new")')
-    expect(contactRoute).toContain('redirect("/opportunities/new")')
+    expect(firmRoute).toContain('redirect("/opportunities/ma?view=firms")')
+    expect(contactRoute).toContain('redirect("/opportunities/ma?view=contacts")')
   })
 
   it("uses canonical contacts and interaction persistence for workflow email evidence", () => {

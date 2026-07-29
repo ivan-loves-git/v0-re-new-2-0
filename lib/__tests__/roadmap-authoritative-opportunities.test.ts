@@ -11,6 +11,22 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the released cross-surface usability milestone", () => {
+    expect(roadmap).toContain('version: "0.9.34"')
+    expect(roadmap).toContain(
+      "Relationships now brings the directory and timeline together",
+    )
+    expect(roadmap).toContain(
+      "Repreneurs can compare more opportunities at a glance",
+    )
+    expect(roadmap).toContain(
+      "Portal decisions and document gates explain the next step",
+    )
+    expect(roadmap).toContain(
+      "Inactive NDA evidence no longer looks actionable",
+    )
+  })
+
   it("groups canonical interaction persistence and the staff Relationships workspace", () => {
     expect(roadmap).toContain('version: "0.9.32"')
     expect(roadmap).toContain(
@@ -52,6 +68,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-07-27")')
+    expect(roadmapStatus).toContain('new Date("2026-07-29")')
   })
 })

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   canAccessOpportunityMemo,
   canMarkOpportunityInfoMemoReceived,
+  getRepreneurMemoAvailability,
   hasCompletedNdaSignature,
   hasStaffDocumentDisclosureApproval,
   safeRepreneurTeaserSummary,
@@ -57,6 +58,16 @@ describe("opportunity confidentiality gate", () => {
   it("keeps non-memo and staff-only documents unavailable after NDA evidence", () => {
     expect(canAccessOpportunityMemo(signedNda, { ...approvedMemo, document_type: "teaser" })).toBe(false)
     expect(canAccessOpportunityMemo(signedNda, { ...approvedMemo, visibility: "staff_only" })).toBe(false)
+  })
+
+  it("derives a portal-safe memo explanation from the complete gate rather than document visibility alone", () => {
+    expect(getRepreneurMemoAvailability(signedNda, [approvedMemo])).toBe("available")
+    expect(getRepreneurMemoAvailability(signedNda, [{ ...approvedMemo, repreneur_approved_at: null }]))
+      .toBe("awaiting_document_approval")
+    expect(getRepreneurMemoAvailability({ nda_status: "sent" }, [approvedMemo]))
+      .toBe("awaiting_confidentiality")
+    expect(getRepreneurMemoAvailability({ nda_status: "not_required" }, []))
+      .toBe("no_nda_required")
   })
 
   it("never returns a teaser that is materially the same as the staff description", () => {
