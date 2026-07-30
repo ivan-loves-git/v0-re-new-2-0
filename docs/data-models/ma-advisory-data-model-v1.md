@@ -599,6 +599,10 @@ address is suppressed, including after archival; their recipient selector
 removes those addresses before staff can choose them. Suppression changes are
 blocked while the existing opportunity email reservation is active, so policy
 cannot change between the final check and provider delivery.
+The migration flushes the platform's existing deferred contact-integrity
+checks after the structured backfill and before installing the policy trigger.
+Its disposable rehearsal includes the same deferred-trigger condition so the
+production DDL ordering remains covered.
 
 ### One-time cutover rules
 
@@ -806,6 +810,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-30 | 4.0.2 | Made migration 083 compatible with the existing deferred contact-integrity trigger by installing its check constraint before the backfill and flushing queued integrity checks before later contact DDL; the disposable rehearsal now mirrors that production condition. No production object survived the rejected first attempt. | W-072 migration-order correction |
 | 2026-07-30 | 4.0.1 | Added the checked-in W-072 implementation candidate: exact 18-person structured backfill with retained source notes, person-level suppression across affiliations, immutable staff change evidence, four machine-readable purposes with no generic bypass, an audited linked-opportunity NDA exception, final send authorization tied to the canonical interaction operation key, staff warnings and controlled removal. Migration 083 remains unapplied to production. | W-072 and migration 083 |
 | 2026-07-30 | 4.0 | Recorded W-010's completed production activation and Colin's post-cutover operating decisions. Source `Secteur_code` and `Geo_code` now drive a bounded one-time reconciliation into canonical WAVE sector labels and geography nodes without becoming permanent source-code fields; qualified `ZZZ (...)` and `BFC` compatibility are explicit; the 109 source-title blanks are distinguished from the 20 live Draft title tasks; positioned repreneurs require unique canonical identities; and person-level campaign suppression blocks campaign/general outreach while permitting only audited, allowlisted opportunity-specific operational messages beginning with NDA requests. These new reconciliation and suppression rules are approved target behavior, not live implementation. | W-010, W-017, W-039, W-060, W-071 and W-072 |
 | 2026-07-28 | 3.0 | Approved the original source teaser as a separate retained `source_teaser` document that is permanently staff-only, cannot be promoted for repreneur access, and never replaces the anonymized summary or a separately controlled repreneur-facing teaser; implementation remains required | W-069 |

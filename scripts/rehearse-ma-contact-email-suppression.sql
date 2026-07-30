@@ -59,6 +59,21 @@ CREATE TABLE public.ma_source_email_send_reservations (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE FUNCTION public.rehearsal_deferred_contact_integrity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END
+$$;
+
+CREATE CONSTRAINT TRIGGER rehearsal_deferred_contact_integrity
+  AFTER INSERT OR UPDATE OR DELETE ON public.ma_contacts
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW
+  EXECUTE FUNCTION public.rehearsal_deferred_contact_integrity();
+
 GRANT SELECT, INSERT, UPDATE ON public.ma_contacts TO service_role;
 GRANT SELECT ON
   public.opportunities,

@@ -94,6 +94,31 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_contact_email_policy_events_exception
   WHERE event_type = 'allowlisted_operational_send';
 
 DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'ma_contacts_campaign_email_suppression_reason_check'
+      AND conrelid = 'public.ma_contacts'::regclass
+  ) THEN
+    ALTER TABLE public.ma_contacts
+      ADD CONSTRAINT ma_contacts_campaign_email_suppression_reason_check
+      CHECK (
+        (
+          campaign_email_suppressed
+          AND NULLIF(BTRIM(campaign_email_suppression_reason), '') IS NOT NULL
+        )
+        OR
+        (
+          NOT campaign_email_suppressed
+          AND campaign_email_suppression_reason IS NULL
+        )
+      );
+  END IF;
+END
+$$;
+
+DO $$
 DECLARE
   flagged_count INTEGER;
   distinct_flagged_count INTEGER;
@@ -156,30 +181,10 @@ SELECT
   'w010_import_backfill'
 FROM updated_contacts contact;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'ma_contacts_campaign_email_suppression_reason_check'
-      AND conrelid = 'public.ma_contacts'::regclass
-  ) THEN
-    ALTER TABLE public.ma_contacts
-      ADD CONSTRAINT ma_contacts_campaign_email_suppression_reason_check
-      CHECK (
-        (
-          campaign_email_suppressed
-          AND NULLIF(BTRIM(campaign_email_suppression_reason), '') IS NOT NULL
-        )
-        OR
-        (
-          NOT campaign_email_suppressed
-          AND campaign_email_suppression_reason IS NULL
-        )
-      );
-  END IF;
-END
-$$;
+-- Production has a deferred contact-integrity constraint trigger. Flush the
+-- backfill's queued checks before installing the contact policy trigger;
+-- PostgreSQL otherwise rejects later DDL on ma_contacts in this transaction.
+SET CONSTRAINTS ALL IMMEDIATE;
 
 CREATE OR REPLACE FUNCTION public.prevent_ma_contact_email_policy_event_mutation()
 RETURNS TRIGGER
