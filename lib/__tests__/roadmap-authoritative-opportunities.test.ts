@@ -11,6 +11,19 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the purpose-aware M&A email suppression milestone", () => {
+    expect(roadmap).toContain('version: "0.9.35"')
+    expect(roadmap).toContain(
+      "A do-not-email decision now follows the person",
+    )
+    expect(roadmap).toContain(
+      "Deal-specific NDA work keeps one controlled exception",
+    )
+    expect(roadmap).toContain(
+      "Every preference change remains accountable",
+    )
+  })
+
   it("records the released cross-surface usability milestone", () => {
     expect(roadmap).toContain('version: "0.9.34"')
     expect(roadmap).toContain(
@@ -68,6 +81,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-07-29")')
+    expect(roadmapStatus).toContain('new Date("2026-07-30")')
   })
 })

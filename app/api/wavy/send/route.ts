@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import { resend, FROM_EMAIL, FROM_NAME } from "@/lib/email/resend-client"
+import { isMaContactEmailAddressSuppressed } from "@/lib/email/ma-contact-email-authorization"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 interface SendRequest {
@@ -41,6 +42,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Invalid email address" },
         { status: 400 }
+      )
+    }
+
+    if (await isMaContactEmailAddressSuppressed(actualRecipient)) {
+      return NextResponse.json(
+        {
+          error:
+            "Email blocked because this contact has opted out of campaign and general outreach.",
+        },
+        { status: 403 },
       )
     }
 

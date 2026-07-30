@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
+import { suppressionBlocksMaTemplate } from "@/lib/ma-contact-email-policy"
 
 interface OpportunityMaWorkflowPanelProps {
   opportunityId: string
@@ -51,7 +52,19 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
   const sendOperationRef = useRef<{ fingerprint: string; key: string } | null>(null)
   const selectedRecipient = workflow.contacts.find((contact) => contact.id === recipientContactId) ?? null
   const recipientEmail = selectedRecipient?.email ?? null
-  const canSend = Boolean(recipientEmail && templateKey && subject.trim() && body.trim())
+  const suppressionBlocksSend = selectedRecipient
+    ? suppressionBlocksMaTemplate(
+        selectedRecipient.campaignEmailSuppressed,
+        templateKey,
+      )
+    : false
+  const canSend = Boolean(
+    recipientEmail &&
+      templateKey &&
+      subject.trim() &&
+      body.trim() &&
+      !suppressionBlocksSend,
+  )
   const recipientName = selectedRecipient?.name || selectedRecipient?.email || selectedRecipient?.phone || workflow.sourceName
 
   const selectTemplate = (value: string) => {
@@ -140,8 +153,8 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-      <Card>
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="size-5" />
@@ -169,7 +182,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Source</Label>
                 <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
                   <p className="font-medium">{workflow.sourceName}</p>
@@ -177,10 +190,10 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="ma_template">Template</Label>
                 <Select value={templateKey} onValueChange={selectTemplate}>
-                  <SelectTrigger id="ma_template">
+                  <SelectTrigger id="ma_template" className="w-full min-w-0">
                     <SelectValue placeholder="Choose template" />
                   </SelectTrigger>
                   <SelectContent>
@@ -201,7 +214,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
               <Label htmlFor="ma_recipient">Recipient</Label>
               {workflow.contacts.length > 0 ? (
                 <Select value={recipientContactId} onValueChange={setRecipientContactId}>
-                  <SelectTrigger id="ma_recipient">
+                  <SelectTrigger id="ma_recipient" className="w-full min-w-0">
                     <SelectValue placeholder="Choose a linked contact" />
                   </SelectTrigger>
                   <SelectContent>
@@ -211,6 +224,9 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                         return (
                           <SelectItem key={contact.id} value={contact.id}>
                             {contact.isPrimary ? `${label} (default)` : label}
+                            {contact.campaignEmailSuppressed
+                              ? " · campaign email blocked"
+                              : ""}
                           </SelectItem>
                         )
                       })}
@@ -223,12 +239,40 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 </div>
               )}
               {selectedRecipient ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="break-all text-xs text-muted-foreground">
                   {selectedRecipient.email ?? "No email"}
                   {selectedRecipient.phone ? ` · ${selectedRecipient.phone}` : ""}
                 </p>
               ) : null}
             </div>
+
+            {selectedRecipient?.campaignEmailSuppressed ? (
+              <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+                <AlertTriangle />
+                <AlertTitle>Campaign email blocked for this contact</AlertTitle>
+                <AlertDescription className="text-amber-900">
+                  {suppressionBlocksSend ? (
+                    <p>
+                      This message cannot be sent. The only current exception is
+                      an NDA request from an opportunity to which this contact is
+                      actively linked.
+                    </p>
+                  ) : (
+                    <p>
+                      This NDA request is the only allowlisted operational
+                      exception. WAVE will verify the active opportunity link
+                      again and record the exception before delivery.
+                    </p>
+                  )}
+                  {selectedRecipient.campaignEmailSuppressionReason ? (
+                    <p className="mt-1">
+                      Reason:{" "}
+                      {selectedRecipient.campaignEmailSuppressionReason}
+                    </p>
+                  ) : null}
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="ma_subject">Subject</Label>
@@ -251,7 +295,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 <Mail />
                 <AlertTitle>Recipient for this follow-up</AlertTitle>
                 <AlertDescription>
-                  <p>
+                  <p className="break-words">
                     This email will be sent to <strong>{recipientName}</strong>
                     {selectedRecipient?.name ? ` from ${workflow.sourceName}` : ""} at <strong>{recipientEmail}</strong>.
                   </p>
@@ -285,7 +329,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Interaction history</CardTitle>
           <CardDescription>Recent source follow-ups logged for this opportunity.</CardDescription>

@@ -11,11 +11,13 @@ import {
   type ResendDeliveryOutcome,
   type ResendDeliveryRequest,
 } from "@/lib/email/resend-delivery-outcome"
+import { authorizeMaContactEmailSend } from "@/lib/email/ma-contact-email-authorization"
 import {
   MA_TEMPLATE_DEFAULT_BODIES,
   TEMPLATE_METADATA,
 } from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
+import { maContactEmailPurposeForTemplate } from "@/lib/ma-contact-email-policy"
 import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
 import type { EmailTemplateKey } from "@/lib/types/email"
@@ -107,6 +109,8 @@ interface OpportunityWorkflowCanonicalContactRow {
       display_name: string | null
       email: string | null
       phone: string | null
+      campaign_email_suppressed: boolean
+      campaign_email_suppression_reason: string | null
     } | null
   } | null
 }
@@ -151,12 +155,15 @@ export interface MaWorkflowDraft {
 
 export interface MaWorkflowContact {
   id: string
+  contactId?: string | null
   affiliationId?: string | null
   name: string | null
   email: string | null
   phone: string | null
   isPrimary: boolean
   legacySourceContactId?: string | null
+  campaignEmailSuppressed: boolean
+  campaignEmailSuppressionReason: string | null
 }
 
 export interface MaOpportunityWorkflow {
@@ -257,6 +264,7 @@ function getWorkflowContacts(
     .map((relation) => {
       return {
         id: relation.id,
+        contactId: relation.affiliation?.contact?.id ?? null,
         affiliationId: relation.affiliation_id,
         name:
           relation.contact_name_snapshot ??
@@ -272,6 +280,11 @@ function getWorkflowContacts(
           null,
         isPrimary: relation.is_primary,
         legacySourceContactId: relation.legacy_source_contact_id,
+        campaignEmailSuppressed:
+          relation.affiliation?.contact?.campaign_email_suppressed ?? false,
+        campaignEmailSuppressionReason:
+          relation.affiliation?.contact?.campaign_email_suppression_reason ??
+          null,
       }
     })
 
@@ -288,12 +301,15 @@ function getWorkflowContacts(
     if (!contact) return null
     return {
       id: relation.contact_id,
+      contactId: null,
       affiliationId: null,
       name: contact.name,
       email: contact.email,
       phone: contact.phone,
       isPrimary: relation.is_primary,
       legacySourceContactId: relation.contact_id,
+      campaignEmailSuppressed: false,
+      campaignEmailSuppressionReason: null,
     }
   })
 
@@ -467,7 +483,14 @@ async function loadOpportunityContext(opportunityId: string) {
           affiliation:ma_contact_office_affiliations(
             id,
             office_id,
-            contact:ma_contacts(id, display_name, email, phone)
+            contact:ma_contacts(
+              id,
+              display_name,
+              email,
+              phone,
+              campaign_email_suppressed,
+              campaign_email_suppression_reason
+            )
           )
         )
       `,
@@ -791,6 +814,14 @@ export async function sendMaSourceWorkflowEmailPayload(
         "Link this opportunity and selected contact through the canonical office before sending a follow-up.",
     }
   }
+  if (!recipient.contactId) {
+    await releaseReservation()
+    return {
+      success: false,
+      message:
+        "Link the selected recipient to a canonical M&A contact before sending.",
+    }
+  }
 
   const renderedSubject = substituteTemplateVariables(subject, variables)
   const renderedBody = substituteTemplateVariables(body, variables)
@@ -818,6 +849,21 @@ export async function sendMaSourceWorkflowEmailPayload(
       success: false,
       message:
         "Email blocked because the source context changed before delivery.",
+    }
+  }
+
+  const emailAuthorization = await authorizeMaContactEmailSend({
+    contactId: recipient.contactId,
+    opportunityId: opportunity.id,
+    purpose: maContactEmailPurposeForTemplate(templateKey),
+    actor: user.id,
+    operationKey: clientOperationKey,
+  })
+  if (!emailAuthorization.allowed) {
+    await releaseReservation()
+    return {
+      success: false,
+      message: emailAuthorization.message,
     }
   }
 

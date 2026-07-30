@@ -7,6 +7,7 @@ WITH target_tables(table_name) AS (
     ('ma_offices'),
     ('ma_contacts'),
     ('ma_contact_office_affiliations'),
+    ('ma_contact_email_policy_events'),
     ('ma_provisional_source_contexts'),
     ('ma_provisional_source_review_events'),
     ('ma_source_email_send_reservations'),
@@ -163,6 +164,7 @@ schema_evidence AS (
       'ma_interaction_owner_verification_events',
       'ma_interaction_delivery_events',
       'ma_interaction_legacy_migration_manifest',
+      'ma_contact_email_policy_events',
       'opportunity_nda_artifacts'
     )
     AND relation.relkind IN ('r', 'p')
@@ -195,6 +197,10 @@ schema_evidence AS (
       'reserve_ma_source_email_send',
       'release_ma_source_email_send',
       'refresh_ma_source_email_send',
+      'ma_contact_email_is_allowed',
+      'ma_contact_email_address_is_suppressed',
+      'authorize_ma_contact_email_send',
+      'set_ma_contact_campaign_email_suppression',
       'verify_ma_interaction_owner',
       'create_ma_relationship_interaction',
       'begin_ma_interaction_email_send',
@@ -465,6 +471,104 @@ SELECT
       has_function_privilege(
         'service_role',
         'public.register_opportunity_nda_artifact(uuid,uuid,text,text,text,text,bigint,text,text)',
+        'EXECUTE'
+      )
+  ) AS details;
+
+-- Aggregate-only W-072 release evidence. This deliberately returns no contact
+-- names, addresses, opportunity identifiers, policy reasons or message bodies.
+SELECT
+  'w072_release_evidence'::TEXT AS evidence_type,
+  JSONB_BUILD_OBJECT(
+    'structured_suppressed_contacts',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_contacts
+        WHERE campaign_email_suppressed
+      ),
+    'structured_suppressed_without_reason',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_contacts
+        WHERE campaign_email_suppressed
+          AND NULLIF(BTRIM(campaign_email_suppression_reason), '') IS NULL
+      ),
+    'w010_warning_contacts',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_contacts
+        WHERE created_by = 'Ivan Paudice via Codex W-010'
+          AND internal_notes LIKE
+            'Email suppressed in the W-010 source snapshot;%'
+      ),
+    'w010_warning_contacts_not_structured',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_contacts
+        WHERE created_by = 'Ivan Paudice via Codex W-010'
+          AND internal_notes LIKE
+            'Email suppressed in the W-010 source snapshot;%'
+          AND NOT campaign_email_suppressed
+      ),
+    'w010_backfill_events',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_contact_email_policy_events
+        WHERE source_key = 'w010_import_backfill'
+          AND event_type = 'suppression_enabled'
+      ),
+    'suppression_change_events',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_contact_email_policy_events
+        WHERE event_type IN ('suppression_enabled', 'suppression_removed')
+      ),
+    'allowlisted_exception_events',
+      (
+        SELECT COUNT(*)
+        FROM public.ma_contact_email_policy_events
+        WHERE event_type = 'allowlisted_operational_send'
+      ),
+    'browser_policy_event_access',
+      (
+        EXISTS (
+          SELECT 1
+          FROM (VALUES ('anon'), ('authenticated')) AS browser(role_name)
+          WHERE has_table_privilege(
+            browser.role_name,
+            'public.ma_contact_email_policy_events',
+            'SELECT,INSERT,UPDATE,DELETE'
+          )
+        )
+      ),
+    'service_policy_event_direct_write',
+      has_table_privilege(
+        'service_role',
+        'public.ma_contact_email_policy_events',
+        'INSERT,UPDATE,DELETE'
+      ),
+    'service_can_check_audience',
+      has_function_privilege(
+        'service_role',
+        'public.ma_contact_email_is_allowed(uuid,uuid,ma_contact_email_purpose)',
+        'EXECUTE'
+      ),
+    'service_can_block_direct_address',
+      has_function_privilege(
+        'service_role',
+        'public.ma_contact_email_address_is_suppressed(text)',
+        'EXECUTE'
+      ),
+    'service_can_authorize_send',
+      has_function_privilege(
+        'service_role',
+        'public.authorize_ma_contact_email_send(uuid,uuid,ma_contact_email_purpose,text,uuid)',
+        'EXECUTE'
+      ),
+    'service_can_change_suppression',
+      has_function_privilege(
+        'service_role',
+        'public.set_ma_contact_campaign_email_suppression(uuid,boolean,text,text)',
         'EXECUTE'
       )
   ) AS details;

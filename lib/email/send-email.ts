@@ -2,6 +2,7 @@
 
 import { resend, FROM_EMAIL, FROM_NAME, DAILY_EMAIL_LIMIT } from "./resend-client"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isMaContactEmailAddressSuppressed } from "@/lib/email/ma-contact-email-authorization"
 import type { EmailTemplateKey, EmailSendResult, EmailLog_Insert } from "@/lib/types/email"
 import type { ReactElement } from "react"
 
@@ -188,7 +189,32 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       console.warn(`[sendEmail] log insert failed for ${templateKey} → ${to}; sending anyway.`)
     }
 
-    // 5. Send email via Resend
+    // 5. Enforce the person-level M&A suppression boundary immediately before
+    // delivery. Generic/manual paths have no operational-purpose exception.
+    const blockedRecipient = (
+      await Promise.all(
+        [to, ...(bcc ?? [])].map(async (recipient) => ({
+          recipient,
+          blocked: await isMaContactEmailAddressSuppressed(recipient),
+        })),
+      )
+    ).find((recipient) => recipient.blocked)
+    if (blockedRecipient) {
+      if (emailLogId) {
+        await updateEmailLogStatus(emailLogId, {
+          status: "failed",
+          error_message: "M&A contact campaign email suppressed",
+        })
+      }
+      return {
+        success: false,
+        emailLogId: emailLogId ?? undefined,
+        error:
+          "Email blocked because a recipient has opted out of campaign and general outreach.",
+      }
+    }
+
+    // 6. Send email via Resend
     const { data, error } = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to: [to],
@@ -207,7 +233,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       return { success: false, emailLogId: emailLogId ?? undefined, error: error.message }
     }
 
-    // 6. Update log with success (best-effort)
+    // 7. Update log with success (best-effort)
     if (emailLogId) {
       await updateEmailLogStatus(emailLogId, {
         status: "sent",
@@ -216,7 +242,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       })
     }
 
-    // 7. Increment daily counter
+    // 8. Increment daily counter
     await incrementDailyCount()
 
     return {
@@ -245,6 +271,14 @@ export async function sendEmailDirect(params: {
   const { to, subject, react, idempotencyKey } = params
 
   try {
+    if (await isMaContactEmailAddressSuppressed(to)) {
+      return {
+        success: false,
+        error:
+          "Email blocked because this contact has opted out of campaign and general outreach.",
+      }
+    }
+
     const { data, error } = await resend.emails.send(
       {
         from: `${FROM_NAME} <${FROM_EMAIL}>`,

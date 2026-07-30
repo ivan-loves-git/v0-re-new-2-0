@@ -107,7 +107,10 @@ describe("W-043 canonical NDA artifact foundation", () => {
     expect(manager).toMatch(/disclose the\s+source/)
     expect(pursuit).toContain("Legacy compatibility fields")
     expect(pursuit).toContain("do not")
-    expect(contract).toContain("does not validate Gate 1 or Gate 2")
+    expect(contract).toContain(
+      "Registering any artifact does not validate signer, opportunity or pursuit validity",
+    )
+    expect(contract).toContain("pass Gate 1 or Gate 2")
   })
 
   it("keeps blank NDA recording available while signed-copy controls wait for an active pursuit", () => {

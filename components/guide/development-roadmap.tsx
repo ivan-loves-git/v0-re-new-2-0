@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Jul 30, 2026",
+    version: "0.9.35",
+    title: "Contact email preferences now protect every M&A workflow",
+    isCompleted: true,
+    events: [
+      {
+        title: "A do-not-email decision now follows the person",
+        type: "feature",
+        description: "Campaign and general relationship outreach are blocked across every office affiliation, even when someone tries to use the contact's address directly.",
+      },
+      {
+        title: "Deal-specific NDA work keeps one controlled exception",
+        type: "decision",
+        description: "A protected contact can receive only an NDA request from an opportunity to which they are actively linked; WAVE checks and records that exception before delivery.",
+      },
+      {
+        title: "Every preference change remains accountable",
+        type: "feature",
+        description: "Staff can review the current warning and change the policy only with a reason, while the original import note and immutable change history remain available.",
+      },
+    ],
+  },
+  {
     period: "Jul 29, 2026",
     version: "0.9.34",
     title: "WAVE’s newest workflows are now easier to scan and act on",

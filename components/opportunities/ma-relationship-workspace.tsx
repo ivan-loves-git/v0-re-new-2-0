@@ -57,6 +57,7 @@ import {
   type MaRelationshipTimelineItem,
   type MaRelationshipWorkspace,
 } from "@/lib/actions/ma-relationships"
+import { setMaContactCampaignEmailSuppression } from "@/lib/actions/ma-contact-email-policy"
 import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
 
 const CHANNELS: Array<{ value: MaInteractionChannel; label: string }> = [
@@ -920,7 +921,13 @@ function RelationshipContactsDirectory({
   contacts,
   offices,
 }: Pick<MaRelationshipWorkspace, "contacts" | "offices">) {
+  const router = useRouter()
+  const [isPolicyPending, startPolicyTransition] = useTransition()
   const [query, setQuery] = useState("")
+  const [policyContact, setPolicyContact] = useState<
+    MaRelationshipWorkspace["contacts"][number] | null
+  >(null)
+  const [policyReason, setPolicyReason] = useState("")
   const officeLabels = useMemo(
     () => new Map(offices.map((office) => [office.id, office.label])),
     [offices],
@@ -941,60 +948,201 @@ function RelationshipContactsDirectory({
       }),
     [contacts, normalizedQuery, officeLabels],
   )
+  const suppressedCount = contacts.filter(
+    (contact) => contact.campaignEmailSuppressed,
+  ).length
+
+  const closePolicyDialog = () => {
+    setPolicyContact(null)
+    setPolicyReason("")
+  }
+
+  const savePolicy = () => {
+    if (!policyContact) return
+    const nextSuppressed = !policyContact.campaignEmailSuppressed
+    startPolicyTransition(async () => {
+      const result = await setMaContactCampaignEmailSuppression({
+        contactId: policyContact.id,
+        suppressed: nextSuppressed,
+        reason: policyReason,
+      })
+      if (!result.success) {
+        toast.error("Email policy not changed", { description: result.message })
+        return
+      }
+      toast.success(
+        nextSuppressed ? "Campaign email blocked" : "Campaign email restored",
+        { description: result.message },
+      )
+      closePolicyDialog()
+      router.refresh()
+    })
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Contacts</CardTitle>
-        <CardDescription>
-          Canonical contacts and their active office affiliations.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Label className="sr-only" htmlFor="relationship-contact-search">
-          Search contacts, email or office
-        </Label>
-        <Input
-          id="relationship-contact-search"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search contacts, email or office"
-        />
-        {contacts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No canonical contacts are available yet.
-          </p>
-        ) : filteredContacts.length === 0 ? (
-          <p className="rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-            No contacts match this search.
-          </p>
-        ) : (
-          <div className="divide-y rounded-md border">
-            {filteredContacts.map((contact) => (
-              <div
-                key={contact.id}
-                className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-medium">{contact.label}</p>
-                  {contact.email ? (
-                    <p className="text-sm text-muted-foreground">
-                      {contact.email}
-                    </p>
-                  ) : null}
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Contacts</CardTitle>
+          <CardDescription>
+            Canonical contacts and their active office affiliations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {suppressedCount > 0 ? (
+            <Alert>
+              <AlertTitle>
+                {suppressedCount} contact
+                {suppressedCount === 1 ? " has" : "s have"} campaign email
+                blocked
+              </AlertTitle>
+              <AlertDescription>
+                WAVE excludes these people from campaign and general outreach
+                across every office affiliation.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <Label className="sr-only" htmlFor="relationship-contact-search">
+            Search contacts, email or office
+          </Label>
+          <Input
+            id="relationship-contact-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search contacts, email or office"
+          />
+          {contacts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No canonical contacts are available yet.
+            </p>
+          ) : filteredContacts.length === 0 ? (
+            <p className="rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+              No contacts match this search.
+            </p>
+          ) : (
+            <div className="divide-y rounded-md border">
+              {filteredContacts.map((contact) => (
+                <div
+                  key={contact.id}
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{contact.label}</p>
+                      {contact.campaignEmailSuppressed ? (
+                        <Badge
+                          className="border-warning/30 bg-warning/10 text-warning hover:bg-warning/10"
+                          variant="outline"
+                        >
+                          Campaign email blocked
+                        </Badge>
+                      ) : null}
+                    </div>
+                    {contact.email ? (
+                      <p className="text-sm text-muted-foreground">
+                        {contact.email}
+                      </p>
+                    ) : null}
+                    {contact.campaignEmailSuppressionReason ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {contact.campaignEmailSuppressionReason}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col items-start gap-2 sm:max-w-[46%] sm:items-end">
+                    <span className="text-xs text-muted-foreground sm:text-right">
+                      {contact.officeIds
+                        .map((officeId) => officeLabels.get(officeId))
+                        .filter(Boolean)
+                        .join(" · ") || "No active office"}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPolicyContact(contact)
+                        setPolicyReason("")
+                      }}
+                    >
+                      Manage email policy
+                    </Button>
+                  </div>
                 </div>
-                <span className="text-xs text-muted-foreground sm:max-w-[46%] sm:text-right">
-                  {contact.officeIds
-                    .map((officeId) => officeLabels.get(officeId))
-                    .filter(Boolean)
-                    .join(" · ") || "No active office"}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={Boolean(policyContact)}
+        onOpenChange={(open) => {
+          if (!open) closePolicyDialog()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {policyContact?.campaignEmailSuppressed
+                ? "Allow campaign email again"
+                : "Block campaign email"}
+            </DialogTitle>
+            <DialogDescription>
+              This policy follows the person across every office affiliation.
+              Every change is retained with your identity, time and reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border px-3 py-2 text-sm">
+              <p className="font-medium">{policyContact?.label}</p>
+              <p className="text-muted-foreground">
+                {policyContact?.email ?? "No email address"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact-email-policy-reason">Reason *</Label>
+              <Textarea
+                id="contact-email-policy-reason"
+                value={policyReason}
+                onChange={(event) => setPolicyReason(event.target.value)}
+                rows={4}
+                maxLength={500}
+                placeholder={
+                  policyContact?.campaignEmailSuppressed
+                    ? "Why is outreach allowed again?"
+                    : "Why should campaign and general outreach be blocked?"
+                }
+              />
+            </div>
+            {policyContact?.campaignEmailSuppressed ? (
+              <p className="text-xs text-muted-foreground">
+                Removing this block does not erase the original W-010 warning
+                or any earlier policy event.
+              </p>
+            ) : null}
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closePolicyDialog}
+              disabled={isPolicyPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={savePolicy}
+              disabled={isPolicyPending || policyReason.trim().length < 5}
+            >
+              {isPolicyPending
+                ? "Saving..."
+                : policyContact?.campaignEmailSuppressed
+                  ? "Allow campaign email"
+                  : "Block campaign email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

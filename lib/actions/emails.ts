@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache"
 import { render } from "@react-email/render"
 import type { EmailTemplateKey } from "@/lib/types/email"
 import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
+import { getSuppressedMaContactEmailAddresses } from "@/lib/email/ma-contact-email-authorization"
 
 // Import all email templates
 import { WelcomeEmail } from "@/lib/email/templates/welcome"
@@ -420,7 +421,12 @@ export async function getRepreneursForManualSend(search?: string) {
     throw new Error(error.message)
   }
 
-  return data || []
+  const candidates = data || []
+  const suppressedEmails = await getSuppressedMaContactEmailAddresses()
+  return candidates.filter((repreneur) => {
+    const normalizedEmail = repreneur.email?.trim().toLowerCase()
+    return !normalizedEmail || !suppressedEmails.has(normalizedEmail)
+  })
 }
 
 /**

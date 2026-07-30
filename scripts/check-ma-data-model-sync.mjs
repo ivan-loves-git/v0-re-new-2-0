@@ -4,10 +4,10 @@ import { existsSync, readFileSync } from "node:fs"
 const contractPath = "docs/data-models/ma-advisory-data-model-v1.md"
 
 const sqlModelTokens =
-  /\b(ma_source_networks|ma_sources|ma_source_contacts|ma_source_contact_moves|ma_source_interactions|ma_firms|ma_offices|ma_contacts|ma_contact_office_affiliations|opportunities|opportunity_source_contacts|opportunity_ma_contacts|ma_interactions)\b/
+  /\b(ma_source_networks|ma_sources|ma_source_contacts|ma_source_contact_moves|ma_source_interactions|ma_firms|ma_offices|ma_contacts|ma_contact_office_affiliations|ma_contact_email_policy_events|opportunities|opportunity_source_contacts|opportunity_ma_contacts|ma_interactions)\b/
 
 const applicationModelTokens =
-  /\b(ma_source_networks|ma_sources|ma_source_contacts|ma_source_contact_moves|ma_source_interactions|ma_firms|ma_offices|ma_contacts|ma_contact_office_affiliations|opportunity_source_contacts|opportunity_ma_contacts|ma_interactions|source_office_id|source_office|source_id|source_label|is_primary|primary_contact|contact_email|recipient_email|repreneur_exposure|opportunity_documents|imported_from|imported_at|date_added)\b/
+  /\b(ma_source_networks|ma_sources|ma_source_contacts|ma_source_contact_moves|ma_source_interactions|ma_firms|ma_offices|ma_contacts|ma_contact_office_affiliations|ma_contact_email_policy_events|opportunity_source_contacts|opportunity_ma_contacts|ma_interactions|source_office_id|source_office|source_id|source_label|is_primary|primary_contact|contact_email|recipient_email|campaign_email_suppressed|campaign_email_suppression_reason|repreneur_exposure|opportunity_documents|imported_from|imported_at|date_added)\b/
 
 function git(args, allowFailure = false) {
   const result = spawnSync("git", args, {

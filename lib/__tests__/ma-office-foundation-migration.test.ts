@@ -267,7 +267,10 @@ describe("M&A operating-office foundation migration", () => {
     expect(contract).toContain("retires `opportunities.repreneur_exposure` from the target operating model")
     expect(contract).toContain("does not add an opportunity sourcing channel")
     expect(contract).toContain(
-      "Migrations 076 to 078 were applied to production and schema-verified on 2026-07-26",
+      "Migrations 076 to 082 are live and schema-verified",
+    )
+    expect(contract).toContain(
+      "Gate 2 executed the final 076 to 078 sequence on 2026-07-26",
     )
     expect(contract).toContain("Canonical firm and operating-office model live since migration 076")
     expect(contract).toContain("W-061 and migration 076")

@@ -20,6 +20,8 @@ export interface MaRelationshipOfficeContactOption {
   affiliationId: string
   label: string
   email: string | null
+  campaignEmailSuppressed: boolean
+  campaignEmailSuppressionReason: string | null
 }
 
 export interface MaRelationshipContactFilterOption {
@@ -27,6 +29,8 @@ export interface MaRelationshipContactFilterOption {
   label: string
   email: string | null
   officeIds: string[]
+  campaignEmailSuppressed: boolean
+  campaignEmailSuppressionReason: string | null
 }
 
 export interface MaRelationshipOfficeOption {
@@ -116,6 +120,8 @@ interface AffiliationRow {
     id: string
     display_name: string | null
     email: string | null
+    campaign_email_suppressed: boolean
+    campaign_email_suppression_reason: string | null
   }>
 }
 
@@ -265,7 +271,14 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       supabase
         .from("ma_contact_office_affiliations")
         .select(
-          "id, office_id, is_active, ended_at, contact:ma_contacts(id, display_name, email)",
+          `id, office_id, is_active, ended_at,
+           contact:ma_contacts(
+             id,
+             display_name,
+             email,
+             campaign_email_suppressed,
+             campaign_email_suppression_reason
+           )`,
         )
         .eq("is_active", true)
         .is("ended_at", null),
@@ -298,6 +311,9 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       affiliationId: relation.id,
       label: contactLabel(contact),
       email: contact.email,
+      campaignEmailSuppressed: contact.campaign_email_suppressed,
+      campaignEmailSuppressionReason:
+        contact.campaign_email_suppression_reason,
     })
     contactsByOffice.set(relation.office_id, contacts)
     const existing = contactsById.get(contact.id)
@@ -308,6 +324,9 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       officeIds: existing
         ? [...new Set([...existing.officeIds, relation.office_id])]
         : [relation.office_id],
+      campaignEmailSuppressed: contact.campaign_email_suppressed,
+      campaignEmailSuppressionReason:
+        contact.campaign_email_suppression_reason,
     })
   }
 
