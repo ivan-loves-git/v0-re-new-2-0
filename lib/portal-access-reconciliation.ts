@@ -23,6 +23,60 @@ export function normalizePortalEmail(email: string | null | undefined) {
   return email?.trim().toLowerCase() || null
 }
 
+export interface PortalEmailValidation {
+  email: string | null
+  error: string | null
+}
+
+const portalEmailCorrection =
+  "Correct the repreneur email before changing portal access or sending a link."
+
+/**
+ * Validates the canonical mailbox used for the repreneur portal. This is kept
+ * deliberately separate from normalization so existing identity lookups can
+ * still compare legacy records safely, while access-changing actions reject an
+ * invalid recipient before opening a database connection.
+ */
+export function validatePortalEmail(
+  value: string | null | undefined,
+): PortalEmailValidation {
+  const email = normalizePortalEmail(value)
+  if (!email) return { email: null, error: null }
+
+  const [localPart, domain, ...extraParts] = email.split("@")
+  if (
+    !localPart ||
+    !domain ||
+    extraParts.length > 0 ||
+    localPart.length > 64 ||
+    domain.length > 253 ||
+    localPart.startsWith(".") ||
+    localPart.endsWith(".") ||
+    localPart.includes("..")
+  ) {
+    return {
+      email,
+      error: `This email address is not valid: the part before @ cannot start or end with a dot or contain consecutive dots. ${portalEmailCorrection}`,
+    }
+  }
+
+  const validLocalPart = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(localPart)
+  const validDomain = domain
+    .split(".")
+    .every(
+      (label) =>
+        /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label),
+    )
+  if (!validLocalPart || !validDomain || !domain.includes(".")) {
+    return {
+      email,
+      error: `This email address is not valid. ${portalEmailCorrection}`,
+    }
+  }
+
+  return { email, error: null }
+}
+
 export function planPortalRoleReconciliation({
   roles,
   repreneurId,

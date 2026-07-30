@@ -438,6 +438,64 @@ describe("repreneur portal access reliability", () => {
     expect(mocks.poolConnect).not.toHaveBeenCalled()
   })
 
+  it.each([
+    [
+      "enable",
+      (repreneurId: string) => enableRepreneurPortalAccess(repreneurId),
+    ],
+    [
+      "resend",
+      (repreneurId: string) => resendRepreneurPortalAccessLink(repreneurId),
+    ],
+  ])(
+    "rejects a malformed canonical email before %s can touch portal identity data",
+    async (_actionName, action) => {
+      mockRepreneur(" Name.@Example.com ")
+
+      await expect(action("repreneur-1")).rejects.toThrow(
+        "the part before @ cannot start or end with a dot",
+      )
+
+      expect(mocks.pgQuery).not.toHaveBeenCalled()
+      expect(mocks.poolConnect).not.toHaveBeenCalled()
+      expect(mocks.clientQuery).not.toHaveBeenCalled()
+      expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([".name@example.com", "name.@example.com", "name..part@example.com"])(
+    "rejects a canonical email with an invalid local-part dot pattern: %s",
+    async (email) => {
+      mockRepreneur(email)
+
+      await expect(enableRepreneurPortalAccess("repreneur-1")).rejects.toThrow(
+        "the part before @ cannot start or end with a dot",
+      )
+
+      expect(mocks.pgQuery).not.toHaveBeenCalled()
+      expect(mocks.poolConnect).not.toHaveBeenCalled()
+      expect(mocks.clientQuery).not.toHaveBeenCalled()
+      expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    },
+  )
+
+  it("reports an invalid canonical recipient without querying portal identities", async () => {
+    mockRepreneur(" Name.@Example.com ")
+
+    const status = await getRepreneurPortalAccessStatus("repreneur-1")
+
+    expect(status).toMatchObject({
+      repreneurEmail: "name.@example.com",
+      portalEmailValidationError: expect.stringContaining(
+        "the part before @ cannot start or end with a dot",
+      ),
+      enabled: false,
+      repairable: false,
+    })
+    expect(mocks.pgQuery).not.toHaveBeenCalled()
+    expect(mocks.poolConnect).not.toHaveBeenCalled()
+  })
+
   it("refuses a resend that would cross the staff role boundary", async () => {
     mockRepreneur("staff@example.com")
     mocks.pgQuery.mockImplementation(async (sql: string) => {

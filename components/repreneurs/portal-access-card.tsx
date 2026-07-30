@@ -41,6 +41,10 @@ function formatDate(value: string | null) {
 function getPortalRecoveryMessage(status: RepreneurPortalAccessStatus) {
   if (status.enabled) return null
 
+  if (status.portalEmailValidationError) {
+    return status.portalEmailValidationError
+  }
+
   if (!status.repreneurEmail) {
     return "Add an email address before enabling portal access."
   }
@@ -93,7 +97,10 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
     })
   }
 
-  const canEnable = Boolean(status.repreneurEmail) && !status.enabled && status.repairable
+  const hasValidPortalEmail = Boolean(
+    status.repreneurEmail && !status.portalEmailValidationError,
+  )
+  const canEnable = hasValidPortalEmail && !status.enabled && status.repairable
   const hasExistingPortalAccess = Boolean(
     status.roleId ||
       status.linkedUserId ||
@@ -102,7 +109,7 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
   )
   const needsRecoveryRepair =
     !status.enabled && status.repairable && hasExistingPortalAccess
-  const canResend = Boolean(status.repreneurEmail) && status.enabled
+  const canResend = hasValidPortalEmail && status.enabled
   const recoveryMessage = getPortalRecoveryMessage(status)
   const enableButtonLabel = needsRecoveryRepair
     ? "Repair portal access & send link"
@@ -135,6 +142,10 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="rounded-md border px-3 py-2 text-sm">
+          <p className="text-xs text-muted-foreground">Portal recipient</p>
+          <p className="font-medium">{status.repreneurEmail ?? "Not set"}</p>
+        </div>
         <div className="grid gap-3 text-sm md:grid-cols-4">
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Auth user</p>

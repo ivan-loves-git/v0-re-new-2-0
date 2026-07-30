@@ -11,6 +11,7 @@ import {
   planPortalRoleReconciliation,
   type PortalAccessIdentityIssue,
   type PortalRoleCandidate,
+  validatePortalEmail,
 } from "@/lib/portal-access-reconciliation"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
@@ -18,6 +19,7 @@ import { env } from "@/lib/env"
 export interface RepreneurPortalAccessStatus {
   repreneurId: string
   repreneurEmail: string | null
+  portalEmailValidationError: string | null
   repreneurName: string
   enabled: boolean
   repairable: boolean
@@ -354,7 +356,29 @@ export async function getRepreneurPortalAccessStatus(
   await requireStaffAccess()
 
   const repreneur = await getRepreneur(repreneurId)
-  const normalizedEmail = normalizePortalEmail(repreneur.email)
+  const { email: normalizedEmail, error: portalEmailValidationError } =
+    validatePortalEmail(repreneur.email)
+  if (portalEmailValidationError) {
+    return {
+      repreneurId,
+      repreneurEmail: normalizedEmail,
+      portalEmailValidationError,
+      repreneurName: fullName(repreneur.first_name, repreneur.last_name),
+      enabled: false,
+      repairable: false,
+      identityIssue: null,
+      authIdentityCount: 0,
+      hasAuthUser: false,
+      hasCredentialAccount: false,
+      linkedUserId: null,
+      roleId: null,
+      roleEmail: null,
+      roleRepreneurId: null,
+      accessEnabledAt: null,
+      lastAccessEmailSentAt: null,
+      activeSessionCount: 0,
+    }
+  }
   const [roles, emailAuthUsers] = await Promise.all([
     listPortalRoles(getPool(), repreneurId, normalizedEmail),
     normalizedEmail
@@ -434,6 +458,7 @@ export async function getRepreneurPortalAccessStatus(
   return {
     repreneurId,
     repreneurEmail: normalizedEmail,
+    portalEmailValidationError: null,
     repreneurName: fullName(repreneur.first_name, repreneur.last_name),
     enabled: Boolean(linkIsConsistent && hasCredentialAccount),
     repairable,
@@ -457,7 +482,10 @@ export async function enableRepreneurPortalAccess(
   await requireStaffAccess()
 
   const repreneur = await getRepreneur(repreneurId)
-  const email = normalizePortalEmail(repreneur.email)
+  const { email, error: portalEmailValidationError } = validatePortalEmail(
+    repreneur.email,
+  )
+  if (portalEmailValidationError) throw new Error(portalEmailValidationError)
   if (!email) {
     throw new Error(
       "This repreneur needs an email before portal access can be enabled.",
@@ -532,6 +560,9 @@ export async function resendRepreneurPortalAccessLink(
   await requireStaffAccess()
 
   const status = await getRepreneurPortalAccessStatus(repreneurId)
+  if (status.portalEmailValidationError) {
+    throw new Error(status.portalEmailValidationError)
+  }
   const email = normalizePortalEmail(status.repreneurEmail)
   if (!email) {
     throw new Error(
