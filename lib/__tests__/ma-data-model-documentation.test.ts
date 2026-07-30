@@ -52,8 +52,30 @@ describe("canonical M&A data model documentation", () => {
       "Canonical firm intake serializes on the lower-trimmed name",
       "W-063 staff intake reconciliation",
       "A cell containing several email addresses is never imported as one address",
-      "WAVE data remains test data until then",
+      "After the switch, WAVE owns every correction and future activity; the workbook is read-only evidence.",
       "scripts/verify-ma-data-model-schema.sql",
+    ]) {
+      expect(contract).toContain(rule)
+    }
+  })
+
+  it("keeps Colin's post-cutover answers bounded to canonical reconciliation and purpose-aware suppression", () => {
+    for (const rule of [
+      "WAVE persists its canonical sector label and geography-node identity, not the workbook code.",
+      "Exactly one recognized code that resolves to exactly one approved mapping produces a `confirmed` reconciliation outcome",
+      "A blank, malformed, multiple, unknown or non-resolving code produces `review`",
+      "The workbook's 12 qualified values `ZZZ (EDUCATION-FORMATION)` and `ZZZ (PRODUITS DE CONSOMMATION ET SERVICES)`",
+      "only in the staff-only per-row reconciliation evidence",
+      "do not write `activity` or persist a second taxonomy",
+      "`BFC` is an accepted source compatibility alias of canonical `BFR`",
+      "109 blank source title cells and the 20 live newly created Draft/staff-only title gaps",
+      "A later WAVE edit always wins over stale workbook evidence.",
+      "Campaign suppression belongs to the canonical person and applies across all office affiliations.",
+      "At W-072 launch, the operational allowlist contains exactly one purpose",
+      "Adding any other operational purpose requires a separately approved PDR decision",
+      "Free-text purpose and a generic bypass are not valid authorization.",
+      "Exactly the 18 named W-010 contacts with retained source evidence receive structured campaign suppression",
+      "No real contact receives a test message.",
     ]) {
       expect(contract).toContain(rule)
     }

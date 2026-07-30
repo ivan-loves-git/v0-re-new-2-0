@@ -5,13 +5,13 @@
 | Item | Value |
 | --- | --- |
 | Status | Approved and live contract |
-| Implementation status | Migrations 076 to 082 are live and schema-verified. W-043 provides immutable, versioned staff-only NDA artifacts. It does not validate Gate 1 or Gate 2, disclose source identity or activate E4/E6/E7. The canonical office/contact model, one-time cutover staging area, W-064 provisional Acme foundation, W-062 canonical interaction persistence and W-066 staff Relationships workspace are present. The four legacy email interactions retain their UUIDs and exact evidence in the canonical model with Bertrand recorded as provisional owner; staff can record new manual relationship activity without sending email, while the legacy table is service-read-only compatibility evidence and browser roles cannot access either model. Acme is not assigned to any opportunity, review evidence and email reservations are empty, no real workbook has been imported, and Excel remains operationally authoritative until W-010. The W-010 date-precision and test-data replacement rules remain approved target gaps and must be implemented and production-verified before the real workbook is staged. W-069's separate, permanently staff-only source-teaser retention rule is approved target behavior and is not yet implemented. |
+| Implementation status | Migrations 076 to 082 are live and schema-verified. W-010 activated Colin's approved 28 July workbook in production on 2026-07-28: WAVE is now the sole operational record for the imported snapshot and Excel is read-only evidence. The activation reconciled 148 opportunity references, 229 firms, 431 offices, 575 named contacts and 603 active affiliations; temporary staging was purged and the retained manifest contains only approved aggregate evidence. The canonical office/contact model, W-064 provisional Acme foundation, W-062 interaction persistence, W-066 staff Relationships workspace and W-043 staff-only NDA artifact foundation are live. W-071 post-cutover reconciliation and W-072 purpose-aware campaign suppression are approved implementation work and must not be described as live until they pass production verification. W-069's separate, permanently staff-only source-teaser retention rule is also approved target behavior and is not yet implemented. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
-| PDR scope | W-001, repreneur action and staff-verified transition authority; W-021, conditional source-identity disclosure; W-043, canonical NDA artifact foundation; W-061, M&A office and contact identity foundation; W-062, canonical interaction persistence; W-066, staff relationship timeline and interaction capture; W-063, canonical staff opportunity intake; W-064, provisional source foundation; W-065, staff review workflow; W-069, separate permanently staff-only source teaser; W-020, controlled one-time cutover staging; W-010, production activation and WAVE-only switch |
-| Last reviewed against live Supabase | 2026-07-27 |
-| Last reviewed against source workbook | 2026-07-26, `CRM Re-New for Wave.xlsx` |
+| PDR scope | W-001, repreneur action and staff-verified transition authority; W-021, conditional source-identity disclosure; W-043, canonical NDA artifact foundation; W-061, M&A office and contact identity foundation; W-062, canonical interaction persistence; W-066, staff relationship timeline and interaction capture; W-063, canonical staff opportunity intake; W-064, provisional source foundation; W-065, staff review workflow; W-069, separate permanently staff-only source teaser; W-020, controlled one-time cutover staging; W-010, production activation and WAVE-only switch; W-013, WAVE-only adoption proof; W-042, lifecycle communication enforcement; W-071, post-cutover opportunity classification and identity reconciliation; W-072, purpose-aware M&A contact campaign email suppression |
+| Last reviewed against live Supabase | 2026-07-30 |
+| Last reviewed against source workbook | 2026-07-30, Colin's approved 2026-07-28 `CRM M&A for Ivan.xlsx` snapshot |
 
 This is the only human-readable source of truth for the M&A advisory data model. Supabase enforces the released implementation. This document defines the approved business meaning, target relationships, requiredness and visibility.
 
@@ -150,6 +150,8 @@ Every non-archived firm has at least one active office. A firm without a known b
 | `phone` | Text | Optional | Staff only | WAVE | Normalized for search while preserving the entered display value |
 | `linkedin_url` | URL | Optional | Staff only | WAVE | Person-level profile |
 | `internal_notes` | Text | Optional | Staff only | WAVE | Person-level relationship context |
+| `campaign_email_suppressed` | Boolean | Always | Staff only | WAVE | Defaults to `false`; blocks campaign, bulk and general relationship outreach to this person |
+| `campaign_email_suppression_reason` | Text | Conditional | Staff only | WAVE | Required while campaign email is suppressed; explains the retained source or staff decision |
 | `created_by`, `created_at` | Staff ID, timestamp | System | Staff only | WAVE | Creation audit |
 | `updated_by`, `updated_at` | Staff ID, timestamp | System | Staff only | WAVE | Last change audit |
 | `archived_by`, `archived_at` | Staff ID, timestamp | Conditional | Staff only | WAVE | Required when archived |
@@ -163,6 +165,9 @@ Every non-archived firm has at least one active office. A firm without a known b
 5. A contact without a usable email may exist, but cannot be the primary contact of a valid opportunity.
 6. A referenced contact is archived, never hard deleted.
 7. Adding a second contact to an office, or affiliating an existing canonical contact to another office, uses the audited `create_or_affiliate_ma_contact` service. It creates no legacy contact or recurrent synchronization record.
+8. Campaign suppression belongs to the canonical person and applies across all office affiliations. A suppressed contact is excluded from campaign, bulk and general relationship-outreach audiences, and the final send boundary must reject those purposes even if a caller supplies the address directly.
+9. Campaign suppression does not prohibit an explicitly classified opportunity-specific operational message. At W-072 launch, the operational allowlist contains exactly one purpose: an NDA request to a contact actively linked to that opportunity. The send evidence must retain the opportunity, contact, purpose, actor and delivery outcome. Free-text purpose and a generic bypass are not valid authorization. Adding any other operational purpose requires a separately approved PDR decision and an update to this contract before implementation.
+10. Setting, changing or removing campaign suppression requires a staff actor, time and reason in immutable audit evidence. The 18 named W-010 contacts retain their imported warning note until structured backfill and send-boundary verification are complete; the note alone is not the target enforcement mechanism.
 
 ## 4. Contact office affiliation
 
@@ -209,10 +214,9 @@ W-063 adds an additional person to an existing office, or links an existing cano
 | `status` | `draft`, `active`, `paused`, `archived`, `closed` | Always | Role appropriate | WAVE | Defaults to `draft`; leaving draft activates validity rules |
 | `source_office_id` | UUID | Valid opportunity | Staff only | WAVE | Exactly one source office |
 | `location` | Text | Repreneur visible | Role appropriate | WAVE | Reader-facing location |
-| `geography_code` | Controlled code | Optional | Staff only | WAVE | Canonical matching geography |
+| `geography_node_id` | UUID | Optional | Staff only | WAVE | Canonical W-039 matching-geography identity; never the workbook `Geo_code` |
 | `geography_confidence` | `confirmed`, `review` | Conditional | Staff only | WAVE | Required when imported geography needs review |
 | `sector` | Controlled label | Repreneur visible | Role appropriate | WAVE | Reader-facing canonical sector |
-| `sector_code` | Controlled code | Optional | Staff only | WAVE | Canonical matching sector |
 | `sector_confidence` | `confirmed`, `review` | Conditional | Staff only | WAVE | Required when imported sector needs review |
 | `description` | Text | Valid opportunity | Staff only | WAVE | Full internal opportunity description |
 | `revenue_meur` | Numeric | Optional | Role appropriate | WAVE | Revenue in millions of euros; missing remains `null` |
@@ -245,6 +249,8 @@ W-063 adds an additional person to an existing office, or links an existing cano
 13. `date_added` and `date_added_precision` are both null when no source date is known. A known full calendar date uses precision `day`.
 14. A source value containing only month and year is stored technically as the first day of that month with precision `month`. The artificial day must never be displayed, exported, described as an event day or used for day-level age or service-level reasoning.
 15. A shared Acme provisional source context may be assigned only by staff. The stored fact is the existing canonical `source_office_id` link to Acme's office; “Source review required” is computed and is not a parallel stored review status. Acme may support `draft`, `active` and `paused` work while staff resolves the real source, but it cannot be used to close or archive an opportunity or to satisfy `cutover-ready` or `cutover-complete` treatment. Acme is never renamed into an actual intermediary; resolution changes the opportunity to the real office and retains the Acme assignment and reason in immutable correction evidence.
+16. A blank source-workbook platform title never clears a non-blank WAVE `public_title`. The approved W-010 workbook contains 109 blank title cells, but preservation of existing WAVE values left only 20 newly created Draft/staff-only opportunities without a live public title. Those 20 require staff-authored anonymized titles before repreneur disclosure; the source count and the live action queue must not be conflated.
+17. Colin's 2026-07-29 confirmation makes the workbook's positioned-repreneur list current source evidence, not automatic identity authority. A row is linked only when its label resolves to one unique canonical repreneur. Ambiguous or absent identities remain unlinked with staff review evidence; no new profile is invented and no opportunity stores the label as free text.
 
 ### Atomic intake write boundary
 
@@ -256,7 +262,7 @@ An omitted key preserves the existing value; an explicit JSON `null` clears it. 
 
 Migration 076 explicitly revokes and drops any intermediate seven-argument opportunity save/create RPC overloads before it defines the final JSONB signatures. A rerun therefore cannot leave a granted pre-allowlist write path behind.
 
-Before W-010 stages the real workbook, the additive date-precision release must extend the atomic write contract so `date_added` and `date_added_precision` are validated and written together. The current production RPC allowlist above does not yet accept the companion field and must not be used to normalize month/year-only values.
+W-010 extended the cutover write boundary so `date_added` and `date_added_precision` were validated and activated together for the approved workbook. Later staff intake or correction must continue to write or clear that pair atomically; no ordinary caller may normalize a month-only value through the earlier date-only allowlist.
 
 ### W-065 staff source-review boundary
 
@@ -504,9 +510,81 @@ This is the authoritative W-001 operating contract for supported lifecycle actio
 
 The cutover mapper uses the workbook structure as input. The workbook does not define the WAVE architecture.
 
+### Post-cutover authority and approved source interpretations
+
+W-010 switched production authority to WAVE on 2026-07-28. Colin's approved workbook and his 2026-07-29 Slack answers remain read-only source evidence for reconciliation; they are not a recurring synchronization feed and cannot overwrite later staff changes in WAVE.
+
+For the approved snapshot, `Secteur_code` and `Geo_code` take precedence over the adjacent free-text label and confidence columns. Exactly one recognized code that resolves to exactly one approved mapping produces a `confirmed` reconciliation outcome, even when the adjacent label differs or the confidence cell is not `OK`; those cells do not by themselves create a conflict. A blank, malformed, multiple, unknown or non-resolving code produces `review` and is never guessed. These are source-vocabulary aliases retained in the reconciliation/version evidence only: WAVE persists its canonical sector label and geography-node identity, not the workbook code.
+
+#### Sector source-code map
+
+| `Secteur_code` | Canonical WAVE sector |
+| --- | --- |
+| `AGR` | Agroalimentaire |
+| `INM` | Industrie manufacturière |
+| `INL` | Industrie lourde |
+| `PHA` | Industrie pharmaceutique & Dispositifs médicaux |
+| `SAN` | Services de santé |
+| `AUT` | Automobile & Mobilité |
+| `TEX` | Textile, Luxe & Mode |
+| `COM` | Commerce, Négoce & Distribution |
+| `BTP` | BTP & Construction |
+| `SRB` | Services aux entreprises (B2B) |
+| `SRC` | Services aux particuliers (B2C) |
+| `TEC` | Tech & Digital |
+| `ENV` | Environnement & Énergie |
+| `HOT` | Hôtellerie, Restauration & Loisirs |
+| `TRA` | Transport & Logistique |
+| `ZZZ` | Autre |
+
+The workbook's 12 qualified values `ZZZ (EDUCATION-FORMATION)` and `ZZZ (PRODUITS DE CONSOMMATION ET SERVICES)` use the `ZZZ` rule. WAVE stores `Autre` as the canonical sector and retains the parenthesized qualifier only in the staff-only per-row reconciliation evidence; it does not write the qualifier to `activity`, create another opportunity field or invent a narrower approved sector.
+
+#### Geography source-code map
+
+| `Geo_code` | Approved meaning | `Geo_code` | Approved meaning |
+| --- | --- | --- | --- |
+| `FR` | France | `DE` | Allemagne |
+| `BE` | Belgique | `ES` | Espagne |
+| `IT` | Italie | `LU` | Luxembourg |
+| `MC` | Monaco | `NL` | Pays-Bas |
+| `PT` | Portugal | `GB` | Royaume-Uni |
+| `CH` | Suisse | `IDF` | Île-de-France |
+| `NE` | Nord-Est | `GO` | Grand-Ouest |
+| `SO` | Sud-Ouest | `SE` | Sud-Est |
+| `OM` | Outre-Mer | `AU` | Auvergne-Rhône-Alpes |
+| `NA` | Nouvelle-Aquitaine | `OC` | Occitanie |
+| `PA` | Provence-Alpes-Côte d'Azur | `COR` | Corse |
+| `BR` | Bretagne | `NO` | Normandie |
+| `PL` | Pays de la Loire | `CVL` | Centre-Val de Loire |
+| `HDF` | Hauts-de-France | `GE` | Grand Est |
+| `BFR` | Bourgogne-Franche-Comté | `DOM` | DOM-TOM |
+
+The approved workbook uses `BFC` on four Bourgogne-Franche-Comté rows while Colin's supplied map names that geography `BFR`. `BFC` is an accepted source compatibility alias of canonical `BFR`; it is not a second geography node and does not change the opportunity reference. W-039 preserves the literal `opportunities.location` display value and resolves the source code to a stable geography node. The map records source meaning for foreign countries but does not by itself activate foreign-country matching.
+
+### Acceptance contract for post-cutover follow-up
+
+The W-071 opportunity-reconciliation release is complete only when:
+
+1. A read-only preflight accounts for all 148 approved source rows and reports each `Secteur_code`, `Geo_code`, title and positioned-repreneur decision before any write.
+2. All 148 sector rows resolve through the map above, including the 12 qualified `ZZZ (...)` values; the qualifier remains staff-only and no narrower sector is invented.
+3. All 148 geography rows resolve through the map above, including the four `BFC` aliases; `opportunities.location` remains byte-for-byte unchanged and foreign-country matching remains inactive.
+4. The release separately reports 109 blank source title cells and the 20 live newly created Draft/staff-only title gaps. It never clears a non-blank WAVE title and never exposes a titleless opportunity.
+5. The 26 positioned-repreneur labels reconcile to 20 already linked unique identities plus six explicit review outcomes unless current canonical identity evidence supports a different exact result. Ambiguous or absent identities remain unlinked.
+6. Because WAVE became authoritative at cutover, a source-derived correction may write only when the current WAVE field still matches its retained cutover state or staff explicitly approves the divergence. A later WAVE edit always wins over stale workbook evidence.
+7. A transactional rehearsal, rollback proof, post-write aggregate comparison, staff browser QA and repreneur confidentiality QA pass before production closure.
+
+The W-072 purpose-aware email-suppression release is complete only when:
+
+1. Exactly the 18 named W-010 contacts with retained source evidence receive structured campaign suppression; the excluded nameless source row does not create a person.
+2. Suppressed contacts are absent from campaign and bulk audiences, and the final send boundary rejects a direct-address campaign attempt.
+3. A synthetic, actively linked opportunity contact can receive an allowlisted NDA request through the operational path, while the same contact cannot receive a non-allowlisted or unlinked message.
+4. The send evidence records contact, opportunity, purpose, actor, idempotency and final delivery outcome without weakening the existing source-review, role or provider-ambiguity controls.
+5. Setting, changing and removing suppression creates immutable actor, time and reason evidence; browser roles cannot bypass the service boundary and repreneur projections expose no suppression state.
+6. Focused tests, migration rehearsal, full lint/build checks and staff-role browser QA pass. No real contact receives a test message.
+
 ### One-time cutover rules
 
-1. Excel remains operationally authoritative until Ivan announces the production switch. WAVE data remains test data until then.
+1. Before the completed 2026-07-28 switch, Excel remained operationally authoritative and WAVE import rows remained controlled cutover data. After the switch, WAVE owns every correction and future activity; the workbook is read-only evidence.
 2. There is one production cutover import. Before approval, a revised workbook may replace the pending stage rows in the same run; it does not create a recurring sync. Once approved, a revision must use the controlled supersession path, which retains the sanitized manifest but purges every temporary row and issue before closing that run.
 3. Source rows and temporary mappings are staged outside the live domain tables in `ma_cutover_runs`, `ma_cutover_stage_rows` and `ma_cutover_stage_issues`. Missing or conflicting information is never invented. Every staged firm, office, contact and affiliation has an explicit reviewed resolution: `create`, or `reuse` with its reviewed canonical WAVE ID. A matching name, email or office never auto-reuses a live record.
 4. An incomplete opportunity remains an import exception until it has a source office, description, named primary contact and usable primary email.
@@ -529,7 +607,7 @@ Migration 078 is a live but empty cutover foundation, not an import launch. It a
 
 The approval digest is owned and recomputed by PostgreSQL with `pgcrypto` SHA-256 over a canonical, ordered serialization of the manifest, every staged row and every staged issue. It includes the algorithm-tagged source fingerprint, exact lowercase raw-content SHA-256 source hash, sanitized reconciliation summary and structured review decisions; the stored and activation-supplied digests must match that recomputation. An issue resolution timestamp is serialized as UTC-stable epoch microseconds, never a session-time-zone-dependent timestamp string. `review_decisions.approved_opportunity_fields` is the only optional-field authorization and may contain only `sector`, `activity`, `location`, `revenue_meur`, `ebitda_keur`, `headcount`, `headcount_range`, `date_added`, `public_title`, `teaser_summary`, and `internal_notes`. Each field must be both explicitly staged and approved. A missing metric or date remains `null`; an invalid supplied metric or date is a blocker, and approval as well as activation rejects unresolved blockers.
 
-That paragraph describes the production-verified W-020 foundation. Before the real workbook is staged, an additive W-010 release must incorporate the derived `date_added_precision`, raw date parsing decision and exact test-data replacement manifest into the database-owned digest and activation checks. Documentation approval alone does not make those controls live.
+That paragraph describes the production-verified W-020 foundation. W-010 subsequently incorporated derived `date_added_precision`, raw date parsing decisions and the exact test-data replacement manifest into the database-owned digest and activation checks before the approved production activation.
 
 The source fingerprint must be exactly `sha256:<64 lowercase hexadecimal characters>` and must be computed before staging from a non-retained provenance representation; a literal filename, workbook ID or source identifier is invalid. The source hash is the separate raw-content SHA-256 checksum. Stage temporary IDs and relationship keys are bounded tokens; locators are bounded flat objects with only source workbook/sheet/row/key fields; and payloads are bounded flat objects whose keys are allowlisted by entity type. This prevents raw workbook blobs, arbitrary nested JSON and unbounded identifiers from being parked in staging. A stage issue that names a row uses the same-run composite foreign key, so it cannot point at a row belonging to another run; a null row reference remains valid for a run-level issue. The retained manifest keeps only the fingerprint/hash, actor and time fields, sanitized aggregate reconciliation, allowlisted review decisions, immutable digest and sanitized aggregate result. Stage locators, normalized payloads, temporary IDs and issues are temporary evidence only and are purged after activation or controlled supersession.
 
@@ -567,6 +645,7 @@ Every staged office also declares the boolean `isSyntheticDefault`. `true` means
 | Managed offices | Additional affiliations | Split and validate each office |
 | Duplicate candidate | Staged `create` or `reuse` resolution | A reviewer binds a reuse to the canonical ID; matching name or email alone never merges a person |
 | Email, phone and LinkedIn | `ma_contacts` | Email is not globally unique; apply the multi-email exception rules above |
+| Unsubscribe or do-not-email marker | `ma_contacts.campaign_email_suppressed` plus immutable change evidence | Set campaign suppression for the 18 named flagged contacts. Preserve the imported note until structured backfill and final-send enforcement are verified. Do not apply the marker to opportunity-specific operational email authorization |
 | Repeated firm website and region | Derived from office | Do not duplicate on the contact |
 
 ### Opportunity rows
@@ -576,23 +655,23 @@ Every staged office also declares the boolean `isSyntheticDefault`. `true` means
 | Mandate reference | `opportunities.reference` | Required and unique |
 | Opportunities worksheet, column B | Temporary source office ID | Maps to `source_office_id`; required before activation and deleted after cutover |
 | Source name | Validation evidence | Do not retain a duplicate source relationship |
-| Location and source geography label | `opportunities.location` plus temporary geography decision | Write location only when the staged value and manifest both approve it; retain only source label plus `confirmed`, `review` or `null` during cutover; do not infer a code |
-| Sector and activity | `opportunities.sector`, `activity` | Write only when explicitly staged and included in the approved manifest allowlist |
+| Location and source geography label | `opportunities.location` plus `geography_node_id` | Preserve the literal display value. Resolve a valid `Geo_code` through the approved map; accept workbook `BFC` only as an alias of canonical `BFR`. Retain the source alias only in reconciliation evidence. Blank, unknown or conflicting codes remain review exceptions |
+| Sector | `opportunities.sector` | Resolve valid `Secteur_code` values to the approved canonical label. Qualified `ZZZ (...)` values map to `Autre`; retain the qualifier only in the staff-only per-row reconciliation evidence and do not write `activity` or persist a second taxonomy |
 | Description | `opportunities.description` | Required before activation |
 | Revenue, EBITDA, headcount and range | Opportunity metrics | Write only when explicitly staged and approved; missing remains `null`, while an invalid supplied value blocks activation |
 | Date added | `opportunities.date_added`, `opportunities.date_added_precision` | A full date maps to precision `day`; month/year maps to the first of that month plus precision `month`. Both values must be staged, digest-bound and activated together; missing remains `null`, while invalid or mismatched precision blocks activation |
-| Platform title and teaser | `opportunities.public_title`, `teaser_summary` | Write only when explicitly staged and approved; this does not make it repreneur-visible |
-| Positioned repreneur | Existing match or pursuit | Never store as free text on the opportunity |
+| Platform title and teaser | `opportunities.public_title`, `teaser_summary` | A non-blank approved source value may be written; a blank source cell never clears an existing WAVE value. A title does not itself make an opportunity repreneur-visible |
+| Positioned repreneur | Existing match or pursuit | Colin confirmed the source list is current, but WAVE links only a unique canonical identity. Ambiguous or absent people remain unlinked with review evidence; never store the label as free text |
 | Associated contact email | Temporary contact matching evidence | Convert to an affiliation and opportunity contact; do not retain as the relationship |
 | Notes | `opportunities.internal_notes` | Staff only; write only when explicitly staged and approved |
 
 ## Current implementation reconciliation
 
-Verified against the live Supabase schema through migrations 076 to 078 on 2026-07-26. Migrations 076 to 078 were applied to production and schema-verified on 2026-07-26. Production contains the canonical firm, office, contact, affiliation and opportunity-contact model; the legacy M&A objects are read-only compatibility evidence. The cutover manifest and staging boundary are live but empty, and no real workbook activation has occurred.
+Verified against the live Supabase schema through migration 082 and the W-010 production activation. Migrations 076 to 082 are live. Production contains the canonical firm, office, contact, affiliation, opportunity-contact, interaction and NDA-artifact foundations; the legacy M&A objects are read-only compatibility evidence.
 
 Gate 2 executed the final 076 to 078 sequence on 2026-07-26 in a disposable Supabase-compatible project whose six-table pre-076 M&A baseline was compared with the live schema catalog before any synthetic row was added. Runtime verification covered fail-closed invalid legacy data, current and historical contact bridging, email-only legacy retention, canonical and cutover privileges, lifecycle and digest rejection, two-contact activation with one primary, UTC/Rome digest equality, normalized-firm concurrency, stage-mutation and supersession serialization, transactional rollback and temporary-evidence purge. Gate 2 exposed and corrected an invalid legacy-affiliation backfill join in migration 076 and ambiguous activation-local identifiers in migration 078.
 
-Production application on 2026-07-26 preserved 21 legacy source firms as 21 canonical firms and offices, 20 named contacts and affiliations, and 18 valid active opportunity-contact relationships with exactly one primary each. One test opportunity that had no named source contact was explicitly returned to `draft` and `staff_only` before migration; its two match records were preserved. Post-migration checks found no active opportunity without a source office, no active office mismatch, no temporary cutover rows, no legacy service-role write grant, and no anonymous or authenticated canonical-table access.
+The 2026-07-28 W-010 activation reconciled all 148 approved opportunity references: 111 existing records were updated in place and 37 were created as Draft/staff-only. It retained existing UUIDs, lifecycle states, public titles, teasers, matches, documents and interactions; created or reconciled 229 firms, 431 offices, 575 named contacts, 603 active affiliations and 211 active opportunity-contact links; and purged temporary rows and issues atomically. Live verification found zero cross-office link violations. Twenty high-confidence positioned-repreneur labels became Draft matches, six ambiguous or absent identities remained unlinked, 18 named suppressed contacts retained a warning note, and 20 new Draft/staff-only opportunities remained without a live public title. WAVE is authoritative after this activation.
 
 Migration 082 was applied to production on 2026-07-27 before application commit `d9bee7b` was deployed as Vercel deployment `dpl_DGYZPx2XGVLyJ2PFd1C1USDmg9fy`. Aggregate verification found the artifact table, enum, registration function, forced RLS, two artifact-table guards and linked-document guard present; browser roles had no access, the service role had read plus registration-service access but no direct write grant, and artifact, scope, document, digest, storage-path, pursuit, version-chain and legacy-promotion counts were all zero. No legacy NDA link was backfilled. Staff desktop and mobile QA showed the three retained PDF roles and compatibility warning; the repreneur persona was redirected to `/portal/deals` on both viewports, and no file was uploaded or operational record changed during release QA.
 
@@ -610,12 +689,12 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | --- | --- | --- | --- |
 | `ma_sources` | Interim firm-level source record. Embedded contact fields are deprecated compatibility fields after migration 072 | Retain as a read-compatibility bridge for existing records only; do not create it as a condition of new opportunity activation | Live, service-role read-only compatibility bridge |
 | `ma_firms`, `ma_offices` | Canonical firm and operating-office model live since migration 076 | Backfilled one synthetic default office per legacy source and preserve `ma_sources` only as compatibility evidence | Live and production-verified |
-| `ma_contacts`, `ma_contact_office_affiliations` | Canonical people and current/historical office affiliations live since migration 076 | A legacy email-only or phone-only row stays only in the bridge until staff supplies a name | Live and production-verified |
+| `ma_contacts`, `ma_contact_office_affiliations` | Canonical people and current/historical office affiliations live since migration 076. W-010 retained 18 named do-not-email markers as staff notes only | Add person-level campaign suppression plus immutable change evidence. Enforce it at audience selection and the final campaign-send boundary while allowing only audited, allowlisted opportunity-specific operational messages | Core identity live; purpose-aware suppression is an approved target gap |
 | `opportunity_ma_contacts` | Canonical office-affiliation opportunity links live since migration 076 | Snapshot contact attribution and retain `opportunity_source_contacts` for existing history | Live and production-verified |
-| `ma_cutover_runs`, `ma_cutover_stage_rows`, `ma_cutover_stage_issues` | Live, service-role-only one-time cutover boundary; all three tables were empty after release | The retained run manifest holds constrained source fingerprint/hash, sanitized aggregate reconciliation, allowlisted decisions, actor/times and immutable approval digest; temporary identifiers and rows are purged after successful activation or controlled supersession | Live and empty; no real workbook imported |
+| `ma_cutover_runs`, `ma_cutover_stage_rows`, `ma_cutover_stage_issues` | Service-role-only one-time cutover boundary used by W-010; the approved run is retained and temporary rows/issues were purged after activation | Retain only the constrained manifest evidence. Do not reuse the boundary as a recurring import or synchronization path | W-010 production activation complete; WAVE is authoritative |
 | `ma_provisional_source_contexts`, `ma_provisional_source_review_events`, `ma_source_email_send_reservations` | Migration 079 provisions exactly one shared Acme Co. / Acme Paris context with Bertrand's existing canonical contact, plus immutable assignment/resolution snapshots, database guards on the complete fixed identity chain, and a content-free two-minute external-send reservation | Keep Acme as provisional operational context only. Compute review-required from canonical source office plus unresolved append-only evidence; block opportunity close/archive, existing external intermediary email, and cutover approval/activation until resolution. The email action performs the required review RPC, then reserves the opportunity row across context load, canonical pending evidence, provider delivery and finalization so a concurrent assignment/resolution cannot change the source between check and send. Explicit success or failure releases the reservation after finalization; an ambiguous provider outcome remains pending and blocks retry for reconciliation. The fixed Bertrand guard checks the supplied display name and independently derives the effective display name from normalized first/last-name components, so it remains authoritative for display-only writes and regardless of migration 076 trigger firing order. Acme assignment and cutover readiness share one transaction lock; approved/activating runs block a new assignment, while an activated historical run does not permanently disable later ordinary Acme use. W-065 provides a staff-only banner, list badge/filter and resolver form that uses only the existing service-only primitive and projects only a computed boolean. | W-064 and W-065 live and production-verified on 2026-07-27; zero browser-role source-review exposure |
-| `opportunities.date_added_precision` | No companion precision field exists, so a first-of-month normalization would appear to be an exact source date | Add the controlled `day` or `month` field; update atomic writes, staging, digest, role-specific projections, display, exports and tests together | Approved target gap; blocks W-010 workbook staging |
-| W-010 test-data replacement manifest | The live W-020 cutover manifest does not inventory or back up existing production test opportunities and matches | Add an immutable backup plus an exact ID, object-type and count manifest before any replacement or deletion | Approved target gap; blocks W-010 activation |
+| `opportunities.date_added_precision` | W-010 stored all 148 source dates with month precision and retained the parsing decision in the cutover evidence | Preserve month precision through display, export and any later correction; never present the technical first day as a source event day | Live and production-verified for W-010 |
+| W-010 test-data replacement manifest | The W-010 release retained exact backup and replacement evidence before the controlled production switch | Keep the evidence immutable; do not treat it as authority for future deletions | W-010 production activation complete |
 | `ma_source_networks` | Migration 074 created an optional grouping object for legacy firms | Keep it as read-only compatibility grouping. It cannot own workflow, scoring, reporting, contacts or opportunities; canonical firms use optional `network_label` | Legacy read-only compatibility bridge; canonical `network_label` live |
 | `ma_source_contacts` | Migration 072 supports several contacts per firm-level source; migration 075 allows a contact record to move between sources | Retain as read-only legacy evidence; canonical identity plus office affiliations own new relationships | Live, service-role read-only compatibility bridge |
 | `ma_source_contact_moves` | Migration 075 keeps append-only old and new source and contact details | Preserve the audit while canonical office affiliation history owns current relationships | Live, service-role read-only compatibility evidence; W-062 still owns interaction history |
@@ -648,7 +727,7 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | `opportunity_nda_artifacts.*` | Retain all versions as immutable staff-only evidence. Never infer a canonical artifact from legacy match NDA fields or use artifact presence alone as gate, disclosure or delivery authority |
 | `opportunities.repreneur_exposure` | Legacy compatibility field only. Do not expose it as a W-061 intake, import or target disclosure control. The atomic service writes `staff_only` for new records and draft transitions solely to prevent old portal reads from publishing them; it preserves existing visible active records. Visibility remains a separate match, staff-assignment and confidentiality decision |
 | `opportunities.origin_channel` or any sourcing-channel field | Not a W-061 target and not an import mapping. Do not add one without a new approved operating use case |
-| Cutover geography label and decision | Stay in temporary staging and aggregate manifest decisions. Do not infer a canonical geography code; write `opportunities.location` only when the approved manifest explicitly approves that text |
+| Cutover geography label and decision | Preserve the literal `opportunities.location` display value. Post-cutover reconciliation maps valid `Geo_code` through the approved source map into `geography_node_id`; `BFC` is a source alias of `BFR`. The source code remains mapping evidence only. Blank, unknown or conflicting codes remain explicit review exceptions |
 
 The live model is now office-centred. The pre-076 firm-level source, contact and contact-move objects remain read-only compatibility evidence alongside the confidentiality wall; they are not a second write model. Do not roll back current history or confidentiality controls.
 
@@ -709,6 +788,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-30 | 4.0 | Recorded W-010's completed production activation and Colin's post-cutover operating decisions. Source `Secteur_code` and `Geo_code` now drive a bounded one-time reconciliation into canonical WAVE sector labels and geography nodes without becoming permanent source-code fields; qualified `ZZZ (...)` and `BFC` compatibility are explicit; the 109 source-title blanks are distinguished from the 20 live Draft title tasks; positioned repreneurs require unique canonical identities; and person-level campaign suppression blocks campaign/general outreach while permitting only audited, allowlisted opportunity-specific operational messages beginning with NDA requests. These new reconciliation and suppression rules are approved target behavior, not live implementation. | W-010, W-017, W-039, W-060, W-071 and W-072 |
 | 2026-07-28 | 3.0 | Approved the original source teaser as a separate retained `source_teaser` document that is permanently staff-only, cannot be promoted for repreneur access, and never replaces the anonymized summary or a separately controlled repreneur-facing teaser; implementation remains required | W-069 |
 | 2026-07-27 | 2.5.1 | Applied migration 082 and released application commit `d9bee7b` through Vercel deployment `dpl_DGYZPx2XGVLyJ2PFd1C1USDmg9fy`. Production has the expected forced-RLS table, enum, registration service and immutability guards; browser access and direct service writes are denied, all release integrity counts are zero, no legacy NDA link was promoted and no artifact was created during release. Staff desktop/mobile QA showed all three retained roles and compatibility separation; repreneur desktop/mobile access redirected to `/portal/deals`, with no upload, email or operational mutation. | W-043 production release; migration 082 |
 | 2026-07-27 | 2.5 | Added the checked-in W-043 implementation candidate: immutable, versioned staff-only blank-template, Re-New-signed and repreneur-signed NDA artifacts; private PDF-only registration with unique non-overwriting object paths and SHA-256 evidence; retained linked documents; no legacy promotion; and explicit separation from Gate 1, Gate 2, source disclosure and E4/E6/E7. Migration 082 is not applied to production. | W-043 foundation; migration 082 |
