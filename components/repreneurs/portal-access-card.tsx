@@ -127,7 +127,12 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
             <CardDescription>Staff-controlled login for the external repreneur portal.</CardDescription>
           </div>
           <Badge variant={status.enabled ? "default" : "secondary"} className="w-fit">
-            {status.enabled ? (
+            {status.portalEmailValidationError ? (
+              <>
+                <AlertCircle data-icon="inline-start" />
+                Recipient invalid
+              </>
+            ) : status.enabled ? (
               <>
                 <ShieldCheck data-icon="inline-start" />
                 Enabled
@@ -149,19 +154,39 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
         <div className="grid gap-3 text-sm md:grid-cols-4">
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Auth user</p>
-            <p className="font-medium">{status.hasAuthUser ? "Linked" : "Missing"}</p>
+            <p className="font-medium">
+              {status.portalEmailValidationError
+                ? "Not checked"
+                : status.hasAuthUser
+                  ? "Linked"
+                  : "Missing"}
+            </p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Password login</p>
-            <p className="font-medium">{status.hasCredentialAccount ? "Ready" : "Missing"}</p>
+            <p className="font-medium">
+              {status.portalEmailValidationError
+                ? "Not checked"
+                : status.hasCredentialAccount
+                  ? "Ready"
+                  : "Missing"}
+            </p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Active sessions</p>
-            <p className="font-medium">{status.activeSessionCount}</p>
+            <p className="font-medium">
+              {status.portalEmailValidationError
+                ? "Not checked"
+                : status.activeSessionCount}
+            </p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Last access email</p>
-            <p className="font-medium">{formatDate(status.lastAccessEmailSentAt)}</p>
+            <p className="font-medium">
+              {status.portalEmailValidationError
+                ? "Not checked"
+                : formatDate(status.lastAccessEmailSentAt)}
+            </p>
           </div>
         </div>
 
