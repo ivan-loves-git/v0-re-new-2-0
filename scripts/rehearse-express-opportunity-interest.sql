@@ -48,6 +48,13 @@ CREATE TYPE public.opportunity_pursuit_stage AS ENUM (
   'closed',
   'dropped'
 );
+CREATE TYPE public.opportunity_nda_status AS ENUM (
+  'not_required',
+  'required',
+  'sent',
+  'signed',
+  'waived'
+);
 
 CREATE TABLE public.repreneurs (
   id UUID PRIMARY KEY,
@@ -77,6 +84,10 @@ CREATE TABLE public.opportunity_matches (
   created_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  nda_status public.opportunity_nda_status NOT NULL DEFAULT 'not_required',
+  nda_signed_at TIMESTAMPTZ,
+  nda_waived_at TIMESTAMPTZ,
+  nda_waived_by TEXT,
   interest_expressed_at TIMESTAMPTZ,
   interest_notification_sent_at TIMESTAMPTZ,
   UNIQUE (opportunity_id, repreneur_id)
@@ -99,7 +110,9 @@ VALUES
   ('20000000-0000-4000-8000-000000000004', 'W067-INACTIVE', 'paused', 'anonymized'),
   ('20000000-0000-4000-8000-000000000005', 'W067-SELF-PURSUIT', 'active', 'anonymized'),
   ('20000000-0000-4000-8000-000000000006', 'W067-HISTORY', 'active', 'anonymized'),
-  ('20000000-0000-4000-8000-000000000007', 'W067-RECONSIDER', 'active', 'anonymized');
+  ('20000000-0000-4000-8000-000000000007', 'W067-RECONSIDER', 'active', 'anonymized'),
+  ('20000000-0000-4000-8000-000000000008', 'W067-INVALID-SIGNED-NDA', 'active', 'anonymized'),
+  ('20000000-0000-4000-8000-000000000009', 'W067-INVALID-WAIVED-NDA', 'active', 'anonymized');
 
 INSERT INTO public.opportunity_matches (
   opportunity_id,
@@ -172,6 +185,49 @@ VALUES
     '2026-07-30 08:00:00+00',
     'staff-fixture'
   );
+
+-- Mirror a production legacy row that predates the evidence constraint. The
+-- constraint remains NOT VALID so existing incomplete evidence is retained,
+-- while migration 084 must avoid mutating or reinterpreting it.
+INSERT INTO public.opportunity_matches (
+  opportunity_id,
+  repreneur_id,
+  status,
+  nda_status,
+  nda_signed_at,
+  created_by
+)
+VALUES
+  (
+    '20000000-0000-4000-8000-000000000008',
+    '10000000-0000-4000-8000-000000000001',
+    'proposed',
+    'signed',
+    NULL,
+    'legacy-fixture'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000009',
+    '10000000-0000-4000-8000-000000000001',
+    'proposed',
+    'waived',
+    NULL,
+    'legacy-fixture'
+  );
+
+ALTER TABLE public.opportunity_matches
+  ADD CONSTRAINT opportunity_matches_signed_requires_evidence
+  CHECK (nda_status <> 'signed' OR nda_signed_at IS NOT NULL)
+  NOT VALID,
+  ADD CONSTRAINT opportunity_matches_waived_requires_evidence
+  CHECK (
+    nda_status <> 'waived'
+    OR (
+      nda_waived_at IS NOT NULL
+      AND NULLIF(BTRIM(nda_waived_by), '') IS NOT NULL
+    )
+  )
+  NOT VALID;
 
 \ir 084_express_opportunity_interest.sql
 \ir 084_express_opportunity_interest.sql
@@ -302,6 +358,24 @@ SELECT public.w067_assert_raises(
   )$$,
   'interest_not_available'
 );
+SELECT public.w067_assert_raises(
+  $$SELECT * FROM public.express_opportunity_interest(
+    '20000000-0000-4000-8000-000000000008',
+    '10000000-0000-4000-8000-000000000001',
+    'repreneur-user-1',
+    NOW()
+  )$$,
+  'interest_not_available'
+);
+SELECT public.w067_assert_raises(
+  $$SELECT * FROM public.express_opportunity_interest(
+    '20000000-0000-4000-8000-000000000009',
+    '10000000-0000-4000-8000-000000000001',
+    'repreneur-user-1',
+    NOW()
+  )$$,
+  'interest_not_available'
+);
 
 DO $$
 DECLARE
@@ -358,6 +432,31 @@ BEGIN
     WHERE status = 'active_pursuit'
   ) <> 2 THEN
     RAISE EXCEPTION 'Interest signaling created or removed an active pursuit';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.opportunity_matches
+    WHERE opportunity_id = '20000000-0000-4000-8000-000000000008'
+      AND repreneur_id = '10000000-0000-4000-8000-000000000001'
+      AND status = 'proposed'
+      AND nda_status = 'signed'
+      AND nda_signed_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Legacy incomplete NDA evidence was mutated or inferred';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.opportunity_matches
+    WHERE opportunity_id = '20000000-0000-4000-8000-000000000009'
+      AND repreneur_id = '10000000-0000-4000-8000-000000000001'
+      AND status = 'proposed'
+      AND nda_status = 'waived'
+      AND nda_waived_at IS NULL
+      AND nda_waived_by IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Legacy incomplete NDA waiver was mutated or inferred';
   END IF;
 END;
 $$;

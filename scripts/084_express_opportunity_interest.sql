@@ -47,6 +47,24 @@ BEGIN
     RAISE EXCEPTION 'interest_not_available' USING ERRCODE = 'P0001';
   END IF;
 
+  -- Some legacy rows predate the evidence constraints and may carry a signed
+  -- or waived label without its required audit evidence. Updating any column
+  -- on those rows would trip the NOT VALID constraint. Fail closed instead of
+  -- inferring evidence, clearing confidentiality history, or exposing a raw
+  -- database error to the repreneur.
+  IF v_has_match AND (
+    (v_match.nda_status = 'signed' AND v_match.nda_signed_at IS NULL)
+    OR (
+      v_match.nda_status = 'waived'
+      AND (
+        v_match.nda_waived_at IS NULL
+        OR NULLIF(BTRIM(v_match.nda_waived_by), '') IS NULL
+      )
+    )
+  ) THEN
+    RAISE EXCEPTION 'interest_not_available' USING ERRCODE = 'P0001';
+  END IF;
+
   -- The existing partial unique index remains the concurrency authority for
   -- active pursuits. We lock another owner's row only to serialize a drop or
   -- reassignment with this signal; it is not modified here.

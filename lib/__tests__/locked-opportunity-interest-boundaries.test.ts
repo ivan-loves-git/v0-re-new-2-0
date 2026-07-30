@@ -39,6 +39,11 @@ describe("locked opportunity interest boundaries", () => {
     expect(migrationSource).toContain("FROM PUBLIC, anon, authenticated")
     expect(migrationSource).toContain("v_has_match")
     expect(migrationSource).toContain("interest_expressed_at IS NULL")
+    expect(migrationSource).toContain("v_match.nda_status = 'signed'")
+    expect(migrationSource).toContain("v_match.nda_signed_at IS NULL")
+    expect(migrationSource).toContain("v_match.nda_status = 'waived'")
+    expect(migrationSource).toContain("v_match.nda_waived_at IS NULL")
+    expect(migrationSource).toContain("BTRIM(v_match.nda_waived_by)")
   })
 
   it("does not introduce queue, ranking, timer, or reassignment behavior", () => {
