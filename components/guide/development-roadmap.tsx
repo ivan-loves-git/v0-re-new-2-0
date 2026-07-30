@@ -26,6 +26,29 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Jul 30, 2026",
+    version: "0.9.36",
+    title: "Every eligible deal now has a clear, safer next action",
+    isCompleted: true,
+    events: [
+      {
+        title: "Repreneurs can express interest across the full eligible deal flow",
+        type: "feature",
+        description: "Unassigned and already-positioned opportunities now accept the same interest signal as staff-selected deals, without creating a pursuit, queue, reassignment or new disclosure.",
+      },
+      {
+        title: "Existing pursuits remain protected",
+        type: "decision",
+        description: "A signal on a positioned opportunity leaves the current candidate and pursuit untouched, while staff receives wording that reflects whether the deal is unassigned or already in pursuit.",
+      },
+      {
+        title: "Portal access changes fail before an invalid recipient can be used",
+        type: "fix",
+        description: "Staff can see the exact portal recipient before acting; malformed addresses block access grants, repairs and resends while emergency revocation remains available.",
+      },
+    ],
+  },
+  {
+    period: "Jul 30, 2026",
     version: "0.9.35",
     title: "Contact email preferences now protect every M&A workflow",
     isCompleted: true,
