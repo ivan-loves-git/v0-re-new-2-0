@@ -236,16 +236,15 @@ describe("W-072 purpose-aware M&A contact email suppression", () => {
     )
   })
 
-  it("keeps the candidate and its synthetic-only proof in the canonical contract", () => {
+  it("keeps the live release and its synthetic-only proof in the canonical contract", () => {
     expect(contract).toContain(
-      "Migration 083 is the W-072 implementation candidate.",
+      "Migration 083 is the live W-072 implementation.",
     )
     expect(contract).toContain(
-      "migration-083 W-072 candidate awaits production verification",
+      "W-072 live and production-verified on 2026-07-30",
     )
-    expect(contract).toContain(
-      "Migration 083 remains unapplied to production.",
-    )
+    expect(contract).toContain("dpl_3oLejSgvXARqTRpsCucHF6ks1xKd")
+    expect(contract).toContain("`10.4845fe4`")
     const rehearsal = source(
       "scripts/rehearse-ma-contact-email-suppression.sql",
     )

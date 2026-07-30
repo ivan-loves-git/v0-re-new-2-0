@@ -5,7 +5,7 @@
 | Item | Value |
 | --- | --- |
 | Status | Approved and live contract |
-| Implementation status | Migrations 076 to 082 are live and schema-verified. W-010 activated Colin's approved 28 July workbook in production on 2026-07-28: WAVE is now the sole operational record for the imported snapshot and Excel is read-only evidence. The activation reconciled 148 opportunity references, 229 firms, 431 offices, 575 named contacts and 603 active affiliations; temporary staging was purged and the retained manifest contains only approved aggregate evidence. The canonical office/contact model, W-064 provisional Acme foundation, W-062 interaction persistence, W-066 staff Relationships workspace and W-043 staff-only NDA artifact foundation are live. W-072 now has a checked-in migration-083 implementation candidate, but it must not be described as live until the 18-contact backfill, send boundary and role behavior pass production verification. W-071 post-cutover reconciliation and W-069's permanently staff-only source-teaser retention remain approved target behavior and are not yet implemented. |
+| Implementation status | Migrations 076 to 083 are live and schema-verified. W-010 activated Colin's approved 28 July workbook in production on 2026-07-28: WAVE is now the sole operational record for the imported snapshot and Excel is read-only evidence. The activation reconciled 148 opportunity references, 229 firms, 431 offices, 575 named contacts and 603 active affiliations; temporary staging was purged and the retained manifest contains only approved aggregate evidence. The canonical office/contact model, W-064 provisional Acme foundation, W-062 interaction persistence, W-066 staff Relationships workspace, W-043 staff-only NDA artifact foundation and W-072 purpose-aware email suppression are live. W-071 post-cutover reconciliation and W-069's permanently staff-only source-teaser retention remain approved target behavior and are not yet implemented. |
 | Contract owner | Ivan Paudice, CTO and product owner |
 | Implementation owner | Dev team |
 | Business reviewers | Bertrand and Colin when a real operating case needs confirmation |
@@ -582,7 +582,7 @@ The W-072 purpose-aware email-suppression release is complete only when:
 5. Setting, changing and removing suppression creates immutable actor, time and reason evidence; browser roles cannot bypass the service boundary and repreneur projections expose no suppression state.
 6. Focused tests, migration rehearsal, full lint/build checks and staff-role browser QA pass. No real contact receives a test message.
 
-Migration 083 is the W-072 implementation candidate. It adds the person-level
+Migration 083 is the live W-072 implementation. It adds the person-level
 suppression state and current reason to `ma_contacts`, plus immutable
 `ma_contact_email_policy_events`. Exactly four machine-readable purposes exist:
 campaign, general relationship, opportunity general and opportunity NDA
@@ -603,6 +603,18 @@ The migration flushes the platform's existing deferred contact-integrity
 checks after the structured backfill and before installing the policy trigger.
 Its disposable rehearsal includes the same deferred-trigger condition so the
 production DDL ordering remains covered.
+
+Production release evidence on 2026-07-30: migration 083 backfilled exactly 18
+suppressed contacts and 18 immutable source events while retaining all 18
+original W-010 notes. Read-only verification found six active linked NDA
+exceptions, zero linked general-message permissions, forced RLS, no browser
+read/change privilege and zero non-backfill policy events. Application
+deployment `dpl_3oLejSgvXARqTRpsCucHF6ks1xKd` serves build `10.4845fe4`.
+Staff browser QA verified the contacts directory, required-reason control,
+general-message block, NDA-only exception and 390-pixel layout without saving
+or sending. Repreneur QA redirected the staff route to `/portal/deals` and
+exposed no policy state. Final verification retained 18 suppressions, zero
+removals, zero live exceptions and zero active reservations.
 
 ### One-time cutover rules
 
@@ -711,7 +723,7 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 | --- | --- | --- | --- |
 | `ma_sources` | Interim firm-level source record. Embedded contact fields are deprecated compatibility fields after migration 072 | Retain as a read-compatibility bridge for existing records only; do not create it as a condition of new opportunity activation | Live, service-role read-only compatibility bridge |
 | `ma_firms`, `ma_offices` | Canonical firm and operating-office model live since migration 076 | Backfilled one synthetic default office per legacy source and preserve `ma_sources` only as compatibility evidence | Live and production-verified |
-| `ma_contacts`, `ma_contact_office_affiliations`, `ma_contact_email_policy_events` | Canonical people and current/historical office affiliations live since migration 076. W-010 retained 18 named do-not-email markers as staff notes only | Migration 083 adds person-level campaign suppression, immutable change/exception evidence and service-only audience/final-send authorization. It backfills only the exact 18 retained W-010 markers and leaves the original notes intact | Core identity live; migration-083 W-072 candidate awaits production verification |
+| `ma_contacts`, `ma_contact_office_affiliations`, `ma_contact_email_policy_events` | Canonical people and current/historical office affiliations live since migration 076. W-010 retained 18 named do-not-email markers as staff notes only | Migration 083 adds person-level campaign suppression, immutable change/exception evidence and service-only audience/final-send authorization. It backfills only the exact 18 retained W-010 markers and leaves the original notes intact | W-072 live and production-verified on 2026-07-30 |
 | `opportunity_ma_contacts` | Canonical office-affiliation opportunity links live since migration 076 | Snapshot contact attribution and retain `opportunity_source_contacts` for existing history | Live and production-verified |
 | `ma_cutover_runs`, `ma_cutover_stage_rows`, `ma_cutover_stage_issues` | Service-role-only one-time cutover boundary used by W-010; the approved run is retained and temporary rows/issues were purged after activation | Retain only the constrained manifest evidence. Do not reuse the boundary as a recurring import or synchronization path | W-010 production activation complete; WAVE is authoritative |
 | `ma_provisional_source_contexts`, `ma_provisional_source_review_events`, `ma_source_email_send_reservations` | Migration 079 provisions exactly one shared Acme Co. / Acme Paris context with Bertrand's existing canonical contact, plus immutable assignment/resolution snapshots, database guards on the complete fixed identity chain, and a content-free two-minute external-send reservation | Keep Acme as provisional operational context only. Compute review-required from canonical source office plus unresolved append-only evidence; block opportunity close/archive, existing external intermediary email, and cutover approval/activation until resolution. The email action performs the required review RPC, then reserves the opportunity row across context load, canonical pending evidence, provider delivery and finalization so a concurrent assignment/resolution cannot change the source between check and send. Explicit success or failure releases the reservation after finalization; an ambiguous provider outcome remains pending and blocks retry for reconciliation. The fixed Bertrand guard checks the supplied display name and independently derives the effective display name from normalized first/last-name components, so it remains authoritative for display-only writes and regardless of migration 076 trigger firing order. Acme assignment and cutover readiness share one transaction lock; approved/activating runs block a new assignment, while an activated historical run does not permanently disable later ordinary Acme use. W-065 provides a staff-only banner, list badge/filter and resolver form that uses only the existing service-only primitive and projects only a computed boolean. | W-064 and W-065 live and production-verified on 2026-07-27; zero browser-role source-review exposure |
@@ -810,6 +822,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-07-30 | 4.1.0 | Released W-072 through migration 083 and application build `10.4845fe4`: exactly 18 imported contacts are suppressed with retained source notes and immutable backfill evidence; all six active linked NDA cases satisfy the narrow exception while linked general messages remain blocked. Staff desktop/mobile and repreneur-denial QA passed without a policy change or email send; final evidence contains zero live exceptions, removals or active reservations. | W-072 production release |
 | 2026-07-30 | 4.0.2 | Made migration 083 compatible with the existing deferred contact-integrity trigger by installing its check constraint before the backfill and flushing queued integrity checks before later contact DDL; the disposable rehearsal now mirrors that production condition. No production object survived the rejected first attempt. | W-072 migration-order correction |
 | 2026-07-30 | 4.0.1 | Added the checked-in W-072 implementation candidate: exact 18-person structured backfill with retained source notes, person-level suppression across affiliations, immutable staff change evidence, four machine-readable purposes with no generic bypass, an audited linked-opportunity NDA exception, final send authorization tied to the canonical interaction operation key, staff warnings and controlled removal. Migration 083 remains unapplied to production. | W-072 and migration 083 |
 | 2026-07-30 | 4.0 | Recorded W-010's completed production activation and Colin's post-cutover operating decisions. Source `Secteur_code` and `Geo_code` now drive a bounded one-time reconciliation into canonical WAVE sector labels and geography nodes without becoming permanent source-code fields; qualified `ZZZ (...)` and `BFC` compatibility are explicit; the 109 source-title blanks are distinguished from the 20 live Draft title tasks; positioned repreneurs require unique canonical identities; and person-level campaign suppression blocks campaign/general outreach while permitting only audited, allowlisted opportunity-specific operational messages beginning with NDA requests. These new reconciliation and suppression rules are approved target behavior, not live implementation. | W-010, W-017, W-039, W-060, W-071 and W-072 |
