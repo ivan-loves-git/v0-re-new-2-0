@@ -6,7 +6,7 @@ import { createLockedOpportunityInterestStore } from "@/lib/data/locked-opportun
 import { sendLockedOpportunityInterestEmail } from "@/lib/email/locked-opportunity-interest"
 import {
   LockedOpportunityInterestUnavailableError,
-  expressLockedOpportunityInterest,
+  expressOpportunityInterest,
 } from "@/lib/locked-opportunity-interest"
 
 type LockedOpportunityInterestActionState =
@@ -21,7 +21,7 @@ function readOpportunityId(formData: FormData) {
   return trimmed.length > 0 ? trimmed : null
 }
 
-export async function expressLockedOpportunityInterestAction(
+export async function expressOpportunityInterestAction(
   _previousState: LockedOpportunityInterestActionState,
   formData: FormData,
 ): Promise<LockedOpportunityInterestActionState> {
@@ -46,7 +46,7 @@ export async function expressLockedOpportunityInterestAction(
   const now = new Date().toISOString()
 
   try {
-    const outcome = await expressLockedOpportunityInterest(
+    const outcome = await expressOpportunityInterest(
       {
         opportunityId,
         repreneurId: access.repreneurId,
@@ -80,12 +80,12 @@ export async function expressLockedOpportunityInterestAction(
     if (error instanceof LockedOpportunityInterestUnavailableError) {
       return {
         status: "error",
-        message: "This opportunity is no longer available for the locked-interest action. Refresh the page to see its current status.",
+        message: "This opportunity is no longer available to express interest. Refresh the page to see its current status.",
         recorded: false,
       }
     }
 
-    console.error("Failed to express interest in locked opportunity", error)
+    console.error("Failed to express interest in opportunity", error)
     return {
       status: "error",
       message: "We could not record your interest right now. Please try again.",

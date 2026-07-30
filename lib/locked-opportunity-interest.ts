@@ -11,6 +11,7 @@ export interface LockedOpportunityInterestNotificationDetails {
   opportunityId: string
   opportunityReference: string
   opportunityTitle: string
+  hasOtherActivePursuit: boolean
 }
 
 export interface LockedOpportunityInterestStore {
@@ -64,7 +65,12 @@ export function lockedOpportunityInterestIdempotencyKey(
   return `locked-interest-${matchId}-${Date.parse(expressedAt)}`
 }
 
-export async function expressLockedOpportunityInterest(
+/**
+ * Records a repreneur's own interest in an eligible visible deal. The store
+ * owns the eligibility transaction: this service intentionally never turns an
+ * interest signal into a pursuit or changes confidentiality.
+ */
+export async function expressOpportunityInterest(
   input: {
     opportunityId: string
     repreneurId: string

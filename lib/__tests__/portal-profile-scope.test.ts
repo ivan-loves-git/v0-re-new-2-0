@@ -113,7 +113,7 @@ describe("repreneur portal profile scope", () => {
     }
   })
 
-  it("opens unmatched deal details without adding response or locked-deal actions", () => {
+  it("opens eligible unmatched deal details with the self-interest action", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const detailGetter = portalOpportunities.slice(
       portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
@@ -121,12 +121,13 @@ describe("repreneur portal profile scope", () => {
     )
     const opportunityDetail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
-    expect(detailGetter).toContain("activeOwnerByOpportunity.has(opportunity.id)")
-    expect(detailGetter).toContain("withoutRelevanceScore(toDealFlowOpportunity(opportunity, repreneur))")
+    expect(detailGetter).toContain("is_locked_for_other_repreneur: isLockedForOtherRepreneur(")
+    expect(detailGetter).toContain("withoutRelevanceScore({")
     expect(opportunityDetail).toContain("const interestAction = opportunity.match_id")
     expect(opportunityDetail).toContain("opportunity.match_id &&")
     expect(opportunityDetail).toContain("matchId={opportunity.match_id}")
-    expect(opportunityDetail).toContain("{opportunity.match_status ? <Card>")
+    expect(opportunityDetail).toContain("const canExpressUnassignedInterest = !opportunity.match_id")
+    expect(opportunityDetail).toContain("(opportunity.match_status || canExpressUnassignedInterest) ? <Card>")
   })
 
   it("resolves proposed deal details only through the current repreneur's owned match", () => {

@@ -29,7 +29,7 @@ function opportunityTitle(
 }
 
 function isUnavailableRpcError(error: { code?: string; message?: string }) {
-  return error.code === "P0001" && error.message?.includes("locked_interest_not_available")
+  return error.code === "P0001" && error.message?.includes("interest_not_available")
 }
 
 export function createLockedOpportunityInterestStore(): LockedOpportunityInterestStore {
@@ -38,7 +38,7 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
   return {
     async recordInterest(input): Promise<LockedOpportunityInterestRecord> {
       const { data, error } = await supabase.rpc(
-        "express_locked_opportunity_interest",
+        "express_opportunity_interest",
         {
           p_opportunity_id: input.opportunityId,
           p_repreneur_id: input.repreneurId,
@@ -65,7 +65,7 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
     },
 
     async getNotificationDetails(input): Promise<LockedOpportunityInterestNotificationDetails> {
-      const [repreneurResult, opportunityResult] = await Promise.all([
+      const [repreneurResult, opportunityResult, activePursuitResult] = await Promise.all([
         supabase
           .from("repreneurs")
           .select("id, first_name, last_name, email")
@@ -76,10 +76,18 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
           .select("id, reference, public_title, sector")
           .eq("id", input.opportunityId)
           .maybeSingle(),
+        supabase
+          .from("opportunity_matches")
+          .select("id")
+          .eq("opportunity_id", input.opportunityId)
+          .eq("status", "active_pursuit")
+          .neq("repreneur_id", input.repreneurId)
+          .limit(1),
       ])
 
       if (repreneurResult.error) throw new Error(repreneurResult.error.message)
       if (opportunityResult.error) throw new Error(opportunityResult.error.message)
+      if (activePursuitResult.error) throw new Error(activePursuitResult.error.message)
       if (!repreneurResult.data || !opportunityResult.data) {
         throw new Error("Interest notification context was not found")
       }
@@ -102,6 +110,7 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
           opportunity.sector,
           opportunity.reference,
         ),
+        hasOtherActivePursuit: (activePursuitResult.data?.length ?? 0) > 0,
       }
     },
 

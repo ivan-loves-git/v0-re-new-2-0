@@ -199,11 +199,12 @@ function DealCard({
           </p>
         </div>
         <div className="flex flex-col gap-3 lg:items-end">
-          {lockedForAnotherRepreneur ? (
+          {lockedForAnotherRepreneur || !opportunity.match_id ? (
             <LockedOpportunityInterestAction
               opportunityId={opportunity.opportunity_id}
               interestRecorded={Boolean(opportunity.interest_expressed_at)}
               notificationSent={Boolean(opportunity.interest_notification_sent_at)}
+              lockedForAnotherRepreneur={lockedForAnotherRepreneur}
               readOnly={readOnly}
             />
           ) : null}

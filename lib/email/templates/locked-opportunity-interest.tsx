@@ -16,6 +16,23 @@ interface LockedOpportunityInterestEmailProps {
   expressedAt: string
   opportunityUrl: string
   repreneurUrl: string
+  hasOtherActivePursuit: boolean
+}
+
+export function getOpportunityInterestEmailCopy(hasOtherActivePursuit: boolean) {
+  if (hasOtherActivePursuit) {
+    return {
+      heading: "Interest on a positioned opportunity",
+      introduction: "A repreneur expressed interest in an opportunity that already has an active pursuit.",
+      followUp: "Re-New's one-candidate-at-a-time principle remains unchanged. This signal does not create a queue, rank the repreneur, or reassign the opportunity. Please follow up directly and courteously.",
+    }
+  }
+
+  return {
+    heading: "Interest in an opportunity",
+    introduction: "A repreneur expressed interest in a currently unassigned opportunity.",
+    followUp: "This signal is a staff-validation request. It does not create an active pursuit, queue, rank, reassignment, or confidentiality change. Please review and follow up directly.",
+  }
 }
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -33,16 +50,16 @@ export function LockedOpportunityInterestEmail({
   expressedAt,
   opportunityUrl,
   repreneurUrl,
+  hasOtherActivePursuit,
 }: LockedOpportunityInterestEmailProps) {
+  const copy = getOpportunityInterestEmailCopy(hasOtherActivePursuit)
   return (
     <BaseLayout
       previewText={`${repreneurName} expressed interest in ${opportunityReference}`}
       footerText="Internal Re-New notification from WAVE."
     >
-      <Text style={heading}>Interest on a positioned opportunity</Text>
-      <Text style={paragraph}>
-        A repreneur expressed interest in an opportunity that already has an active pursuit.
-      </Text>
+      <Text style={heading}>{copy.heading}</Text>
+      <Text style={paragraph}>{copy.introduction}</Text>
 
       <Section style={highlight}>
         <Text style={detailLabel}>Repreneur</Text>
@@ -57,9 +74,7 @@ export function LockedOpportunityInterestEmail({
         <Text style={detailValue}>{formatDateTime(expressedAt)}</Text>
       </Section>
 
-      <Text style={paragraph}>
-        Re-New&apos;s one-candidate-at-a-time principle remains unchanged. This signal does not create a queue, rank the repreneur, or reassign the opportunity. Please follow up directly and courteously.
-      </Text>
+      <Text style={paragraph}>{copy.followUp}</Text>
 
       <Section style={actions}>
         <Link href={opportunityUrl} style={button}>Open opportunity</Link>

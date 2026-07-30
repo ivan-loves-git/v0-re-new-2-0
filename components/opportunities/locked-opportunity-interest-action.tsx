@@ -5,7 +5,7 @@ import { CheckCircle2, LockKeyhole, MailWarning } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { expressLockedOpportunityInterestAction } from "@/lib/actions/locked-opportunity-interest"
+import { expressOpportunityInterestAction } from "@/lib/actions/locked-opportunity-interest"
 
 type LockedOpportunityInterestActionState =
   | { status: "idle"; message: ""; recorded: false }
@@ -22,6 +22,7 @@ interface LockedOpportunityInterestActionProps {
   opportunityId: string
   interestRecorded: boolean
   notificationSent: boolean
+  lockedForAnotherRepreneur?: boolean
   readOnly?: boolean
 }
 
@@ -29,10 +30,11 @@ export function LockedOpportunityInterestAction({
   opportunityId,
   interestRecorded,
   notificationSent,
+  lockedForAnotherRepreneur = false,
   readOnly = false,
 }: LockedOpportunityInterestActionProps) {
   const [state, formAction, pending] = useActionState(
-    expressLockedOpportunityInterestAction,
+    expressOpportunityInterestAction,
     INITIAL_LOCKED_OPPORTUNITY_INTEREST_STATE,
   )
   const recorded = interestRecorded || state.recorded
@@ -54,13 +56,15 @@ export function LockedOpportunityInterestAction({
 
   return (
     <div className="flex flex-col gap-3">
-      <Alert>
-        <LockKeyhole />
-        <AlertTitle>Someone is already positioned</AlertTitle>
-        <AlertDescription>
-          Re-New works with one candidate at a time on each opportunity. You can still express interest, and the team will follow up directly without changing the current pursuit.
-        </AlertDescription>
-      </Alert>
+      {lockedForAnotherRepreneur ? (
+        <Alert>
+          <LockKeyhole />
+          <AlertTitle>Someone is already positioned</AlertTitle>
+          <AlertDescription>
+            Re-New works with one candidate at a time on each opportunity. You can still express interest, and the team will follow up directly without changing the current pursuit.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {readOnly ? (
         <p className="text-sm text-muted-foreground">

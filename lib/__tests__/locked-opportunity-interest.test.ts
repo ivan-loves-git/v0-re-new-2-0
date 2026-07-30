@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import {
-  expressLockedOpportunityInterest,
+  expressOpportunityInterest,
   lockedOpportunityInterestIdempotencyKey,
   type LockedOpportunityInterestNotificationDetails,
   type LockedOpportunityInterestRecord,
@@ -15,6 +15,7 @@ const DETAILS: LockedOpportunityInterestNotificationDetails = {
   opportunityId: "opportunity-1",
   opportunityReference: "RN-1042",
   opportunityTitle: "Precision manufacturing business",
+  hasOtherActivePursuit: false,
 }
 
 function createStore(record: LockedOpportunityInterestRecord) {
@@ -34,7 +35,7 @@ describe("locked opportunity interest", () => {
     })
     const notifier = { send: vi.fn(async () => ({ success: true })) }
 
-    const result = await expressLockedOpportunityInterest(
+    const result = await expressOpportunityInterest(
       {
         opportunityId: DETAILS.opportunityId,
         repreneurId: DETAILS.repreneurId,
@@ -76,7 +77,7 @@ describe("locked opportunity interest", () => {
     })
     const notifier = { send: vi.fn(async () => ({ success: true })) }
 
-    const result = await expressLockedOpportunityInterest(
+    const result = await expressOpportunityInterest(
       {
         opportunityId: DETAILS.opportunityId,
         repreneurId: DETAILS.repreneurId,
@@ -106,7 +107,7 @@ describe("locked opportunity interest", () => {
       send: vi.fn(async () => ({ success: false, error: "test-safe failure" })),
     }
 
-    const result = await expressLockedOpportunityInterest(
+    const result = await expressOpportunityInterest(
       {
         opportunityId: DETAILS.opportunityId,
         repreneurId: DETAILS.repreneurId,

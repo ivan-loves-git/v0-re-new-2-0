@@ -82,6 +82,7 @@ export function RepreneurOpportunityDetail({
   const memoAvailability = opportunity.memo_availability
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
+  const canExpressUnassignedInterest = !opportunity.match_id
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,9 +121,9 @@ export function RepreneurOpportunityDetail({
         </div>
       </header>
 
-      {opportunity.match_status ? <Card>
+      {(opportunity.match_status || canExpressUnassignedInterest) ? <Card>
         <CardHeader>
-          <CardTitle>{readOnly ? "Response" : "Your response"}</CardTitle>
+          <CardTitle>{canExpressUnassignedInterest ? "Express interest" : readOnly ? "Response" : "Your response"}</CardTitle>
           <CardDescription>
             {readOnly
               ? "Current repreneur-facing status for this opportunity."
@@ -169,11 +170,12 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {lockedForAnotherRepreneur ? (
+          {lockedForAnotherRepreneur || canExpressUnassignedInterest ? (
             <LockedOpportunityInterestAction
               opportunityId={opportunity.opportunity_id}
               interestRecorded={Boolean(opportunity.interest_expressed_at)}
               notificationSent={Boolean(opportunity.interest_notification_sent_at)}
+              lockedForAnotherRepreneur={lockedForAnotherRepreneur}
               readOnly={readOnly}
             />
           ) : null}

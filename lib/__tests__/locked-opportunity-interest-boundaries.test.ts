@@ -8,7 +8,7 @@ const actionSource = fs.readFileSync(
   "utf8",
 )
 const migrationSource = fs.readFileSync(
-  path.join(root, "scripts/067_locked_opportunity_interest.sql"),
+  path.join(root, "scripts/084_express_opportunity_interest.sql"),
   "utf8",
 )
 
@@ -24,7 +24,7 @@ describe("locked opportunity interest boundaries", () => {
   it("exports only the async action from its use-server module", () => {
     expect(actionSource.startsWith('"use server"')).toBe(true)
     expect(actionSource.match(/^export /gm)).toHaveLength(1)
-    expect(actionSource).toContain("export async function expressLockedOpportunityInterestAction")
+    expect(actionSource).toContain("export async function expressOpportunityInterestAction")
     expect(actionSource).not.toContain("export const INITIAL_LOCKED_OPPORTUNITY_INTEREST_STATE")
   })
 
@@ -32,11 +32,13 @@ describe("locked opportunity interest boundaries", () => {
     expect(migrationSource).toContain("status = 'active'")
     expect(migrationSource).toContain("repreneur_exposure <> 'staff_only'")
     expect(migrationSource).toContain("status = 'active_pursuit'")
-    expect(migrationSource).toContain("repreneur_id <> p_repreneur_id")
+    expect(migrationSource).toContain("v_match.status = 'active_pursuit'")
     expect(migrationSource).toContain("FOR UPDATE")
     expect(migrationSource).toContain("interest_notification_sent_at")
     expect(migrationSource).toContain("TO service_role")
     expect(migrationSource).toContain("FROM PUBLIC, anon, authenticated")
+    expect(migrationSource).toContain("v_has_match")
+    expect(migrationSource).toContain("interest_expressed_at IS NULL")
   })
 
   it("does not introduce queue, ranking, timer, or reassignment behavior", () => {

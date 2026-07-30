@@ -283,7 +283,10 @@ function withStaffRecommendation(
 ): RepreneurDealFlowOpportunity {
   return {
     ...opportunity,
-    is_staff_recommended: true,
+    // A staff-proposed match remains a Re-New recommendation after the
+    // repreneur accepts it. Only the timestamp written by the self-interest
+    // RPC distinguishes an independently discovered signal from that path.
+    is_staff_recommended: !opportunity.interest_expressed_at,
     is_outside_current_criteria: false,
   }
 }
@@ -666,9 +669,14 @@ export async function getMyRepreneurOpportunity(
     if (!opportunity) return null
 
     const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [opportunity.id])
-    if (activeOwnerByOpportunity.has(opportunity.id)) return null
-
-    return withoutRelevanceScore(toDealFlowOpportunity(opportunity, repreneur))
+    return withoutRelevanceScore({
+      ...toDealFlowOpportunity(opportunity, repreneur),
+      is_locked_for_other_repreneur: isLockedForOtherRepreneur(
+        opportunity.id,
+        repreneur.id,
+        activeOwnerByOpportunity,
+      ),
+    })
   }
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
