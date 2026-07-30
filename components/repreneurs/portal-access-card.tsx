@@ -209,7 +209,10 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
           <Button
             type="button"
             variant="outline"
-            disabled={!status.enabled || isPending}
+            disabled={
+              (!status.enabled && !status.portalEmailValidationError) ||
+              isPending
+            }
             onClick={() =>
               runAction(
                 () => disableRepreneurPortalAccess(repreneurId),

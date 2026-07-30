@@ -44,6 +44,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }))
 
 import {
+  disableRepreneurPortalAccess,
   enableRepreneurPortalAccess,
   getRepreneurPortalAccessStatus,
   resendRepreneurPortalAccessLink,
@@ -494,6 +495,47 @@ describe("repreneur portal access reliability", () => {
     })
     expect(mocks.pgQuery).not.toHaveBeenCalled()
     expect(mocks.poolConnect).not.toHaveBeenCalled()
+  })
+
+  it("still revokes existing portal access for a malformed canonical email", async () => {
+    mockRepreneur(" Name.@Example.com ")
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
+        return { rows: [] }
+      }
+      if (sql.includes("pg_advisory_xact_lock")) return { rows: [] }
+      if (sql.includes("FROM public.app_user_roles")) {
+        return {
+          rows: [
+            {
+              id: "role-1",
+              user_id: "auth-current",
+              email: "name.@example.com",
+              role: "repreneur",
+              repreneur_id: "repreneur-1",
+            },
+          ],
+        }
+      }
+      if (sql.includes("DELETE FROM public.app_user_roles")) return { rows: [] }
+      if (sql.includes('DELETE FROM "session"')) return { rows: [] }
+      throw new Error(`Unexpected transaction SQL in test: ${sql}`)
+    })
+
+    await expect(disableRepreneurPortalAccess("repreneur-1")).resolves.toEqual({
+      success: true,
+    })
+
+    expect(
+      mocks.clientQuery.mock.calls.some(([sql]) =>
+        String(sql).includes("DELETE FROM public.app_user_roles"),
+      ),
+    ).toBe(true)
+    expect(
+      mocks.clientQuery.mock.calls.some(([sql]) =>
+        String(sql).includes('DELETE FROM "session"'),
+      ),
+    ).toBe(true)
   })
 
   it("refuses a resend that would cross the staff role boundary", async () => {
