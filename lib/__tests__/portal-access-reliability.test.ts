@@ -1,3 +1,5 @@
+import fs from "node:fs"
+import path from "node:path"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
@@ -50,6 +52,11 @@ import {
   resendRepreneurPortalAccessLink,
 } from "@/lib/actions/portal-access"
 import { planPortalRoleReconciliation } from "@/lib/portal-access-reconciliation"
+
+const portalAccessCardSource = fs.readFileSync(
+  path.join(process.cwd(), "components/repreneurs/portal-access-card.tsx"),
+  "utf8",
+)
 
 function mockRepreneur(repreneurEmail: string) {
   const from = vi.fn((table: string) => {
@@ -122,6 +129,10 @@ describe("repreneur portal access reliability", () => {
       query: mocks.clientQuery,
       release: mocks.clientRelease,
     })
+  })
+
+  it("renders access timestamps in one explicit timezone across server and browser", () => {
+    expect(portalAccessCardSource).toContain('timeZone: "Europe/Paris"')
   })
 
   it("does not report access enabled when the linked auth identity uses a stale email", async () => {
