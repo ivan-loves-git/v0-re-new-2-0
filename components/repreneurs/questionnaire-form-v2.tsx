@@ -99,7 +99,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
       await saveQuestionnaireV2(repreneur.id, formData)
       setIsExpanded(false)
     } catch (error) {
-      console.error("Failed to save questionnaire:", error)
+      console.error("Questionnaire save failed")
     } finally {
       setIsSaving(false)
     }

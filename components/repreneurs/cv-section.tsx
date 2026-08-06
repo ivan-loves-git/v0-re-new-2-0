@@ -56,7 +56,7 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
       setCurrentCvUrl(path || null)
       toast.success("CV uploaded successfully")
     } catch (error) {
-      console.error("CV upload error:", error)
+      console.error("CV upload failed")
       toast.error(error instanceof Error ? error.message : "Failed to upload CV")
     } finally {
       setIsUploading(false)
@@ -83,7 +83,7 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
       setCurrentCvUrl(null)
       toast.success("CV deleted")
     } catch (error) {
-      console.error("CV delete error:", error)
+      console.error("CV deletion failed")
       toast.error(error instanceof Error ? error.message : "Failed to delete CV")
     } finally {
       setIsDeleting(false)

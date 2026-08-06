@@ -69,7 +69,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       setCurrentUrl(newUrl)
       toast.success(`${label} uploaded successfully`)
     } catch (error) {
-      console.error("Upload error:", error)
+      console.error("Document upload failed")
       toast.error(error instanceof Error ? error.message : "Failed to upload")
     } finally {
       setIsUploading(false)
@@ -100,7 +100,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       setCurrentUrl(null)
       toast.success(`${label} deleted`)
     } catch (error) {
-      console.error("Delete error:", error)
+      console.error("Document deletion failed")
       toast.error(error instanceof Error ? error.message : "Failed to delete")
     } finally {
       setIsDeleting(false)

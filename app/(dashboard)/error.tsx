@@ -17,7 +17,7 @@ export default function DashboardError({
 
   useEffect(() => {
     // Log the error to console in development
-    console.error("Dashboard error:", error)
+    console.error("Dashboard error occurred")
   }, [error])
 
   return (

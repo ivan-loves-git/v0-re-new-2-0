@@ -189,7 +189,7 @@ export function Tier1InlineEditor({ repreneur }: Tier1InlineEditorProps) {
         setIsOpen(false)
       } catch (error) {
         toast.error("Failed to calculate score")
-        console.error(error)
+        console.error("Tier 1 score calculation failed")
       }
     })
   }

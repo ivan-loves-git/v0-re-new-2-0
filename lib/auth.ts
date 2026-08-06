@@ -102,7 +102,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     sendResetPassword: async ({ user, url }) => {
       try {
-        console.log("[auth] Sending password reset email to:", user.email)
+        console.log("[auth] Sending password reset email")
         console.log("[auth] RESEND_API_KEY set:", !!env.RESEND_API_KEY)
         const isPortalAccessSetup = isPortalAccessSetupUrl(url)
         const { data, error } = await resend.emails.send({
@@ -116,12 +116,12 @@ export const auth = betterAuth({
             : renderPasswordResetEmail(user.name, url),
         })
         if (error) {
-          console.error("[auth] Resend error:", JSON.stringify(error))
+          console.error("[auth] Password reset delivery failed")
           throw new Error(`Failed to send reset email: ${error.message}`)
         }
-        console.log("[auth] Reset email sent successfully:", data?.id)
+        console.log("[auth] Reset email sent successfully")
       } catch (err) {
-        console.error("[auth] sendResetPassword failed:", err)
+        console.error("[auth] sendResetPassword failed")
         throw err
       }
     },

@@ -104,7 +104,7 @@ export function WhenScoreEditor({ repreneur, onSaved }: WhenScoreEditorProps) {
         onSaved?.()
       } catch (error) {
         toast.error("Failed to update score")
-        console.error(error)
+        console.error("WHEN score update failed")
       }
     })
   }

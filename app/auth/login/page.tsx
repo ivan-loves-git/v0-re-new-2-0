@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { KeyRound, Store, Waves } from "lucide-react"
+import { captureWaveEvent } from "@/lib/telemetry/runtime"
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "request">("signin")
@@ -24,6 +25,12 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+    captureWaveEvent("wave_action_started", {
+      surface: "auth",
+      role: "anonymous",
+      workflow: "authentication",
+      action: "sign_in",
+    })
 
     try {
       const result = await signIn.email({
@@ -32,19 +39,47 @@ export default function LoginPage() {
       })
 
       if (result.error) {
+        captureWaveEvent("wave_auth_failed", {
+          surface: "auth",
+          role: "anonymous",
+          workflow: "authentication",
+          action: "sign_in",
+          outcome: "rejected",
+        })
         setError(result.error.message || "Invalid email or password")
         setLoading(false)
         return
       }
 
       if (result.data) {
+        captureWaveEvent("wave_auth_succeeded", {
+          surface: "auth",
+          role: "anonymous",
+          workflow: "authentication",
+          action: "sign_in",
+          outcome: "success",
+        })
         window.location.href = "/routing"
       } else {
+        captureWaveEvent("wave_auth_failed", {
+          surface: "auth",
+          role: "anonymous",
+          workflow: "authentication",
+          action: "sign_in",
+          outcome: "missing_session",
+        })
         setError("Login succeeded but no session was created. Please try again.")
         setLoading(false)
       }
     } catch (err: any) {
-      console.error("[Login] Exception:", err)
+      console.error("[Login] Sign-in failed")
+      captureWaveEvent("wave_auth_failed", {
+        surface: "auth",
+        role: "anonymous",
+        workflow: "authentication",
+        action: "sign_in",
+        outcome: "unexpected_error",
+      })
       setError(err?.message || "An unexpected error occurred")
       setLoading(false)
     }
@@ -55,30 +90,78 @@ export default function LoginPage() {
     setError(null)
 
     if (!name.trim()) {
+      captureWaveEvent("wave_validation_failed", {
+        surface: "auth",
+        role: "anonymous",
+        workflow: "access_request",
+        action: "request_access",
+        outcome: "validation_error",
+      })
       setError("Please enter your name.")
       return
     }
     if (!email.trim()) {
+      captureWaveEvent("wave_validation_failed", {
+        surface: "auth",
+        role: "anonymous",
+        workflow: "access_request",
+        action: "request_access",
+        outcome: "validation_error",
+      })
       setError("Please enter your email.")
       return
     }
     if (!role) {
+      captureWaveEvent("wave_validation_failed", {
+        surface: "auth",
+        role: "anonymous",
+        workflow: "access_request",
+        action: "request_access",
+        outcome: "validation_error",
+      })
       setError("Please select your role.")
       return
     }
 
     setLoading(true)
+    captureWaveEvent("wave_action_started", {
+      surface: "auth",
+      role: "anonymous",
+      workflow: "access_request",
+      action: "request_access",
+    })
 
     try {
       const result = await submitWaitlistRequest(name.trim(), email.trim(), role)
 
       if (result.success) {
+        captureWaveEvent("wave_action_succeeded", {
+          surface: "auth",
+          role: "anonymous",
+          workflow: "access_request",
+          action: "request_access",
+          outcome: "success",
+        })
         setRequestSubmitted(true)
       } else {
+        captureWaveEvent("wave_action_failed", {
+          surface: "auth",
+          role: "anonymous",
+          workflow: "access_request",
+          action: "request_access",
+          outcome: "failure",
+        })
         setError(result.error)
       }
-    } catch (err: any) {
-      console.error("[RequestAccess] Exception:", err)
+    } catch {
+      console.error("[RequestAccess] Submission failed")
+      captureWaveEvent("wave_action_failed", {
+        surface: "auth",
+        role: "anonymous",
+        workflow: "access_request",
+        action: "request_access",
+        outcome: "unexpected_error",
+      })
       setError("Something went wrong. Please try again.")
     } finally {
       setLoading(false)

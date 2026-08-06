@@ -53,7 +53,7 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
       await rejectRepreneur(repreneurId)
       setIsRejectDialogOpen(false)
     } catch (error) {
-      console.error("Failed to reject repreneur:", error)
+      console.error("Repreneur rejection failed")
     } finally {
       setIsLoading(false)
     }
@@ -65,7 +65,7 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
       await unrejectRepreneur(repreneurId)
       setIsRejectDialogOpen(false)
     } catch (error) {
-      console.error("Failed to restore repreneur:", error)
+      console.error("Repreneur restore failed")
     } finally {
       setIsLoading(false)
     }
@@ -79,7 +79,7 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
       setDeclineReasonCategory("")
       setDeclineReasonText("")
     } catch (error) {
-      console.error("Failed to decline repreneur:", error)
+      console.error("Repreneur decline failed")
     } finally {
       setIsLoading(false)
     }
@@ -91,7 +91,7 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
       await undeclineRepreneur(repreneurId)
       setIsDeclineDialogOpen(false)
     } catch (error) {
-      console.error("Failed to restore repreneur:", error)
+      console.error("Repreneur restore failed")
     } finally {
       setIsLoading(false)
     }
@@ -105,7 +105,7 @@ export function RepreneurActionsMenu({ repreneurId, currentStatus, repreneurName
       // deleteRepreneur calls redirect() which throws NEXT_REDIRECT - that's expected
       const message = error instanceof Error ? error.message : ""
       if (!message.includes("NEXT_REDIRECT")) {
-        console.error("Failed to delete repreneur:", error)
+        console.error("Repreneur deletion failed")
         toast.error("Failed to delete repreneur. Please try again.")
         setIsLoading(false)
       }

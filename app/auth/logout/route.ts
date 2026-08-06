@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
     await auth.api.signOut({
       headers: await headers(),
     })
-  } catch (error) {
+  } catch {
     // Even if signOut fails, redirect to login
-    console.error("Logout error:", error)
+    console.error("Logout failed")
   }
 
   // Redirect to login page after logout and defensively expire auth cookies.

@@ -44,8 +44,8 @@ export function ManualSend() {
       try {
         const data = await getRepreneursForManualSend(search || undefined)
         setRepreneurs(data)
-      } catch (error) {
-        console.error("Failed to search repreneurs:", error)
+      } catch {
+        console.error("Failed to search repreneurs")
       } finally {
         setSearching(false)
       }

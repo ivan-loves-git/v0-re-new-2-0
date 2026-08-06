@@ -33,7 +33,7 @@ export function RejectButton({ repreneurId, currentStatus, repreneurName }: Reje
       await rejectRepreneur(repreneurId)
       setIsOpen(false)
     } catch (error) {
-      console.error("Failed to reject repreneur:", error)
+      console.error("Repreneur rejection failed")
     } finally {
       setIsLoading(false)
     }
@@ -45,7 +45,7 @@ export function RejectButton({ repreneurId, currentStatus, repreneurName }: Reje
       await unrejectRepreneur(repreneurId)
       setIsOpen(false)
     } catch (error) {
-      console.error("Failed to un-reject repreneur:", error)
+      console.error("Repreneur rejection reversal failed")
     } finally {
       setIsLoading(false)
     }

@@ -37,7 +37,7 @@ export function UpdateJourneyStageForm({ repreneurId, currentStage }: UpdateJour
       await updateRepreneurJourneyStage(repreneurId, newStage as JourneyStage)
       toast.success("Journey stage updated")
     } catch (error) {
-      console.error("Failed to update journey stage:", error)
+      console.error("Journey stage update failed")
       toast.error("Failed to update journey stage. Please try again.")
       // Revert on error
       setOptimisticStage(undefined)

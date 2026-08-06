@@ -2,6 +2,7 @@ import type React from "react"
 import { Suspense } from "react"
 import { requirePortalAccess } from "@/lib/access-control"
 import { PortalShell } from "@/components/portal/portal-shell"
+import { WaveTelemetryIdentity } from "@/lib/telemetry/provider"
 
 async function PortalGate({
   children,
@@ -11,9 +12,12 @@ async function PortalGate({
   const { user } = await requirePortalAccess()
 
   return (
-    <PortalShell userEmail={user.email} userName={user.name}>
-      {children}
-    </PortalShell>
+    <>
+      <WaveTelemetryIdentity userId={user.id} role="repreneur" />
+      <PortalShell userEmail={user.email} userName={user.name}>
+        {children}
+      </PortalShell>
+    </>
   )
 }
 

@@ -109,7 +109,7 @@ export function Tier2DimensionRating({ repreneurId, repreneur }: Tier2DimensionR
       try {
         await setTier2Dimensions(repreneurId, updates)
       } catch (error) {
-        console.error("Failed to save dimensions:", error)
+        console.error("Dimension rating save failed")
         toast.error("Failed to save rating")
       }
     }, 400) // 400ms debounce - wait for rapid clicks to finish

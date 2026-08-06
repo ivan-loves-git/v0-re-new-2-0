@@ -87,7 +87,7 @@ export function WhoScoreEditor({ repreneur, onSaved }: WhoScoreEditorProps) {
         onSaved?.()
       } catch (error) {
         toast.error("Failed to update score")
-        console.error(error)
+        console.error("WHO score update failed")
       }
     })
   }

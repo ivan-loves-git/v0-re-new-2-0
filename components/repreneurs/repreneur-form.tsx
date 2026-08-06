@@ -36,7 +36,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
     try {
       await action(formData)
     } catch (error) {
-      console.error("Failed to submit form:", error)
+      console.error("Repreneur form submission failed")
       setIsSubmitting(false)
     }
   }

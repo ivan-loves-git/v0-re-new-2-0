@@ -41,7 +41,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
       await setTier2Stars(repreneurId, stars)
       toast.success("Rating saved")
     } catch (error) {
-      console.error("Failed to set star rating:", error)
+      console.error("Star rating save failed")
       toast.error("Failed to save rating. Please try again.")
     } finally {
       setIsUpdating(false)
@@ -54,7 +54,7 @@ export function Tier2StarRating({ repreneurId, currentStars }: Tier2StarRatingPr
       await clearTier2Stars(repreneurId)
       toast.success("Rating cleared")
     } catch (error) {
-      console.error("Failed to clear star rating:", error)
+      console.error("Star rating clear failed")
       toast.error("Failed to clear rating. Please try again.")
     } finally {
       setIsUpdating(false)

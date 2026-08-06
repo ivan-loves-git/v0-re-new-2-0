@@ -29,7 +29,7 @@ export function UpdateStatusForm({ repreneurId, currentStatus }: UpdateStatusFor
       await updateRepreneurStatus(repreneurId, newStatus)
       toast.success("Status updated")
     } catch (error) {
-      console.error("Failed to update status:", error)
+      console.error("Repreneur status update failed")
       toast.error("Failed to update status. Please try again.")
       // Revert on error
       setOptimisticStatus(null)

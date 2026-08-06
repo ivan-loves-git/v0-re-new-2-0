@@ -51,7 +51,7 @@ export function EditableSelectField({
       await updateRepreneurField(repreneurId, field, valueToSave)
       toast.success("Saved successfully")
     } catch (error) {
-      console.error("Failed to update field:", error)
+      console.error("Repreneur field update failed")
       toast.error("Failed to save. Please try again.")
       // Revert on error
       setOptimisticValue(undefined)

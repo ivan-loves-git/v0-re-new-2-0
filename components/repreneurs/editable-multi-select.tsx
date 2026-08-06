@@ -44,7 +44,7 @@ export function EditableMultiSelect({
       setIsEditing(false)
       toast.success("Saved successfully")
     } catch (error) {
-      console.error("Failed to update field:", error)
+      console.error("Repreneur field update failed")
       toast.error("Failed to save. Please try again.")
     } finally {
       setIsSaving(false)

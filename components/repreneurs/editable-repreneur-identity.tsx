@@ -46,7 +46,7 @@ export function EditableRepreneurIdentity({
       setIsEditing(false)
       toast.success("Name updated")
     } catch (error) {
-      console.error("Failed to update repreneur identity:", error)
+      console.error("Repreneur identity update failed")
       toast.error("Failed to update the name. Please try again.")
     } finally {
       setIsSaving(false)

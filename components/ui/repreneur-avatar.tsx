@@ -98,7 +98,7 @@ export function RepreneurAvatar({
       setCurrentAvatarUrl(url)
       setIsDialogOpen(false)
     } catch (error) {
-      console.error("Failed to upload avatar:", error)
+      console.error("Repreneur avatar upload failed")
       alert("Failed to upload avatar. Please try again.")
     } finally {
       setIsUploading(false)
@@ -123,7 +123,7 @@ export function RepreneurAvatar({
       setCurrentAvatarUrl(null)
       setIsDialogOpen(false)
     } catch (error) {
-      console.error("Failed to reset avatar:", error)
+      console.error("Repreneur avatar reset failed")
       alert("Failed to reset avatar. Please try again.")
     } finally {
       setIsUploading(false)

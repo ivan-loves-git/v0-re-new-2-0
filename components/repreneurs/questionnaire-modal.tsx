@@ -67,7 +67,7 @@ export function QuestionnaireModal({ repreneur, open, onOpenChange, onSaved }: Q
       onSaved?.(result.total)
       onOpenChange(false)
     } catch (error) {
-      console.error("Failed to save questionnaire:", error)
+      console.error("Questionnaire save failed")
     } finally {
       setIsSaving(false)
     }

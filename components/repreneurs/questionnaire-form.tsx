@@ -71,7 +71,7 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
       setSavedScore(result.total)
       setIsExpanded(false)
     } catch (error) {
-      console.error("Failed to save questionnaire:", error)
+      console.error("Questionnaire save failed")
     } finally {
       setIsSaving(false)
     }

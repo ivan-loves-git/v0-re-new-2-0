@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
+import { WaveTelemetryProvider } from "@/lib/telemetry/provider"
 import "./globals.css"
 
 import { Inter as V0_Font_Inter, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
@@ -60,7 +61,7 @@ export default function RootLayout({
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${_inter.variable} ${_geistMono.variable} ${_sourceSerif_4.variable} font-sans antialiased`} suppressHydrationWarning>
         <a href="#main-content" className="skip-link">Skip to main content</a>
-        {children}
+        <WaveTelemetryProvider>{children}</WaveTelemetryProvider>
         <Toaster
           position="bottom-right"
           richColors

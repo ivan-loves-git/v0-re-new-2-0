@@ -48,7 +48,7 @@ export function DeclineButton({ repreneurId, currentStatus, repreneurName, decli
       setReasonCategory("")
       setReasonText("")
     } catch (error) {
-      console.error("Failed to decline repreneur:", error)
+      console.error("Repreneur decline failed")
     } finally {
       setIsLoading(false)
     }
@@ -60,7 +60,7 @@ export function DeclineButton({ repreneurId, currentStatus, repreneurName, decli
       await undeclineRepreneur(repreneurId)
       setIsOpen(false)
     } catch (error) {
-      console.error("Failed to restore repreneur:", error)
+      console.error("Repreneur restore failed")
     } finally {
       setIsLoading(false)
     }

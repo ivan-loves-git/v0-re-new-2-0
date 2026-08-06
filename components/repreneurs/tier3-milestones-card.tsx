@@ -174,7 +174,7 @@ export function Tier3MilestonesCard({ repreneurId, repreneur }: Tier3MilestonesC
         try {
           await toggleMilestone(repreneurId, key as MilestoneKey, value)
         } catch (error) {
-          console.error("Failed to toggle milestone:", error)
+          console.error("Milestone update failed")
           toast.error("Failed to update milestone")
         }
       }

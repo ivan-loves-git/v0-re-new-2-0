@@ -84,7 +84,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
       setIsOpen(false)
       router.refresh()
     } catch (error) {
-      console.error("Failed to create activity:", error)
+      console.error("Activity creation failed")
       toast.error("Failed to log activity. Please try again.")
     } finally {
       setIsSubmitting(false)
@@ -99,7 +99,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
       toast.success("Activity deleted")
       router.refresh()
     } catch (error) {
-      console.error("Failed to delete activity:", error)
+      console.error("Activity deletion failed")
       toast.error("Failed to delete activity. Please try again.")
     } finally {
       setDeletingId(null)

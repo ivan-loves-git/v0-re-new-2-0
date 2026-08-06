@@ -64,8 +64,8 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       setLocalTemplates((prev) =>
         prev.map((t) => (t.template_key === templateKey ? { ...t, is_active: enabled } : t))
       )
-    } catch (error) {
-      console.error("Failed to toggle template:", error)
+    } catch {
+      console.error("Failed to toggle email template")
     } finally {
       setLoading(null)
     }
