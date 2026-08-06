@@ -1,6 +1,10 @@
 import { cache } from "react"
 import { redirect } from "next/navigation"
-import { getCurrentUser, requireUser } from "@/lib/auth-server"
+import {
+  getCurrentUser,
+  getCurrentUserFromHeaders,
+  requireUser,
+} from "@/lib/auth-server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export type AppUserRole = "staff" | "repreneur"
@@ -124,50 +128,63 @@ async function findRepreneurForRole(
   return findRepreneurByEmail(fallbackEmail, supabase)
 }
 
-export const getCurrentUserAccess = cache(
-  async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> {
-    const user = await getCurrentUser()
-    if (!user) return null
+async function resolveCurrentUserAccess(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+): Promise<CurrentUserAccess | null> {
+  if (!user) return null
 
-    const email = normalizeEmail(user.email)
-    if (!email) {
-      return {
-        user,
-        role: "unassigned",
-        repreneurId: null,
-        repreneurName: null,
-      }
-    }
-
-    const explicitRole = await findRole(email, user.id)
-
-    if (explicitRole?.role === "staff") {
-      return {
-        user,
-        role: "staff",
-        repreneurId: null,
-        repreneurName: null,
-      }
-    }
-
-    if (explicitRole?.role === "repreneur") {
-      const repreneur = await findRepreneurForRole(explicitRole, email)
-      return {
-        user,
-        role: "repreneur",
-        repreneurId: repreneur?.id ?? null,
-        repreneurName: displayName(repreneur),
-      }
-    }
-
+  const email = normalizeEmail(user.email)
+  if (!email) {
     return {
       user,
       role: "unassigned",
       repreneurId: null,
       repreneurName: null,
     }
+  }
+
+  const explicitRole = await findRole(email, user.id)
+
+  if (explicitRole?.role === "staff") {
+    return {
+      user,
+      role: "staff",
+      repreneurId: null,
+      repreneurName: null,
+    }
+  }
+
+  if (explicitRole?.role === "repreneur") {
+    const repreneur = await findRepreneurForRole(explicitRole, email)
+    return {
+      user,
+      role: "repreneur",
+      repreneurId: repreneur?.id ?? null,
+      repreneurName: displayName(repreneur),
+    }
+  }
+
+  return {
+    user,
+    role: "unassigned",
+    repreneurId: null,
+    repreneurName: null,
+  }
+}
+
+export const getCurrentUserAccess = cache(
+  async function getCurrentUserAccess(): Promise<CurrentUserAccess | null> {
+    return resolveCurrentUserAccess(await getCurrentUser())
   },
 )
+
+export async function getCurrentUserAccessFromHeaders(
+  requestHeaders: Headers,
+) {
+  return resolveCurrentUserAccess(
+    await getCurrentUserFromHeaders(requestHeaders),
+  )
+}
 
 export async function getPostLoginDestination() {
   const access = await getCurrentUserAccess()

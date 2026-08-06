@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 6, 2026",
+    version: "0.9.37",
+    title: "WAVE AI now helps staff prepare reviewed email drafts",
+    isCompleted: true,
+    events: [
+      {
+        title: "Staff can create a draft from current WAVE context",
+        type: "feature",
+        description: "Choose a repreneur, purpose and language to create an editable draft from the limited profile information needed for that task.",
+      },
+      {
+        title: "Every AI result remains under staff control",
+        type: "decision",
+        description: "WAVE AI cannot send messages or change business records. Staff must review, edit and copy the draft before using it.",
+      },
+      {
+        title: "AI use, reliability and estimated cost are now visible",
+        type: "feature",
+        description: "The staff usage view measures attempts, useful outcomes, latency, tokens and estimated cost without storing prompts, drafts or personal details.",
+      },
+    ],
+  },
+  {
     period: "Jul 30, 2026",
     version: "0.9.36",
     title: "Every eligible deal now has a clear, safer next action",

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
-import { getCurrentUserAccess } from "@/lib/access-control"
+import { getCurrentUserAccessFromHeaders } from "@/lib/access-control"
 import { waveAiGenerationEventSchema } from "@/lib/ai/email-contract"
 import { recordWaveAiGenerationEvent } from "@/lib/ai/ledger"
 
 export async function POST(request: Request) {
-  const access = await getCurrentUserAccess()
+  const access = await getCurrentUserAccessFromHeaders(request.headers)
   if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
@@ -29,4 +29,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "WAVE AI usage logging is unavailable." }, { status: 503 })
   }
 }
-

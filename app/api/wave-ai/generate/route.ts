@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server"
-import { getCurrentUserAccess } from "@/lib/access-control"
+import { getCurrentUserAccessFromHeaders } from "@/lib/access-control"
 import { WAVE_AI_MODEL, WAVE_AI_PROMPT_VERSION } from "@/lib/ai/config"
 import { waveAiEmailDraftRequestSchema } from "@/lib/ai/email-contract"
 import { generateWaveAiEmailDraft } from "@/lib/ai/email-drafting"
@@ -9,7 +9,7 @@ import { estimateWaveAiCostUsd, normalizeWaveAiUsage } from "@/lib/ai/usage"
 import { captureWaveAiGeneration } from "@/lib/telemetry/server"
 
 export async function POST(request: Request) {
-  const access = await getCurrentUserAccess()
+  const access = await getCurrentUserAccessFromHeaders(request.headers)
   if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 

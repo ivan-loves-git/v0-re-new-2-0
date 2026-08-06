@@ -3,15 +3,7 @@ import { headers } from "next/headers"
 import { unstable_rethrow } from "next/navigation"
 import { auth } from "@/lib/auth"
 
-/**
- * Get the current authenticated user from Better Auth on the server side.
- * Use this in Server Components and Server Actions.
- *
- * @returns The current user or null if not authenticated
- */
-export const getCurrentUser = cache(async function getCurrentUser() {
-  const requestHeaders = await headers()
-
+async function resolveCurrentUser(requestHeaders: Headers) {
   try {
     const session = await auth.api.getSession({
       headers: requestHeaders,
@@ -27,6 +19,21 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     console.error("Error getting current user:", error)
     return null
   }
+}
+
+export async function getCurrentUserFromHeaders(requestHeaders: Headers) {
+  return resolveCurrentUser(requestHeaders)
+}
+
+/**
+ * Get the current authenticated user from Better Auth on the server side.
+ * Use this in Server Components and Server Actions.
+ *
+ * @returns The current user or null if not authenticated
+ */
+export const getCurrentUser = cache(async function getCurrentUser() {
+  const requestHeaders = await headers()
+  return resolveCurrentUser(requestHeaders)
 })
 
 /**

@@ -42,6 +42,26 @@ describe("WAVE AI runtime contract", () => {
     }
   })
 
+  it("keeps WAVE AI route authentication inside the explicit request scope", () => {
+    const authServer = source("lib/auth-server.ts")
+    const accessControl = source("lib/access-control.ts")
+
+    expect(authServer).toContain("getCurrentUserFromHeaders")
+    expect(authServer).toContain("headers: requestHeaders")
+    expect(accessControl).toContain("getCurrentUserAccessFromHeaders")
+
+    for (const path of [
+      "app/api/wave-ai/generate/route.ts",
+      "app/api/wave-ai/events/route.ts",
+      "app/api/wave-ai/repreneurs/route.ts",
+    ]) {
+      const file = source(path)
+      expect(file).toContain("request: Request")
+      expect(file).toContain("getCurrentUserAccessFromHeaders(request.headers)")
+      expect(file).not.toContain("getCurrentUserAccess()")
+    }
+  })
+
   it("keeps the AI ledger metadata-only and unavailable to browser roles", () => {
     const migration = source("scripts/085_wave_ai_generation_ledger.sql")
     const ledger = source("lib/ai/ledger.ts")

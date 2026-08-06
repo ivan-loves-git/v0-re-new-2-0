@@ -11,6 +11,19 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the staff-controlled WAVE AI drafting release", () => {
+    expect(roadmap).toContain('version: "0.9.37"')
+    expect(roadmap).toContain(
+      "Staff can create a draft from current WAVE context",
+    )
+    expect(roadmap).toContain(
+      "Every AI result remains under staff control",
+    )
+    expect(roadmap).toContain(
+      "AI use, reliability and estimated cost are now visible",
+    )
+  })
+
   it("records the purpose-aware M&A email suppression milestone", () => {
     expect(roadmap).toContain('version: "0.9.35"')
     expect(roadmap).toContain(
@@ -81,6 +94,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-07-30")')
+    expect(roadmapStatus).toContain('new Date("2026-08-06")')
   })
 })

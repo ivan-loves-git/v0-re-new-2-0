@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { getCurrentUserAccess } from "@/lib/access-control"
+import { getCurrentUserAccessFromHeaders } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-export async function GET() {
-  const access = await getCurrentUserAccess()
+export async function GET(request: Request) {
+  const access = await getCurrentUserAccessFromHeaders(request.headers)
   if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (access.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
