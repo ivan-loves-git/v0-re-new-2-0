@@ -6,6 +6,7 @@ import { FloatingNav } from "@/components/floating-nav"
 import { requireStaffAccess } from "@/lib/access-control"
 import { Skeleton } from "@/components/ui/skeleton"
 import { connection } from "next/server"
+import { getOpaqueTelemetryUserId } from "@/lib/telemetry/identity"
 import { WaveTelemetryIdentity } from "@/lib/telemetry/provider"
 
 async function StaffDashboardGate({ children }: { children: React.ReactNode }) {
@@ -19,7 +20,10 @@ async function DashboardSidebar() {
   const access = await requireStaffAccess()
   return (
     <>
-      <WaveTelemetryIdentity userId={access.user.id} role="staff" />
+      <WaveTelemetryIdentity
+        userId={getOpaqueTelemetryUserId(access.user.id)}
+        role="staff"
+      />
       <AppSidebar
         userEmail={access.user.email}
         userName={access.user.name ?? undefined}

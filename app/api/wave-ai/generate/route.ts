@@ -6,6 +6,7 @@ import { generateWaveAiEmailDraft } from "@/lib/ai/email-drafting"
 import { classifyWaveAiError, publicWaveAiError } from "@/lib/ai/errors"
 import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
 import { estimateWaveAiCostUsd, normalizeWaveAiUsage } from "@/lib/ai/usage"
+import { getOpaqueTelemetryUserId } from "@/lib/telemetry/identity"
 import { captureWaveAiGeneration } from "@/lib/telemetry/server"
 
 export async function POST(request: Request) {
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
   }
 
   const startedAt = Date.now()
+  const telemetryUserId = getOpaqueTelemetryUserId(access.user.id)
   let run: Awaited<ReturnType<typeof startWaveAiRun>> | null = null
 
   try {
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
     })
     after(async () => {
       await captureWaveAiGeneration({
-        distinctId: access.user.id,
+        distinctId: telemetryUserId,
         generationId: startedRun.generationId,
         traceId: startedRun.traceId,
         role: "staff",
@@ -83,7 +85,7 @@ export async function POST(request: Request) {
       })
       after(async () => {
         await captureWaveAiGeneration({
-          distinctId: access.user.id,
+          distinctId: telemetryUserId,
           generationId: failedRun.generationId,
           traceId: failedRun.traceId,
           role: "staff",
