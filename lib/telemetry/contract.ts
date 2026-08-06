@@ -109,11 +109,13 @@ export type WaveAiStatus = (typeof WAVE_AI_STATUSES)[number]
 export const WAVE_AI_ERROR_CODES = [
   "rate_limited",
   "provider_timeout",
-  "provider_error",
-  "validation_error",
-  "unauthorized",
-  "ledger_error",
-  "unknown",
+  "provider_rate_limited",
+  "provider_authentication",
+  "provider_unavailable",
+  "invalid_output",
+  "ledger_unavailable",
+  "invalid_request",
+  "internal_error",
 ] as const
 
 export type WaveAiErrorCode = (typeof WAVE_AI_ERROR_CODES)[number]
@@ -156,6 +158,7 @@ export interface WaveTelemetryProperties {
   error_code?: WaveAiErrorCode
   input_tokens?: number
   cached_input_tokens?: number
+  cache_write_tokens?: number
   output_tokens?: number
   reasoning_tokens?: number
   estimated_cost_usd?: number
@@ -173,10 +176,10 @@ export interface WaveAiGenerationCapture {
   latencyMs: number
   inputTokens?: number
   cachedInputTokens?: number
+  cacheWriteTokens?: number
   outputTokens?: number
   reasoningTokens?: number
   estimatedCostUsd?: number
   errorCode?: WaveAiErrorCode
   isTest?: boolean
 }
-

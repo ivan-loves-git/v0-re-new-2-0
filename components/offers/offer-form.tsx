@@ -29,8 +29,8 @@ export function OfferForm({ offer }: OfferFormProps) {
         await createOffer(formData)
         toast.success("Offer created")
       }
-    } catch (error) {
-      console.error("Failed to save offer:", error)
+    } catch {
+      console.error("Offer save failed")
       toast.error("Failed to save offer. Please try again.")
     }
   }

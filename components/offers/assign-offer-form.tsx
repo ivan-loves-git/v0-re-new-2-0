@@ -87,8 +87,8 @@ export function AssignOfferForm({
       // Small delay to allow server to process before refresh
       await new Promise(resolve => setTimeout(resolve, 100))
       onAssignComplete?.()
-    } catch (error) {
-      console.error("Failed to assign offer:", error)
+    } catch {
+      console.error("Offer assignment failed")
       toast.error("Failed to assign offer. Please try again.")
       // Revert on error
       onAssignError?.(tempId)

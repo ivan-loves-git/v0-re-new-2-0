@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { getCurrentUserAccess } from "@/lib/access-control"
-import { WAVE_AI_MODEL } from "@/lib/ai/config"
+import { WAVE_AI_MODEL, WAVE_AI_PROMPT_VERSION } from "@/lib/ai/config"
 import { waveAiEmailDraftRequestSchema } from "@/lib/ai/email-contract"
 import { generateWaveAiEmailDraft } from "@/lib/ai/email-drafting"
 import { classifyWaveAiError, publicWaveAiError } from "@/lib/ai/errors"
 import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
 import { estimateWaveAiCostUsd, normalizeWaveAiUsage } from "@/lib/ai/usage"
+import { captureWaveAiGeneration } from "@/lib/telemetry/server"
 
 export async function POST(request: Request) {
   const access = await getCurrentUserAccess()
@@ -25,38 +26,73 @@ export async function POST(request: Request) {
   let run: Awaited<ReturnType<typeof startWaveAiRun>> | null = null
 
   try {
-    run = await startWaveAiRun({
+    const startedRun = await startWaveAiRun({
       actorUserId: access.user.id,
       feature: "email_draft",
       workflow: "repreneur_email_draft",
       surface: "/tools/wave-ai",
     })
+    run = startedRun
     const result = await generateWaveAiEmailDraft({
       request: parsed.data,
       safetyIdentifier: access.user.id,
     })
     const usage = normalizeWaveAiUsage(result.usage)
     const estimatedCostUsd = estimateWaveAiCostUsd(usage)
+    const latencyMs = Date.now() - startedAt
     await completeWaveAiRun({
-      generationId: run.generationId,
+      generationId: startedRun.generationId,
       usage,
       estimatedCostUsd,
-      latencyMs: Date.now() - startedAt,
+      latencyMs,
+    })
+    after(async () => {
+      await captureWaveAiGeneration({
+        distinctId: access.user.id,
+        generationId: startedRun.generationId,
+        traceId: startedRun.traceId,
+        role: "staff",
+        feature: "email_draft",
+        promptVersion: WAVE_AI_PROMPT_VERSION,
+        status: "succeeded",
+        latencyMs,
+        inputTokens: usage.inputTokens,
+        cachedInputTokens: usage.cachedInputTokens,
+        cacheWriteTokens: usage.cacheWriteTokens,
+        outputTokens: usage.outputTokens,
+        reasoningTokens: usage.reasoningTokens,
+        estimatedCostUsd,
+      })
     })
 
     return NextResponse.json({
       ...result.draft,
-      generationId: run.generationId,
-      traceId: run.traceId,
+      generationId: startedRun.generationId,
+      traceId: startedRun.traceId,
       model: WAVE_AI_MODEL,
     })
   } catch (error) {
     const code = classifyWaveAiError(error)
     if (run) {
+      const failedRun = run
+      const latencyMs = Date.now() - startedAt
       await failWaveAiRun({
-        generationId: run.generationId,
+        generationId: failedRun.generationId,
         code,
-        latencyMs: Date.now() - startedAt,
+        latencyMs,
+      })
+      after(async () => {
+        await captureWaveAiGeneration({
+          distinctId: access.user.id,
+          generationId: failedRun.generationId,
+          traceId: failedRun.traceId,
+          role: "staff",
+          feature: "email_draft",
+          promptVersion: WAVE_AI_PROMPT_VERSION,
+          status: "failed",
+          latencyMs,
+          errorCode: code,
+        })
       })
     }
     console.error("WAVE AI generation failed", {

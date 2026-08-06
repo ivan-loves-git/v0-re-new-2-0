@@ -78,7 +78,7 @@ export function OpportunityClosureControls({
       setSelectedReason("")
       router.refresh()
     } catch (error) {
-      console.error("Failed to update opportunity closure:", error)
+      console.error("Opportunity closure update failed")
       toast.error(
         error instanceof Error
           ? error.message

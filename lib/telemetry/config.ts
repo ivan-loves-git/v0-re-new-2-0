@@ -21,6 +21,8 @@ export interface ClientTelemetryConfig {
   isTest: boolean
 }
 
+export type ServerTelemetryConfig = ClientTelemetryConfig
+
 interface ClientTelemetryEnvironment {
   enabled?: string
   projectToken?: string
@@ -29,6 +31,8 @@ interface ClientTelemetryEnvironment {
   buildNumber?: string
   buildHash?: string
 }
+
+type ServerTelemetryEnvironment = ClientTelemetryEnvironment
 
 function normalizeEnvironment(value: string | undefined): WaveEnvironment {
   return value && ENVIRONMENTS.has(value as WaveEnvironment)
@@ -68,3 +72,8 @@ export function getClientTelemetryConfig() {
   })
 }
 
+export function resolveServerTelemetryConfig(
+  input: ServerTelemetryEnvironment,
+): ServerTelemetryConfig {
+  return resolveClientTelemetryConfig(input)
+}

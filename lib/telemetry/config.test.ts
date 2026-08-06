@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { resolveClientTelemetryConfig } from "@/lib/telemetry/config"
+import { resolveClientTelemetryConfig, resolveServerTelemetryConfig } from "@/lib/telemetry/config"
 import {
   buildPostHogBrowserConfig,
   WAVE_REPLAY_START_OVERRIDE,
@@ -31,6 +31,23 @@ describe("WAVE telemetry configuration", () => {
     ).toMatchObject({ environment: "production", isTest: false })
   })
 
+  it("applies the same explicit switch and isolated-token validation server-side", () => {
+    expect(resolveServerTelemetryConfig({
+      enabled: "true",
+      projectToken: "phc_wave_project",
+      environment: "production",
+      isTest: "false",
+      buildNumber: "1200",
+      buildHash: "abc1234",
+    })).toEqual({
+      enabled: true,
+      projectToken: "phc_wave_project",
+      environment: "production",
+      release: "1200.abc1234",
+      isTest: false,
+    })
+  })
+
   it("pins direct EU ingestion and the locked privacy configuration", () => {
     const resolved = resolveClientTelemetryConfig({
       enabled: "true",
@@ -46,6 +63,7 @@ describe("WAVE telemetry configuration", () => {
       ui_host: "https://eu.posthog.com",
       autocapture: false,
       capture_pageview: false,
+      opt_out_useragent_filter: false,
       capture_exceptions: {
         capture_unhandled_errors: true,
         capture_unhandled_rejections: true,
@@ -68,6 +86,11 @@ describe("WAVE telemetry configuration", () => {
       url_trigger: true,
       event_trigger: true,
     })
+
+    const testConfig = buildPostHogBrowserConfig(
+      { ...resolved, environment: "test", isTest: true },
+      { isHttps: false },
+    )
+    expect(testConfig.opt_out_useragent_filter).toBe(true)
   })
 })
-

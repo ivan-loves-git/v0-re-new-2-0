@@ -123,8 +123,8 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
       setTimeout(() => { isMutatingRef.current = false }, 500)
-    } catch (error) {
-      console.error("Failed to create milestone:", error)
+    } catch {
+      console.error("Offer milestone creation failed")
       setLocalMilestones(prev => prev.filter(m => m.id !== tempMilestone.id))
       isMutatingRef.current = false
     } finally {
@@ -149,8 +149,8 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
       setTimeout(() => { isMutatingRef.current = false }, 500)
-    } catch (error) {
-      console.error("Failed to toggle milestone:", error)
+    } catch {
+      console.error("Offer milestone toggle failed")
       setLocalMilestones(prev =>
         prev.map(m =>
           m.id === milestone.id ? { ...m, is_completed: !newCompleted } : m
@@ -190,8 +190,8 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
       setTimeout(() => { isMutatingRef.current = false }, 500)
-    } catch (error) {
-      console.error("Failed to update milestone:", error)
+    } catch {
+      console.error("Offer milestone update failed")
       isMutatingRef.current = false
     } finally {
       setIsSubmitting(false)
@@ -209,8 +209,8 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
       setTimeout(() => { isMutatingRef.current = false }, 500)
-    } catch (error) {
-      console.error("Failed to delete milestone:", error)
+    } catch {
+      console.error("Offer milestone deletion failed")
       if (milestoneToDelete) {
         setLocalMilestones(prev => [...prev, milestoneToDelete])
       }

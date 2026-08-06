@@ -111,11 +111,11 @@ export function KanbanBoard({ repreneurs }: KanbanBoardProps) {
       await updateRepreneurStatusPipeline(repreneurId, newStatus)
       toast.success("Status updated")
       router.refresh()
-    } catch (error) {
+    } catch {
       // Revert on error
       setOptimisticRepreneurs(repreneurs)
       toast.error("Failed to update status. Please try again.")
-      console.error("Failed to update status:", error)
+      console.error("Pipeline status update failed")
     }
   }
 

@@ -44,6 +44,7 @@ describe("WAVE telemetry privacy", () => {
     expect(workflowForRoute("/repreneurs/private/questionnaire")).toBe("assessment")
     expect(workflowForRoute("/opportunities/private")).toBe("opportunity_management")
     expect(workflowForRoute("/portal/deals/private")).toBe("portal_deals")
+    expect(workflowForRoute("/tools/wave-ai")).toBe("wave_ai")
     expect(workflowForRoute("/future/private")).toBe("navigation")
   })
 
@@ -88,6 +89,7 @@ describe("WAVE telemetry privacy", () => {
   it("masks content-bearing replay attributes while retaining layout attributes", () => {
     expect(maskReplayAttribute("aria-label", "Bertrand account")).toBe("[masked]")
     expect(maskReplayAttribute("value", "person@example.com")).toBe("[masked]")
+    expect(maskReplayAttribute("style", "background-image:url(/private/person.png)")).toBe("[masked]")
     expect(maskReplayAttribute("class", "grid gap-4")).toBe("grid gap-4")
     expect(
       maskReplayAttribute(
@@ -111,6 +113,7 @@ describe("WAVE telemetry privacy", () => {
       uuid: "019fd674-9442-7000-a255-fa06c75772d7",
       event: "wave_action_succeeded",
       properties: {
+        token: "phc_publicprojecttoken1234567890",
         distinct_id: "019fd674-9442-7000-a255-fa06c75772d7",
         $current_url:
           "https://app.re-new.team/opportunities/019fd674-9442-7000-a255-fa06c75772d7?contact=person@example.com",
@@ -138,6 +141,7 @@ describe("WAVE telemetry privacy", () => {
       action: "save",
       outcome: "success",
       $current_url: "https://app.re-new.team/opportunities/:id",
+      token: "phc_publicprojecttoken1234567890",
     })
     expect(result?.properties).not.toHaveProperty("email")
     expect(result?.properties).not.toHaveProperty("company")

@@ -33,6 +33,7 @@ export interface WaveTelemetryTransport {
 let transport: WaveTelemetryTransport | null = null
 let currentRole: WaveTelemetryRole = "anonymous"
 let lastPageView: string | null = null
+const transportReadyListeners = new Set<() => void>()
 
 function baseProperties() {
   const config = getClientTelemetryConfig()
@@ -54,8 +55,17 @@ export function installWaveTelemetryTransport(next: WaveTelemetryTransport) {
       isTest: getClientTelemetryConfig().isTest,
     }),
   )
+  for (const listener of transportReadyListeners) listener()
   return () => {
     if (transport === next) transport = null
+  }
+}
+
+export function onWaveTelemetryTransportReady(listener: () => void) {
+  transportReadyListeners.add(listener)
+  if (transport) listener()
+  return () => {
+    transportReadyListeners.delete(listener)
   }
 }
 

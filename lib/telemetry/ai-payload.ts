@@ -77,6 +77,7 @@ export function buildAiGenerationPayload(
 
   const inputTokens = boundedCount(capture.inputTokens)
   const cachedInputTokens = boundedCount(capture.cachedInputTokens)
+  const cacheWriteTokens = boundedCount(capture.cacheWriteTokens)
   const outputTokens = boundedCount(capture.outputTokens)
   const reasoningTokens = boundedCount(capture.reasoningTokens)
   const estimatedCost = boundedCost(capture.estimatedCostUsd)
@@ -86,6 +87,7 @@ export function buildAiGenerationPayload(
     properties.input_tokens = inputTokens
   }
   if (cachedInputTokens !== undefined) properties.cached_input_tokens = cachedInputTokens
+  if (cacheWriteTokens !== undefined) properties.cache_write_tokens = cacheWriteTokens
   if (outputTokens !== undefined) {
     properties.$ai_output_tokens = outputTokens
     properties.output_tokens = outputTokens
@@ -102,4 +104,3 @@ export function buildAiGenerationPayload(
 
   return { event: "$ai_generation" as const, properties }
 }
-

@@ -181,7 +181,7 @@ export function OpportunityForm({
         toast.success(result.message)
       }
     } catch (error) {
-      console.error("Failed to save opportunity:", error)
+      console.error("Opportunity save failed")
       toast.error(
         error instanceof Error
           ? error.message

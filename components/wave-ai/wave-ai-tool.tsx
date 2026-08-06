@@ -12,8 +12,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { WAVE_AI_EMAIL_TEMPLATES } from "@/lib/ai/email-templates"
+import { WAVE_AI_PROMPT_VERSION } from "@/lib/ai/config"
 import type { WaveAiEmailDraftResponse } from "@/lib/ai/email-contract"
 import type { WaveAiCustomTemplate } from "@/lib/actions/wave-ai"
+import { captureWaveEvent } from "@/lib/telemetry/runtime"
 import { WaveAiRepreneurSearch, type WaveAiRepreneurOption } from "./repreneur-search"
 
 type FeedbackReason = "wrong_fact" | "not_relevant" | "poor_wording" | "missing_context" | "other_without_text"
@@ -81,6 +83,16 @@ export function WaveAiTool({
 
   const generate = async () => {
     if (!selectedRepreneur || !canGenerate) return
+    captureWaveEvent("wave_ai_generation_requested", {
+      route_template: "/tools/wave-ai",
+      surface: "staff",
+      role: "staff",
+      workflow: "wave_ai",
+      action: "generate",
+      feature: "email_draft",
+      prompt_version: WAVE_AI_PROMPT_VERSION,
+      model_key: "gpt-5.6-luna",
+    })
     setGenerating(true)
     setDraft(null)
     setSubject("")
@@ -107,8 +119,32 @@ export function WaveAiTool({
       setSubject(nextDraft.subject)
       setBody(nextDraft.body)
       void recordEvent(nextDraft.generationId, "rendered")
+      captureWaveEvent("wave_ai_generation_rendered", {
+        route_template: "/tools/wave-ai",
+        surface: "staff",
+        role: "staff",
+        workflow: "wave_ai",
+        action: "render",
+        outcome: "success",
+        feature: "email_draft",
+        generation_id: nextDraft.generationId,
+        trace_id: nextDraft.traceId,
+        prompt_version: WAVE_AI_PROMPT_VERSION,
+        model_key: nextDraft.model,
+      })
       toast.success("Draft ready for review.")
     } catch (error) {
+      captureWaveEvent("wave_action_failed", {
+        route_template: "/tools/wave-ai",
+        surface: "staff",
+        role: "staff",
+        workflow: "wave_ai",
+        action: "generate",
+        outcome: "failure",
+        feature: "email_draft",
+        prompt_version: WAVE_AI_PROMPT_VERSION,
+        model_key: "gpt-5.6-luna",
+      })
       toast.error(error instanceof Error ? error.message : "Draft generation failed.")
     } finally {
       setGenerating(false)
@@ -127,6 +163,19 @@ export function WaveAiTool({
       await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`)
       setCopied(true)
       void recordEvent(draft.generationId, "copied")
+      captureWaveEvent("wave_ai_outcome_recorded", {
+        route_template: "/tools/wave-ai",
+        surface: "staff",
+        role: "staff",
+        workflow: "wave_ai",
+        action: "copy",
+        outcome: "copied",
+        feature: "email_draft",
+        generation_id: draft.generationId,
+        trace_id: draft.traceId,
+        prompt_version: WAVE_AI_PROMPT_VERSION,
+        model_key: draft.model,
+      })
       toast.success("Reviewed draft copied.")
       window.setTimeout(() => setCopied(false), 1800)
     } catch {
@@ -142,6 +191,19 @@ export function WaveAiTool({
     }
     setFeedback(value)
     setFeedbackRecorded(true)
+    captureWaveEvent("wave_ai_feedback_submitted", {
+      route_template: "/tools/wave-ai",
+      surface: "staff",
+      role: "staff",
+      workflow: "wave_ai",
+      action: "feedback",
+      outcome: value === "helpful" ? "useful" : "not_useful",
+      feature: "email_draft",
+      generation_id: draft.generationId,
+      trace_id: draft.traceId,
+      prompt_version: WAVE_AI_PROMPT_VERSION,
+      model_key: draft.model,
+    })
     void recordEvent(
       draft.generationId,
       value === "helpful" ? "feedback_helpful" : "feedback_not_helpful",
@@ -201,7 +263,7 @@ export function WaveAiTool({
             <p className="text-right text-xs text-muted-foreground">{customInstructions.length}/1200</p>
           </div>
 
-          <Button className="w-full" onClick={generate} disabled={!canGenerate || generating}>
+          <Button className="w-full" onClick={generate} disabled={!canGenerate || generating} data-wave-action="generate" data-wave-workflow="wave_ai">
             {generating ? <Loader2 className="animate-spin" /> : <Sparkles />}
             {generating ? "Drafting with Luna…" : "Create editable draft"}
           </Button>
@@ -262,10 +324,10 @@ export function WaveAiTool({
               <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-muted-foreground">Helpful?</span>
-                  <Button variant={feedback === "helpful" ? "secondary" : "ghost"} size="sm" onClick={() => submitFeedback("helpful")} disabled={feedbackRecorded}>
+                  <Button variant={feedback === "helpful" ? "secondary" : "ghost"} size="sm" onClick={() => submitFeedback("helpful")} disabled={feedbackRecorded} data-wave-action="feedback" data-wave-workflow="wave_ai">
                     <ThumbsUp /> Yes
                   </Button>
-                  <Button variant={feedback === "not_helpful" ? "secondary" : "ghost"} size="sm" onClick={() => submitFeedback("not_helpful")} disabled={feedbackRecorded}>
+                  <Button variant={feedback === "not_helpful" ? "secondary" : "ghost"} size="sm" onClick={() => submitFeedback("not_helpful")} disabled={feedbackRecorded} data-wave-action="feedback" data-wave-workflow="wave_ai">
                     <ThumbsDown /> No
                   </Button>
                   {feedback === "not_helpful" && (
@@ -288,7 +350,7 @@ export function WaveAiTool({
                     </Select>
                   )}
                 </div>
-                <Button onClick={copyDraft} disabled={!subject.trim() || !body.trim()}>
+                <Button onClick={copyDraft} disabled={!subject.trim() || !body.trim()} data-wave-action="copy" data-wave-workflow="wave_ai">
                   {copied ? <Check /> : <Clipboard />}
                   {copied ? "Copied" : "Copy reviewed draft"}
                 </Button>

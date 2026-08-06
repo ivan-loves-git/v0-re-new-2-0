@@ -116,8 +116,8 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
         isMutatingRef.current = false
       }, 500)
       return true
-    } catch (error) {
-      console.error("Failed to update offer status:", error)
+    } catch {
+      console.error("Offer status update failed")
       toast.error("Failed to update offer status")
       // Revert on error
       setLocalOffers(originalOffers)
@@ -166,8 +166,8 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
       setTimeout(() => {
         isMutatingRef.current = false
       }, 500)
-    } catch (error) {
-      console.error("Failed to delete offer:", error)
+    } catch {
+      console.error("Offer deletion failed")
       toast.error("Failed to remove offer")
       // Revert on error
       if (offerToDelete) {

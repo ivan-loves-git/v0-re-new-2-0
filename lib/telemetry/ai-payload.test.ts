@@ -12,6 +12,7 @@ const capture = {
   latencyMs: 2_450,
   inputTokens: 120,
   cachedInputTokens: 20,
+  cacheWriteTokens: 5,
   outputTokens: 60,
   reasoningTokens: 15,
   estimatedCostUsd: 0.042,
@@ -36,6 +37,7 @@ describe("metadata-only AI telemetry payload", () => {
         $ai_input_tokens: 120,
         $ai_output_tokens: 60,
         $ai_total_cost_usd: 0.042,
+        cache_write_tokens: 5,
         latency_bucket: "1s_to_3s",
       },
     })
@@ -63,4 +65,3 @@ describe("metadata-only AI telemetry payload", () => {
     expect(latencyBucket(30_000)).toBe("over_30s")
   })
 })
-

@@ -25,6 +25,7 @@ const UUID_IN_TEXT_PATTERN =
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi
 const SAFE_RELEASE_PATTERN = /^[a-z0-9][a-z0-9._-]{0,79}$/i
 const SAFE_VERSION_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/i
+const POSTHOG_PROJECT_TOKEN_PATTERN = /^phc_[A-Za-z0-9_-]{20,}$/
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi
 const TOKEN_PATTERN = /\b(?:sk|phc|re|whsec|eyJ)[-_a-z0-9.]{12,}\b/gi
 const LONG_IDENTIFIER_PATTERN = /\b[a-z0-9_-]{20,}\b/gi
@@ -70,7 +71,8 @@ const APPLICATION_PROPERTY_KEYS = new Set<keyof WaveTelemetryProperties>([
   "surface", "role", "workflow", "action", "outcome", "generation_id",
   "trace_id", "prompt_version", "model_key", "latency_bucket", "feature",
   "status", "error_code", "input_tokens", "cached_input_tokens",
-  "output_tokens", "reasoning_tokens", "estimated_cost_usd", "latency_ms",
+  "cache_write_tokens", "output_tokens", "reasoning_tokens",
+  "estimated_cost_usd", "latency_ms",
 ])
 
 const SYSTEM_PROPERTY_KEYS = new Set([
@@ -79,7 +81,7 @@ const SYSTEM_PROPERTY_KEYS = new Set([
   "$initial_current_url", "$lib", "$lib_version", "$os", "$os_version",
   "$pathname", "$process_person_profile", "$screen_height", "$screen_width",
   "$session_entry_url", "$session_id", "$viewport_height", "$viewport_width",
-  "$window_id", "distinct_id",
+  "$window_id", "distinct_id", "token",
 ])
 
 const AUTOMATIC_EVENT_NAMES = new Set([
@@ -178,6 +180,7 @@ export function workflowForRoute(pathname: string): WaveWorkflow {
     routeTemplate.startsWith("/deals")
   ) return "ma_advisory"
   if (
+    routeTemplate.startsWith("/tools/wave-ai") ||
     routeTemplate.startsWith("/wave-ai") ||
     routeTemplate.startsWith("/wavy")
   ) return "wave_ai"
@@ -227,7 +230,7 @@ export function maskCapturedNetworkRequest(request: CapturedNetworkRequest): Cap
 
 export function maskReplayAttribute(name: string, value: string) {
   const normalizedName = name.toLowerCase()
-  if (["class", "style", "role", "type", "width", "height", "viewbox"].includes(normalizedName)) return value
+  if (["class", "role", "type", "width", "height", "viewbox"].includes(normalizedName)) return value
   if (["href", "src", "action", "formaction"].includes(normalizedName)) return normalizeUrl(value) ?? "[masked]"
   return "[masked]"
 }
@@ -256,6 +259,10 @@ function sanitizeSystemProperties(properties: Properties) {
     }
     if (key === "$host") {
       if (typeof value === "string" && value.length <= 255) safe[key] = value
+      continue
+    }
+    if (key === "token") {
+      if (typeof value === "string" && POSTHOG_PROJECT_TOKEN_PATTERN.test(value)) safe[key] = value
       continue
     }
     if (["string", "number", "boolean"].includes(typeof value)) safe[key] = value
@@ -287,7 +294,7 @@ function sanitizeApplicationProperties(properties: Properties, context: Telemetr
       case "feature": if (isOneOf(value, WAVE_AI_FEATURES)) safe.feature = value; break
       case "status": if (isOneOf(value, WAVE_AI_STATUSES)) safe.status = value; break
       case "error_code": if (isOneOf(value, WAVE_AI_ERROR_CODES)) safe.error_code = value; break
-      case "input_tokens": case "cached_input_tokens": case "output_tokens": case "reasoning_tokens": {
+      case "input_tokens": case "cached_input_tokens": case "cache_write_tokens": case "output_tokens": case "reasoning_tokens": {
         const count = finiteNumber(value, 10_000_000)
         if (count !== undefined) safe[key] = Math.trunc(count)
         break

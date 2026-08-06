@@ -144,7 +144,7 @@ importers:
         specifier: ^8.17.1
         version: 8.17.1
       posthog-js:
-        specifier: ^1.413.2
+        specifier: 1.413.2
         version: 1.413.2
       prettier:
         specifier: 3.7.4

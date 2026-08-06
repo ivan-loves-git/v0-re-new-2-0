@@ -49,6 +49,7 @@ export function buildPostHogBrowserConfig(
     disable_surveys: true,
     advanced_disable_feature_flags: true,
     person_profiles: "identified_only",
+    opt_out_useragent_filter: config.isTest,
     persistence: "localStorage+cookie",
     cross_subdomain_cookie: false,
     secure_cookie: options.isHttps,
@@ -113,4 +114,3 @@ export function buildPostHogBrowserConfig(
     }),
   }
 }
-
