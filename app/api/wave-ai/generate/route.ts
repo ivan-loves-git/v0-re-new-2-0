@@ -7,8 +7,6 @@ import { classifyWaveAiError, publicWaveAiError } from "@/lib/ai/errors"
 import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
 import { estimateWaveAiCostUsd, normalizeWaveAiUsage } from "@/lib/ai/usage"
 
-export const runtime = "nodejs"
-
 export async function POST(request: Request) {
   const access = await getCurrentUserAccess()
   if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -69,4 +67,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: safe.message }, { status: safe.status })
   }
 }
-

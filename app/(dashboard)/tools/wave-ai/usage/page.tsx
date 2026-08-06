@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { connection } from "next/server"
 import { ArrowLeft, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
@@ -6,13 +7,12 @@ import { WaveAiUsageDashboard } from "@/components/wave-ai/usage-dashboard"
 import { requireStaffAccess } from "@/lib/access-control"
 import { getWaveAiDashboardMetrics } from "@/lib/ai/ledger"
 
-export const dynamic = "force-dynamic"
-
 export default async function WaveAiUsagePage({
   searchParams,
 }: {
   searchParams: Promise<{ window?: string }>
 }) {
+  await connection()
   await requireStaffAccess()
   const params = await searchParams
   const days: 7 | 30 = params.window === "30" ? 30 : 7
@@ -37,4 +37,3 @@ export default async function WaveAiUsagePage({
     </div>
   )
 }
-
