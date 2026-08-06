@@ -83,7 +83,9 @@ export function buildPostHogBrowserConfig(
       captureExtensionExceptions: false,
       exception_steps: { enabled: false },
     },
-    enable_recording_console_log: true,
+    // Console payloads can contain arbitrary business or personal data. Keep
+    // automatic exception capture, but never attach console content to replays.
+    enable_recording_console_log: false,
     capture_performance: {
       network_timing: true,
       web_vitals: true,

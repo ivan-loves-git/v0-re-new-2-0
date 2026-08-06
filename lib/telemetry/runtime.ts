@@ -28,12 +28,24 @@ export interface WaveTelemetryTransport {
   identify(userId: string, properties: { role: "staff" | "repreneur" }): void
   reset(options: { resetDeviceId: boolean }): void
   register(properties: Record<string, unknown>): void
+  suspend(): void
 }
 
 let transport: WaveTelemetryTransport | null = null
 let currentRole: WaveTelemetryRole = "anonymous"
 let lastPageView: string | null = null
 const transportReadyListeners = new Set<() => void>()
+
+function suspendWaveTelemetry(failedTransport: WaveTelemetryTransport) {
+  currentRole = "anonymous"
+  lastPageView = null
+  try {
+    failedTransport.suspend()
+  } catch {
+    // The in-memory transport is still detached below, so custom events stop.
+  }
+  if (transport === failedTransport) transport = null
+}
 
 function baseProperties() {
   const config = getClientTelemetryConfig()
@@ -126,10 +138,14 @@ export function identifyTelemetryUser(
 ) {
   const config = getClientTelemetryConfig()
   if (!config.enabled || !transport || !isOpaqueUuid(userId)) return false
+  const activeTransport = transport
   try {
+    // Set the recovery marker before identification so a partial hand-off is
+    // repaired on the next login even if a later SDK operation fails.
+    window.localStorage.setItem(IDENTIFIED_MARKER, "true")
+    activeTransport.identify(userId, { role })
     currentRole = role
-    transport.identify(userId, { role })
-    transport.register(
+    activeTransport.register(
       sanitizeWaveProperties(
         { ...baseProperties(), role },
         {
@@ -139,24 +155,36 @@ export function identifyTelemetryUser(
         },
       ),
     )
-    window.localStorage.setItem(IDENTIFIED_MARKER, "true")
     lastPageView = null
     return true
   } catch {
+    // If any part of the hand-off fails, prefer losing the analytics chain to
+    // leaving a partially identified browser behind.
+    currentRole = "anonymous"
+    lastPageView = null
+    try {
+      activeTransport.reset({ resetDeviceId: true })
+      activeTransport.register(baseProperties())
+      window.localStorage.removeItem(IDENTIFIED_MARKER)
+    } catch {
+      suspendWaveTelemetry(activeTransport)
+    }
     return false
   }
 }
 
 export function resetTelemetryIdentity() {
-  currentRole = "anonymous"
-  lastPageView = null
   if (!transport) return false
+  const activeTransport = transport
   try {
-    transport.reset({ resetDeviceId: true })
-    transport.register(baseProperties())
+    activeTransport.reset({ resetDeviceId: true })
+    currentRole = "anonymous"
+    lastPageView = null
+    activeTransport.register(baseProperties())
     window.localStorage.removeItem(IDENTIFIED_MARKER)
     return true
   } catch {
+    suspendWaveTelemetry(activeTransport)
     return false
   }
 }

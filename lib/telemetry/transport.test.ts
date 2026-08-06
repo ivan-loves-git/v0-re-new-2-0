@@ -20,6 +20,9 @@ describe("WAVE PostHog transport wiring", () => {
     expect(config).toContain("recordBody: false")
     expect(config).toContain("capture_console_errors: true")
     expect(config).toContain("network_timing: true")
+    expect(provider).toContain("posthog.stopSessionRecording()")
+    expect(provider).toContain("posthog.opt_out_capturing()")
+    expect(provider).not.toContain("posthog.opt_in_capturing")
   })
 
   it("delivers only metadata from the server after the ledger completes", () => {

@@ -69,7 +69,7 @@ describe("WAVE telemetry configuration", () => {
         capture_unhandled_rejections: true,
         capture_console_errors: true,
       },
-      enable_recording_console_log: true,
+      enable_recording_console_log: false,
       capture_performance: { network_timing: true },
       disable_session_recording: false,
       session_recording: {

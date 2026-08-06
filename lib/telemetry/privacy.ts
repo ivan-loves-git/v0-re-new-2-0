@@ -32,9 +32,9 @@ const LONG_IDENTIFIER_PATTERN = /\b[a-z0-9_-]{20,}\b/gi
 
 const STATIC_ROUTE_SEGMENTS = new Set([
   "account", "analytics", "analytics_op", "analytics_re", "api", "assessment",
-  "auth", "c", "cron", "dashboard", "dashboard_op", "dashboard_re", "deals",
+  "auth", "c", "contacts", "cron", "dashboard", "dashboard_op", "dashboard_re", "deals",
   "design-system", "details", "edit", "emails", "error", "explore",
-  "find", "forgot-password", "groups", "guide", "guidelines", "import",
+  "find", "firms", "forgot-password", "groups", "guide", "guidelines", "import",
   "instructions", "intake-upload-token", "intake-v2", "journey", "login", "ma",
   "ma-workflow", "nda-artifacts", "documents",
   "my-opportunities", "new", "offers", "opportunities", "pipeline",
@@ -51,6 +51,7 @@ const ROUTE_PATTERNS: Array<[RegExp, string]> = [
   [/^\/c\/[^/]+\/?$/, "/c/:slug"],
   [/^\/my-opportunities\/[^/]+\/?$/, "/my-opportunities/:matchId"],
   [/^\/offers\/[^/]+\/edit\/?$/, "/offers/:id/edit"],
+  [/^\/opportunities\/ma\/?$/, "/opportunities/ma"],
   [/^\/opportunities\/[^/]+\/?$/, "/opportunities/:id"],
   [/^\/portal\/deals\/[^/]+\/?$/, "/portal/deals/:matchId"],
   [/^\/repreneurs\/[^/]+\/questionnaire\/?$/, "/repreneurs/:id/questionnaire"],
@@ -166,6 +167,11 @@ export function workflowForRoute(pathname: string): WaveWorkflow {
     routeTemplate.startsWith("/analytics_re")
   ) return "repreneur_management"
   if (
+    routeTemplate.startsWith("/opportunities/ma") ||
+    routeTemplate.startsWith("/ma") ||
+    routeTemplate.startsWith("/deals")
+  ) return "ma_advisory"
+  if (
     routeTemplate.startsWith("/opportunities") ||
     routeTemplate.startsWith("/dashboard_op") ||
     routeTemplate.startsWith("/analytics_op")
@@ -175,10 +181,6 @@ export function workflowForRoute(pathname: string): WaveWorkflow {
   if (routeTemplate.startsWith("/emails")) return "email"
   if (routeTemplate.startsWith("/portal/deals")) return "portal_deals"
   if (routeTemplate.startsWith("/portal/profile")) return "portal_profile"
-  if (
-    routeTemplate.startsWith("/ma") ||
-    routeTemplate.startsWith("/deals")
-  ) return "ma_advisory"
   if (
     routeTemplate.startsWith("/tools/wave-ai") ||
     routeTemplate.startsWith("/wave-ai") ||

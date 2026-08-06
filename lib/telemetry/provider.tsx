@@ -99,6 +99,10 @@ export function WaveTelemetryProvider({ children }: { children: React.ReactNode 
       register(properties) {
         posthog.register(properties)
       },
+      suspend() {
+        posthog.stopSessionRecording()
+        posthog.opt_out_capturing()
+      },
     })
     resetStaleIdentityOnLogin(window.location.pathname)
     capturePageView(window.location.pathname)
