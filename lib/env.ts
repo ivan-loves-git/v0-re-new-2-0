@@ -28,7 +28,6 @@ const envSchema = z.object({
   CC_ON_INTERVIEW_REMINDER: z.string().email("CC_ON_INTERVIEW_REMINDER must be a valid email").optional(),
 
   // AI features
-  ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
 
   // Public feature configuration

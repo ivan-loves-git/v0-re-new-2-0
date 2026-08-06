@@ -191,9 +191,8 @@ describe("W-072 purpose-aware M&A contact email suppression", () => {
       ),
     )
     expect(addressPolicy).not.toContain("contact.status = 'active'")
-    expect(wavySendRoute.indexOf("isMaContactEmailAddressSuppressed")).toBeLessThan(
-      wavySendRoute.indexOf("resend.emails.send"),
-    )
+    expect(wavySendRoute).toContain("status: 410")
+    expect(wavySendRoute).not.toContain("resend.emails.send")
   })
 
   it("shows staff the policy in both recipient selection and the canonical directory", () => {

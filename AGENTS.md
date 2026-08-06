@@ -181,14 +181,8 @@ GitHub is the project's memory. Commit format, types, push-immediately rule, bro
 
 In-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team. When to update, how to update, entry format, founder-friendly language → `docs/roadmap-workflow.md`.
 
-## Wavy — team communications
+## WAVE AI — staff assistance
 
-Wavy is the platform's AI mascot for internal team updates. Always test-send to `ivanpaudice@me.com` first; only after Ivan confirms, send to team.
+WAVE AI is staff-only and uses OpenAI `gpt-5.6-luna` with maximum reasoning. It may create editable drafts and recommendations after an explicit staff request, but it must not send messages, mutate business data, or replace deterministic rules. A human reviews and performs the separate operational action.
 
-| Item                 | Location                                         |
-| -------------------- | ------------------------------------------------ |
-| Personality + voice  | `docs/communications/WAVY.md`                    |
-| Email template rules | `docs/communications/PRODUCT_UPDATE_TEMPLATE.md` |
-| Sent archive         | `docs/emails-sent/`                              |
-| Send script          | `scripts/send-roadmap-email.ts`                  |
-| Team list            | `lib/distribution-lists.ts`                      |
+The binding runtime, data, privacy, observability, and acceptance contract is `docs/architecture/wave-ai-and-observability-v1.md`. Historical Wavy communication files and archives may retain their original names, but they do not define the active product runtime.

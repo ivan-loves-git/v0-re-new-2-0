@@ -17,8 +17,8 @@ import Link from "next/link"
 import { connection } from "next/server"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
 import { Eye, LayoutDashboard } from "lucide-react"
-import { getWavySuggestions } from "@/lib/actions/wavy"
-import { WavySuggestsWidget } from "@/components/wavy/wavy-suggests-widget"
+import { getFollowUpSuggestions } from "@/lib/actions/wave-ai"
+import { FollowUpSuggestionsWidget } from "@/components/follow-ups/follow-up-suggestions-widget"
 import { getRepreneurDashboardSnapshot } from "@/lib/data/dashboard-snapshots"
 
 // Skeleton components for Suspense fallbacks
@@ -294,16 +294,15 @@ async function ChartsRow() {
   )
 }
 
-// Server component for Wavy suggestions
-async function WavySuggestsRow() {
+// Server component for deterministic follow-up suggestions
+async function FollowUpSuggestionsRow() {
   await connection()
 
-  let data: Awaited<ReturnType<typeof getWavySuggestions>>
+  let data: Awaited<ReturnType<typeof getFollowUpSuggestions>>
   try {
-    data = await getWavySuggestions()
-  } catch (error) {
-    // Silently fail if wavy_templates table doesn't exist yet
-    console.error("Failed to fetch Wavy suggestions:", error)
+    data = await getFollowUpSuggestions()
+  } catch {
+    console.error("Follow-up suggestions could not be loaded")
     return null
   }
 
@@ -311,7 +310,7 @@ async function WavySuggestsRow() {
     return null
   }
 
-  return <WavySuggestsWidget suggestions={data.suggestions} totalCount={data.totalCount} />
+  return <FollowUpSuggestionsWidget suggestions={data.suggestions} totalCount={data.totalCount} />
 }
 
 export default async function RepreneurDashboardPage() {
@@ -370,9 +369,9 @@ export default async function RepreneurDashboardPage() {
         <ChartsRow />
       </Suspense>
 
-      {/* Wavy Suggestions - follow-up recommendations */}
+      {/* Deterministic follow-up recommendations */}
       <Suspense fallback={<ChartSkeleton />}>
-        <WavySuggestsRow />
+        <FollowUpSuggestionsRow />
       </Suspense>
 
     </div>

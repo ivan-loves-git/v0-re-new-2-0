@@ -3,7 +3,6 @@ import { EmailOverview } from "./components/email-overview"
 import { EmailLog } from "./components/email-log"
 import { EmailTemplates } from "./components/email-templates"
 import { ManualSend } from "./components/manual-send"
-import { AiDraftTest } from "./components/ai-draft-test"
 import { getEmailStats, getEmailLogs, getTemplateSettings, getDailyEmailCounts } from "@/lib/actions/emails"
 import { connection } from "next/server"
 import { Mail } from "lucide-react"
@@ -47,7 +46,6 @@ export default async function EmailsPage() {
 
         <TabsContent value="send" className="mt-6 space-y-6">
           <ManualSend />
-          <AiDraftTest />
         </TabsContent>
       </Tabs>
     </div>

@@ -18,7 +18,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.72.1",
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
@@ -62,6 +61,7 @@
     "motion": "^12.42.2",
     "next": "16.0.10",
     "next-themes": "^0.4.6",
+    "openai": "7.4.0",
     "pg": "^8.17.1",
     "prettier": "3.7.4",
     "radix-ui": "^1.4.3",

@@ -19,6 +19,7 @@ import {
   Settings,
   User,
   Waves,
+  Sparkles,
   Palette,
   type LucideIcon,
 } from "lucide-react"
@@ -77,7 +78,7 @@ const opportunityNavigation: NavigationItem[] = [
 
 const toolsNavigation: NavigationItem[] = [
   { name: "Emails", href: "/emails", icon: Mail },
-  { name: "Wavy", href: "/tools/wavy", icon: Waves },
+  { name: "WAVE AI", href: "/tools/wave-ai", icon: Sparkles },
 ]
 
 const projectNavigation: NavigationItem[] = [
