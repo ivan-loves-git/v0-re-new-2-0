@@ -156,7 +156,7 @@ The initial review gate is 30 reviewed outcomes. Model routing, fallback or reas
 ### Identity
 
 - Before login, use PostHog's anonymous identity.
-- After login, identify only with the opaque Better Auth user UUID and application role.
+- After login, derive a deterministic analytics-only UUID from the Better Auth user ID and identify only with that UUID plus the application role. Never send the raw authentication ID to PostHog.
 - Merge the anonymous pre-login journey after authentication.
 - Never identify or set person properties with name, email address, CRM ID, company, opportunity or repreneur ID.
 - Reset analytics identity on logout.
