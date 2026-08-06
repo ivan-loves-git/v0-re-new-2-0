@@ -386,6 +386,8 @@ export interface Opportunity {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
+  /** Source date precision; month-only dates must never be exported as a day. */
+  date_added_precision?: "day" | "month" | null
   repreneur_exposure: OpportunityVisibility
   public_title?: string | null
   teaser_summary?: string | null
