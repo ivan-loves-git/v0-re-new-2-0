@@ -13,6 +13,7 @@ export type OpportunityVisibility =
 export type MaSourceType = "ma_firm" | "broker" | "direct" | "other"
 
 export type OpportunityDocumentType =
+  | "source_teaser"
   | "teaser"
   | "deal_book"
   | "nda"
@@ -137,8 +138,9 @@ export const MA_SOURCE_TYPE_OPTIONS = [
 ] as const
 
 export const OPPORTUNITY_DOCUMENT_TYPE_OPTIONS = [
+  { value: "source_teaser", label: "Source teaser (staff only)" },
   { value: "teaser", label: "Teaser" },
-  { value: "deal_book", label: "Deal book" },
+  { value: "deal_book", label: "Information memorandum (IM)" },
   { value: "nda", label: "NDA" },
   { value: "external_analysis", label: "External analysis" },
   { value: "other", label: "Other" },

@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ExternalLink, FileText, MoreHorizontal, Trash2, Upload } from "lucide-react"
+import { Download, ExternalLink, FileText, MoreHorizontal, Trash2, Upload } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,6 +27,7 @@ import {
   OPPORTUNITY_DOCUMENT_TYPE_OPTIONS,
   OPPORTUNITY_DOCUMENT_VISIBILITY_OPTIONS,
   type OpportunityDocument,
+  type OpportunityDocumentType,
   type OpportunityDocumentVisibility,
 } from "@/lib/types/opportunity"
 
@@ -45,6 +47,14 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
 }
 
+function documentTypeLabel(type: OpportunityDocumentType) {
+  return OPPORTUNITY_DOCUMENT_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type.replaceAll("_", " ")
+}
+
+function hasRetainedPolicy(document: OpportunityDocument) {
+  return document.document_type === "source_teaser" || document.document_type === "deal_book"
+}
+
 export function OpportunityDocumentsPanel({
   opportunityId,
   documents,
@@ -52,26 +62,53 @@ export function OpportunityDocumentsPanel({
 }: OpportunityDocumentsPanelProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [documentType, setDocumentType] = useState<OpportunityDocumentType>("teaser")
   const canonicalNdaDocumentIdSet = new Set(canonicalNdaDocumentIds)
+  const selectedTypeIsStaffOnly = documentType === "source_teaser" || documentType === "deal_book"
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
     try {
-      await registerOpportunityDocument(formData)
+      const result = await registerOpportunityDocument(formData)
+      if (!result.success) {
+        toast.error("Document not added", { description: result.message })
+        return
+      }
+      toast.success("Document added", { description: result.message })
       router.refresh()
+    } catch {
+      toast.error("Document not added", { description: "Please try again." })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   async function handleVisibility(documentId: string, visibility: OpportunityDocumentVisibility) {
-    await updateOpportunityDocumentVisibility(documentId, opportunityId, visibility)
-    router.refresh()
+    try {
+      const result = await updateOpportunityDocumentVisibility(documentId, opportunityId, visibility)
+      if (!result.success) {
+        toast.error("Document visibility not changed", { description: result.message })
+        return
+      }
+      toast.success("Document visibility changed", { description: result.message })
+      router.refresh()
+    } catch {
+      toast.error("Document visibility not changed", { description: "Please try again." })
+    }
   }
 
   async function handleRemove(documentId: string) {
-    await removeOpportunityDocument(documentId, opportunityId)
-    router.refresh()
+    try {
+      const result = await removeOpportunityDocument(documentId, opportunityId)
+      if (!result.success) {
+        toast.error("Document not removed", { description: result.message })
+        return
+      }
+      toast.success("Document removed", { description: result.message })
+      router.refresh()
+    } catch {
+      toast.error("Document not removed", { description: "Please try again." })
+    }
   }
 
   return (
@@ -82,7 +119,7 @@ export function OpportunityDocumentsPanel({
             <Upload className="size-5" />
             Add document
           </CardTitle>
-          <CardDescription>Documents stay staff-only until a staff member records an explicit repreneur approval.</CardDescription>
+          <CardDescription>Source teasers and Information Memoranda stay staff-only; access is granted only from the pursuit workflow.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="grid gap-4 lg:grid-cols-[1fr_180px_220px_1fr_auto] lg:items-end">
@@ -93,7 +130,7 @@ export function OpportunityDocumentsPanel({
             </div>
             <div className="space-y-2">
               <Label htmlFor="document-type">Type</Label>
-              <Select name="document_type" defaultValue="teaser">
+              <Select name="document_type" value={documentType} onValueChange={(value) => setDocumentType(value as OpportunityDocumentType)}>
                 <SelectTrigger id="document-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -110,24 +147,31 @@ export function OpportunityDocumentsPanel({
             </div>
             <div className="space-y-2">
               <Label htmlFor="document-visibility">Visibility</Label>
-              <Select name="visibility" defaultValue="staff_only">
-                <SelectTrigger id="document-visibility">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {OPPORTUNITY_DOCUMENT_VISIBILITY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              {selectedTypeIsStaffOnly ? (
+                <>
+                  <input type="hidden" name="visibility" value="staff_only" />
+                  <div id="document-visibility" className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">Staff only</div>
+                </>
+              ) : (
+                <Select name="visibility" defaultValue="staff_only">
+                  <SelectTrigger id="document-visibility">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {OPPORTUNITY_DOCUMENT_VISIBILITY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="document-file">File</Label>
-              <Input id="document-file" name="file" type="file" />
+              <Input id="document-file" name="file" type="file" accept={selectedTypeIsStaffOnly ? "application/pdf,.pdf" : undefined} />
             </div>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Adding..." : "Add"}
@@ -166,8 +210,8 @@ export function OpportunityDocumentsPanel({
                   </TableRow>
                 ) : (
                   documents.map((document) => {
-                    const isCanonicalNdaArtifact =
-                      canonicalNdaDocumentIdSet.has(document.id)
+                    const isCanonicalNdaArtifact = canonicalNdaDocumentIdSet.has(document.id)
+                    const isRetained = hasRetainedPolicy(document)
                     return (
                     <TableRow key={document.id}>
                       <TableCell>
@@ -181,7 +225,7 @@ export function OpportunityDocumentsPanel({
                           </Button>
                         )}
                       </TableCell>
-                      <TableCell>{document.document_type.replaceAll("_", " ")}</TableCell>
+                      <TableCell>{documentTypeLabel(document.document_type)}</TableCell>
                       <TableCell>
                         <Badge variant={document.visibility === "staff_only" ? "secondary" : "default"}>
                           {document.visibility === "staff_only" ? "Staff only" : "Approved"}
@@ -202,7 +246,7 @@ export function OpportunityDocumentsPanel({
                       <TableCell>{formatBytes(document.size_bytes)}</TableCell>
                       <TableCell>{formatDate(document.uploaded_at)}</TableCell>
                       <TableCell>
-                        {isCanonicalNdaArtifact ? (
+                        {isCanonicalNdaArtifact || isRetained ? (
                           <span className="text-xs text-muted-foreground">Locked</span>
                         ) : (
                         <DropdownMenu>
@@ -212,6 +256,12 @@ export function OpportunityDocumentsPanel({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <a href={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`} target="_blank" rel="noreferrer">
+                                <Download className="size-4" />
+                                View or download
+                              </a>
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleVisibility(document.id, "staff_only")}>
                               Mark staff-only
                             </DropdownMenuItem>
@@ -224,6 +274,14 @@ export function OpportunityDocumentsPanel({
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        )}
+                        {(isCanonicalNdaArtifact || isRetained) && (
+                          <Button asChild variant="ghost" size="sm" className="h-8">
+                            <a href={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`} target="_blank" rel="noreferrer">
+                              <Download className="size-4" />
+                              View
+                            </a>
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
