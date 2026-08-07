@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
 import {
   assertGenericOpportunityDocumentPolicy,
   getOpportunityDocumentPolicy,
@@ -145,11 +144,8 @@ export async function registerOpportunityDocument(formData: FormData): Promise<O
 
     if (error) throw new Error(error.message)
 
-    // Upload is never a disclosure decision. In particular, a newly stored IM
-    // has no notification side effect; the canonical pursuit grant owns it.
-    if (documentType !== "deal_book") {
-      await triggerOpportunityMemoNotification({ opportunityId })
-    }
+    // Upload is never a disclosure decision and has no notification side
+    // effect. Only the canonical pursuit grant may notify a repreneur.
 
     revalidatePath(`/opportunities/${opportunityId}`)
     revalidateOpportunityDashboardTags()
@@ -200,9 +196,6 @@ export async function updateOpportunityDocumentVisibility(
     .eq("opportunity_id", opportunityId)
 
     if (error) throw new Error(error.message)
-    if (document.document_type !== "deal_book") {
-      await triggerOpportunityMemoNotification({ opportunityId })
-    }
     revalidatePath(`/opportunities/${opportunityId}`)
     revalidateOpportunityDashboardTags()
     return { success: true, message: visibility === "staff_only" ? "Document is now staff-only." : "Document approval recorded." }
