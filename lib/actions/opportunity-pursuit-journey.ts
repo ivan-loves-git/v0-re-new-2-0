@@ -49,6 +49,11 @@ export async function runOpportunityPursuitJourneyAction(input: {
 
 export const qualifyOpportunityPursuit = (matchId: string, idempotencyKey?: string) =>
   runOpportunityPursuitJourneyAction({ matchId, action: "qualify", idempotencyKey })
+export async function startOpportunityPursuit(matchId: string, evidenceReference?: string, idempotencyKey = randomUUID()): Promise<OpportunityPursuitJourneyResult> {
+  const staff = await requireStaffAccess()
+  const { data, error } = await createAdminClient().rpc("journey_start_pursuit", { p_match_id: matchId, p_actor: staff.user.email, p_idempotency_key: idempotencyKey, p_evidence_reference: evidenceReference ?? null })
+  return error ? { success: false, message: error.message } : { success: true, message: "Active pursuit started.", eventId: data }
+}
 export const validateOpportunityPursuitTemplate = (matchId: string, artifactId: string, idempotencyKey?: string) =>
   runOpportunityPursuitJourneyAction({ matchId, action: "validate_template", artifactId, idempotencyKey })
 export const passOpportunityPursuitGate1 = (matchId: string, idempotencyKey?: string) =>
