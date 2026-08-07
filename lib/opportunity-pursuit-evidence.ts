@@ -28,6 +28,8 @@ export interface OpportunityPursuitEvidence {
 }
 
 export interface OpportunityPursuitProjection {
+  currentCycleId: string | null
+  steps: Array<{ key: string; label: string; status: "complete" | "current" | "blocked" | "not_available"; recordedAt?: string; actor?: string; artifactId?: string; blocker?: string }>
   gate1Passed: boolean
   gate2Passed: boolean
   hasCurrentRenewCopy: boolean
@@ -40,15 +42,17 @@ export interface OpportunityPursuitProjection {
 export function projectOpportunityPursuitEvidence(input: {
   enabled: boolean
   status: string
-  events: Pick<OpportunityPursuitEvidence, "event_type" | "nda_artifact_id">[]
+  events: Array<Pick<OpportunityPursuitEvidence, "event_type" | "nda_artifact_id"> & Partial<Pick<OpportunityPursuitEvidence, "id" | "recorded_at" | "actor">>>
   currentRenewArtifactId?: string | null
   currentRepreneurArtifactId?: string | null
 }): OpportunityPursuitProjection {
-  const eventTypes = new Set(input.events.map((event) => event.event_type))
-  const hasCurrentRenewCopy = Boolean(input.currentRenewArtifactId && input.events.some((event) =>
+  const cycleStart = [...input.events].reverse().find((event) => event.event_type === "mutual_interest_validated")
+  const cycleEvents = cycleStart ? input.events.slice(input.events.indexOf(cycleStart)) : []
+  const eventTypes = new Set(cycleEvents.map((event) => event.event_type))
+  const hasCurrentRenewCopy = Boolean(input.currentRenewArtifactId && cycleEvents.some((event) =>
     event.event_type === "renew_signed_copy_validated" && event.nda_artifact_id === input.currentRenewArtifactId,
   ))
-  const hasCurrentRepreneurCopy = Boolean(input.currentRepreneurArtifactId && input.events.some((event) =>
+  const hasCurrentRepreneurCopy = Boolean(input.currentRepreneurArtifactId && cycleEvents.some((event) =>
     event.event_type === "repreneur_signed_copy_validated" && event.nda_artifact_id === input.currentRepreneurArtifactId,
   ))
   const gate1Passed = eventTypes.has("gate_1_passed")
@@ -64,5 +68,11 @@ export function projectOpportunityPursuitEvidence(input: {
     : !gate2Passed ? "pass_gate_2"
     : !dispatched ? "record_dispatch"
     : "grant_confidential_access"
-  return { gate1Passed, gate2Passed, hasCurrentRenewCopy, hasCurrentRepreneurCopy, dispatched, canGrantConfidentialAccess: active && gate2Passed && dispatched, nextAction }
+  const recorded = (key: string) => cycleEvents.find((event) => event.event_type === key)
+  const state = (key: string, available: boolean, blocker: string) => {
+    const event = recorded(key)
+    return { key, label: key.replaceAll("_", " "), status: event ? "complete" as const : !available ? "not_available" as const : nextAction === key ? "current" as const : "blocked" as const, recordedAt: event?.recorded_at, actor: event?.actor, artifactId: event?.nda_artifact_id ?? undefined, blocker: event ? undefined : blocker }
+  }
+  const steps = [state("mutual_interest_validated", active, "Start an active pursuit first."), state("intermediary_qualified", active, "Qualification is required."), state("template_validated", active, "Validate the current blank template."), state("gate_1_passed", active, "Qualification and the current template are required."), state("renew_signed_copy_validated", gate1Passed, "Gate 1 is required."), state("repreneur_signed_copy_validated", gate1Passed, "Gate 1 is required."), state("gate_2_passed", hasCurrentRenewCopy && hasCurrentRepreneurCopy, "Validate both current signed copies."), state("manual_package_dispatched", gate2Passed, "Gate 2 is required."), state("confidential_access_granted", dispatched, "Record manual dispatch first.")]
+  return { currentCycleId: cycleStart?.id ?? null, steps, gate1Passed, gate2Passed, hasCurrentRenewCopy, hasCurrentRepreneurCopy, dispatched, canGrantConfidentialAccess: active && gate2Passed && dispatched, nextAction }
 }
