@@ -7,10 +7,11 @@ import { projectOpportunityPursuitEvidence, type OpportunityPursuitEvidence, typ
 export interface PursuitArtifactProjection { id: string; artifact_role: string; version_number: number; document_id: string; recorded_at: string }
 export interface PursuitConfidentialGrantProjection { information_memo_document_id: string; source_disclosed_at: string; source_firm_id: string; source_firm_name: string; source_office_id: string; source_office_name: string; disclosed_contacts: Array<{ opportunity_contact_id: string; contact_id: string; name: string; email?: string | null }>; revoked_at?: string | null; revoked_reason?: string | null }
 export interface OpportunityPursuitProjectionView {
-  matchId: string; opportunityId: string; repreneurId: string; enabled: boolean; status: string
+  matchId: string; opportunityId: string; repreneurId: string; enabled: boolean; status: string; opportunityStatus: string | null
   entries: OpportunityPursuitEvidence[]; currentTemplate: PursuitArtifactProjection | null
   currentRenewSignedCopy: PursuitArtifactProjection | null; currentRepreneurSignedCopy: PursuitArtifactProjection | null
   gate1Passed: boolean; gate2Passed: boolean; dispatched: boolean
+  currentCycleId: string | null; steps: ReturnType<typeof projectOpportunityPursuitEvidence>["steps"]
   confidentialGrant: PursuitConfidentialGrantProjection | null; revoked: boolean; evidenceRequired: boolean
   nextAction: OpportunityPursuitJourneyAction | null; allowedActions: OpportunityPursuitJourneyAction[]; blockers: string[]
 }
@@ -18,7 +19,7 @@ export interface OpportunityPursuitProjectionView {
 async function loadProjection(matchId: string): Promise<OpportunityPursuitProjectionView | null> {
   const supabase = createAdminClient()
   const [{ data: match, error }, { data: settings }] = await Promise.all([
-    supabase.from("opportunity_matches").select("id, opportunity_id, repreneur_id, status").eq("id", matchId).maybeSingle(),
+    supabase.from("opportunity_matches").select("id, opportunity_id, repreneur_id, status, opportunity:opportunities(status)").eq("id", matchId).maybeSingle(),
     supabase.from("wave_journey_settings").select("enabled").eq("singleton", true).maybeSingle(),
   ])
   if (error) throw new Error(error.message)
@@ -34,6 +35,7 @@ async function loadProjection(matchId: string): Promise<OpportunityPursuitProjec
   const renew = byRole("renew_signed_copy"), repreneur = byRole("repreneur_signed_copy")
   const projection = projectOpportunityPursuitEvidence({ enabled: Boolean(settings?.enabled), status: match.status, events: entries, currentRenewArtifactId: renew?.id, currentRepreneurArtifactId: repreneur?.id })
   const dispatched = projection.dispatched
+  const opportunity = Array.isArray(match.opportunity) ? match.opportunity[0] : match.opportunity
   const grant = (grants as PursuitConfidentialGrantProjection | null) ?? null
   const revoked = Boolean(grant?.revoked_at || entries.some((entry) => entry.event_type === "access_revoked"))
   const blockers: string[] = []
@@ -47,7 +49,7 @@ async function loadProjection(matchId: string): Promise<OpportunityPursuitProjec
   if (projection.gate2Passed && !grant?.revoked_at) allowedActions.push("revoke_access", "continue", "drop", "complete")
   if (match.status === "dropped") allowedActions.push("reopen")
   const template = ((templateArtifacts ?? []) as PursuitArtifactProjection[])[0] ?? null
-  return { matchId: match.id, opportunityId: match.opportunity_id, repreneurId: match.repreneur_id, enabled: Boolean(settings?.enabled), status: match.status, entries, currentTemplate: template, currentRenewSignedCopy: renew, currentRepreneurSignedCopy: repreneur, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched, confidentialGrant: grant, revoked, evidenceRequired: !projection.gate2Passed, nextAction: projection.nextAction, allowedActions: [...new Set(allowedActions)], blockers }
+  return { matchId: match.id, opportunityId: match.opportunity_id, repreneurId: match.repreneur_id, enabled: Boolean(settings?.enabled), status: match.status, opportunityStatus: (opportunity as { status?: string } | null)?.status ?? null, entries, currentTemplate: template, currentRenewSignedCopy: renew, currentRepreneurSignedCopy: repreneur, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched, currentCycleId: projection.currentCycleId, steps: projection.steps, confidentialGrant: grant, revoked, evidenceRequired: !projection.gate2Passed, nextAction: projection.nextAction, allowedActions: [...new Set(allowedActions)], blockers }
 }
 
 export async function getStaffPursuitProjection(matchId: string) {
@@ -55,10 +57,12 @@ export async function getStaffPursuitProjection(matchId: string) {
   return loadProjection(matchId)
 }
 
-export async function getPortalPursuitProjection(matchId: string, repreneurId?: string) {
+export async function getPortalPursuitProjection(matchId: string) {
   const access = await requirePortalAccess()
   const projection = await loadProjection(matchId)
-  if (!projection || projection.repreneurId !== (repreneurId ?? access.repreneurId)) return null
+  if (!projection || projection.repreneurId !== access.repreneurId) return null
   // The portal consumer must only render grants, not raw staff evidence.
-  return { matchId: projection.matchId, enabled: projection.enabled, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched: projection.dispatched, confidentialGrant: projection.confidentialGrant && !projection.revoked ? projection.confidentialGrant : null, revoked: projection.revoked, evidenceRequired: projection.evidenceRequired }
+  const opportunityIsActive = projection.opportunityStatus === "active"
+  const canDisclose = projection.enabled && projection.status === "active_pursuit" && opportunityIsActive && projection.gate2Passed && projection.dispatched && !projection.revoked
+  return { matchId: projection.matchId, enabled: projection.enabled, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched: projection.dispatched, confidentialGrant: canDisclose ? projection.confidentialGrant : null, revoked: projection.revoked, evidenceRequired: projection.evidenceRequired }
 }
