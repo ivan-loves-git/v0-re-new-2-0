@@ -144,7 +144,7 @@ END; $$;
 CREATE OR REPLACE FUNCTION public.journey_current_artifact_is_valid(
   p_match_id UUID, p_role public.opportunity_nda_artifact_role
 ) RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  WITH current_artifact AS (
+  WITH cycle AS (SELECT max(recorded_at) AS started_at FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='mutual_interest_validated'), current_artifact AS (
     SELECT a.id FROM public.opportunity_nda_artifacts a
     WHERE a.match_id = p_match_id AND a.artifact_role = p_role
     ORDER BY a.version_number DESC LIMIT 1
@@ -152,6 +152,7 @@ CREATE OR REPLACE FUNCTION public.journey_current_artifact_is_valid(
     SELECT 1 FROM current_artifact a
     JOIN public.opportunity_pursuit_evidence e ON e.nda_artifact_id = a.id
     WHERE e.match_id = p_match_id
+      AND e.recorded_at >= (SELECT started_at FROM cycle)
       AND e.event_type = CASE p_role
         WHEN 'renew_signed_copy' THEN 'renew_signed_copy_validated'::public.opportunity_pursuit_evidence_type
         WHEN 'repreneur_signed_copy' THEN 'repreneur_signed_copy_validated'::public.opportunity_pursuit_evidence_type
@@ -161,16 +162,19 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.journey_gate_2_satisfied(p_match_id UUID)
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  WITH current_artifacts AS (
+  WITH cycle AS (SELECT max(recorded_at) AS started_at FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='mutual_interest_validated'), current_artifacts AS (
     SELECT DISTINCT ON (artifact_role) id, artifact_role
     FROM public.opportunity_nda_artifacts
     WHERE match_id = p_match_id AND artifact_role IN ('renew_signed_copy', 'repreneur_signed_copy')
     ORDER BY artifact_role, version_number DESC
   ), validations AS (
-    SELECT e.recorded_at FROM public.opportunity_pursuit_evidence e
+    SELECT a.artifact_role, max(e.recorded_at) AS recorded_at FROM public.opportunity_pursuit_evidence e
     JOIN current_artifacts a ON a.id=e.nda_artifact_id
-    WHERE (a.artifact_role='renew_signed_copy' AND e.event_type='renew_signed_copy_validated')
-       OR (a.artifact_role='repreneur_signed_copy' AND e.event_type='repreneur_signed_copy_validated')
+    CROSS JOIN cycle
+    WHERE ((a.artifact_role='renew_signed_copy' AND e.event_type='renew_signed_copy_validated')
+       OR (a.artifact_role='repreneur_signed_copy' AND e.event_type='repreneur_signed_copy_validated'))
+      AND e.recorded_at >= cycle.started_at
+    GROUP BY a.artifact_role
   ) SELECT public.wave_journey_is_enabled()
     AND (SELECT count(*) FROM validations) = 2
     AND EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence gate
