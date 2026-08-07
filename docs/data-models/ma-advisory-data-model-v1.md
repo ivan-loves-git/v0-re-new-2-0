@@ -462,12 +462,14 @@ These rules are part of the contract and should be enforced in the database wher
 | Firm, office and contact notes | Yes | Never |
 | Interaction history, source-review evidence and audit metadata | Yes | Never |
 | Opportunity internal description and notes | Yes | Never |
-| Opportunity public title, teaser, sector, location and approved metrics | Yes | Only when the opportunity visibility and confidentiality gates allow it |
+| Opportunity public title, teaser, sector, location and approved metrics | Yes | The exact repreneur may see the anonymized opportunity through their current proposed, interested, declined or active-pursuit match. Broad deal discovery remains limited to opportunities that its legacy compatibility filter makes visible. |
 | Original source teaser document | Yes | Never |
 | Opportunity documents | Yes | Only when explicitly approved and the NDA gate allows it |
 | Cutover mappings and issues | Yes | Never |
 
 No API, export, notification, download or UI surface may expose staff-only source information to a repreneur. The one exception is the approved source firm, office and named contact disclosure in the table above; it must be server-side, purpose-limited to that active pursuit and revoked immediately when any listed condition ceases to hold.
+
+The legacy `opportunities.repreneur_exposure` field is a broad-discovery compatibility filter only. It must not hide an active opportunity from the repreneur who owns its current visible `opportunity_matches` row; that row authorizes only the anonymized opportunity projection, never source identity, internal description, notes, documents or confidential access. An unmatched `staff_only` opportunity remains absent from broad discovery and direct unmatched detail lookup.
 
 ## Lifecycle action and evidence authority matrix
 
@@ -828,6 +830,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-08-07 | 4.4.4 | Corrected the released portal visibility projection: a current proposed, interested, declined or active-pursuit match now exposes its anonymized opportunity to that exact repreneur even when the legacy broad-discovery compatibility value is `staff_only`. Unmatched `staff_only` opportunities remain absent from deal discovery and direct unmatched lookup; this changes no source, document or confidential-access rule. | W-088/W-090/W-091 production correction |
 | 2026-08-07 | 4.4.3 | Corrected the released opportunity-intake execution boundary after production QA reproduced the silent creation failure. The existing source-office trigger now runs as its database owner solely to inspect the private email-send reservation ledger; staff intake can create or update an opportunity without receiving direct table access, while an active reservation still blocks a source-office change. | W-088; migration 089 production correction |
 | 2026-08-07 | 4.4.2 | Bound blank-NDA delivery to one canonical active-pursuit lookup that returns the exact current template authorized by current Gate 1. Dropped pursuits and superseding unvalidated templates now return no document, and the portal route no longer combines an earlier projection decision with a later “latest template” query. | W-090/W-091; migration 088 release candidate |
 | 2026-08-07 | 4.4.1 | Completed the W-090/W-091 candidate cutover boundary: the exact canonical pursuit grant is now the sole action that may attempt the once-only IM-available notification, and it passes the exact match rather than discovering candidates from legacy NDA fields. Repreneur and staff-preview projections and download routes use the same current-cycle Gate 2, exact dispatch, grant, expiry and revocation predicate; portal-safe output contains only the exact granted IM plus snapshotted source firm, office and contact display names. Staff actions are projected from canonical evidence, while legacy stage/NDA mutations and generic document approval remain read-only history and cannot authorize access. | W-090, W-091 and migration 088 release candidate |

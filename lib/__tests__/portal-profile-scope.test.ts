@@ -148,4 +148,26 @@ describe("repreneur portal profile scope", () => {
     expect(detailPage).toContain("if (!opportunity)")
     expect(detailPage).toContain("notFound()")
   })
+
+  it("keeps a staff-only opportunity out of broad discovery while its exact proposed match remains visible to its owner", () => {
+    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
+    const normalizeExposureSource = portalOpportunities.slice(
+      portalOpportunities.indexOf("function normalizeExposure"),
+      portalOpportunities.indexOf("async function getActivePursuitOwners"),
+    )
+    const dealFlowGetter = portalOpportunities.slice(
+      portalOpportunities.indexOf("export async function listMyRepreneurDealFlow"),
+      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
+    )
+    const detailGetter = portalOpportunities.slice(
+      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
+      portalOpportunities.indexOf("async function updateMyOpportunityResponse"),
+    )
+
+    expect(normalizeExposureSource).not.toContain('opportunity.repreneur_exposure === "staff_only"')
+    expect(normalizeExposureSource).toContain("current repreneur's exact")
+    expect(dealFlowGetter).toContain('.neq("repreneur_exposure", "staff_only")')
+    expect(detailGetter).toContain('.eq("repreneur_id", repreneur.id)')
+    expect(detailGetter).toContain('.neq("repreneur_exposure", "staff_only")')
+  })
 })

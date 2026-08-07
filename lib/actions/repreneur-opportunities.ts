@@ -70,7 +70,11 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
   if (opportunity.status !== "active") return null
-  if (opportunity.repreneur_exposure === "staff_only") return null
+
+  // This projection is reached only through the current repreneur's exact
+  // visible match. `repreneur_exposure` remains a legacy broad-discovery
+  // compatibility filter, not an authority that can hide a staff proposal
+  // from its intended candidate.
 
   return {
     match_id: row.id,
