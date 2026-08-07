@@ -11,6 +11,19 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the released opportunity-to-memo journey", () => {
+    expect(roadmap).toContain('version: "0.9.39"')
+    expect(roadmap).toContain(
+      "One journey now connects opportunity creation to the confidential memo",
+    )
+    expect(roadmap).toContain(
+      "Every pursuit earns confidential access independently",
+    )
+    expect(roadmap).toContain(
+      "Signing and intermediary communication remain manual",
+    )
+  })
+
   it("records the staff-controlled WAVE AI drafting release", () => {
     expect(roadmap).toContain('version: "0.9.37"')
     expect(roadmap).toContain(

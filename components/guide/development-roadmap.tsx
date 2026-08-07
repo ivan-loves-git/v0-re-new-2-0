@@ -26,6 +26,34 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 7, 2026",
+    version: "0.9.39",
+    title: "The opportunity-to-memo journey is now controlled end to end",
+    isCompleted: true,
+    events: [
+      {
+        title: "One journey now connects opportunity creation to the confidential memo",
+        type: "feature",
+        description: "Staff can create the source office and opportunity, recommend a repreneur, validate interest, complete both NDA gates, record the manual intermediary handoff, grant the exact Information Memorandum and record the outcome.",
+      },
+      {
+        title: "Every pursuit earns confidential access independently",
+        type: "decision",
+        description: "A dropped or completed pursuit loses access immediately, and a later repreneur inherits neither the signed documents nor the source or Information Memorandum grant.",
+      },
+      {
+        title: "Creation and document actions now confirm what actually happened",
+        type: "fix",
+        description: "Opportunity creation returns the persisted record or clear field errors, and the shared document controls provide consistent upload, view, download, locked, success and failure states.",
+      },
+      {
+        title: "Signing and intermediary communication remain manual",
+        type: "decision",
+        description: "WAVE stores final PDF evidence, validations, grants and outcomes; document editing, signing, email exchange and post-memo negotiations continue outside the platform.",
+      },
+    ],
+  },
+  {
+    period: "Aug 7, 2026",
     version: "0.9.38",
     title: "Staff can export opportunity data and ask WAVE AI what to do next",
     isCompleted: true,
