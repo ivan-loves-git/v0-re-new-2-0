@@ -1,0 +1,46 @@
+import { describe, expect, it } from "vitest"
+import { projectOpportunityPursuitEvidence } from "@/lib/opportunity-pursuit-evidence"
+
+describe("projectOpportunityPursuitEvidence", () => {
+  const renew = "renew-current"
+  const repreneur = "repreneur-current"
+
+  it("fails closed when the journey switch is disabled", () => {
+    const result = projectOpportunityPursuitEvidence({ enabled: false, status: "active_pursuit", events: [], currentRenewArtifactId: renew, currentRepreneurArtifactId: repreneur })
+    expect(result.gate2Passed).toBe(false)
+    expect(result.nextAction).toBeNull()
+  })
+
+  it("requires validation of the exact current signed copies for Gate 2", () => {
+    const result = projectOpportunityPursuitEvidence({
+      enabled: true, status: "active_pursuit", currentRenewArtifactId: renew, currentRepreneurArtifactId: repreneur,
+      events: [
+        { event_type: "intermediary_qualified", nda_artifact_id: null },
+        { event_type: "template_validated", nda_artifact_id: null },
+        { event_type: "gate_1_passed", nda_artifact_id: null },
+        { event_type: "renew_signed_copy_validated", nda_artifact_id: "renew-old" },
+        { event_type: "repreneur_signed_copy_validated", nda_artifact_id: repreneur },
+        { event_type: "gate_2_passed", nda_artifact_id: null },
+      ],
+    })
+    expect(result.hasCurrentRenewCopy).toBe(false)
+    expect(result.gate2Passed).toBe(false)
+    expect(result.nextAction).toBe("validate_renew_copy")
+  })
+
+  it("permits a confidential grant only after canonical gate evidence", () => {
+    const result = projectOpportunityPursuitEvidence({
+      enabled: true, status: "active_pursuit", currentRenewArtifactId: renew, currentRepreneurArtifactId: repreneur,
+      events: [
+        { event_type: "intermediary_qualified", nda_artifact_id: null },
+        { event_type: "template_validated", nda_artifact_id: null },
+        { event_type: "gate_1_passed", nda_artifact_id: null },
+        { event_type: "renew_signed_copy_validated", nda_artifact_id: renew },
+        { event_type: "repreneur_signed_copy_validated", nda_artifact_id: repreneur },
+        { event_type: "gate_2_passed", nda_artifact_id: null },
+      ],
+    })
+    expect(result.canGrantConfidentialAccess).toBe(false)
+    expect(result.nextAction).toBe("record_dispatch")
+  })
+})
