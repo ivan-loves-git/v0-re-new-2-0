@@ -389,8 +389,10 @@ ALTER TABLE public.opportunity_pursuit_confidential_grants
 
 CREATE OR REPLACE FUNCTION public.journey_current_cycle_event(p_match_id UUID)
 RETURNS UUID LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  SELECT id FROM public.opportunity_pursuit_evidence
-  WHERE match_id=p_match_id AND event_type='mutual_interest_validated'
+  SELECT e.id FROM public.opportunity_pursuit_evidence e
+  JOIN public.opportunity_matches m ON m.id=e.match_id
+  WHERE e.match_id=p_match_id AND e.event_type='mutual_interest_validated'
+    AND m.status='active_pursuit'
   ORDER BY recorded_at DESC, id DESC LIMIT 1
 $$;
 
@@ -579,29 +581,49 @@ END $$;
 CREATE OR REPLACE FUNCTION public.journey_grant_confidential_access(
   p_match_id UUID,p_information_memo_document_id UUID,p_actor TEXT,p_idempotency_key TEXT,p_nda_expires_at TIMESTAMPTZ
 ) RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE v_event UUID; v_grant public.opportunity_pursuit_confidential_grants%ROWTYPE; BEGIN
- IF p_nda_expires_at IS NULL OR p_nda_expires_at<=NOW() THEN RAISE EXCEPTION 'A future NDA expiry is required before confidential access.'; END IF;
- SELECT * INTO v_grant FROM public.opportunity_pursuit_confidential_grants WHERE match_id=p_match_id FOR UPDATE;
- IF v_grant.id IS NOT NULL AND v_grant.revoked_at IS NULL AND v_grant.information_memo_document_id=p_information_memo_document_id AND v_grant.nda_expires_at=p_nda_expires_at AND v_grant.cycle_started_evidence_id=public.journey_current_cycle_event(p_match_id) AND v_grant.gate_2_evidence_id=public.journey_current_gate_2_event(p_match_id) AND v_grant.dispatch_evidence_id=public.journey_current_dispatch_event(p_match_id) THEN
-   SELECT id INTO v_event FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='confidential_access_granted' AND document_id=p_information_memo_document_id ORDER BY recorded_at DESC,id DESC LIMIT 1;
-   IF v_event IS NOT NULL THEN RETURN v_event; END IF;
- END IF;
- v_event:=public.journey_grant_confidential_access(p_match_id,p_information_memo_document_id,p_actor,p_idempotency_key);
- UPDATE public.opportunity_pursuit_confidential_grants SET nda_expires_at=p_nda_expires_at WHERE match_id=p_match_id AND cycle_started_evidence_id=public.journey_current_cycle_event(p_match_id) AND gate_2_evidence_id=public.journey_current_gate_2_event(p_match_id) AND dispatch_evidence_id=public.journey_current_dispatch_event(p_match_id);
- IF NOT FOUND THEN RAISE EXCEPTION 'Current grant binding could not be retained.'; END IF;
- SELECT * INTO v_grant FROM public.opportunity_pursuit_confidential_grants WHERE match_id=p_match_id;
- -- Retain an immutable disclosure snapshot for every grant/regrant. The mutable
- -- permission row is only the live access projection and never erases history.
- PERFORM public.journey_append_evidence(p_match_id,'confidential_access_granted',p_actor,p_idempotency_key||':bound',NULL,p_information_memo_document_id,NULL,jsonb_build_object('cycle_started_evidence_id',v_grant.cycle_started_evidence_id,'gate_2_evidence_id',v_grant.gate_2_evidence_id,'dispatch_evidence_id',v_grant.dispatch_evidence_id,'information_memo_document_id',v_grant.information_memo_document_id,'source_firm_name',v_grant.source_firm_name,'source_office_name',v_grant.source_office_name,'contact_names',v_grant.disclosed_contacts,'nda_expires_at',v_grant.nda_expires_at));
- RETURN v_event;
+DECLARE
+  v_match public.opportunity_matches%ROWTYPE; v_doc public.opportunity_documents%ROWTYPE;
+  v_existing UUID; v_cycle UUID; v_gate2 UUID; v_dispatch UUID; v_firm_id UUID;
+  v_firm_name TEXT; v_office_id UUID; v_office_name TEXT; v_contacts JSONB; v_event UUID;
+  v_grant public.opportunity_pursuit_confidential_grants%ROWTYPE;
+BEGIN
+  IF NOT public.wave_journey_is_enabled() THEN RAISE EXCEPTION 'wave_journey_disabled'; END IF;
+  IF p_nda_expires_at IS NULL OR p_nda_expires_at <= clock_timestamp() THEN RAISE EXCEPTION 'A future NDA expiry is required before confidential access.'; END IF;
+  SELECT id INTO v_existing FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND idempotency_key=p_idempotency_key;
+  IF v_existing IS NOT NULL THEN RETURN v_existing; END IF;
+  SELECT * INTO v_match FROM public.opportunity_matches WHERE id=p_match_id FOR UPDATE;
+  IF v_match.id IS NULL OR v_match.status<>'active_pursuit' OR NOT EXISTS(SELECT 1 FROM public.opportunities WHERE id=v_match.opportunity_id AND status='active') THEN RAISE EXCEPTION 'An active pursuit on an active opportunity is required.'; END IF;
+  SELECT * INTO v_doc FROM public.opportunity_documents WHERE id=p_information_memo_document_id;
+  v_cycle:=public.journey_current_cycle_event(p_match_id); v_gate2:=public.journey_current_gate_2_event(p_match_id); v_dispatch:=public.journey_current_dispatch_event(p_match_id);
+  IF v_cycle IS NULL OR v_gate2 IS NULL OR v_dispatch IS NULL THEN RAISE EXCEPTION 'Current Gate 2 and its exact manual dispatch are required before confidential access.'; END IF;
+  IF v_doc.id IS NULL OR v_doc.opportunity_id<>v_match.opportunity_id OR v_doc.document_type<>'deal_book' OR NULLIF(BTRIM(v_doc.storage_path),'') IS NULL THEN RAISE EXCEPTION 'Select a retained Information Memorandum for this opportunity.'; END IF;
+  SELECT f.id,f.name,o.id,o.name INTO v_firm_id,v_firm_name,v_office_id,v_office_name FROM public.opportunities p JOIN public.ma_offices o ON o.id=p.source_office_id JOIN public.ma_firms f ON f.id=o.firm_id WHERE p.id=v_match.opportunity_id AND o.status='active' AND f.status<>'archived';
+  IF v_office_id IS NULL THEN RAISE EXCEPTION 'An active canonical source office is required before disclosure.'; END IF;
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('name',link.contact_name_snapshot) ORDER BY link.is_primary DESC,link.linked_at),'[]'::JSONB) INTO v_contacts FROM public.opportunity_ma_contacts link JOIN public.ma_contact_office_affiliations a ON a.id=link.affiliation_id WHERE link.opportunity_id=v_match.opportunity_id AND link.is_active AND a.office_id=v_office_id AND NULLIF(BTRIM(link.contact_name_snapshot),'') IS NOT NULL;
+  IF jsonb_array_length(v_contacts)=0 THEN RAISE EXCEPTION 'An approved source contact is required before disclosure.'; END IF;
+  SELECT * INTO v_grant FROM public.opportunity_pursuit_confidential_grants WHERE match_id=p_match_id FOR UPDATE;
+  IF v_grant.id IS NOT NULL AND v_grant.revoked_at IS NULL
+    AND v_grant.cycle_started_evidence_id=v_cycle AND v_grant.gate_2_evidence_id=v_gate2 AND v_grant.dispatch_evidence_id=v_dispatch THEN
+    IF v_grant.information_memo_document_id=p_information_memo_document_id AND v_grant.nda_expires_at=p_nda_expires_at THEN
+      SELECT id INTO v_event FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='confidential_access_granted' AND metadata->>'cycle_started_evidence_id'=v_cycle::TEXT AND metadata->>'gate_2_evidence_id'=v_gate2::TEXT AND metadata->>'dispatch_evidence_id'=v_dispatch::TEXT ORDER BY recorded_at DESC,id DESC LIMIT 1;
+      IF v_event IS NULL THEN RAISE EXCEPTION 'Live grant lacks its immutable disclosure evidence.'; END IF;
+      RETURN v_event;
+    END IF;
+    RAISE EXCEPTION 'Confidential access is already live for this pursuit. Revoke it before changing the disclosure.';
+  END IF;
+  INSERT INTO public.opportunity_pursuit_confidential_grants(match_id,opportunity_id,information_memo_document_id,source_firm_id,source_firm_name,source_office_id,source_office_name,disclosed_contacts,granted_by,cycle_started_evidence_id,gate_2_evidence_id,dispatch_evidence_id,nda_expires_at)
+  VALUES(v_match.id,v_match.opportunity_id,v_doc.id,v_firm_id,v_firm_name,v_office_id,v_office_name,v_contacts,p_actor,v_cycle,v_gate2,v_dispatch,p_nda_expires_at)
+  ON CONFLICT(match_id) DO UPDATE SET information_memo_document_id=EXCLUDED.information_memo_document_id,source_firm_id=EXCLUDED.source_firm_id,source_firm_name=EXCLUDED.source_firm_name,source_office_id=EXCLUDED.source_office_id,source_office_name=EXCLUDED.source_office_name,disclosed_contacts=EXCLUDED.disclosed_contacts,source_disclosed_at=clock_timestamp(),granted_by=EXCLUDED.granted_by,cycle_started_evidence_id=EXCLUDED.cycle_started_evidence_id,gate_2_evidence_id=EXCLUDED.gate_2_evidence_id,dispatch_evidence_id=EXCLUDED.dispatch_evidence_id,nda_expires_at=EXCLUDED.nda_expires_at,revoked_at=NULL,revoked_by=NULL,revoked_reason=NULL;
+  v_event:=public.journey_append_evidence(p_match_id,'confidential_access_granted',p_actor,p_idempotency_key,NULL,v_doc.id,NULL,jsonb_build_object('cycle_started_evidence_id',v_cycle,'gate_2_evidence_id',v_gate2,'dispatch_evidence_id',v_dispatch,'information_memo_document_id',v_doc.id,'source_firm_name',v_firm_name,'source_office_name',v_office_name,'contact_names',v_contacts,'nda_expires_at',p_nda_expires_at));
+  RETURN v_event;
 END $$;
 
 CREATE OR REPLACE FUNCTION public.journey_submit_repreneur_signed_copy_v2(p_match_id UUID,p_repreneur_id UUID,p_actor_email TEXT,p_title TEXT,p_storage_path TEXT,p_file_name TEXT,p_file_size BIGINT,p_content_sha256 TEXT)
 RETURNS TABLE(artifact_id UUID,document_id UUID,version_number INTEGER,reused_existing BOOLEAN)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE r RECORD; v_path TEXT; BEGIN
- SELECT a.id,a.document_id,a.version_number,d.storage_path INTO r FROM public.opportunity_nda_artifacts a JOIN public.opportunity_documents d ON d.id=a.document_id WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' AND a.content_sha256=LOWER(p_content_sha256) LIMIT 1;
- IF r.id IS NOT NULL THEN RETURN QUERY SELECT r.id,r.document_id,r.version_number,TRUE; RETURN; END IF;
+ -- The core authorizes ownership and current Gate 1 before it may reuse a
+ -- content-hash match; hashes are never an artifact-discovery side channel.
  SELECT * INTO r FROM public.journey_submit_repreneur_signed_copy(p_match_id,p_repreneur_id,p_actor_email,p_title,p_storage_path,p_file_name,p_file_size,p_content_sha256);
  SELECT storage_path INTO v_path FROM public.opportunity_documents WHERE id=r.document_id;
  RETURN QUERY SELECT r.artifact_id,r.document_id,r.version_number,v_path IS DISTINCT FROM p_storage_path;
@@ -618,44 +640,33 @@ DECLARE v_match public.opportunity_matches%ROWTYPE; v_email TEXT; v_gate UUID; v
  v_gate:=public.journey_current_gate_1_event(p_match_id); IF v_gate IS NULL THEN RAISE EXCEPTION 'Current Gate 1 is required before signed-copy submission.'; END IF;
  IF NULLIF(BTRIM(p_title),'') IS NULL OR NULLIF(BTRIM(p_storage_path),'') IS NULL OR LOWER(p_file_name) NOT LIKE '%.pdf' OR p_file_size<=0 OR LOWER(p_content_sha256)!~'^[0-9a-f]{64}$' OR p_storage_path NOT LIKE v_match.opportunity_id::TEXT||'/nda-artifacts/repreneur_signed_copy/%' THEN RAISE EXCEPTION 'Submit one retained PDF in the canonical signed-copy path.'; END IF;
  SELECT a.id,a.version_number INTO v_artifact,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' AND a.content_sha256=LOWER(p_content_sha256) LIMIT 1;
- IF v_artifact IS NOT NULL THEN RETURN QUERY SELECT v_artifact,(SELECT document_id FROM public.opportunity_nda_artifacts WHERE id=v_artifact),v_version; RETURN; END IF;
+ IF v_artifact IS NOT NULL THEN RETURN QUERY SELECT v_artifact,(SELECT a.document_id FROM public.opportunity_nda_artifacts a WHERE a.id=v_artifact),v_version; RETURN; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended(p_match_id::TEXT||':repreneur_signed_copy',0));
- SELECT id,version_number+1 INTO v_prior,v_version FROM public.opportunity_nda_artifacts WHERE match_id=p_match_id AND artifact_role='repreneur_signed_copy' ORDER BY version_number DESC LIMIT 1; v_version:=COALESCE(v_version,1);
+ SELECT a.id,a.document_id,a.version_number INTO v_artifact,v_document,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' AND a.content_sha256=LOWER(p_content_sha256) LIMIT 1;
+ IF v_artifact IS NOT NULL THEN RETURN QUERY SELECT v_artifact,v_document,v_version; RETURN; END IF;
+ SELECT a.id,a.version_number+1 INTO v_prior,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' ORDER BY a.version_number DESC LIMIT 1; v_version:=COALESCE(v_version,1);
  INSERT INTO public.opportunity_documents(opportunity_id,title,document_type,visibility,storage_bucket,storage_path,file_name,size_bytes,mime_type,uploaded_by) VALUES(v_match.opportunity_id,p_title,'nda','staff_only','opportunity-documents',p_storage_path,p_file_name,p_file_size,'application/pdf',p_actor_email) RETURNING id INTO v_document;
- INSERT INTO public.opportunity_nda_artifacts(opportunity_id,match_id,document_id,artifact_role,version_number,content_sha256,supersedes_artifact_id,recorded_by) VALUES(v_match.opportunity_id,p_match_id,v_document,'repreneur_signed_copy',v_version,LOWER(p_content_sha256),v_prior,p_actor_email) RETURNING id INTO v_artifact;
+ PERFORM set_config('wave.journey_portal_repreneur_upload','on',true);
+ INSERT INTO public.opportunity_nda_artifacts(opportunity_id,match_id,document_id,artifact_role,version_number,content_sha256,supersedes_artifact_id,recorded_by,recorded_at) VALUES(v_match.opportunity_id,p_match_id,v_document,'repreneur_signed_copy',v_version,LOWER(p_content_sha256),v_prior,p_actor_email,clock_timestamp()) RETURNING id INTO v_artifact;
  RETURN QUERY SELECT v_artifact,v_document,v_version;
 EXCEPTION WHEN unique_violation THEN
  SELECT a.id,a.document_id,a.version_number INTO v_artifact,v_document,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' AND a.content_sha256=LOWER(p_content_sha256) LIMIT 1;
  IF v_artifact IS NULL THEN RAISE; END IF; RETURN QUERY SELECT v_artifact,v_document,v_version;
 END $$;
 
--- The legacy generic staff artifact service is retained only for templates and
--- Re-New copies.  Repreneur copies enter exclusively through the owner portal
--- RPC above, whose match lock and Gate 1 predicate are the authority boundary.
-CREATE OR REPLACE FUNCTION public.register_opportunity_nda_artifact(
-  p_opportunity_id UUID,p_match_id UUID,p_artifact_role TEXT,p_title TEXT,p_storage_path TEXT,p_file_name TEXT,p_file_size BIGINT,p_content_sha256 TEXT,p_recorded_by TEXT
-) RETURNS TABLE(artifact_id UUID,document_id UUID,version_number INTEGER)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+-- Keep migration 082's registered, lock-safe staff RPC unchanged. This origin
+-- guard makes its repreneur role fail unless the canonical portal RPC marked
+-- the transaction after ownership and Gate 1 validation.
+CREATE OR REPLACE FUNCTION public.wave_journey_guard_repreneur_artifact_origin()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
- IF p_artifact_role='repreneur_signed_copy' THEN RAISE EXCEPTION 'Repreneur signed copies may be submitted only by the active repreneur after Gate 1.'; END IF;
- -- Invoke the predecessor implementation by reproducing its strictly limited
- -- path here; its direct name cannot be called recursively after replacement.
- IF p_artifact_role NOT IN ('blank_template','renew_signed_copy') THEN RAISE EXCEPTION 'Unsupported NDA artifact role.'; END IF;
- IF NULLIF(BTRIM(p_title),'') IS NULL OR NULLIF(BTRIM(p_recorded_by),'') IS NULL OR NULLIF(BTRIM(p_storage_path),'') IS NULL OR LOWER(p_file_name) NOT LIKE '%.pdf' OR p_file_size<=0 OR LOWER(p_content_sha256)!~'^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'A retained PDF artifact with staff actor and SHA-256 is required.'; END IF;
- IF p_artifact_role='blank_template' AND p_match_id IS NOT NULL THEN RAISE EXCEPTION 'A blank NDA template belongs to the opportunity, not a pursuit.'; END IF;
- IF p_artifact_role='renew_signed_copy' AND p_match_id IS NULL THEN RAISE EXCEPTION 'A Re-New signed copy requires a pursuit.'; END IF;
- IF NOT EXISTS(SELECT 1 FROM public.app_user_roles WHERE LOWER(email)=LOWER(BTRIM(p_recorded_by)) AND role='staff') THEN RAISE EXCEPTION 'Artifact registration requires one active staff identity.'; END IF;
- IF NOT EXISTS(SELECT 1 FROM public.opportunities WHERE id=p_opportunity_id FOR UPDATE) THEN RAISE EXCEPTION 'Opportunity not found.'; END IF;
- IF p_artifact_role='renew_signed_copy' AND NOT EXISTS(SELECT 1 FROM public.opportunity_matches WHERE id=p_match_id AND opportunity_id=p_opportunity_id AND status='active_pursuit') THEN RAISE EXCEPTION 'A Re-New signed copy requires this active pursuit.'; END IF;
- IF p_storage_path NOT LIKE p_opportunity_id::TEXT||'/nda-artifacts/'||p_artifact_role||'/%' THEN RAISE EXCEPTION 'Stored NDA artifact path is outside its canonical role folder.'; END IF;
- RETURN QUERY
- WITH prior AS (SELECT id,version_number FROM public.opportunity_nda_artifacts WHERE opportunity_id=p_opportunity_id AND match_id IS NOT DISTINCT FROM p_match_id AND artifact_role=p_artifact_role::public.opportunity_nda_artifact_role ORDER BY version_number DESC LIMIT 1), doc AS (
- INSERT INTO public.opportunity_documents(opportunity_id,title,document_type,visibility,storage_bucket,storage_path,file_name,size_bytes,mime_type,uploaded_by) VALUES(p_opportunity_id,BTRIM(p_title),'nda','staff_only','opportunity-documents',BTRIM(p_storage_path),p_file_name,p_file_size,'application/pdf',BTRIM(p_recorded_by)) RETURNING id
- ), artifact AS (
- INSERT INTO public.opportunity_nda_artifacts(opportunity_id,match_id,document_id,artifact_role,version_number,content_sha256,supersedes_artifact_id,recorded_by)
- SELECT p_opportunity_id,p_match_id,doc.id,p_artifact_role::public.opportunity_nda_artifact_role,COALESCE(prior.version_number+1,1),LOWER(p_content_sha256),prior.id,BTRIM(p_recorded_by) FROM doc LEFT JOIN prior ON TRUE RETURNING id,document_id,version_number
- ) SELECT id,document_id,version_number FROM artifact;
+  IF NEW.artifact_role='repreneur_signed_copy' AND current_setting('wave.journey_portal_repreneur_upload',true) IS DISTINCT FROM 'on' THEN
+    RAISE EXCEPTION 'Repreneur signed copies may be submitted only by the active repreneur after Gate 1.';
+  END IF;
+  RETURN NEW;
 END $$;
+DROP TRIGGER IF EXISTS wave_journey_guard_repreneur_artifact_origin ON public.opportunity_nda_artifacts;
+CREATE TRIGGER wave_journey_guard_repreneur_artifact_origin BEFORE INSERT ON public.opportunity_nda_artifacts FOR EACH ROW EXECUTE FUNCTION public.wave_journey_guard_repreneur_artifact_origin();
 
 -- The notification claim is intentionally replaced, not supplemented.  A
 -- legacy NDA flag or document visibility can never claim delivery again.
@@ -671,7 +682,7 @@ BEGIN
  IF v.id IS NULL THEN RETURN; END IF;
  SELECT BTRIM(email),COALESCE(NULLIF(BTRIM(first_name),''),'Madame, Monsieur') INTO v_email,v_first FROM public.repreneurs WHERE id=v.repreneur_id; SELECT COALESCE(NULLIF(BTRIM(public_title),''),'votre opportunite') INTO v_title FROM public.opportunities WHERE id=v.opportunity_id;
  INSERT INTO public.opportunity_memo_notifications(match_id,opportunity_id,repreneur_id,recipient_email) VALUES(v.id,v.opportunity_id,v.repreneur_id,v_email) ON CONFLICT ON CONSTRAINT opportunity_memo_notifications_match_id_key DO UPDATE SET recipient_email=EXCLUDED.recipient_email,updated_at=p_attempted_at WHERE opportunity_memo_notifications.sent_at IS NULL;
- UPDATE public.opportunity_memo_notifications SET status='sending',attempt_count=attempt_count+1,last_attempt_at=p_attempted_at,failed_at=NULL,last_error=NULL,updated_at=p_attempted_at WHERE match_id=v.id AND sent_at IS NULL AND (status IN ('pending','failed') OR (status='sending' AND last_attempt_at<p_attempted_at-INTERVAL '15 minutes')) RETURNING match_id INTO v_claim;
+ UPDATE public.opportunity_memo_notifications n SET status='sending',attempt_count=n.attempt_count+1,last_attempt_at=p_attempted_at,failed_at=NULL,last_error=NULL,updated_at=p_attempted_at WHERE n.match_id=v.id AND n.sent_at IS NULL AND (n.status IN ('pending','failed') OR (n.status='sending' AND n.last_attempt_at<p_attempted_at-INTERVAL '15 minutes')) RETURNING n.match_id INTO v_claim;
  IF v_claim IS NULL THEN RETURN; END IF;
  RETURN QUERY SELECT v.id,v.opportunity_id,v.repreneur_id,v_email,v_first,v_title;
 END $$;
@@ -679,6 +690,7 @@ END $$;
 REVOKE ALL ON FUNCTION public.journey_current_cycle_event(UUID),public.journey_current_cycle_started_at(UUID),public.journey_current_template_id(UUID),public.journey_current_gate_1_event(UUID),public.journey_current_signed_validation_event(UUID,public.opportunity_nda_artifact_role),public.journey_current_gate_2_event(UUID),public.journey_current_dispatch_event(UUID) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.journey_current_cycle_event(UUID),public.journey_current_cycle_started_at(UUID),public.journey_current_template_id(UUID),public.journey_current_gate_1_event(UUID),public.journey_current_signed_validation_event(UUID,public.opportunity_nda_artifact_role),public.journey_current_gate_2_event(UUID),public.journey_current_dispatch_event(UUID) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT) FROM service_role;
+DROP FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT);
 REVOKE EXECUTE ON FUNCTION public.journey_submit_repreneur_signed_copy(UUID,UUID,TEXT,TEXT,TEXT,TEXT,BIGINT,TEXT) FROM service_role;
 GRANT EXECUTE ON FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT,TIMESTAMPTZ) TO service_role;
 
@@ -720,7 +732,7 @@ DECLARE v_match public.opportunity_matches%ROWTYPE; v_event UUID; BEGIN
  SELECT * INTO v_match FROM public.opportunity_matches WHERE id=p_match_id FOR UPDATE; IF v_match.id IS NULL THEN RAISE EXCEPTION 'Pursuit not found.'; END IF;
  IF p_transition='continue' THEN IF v_match.status<>'active_pursuit' OR NOT public.journey_repreneur_can_access_confidential(p_match_id,v_match.repreneur_id,(SELECT information_memo_document_id FROM public.opportunity_pursuit_confidential_grants WHERE match_id=p_match_id)) THEN RAISE EXCEPTION 'Continue requires a live current confidential grant.'; END IF; RETURN public.journey_append_evidence(p_match_id,'continued',p_actor,p_idempotency_key); END IF;
  IF p_transition='drop' THEN IF v_match.status<>'active_pursuit' THEN RAISE EXCEPTION 'Only an active pursuit can be dropped.'; END IF; PERFORM public.journey_revoke_confidential_access(p_match_id,p_actor,'dropped',p_idempotency_key||':revoke'); UPDATE public.opportunity_matches SET status='dropped',pursuit_stage='dropped',pursuit_stage_updated_by=p_actor,pursuit_stage_updated_at=NOW() WHERE id=p_match_id; RETURN public.journey_append_evidence(p_match_id,'dropped',p_actor,p_idempotency_key); END IF;
- IF p_transition='complete' THEN IF v_match.status<>'active_pursuit' OR NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='continued' AND recorded_at>=public.journey_current_cycle_started_at(p_match_id)) THEN RAISE EXCEPTION 'Complete requires current continued external follow-up.'; END IF; PERFORM public.journey_revoke_confidential_access(p_match_id,p_actor,'completed',p_idempotency_key||':revoke'); UPDATE public.opportunity_matches SET status='completed',pursuit_stage='closed',pursuit_stage_updated_by=p_actor,pursuit_stage_updated_at=NOW() WHERE id=p_match_id; PERFORM set_config('wave.journey_terminal_transition','on',true); UPDATE public.opportunities SET status='closed',updated_by=p_actor WHERE id=v_match.opportunity_id; RETURN public.journey_append_evidence(p_match_id,'completed',p_actor,p_idempotency_key,NULL,NULL,p_closure_reason); END IF;
+ IF p_transition='complete' THEN IF v_match.status<>'active_pursuit' OR NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='continued' AND recorded_at>=public.journey_current_cycle_started_at(p_match_id)) THEN RAISE EXCEPTION 'Complete requires current continued external follow-up.'; END IF; PERFORM public.journey_revoke_confidential_access(p_match_id,p_actor,'completed',p_idempotency_key||':revoke'); UPDATE public.opportunity_matches SET status='completed',pursuit_stage='closed',pursuit_stage_updated_by=p_actor,pursuit_stage_updated_at=NOW() WHERE id=p_match_id; PERFORM set_config('wave.journey_terminal_transition','on',true); UPDATE public.opportunities SET status='closed',updated_by=p_actor WHERE id=v_match.opportunity_id; INSERT INTO public.opportunity_closure_history(opportunity_id,reason,closed_by) VALUES(v_match.opportunity_id,'signed_repreneur'::public.opportunity_closure_reason,p_actor); RETURN public.journey_append_evidence(p_match_id,'completed',p_actor,p_idempotency_key,NULL,NULL,p_closure_reason); END IF;
  IF p_transition='reopen' THEN IF v_match.status<>'dropped' THEN RAISE EXCEPTION 'Only a dropped pursuit can reopen.'; END IF; UPDATE public.opportunity_matches SET status='interested',pursuit_stage=NULL,pursuit_stage_notes=NULL,pursuit_stage_updated_by=p_actor,pursuit_stage_updated_at=NOW() WHERE id=p_match_id; RETURN public.journey_append_evidence(p_match_id,'reopened',p_actor,p_idempotency_key); END IF;
  RAISE EXCEPTION 'Unsupported pursuit transition.';
 END $$;

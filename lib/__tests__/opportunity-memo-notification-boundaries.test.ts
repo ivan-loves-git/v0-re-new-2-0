@@ -7,12 +7,8 @@ const migrationSource = fs.readFileSync(
   path.join(root, "scripts/069_opportunity_memo_notification.sql"),
   "utf8",
 )
-const matchActionSource = fs.readFileSync(
-  path.join(root, "lib/actions/opportunity-matches.ts"),
-  "utf8",
-)
-const documentActionSource = fs.readFileSync(
-  path.join(root, "lib/actions/opportunity-documents.ts"),
+const canonicalMigrationSource = fs.readFileSync(
+  path.join(root, "scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"),
   "utf8",
 )
 const notificationDataSource = fs.readFileSync(
@@ -60,10 +56,11 @@ describe("opportunity memo notification boundaries", () => {
     expect(migrationSource).not.toContain("contact_email")
   })
 
-  it("triggers at both sides of the eligibility boundary", () => {
-    expect(matchActionSource.match(/await triggerOpportunityMemoNotification/g)).toHaveLength(2)
-    expect(matchActionSource).toContain("matchId,")
-    expect(documentActionSource.match(/await triggerOpportunityMemoNotification/g)).toHaveLength(2)
+  it("makes a notification claim depend on the exact canonical grant", () => {
+    expect(canonicalMigrationSource).toContain("g.cycle_started_evidence_id=public.journey_current_cycle_event(m.id)")
+    expect(canonicalMigrationSource).toContain("g.gate_2_evidence_id=public.journey_current_gate_2_event(m.id)")
+    expect(canonicalMigrationSource).toContain("g.dispatch_evidence_id=public.journey_current_dispatch_event(m.id)")
+    expect(canonicalMigrationSource).not.toContain("om.nda_status IN ('signed', 'waived')")
   })
 
   it("evaluates every eligible pursuit when a memo becomes available", () => {
