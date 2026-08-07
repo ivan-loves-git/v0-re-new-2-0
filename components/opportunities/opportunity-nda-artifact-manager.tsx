@@ -16,6 +16,8 @@ interface OpportunityNdaArtifactManagerProps {
   opportunityId: string
   activeMatchId: string | null
   artifacts: OpportunityNdaArtifact[]
+  /** The repreneur signs and uploads their own copy in the portal after Gate 1. */
+  staffOnlyRoles?: boolean
 }
 
 interface ArtifactRoleDefinition {
@@ -75,6 +77,7 @@ export function OpportunityNdaArtifactManager({
   opportunityId,
   activeMatchId,
   artifacts,
+  staffOnlyRoles = false,
 }: OpportunityNdaArtifactManagerProps) {
   const router = useRouter()
   const [pendingRole, setPendingRole] = useState<OpportunityNdaArtifactRole | null>(null)
@@ -117,7 +120,7 @@ export function OpportunityNdaArtifactManager({
         </AlertDescription>
       </Alert>
 
-      {ARTIFACT_ROLES.map((definition) => {
+      {ARTIFACT_ROLES.filter((definition) => !staffOnlyRoles || definition.role !== "repreneur_signed_copy").map((definition) => {
         const roleArtifacts = artifacts.filter((artifact) => artifact.artifact_role === definition.role)
         const current = currentArtifact(definition.role, roleArtifacts, activeMatchId)
         const requiresPursuit = definition.role !== "blank_template"

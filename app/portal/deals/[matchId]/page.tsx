@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RepreneurOpportunityDetail } from "@/components/opportunities/repreneur-opportunity-detail"
 import { getMyRepreneurOpportunity } from "@/lib/actions/repreneur-opportunities"
+import { getPortalPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
 
 
 export default async function PortalDealDetailPage({ params }: { params: Promise<{ matchId: string }> }) {
@@ -16,6 +17,10 @@ export default async function PortalDealDetailPage({ params }: { params: Promise
     notFound()
   }
 
+  const journey = opportunity.match_id && opportunity.match_status === "active_pursuit"
+    ? await getPortalPursuitProjection(opportunity.match_id)
+    : null
+
   return (
     <div className="flex flex-col gap-6">
       <Button asChild variant="ghost" className="w-fit">
@@ -24,7 +29,7 @@ export default async function PortalDealDetailPage({ params }: { params: Promise
           Back to deals
         </Link>
       </Button>
-      <RepreneurOpportunityDetail opportunity={opportunity} />
+      <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} />
     </div>
   )
 }

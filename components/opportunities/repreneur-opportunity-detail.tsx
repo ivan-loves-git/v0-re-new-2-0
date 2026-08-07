@@ -4,15 +4,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
+import { RepreneurNdaSignatureUpload } from "@/components/opportunities/repreneur-nda-signature-upload"
 import { RepreneurOpportunityDeclineAction } from "@/components/opportunities/repreneur-opportunity-decline-action"
 import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity-responses"
 import {
   getOpportunityMatchStatusLabel,
-  getOpportunityNdaStatusLabel,
-  getOpportunityPursuitStageLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type RepreneurDealFlowOpportunity,
-  type RepreneurMemoAvailability,
   type RepreneurOpportunityDocument,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
@@ -24,7 +22,17 @@ type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDe
 interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityDetailItem
   readOnly?: boolean
+  /** Legacy staff preview link factory; portal disclosure is now canonical and ignores it. */
   documentHrefForDocument?: (document: RepreneurOpportunityDocument) => string | null
+  journey?: {
+    enabled: boolean
+    gate1Passed: boolean
+    gate2Passed: boolean
+    dispatched: boolean
+    confidentialGrant: { information_memo_document_id: string } | null
+    revoked: boolean
+    evidenceRequired: boolean
+  } | null
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityDetailItem) {
@@ -47,39 +55,19 @@ function formatEbitdaMargin(opportunity: RepreneurOpportunityDetailItem) {
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(margin)}%`
 }
 
-function formatBytes(bytes: number | null | undefined) {
-  if (!bytes) return "-"
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 function canRespond(status: RepreneurOpportunityDetailItem["match_status"]) {
   return status === "proposed" || status === "interested" || status === "declined"
-}
-
-function memoLockedDescription(availability: RepreneurMemoAvailability | undefined) {
-  switch (availability) {
-    case "no_nda_required":
-      return "NDA marked not required. Re-New must still record an explicit waiver before approving memo access."
-    case "awaiting_confidentiality":
-      return "Memo awaiting completion of the confidentiality checks and Re-New document approval."
-    case "awaiting_document_approval":
-      return "Memo awaiting Re-New document approval."
-    default:
-      return "Re-New will make the info memo available after the confidentiality checks and document approval are recorded."
-  }
 }
 
 export function RepreneurOpportunityDetail({
   opportunity,
   readOnly = false,
-  documentHrefForDocument,
+  journey,
 }: RepreneurOpportunityDetailProps) {
   const interestAction = opportunity.match_id
     ? markMyOpportunityInterested.bind(null, opportunity.match_id)
     : null
-  const memoAvailable = opportunity.visible_documents.length > 0
-  const memoAvailability = opportunity.memo_availability
+  const memoAvailable = Boolean(journey?.confidentialGrant && !journey.revoked)
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
   const canExpressUnassignedInterest = !opportunity.match_id
@@ -93,9 +81,7 @@ export function RepreneurOpportunityDetail({
             <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
           ) : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
-          {opportunity.match_status === "active_pursuit" && (
-            <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge>
-          )}
+          {opportunity.match_status === "active_pursuit" && <Badge variant="outline">Confidential journey</Badge>}
           {isStaffRecommended(opportunity) ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
         </div>
         <div>
@@ -163,10 +149,7 @@ export function RepreneurOpportunityDetail({
             <Alert>
               <CheckCircle2 />
               <AlertTitle>Active pursuit</AlertTitle>
-              <AlertDescription>
-                Re-New has validated this opportunity as an active pursuit.
-                {opportunity.pursuit_stage ? ` Current stage: ${getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}.` : ""}
-              </AlertDescription>
+              <AlertDescription>Re-New has validated this opportunity as an active pursuit. The next available action is shown in the documents area below.</AlertDescription>
             </Alert>
           )}
 
@@ -216,49 +199,31 @@ export function RepreneurOpportunityDetail({
               <ShieldCheck className="size-5" />
               Documents
             </CardTitle>
-            <CardDescription>Documents are released through the confidentiality and Re-New approval gate.</CardDescription>
+            <CardDescription>Each document is released only through the canonical confidentiality journey.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {!memoAvailable && (
               <Alert>
                 <FileText />
-                <AlertTitle>Memo locked</AlertTitle>
+                <AlertTitle>{journey?.gate1Passed ? "Information memorandum locked" : "Confidential documents locked"}</AlertTitle>
                 <AlertDescription>
-                  {memoLockedDescription(memoAvailability)}
+                  {!journey?.enabled
+                    ? "The confidential journey is not enabled for this opportunity. Re-New will tell you when the next action is available."
+                    : journey.revoked
+                      ? "Confidential access has been revoked for this pursuit."
+                      : journey.gate1Passed
+                        ? "Your signed copy can now be reviewed by Re-New. The Information Memorandum remains locked until Gate 2, manual intermediary handoff, and an explicit grant."
+                        : "Re-New is preparing the NDA journey. The template becomes available after Gate 1."}
                 </AlertDescription>
               </Alert>
             )}
 
-            {memoAvailable &&
-              opportunity.visible_documents.map((document) => {
-                const documentHref =
-                  documentHrefForDocument?.(document) ??
-                  `/portal/deals/${opportunity.match_id}/documents/${document.id}`
+            {journey?.enabled && journey.gate1Passed && !journey.revoked ? <>
+              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">NDA template</p><p className="text-xs text-muted-foreground">Use this exact validated template for your signed copy.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/nda-template`}><Download data-icon="inline-start" />Download template</a></Button></div>
+              {!journey.gate2Passed && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
+            </> : null}
 
-                return (
-                  <div key={document.id} className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium">{document.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {document.document_type.replaceAll("_", " ")} · {formatBytes(document.size_bytes)}
-                      </p>
-                    </div>
-                    {documentHref ? (
-                      <Button asChild variant="outline" size="sm">
-                        <a href={documentHref}>
-                          <Download data-icon="inline-start" />
-                          Download
-                        </a>
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" disabled>
-                        <Download data-icon="inline-start" />
-                        Download
-                      </Button>
-                    )}
-                  </div>
-                )
-              })}
+            {memoAvailable && journey?.confidentialGrant ? <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Information memorandum (IM)</p><p className="text-xs text-muted-foreground">This exact IM was explicitly granted to this pursuit.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.information_memo_document_id}`}><Download data-icon="inline-start" />Download IM</a></Button></div> : null}
           </CardContent>
         </Card>
       )}
