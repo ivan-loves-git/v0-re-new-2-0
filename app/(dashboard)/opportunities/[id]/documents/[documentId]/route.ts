@@ -23,24 +23,27 @@ export async function GET(
 
   const { data: document, error } = await supabase
     .from("opportunity_documents")
-    .select("storage_bucket, storage_path, external_url")
+    .select("storage_bucket, storage_path")
     .eq("id", documentId)
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: "Unable to open document." }, { status: 500 })
   if (!document) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  if (document.external_url) return privateRedirect(document.external_url)
-  if (!document.storage_path) {
-    return NextResponse.json({ error: "Document file is unavailable." }, { status: 404 })
+  const expectedPrefix = `${opportunityId}/`
+  if (
+    document.storage_bucket !== "opportunity-documents" ||
+    !document.storage_path?.startsWith(expectedPrefix)
+  ) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
   const { data: signedUrl, error: signedUrlError } = await supabase.storage
-    .from(document.storage_bucket || "opportunity-documents")
+    .from("opportunity-documents")
     .createSignedUrl(document.storage_path, 60)
   if (signedUrlError) {
-    return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
+    return NextResponse.json({ error: "Unable to open document." }, { status: 500 })
   }
 
   return privateRedirect(signedUrl.signedUrl)

@@ -5,6 +5,10 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
+import {
+  assertGenericOpportunityDocumentPolicy,
+  getOpportunityDocumentPolicy,
+} from "@/lib/opportunity-document-policy"
 import type {
   OpportunityDocument,
   OpportunityDocumentType,
@@ -13,14 +17,6 @@ import type {
 
 const OPPORTUNITY_DOCUMENTS_BUCKET = "opportunity-documents"
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
-const PDF_ONLY_DOCUMENT_TYPES = new Set<OpportunityDocumentType>([
-  "source_teaser",
-  "deal_book",
-])
-const STAFF_ONLY_DOCUMENT_TYPES = new Set<OpportunityDocumentType>([
-  "source_teaser",
-  "deal_book",
-])
 
 export type OpportunityDocumentMutationResult =
   | { success: true; message: string; documentId?: string }
@@ -42,32 +38,12 @@ function safeFileName(fileName: string) {
   return cleaned || "document"
 }
 
-function isPdf(file: File) {
-  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
-}
-
 function assertSupportedDocumentType(value: string | null): OpportunityDocumentType {
   const allowed: OpportunityDocumentType[] = ["source_teaser", "teaser", "deal_book", "nda", "external_analysis", "other"]
   if (!value || !allowed.includes(value as OpportunityDocumentType)) {
     throw new Error("Choose a valid document type.")
   }
   return value as OpportunityDocumentType
-}
-
-function assertGenericDocumentPolicy(
-  documentType: OpportunityDocumentType,
-  visibility: OpportunityDocumentVisibility,
-  file: FormDataEntryValue | null,
-  externalUrl: string | null,
-) {
-  if (STAFF_ONLY_DOCUMENT_TYPES.has(documentType) && visibility !== "staff_only") {
-    throw new Error(`${documentType === "source_teaser" ? "Source teasers" : "Information memoranda"} stay staff-only until the pursuit access workflow grants access.`)
-  }
-  if (PDF_ONLY_DOCUMENT_TYPES.has(documentType)) {
-    if (!(file instanceof File) || file.size === 0 || externalUrl || !isPdf(file)) {
-      throw new Error(`${documentType === "source_teaser" ? "Source teasers" : "Information memoranda"} must be uploaded as a PDF.`)
-    }
-  }
 }
 
 async function assertDocumentIsNotCanonicalNdaArtifact(
@@ -117,7 +93,7 @@ export async function registerOpportunityDocument(formData: FormData): Promise<O
     if (!opportunityId) throw new Error("Opportunity is required")
     if (!title) throw new Error("Document title is required")
     if (!(file instanceof File) && !externalUrl) throw new Error("Upload a file or provide an external URL")
-    assertGenericDocumentPolicy(documentType, visibility, file, externalUrl)
+    assertGenericOpportunityDocumentPolicy(documentType, visibility, file, externalUrl)
 
     let storagePath: string | null = null
   let fileName: string | null = null
@@ -169,7 +145,11 @@ export async function registerOpportunityDocument(formData: FormData): Promise<O
 
     if (error) throw new Error(error.message)
 
-    await triggerOpportunityMemoNotification({ opportunityId })
+    // Upload is never a disclosure decision. In particular, a newly stored IM
+    // has no notification side effect; the canonical pursuit grant owns it.
+    if (documentType !== "deal_book") {
+      await triggerOpportunityMemoNotification({ opportunityId })
+    }
 
     revalidatePath(`/opportunities/${opportunityId}`)
     revalidateOpportunityDashboardTags()
@@ -197,7 +177,8 @@ export async function updateOpportunityDocumentVisibility(
       .maybeSingle()
     if (fetchError) throw new Error(fetchError.message)
     if (!document) throw new Error("Document not found.")
-    if (STAFF_ONLY_DOCUMENT_TYPES.has(document.document_type as OpportunityDocumentType) && visibility !== "staff_only") {
+    const policy = getOpportunityDocumentPolicy(document.document_type as OpportunityDocumentType)
+    if (!policy.canChangeVisibility && visibility !== "staff_only") {
       throw new Error("Source teasers and Information Memoranda are granted through the pursuit access workflow, not this control.")
     }
 
@@ -219,7 +200,9 @@ export async function updateOpportunityDocumentVisibility(
     .eq("opportunity_id", opportunityId)
 
     if (error) throw new Error(error.message)
-    await triggerOpportunityMemoNotification({ opportunityId })
+    if (document.document_type !== "deal_book") {
+      await triggerOpportunityMemoNotification({ opportunityId })
+    }
     revalidatePath(`/opportunities/${opportunityId}`)
     revalidateOpportunityDashboardTags()
     return { success: true, message: visibility === "staff_only" ? "Document is now staff-only." : "Document approval recorded." }
@@ -242,7 +225,8 @@ export async function removeOpportunityDocument(documentId: string, opportunityI
     .single()
 
     if (fetchError) throw new Error(fetchError.message)
-    if (STAFF_ONLY_DOCUMENT_TYPES.has((document as { document_type: OpportunityDocumentType }).document_type)) {
+    const policy = getOpportunityDocumentPolicy((document as { document_type: OpportunityDocumentType }).document_type)
+    if (!policy.canRemove) {
       throw new Error("Retained source teasers and Information Memoranda cannot be removed. Upload a corrected PDF as a new document.")
     }
 
