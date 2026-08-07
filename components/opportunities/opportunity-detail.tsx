@@ -32,6 +32,7 @@ import {
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
+import type { OpportunityPursuitProjectionView } from "@/lib/data/opportunity-pursuit-projection"
 import type {
   OpportunityActionResult,
   OpportunityClosureHistoryEntry,
@@ -67,6 +68,7 @@ interface OpportunityDetailProps {
   matches: OpportunityMatch[]
   matchCandidates: OpportunityMatchCandidate[]
   pursuitEvents: OpportunityPursuitEvent[]
+  pursuitProjection: OpportunityPursuitProjectionView | null
   maWorkflow: MaOpportunityWorkflow
   updateAction: (formData: FormData) => Promise<OpportunityActionResult | void>
   resolveSourceAction: (formData: FormData) => Promise<OpportunityActionResult>
@@ -149,6 +151,7 @@ export function OpportunityDetail({
   matches,
   matchCandidates,
   pursuitEvents,
+  pursuitProjection,
   maWorkflow,
   updateAction,
   resolveSourceAction,
@@ -570,9 +573,10 @@ export function OpportunityDetail({
           <OpportunityPursuitPanel
             opportunityId={opportunity.id}
             matches={matches}
-            events={pursuitEvents}
             documents={documents}
             ndaArtifacts={ndaArtifacts}
+            projection={pursuitProjection}
+            legacyEventCount={pursuitEvents.length}
           />
         </TabsContent>
 

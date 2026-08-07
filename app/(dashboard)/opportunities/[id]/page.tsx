@@ -7,6 +7,7 @@ import { OpportunityDetail } from "@/components/opportunities/opportunity-detail
 import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
 import { listOpportunityNdaArtifacts } from "@/lib/actions/opportunity-nda-artifacts"
+import { getStaffPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
 import {
   listOpportunityMatchCandidates,
   listOpportunityMatches,
@@ -76,6 +77,12 @@ async function OpportunityDetailContent({
       ? opportunity.source_office_id
       : null,
   })
+  const journeyMatch = matches.find((match) => match.status === "active_pursuit")
+    ?? matches.find((match) => match.status === "dropped")
+    ?? null
+  const pursuitProjection = journeyMatch
+    ? await getStaffPursuitProjection(journeyMatch.id)
+    : null
 
   async function updateAction(formData: FormData) {
     "use server"
@@ -110,6 +117,7 @@ async function OpportunityDetailContent({
         matches={matches}
         matchCandidates={matchCandidates}
         pursuitEvents={pursuitEvents}
+        pursuitProjection={pursuitProjection}
         maWorkflow={maWorkflow}
         updateAction={updateAction}
         resolveSourceAction={resolveSourceAction}
