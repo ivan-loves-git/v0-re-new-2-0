@@ -107,4 +107,23 @@ DO $$ BEGIN
 END $$;
 SELECT public.journey_start_pursuit('40000000-0000-4000-8000-000000000001','staff@test.invalid','test:second-cycle');
 SELECT public.test_assert_raises($$SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','intermediary_qualified','staff@test.invalid','test:second-cycle-skip')$$,'qualification request');
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','qualification_requested','staff@test.invalid','test:second-request');
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','intermediary_qualified','staff@test.invalid','test:second-qualified');
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:second-template',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template' ORDER BY version_number DESC LIMIT 1));
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','gate_1_passed','staff@test.invalid','test:second-gate1');
+SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','renew_signed_copy','TEST Re-New final','20000000-0000-4000-8000-000000000001/nda-artifacts/renew_signed_copy/final.pdf','final.pdf',1,repeat('7',64),'staff@test.invalid');
+SELECT * FROM public.journey_submit_repreneur_signed_copy_v2('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','buyer@test.invalid','TEST buyer final','20000000-0000-4000-8000-000000000001/nda-artifacts/repreneur_signed_copy/final.pdf','final.pdf',1,repeat('8',64));
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','renew_signed_copy_validated','staff@test.invalid','test:second-renew',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='renew_signed_copy' ORDER BY version_number DESC LIMIT 1));
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','repreneur_signed_copy_validated','staff@test.invalid','test:second-buyer',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='repreneur_signed_copy' ORDER BY version_number DESC LIMIT 1));
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','gate_2_passed','staff@test.invalid','test:second-gate2');
+SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','manual_package_dispatched','staff@test.invalid','test:second-dispatch');
+SELECT public.journey_grant_confidential_access('40000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000001','staff@test.invalid','test:second-grant',NOW()+INTERVAL '3 days');
+SELECT public.journey_transition_terminal('40000000-0000-4000-8000-000000000001','continue','staff@test.invalid','test:continue');
+SELECT public.journey_transition_terminal('40000000-0000-4000-8000-000000000001','complete','staff@test.invalid','test:complete','signed this week');
+DO $$ BEGIN
+  IF (SELECT status FROM public.opportunity_matches WHERE id='40000000-0000-4000-8000-000000000001')<>'completed' THEN RAISE EXCEPTION 'Complete did not mark the pursuit completed'; END IF;
+  IF (SELECT status FROM public.opportunities WHERE id='20000000-0000-4000-8000-000000000001')<>'closed' THEN RAISE EXCEPTION 'Complete did not close the opportunity'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_confidential_grants WHERE match_id='40000000-0000-4000-8000-000000000001' AND revoked_at IS NOT NULL) THEN RAISE EXCEPTION 'Complete did not revoke confidential access'; END IF;
+  IF (SELECT count(*) FROM public.opportunity_closure_history WHERE opportunity_id='20000000-0000-4000-8000-000000000001' AND reason='signed_repreneur')<>1 THEN RAISE EXCEPTION 'Complete did not write exactly one signed-repreneur closure history row'; END IF;
+END $$;
 -- The shell runner destroys the disposable cluster after this script exits.
