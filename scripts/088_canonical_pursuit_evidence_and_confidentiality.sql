@@ -696,6 +696,46 @@ BEGIN
  RETURN QUERY SELECT v.id,v.opportunity_id,v.repreneur_id,v_email,v_first,v_title;
 END $$;
 
+-- Resolve the exact blank-template document that the active repreneur may
+-- download.  The active lifecycle check, current Gate 1 check and template
+-- selection share one database snapshot, so a superseding upload cannot be
+-- substituted after an earlier projection authorized a different version.
+CREATE OR REPLACE FUNCTION public.journey_repreneur_authorized_template(
+  p_match_id UUID,
+  p_repreneur_id UUID
+)
+RETURNS TABLE(document_id UUID, storage_bucket TEXT, storage_path TEXT)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+  SELECT d.id, d.storage_bucket, d.storage_path
+  FROM public.wave_journey_settings settings
+  JOIN public.opportunity_matches match ON match.id=p_match_id
+  JOIN public.opportunities opportunity ON opportunity.id=match.opportunity_id
+  JOIN public.opportunity_nda_artifacts artifact
+    ON artifact.id=public.journey_current_template_id(match.id)
+  JOIN public.opportunity_documents d ON d.id=artifact.document_id
+  WHERE settings.singleton=TRUE
+    AND settings.enabled=TRUE
+    AND match.repreneur_id=p_repreneur_id
+    AND match.status='active_pursuit'
+    AND opportunity.status='active'
+    AND public.journey_current_gate_1_event(match.id) IS NOT NULL
+    AND artifact.opportunity_id=match.opportunity_id
+    AND artifact.match_id IS NULL
+    AND artifact.artifact_role='blank_template'
+    AND d.opportunity_id=match.opportunity_id
+    AND d.document_type='nda'
+    AND d.visibility='staff_only'
+    AND d.external_url IS NULL
+    AND d.storage_bucket='opportunity-documents'
+    AND d.storage_path LIKE match.opportunity_id::TEXT||'/nda-artifacts/blank_template/%'
+    AND LOWER(COALESCE(d.file_name,'')) LIKE '%.pdf'
+    AND LOWER(COALESCE(d.mime_type,''))='application/pdf'
+    AND COALESCE(d.size_bytes,0)>0
+  LIMIT 1
+$$;
+REVOKE ALL ON FUNCTION public.journey_repreneur_authorized_template(UUID,UUID) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.journey_repreneur_authorized_template(UUID,UUID) TO service_role;
+
 REVOKE ALL ON FUNCTION public.journey_current_cycle_event(UUID),public.journey_current_cycle_started_at(UUID),public.journey_current_template_id(UUID),public.journey_current_gate_1_event(UUID),public.journey_current_signed_validation_event(UUID,public.opportunity_nda_artifact_role),public.journey_current_gate_2_event(UUID),public.journey_current_dispatch_event(UUID) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.journey_current_cycle_event(UUID),public.journey_current_cycle_started_at(UUID),public.journey_current_template_id(UUID),public.journey_current_gate_1_event(UUID),public.journey_current_signed_validation_event(UUID,public.opportunity_nda_artifact_role),public.journey_current_gate_2_event(UUID),public.journey_current_dispatch_event(UUID) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT) FROM service_role;

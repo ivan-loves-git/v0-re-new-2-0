@@ -68,9 +68,20 @@ SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','in
 SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST blank','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test.pdf','test.pdf',1,repeat('a',64),'staff@test.invalid');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:template',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template'));
 SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST blank replacement','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test-v2.pdf','test-v2.pdf',1,repeat('e',64),'staff@test.invalid');
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM public.journey_repreneur_authorized_template('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001')) THEN
+    RAISE EXCEPTION 'A superseding unvalidated template remained downloadable';
+  END IF;
+END $$;
 SELECT public.test_assert_raises($$SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','gate_1_passed','staff@test.invalid','test:stale-gate1')$$,'exact current-template validation');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:template-v2',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template' ORDER BY version_number DESC LIMIT 1));
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','gate_1_passed','staff@test.invalid','test:gate1');
+DO $$ DECLARE v_template RECORD; BEGIN
+  SELECT * INTO v_template FROM public.journey_repreneur_authorized_template('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001');
+  IF v_template.document_id IS DISTINCT FROM (SELECT document_id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template' ORDER BY version_number DESC LIMIT 1) THEN
+    RAISE EXCEPTION 'Gate 1 did not resolve its exact current template';
+  END IF;
+END $$;
 SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','renew_signed_copy','TEST Re-New','20000000-0000-4000-8000-000000000001/nda-artifacts/renew_signed_copy/test.pdf','test.pdf',1,repeat('b',64),'staff@test.invalid');
 SELECT * FROM public.journey_submit_repreneur_signed_copy_v2('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','buyer@test.invalid','TEST buyer','20000000-0000-4000-8000-000000000001/nda-artifacts/repreneur_signed_copy/test.pdf','test.pdf',1,repeat('c',64));
 DO $$ DECLARE v_reused BOOLEAN; BEGIN SELECT reused_existing INTO v_reused FROM public.journey_submit_repreneur_signed_copy_v2('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','buyer@test.invalid','TEST buyer duplicate','20000000-0000-4000-8000-000000000001/nda-artifacts/repreneur_signed_copy/duplicate.pdf','duplicate.pdf',1,repeat('c',64)); IF v_reused IS DISTINCT FROM TRUE THEN RAISE EXCEPTION 'Duplicate portal upload did not reuse the retained artifact'; END IF; END $$;
@@ -109,6 +120,11 @@ UPDATE public.opportunities SET status='paused' WHERE id='20000000-0000-4000-800
 UPDATE public.opportunities SET status='active' WHERE id='20000000-0000-4000-8000-000000000001';
 DO $$ BEGIN IF public.journey_repreneur_can_access_confidential('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000001') THEN RAISE EXCEPTION 'Pause/resume restored confidential access'; END IF; END $$;
 SELECT public.journey_transition_terminal('40000000-0000-4000-8000-000000000001','drop','staff@test.invalid','test:drop');
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM public.journey_repreneur_authorized_template('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001')) THEN
+    RAISE EXCEPTION 'A dropped pursuit retained template access';
+  END IF;
+END $$;
 SELECT public.journey_transition_terminal('40000000-0000-4000-8000-000000000001','reopen','staff@test.invalid','test:reopen');
 DO $$ BEGIN
   IF public.journey_current_gate_1_event('40000000-0000-4000-8000-000000000001') IS NOT NULL OR public.journey_current_gate_2_event('40000000-0000-4000-8000-000000000001') IS NOT NULL THEN RAISE EXCEPTION 'Reopen inherited old gate evidence'; END IF;
@@ -119,6 +135,11 @@ SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','qu
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','intermediary_qualified','staff@test.invalid','test:second-qualified');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:second-template',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template' ORDER BY version_number DESC LIMIT 1));
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','gate_1_passed','staff@test.invalid','test:second-gate1');
+DO $$ BEGIN
+  IF NOT EXISTS(SELECT 1 FROM public.journey_repreneur_authorized_template('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001')) THEN
+    RAISE EXCEPTION 'Second pursuit could not re-earn exact template access';
+  END IF;
+END $$;
 SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','renew_signed_copy','TEST Re-New final','20000000-0000-4000-8000-000000000001/nda-artifacts/renew_signed_copy/final.pdf','final.pdf',1,repeat('7',64),'staff@test.invalid');
 SELECT * FROM public.journey_submit_repreneur_signed_copy_v2('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','buyer@test.invalid','TEST buyer final','20000000-0000-4000-8000-000000000001/nda-artifacts/repreneur_signed_copy/final.pdf','final.pdf',1,repeat('8',64));
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','renew_signed_copy_validated','staff@test.invalid','test:second-renew',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='renew_signed_copy' ORDER BY version_number DESC LIMIT 1));

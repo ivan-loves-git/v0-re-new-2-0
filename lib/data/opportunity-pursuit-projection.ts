@@ -11,6 +11,11 @@ export interface PortalPursuitConfidentialGrant {
   grantedAt: string
   source: { firmName: string; officeName: string; contactNames: string[] }
 }
+export interface PortalAuthorizedNdaTemplate {
+  documentId: string
+  storageBucket: string
+  storagePath: string
+}
 export interface OpportunityPursuitProjectionView {
   matchId: string; opportunityId: string; repreneurId: string; enabled: boolean; status: string; opportunityStatus: string | null
   entries: OpportunityPursuitEvidence[]; currentTemplate: PursuitArtifactProjection | null
@@ -132,4 +137,34 @@ export async function getPortalPursuitProjection(matchId: string) {
   const access = await requirePortalAccess()
   if (!access.repreneurId) return null
   return getPortalSafePursuitProjectionForRepreneur(matchId, access.repreneurId)
+}
+
+/** Return only the exact current template bound to Gate 1 for this active pursuit. */
+export async function getPortalAuthorizedNdaTemplate(matchId: string): Promise<PortalAuthorizedNdaTemplate | null> {
+  const access = await requirePortalAccess()
+  if (!access.repreneurId) return null
+
+  const { data, error } = await createAdminClient().rpc("journey_repreneur_authorized_template", {
+    p_match_id: matchId,
+    p_repreneur_id: access.repreneurId,
+  })
+  if (error) return null
+
+  const row = (Array.isArray(data) ? data[0] : data) as {
+    document_id?: unknown
+    storage_bucket?: unknown
+    storage_path?: unknown
+  } | null
+  if (
+    !row
+    || typeof row.document_id !== "string"
+    || typeof row.storage_bucket !== "string"
+    || typeof row.storage_path !== "string"
+  ) return null
+
+  return {
+    documentId: row.document_id,
+    storageBucket: row.storage_bucket,
+    storagePath: row.storage_path,
+  }
 }

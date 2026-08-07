@@ -30,6 +30,16 @@ describe("W-090/W-091 evidence foundation", () => {
     expect(source).toContain("status='completed'")
   })
 
+  it("resolves the active pursuit's exact Gate-1 template in one canonical operation", () => {
+    expect(source).toContain("journey_repreneur_authorized_template")
+    expect(source).toContain("match.status='active_pursuit'")
+    expect(source).toContain("artifact.id=public.journey_current_template_id(match.id)")
+    expect(source).toContain("public.journey_current_gate_1_event(match.id) IS NOT NULL")
+    expect(source).toContain(
+      "REVOKE ALL ON FUNCTION public.journey_repreneur_authorized_template(UUID,UUID) FROM PUBLIC,anon,authenticated",
+    )
+  })
+
   it("binds every confidential release to the latest cycle, exact artifacts, dispatch and expiry", () => {
     expect(source).toContain("journey_current_cycle_event")
     expect(source).toContain("journey_current_gate_1_event")
