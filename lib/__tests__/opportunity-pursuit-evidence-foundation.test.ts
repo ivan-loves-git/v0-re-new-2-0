@@ -26,4 +26,24 @@ describe("W-090/W-091 evidence foundation", () => {
     expect(source).toContain("PERFORM public.journey_revoke_confidential_access")
     expect(source).toContain("status='completed'")
   })
+
+  it("binds every confidential release to the latest cycle, exact artifacts, dispatch and expiry", () => {
+    expect(source).toContain("journey_current_cycle_event")
+    expect(source).toContain("journey_current_gate_1_event")
+    expect(source).toContain("journey_current_gate_2_event")
+    expect(source).toContain("journey_current_dispatch_event")
+    expect(source).toContain("renew_validation_id")
+    expect(source).toContain("repreneur_validation_id")
+    expect(source).toContain("nda_expires_at>NOW()")
+    expect(source).toContain("legacy active-pursuit start only; no gate inferred")
+  })
+
+  it("retains legacy edits only as read-only history and blocks direct repreneur-copy registration", () => {
+    const actions = fs.readFileSync(path.join(process.cwd(), "lib/actions/opportunity-matches.ts"), "utf8")
+    const artifacts = fs.readFileSync(path.join(process.cwd(), "lib/actions/opportunity-nda-artifacts.ts"), "utf8")
+    expect(actions).toContain("Legacy pursuit-stage editing is read-only")
+    expect(actions).toContain("Legacy NDA status editing is read-only")
+    expect(artifacts).not.toContain('"repreneur_signed_copy",')
+    expect(source).toContain("Repreneur signed copies may be submitted only")
+  })
 })
