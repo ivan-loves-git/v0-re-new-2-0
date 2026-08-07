@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 7, 2026",
+    version: "0.9.38",
+    title: "Staff can export opportunity data and ask WAVE AI what to do next",
+    isCompleted: true,
+    events: [
+      {
+        title: "Opportunity data is available as a reliable staff export",
+        type: "feature",
+        description: "Staff can download one row per opportunity with its current pipeline position, matching context, source information, internal notes and calculated EBITDA margin.",
+      },
+      {
+        title: "WAVE AI can recommend existing actions from recorded facts",
+        type: "feature",
+        description: "On an opportunity, staff can request up to three next actions that separate recorded facts, inference and unknown information and link only to controls already available in WAVE.",
+      },
+      {
+        title: "Staff remains responsible for every business action",
+        type: "decision",
+        description: "Luna can rank and explain available actions, but it cannot invent a workflow, change a record or confirm an action on behalf of the team.",
+      },
+    ],
+  },
+  {
     period: "Aug 6, 2026",
     version: "0.9.37",
     title: "WAVE AI now helps staff prepare reviewed email drafts",

@@ -45,6 +45,8 @@ export async function startWaveAiRun(input: {
   feature: WaveAiFeature
   workflow: string
   surface: string
+  promptVersion?: string
+  outputSchemaVersion?: string
 }): Promise<StartedWaveAiRun> {
   const supabase = createAdminClient()
   const rateLimitStart = new Date(Date.now() - WAVE_AI_RATE_LIMIT.windowMs).toISOString()
@@ -65,8 +67,8 @@ export async function startWaveAiRun(input: {
       feature: input.feature,
       workflow: input.workflow,
       surface: input.surface,
-      prompt_version: WAVE_AI_PROMPT_VERSION,
-      output_schema_version: WAVE_AI_OUTPUT_SCHEMA_VERSION,
+      prompt_version: input.promptVersion ?? WAVE_AI_PROMPT_VERSION,
+      output_schema_version: input.outputSchemaVersion ?? WAVE_AI_OUTPUT_SCHEMA_VERSION,
       provider: WAVE_AI_PROVIDER,
       model: WAVE_AI_MODEL,
       reasoning_effort: WAVE_AI_REASONING_EFFORT,

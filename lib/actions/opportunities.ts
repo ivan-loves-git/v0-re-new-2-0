@@ -231,24 +231,64 @@ export async function listOpportunities(): Promise<OpportunityWithSource[]> {
   return withStaffSourceReviewState(supabase, (data ?? []).map(normalizeOpportunity))
 }
 
-export async function listOpportunityWorkSurfaceRecords(): Promise<
+export async function listOpportunityWorkSurfaceRecords(options?: {
+  includeSourceReview?: boolean
+}): Promise<
   OpportunityWorkSurfaceRecord[]
 > {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { data, error } = await supabase
+  // Freeze the export boundary before reading. The ID high-water mark excludes
+  // later rows regardless of their randomly allocated UUID, while created_at
+  // excludes inserts that sort below that mark. ID keyset pagination means a
+  // concurrent delete cannot shift an offset and silently skip the next row.
+  const opportunityRows: OpportunitySourceRow[] = []
+  const pageSize = 500
+  const exportStartedAt = new Date().toISOString()
+  const { data: highWaterRow, error: highWaterError } = await supabase
     .from("opportunities")
-    .select(OPPORTUNITY_WITH_SOURCE_SELECT)
-    .order("date_added", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
+    .select("id")
+    .lte("created_at", exportStartedAt)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-  if (error) throw new Error(error.message)
+  if (highWaterError) throw new Error(highWaterError.message)
+  const highWaterId = highWaterRow?.id as string | undefined
+  if (!highWaterId) return []
 
-  const opportunities = await withStaffSourceReviewState(
-    supabase,
-    (data ?? []).map(normalizeOpportunity),
-  )
+  let lastOpportunityId: string | null = null
+  for (;;) {
+    let query = supabase
+      .from("opportunities")
+      .select(OPPORTUNITY_WITH_SOURCE_SELECT)
+      .lte("created_at", exportStartedAt)
+      .lte("id", highWaterId)
+      .order("id", { ascending: true })
+      .limit(pageSize)
+
+    if (lastOpportunityId) query = query.gt("id", lastOpportunityId)
+    const { data, error } = await query
+
+    if (error) throw new Error(error.message)
+    const page = (data ?? []) as OpportunitySourceRow[]
+    opportunityRows.push(...page)
+    if (page.length < pageSize) break
+    const nextCursor = page.at(-1)?.id as string | undefined
+    if (!nextCursor || nextCursor === lastOpportunityId) {
+      throw new Error("Opportunity export pagination did not advance.")
+    }
+    lastOpportunityId = nextCursor
+  }
+
+  const normalizedOpportunities = opportunityRows.map(normalizeOpportunity)
+  // The CSV does not export the W-064 review predicate. Skipping that extra
+  // projection keeps every export read paginated, including very large data
+  // sets where a single `in(...)` review lookup would itself hit a cap.
+  const opportunities = options?.includeSourceReview === false
+    ? normalizedOpportunities
+    : await withStaffSourceReviewState(supabase, normalizedOpportunities)
   const opportunityIds = opportunities.map((opportunity) => opportunity.id)
 
   if (opportunityIds.length === 0) {
@@ -258,25 +298,47 @@ export async function listOpportunityWorkSurfaceRecords(): Promise<
     }))
   }
 
-  const { data: matchRows, error: matchError } = await supabase
-    .from("opportunity_matches")
-    .select(
-      `
+  const matchRows: OpportunityWorkSurfaceMatchRow[] = []
+  // Keep UUID lists small enough for conservative PostgREST URL limits.
+  const matchOpportunityChunkSize = 100
+  for (let start = 0; start < opportunityIds.length; start += matchOpportunityChunkSize) {
+    const ids = opportunityIds.slice(start, start + matchOpportunityChunkSize)
+    let lastMatchId: string | null = null
+    for (;;) {
+      let query = supabase
+        .from("opportunity_matches")
+        .select(
+          `
       id,
       opportunity_id,
       status,
       pursuit_stage,
       updated_at,
       repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)
-    `,
-    )
-    .in("opportunity_id", opportunityIds)
-    .order("updated_at", { ascending: false })
+      `,
+        )
+        .in("opportunity_id", ids)
+        .lte("created_at", exportStartedAt)
+        .order("id", { ascending: true })
+        .limit(pageSize)
 
-  if (matchError) throw new Error(matchError.message)
+      if (lastMatchId) query = query.gt("id", lastMatchId)
+      const { data, error: matchError } = await query
+
+      if (matchError) throw new Error(matchError.message)
+      const page = (data ?? []) as OpportunityWorkSurfaceMatchRow[]
+      matchRows.push(...page)
+      if (page.length < pageSize) break
+      const nextCursor = page.at(-1)?.id as string | undefined
+      if (!nextCursor || nextCursor === lastMatchId) {
+        throw new Error("Opportunity match export pagination did not advance.")
+      }
+      lastMatchId = nextCursor
+    }
+  }
 
   const matchesByOpportunity = new Map<string, OpportunityWorkSurfaceMatch[]>()
-  for (const row of matchRows ?? []) {
+  for (const row of matchRows) {
     const match = normalizeWorkSurfaceMatch(row)
     const current = matchesByOpportunity.get(match.opportunity_id) ?? []
     current.push(match)

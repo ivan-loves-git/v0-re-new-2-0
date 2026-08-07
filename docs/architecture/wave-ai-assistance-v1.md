@@ -80,7 +80,7 @@ The generated subject and body return only to the staff editor. They are not wri
 
 ### Next-action recommendations
 
-Inputs are limited to canonical workflow state, dates, ownership, completed gates and bounded freshness signals. The model returns at most three ranked recommendations with rationale, confidence and explicit unknowns. Each recommendation references an existing deterministic action identifier and cannot invent a mutation.
+Inputs are limited to a server-built opportunity projection: status, computed source-review flag, profile completeness, date precision and age buckets, match counts, active-pursuit state, derived readiness or gate booleans, last canonical interaction age or next-due bucket, as-of time, and the server-derived allowed actions. It excludes raw rows, notes, audit data, secrets and identifiers. The model returns at most three unique ordered recommendations with rationale, confidence, recorded-fact references and explicit unknowns. Each recommendation references an existing deterministic action identifier and cannot invent a mutation, URL or identifier. In v1 the only confirmable actions are `resolve_source_review` and `complete_opportunity_profile`; match review and pursuit continue remain deterministic-only because they do not have one unambiguous completion boundary. The server gives each recommendation a short-lived, domain-separated HMAC outcome token. Only the matching successful staff mutation can append the confirmed outcome; a ledger failure never rolls back that mutation. The Opportunity Overview keeps the deterministic Next Best Action primary. Staff must explicitly select Ask WAVE AI to request this advisory output.
 
 ### Match-review ordering
 

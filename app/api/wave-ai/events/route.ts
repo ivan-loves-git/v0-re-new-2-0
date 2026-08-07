@@ -14,6 +14,12 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid WAVE AI event." }, { status: 400 })
   }
+  // A browser can describe rendering and feedback, but it cannot assert that
+  // an operational workflow action happened. Existing server mutation
+  // boundaries may append that outcome after they verify their own result.
+  if (parsed.data.eventType === "workflow_action_confirmed") {
+    return NextResponse.json({ error: "Workflow outcomes are server-recorded." }, { status: 403 })
+  }
 
   try {
     await recordWaveAiGenerationEvent({

@@ -29,7 +29,7 @@ export default function OpportunityDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; wave_ai_outcome?: string }>
 }) {
   return (
     <Suspense fallback={null}>
@@ -43,10 +43,10 @@ async function OpportunityDetailContent({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; wave_ai_outcome?: string }>
 }) {
   const { id } = await params
-  const { tab } = await searchParams
+  const { tab, wave_ai_outcome: waveAiOutcome } = await searchParams
   const [
     opportunity,
     documents,
@@ -79,6 +79,7 @@ async function OpportunityDetailContent({
 
   async function updateAction(formData: FormData) {
     "use server"
+    if (waveAiOutcome) formData.set("wave_ai_outcome", waveAiOutcome)
     return updateOpportunityIntake(id, formData)
   }
 
@@ -89,6 +90,7 @@ async function OpportunityDetailContent({
 
   async function resolveSourceAction(formData: FormData) {
     "use server"
+    if (waveAiOutcome) formData.set("wave_ai_outcome", waveAiOutcome)
     return resolveAcmeProvisionalSource(id, formData)
   }
 

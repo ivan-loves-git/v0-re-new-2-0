@@ -26,6 +26,7 @@ import { OpportunityForm } from "@/components/opportunities/opportunity-form"
 import { OpportunityMatchesPanel } from "@/components/opportunities/opportunity-matches-panel"
 import { OpportunityPursuitPanel } from "@/components/opportunities/opportunity-pursuit-panel"
 import { OpportunitySourceReviewPanel } from "@/components/opportunities/opportunity-source-review-panel"
+import { OpportunityAiNextActions } from "@/components/opportunities/opportunity-ai-next-actions"
 import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
@@ -299,6 +300,8 @@ export function OpportunityDetail({
               </div>
             </CardContent>
           </Card>
+
+          <OpportunityAiNextActions opportunityId={opportunity.id} />
 
           <OpportunityClosureControls
             opportunityStatus={opportunity.status}

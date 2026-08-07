@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requireStaffAccess } from "@/lib/access-control"
+import { appendConfirmedWaveAiOutcome } from "@/lib/ai/next-action-outcome"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
@@ -498,6 +499,12 @@ export async function updateOpportunityIntake(
   if (error) return normalizeDbError(error)
 
   revalidateOpportunityIntake(opportunityId)
+  await appendConfirmedWaveAiOutcome({
+    token: readOpportunityFormString(formData, "wave_ai_outcome"),
+    userId: user.id,
+    opportunityId,
+    action: "complete_opportunity_profile",
+  })
   return { success: true, message: "Opportunity saved." }
 }
 
@@ -546,6 +553,12 @@ export async function resolveAcmeProvisionalSource(
   if (error) return normalizeDbError(error)
 
   revalidateOpportunityIntake(opportunityId)
+  await appendConfirmedWaveAiOutcome({
+    token: readOpportunityFormString(formData, "wave_ai_outcome"),
+    userId: user.id,
+    opportunityId,
+    action: "resolve_source_review",
+  })
   return {
     success: true,
     message: "Source corrected. The provisional assignment and this correction are retained in staff-only evidence.",
