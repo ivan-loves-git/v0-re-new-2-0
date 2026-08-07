@@ -188,7 +188,7 @@ function ensureStaffMatchStatus(status: OpportunityMatchStatus) {
   }
 }
 
-async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, repreneurId: string, status: OpportunityMatchStatus) {
+async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, status: OpportunityMatchStatus) {
   if (status !== "proposed" && status !== "interested") return
 
   const supabase = createAdminClient()
@@ -202,16 +202,9 @@ async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, repr
 
   if (error) throw new Error(error.message)
   if (data) {
-    const { data: existing, error: existingError } = await supabase
-      .from("opportunity_matches")
-      .select("status")
-      .eq("opportunity_id", opportunityId)
-      .eq("repreneur_id", repreneurId)
-      .maybeSingle()
-    if (existingError) throw new Error(existingError.message)
-    // Preserve a pre-existing proposed card (the portal may independently
-    // turn it into interest); never expose a fresh candidate mid-pursuit.
-    if (existing?.status === "proposed" && status === "proposed") return
+    // Staff cannot expose or alter an external proposal while the opportunity
+    // is locked. The only exception is the separate portal-owned response
+    // action, which turns an already-proposed candidate into interest.
     throw formError("This opportunity already has an active pursuit. Drop it before exposing the opportunity to another repreneur.", "status")
   }
 }
@@ -553,7 +546,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     ensureStaffMatchStatus(status)
     await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
     await ensureOpportunityReadyForExternalMatch(opportunityId, status)
-    await ensureOpportunityCanExposeMoreMatches(opportunityId, repreneurId, status)
+    await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 
     const humanRecommendation = readRecommendation(formData, "human_recommendation")
     const humanNotes = readString(formData, "human_notes")

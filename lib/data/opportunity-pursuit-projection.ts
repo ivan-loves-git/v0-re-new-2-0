@@ -17,7 +17,7 @@ export interface OpportunityPursuitProjectionView {
   currentRenewSignedCopy: PursuitArtifactProjection | null; currentRepreneurSignedCopy: PursuitArtifactProjection | null
   gate1Passed: boolean; gate2Passed: boolean; dispatched: boolean
   currentCycleId: string | null; steps: ReturnType<typeof projectOpportunityPursuitEvidence>["steps"]
-  confidentialGrant: PursuitConfidentialGrantProjection | null; revoked: boolean; evidenceRequired: boolean
+  confidentialGrant: PursuitConfidentialGrantProjection | null; revoked: boolean; evidenceRequired: boolean; ndaExpiresAt: string | null
   nextAction: OpportunityPursuitJourneyAction | null; allowedActions: OpportunityPursuitJourneyAction[]; blockers: string[]
 }
 
@@ -58,7 +58,8 @@ async function loadProjection(matchId: string): Promise<OpportunityPursuitProjec
   if (!projection.gate2Passed) blockers.push("Gate 2 has not passed.")
   const allowedActions: OpportunityPursuitJourneyAction[] = projection.nextAction ? [projection.nextAction] : []
   if (match.status === "active_pursuit") allowedActions.push("drop")
-  if (projection.gate2Passed && !grant?.revoked_at) allowedActions.push("revoke_access", "continue", "complete")
+  if (projection.gate2Passed && !grant?.revoked_at) allowedActions.push("revoke_access", "continue")
+  if (projection.gate2Passed && !grant?.revoked_at && entries.some((entry) => entry.event_type === "continued")) allowedActions.push("complete")
   if (match.status === "dropped") allowedActions.push("reopen")
   const template = ((templateArtifacts ?? []) as PursuitArtifactProjection[])[0] ?? null
   if (expired) blockers.push("The NDA expiry has passed; confidential access is unavailable.")
