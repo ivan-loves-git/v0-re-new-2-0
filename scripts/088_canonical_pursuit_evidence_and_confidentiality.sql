@@ -189,6 +189,12 @@ BEGIN
   IF v_existing IS NOT NULL THEN RETURN v_existing; END IF;
   SELECT * INTO v_match FROM public.opportunity_matches WHERE id = p_match_id FOR UPDATE;
   IF v_match.id IS NULL OR v_match.status <> 'active_pursuit' THEN RAISE EXCEPTION 'An active pursuit is required.'; END IF;
+  IF v_type = 'qualification_requested' AND NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='mutual_interest_validated') THEN
+    RAISE EXCEPTION 'Qualification requires recorded mutual interest.'; END IF;
+  IF v_type = 'intermediary_qualified' AND NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='qualification_requested') THEN
+    RAISE EXCEPTION 'Intermediary qualification requires a recorded qualification request.'; END IF;
+  IF v_type = 'template_validated' AND NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='intermediary_qualified') THEN
+    RAISE EXCEPTION 'Template validation requires intermediary qualification.'; END IF;
   IF v_type IN ('template_validated', 'renew_signed_copy_validated', 'repreneur_signed_copy_validated') THEN
     IF p_artifact_id IS NULL THEN RAISE EXCEPTION 'This validation requires an exact NDA artifact.'; END IF;
     SELECT * INTO v_artifact FROM public.opportunity_nda_artifacts WHERE id=p_artifact_id;
@@ -212,7 +218,7 @@ BEGIN
   IF v_type = 'manual_package_dispatched' AND NOT public.journey_gate_2_satisfied(p_match_id) THEN
     RAISE EXCEPTION 'Manual dispatch requires current Gate 2 evidence.';
   END IF;
-  IF v_type NOT IN ('intermediary_qualified', 'template_validated', 'gate_1_passed', 'renew_signed_copy_validated', 'repreneur_signed_copy_validated', 'gate_2_passed', 'manual_package_dispatched') THEN
+  IF v_type NOT IN ('qualification_requested', 'intermediary_qualified', 'template_validated', 'gate_1_passed', 'renew_signed_copy_validated', 'repreneur_signed_copy_validated', 'gate_2_passed', 'manual_package_dispatched') THEN
     RAISE EXCEPTION 'This evidence type is not a staff journey action.';
   END IF;
   RETURN public.journey_append_evidence(p_match_id, v_type, p_actor, p_idempotency_key, p_artifact_id, p_document_id, p_evidence_reference,
@@ -231,7 +237,7 @@ BEGIN
   IF v_match.id IS NULL OR v_match.status <> 'interested' THEN RAISE EXCEPTION 'Only an interested match can start a pursuit.'; END IF;
   PERFORM 1 FROM public.opportunities WHERE id=v_match.opportunity_id AND status='active' FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Only an active opportunity can start a pursuit.'; END IF;
-  UPDATE public.opportunity_matches SET status='active_pursuit', pursuit_stage='interest', pursuit_stage_updated_by=p_actor, pursuit_stage_updated_at=NOW() WHERE id=p_match_id;
+  UPDATE public.opportunity_matches SET status='active_pursuit', pursuit_stage='interest', pursuit_stage_updated_by=p_actor, pursuit_stage_updated_at=NOW(), reviewed_by=p_actor, reviewed_at=NOW() WHERE id=p_match_id;
   RETURN public.journey_append_evidence(p_match_id, 'mutual_interest_validated', p_actor, p_idempotency_key, NULL, NULL, p_evidence_reference);
 EXCEPTION WHEN unique_violation THEN RAISE EXCEPTION 'This opportunity already has an active pursuit.'; END; $$;
 
@@ -332,7 +338,7 @@ BEGIN
   SELECT * INTO v_match FROM public.opportunity_matches WHERE id=p_match_id FOR UPDATE;
   SELECT LOWER(BTRIM(email)) INTO v_email FROM public.repreneurs WHERE id=p_repreneur_id;
   IF v_match.id IS NULL OR v_match.status <> 'active_pursuit' OR v_match.repreneur_id <> p_repreneur_id OR v_email IS NULL OR v_email <> LOWER(BTRIM(p_actor_email)) THEN RAISE EXCEPTION 'Only the active pursuit repreneur may submit this signed copy.'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='gate_1_passed') THEN RAISE EXCEPTION 'Gate 1 is required before signed-copy submission.'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence gate WHERE gate.match_id=p_match_id AND gate.event_type='gate_1_passed' AND gate.recorded_at >= COALESCE((SELECT max(validation.recorded_at) FROM public.opportunity_pursuit_evidence validation JOIN public.opportunity_nda_artifacts template ON template.id=validation.nda_artifact_id WHERE validation.match_id=p_match_id AND validation.event_type='template_validated' AND template.match_id IS NULL AND template.artifact_role='blank_template' AND NOT EXISTS (SELECT 1 FROM public.opportunity_nda_artifacts newer WHERE newer.opportunity_id=template.opportunity_id AND newer.match_id IS NULL AND newer.artifact_role='blank_template' AND newer.version_number>template.version_number)), '-infinity'::timestamptz)) THEN RAISE EXCEPTION 'Current Gate 1 is required before signed-copy submission.'; END IF;
   IF NULLIF(BTRIM(p_title),'') IS NULL OR NULLIF(BTRIM(p_storage_path),'') IS NULL OR LOWER(p_file_name) NOT LIKE '%.pdf' OR p_file_size <= 0 OR LOWER(p_content_sha256) !~ '^[0-9a-f]{64}$' OR p_storage_path NOT LIKE v_match.opportunity_id::TEXT || '/nda-artifacts/repreneur_signed_copy/%' THEN RAISE EXCEPTION 'Submit one retained PDF in the canonical signed-copy path.'; END IF;
   SELECT id, version_number+1 INTO v_prior, v_version FROM public.opportunity_nda_artifacts WHERE match_id=p_match_id AND artifact_role='repreneur_signed_copy' ORDER BY version_number DESC LIMIT 1;
   v_version := COALESCE(v_version, 1);

@@ -6,6 +6,7 @@ import { projectOpportunityPursuitEvidence, type OpportunityPursuitEvidence, typ
 
 export interface PursuitArtifactProjection { id: string; artifact_role: string; version_number: number; document_id: string; recorded_at: string }
 export interface PursuitConfidentialGrantProjection { information_memo_document_id: string; source_disclosed_at: string; source_firm_id: string; source_firm_name: string; source_office_id: string; source_office_name: string; disclosed_contacts: Array<{ opportunity_contact_id: string; contact_id: string; name: string; email?: string | null }>; revoked_at?: string | null; revoked_reason?: string | null }
+export interface PortalPursuitConfidentialGrant { informationMemoDocumentId: string; grantedAt: string }
 export interface OpportunityPursuitProjectionView {
   matchId: string; opportunityId: string; repreneurId: string; enabled: boolean; status: string; opportunityStatus: string | null
   entries: OpportunityPursuitEvidence[]; currentTemplate: PursuitArtifactProjection | null
@@ -64,5 +65,8 @@ export async function getPortalPursuitProjection(matchId: string) {
   // The portal consumer must only render grants, not raw staff evidence.
   const opportunityIsActive = projection.opportunityStatus === "active"
   const canDisclose = projection.enabled && projection.status === "active_pursuit" && opportunityIsActive && projection.gate2Passed && projection.dispatched && !projection.revoked
-  return { matchId: projection.matchId, enabled: projection.enabled, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched: projection.dispatched, confidentialGrant: canDisclose ? projection.confidentialGrant : null, revoked: projection.revoked, evidenceRequired: projection.evidenceRequired }
+  const confidentialGrant: PortalPursuitConfidentialGrant | null = canDisclose && projection.confidentialGrant
+    ? { informationMemoDocumentId: projection.confidentialGrant.information_memo_document_id, grantedAt: projection.confidentialGrant.source_disclosed_at }
+    : null
+  return { matchId: projection.matchId, enabled: projection.enabled, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched: projection.dispatched, confidentialGrant, revoked: projection.revoked, evidenceRequired: projection.evidenceRequired }
 }
