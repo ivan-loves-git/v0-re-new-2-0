@@ -229,6 +229,7 @@ export function OpportunityNdaArtifactManager({
                       policy={getOpportunityDocumentPolicy("nda", true)}
                       state="locked"
                       viewHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`}
+                      downloadHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}?download`}
                     />
                   </div>
                 ))}
