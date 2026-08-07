@@ -45,6 +45,9 @@ export function projectOpportunityPursuitEvidence(input: {
   events: Array<Pick<OpportunityPursuitEvidence, "event_type" | "nda_artifact_id"> & Partial<Pick<OpportunityPursuitEvidence, "id" | "recorded_at" | "actor">>>
   currentRenewArtifactId?: string | null
   currentRepreneurArtifactId?: string | null
+  currentGate1EventId?: string | null
+  currentGate2EventId?: string | null
+  currentDispatchEventId?: string | null
   artifactVersions?: Record<string, number>
 }): OpportunityPursuitProjection {
   const cycleStart = [...input.events].reverse().find((event) => event.event_type === "mutual_interest_validated")
@@ -56,9 +59,9 @@ export function projectOpportunityPursuitEvidence(input: {
   const hasCurrentRepreneurCopy = Boolean(input.currentRepreneurArtifactId && cycleEvents.some((event) =>
     event.event_type === "repreneur_signed_copy_validated" && event.nda_artifact_id === input.currentRepreneurArtifactId,
   ))
-  const gate1Passed = eventTypes.has("gate_1_passed")
-  const gate2Passed = eventTypes.has("gate_2_passed") && hasCurrentRenewCopy && hasCurrentRepreneurCopy
-  const dispatched = eventTypes.has("manual_package_dispatched")
+  const gate1Passed = Boolean(input.currentGate1EventId)
+  const gate2Passed = Boolean(input.currentGate2EventId) && hasCurrentRenewCopy && hasCurrentRepreneurCopy
+  const dispatched = Boolean(input.currentDispatchEventId) && gate2Passed
   const active = input.enabled && input.status === "active_pursuit"
   const nextAction = !active ? null
     : !eventTypes.has("qualification_requested") ? "request_qualification"
@@ -70,7 +73,10 @@ export function projectOpportunityPursuitEvidence(input: {
     : !gate2Passed ? "pass_gate_2"
     : !dispatched ? "record_dispatch"
     : "grant_confidential_access"
-  const recorded = (key: string) => cycleEvents.find((event) => event.event_type === key)
+  const recorded = (key: string) => {
+    const authorityId = key === "gate_1_passed" ? input.currentGate1EventId : key === "gate_2_passed" ? input.currentGate2EventId : key === "manual_package_dispatched" ? input.currentDispatchEventId : null
+    return authorityId ? cycleEvents.find((event) => event.id === authorityId) : cycleEvents.find((event) => event.event_type === key)
+  }
   const stepAction: Record<string, OpportunityPursuitJourneyAction | undefined> = { qualification_requested: "request_qualification", intermediary_qualified: "qualify", template_validated: "validate_template", gate_1_passed: "pass_gate_1", renew_signed_copy_validated: "validate_renew_copy", repreneur_signed_copy_validated: "validate_repreneur_copy", gate_2_passed: "pass_gate_2", manual_package_dispatched: "record_dispatch", confidential_access_granted: "grant_confidential_access" }
   const state = (key: string, available: boolean, blocker: string) => {
     const event = recorded(key)

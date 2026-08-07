@@ -3,9 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
-import { canMarkOpportunityInfoMemoReceived } from "@/lib/opportunity-confidentiality"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import type {
   OpportunityNdaStatus,
@@ -190,7 +188,7 @@ function ensureStaffMatchStatus(status: OpportunityMatchStatus) {
   }
 }
 
-async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, status: OpportunityMatchStatus) {
+async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, repreneurId: string, status: OpportunityMatchStatus) {
   if (status !== "proposed" && status !== "interested") return
 
   const supabase = createAdminClient()
@@ -204,8 +202,32 @@ async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, stat
 
   if (error) throw new Error(error.message)
   if (data) {
+    const { data: existing, error: existingError } = await supabase
+      .from("opportunity_matches")
+      .select("status")
+      .eq("opportunity_id", opportunityId)
+      .eq("repreneur_id", repreneurId)
+      .maybeSingle()
+    if (existingError) throw new Error(existingError.message)
+    // Preserve a pre-existing proposed card (the portal may independently
+    // turn it into interest); never expose a fresh candidate mid-pursuit.
+    if (existing?.status === "proposed" && status === "proposed") return
     throw formError("This opportunity already has an active pursuit. Drop it before exposing the opportunity to another repreneur.", "status")
   }
+}
+
+async function ensureOpportunityReadyForExternalMatch(opportunityId: string, status: OpportunityMatchStatus) {
+  if (status !== "proposed" && status !== "interested") return
+  const { data, error } = await createAdminClient()
+    .from("opportunities")
+    .select("status, sector, location, public_title, teaser_summary")
+    .eq("id", opportunityId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data || data.status !== "active") throw formError("Only an active opportunity can be proposed externally.", "status")
+  const missing = [data.sector, data.location, data.public_title, data.teaser_summary]
+    .some((value) => typeof value !== "string" || !value.trim())
+  if (missing) throw formError("Sector, location, public title and teaser summary are required before an external proposal.", "status")
 }
 
 async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId: string) {
@@ -530,7 +552,8 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     const status = readStatus(formData)
     ensureStaffMatchStatus(status)
     await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
-    await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
+    await ensureOpportunityReadyForExternalMatch(opportunityId, status)
+    await ensureOpportunityCanExposeMoreMatches(opportunityId, repreneurId, status)
 
     const humanRecommendation = readRecommendation(formData, "human_recommendation")
     const humanNotes = readString(formData, "human_notes")
@@ -611,53 +634,10 @@ export async function markOpportunityMatchReviewed(matchId: string, opportunityI
 export async function validateOpportunityPursuit(matchId: string, opportunityId: string) {
   const access = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  const { data: match, error: matchError } = await supabase
-    .from("opportunity_matches")
-    .select("id, opportunity_id, repreneur_id, status")
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .maybeSingle()
-
-  if (matchError) throw new Error(matchError.message)
-  if (!match) throw new Error("Opportunity match not found")
-  if (match.status !== "interested") {
-    throw new Error("Only an interested response can be validated into an active pursuit.")
-  }
-
-  const { data: updatedMatch, error } = await supabase
-    .from("opportunity_matches")
-    .update({
-      status: "active_pursuit",
-      pursuit_stage: "interest",
-      pursuit_stage_notes: null,
-      pursuit_stage_updated_by: access.user.id,
-      pursuit_stage_updated_at: new Date().toISOString(),
-      reviewed_by: access.user.id,
-      reviewed_at: new Date().toISOString(),
-    })
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "interested")
-    .select("id")
-    .maybeSingle()
-
-  if (error) throw lockedMatchError(error)
-  if (!updatedMatch) throw new Error("Only an interested response can be validated into an active pursuit.")
-
-  await createPursuitEvent({
-    matchId,
-    opportunityId,
-    repreneurId: match.repreneur_id,
-    stage: "interest",
-    note: "Pursuit validated.",
-    createdBy: access.user.id,
+  const { data, error } = await supabase.rpc("journey_start_pursuit", {
+    p_match_id: matchId, p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_evidence_reference: "staff validation",
   })
-
-  await triggerOpportunityMemoNotification({
-    opportunityId,
-    matchId,
-  })
+  if (error || !data) throw new Error(error?.message ?? "Only an interested response can be validated into an active pursuit.")
 
   revalidateMatchPaths(opportunityId, matchId)
 }
@@ -665,201 +645,29 @@ export async function validateOpportunityPursuit(matchId: string, opportunityId:
 export async function dropOpportunityPursuit(matchId: string, opportunityId: string) {
   const access = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  const { data, error } = await supabase
-    .from("opportunity_matches")
-    .update({
-      status: "dropped",
-      pursuit_stage: "dropped",
-      pursuit_stage_updated_by: access.user.id,
-      pursuit_stage_updated_at: new Date().toISOString(),
-      reviewed_by: access.user.id,
-      reviewed_at: new Date().toISOString(),
-    })
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "active_pursuit")
-    .select("id, repreneur_id")
-    .maybeSingle()
-
+  const { error } = await supabase.rpc("journey_transition_terminal", { p_match_id: matchId, p_transition: "drop", p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_closure_reason: "staff drop" })
   if (error) throw new Error(error.message)
-  if (!data) throw new Error("Only an active pursuit can be dropped.")
-
-  await createPursuitEvent({
-    matchId,
-    opportunityId,
-    repreneurId: data.repreneur_id,
-    stage: "dropped",
-    note: "Pursuit dropped.",
-    createdBy: access.user.id,
-  })
 
   revalidateMatchPaths(opportunityId, matchId)
 }
 
 export async function reopenDroppedOpportunityMatch(matchId: string, opportunityId: string) {
-  await requireStaffAccess()
+  const access = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  const { data, error } = await supabase
-    .from("opportunity_matches")
-    .update({
-      status: "interested",
-      pursuit_stage: null,
-      pursuit_stage_notes: null,
-      pursuit_stage_updated_by: null,
-      pursuit_stage_updated_at: null,
-      reviewed_by: null,
-      reviewed_at: null,
-    })
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "dropped")
-    .select("id")
-    .maybeSingle()
-
+  const { error } = await supabase.rpc("journey_transition_terminal", { p_match_id: matchId, p_transition: "reopen", p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_closure_reason: null })
   if (error) throw new Error(error.message)
-  if (!data) throw new Error("Only a dropped pursuit can be reopened.")
 
   revalidateMatchPaths(opportunityId, matchId)
 }
 
 export async function updateOpportunityPursuitStage(matchId: string, opportunityId: string, formData: FormData) {
-  const access = await requireStaffAccess()
-  const stage = readPursuitStage(formData)
-  const note = readString(formData, "pursuit_stage_notes")
-  const supabase = createAdminClient()
-  const now = new Date().toISOString()
-
-  const { data: activeMatch, error: activeMatchError } = await supabase
-    .from("opportunity_matches")
-    .select("id, repreneur_id, nda_status, nda_signed_at, nda_waived_at, nda_waived_by")
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "active_pursuit")
-    .maybeSingle()
-
-  if (activeMatchError) throw new Error(activeMatchError.message)
-  if (!activeMatch) throw new Error("Only an active pursuit can have its stage updated.")
-
-  if (stage === "info_memo_received") {
-    const { data: documents, error: documentsError } = await supabase
-      .from("opportunity_documents")
-      .select("document_type, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
-      .eq("opportunity_id", opportunityId)
-      .eq("document_type", "deal_book")
-      .eq("visibility", "approved_for_repreneur")
-
-    if (documentsError) throw new Error(documentsError.message)
-    const memoAvailable = (documents ?? []).some((document) =>
-      canMarkOpportunityInfoMemoReceived(activeMatch, document),
-    )
-    if (!memoAvailable) {
-      throw formError(
-        "Recorded NDA evidence and a staff-approved info memo file are required before marking Info memo received.",
-        "pursuit_stage",
-      )
-    }
-  }
-
-  const { data, error } = await supabase
-    .from("opportunity_matches")
-    .update({
-      pursuit_stage: stage,
-      pursuit_stage_notes: note,
-      pursuit_stage_updated_by: access.user.id,
-      pursuit_stage_updated_at: now,
-      reviewed_by: access.user.id,
-      reviewed_at: now,
-    })
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "active_pursuit")
-    .select("id")
-    .maybeSingle()
-
-  if (error) throw new Error(error.message)
-  if (!data) throw new Error("Only an active pursuit can have its stage updated.")
-
-  await createPursuitEvent({
-    matchId,
-    opportunityId,
-    repreneurId: activeMatch.repreneur_id,
-    stage,
-    note,
-    createdBy: access.user.id,
-  })
-
-  revalidateMatchPaths(opportunityId, matchId)
+  await requireStaffAccess()
+  void matchId; void opportunityId; void formData
+  throw new Error("Legacy pursuit-stage editing is read-only. Record the next canonical journey action instead.")
 }
 
 export async function updateOpportunityPursuitNda(matchId: string, opportunityId: string, formData: FormData) {
-  const access = await requireStaffAccess()
-  const ndaStatus = readNdaStatus(formData)
-  const ndaReceived = readCheckbox(formData, "nda_received")
-  const ndaDocumentId = readString(formData, "nda_document_id")
-  const ndaNotes = readString(formData, "nda_notes")
-  const supabase = createAdminClient()
-  const now = new Date().toISOString()
-  const linkedNdaDocumentId = ndaDocumentId === "none" ? null : ndaDocumentId
-
-  if (linkedNdaDocumentId) {
-    const { data: document, error: documentError } = await supabase
-      .from("opportunity_documents")
-      .select("id")
-      .eq("id", linkedNdaDocumentId)
-      .eq("opportunity_id", opportunityId)
-      .eq("document_type", "nda")
-      .maybeSingle()
-
-    if (documentError) throw new Error(documentError.message)
-    if (!document) throw new Error("Select an NDA document from this opportunity.")
-  }
-
-  const { data: activeMatch, error: activeMatchError } = await supabase
-    .from("opportunity_matches")
-    .select("id, nda_received_at, nda_signed_at, nda_waived_at, nda_waived_by")
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "active_pursuit")
-    .maybeSingle()
-
-  if (activeMatchError) throw new Error(activeMatchError.message)
-  if (!activeMatch) throw new Error("Only an active pursuit can have NDA status updated.")
-
-  const ndaReceivedAt = ndaReceived || ndaStatus === "signed" ? activeMatch.nda_received_at ?? now : null
-  const ndaSignedAt = ndaStatus === "signed" ? activeMatch.nda_signed_at ?? now : null
-  const ndaWaivedAt = ndaStatus === "waived" ? activeMatch.nda_waived_at ?? now : null
-  const ndaWaivedBy = ndaStatus === "waived" ? activeMatch.nda_waived_by ?? access.user.id : null
-
-  const { data, error } = await supabase
-    .from("opportunity_matches")
-    .update({
-      nda_status: ndaStatus,
-      nda_document_id: linkedNdaDocumentId,
-      nda_notes: ndaNotes,
-      nda_received_at: ndaReceivedAt,
-      nda_signed_at: ndaSignedAt,
-      nda_waived_at: ndaWaivedAt,
-      nda_waived_by: ndaWaivedBy,
-      nda_updated_by: access.user.id,
-      nda_updated_at: now,
-      reviewed_by: access.user.id,
-      reviewed_at: now,
-    })
-    .eq("id", matchId)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "active_pursuit")
-    .select("id")
-    .maybeSingle()
-
-  if (error) throw new Error(error.message)
-  if (!data) throw new Error("Only an active pursuit can have NDA status updated.")
-
-  await triggerOpportunityMemoNotification({
-    opportunityId,
-    matchId,
-  })
-
-  revalidateMatchPaths(opportunityId, matchId)
+  await requireStaffAccess()
+  void matchId; void opportunityId; void formData
+  throw new Error("Legacy NDA status editing is read-only. Use canonical artifact validation and gates instead.")
 }

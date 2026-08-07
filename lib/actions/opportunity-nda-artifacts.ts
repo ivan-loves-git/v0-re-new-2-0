@@ -13,7 +13,6 @@ const MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
 const ARTIFACT_ROLES = new Set<OpportunityNdaArtifactRole>([
   "blank_template",
   "renew_signed_copy",
-  "repreneur_signed_copy",
 ])
 
 function readString(formData: FormData, key: string): string | null {

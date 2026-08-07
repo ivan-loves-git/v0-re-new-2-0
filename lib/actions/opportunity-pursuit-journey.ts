@@ -14,7 +14,7 @@ const evidenceAction: Partial<Record<OpportunityPursuitJourneyAction, string>> =
 }
 
 export async function runOpportunityPursuitJourneyAction(input: {
-  matchId: string; action: OpportunityPursuitJourneyAction; artifactId?: string; documentId?: string; reason?: string; idempotencyKey?: string
+  matchId: string; action: OpportunityPursuitJourneyAction; artifactId?: string; documentId?: string; reason?: string; ndaExpiresAt?: string; idempotencyKey?: string
 }): Promise<OpportunityPursuitJourneyResult> {
   const staff = await requireStaffAccess()
   const actor = staff.user.email
@@ -23,7 +23,8 @@ export async function runOpportunityPursuitJourneyAction(input: {
   try {
     if (input.action === "grant_confidential_access") {
       if (!input.documentId) return { success: false, message: "Select an Information Memorandum." }
-      const { data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key })
+      if (!input.ndaExpiresAt) return { success: false, message: "Set the NDA expiry before granting confidential access." }
+      const { data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt })
       if (error) throw error
       return { success: true, message: "Confidential access granted.", eventId: data }
     }
@@ -64,7 +65,7 @@ export const passOpportunityPursuitGate2 = (matchId: string, idempotencyKey?: st
   runOpportunityPursuitJourneyAction({ matchId, action: "pass_gate_2", idempotencyKey })
 export const recordOpportunityPursuitDispatch = (matchId: string, reference?: string, idempotencyKey?: string) =>
   runOpportunityPursuitJourneyAction({ matchId, action: "record_dispatch", reason: reference, idempotencyKey })
-export const grantOpportunityPursuitConfidentialAccess = (matchId: string, documentId: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "grant_confidential_access", documentId, idempotencyKey })
+export const grantOpportunityPursuitConfidentialAccess = (matchId: string, documentId: string, ndaExpiresAt: string, idempotencyKey?: string) =>
+  runOpportunityPursuitJourneyAction({ matchId, action: "grant_confidential_access", documentId, ndaExpiresAt, idempotencyKey })
 export const transitionOpportunityPursuit = (matchId: string, action: Extract<OpportunityPursuitJourneyAction, "continue" | "drop" | "reopen" | "complete">, reason?: string, idempotencyKey?: string) =>
   runOpportunityPursuitJourneyAction({ matchId, action, reason, idempotencyKey })
