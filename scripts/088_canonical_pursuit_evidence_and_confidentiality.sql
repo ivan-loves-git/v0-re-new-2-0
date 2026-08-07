@@ -189,6 +189,12 @@ BEGIN
   IF v_existing IS NOT NULL THEN RETURN v_existing; END IF;
   SELECT * INTO v_match FROM public.opportunity_matches WHERE id = p_match_id FOR UPDATE;
   IF v_match.id IS NULL OR v_match.status <> 'active_pursuit' THEN RAISE EXCEPTION 'An active pursuit is required.'; END IF;
+  IF v_type = 'qualification_requested' AND NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='mutual_interest_validated' AND recorded_at=(SELECT max(recorded_at) FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='mutual_interest_validated')) THEN
+    RAISE EXCEPTION 'Qualification requires recorded mutual interest.'; END IF;
+  IF v_type = 'intermediary_qualified' AND NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='qualification_requested' AND recorded_at >= (SELECT max(recorded_at) FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='mutual_interest_validated')) THEN
+    RAISE EXCEPTION 'Intermediary qualification requires a recorded qualification request.'; END IF;
+  IF v_type = 'template_validated' AND NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='intermediary_qualified' AND recorded_at >= (SELECT max(recorded_at) FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='mutual_interest_validated')) THEN
+    RAISE EXCEPTION 'Template validation requires intermediary qualification.'; END IF;
   IF v_type IN ('template_validated', 'renew_signed_copy_validated', 'repreneur_signed_copy_validated') THEN
     IF p_artifact_id IS NULL THEN RAISE EXCEPTION 'This validation requires an exact NDA artifact.'; END IF;
     SELECT * INTO v_artifact FROM public.opportunity_nda_artifacts WHERE id=p_artifact_id;
