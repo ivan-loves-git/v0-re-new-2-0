@@ -93,6 +93,10 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
   }
 
   const nextAction = projection?.nextAction
+  const hasLiveGrant = Boolean(projection?.hasLiveConfidentialGrant)
+  const canDrop = projection?.allowedActions.includes("drop") ?? false
+  const canContinue = projection?.allowedActions.includes("continue") ?? false
+  const canComplete = projection?.allowedActions.includes("complete") ?? false
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,6 +124,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
             {nextAction === "pass_gate_2" ? <Button disabled={pending} onClick={() => run(() => passOpportunityPursuitGate2(activeMatch.id))}><ShieldCheck data-icon="inline-start" />{pending ? "Recording..." : "Pass Gate 2"}</Button> : null}
             {nextAction === "record_dispatch" ? <Button disabled={pending} variant="outline" onClick={() => run(() => recordOpportunityPursuitDispatch(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Recording..." : "Record manual dispatch"}</Button> : null}
           </div> : null}
+          {activeMatch && canDrop ? <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-drop-reason">Reason required to drop this pursuit</Label><Input id="pursuit-drop-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} variant="destructive" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "drop", outcomeReason.trim()))}>Drop pursuit</Button></div> : null}
         </CardContent>
       </Card>
 
@@ -138,7 +143,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
       {activeMatch && projection?.gate2Passed && projection.dispatched ? <Card>
         <CardHeader><CardTitle>Confidential access and outcome</CardTitle><CardDescription>Grant one exact Information Memorandum only after Gate 2 and manual intermediary handoff.</CardDescription></CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {!projection.confidentialGrant && <form action={(formData) => {
+          {!hasLiveGrant && <form action={(formData) => {
             const documentId = String(formData.get("document_id") ?? "")
             const ndaExpiresAt = String(formData.get("nda_expires_at") ?? "")
             run(() => grantOpportunityPursuitConfidentialAccess(activeMatch.id, documentId, ndaExpiresAt))
@@ -147,7 +152,8 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
             <div className="space-y-2"><Label htmlFor="journey-nda-expiry">NDA access expires</Label><Input id="journey-nda-expiry" name="nda_expires_at" type="datetime-local" required /></div>
             <OpportunityReviewSubmitButton label="Grant confidential access" pendingLabel="Granting..." disabled={imDocuments.length === 0} />
           </form>}
-          {projection.confidentialGrant && !projection.revoked ? <div className="flex flex-col gap-3"><div className="flex flex-wrap gap-2"><Badge variant="secondary">Access granted</Badge><Button disabled={pending} variant="outline" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "continue"))}>Record Continue</Button><Button disabled={pending} variant="outline" onClick={() => run(() => runOpportunityPursuitJourneyAction({ matchId: activeMatch.id, action: "revoke_access", reason: outcomeReason || "staff_revocation" }))}>Revoke access</Button></div><div className="flex flex-col gap-2 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-outcome-reason">Reason required to drop or complete</Label><Input id="pursuit-outcome-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} variant="destructive" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "drop", outcomeReason.trim()))}>Drop pursuit</Button><Button disabled={pending || !outcomeReason.trim()} onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "complete", outcomeReason.trim()))}>Complete pursuit</Button></div></div> : null}
+          {!hasLiveGrant && projection.confidentialGrant ? <Alert><LockKeyhole /><AlertTitle>Confidential access is no longer live</AlertTitle><AlertDescription>The prior grant is revoked, expired, or no longer bound to the current evidence. Select the IM and set a new expiry to grant access again.</AlertDescription></Alert> : null}
+          {hasLiveGrant ? <div className="flex flex-col gap-3"><div className="flex flex-wrap gap-2"><Badge variant="secondary">Access granted</Badge>{canContinue ? <Button disabled={pending} variant="outline" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "continue"))}>Record Continue</Button> : null}<Button disabled={pending} variant="outline" onClick={() => run(() => runOpportunityPursuitJourneyAction({ matchId: activeMatch.id, action: "revoke_access", reason: outcomeReason || "staff_revocation" }))}>Revoke access</Button></div>{canComplete ? <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-complete-reason">Reason required to complete</Label><Input id="pursuit-complete-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "complete", outcomeReason.trim()))}>Complete pursuit</Button></div> : null}</div> : null}
         </CardContent>
       </Card> : null}
 

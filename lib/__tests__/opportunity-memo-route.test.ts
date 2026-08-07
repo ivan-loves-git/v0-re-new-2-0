@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
-  getCurrentUserAccess: vi.fn(),
+  getPortalPursuitProjection: vi.fn(),
 }))
 
-vi.mock("@/lib/access-control", () => ({
-  getCurrentUserAccess: mocks.getCurrentUserAccess,
+vi.mock("@/lib/data/opportunity-pursuit-projection", () => ({
+  getPortalPursuitProjection: mocks.getPortalPursuitProjection,
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -16,28 +16,17 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 import { GET } from "@/app/portal/deals/[matchId]/documents/[documentId]/route"
 
-const REPRENEUR_ACCESS = {
-  role: "repreneur",
-  repreneurId: "repreneur-1",
-  repreneurName: "QA Repreneur",
-  user: { id: "qa-repreneur" },
-}
-
 function setupAdminClient({
-  match,
   document,
 }: {
-  match: Record<string, unknown> | null
   document: Record<string, unknown> | null
 }) {
-  const matchMaybeSingle = vi.fn().mockResolvedValue({ data: match, error: null })
-  const matchEqRepreneur = vi.fn(() => ({ maybeSingle: matchMaybeSingle }))
-  const matchEqId = vi.fn(() => ({ eq: matchEqRepreneur }))
+  const matchMaybeSingle = vi.fn().mockResolvedValue({ data: activeMatch, error: null })
+  const matchEqId = vi.fn(() => ({ maybeSingle: matchMaybeSingle }))
   const matchSelect = vi.fn(() => ({ eq: matchEqId }))
 
   const documentMaybeSingle = vi.fn().mockResolvedValue({ data: document, error: null })
-  const documentEqVisibility = vi.fn(() => ({ maybeSingle: documentMaybeSingle }))
-  const documentEqOpportunity = vi.fn(() => ({ eq: documentEqVisibility }))
+  const documentEqOpportunity = vi.fn(() => ({ maybeSingle: documentMaybeSingle }))
   const documentEqId = vi.fn(() => ({ eq: documentEqOpportunity }))
   const documentSelect = vi.fn(() => ({ eq: documentEqId }))
 
@@ -73,71 +62,79 @@ const activeMatch = {
   status: "active_pursuit",
 }
 
-const approvedMemo = {
+const informationMemo = {
   id: "memo-1",
   document_type: "deal_book",
-  visibility: "approved_for_repreneur",
   external_url: null,
   storage_bucket: "opportunity-documents",
   storage_path: "opportunities/opportunity-1/info-memo.pdf",
-  repreneur_approved_at: "2026-07-22T08:00:00.000Z",
-  repreneur_approved_by: "qa-staff",
+}
+
+const exactLiveGrant = {
+  enabled: true,
+  gate1Passed: true,
+  gate2Passed: true,
+  dispatched: true,
+  revoked: false,
+  confidentialGrant: {
+    informationMemoDocumentId: "memo-1",
+    grantedAt: "2026-08-07T10:00:00.000Z",
+    source: { firmName: "Source firm", officeName: "Milan", contactNames: ["Contact"] },
+  },
 }
 
 describe("repreneur info-memo download route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.getCurrentUserAccess.mockResolvedValue(REPRENEUR_ACCESS)
+    mocks.getPortalPursuitProjection.mockResolvedValue(exactLiveGrant)
   })
 
-  it("denies a received but unsigned NDA before reading memo metadata", async () => {
+  it("denies a legacy signed label without consulting memo metadata", async () => {
     const { createSignedUrl, documentSelect } = setupAdminClient({
-      match: {
-        ...activeMatch,
-        nda_status: "sent",
-        nda_received_at: "2026-07-19T08:00:00.000Z",
-      },
-      document: approvedMemo,
+      document: informationMemo,
     })
-
-    expect((await requestMemo()).status).toBe(403)
-    expect(documentSelect).not.toHaveBeenCalled()
-    expect(createSignedUrl).not.toHaveBeenCalled()
-  })
-
-  it("denies a signed label without recorded signature evidence before reading memo metadata", async () => {
-    const { createSignedUrl, documentSelect } = setupAdminClient({
-      match: { ...activeMatch, nda_status: "signed" },
-      document: { ...approvedMemo, storage_path: null },
-    })
-
-    expect((await requestMemo()).status).toBe(403)
-    expect(documentSelect).not.toHaveBeenCalled()
-    expect(createSignedUrl).not.toHaveBeenCalled()
-  })
-
-  it("denies a recorded NDA when the memo lacks staff approval evidence", async () => {
-    const { createSignedUrl } = setupAdminClient({
-      match: {
-        ...activeMatch,
-        nda_status: "signed",
-        nda_signed_at: "2026-07-22T08:00:00.000Z",
-      },
-      document: { ...approvedMemo, repreneur_approved_by: null },
+    mocks.getPortalPursuitProjection.mockResolvedValue({
+      ...exactLiveGrant,
+      gate2Passed: false,
+      confidentialGrant: null,
     })
 
     expect((await requestMemo()).status).toBe(404)
+    expect(documentSelect).not.toHaveBeenCalled()
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it("permits a recorded signed NDA with a staff-approved memo file", async () => {
+  it("denies a revoked or expired grant before reading memo metadata", async () => {
+    const { createSignedUrl, documentSelect } = setupAdminClient({
+      document: informationMemo,
+    })
+    mocks.getPortalPursuitProjection.mockResolvedValue({
+      ...exactLiveGrant,
+      revoked: true,
+    })
+
+    expect((await requestMemo()).status).toBe(404)
+    expect(documentSelect).not.toHaveBeenCalled()
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("denies a different memo even when the pursuit has a live grant", async () => {
+    const { createSignedUrl, documentSelect } = setupAdminClient({
+      document: informationMemo,
+    })
+    const response = await GET(
+      new NextRequest("http://localhost/portal/deals/match-1/documents/other-memo"),
+      { params: Promise.resolve({ matchId: "match-1", documentId: "other-memo" }) },
+    )
+
+    expect(response.status).toBe(404)
+    expect(documentSelect).not.toHaveBeenCalled()
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("permits only the exact current granted IM after canonical portal projection succeeds", async () => {
     const { createSignedUrl } = setupAdminClient({
-      match: {
-        ...activeMatch,
-        nda_status: "signed",
-        nda_signed_at: "2026-07-22T08:00:00.000Z",
-      },
-      document: approvedMemo,
+      document: informationMemo,
     })
 
     const response = await requestMemo()
@@ -148,5 +145,6 @@ describe("repreneur info-memo download route", () => {
       "opportunities/opportunity-1/info-memo.pdf",
       60,
     )
+    expect(mocks.getPortalPursuitProjection).toHaveBeenCalledWith("match-1")
   })
 })

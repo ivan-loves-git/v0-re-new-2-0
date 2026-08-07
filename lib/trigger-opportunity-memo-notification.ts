@@ -1,25 +1,18 @@
 import "server-only"
 
-import {
-  createOpportunityMemoNotificationStore,
-  listOpportunityMemoNotificationCandidateMatchIds,
-} from "@/lib/data/opportunity-memo-notification"
+import { createOpportunityMemoNotificationStore } from "@/lib/data/opportunity-memo-notification"
 import { sendOpportunityMemoAvailableEmail } from "@/lib/email/opportunity-memo-available"
 import { notifyOpportunityMemoCandidates } from "@/lib/opportunity-memo-notification"
 
 export async function triggerOpportunityMemoNotification(input: {
   opportunityId: string
-  matchId?: string
+  matchId: string
 }) {
   try {
-    const matchIds = input.matchId
-      ? [input.matchId]
-      : await listOpportunityMemoNotificationCandidateMatchIds(input.opportunityId)
-
     const outcomes = await notifyOpportunityMemoCandidates(
       {
         opportunityId: input.opportunityId,
-        matchIds,
+        matchIds: [input.matchId],
         now: new Date().toISOString(),
       },
       {

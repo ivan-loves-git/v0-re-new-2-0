@@ -1,8 +1,13 @@
+import fs from "node:fs"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   assertGenericOpportunityDocumentPolicy,
   getOpportunityDocumentPolicy,
 } from "@/lib/opportunity-document-policy"
+
+const actionSource = fs.readFileSync(path.join(process.cwd(), "lib/actions/opportunity-documents.ts"), "utf8")
+const panelSource = fs.readFileSync(path.join(process.cwd(), "components/opportunities/opportunity-documents-panel.tsx"), "utf8")
 
 function pdf(name = "document.pdf") {
   return new File(["pdf"], name, { type: "application/pdf" })
@@ -39,5 +44,10 @@ describe("opportunity document controls", () => {
     const policy = getOpportunityDocumentPolicy("other")
     expect(policy.canRemove).toBe(true)
     expect(policy.canChangeVisibility).toBe(true)
+  })
+
+  it("routes every new NDA through the immutable pursuit artifact workflow", () => {
+    expect(actionSource).not.toContain('"deal_book", "nda", "external_analysis"')
+    expect(panelSource).toContain('option.value !== "nda"')
   })
 })

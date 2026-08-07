@@ -39,9 +39,16 @@ INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status) VA
 INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,pursuit_stage) VALUES ('40000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','active_pursuit','info_memo_received');
 INSERT INTO public.opportunity_ma_contacts(id,opportunity_id,affiliation_id,contact_name_snapshot,contact_email_snapshot,is_primary) VALUES ('50000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','13000000-0000-4000-8000-000000000001','TEST source contact','source@test.invalid',TRUE);
 INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,visibility,storage_path,file_name,mime_type,size_bytes,uploaded_by) VALUES ('60000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','TEST IM','deal_book','staff_only','20000000-0000-4000-8000-000000000001/im/test.pdf','test.pdf','application/pdf',1,'staff@test.invalid');
+INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,visibility,storage_path,file_name,mime_type,size_bytes,uploaded_by) VALUES ('60000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001','TEST non-PDF IM','deal_book','staff_only','20000000-0000-4000-8000-000000000001/im/test.docx','test.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',1,'staff@test.invalid');
 
 \ir 082_opportunity_nda_artifact_foundation.sql
 \ir 088_canonical_pursuit_evidence_and_confidentiality.sql
+DO $$ BEGIN
+  IF has_function_privilege('anon','public.journey_grant_confidential_access(uuid,uuid,text,text,timestamp with time zone)','EXECUTE')
+    OR has_function_privilege('authenticated','public.journey_grant_confidential_access(uuid,uuid,text,text,timestamp with time zone)','EXECUTE')
+    OR NOT has_function_privilege('service_role','public.journey_grant_confidential_access(uuid,uuid,text,text,timestamp with time zone)','EXECUTE')
+  THEN RAISE EXCEPTION 'Canonical grant function privileges are not service-only'; END IF;
+END $$;
 UPDATE public.wave_journey_settings SET enabled=TRUE, updated_by='staff@test.invalid';
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.opportunity_pursuit_evidence WHERE match_id='40000000-0000-4000-8000-000000000002')<>1
@@ -77,6 +84,7 @@ SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','ga
 DO $$ DECLARE v_claim RECORD; BEGIN SELECT * INTO v_claim FROM public.claim_opportunity_memo_notification('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001',clock_timestamp()); IF v_claim.match_id IS NOT NULL THEN RAISE EXCEPTION 'Legacy gate state claimed a memo notification before canonical grant'; END IF; END $$;
 SELECT public.test_assert_raises($$SELECT public.journey_grant_confidential_access('40000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000001','staff@test.invalid','test:too-early-grant',NOW()+INTERVAL '1 day')$$,'manual dispatch');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','manual_package_dispatched','staff@test.invalid','test:dispatch');
+SELECT public.test_assert_raises($$SELECT public.journey_grant_confidential_access('40000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000002','staff@test.invalid','test:non-pdf-grant',NOW()+INTERVAL '1 day')$$,'staff-only PDF Information Memorandum');
 SELECT public.journey_grant_confidential_access('40000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000001','staff@test.invalid','test:grant',NOW()+INTERVAL '1 day');
 SELECT public.journey_grant_confidential_access('40000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000001','staff@test.invalid','test:grant',NOW()+INTERVAL '1 day');
 DO $$ BEGIN

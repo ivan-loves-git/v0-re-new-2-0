@@ -6,11 +6,9 @@ import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapsho
 import { createAdminClient } from "@/lib/supabase/admin"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import type {
-  OpportunityNdaStatus,
   OpportunityMatch,
   OpportunityMatchCandidate,
   OpportunityPursuitEvent,
-  OpportunityPursuitStage,
   RepreneurOpportunityMatch,
   OpportunityMatchRecommendation,
   OpportunityMatchResponse,
@@ -22,15 +20,6 @@ import {
   OPPORTUNITY_MATCH_STATUS_OPTIONS,
 } from "@/lib/types/opportunity"
 
-const STAFF_EDITABLE_PURSUIT_STAGES: OpportunityPursuitStage[] = [
-  "interest",
-  "info_memo_received",
-  "intermediary_meeting",
-  "seller_meeting",
-  "loi",
-  "closed",
-]
-const STAFF_EDITABLE_NDA_STATUSES: OpportunityNdaStatus[] = ["not_required", "required", "sent", "signed", "waived"]
 const MATCH_RECOMMENDATION_VALUES = OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.map((option) => option.value)
 const STAFF_EDITABLE_MATCH_STATUS_VALUES: OpportunityMatchStatus[] = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter(
   (option) => option.value !== "active_pursuit",
@@ -91,11 +80,6 @@ function readString(formData: FormData, key: string): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function readCheckbox(formData: FormData, key: string) {
-  const value = formData.get(key)
-  return value === "on" || value === "true"
-}
-
 function readRecommendation(formData: FormData, key: string): OpportunityMatchRecommendation {
   const value = readString(formData, key) ?? "not_evaluated"
   if (!MATCH_RECOMMENDATION_VALUES.includes(value as OpportunityMatchRecommendation)) {
@@ -112,24 +96,6 @@ function readStatus(formData: FormData): OpportunityMatchStatus {
   }
 
   return status as OpportunityMatchStatus
-}
-
-function readPursuitStage(formData: FormData): OpportunityPursuitStage {
-  const stage = readString(formData, "pursuit_stage") as OpportunityPursuitStage | null
-  if (!stage || !STAFF_EDITABLE_PURSUIT_STAGES.includes(stage)) {
-    throw new Error("Select a valid pursuit stage.")
-  }
-
-  return stage
-}
-
-function readNdaStatus(formData: FormData): OpportunityNdaStatus {
-  const status = readString(formData, "nda_status") as OpportunityNdaStatus | null
-  if (!status || !STAFF_EDITABLE_NDA_STATUSES.includes(status)) {
-    throw new Error("Select a valid NDA status.")
-  }
-
-  return status
 }
 
 function normalizeMatch(row: any): OpportunityMatch {
@@ -268,34 +234,6 @@ function revalidateMatchPaths(opportunityId: string, matchId?: string) {
   revalidatePath("/portal/deals")
   if (matchId) revalidatePath(`/portal/deals/${matchId}`)
   revalidateOpportunityDashboardTags()
-}
-
-async function createPursuitEvent({
-  matchId,
-  opportunityId,
-  repreneurId,
-  stage,
-  note,
-  createdBy,
-}: {
-  matchId: string
-  opportunityId: string
-  repreneurId: string
-  stage: OpportunityPursuitStage
-  note?: string | null
-  createdBy?: string | null
-}) {
-  const supabase = createAdminClient()
-  const { error } = await supabase.from("opportunity_pursuit_events").insert({
-    match_id: matchId,
-    opportunity_id: opportunityId,
-    repreneur_id: repreneurId,
-    stage,
-    note,
-    created_by: createdBy,
-  })
-
-  if (error) throw new Error(error.message)
 }
 
 export async function listOpportunityMatches(opportunityId: string): Promise<OpportunityMatch[]> {

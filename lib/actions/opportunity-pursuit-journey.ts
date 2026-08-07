@@ -4,6 +4,7 @@ import { randomUUID } from "crypto"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { OpportunityPursuitJourneyAction } from "@/lib/opportunity-pursuit-evidence"
+import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
 
 export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string } | { success: false; message: string }
 
@@ -26,6 +27,21 @@ export async function runOpportunityPursuitJourneyAction(input: {
       if (!input.ndaExpiresAt) return { success: false, message: "Set the NDA expiry before granting confidential access." }
       const { data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt })
       if (error) throw error
+      const { data: match, error: matchError } = await supabase
+        .from("opportunity_matches")
+        .select("opportunity_id")
+        .eq("id", input.matchId)
+        .maybeSingle()
+      if (matchError || !match?.opportunity_id) {
+        // The grant is already canonical and must not be rolled back because a
+        // notification lookup failed. The once-only delivery remains retryable.
+        console.error("Could not resolve the granted pursuit for its info memo notification")
+      } else {
+        await triggerOpportunityMemoNotification({
+          opportunityId: match.opportunity_id,
+          matchId: input.matchId,
+        })
+      }
       return { success: true, message: "Confidential access granted.", eventId: data }
     }
     if (input.action === "revoke_access") {

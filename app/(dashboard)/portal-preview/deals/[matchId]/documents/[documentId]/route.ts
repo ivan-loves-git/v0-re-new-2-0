@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getCurrentUserAccess } from "@/lib/access-control"
-import { getStaffPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
+import { getStaffPortalPreviewPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export async function GET(
@@ -15,13 +15,10 @@ export async function GET(
   if (!repreneurId) return NextResponse.json({ error: "Missing repreneurId" }, { status: 400 })
 
   const { matchId, documentId } = (await context.params) as { matchId: string; documentId: string }
-  const projection = await getStaffPursuitProjection(matchId)
+  const projection = await getStaffPortalPreviewPursuitProjection(matchId, repreneurId)
   if (
     !projection ||
-    projection.repreneurId !== repreneurId ||
     !projection.enabled ||
-    projection.status !== "active_pursuit" ||
-    projection.opportunityStatus !== "active" ||
     !projection.gate2Passed ||
     !projection.dispatched ||
     projection.revoked ||
@@ -35,7 +32,6 @@ export async function GET(
     .from("opportunity_documents")
     .select("id, document_type, external_url, storage_bucket, storage_path")
     .eq("id", documentId)
-    .eq("opportunity_id", projection.opportunityId)
     .maybeSingle()
 
   if (documentError) return NextResponse.json({ error: documentError.message }, { status: 500 })

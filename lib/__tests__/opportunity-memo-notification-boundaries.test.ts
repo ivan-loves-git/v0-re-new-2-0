@@ -19,6 +19,10 @@ const notificationTriggerSource = fs.readFileSync(
   path.join(root, "lib/trigger-opportunity-memo-notification.ts"),
   "utf8",
 )
+const pursuitJourneyActionSource = fs.readFileSync(
+  path.join(root, "lib/actions/opportunity-pursuit-journey.ts"),
+  "utf8",
+)
 
 describe("opportunity memo notification boundaries", () => {
   it("claims only an active pursuit after NDA completion and a real approved memo", () => {
@@ -63,11 +67,15 @@ describe("opportunity memo notification boundaries", () => {
     expect(canonicalMigrationSource).not.toContain("om.nda_status IN ('signed', 'waived')")
   })
 
-  it("evaluates every eligible pursuit when a memo becomes available", () => {
-    expect(notificationDataSource).toContain('.eq("status", "active_pursuit")')
-    expect(notificationDataSource).toContain('.in("nda_status", ["signed", "waived"])')
+  it("attempts delivery only from the exact canonical grant action", () => {
+    expect(pursuitJourneyActionSource).toContain("await triggerOpportunityMemoNotification({")
+    expect(pursuitJourneyActionSource).toContain("matchId: input.matchId")
+    expect(notificationTriggerSource).toContain("matchId: string")
+    expect(notificationTriggerSource).toContain("matchIds: [input.matchId]")
+    expect(notificationTriggerSource).not.toContain("listOpportunityMemoNotificationCandidateMatchIds")
+    expect(notificationDataSource).not.toContain("nda_status")
     expect(notificationTriggerSource).toContain("notifyOpportunityMemoCandidates")
-    expect(notificationTriggerSource).toContain("matchIds,")
+    expect(notificationDataSource).toContain("claim_opportunity_memo_notification")
   })
 
   it("keeps the delivery records and functions service-role only", () => {

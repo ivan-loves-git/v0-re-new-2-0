@@ -596,7 +596,16 @@ BEGIN
   SELECT * INTO v_doc FROM public.opportunity_documents WHERE id=p_information_memo_document_id;
   v_cycle:=public.journey_current_cycle_event(p_match_id); v_gate2:=public.journey_current_gate_2_event(p_match_id); v_dispatch:=public.journey_current_dispatch_event(p_match_id);
   IF v_cycle IS NULL OR v_gate2 IS NULL OR v_dispatch IS NULL THEN RAISE EXCEPTION 'Current Gate 2 and its exact manual dispatch are required before confidential access.'; END IF;
-  IF v_doc.id IS NULL OR v_doc.opportunity_id<>v_match.opportunity_id OR v_doc.document_type<>'deal_book' OR NULLIF(BTRIM(v_doc.storage_path),'') IS NULL THEN RAISE EXCEPTION 'Select a retained Information Memorandum for this opportunity.'; END IF;
+  IF v_doc.id IS NULL
+    OR v_doc.opportunity_id<>v_match.opportunity_id
+    OR v_doc.document_type<>'deal_book'
+    OR v_doc.visibility<>'staff_only'
+    OR v_doc.external_url IS NOT NULL
+    OR COALESCE(v_doc.storage_bucket,'opportunity-documents')<>'opportunity-documents'
+    OR NULLIF(BTRIM(v_doc.storage_path),'') IS NULL
+    OR v_doc.storage_path NOT LIKE v_match.opportunity_id::TEXT||'/%'
+    OR LOWER(COALESCE(v_doc.file_name,'')) NOT LIKE '%.pdf'
+  THEN RAISE EXCEPTION 'Select a retained staff-only PDF Information Memorandum for this opportunity.'; END IF;
   SELECT f.id,f.name,o.id,o.name INTO v_firm_id,v_firm_name,v_office_id,v_office_name FROM public.opportunities p JOIN public.ma_offices o ON o.id=p.source_office_id JOIN public.ma_firms f ON f.id=o.firm_id WHERE p.id=v_match.opportunity_id AND o.status='active' AND f.status<>'archived';
   IF v_office_id IS NULL THEN RAISE EXCEPTION 'An active canonical source office is required before disclosure.'; END IF;
   SELECT COALESCE(jsonb_agg(jsonb_build_object('name',link.contact_name_snapshot) ORDER BY link.is_primary DESC,link.linked_at),'[]'::JSONB) INTO v_contacts FROM public.opportunity_ma_contacts link JOIN public.ma_contact_office_affiliations a ON a.id=link.affiliation_id WHERE link.opportunity_id=v_match.opportunity_id AND link.is_active AND a.office_id=v_office_id AND NULLIF(BTRIM(link.contact_name_snapshot),'') IS NOT NULL;
@@ -692,6 +701,7 @@ GRANT EXECUTE ON FUNCTION public.journey_current_cycle_event(UUID),public.journe
 REVOKE EXECUTE ON FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT) FROM service_role;
 DROP FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT);
 REVOKE EXECUTE ON FUNCTION public.journey_submit_repreneur_signed_copy(UUID,UUID,TEXT,TEXT,TEXT,TEXT,BIGINT,TEXT) FROM service_role;
+REVOKE ALL ON FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT,TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT,TIMESTAMPTZ) TO service_role;
 
 -- Compatibility cutover is deliberately narrow: a currently active pursuit

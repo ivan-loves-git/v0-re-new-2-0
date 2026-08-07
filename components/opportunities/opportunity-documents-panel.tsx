@@ -125,7 +125,7 @@ export function OpportunityDocumentsPanel({
             <input type="hidden" name="opportunity_id" value={opportunityId} />
             <div className="space-y-2">
               <Label htmlFor="document-title">Title</Label>
-              <Input id="document-title" name="title" placeholder="Teaser, NDA, analysis..." required />
+              <Input id="document-title" name="title" placeholder="Teaser, IM, analysis..." required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="document-type">Type</Label>
@@ -135,7 +135,7 @@ export function OpportunityDocumentsPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {OPPORTUNITY_DOCUMENT_TYPE_OPTIONS.map((option) => (
+                    {OPPORTUNITY_DOCUMENT_TYPE_OPTIONS.filter((option) => option.value !== "nda").map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>

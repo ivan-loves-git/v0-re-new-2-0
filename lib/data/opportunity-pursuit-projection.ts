@@ -17,7 +17,7 @@ export interface OpportunityPursuitProjectionView {
   currentRenewSignedCopy: PursuitArtifactProjection | null; currentRepreneurSignedCopy: PursuitArtifactProjection | null
   gate1Passed: boolean; gate2Passed: boolean; dispatched: boolean
   currentCycleId: string | null; steps: ReturnType<typeof projectOpportunityPursuitEvidence>["steps"]
-  confidentialGrant: PursuitConfidentialGrantProjection | null; revoked: boolean; evidenceRequired: boolean; ndaExpiresAt: string | null
+  confidentialGrant: PursuitConfidentialGrantProjection | null; revoked: boolean; hasLiveConfidentialGrant: boolean; evidenceRequired: boolean; ndaExpiresAt: string | null
   nextAction: OpportunityPursuitJourneyAction | null; allowedActions: OpportunityPursuitJourneyAction[]; blockers: string[]
 }
 
@@ -48,7 +48,18 @@ async function loadProjection(matchId: string): Promise<OpportunityPursuitProjec
   // A historical revocation belongs to a historical grant. The exact live
   // grant is authoritative, so a later valid grant is not poisoned by it.
   const expired = Boolean(grant?.nda_expires_at && new Date(grant.nda_expires_at).getTime() <= Date.now())
-  const revoked = Boolean(grant?.revoked_at || expired)
+  const { data: canonicalGrantAccess, error: canonicalGrantAccessError } = grant
+    ? await supabase.rpc("journey_repreneur_can_access_confidential", {
+        p_match_id: matchId,
+        p_repreneur_id: match.repreneur_id,
+        p_document_id: grant.information_memo_document_id,
+      })
+    : { data: false, error: null }
+  // A grant is live only when the database's canonical predicate accepts the
+  // exact match, repreneur and IM. This also makes an invalidated artifact fail
+  // closed without relying on a stale client-side flag.
+  const hasLiveConfidentialGrant = !canonicalGrantAccessError && Boolean(canonicalGrantAccess)
+  const revoked = Boolean(grant && !hasLiveConfidentialGrant) || Boolean(grant?.revoked_at || expired)
   const blockers: string[] = []
   if (!settings?.enabled) blockers.push("The WAVE journey kill switch is disabled.")
   if (match.status !== "active_pursuit") blockers.push("This is not an active pursuit.")
@@ -56,14 +67,22 @@ async function loadProjection(matchId: string): Promise<OpportunityPursuitProjec
   if (!projection.hasCurrentRenewCopy) blockers.push("The current Re-New signed copy is not validated.")
   if (!projection.hasCurrentRepreneurCopy) blockers.push("The current repreneur signed copy is not validated.")
   if (!projection.gate2Passed) blockers.push("Gate 2 has not passed.")
-  const allowedActions: OpportunityPursuitJourneyAction[] = projection.nextAction ? [projection.nextAction] : []
+  const currentCycleEntries = projection.currentCycleId
+    ? entries.slice(entries.findIndex((entry) => entry.id === projection.currentCycleId))
+    : []
+  const hasContinuedCurrentCycle = currentCycleEntries.some((entry) => entry.event_type === "continued")
+  const nextAction = hasLiveConfidentialGrant && projection.nextAction === "grant_confidential_access"
+    ? null
+    : projection.nextAction
+  const allowedActions: OpportunityPursuitJourneyAction[] = nextAction ? [nextAction] : []
   if (match.status === "active_pursuit") allowedActions.push("drop")
-  if (projection.gate2Passed && !grant?.revoked_at) allowedActions.push("revoke_access", "continue")
-  if (projection.gate2Passed && !grant?.revoked_at && entries.some((entry) => entry.event_type === "continued")) allowedActions.push("complete")
+  if (hasLiveConfidentialGrant) allowedActions.push("revoke_access")
+  if (hasLiveConfidentialGrant && !hasContinuedCurrentCycle) allowedActions.push("continue")
+  if (hasLiveConfidentialGrant && hasContinuedCurrentCycle) allowedActions.push("complete")
   if (match.status === "dropped") allowedActions.push("reopen")
   const template = ((templateArtifacts ?? []) as PursuitArtifactProjection[])[0] ?? null
   if (expired) blockers.push("The NDA expiry has passed; confidential access is unavailable.")
-  return { matchId: match.id, opportunityId: match.opportunity_id, repreneurId: match.repreneur_id, enabled: Boolean(settings?.enabled), status: match.status, opportunityStatus: (opportunity as { status?: string } | null)?.status ?? null, entries, currentTemplate: template, currentRenewSignedCopy: renew, currentRepreneurSignedCopy: repreneur, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched, currentCycleId: projection.currentCycleId, steps: projection.steps, confidentialGrant: grant, revoked, evidenceRequired: !projection.gate2Passed, nextAction: projection.nextAction, allowedActions: [...new Set(allowedActions)], blockers, ndaExpiresAt: grant?.nda_expires_at ?? null }
+  return { matchId: match.id, opportunityId: match.opportunity_id, repreneurId: match.repreneur_id, enabled: Boolean(settings?.enabled), status: match.status, opportunityStatus: (opportunity as { status?: string } | null)?.status ?? null, entries, currentTemplate: template, currentRenewSignedCopy: renew, currentRepreneurSignedCopy: repreneur, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched, currentCycleId: projection.currentCycleId, steps: projection.steps, confidentialGrant: grant, revoked, hasLiveConfidentialGrant, evidenceRequired: !projection.gate2Passed, nextAction, allowedActions: [...new Set(allowedActions)], blockers, ndaExpiresAt: grant?.nda_expires_at ?? null }
 }
 
 export async function getStaffPursuitProjection(matchId: string) {
@@ -71,15 +90,20 @@ export async function getStaffPursuitProjection(matchId: string) {
   return loadProjection(matchId)
 }
 
-export async function getPortalPursuitProjection(matchId: string) {
-  const access = await requirePortalAccess()
+export interface PortalSafePursuitProjection {
+  matchId: string
+  enabled: boolean; gate1Passed: boolean; gate2Passed: boolean; dispatched: boolean
+  confidentialGrant: PortalPursuitConfidentialGrant | null; revoked: boolean; evidenceRequired: boolean
+}
+
+async function getPortalSafePursuitProjectionForRepreneur(matchId: string, repreneurId: string): Promise<PortalSafePursuitProjection | null> {
   const projection = await loadProjection(matchId)
-  if (!projection || projection.repreneurId !== access.repreneurId) return null
+  if (!projection || projection.repreneurId !== repreneurId) return null
   // The portal consumer must only render grants, not raw staff evidence.
   const opportunityIsActive = projection.opportunityStatus === "active"
   const requestedDocumentId = projection.confidentialGrant?.information_memo_document_id
   const { data: canonicalAccess, error: canonicalAccessError } = requestedDocumentId
-    ? await createAdminClient().rpc("journey_repreneur_can_access_confidential", { p_match_id: matchId, p_repreneur_id: access.repreneurId, p_document_id: requestedDocumentId })
+    ? await createAdminClient().rpc("journey_repreneur_can_access_confidential", { p_match_id: matchId, p_repreneur_id: repreneurId, p_document_id: requestedDocumentId })
     : { data: false, error: null }
   const canDisclose = !canonicalAccessError && Boolean(canonicalAccess) && projection.enabled && projection.status === "active_pursuit" && opportunityIsActive && projection.gate2Passed && projection.dispatched && !projection.revoked
   const confidentialGrant: PortalPursuitConfidentialGrant | null = canDisclose && projection.confidentialGrant
@@ -96,4 +120,16 @@ export async function getPortalPursuitProjection(matchId: string) {
       }
     : null
   return { matchId: projection.matchId, enabled: projection.enabled, gate1Passed: projection.gate1Passed, gate2Passed: projection.gate2Passed, dispatched: projection.dispatched, confidentialGrant, revoked: projection.revoked, evidenceRequired: projection.evidenceRequired }
+}
+
+/** Staff preview deliberately receives the same portal-safe DTO as a real repreneur. */
+export async function getStaffPortalPreviewPursuitProjection(matchId: string, repreneurId: string) {
+  await requireStaffAccess()
+  return getPortalSafePursuitProjectionForRepreneur(matchId, repreneurId)
+}
+
+export async function getPortalPursuitProjection(matchId: string) {
+  const access = await requirePortalAccess()
+  if (!access.repreneurId) return null
+  return getPortalSafePursuitProjectionForRepreneur(matchId, access.repreneurId)
 }

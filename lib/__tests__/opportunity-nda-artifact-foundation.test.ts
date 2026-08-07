@@ -91,7 +91,7 @@ describe("W-043 canonical NDA artifact foundation", () => {
     expect(contract).toContain("never become canonical artifact evidence by inference")
   })
 
-  it("does not activate gates, disclosure, memo access, or email delivery", () => {
+  it("keeps artifact recording separate while the journey derives gates and disclosure from evidence", () => {
     for (const forbidden of [
       "triggerOpportunityMemoNotification",
       "sendMaSourceWorkflowEmail",
@@ -99,14 +99,15 @@ describe("W-043 canonical NDA artifact foundation", () => {
       "nda_signed_at",
       "nda_waived_at",
       "repreneur_approved_at",
-      "source_disclosure",
     ]) {
       expect(actions).not.toContain(forbidden)
     }
     expect(manager).toContain("do not complete")
     expect(manager).toMatch(/disclose the\s+source/)
-    expect(pursuit).toContain("Legacy compatibility fields")
-    expect(pursuit).toContain("do not")
+    expect(pursuit).toContain("Legacy stage and NDA fields are history only")
+    expect(pursuit).toContain("The repreneur uploads their own signed copy in the portal after Gate 1")
+    expect(pursuit).toContain("Grant one exact Information Memorandum only after Gate 2 and manual intermediary handoff")
+    expect(pursuit).toContain("Record manual dispatch")
     expect(contract).toContain(
       "Registering any artifact does not validate signer, opportunity or pursuit validity",
     )

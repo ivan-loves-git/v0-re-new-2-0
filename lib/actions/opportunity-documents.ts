@@ -38,7 +38,9 @@ function safeFileName(fileName: string) {
 }
 
 function assertSupportedDocumentType(value: string | null): OpportunityDocumentType {
-  const allowed: OpportunityDocumentType[] = ["source_teaser", "teaser", "deal_book", "nda", "external_analysis", "other"]
+  // NDA evidence has its own immutable, versioned pursuit workflow. New NDA
+  // files must never enter the replaceable generic attachment path.
+  const allowed: OpportunityDocumentType[] = ["source_teaser", "teaser", "deal_book", "external_analysis", "other"]
   if (!value || !allowed.includes(value as OpportunityDocumentType)) {
     throw new Error("Choose a valid document type.")
   }

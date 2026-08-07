@@ -23,6 +23,9 @@ describe("W-090/W-091 evidence foundation", () => {
   it("fails closed for portal access and revokes before terminal changes", () => {
     expect(source).toContain("journey_repreneur_can_access_confidential")
     expect(source).toContain("public.wave_journey_is_enabled()")
+    expect(source).toContain(
+      "REVOKE ALL ON FUNCTION public.journey_grant_confidential_access(UUID,UUID,TEXT,TEXT,TIMESTAMPTZ) FROM PUBLIC, anon, authenticated",
+    )
     expect(source).toContain("PERFORM public.journey_revoke_confidential_access")
     expect(source).toContain("status='completed'")
   })
@@ -35,6 +38,7 @@ describe("W-090/W-091 evidence foundation", () => {
     expect(source).toContain("renew_validation_id")
     expect(source).toContain("repreneur_validation_id")
     expect(source).toContain("nda_expires_at>NOW()")
+    expect(source).toContain("staff-only PDF Information Memorandum")
     expect(source).toContain("legacy active-pursuit start only; no gate inferred")
   })
 
