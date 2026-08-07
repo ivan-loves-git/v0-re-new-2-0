@@ -41,6 +41,7 @@ describe("high-severity authorization boundaries", () => {
       "createOpportunityIntake",
       "updateOpportunityIntake",
       "createMaFirmOfficeContext",
+      "createMaOfficeForExistingFirm",
       "createMaOfficeContact",
     ]) {
       const source = functionSource(

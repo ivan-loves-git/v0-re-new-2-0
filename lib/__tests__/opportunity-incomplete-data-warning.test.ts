@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
-  redirect: vi.fn(),
   requireStaffAccess: vi.fn(),
   revalidateOpportunityDashboardTags: vi.fn(),
   revalidatePath: vi.fn(),
@@ -24,10 +23,6 @@ vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
 }))
 
-vi.mock("next/navigation", () => ({
-  redirect: mocks.redirect,
-}))
-
 import { createOpportunityFromDraft } from "@/lib/actions/opportunities"
 import { createOpportunityIntake } from "@/lib/actions/opportunity-intake"
 import {
@@ -41,9 +36,21 @@ describe("opportunity intake draft rules", () => {
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "qa-staff" } })
   })
 
-  it("allows a staff-only draft with a reference only", async () => {
+  it("requires a safe public title for a new staff-only draft", async () => {
     const formData = new FormData()
     formData.set("reference", "OPP-DRAFT-001")
+    formData.set("status", "draft")
+    await expect(createOpportunityIntake(formData)).resolves.toMatchObject({
+      success: false,
+      fieldErrors: { public_title: expect.any(String) },
+    })
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("returns committed identity for a valid staff-only draft", async () => {
+    const formData = new FormData()
+    formData.set("reference", "OPP-DRAFT-001")
+    formData.set("public_title", "Anonymized industrial services business")
     formData.set("status", "draft")
     const rpc = vi.fn().mockResolvedValue({
       data: { id: "created-opportunity" },
@@ -51,7 +58,12 @@ describe("opportunity intake draft rules", () => {
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
 
-    await expect(createOpportunityIntake(formData)).resolves.toBeUndefined()
+    await expect(createOpportunityIntake(formData)).resolves.toEqual({
+      success: true,
+      message: "Opportunity OPP-DRAFT-001 created.",
+      opportunityId: "created-opportunity",
+      opportunityReference: "OPP-DRAFT-001",
+    })
 
     expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
       p_reference: "OPP-DRAFT-001",

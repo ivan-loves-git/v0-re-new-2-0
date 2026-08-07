@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
-  redirect: vi.fn(),
   requireStaffAccess: vi.fn(),
   revalidateOpportunityDashboardTags: vi.fn(),
   revalidatePath: vi.fn(),
@@ -24,12 +23,9 @@ vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
 }))
 
-vi.mock("next/navigation", () => ({
-  redirect: mocks.redirect,
-}))
-
 import {
   createMaFirmOfficeContext,
+  createMaOfficeForExistingFirm,
   createMaOfficeContact,
   createOpportunityIntake,
   listMaCanonicalContactOptions,
@@ -70,7 +66,10 @@ function sourceCorrectionForm() {
   formData.set("source_office_id", OFFICE_ID)
   formData.append("affiliation_ids", AFFILIATION_ID)
   formData.set("primary_affiliation_id", AFFILIATION_ID)
-  formData.set("source_review_reason", "Verified against the intermediary's confirmed office details.")
+  formData.set(
+    "source_review_reason",
+    "Verified against the intermediary's confirmed office details.",
+  )
   return formData
 }
 
@@ -87,7 +86,10 @@ describe("canonical opportunity contact persistence", () => {
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
 
-    await expect(createOpportunityIntake(activeForm())).resolves.toBeUndefined()
+    await expect(createOpportunityIntake(activeForm())).resolves.toMatchObject({
+      success: true,
+      opportunityId: "opportunity-created",
+    })
 
     expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
       p_reference: "OPP-001",
@@ -102,9 +104,6 @@ describe("canonical opportunity contact persistence", () => {
         teaser_summary: "An anonymized opportunity summary.",
       }),
     })
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/opportunities/opportunity-created",
-    )
   })
 
   it("saves an edit through the canonical office-context RPC", async () => {
@@ -175,7 +174,10 @@ describe("canonical opportunity contact persistence", () => {
     mocks.createAdminClient.mockReturnValue({ rpc })
 
     await expect(
-      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
+      resolveAcmeProvisionalSource(
+        "00000000-0000-4000-8000-000000000099",
+        sourceCorrectionForm(),
+      ),
     ).resolves.toMatchObject({ success: true })
 
     expect(rpc).toHaveBeenCalledWith("resolve_acme_provisional_source", {
@@ -192,7 +194,10 @@ describe("canonical opportunity contact persistence", () => {
     const rpc = vi.fn()
     mocks.createAdminClient.mockReturnValue({ rpc })
     await expect(
-      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", new FormData()),
+      resolveAcmeProvisionalSource(
+        "00000000-0000-4000-8000-000000000099",
+        new FormData(),
+      ),
     ).resolves.toMatchObject({
       success: false,
       fieldErrors: {
@@ -203,20 +208,56 @@ describe("canonical opportunity contact persistence", () => {
       },
     })
 
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "ma_provisional_source_resolution_requires_real_office" } })
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        message: "ma_provisional_source_resolution_requires_real_office",
+      },
+    })
     await expect(
-      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
-    ).resolves.toMatchObject({ success: false, fieldErrors: { source_office_id: expect.any(String) } })
+      resolveAcmeProvisionalSource(
+        "00000000-0000-4000-8000-000000000099",
+        sourceCorrectionForm(),
+      ),
+    ).resolves.toMatchObject({
+      success: false,
+      fieldErrors: { source_office_id: expect.any(String) },
+    })
 
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "ma_provisional_source_resolution_requires_current_acme_source" } })
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        message:
+          "ma_provisional_source_resolution_requires_current_acme_source",
+      },
+    })
     await expect(
-      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
-    ).resolves.toMatchObject({ success: false, message: "Source review state changed. Refresh this opportunity and try again." })
+      resolveAcmeProvisionalSource(
+        "00000000-0000-4000-8000-000000000099",
+        sourceCorrectionForm(),
+      ),
+    ).resolves.toMatchObject({
+      success: false,
+      message:
+        "Source review state changed. Refresh this opportunity and try again.",
+    })
 
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "ma_provisional_source_resolution_supports_draft_active_or_paused_only" } })
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        message:
+          "ma_provisional_source_resolution_supports_draft_active_or_paused_only",
+      },
+    })
     await expect(
-      resolveAcmeProvisionalSource("00000000-0000-4000-8000-000000000099", sourceCorrectionForm()),
-    ).resolves.toMatchObject({ success: false, fieldErrors: { status: expect.any(String) } })
+      resolveAcmeProvisionalSource(
+        "00000000-0000-4000-8000-000000000099",
+        sourceCorrectionForm(),
+      ),
+    ).resolves.toMatchObject({
+      success: false,
+      fieldErrors: { status: expect.any(String) },
+    })
   })
 
   it("adds a second contact through the canonical office-affiliation RPC", async () => {
@@ -317,11 +358,13 @@ describe("canonical opportunity contact persistence", () => {
       formData.append(field, "")
       formData.append(field, "Forged")
 
-      await expect(createMaOfficeContact(OFFICE_ID, formData)).resolves.toEqual({
-        success: false,
-        message:
-          "Existing canonical contacts cannot be submitted with new identity details.",
-      })
+      await expect(createMaOfficeContact(OFFICE_ID, formData)).resolves.toEqual(
+        {
+          success: false,
+          message:
+            "Existing canonical contacts cannot be submitted with new identity details.",
+        },
+      )
     }
 
     expect(rpc).not.toHaveBeenCalled()
@@ -333,10 +376,7 @@ describe("canonical opportunity contact persistence", () => {
       (formData: FormData) =>
         formData.append("existing_contact_id", EXISTING_CONTACT_ID),
       (formData: FormData) =>
-        formData.append(
-          "existing_contact_id",
-          "not-a-canonical-contact-id",
-        ),
+        formData.append("existing_contact_id", "not-a-canonical-contact-id"),
       (formData: FormData) => {
         formData.append("existing_contact_id", "")
         formData.append("existing_contact_id", EXISTING_CONTACT_ID)
@@ -349,13 +389,13 @@ describe("canonical opportunity contact persistence", () => {
       appendExistingContactId(formData)
       formData.set("contact_first_name", "Camille")
 
-      await expect(
-        createMaOfficeContact(OFFICE_ID, formData),
-      ).resolves.toEqual({
-        success: false,
-        message:
-          "Choose either an existing canonical contact or a new contact, not both.",
-      })
+      await expect(createMaOfficeContact(OFFICE_ID, formData)).resolves.toEqual(
+        {
+          success: false,
+          message:
+            "Choose either an existing canonical contact or a new contact, not both.",
+        },
+      )
     }
 
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
@@ -385,12 +425,13 @@ describe("canonical opportunity contact persistence", () => {
       formData.set("contact_mode", "existing")
       appendExistingContactIds(formData)
 
-      await expect(
-        createMaOfficeContact(OFFICE_ID, formData),
-      ).resolves.toEqual({
-        success: false,
-        message: "Choose an active canonical contact to affiliate with this office.",
-      })
+      await expect(createMaOfficeContact(OFFICE_ID, formData)).resolves.toEqual(
+        {
+          success: false,
+          message:
+            "Choose an active canonical contact to affiliate with this office.",
+        },
+      )
     }
 
     expect(rpc).not.toHaveBeenCalled()
@@ -435,13 +476,15 @@ describe("canonical opportunity contact persistence", () => {
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
 
-    await expect(createMaFirmOfficeContext(firmContextForm())).resolves.toEqual({
-      success: false,
-      message: "This firm already exists; select its operating office.",
-      fieldErrors: {
-        firm_name: "This firm already exists; select its operating office.",
+    await expect(createMaFirmOfficeContext(firmContextForm())).resolves.toEqual(
+      {
+        success: false,
+        message: "This firm already exists; select its operating office.",
+        fieldErrors: {
+          firm_name: "This firm already exists; select its operating office.",
+        },
       },
-    })
+    )
 
     expect(rpc).toHaveBeenCalledWith("create_ma_firm_with_default_office", {
       p_firm_name: "Acme Conseil",
@@ -453,6 +496,82 @@ describe("canonical opportunity contact persistence", () => {
       p_contact_phone: null,
       p_contact_job_title: null,
       p_actor: "staff-001",
+    })
+  })
+
+  it("adds a real office to an existing active firm through the dedicated atomic service", async () => {
+    const formData = new FormData()
+    formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
+    formData.set("office_name", "Lyon")
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        {
+          firm_id: "00000000-0000-4000-8000-000000000010",
+          firm_name: "Acme Conseil",
+          office_id: "00000000-0000-4000-8000-000000000011",
+          office_name: "Lyon",
+        },
+      ],
+      error: null,
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createMaOfficeForExistingFirm(formData)).resolves.toEqual({
+      success: true,
+      message: "Operating office added to the existing firm.",
+      office: {
+        office_id: "00000000-0000-4000-8000-000000000011",
+        firm_id: "00000000-0000-4000-8000-000000000010",
+        firm_name: "Acme Conseil",
+        office_name: "Lyon",
+        office_label: "Acme Conseil — Lyon",
+        contacts: [],
+      },
+    })
+    expect(rpc).toHaveBeenCalledWith("create_ma_office_for_existing_firm", {
+      p_firm_id: "00000000-0000-4000-8000-000000000010",
+      p_office_name: "Lyon",
+      p_actor: "staff-001",
+    })
+  })
+
+  it("surfaces duplicate office creation without changing form state", async () => {
+    const formData = new FormData()
+    formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
+    formData.set("office_name", "Lyon")
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "ma_real_office_name_already_exists" },
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+    await expect(createMaOfficeForExistingFirm(formData)).resolves.toEqual({
+      success: false,
+      message: "This firm already has an active real office with that name.",
+      fieldErrors: {
+        office_name:
+          "This firm already has an active real office with that name.",
+      },
+    })
+  })
+
+  it("rejects an archived or inactive firm returned by the atomic office service", async () => {
+    const formData = new FormData()
+    formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
+    formData.set("office_name", "Lyon")
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "ma_existing_firm_not_active" },
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createMaOfficeForExistingFirm(formData)).resolves.toEqual({
+      success: false,
+      message:
+        "This firm is no longer active. Refresh and choose another firm.",
+      fieldErrors: {
+        existing_firm_id:
+          "This firm is no longer active. Refresh and choose another firm.",
+      },
     })
   })
 })

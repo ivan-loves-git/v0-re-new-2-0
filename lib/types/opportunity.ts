@@ -422,6 +422,7 @@ export interface MaOfficeIntakeOffice {
   office_id: string
   firm_id: string
   firm_name: string
+  firm_status?: "prospect" | "active"
   office_name: string
   office_label: string
   contacts: MaOfficeIntakeContact[]
@@ -496,6 +497,9 @@ export interface OpportunityActionResult {
   message: string
   fieldErrors?: Record<string, string>
   incompleteData?: OpportunityIncompleteDataWarning
+  /** Present only after the server has committed a newly-created opportunity. */
+  opportunityId?: string
+  opportunityReference?: string
 }
 
 export interface OpportunityWorkSurfaceMatch {

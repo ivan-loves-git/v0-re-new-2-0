@@ -1,7 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 import { requireStaffAccess } from "@/lib/access-control"
 import { appendConfirmedWaveAiOutcome } from "@/lib/ai/next-action-outcome"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
@@ -20,9 +19,7 @@ import {
   readOpportunityNumber,
   readOpportunityFormString,
 } from "@/lib/utils/opportunity-incomplete-data"
-import {
-  resolveNewOpportunitySector,
-} from "@/lib/utils/opportunity-sector"
+import { resolveNewOpportunitySector } from "@/lib/utils/opportunity-sector"
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -50,6 +47,7 @@ interface MaOfficeIntakeProjectionRow {
   office_id: string
   firm_id: string
   firm_name: string
+  firm_status: "prospect" | "active"
   office_name: string
   office_label: string
   affiliation_id: string | null
@@ -86,6 +84,13 @@ export interface CreateMaOfficeContactResult {
   success: boolean
   message: string
   contact?: MaOfficeIntakeContact
+}
+
+export interface CreateMaOfficeForExistingFirmResult {
+  success: boolean
+  message: string
+  fieldErrors?: Record<string, string>
+  office?: MaOfficeIntakeOffice
 }
 
 const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
@@ -171,7 +176,8 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
   },
   ma_provisional_source_resolution_requires_real_office: {
     field: "source_office_id",
-    message: "Choose the real operating office to replace the provisional source.",
+    message:
+      "Choose the real operating office to replace the provisional source.",
   },
   ma_provisional_source_resolution_supports_draft_active_or_paused_only: {
     field: "status",
@@ -180,19 +186,23 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
   },
   ma_provisional_source_change_blocked_during_email_send: {
     field: "source_office_id",
-    message: "A source email is being sent. Wait for it to finish, then try again.",
+    message:
+      "A source email is being sent. Wait for it to finish, then try again.",
   },
   ma_provisional_source_resolution_requires_current_acme_source: {
     field: "source_office_id",
-    message: "Source review state changed. Refresh this opportunity and try again.",
+    message:
+      "Source review state changed. Refresh this opportunity and try again.",
   },
   ma_provisional_source_resolution_requires_assignment_evidence: {
     field: "source_office_id",
-    message: "Source review state changed. Refresh this opportunity and try again.",
+    message:
+      "Source review state changed. Refresh this opportunity and try again.",
   },
   opportunity_not_found: {
     field: "source_office_id",
-    message: "This opportunity is no longer available. Refresh the page and try again.",
+    message:
+      "This opportunity is no longer available. Refresh the page and try again.",
   },
 }
 
@@ -288,6 +298,7 @@ function parseOptionalNumber(formData: FormData, key: string) {
 
 function parseOpportunityIntake(
   formData: FormData,
+  options?: { requirePublicTitle?: boolean },
 ): ParsedOpportunityIntake | OpportunityActionResult {
   const reference = readOpportunityFormString(formData, "reference")
   const rawStatus = readOpportunityFormString(formData, "status") ?? "draft"
@@ -301,6 +312,13 @@ function parseOpportunityIntake(
   const fieldErrors: Record<string, string> = {}
 
   if (!reference) fieldErrors.reference = "Ref. Mandat is required."
+  if (
+    options?.requirePublicTitle &&
+    !readOpportunityFormString(formData, "public_title")
+  ) {
+    fieldErrors.public_title =
+      "A safe public title is required for a new opportunity."
+  }
   if (!status || !INTAKE_STATUSES.has(status)) {
     fieldErrors.status = "Choose Draft, Active, or Paused."
   }
@@ -368,7 +386,7 @@ export async function listMaOfficeIntakeOptions(options?: {
     supabase
       .from("staff_ma_office_intake_projection")
       .select(
-        "office_id, firm_id, firm_name, office_name, office_label, affiliation_id, contact_id, contact_name, contact_email, job_title",
+        "office_id, firm_id, firm_name, firm_status, office_name, office_label, affiliation_id, contact_id, contact_name, contact_email, job_title",
       )
       .order("firm_name")
       .order("office_name")
@@ -390,7 +408,8 @@ export async function listMaOfficeIntakeOptions(options?: {
     options?.includeCurrentProvisionalOfficeId === provisionalOfficeId
 
   const offices = new Map<string, MaOfficeIntakeOffice>()
-  for (const row of (projectionResult.data ?? []) as MaOfficeIntakeProjectionRow[]) {
+  for (const row of (projectionResult.data ??
+    []) as MaOfficeIntakeProjectionRow[]) {
     // Acme may only be assigned through the audited W-064 assignment action.
     // Hiding it here prevents ordinary intake from offering a path that the
     // deferred database invariant will reject anyway.
@@ -399,6 +418,7 @@ export async function listMaOfficeIntakeOptions(options?: {
       office_id: row.office_id,
       firm_id: row.firm_id,
       firm_name: row.firm_name,
+      firm_status: row.firm_status,
       office_name: row.office_name,
       office_label: row.office_label,
       contacts: [],
@@ -447,9 +467,9 @@ export async function listMaCanonicalContactOptions(): Promise<
 
 export async function createOpportunityIntake(
   formData: FormData,
-): Promise<OpportunityActionResult | void> {
+): Promise<OpportunityActionResult> {
   const { user } = await requireStaffAccess()
-  const parsed = parseOpportunityIntake(formData)
+  const parsed = parseOpportunityIntake(formData, { requirePublicTitle: true })
   if (isActionFailure(parsed)) return parsed
 
   const supabase = createAdminClient()
@@ -472,8 +492,18 @@ export async function createOpportunityIntake(
   }
 
   const opportunity = data as Opportunity
+  if (!opportunity?.id) {
+    return actionFailure(
+      "Opportunity was saved but its confirmation could not be read. Refresh the opportunity list before retrying.",
+    )
+  }
   revalidateOpportunityIntake(opportunity.id)
-  redirect(`/opportunities/${opportunity.id}`)
+  return {
+    success: true,
+    message: `Opportunity ${parsed.reference} created.`,
+    opportunityId: opportunity.id,
+    opportunityReference: parsed.reference,
+  }
 }
 
 export async function updateOpportunityIntake(
@@ -515,7 +545,9 @@ export async function resolveAcmeProvisionalSource(
 ): Promise<OpportunityActionResult> {
   const { user } = await requireStaffAccess()
   if (!UUID_PATTERN.test(opportunityId)) {
-    return actionFailure("This opportunity is no longer available for source review.")
+    return actionFailure(
+      "This opportunity is no longer available for source review.",
+    )
   }
 
   const sourceOffice = readUuid(formData, "source_office_id")
@@ -524,18 +556,22 @@ export async function resolveAcmeProvisionalSource(
   const reason = readOpportunityFormString(formData, "source_review_reason")
   const fieldErrors: Record<string, string> = {}
   if (!sourceOffice.value || sourceOffice.error) {
-    fieldErrors.source_office_id = sourceOffice.error ?? "Choose the real operating office."
+    fieldErrors.source_office_id =
+      sourceOffice.error ?? "Choose the real operating office."
   }
   if (affiliations.error || affiliations.value.length === 0) {
-    fieldErrors.affiliation_ids = affiliations.error ?? "Select at least one contact at the real office."
+    fieldErrors.affiliation_ids =
+      affiliations.error ?? "Select at least one contact at the real office."
   }
   if (!primaryAffiliation.value || primaryAffiliation.error) {
-    fieldErrors.primary_affiliation_id = primaryAffiliation.error ?? "Choose one primary contact."
+    fieldErrors.primary_affiliation_id =
+      primaryAffiliation.error ?? "Choose one primary contact."
   }
   if (!reason) {
     fieldErrors.source_review_reason = "Record why this is the verified source."
   } else if (reason.length > 4096) {
-    fieldErrors.source_review_reason = "Keep the correction reason under 4,096 characters."
+    fieldErrors.source_review_reason =
+      "Keep the correction reason under 4,096 characters."
   }
   if (Object.keys(fieldErrors).length > 0) {
     return actionFailure("Complete the source correction details.", fieldErrors)
@@ -561,7 +597,8 @@ export async function resolveAcmeProvisionalSource(
   })
   return {
     success: true,
-    message: "Source corrected. The provisional assignment and this correction are retained in staff-only evidence.",
+    message:
+      "Source corrected. The provisional assignment and this correction are retained in staff-only evidence.",
   }
 }
 
@@ -667,6 +704,94 @@ export async function createMaFirmOfficeContext(
 }
 
 /**
+ * Adds one real operating office to an existing active firm. This never
+ * creates a fallback office or a contact: those are separate, explicit staff
+ * actions so a partial source context cannot silently become valid.
+ */
+export async function createMaOfficeForExistingFirm(
+  formData: FormData,
+): Promise<CreateMaOfficeForExistingFirmResult> {
+  const { user } = await requireStaffAccess()
+  const firmId = readUuid(formData, "existing_firm_id")
+  const officeName = readOpportunityFormString(formData, "office_name")
+  const fieldErrors: Record<string, string> = {}
+
+  if (!firmId.value || firmId.error) {
+    fieldErrors.existing_firm_id =
+      firmId.error ?? "Choose an active M&A advisory firm."
+  }
+  if (!officeName) {
+    fieldErrors.office_name = "A real operating office name is required."
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      success: false,
+      message: "Complete the operating office details.",
+      fieldErrors,
+    }
+  }
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.rpc(
+    "create_ma_office_for_existing_firm",
+    {
+      p_firm_id: firmId.value,
+      p_office_name: officeName,
+      p_actor: user.id,
+    },
+  )
+
+  if (error) {
+    const message = error.message?.includes("ma_existing_firm_not_active")
+      ? "This firm is no longer active. Refresh and choose another firm."
+      : error.message?.includes("ma_existing_firm_not_found")
+        ? "This firm is no longer available. Refresh and choose another firm."
+        : error.message?.includes("ma_real_office_name_already_exists")
+          ? "This firm already has an active real office with that name."
+          : "The operating office could not be created. Check the supplied details."
+    const field = error.message?.includes("office")
+      ? "office_name"
+      : "existing_firm_id"
+    return { success: false, message, fieldErrors: { [field]: message } }
+  }
+
+  const identity = Array.isArray(data) ? data[0] : data
+  if (
+    !identity?.office_id ||
+    !identity?.firm_id ||
+    !identity?.firm_name ||
+    !identity?.office_name
+  ) {
+    return {
+      success: false,
+      message:
+        "The operating office was created but its confirmation could not be read. Refresh the page before retrying.",
+    }
+  }
+
+  const resolvedOfficeName = identity.office_name as string
+  const firmName = identity.firm_name as string
+  const office: MaOfficeIntakeOffice = {
+    office_id: identity.office_id as string,
+    firm_id: identity.firm_id as string,
+    firm_name: firmName,
+    office_name: resolvedOfficeName,
+    office_label:
+      resolvedOfficeName.trim() === firmName.trim()
+        ? firmName
+        : `${firmName} — ${resolvedOfficeName}`,
+    contacts: [],
+  }
+
+  revalidateOpportunityIntake()
+  return {
+    success: true,
+    message: "Operating office added to the existing firm.",
+    office,
+  }
+}
+
+/**
  * Adds one further person through the canonical office-affiliation primitive.
  * It deliberately has no legacy source-contact fallback: the selected office
  * remains the only relationship anchor.
@@ -685,13 +810,15 @@ export async function createMaOfficeContact(
   }
 
   const jobTitle = readOpportunityFormString(formData, "contact_job_title")
-  const contactMode = readOpportunityFormString(formData, "contact_mode") ?? "new"
+  const contactMode =
+    readOpportunityFormString(formData, "contact_mode") ?? "new"
   const usesExistingContact = contactMode === "existing"
 
   if (!usesExistingContact && contactMode !== "new") {
     return {
       success: false,
-      message: "Choose whether to affiliate an existing contact or create a new one.",
+      message:
+        "Choose whether to affiliate an existing contact or create a new one.",
     }
   }
 
@@ -735,7 +862,8 @@ export async function createMaOfficeContact(
     ) {
       return {
         success: false,
-        message: "Choose an active canonical contact to affiliate with this office.",
+        message:
+          "Choose an active canonical contact to affiliate with this office.",
       }
     }
 
@@ -795,7 +923,9 @@ export async function createMaOfficeContact(
   )
 
   if (error) {
-    if (error.message?.includes("ma_contact_office_affiliation_already_active")) {
+    if (
+      error.message?.includes("ma_contact_office_affiliation_already_active")
+    ) {
       return {
         success: false,
         message:
