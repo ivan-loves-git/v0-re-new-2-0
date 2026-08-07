@@ -8,15 +8,10 @@ import {
 } from "@/lib/data/portal-profile"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
-import {
-  canAccessOpportunityMemo,
-  safeRepreneurTeaserSummary,
-  type OpportunityNdaDisclosureEvidence,
-} from "@/lib/opportunity-confidentiality"
+import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
-  RepreneurOpportunityDocument,
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
@@ -78,19 +73,6 @@ interface PreviewOpportunityMatchRow {
   interest_notification_sent_at?: string | null
   updated_at: string
   opportunity: PreviewOpportunityRow | PreviewOpportunityRow[] | null
-}
-
-type PortalMemoDocument = RepreneurOpportunityDocument & {
-  visibility: "approved_for_repreneur"
-  storage_path: string | null
-  external_url: string | null
-  repreneur_approved_at: string | null
-  repreneur_approved_by: string | null
-}
-
-type PreviewExposureRecord = {
-  exposure: RepreneurOpportunityExposure
-  ndaEvidence: OpportunityNdaDisclosureEvidence
 }
 
 export interface StaffPortalPreviewOption {
@@ -158,80 +140,6 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     interest_notification_sent_at: row.interest_notification_sent_at,
     updated_at: row.updated_at,
   }
-}
-
-function normalizeExposureWithDisclosure(
-  row: PreviewOpportunityMatchRow,
-): PreviewExposureRecord | null {
-  const exposure = normalizeExposure(row)
-  if (!exposure) return null
-
-  return {
-    exposure,
-    ndaEvidence: {
-      nda_status: row.nda_status,
-      nda_signed_at: row.nda_signed_at,
-      nda_waived_at: row.nda_waived_at,
-      nda_waived_by: row.nda_waived_by,
-    },
-  }
-}
-
-async function listApprovedMemoDocumentsByOpportunity(
-  supabase: ReturnType<typeof createAdminClient>,
-  opportunityIds: string[]
-): Promise<Map<string, PortalMemoDocument[]>> {
-  if (opportunityIds.length === 0) return new Map()
-
-  const { data, error } = await supabase
-    .from("opportunity_documents")
-    .select("id, opportunity_id, title, document_type, file_name, size_bytes, uploaded_at, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by")
-    .in("opportunity_id", opportunityIds)
-    .eq("document_type", "deal_book")
-    .eq("visibility", "approved_for_repreneur")
-    .order("uploaded_at", { ascending: false })
-
-  if (error) throw new Error(error.message)
-
-  const documentsByOpportunity = new Map<string, PortalMemoDocument[]>()
-  for (const document of data ?? []) {
-    const documents = documentsByOpportunity.get(document.opportunity_id) ?? []
-    documents.push({
-      id: document.id,
-      title: document.title,
-      document_type: document.document_type,
-      file_name: document.file_name,
-      size_bytes: document.size_bytes,
-      uploaded_at: document.uploaded_at,
-      visibility: document.visibility,
-      storage_path: document.storage_path,
-      external_url: document.external_url,
-      repreneur_approved_at: document.repreneur_approved_at,
-      repreneur_approved_by: document.repreneur_approved_by,
-    } as PortalMemoDocument)
-    documentsByOpportunity.set(document.opportunity_id, documents)
-  }
-
-  return documentsByOpportunity
-}
-
-function visibleMemoDocumentsForMatch(
-  opportunity: RepreneurOpportunityExposure,
-  ndaEvidence: OpportunityNdaDisclosureEvidence,
-  documents: PortalMemoDocument[] | undefined,
-): RepreneurOpportunityDocument[] {
-  if (opportunity.match_status !== "active_pursuit") return []
-
-  return (documents ?? [])
-    .filter((document) => canAccessOpportunityMemo(ndaEvidence, document))
-    .map((document) => ({
-      id: document.id,
-      title: document.title,
-      document_type: document.document_type,
-      file_name: document.file_name,
-      size_bytes: document.size_bytes,
-      uploaded_at: document.uploaded_at,
-    }))
 }
 
 async function getActivePursuitOwners(
@@ -322,16 +230,11 @@ async function listVisibleOpportunitiesForRepreneur(
   const { data, error } = await query
   if (error) throw new Error(error.message)
 
-  const exposureRecords = (data ?? [])
-    .map((row) => normalizeExposureWithDisclosure(row as PreviewOpportunityMatchRow))
-    .filter((record): record is PreviewExposureRecord => Boolean(record))
-  const opportunities = exposureRecords.map((record) => record.exposure)
+  const opportunities = (data ?? [])
+    .map((row) => normalizeExposure(row as PreviewOpportunityMatchRow))
+    .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
-    supabase,
-    opportunities.map((opportunity) => opportunity.opportunity_id)
-  )
-  const documentsByOpportunity = await listApprovedMemoDocumentsByOpportunity(
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id)
   )
@@ -340,8 +243,8 @@ async function listVisibleOpportunitiesForRepreneur(
     opportunities.map((opportunity) => opportunity.match_id),
   )
 
-  return exposureRecords
-    .map(({ exposure, ndaEvidence }) => ({
+  return opportunities
+    .map((exposure) => ({
       ...exposure,
       ...interestStateByMatch.get(exposure.match_id),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
@@ -349,11 +252,9 @@ async function listVisibleOpportunitiesForRepreneur(
         repreneurId,
         activeOwnerByOpportunity,
       ),
-      visible_documents: visibleMemoDocumentsForMatch(
-        exposure,
-        ndaEvidence,
-        documentsByOpportunity.get(exposure.opportunity_id),
-      ),
+      // Exact IM disclosure is intentionally resolved only by the canonical
+      // pursuit projection in the preview detail route.
+      visible_documents: [],
     }))
 }
 
