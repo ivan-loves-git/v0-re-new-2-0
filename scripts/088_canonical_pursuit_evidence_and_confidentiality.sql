@@ -48,6 +48,9 @@ CREATE INDEX IF NOT EXISTS opportunity_pursuit_evidence_match_recorded_idx
   ON public.opportunity_pursuit_evidence (match_id, recorded_at DESC);
 CREATE INDEX IF NOT EXISTS opportunity_pursuit_evidence_type_idx
   ON public.opportunity_pursuit_evidence (match_id, event_type, recorded_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS opportunity_nda_artifacts_signed_content_unique
+  ON public.opportunity_nda_artifacts (match_id, artifact_role, content_sha256)
+  WHERE match_id IS NOT NULL AND artifact_role IN ('renew_signed_copy', 'repreneur_signed_copy');
 ALTER TABLE public.opportunity_pursuit_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.opportunity_pursuit_evidence FORCE ROW LEVEL SECURITY;
 REVOKE ALL ON public.opportunity_pursuit_evidence FROM PUBLIC, anon, authenticated, service_role;
@@ -255,7 +258,7 @@ BEGIN
   IF v_event IS NOT NULL THEN RETURN v_event; END IF;
   SELECT * INTO v_match FROM public.opportunity_matches WHERE id=p_match_id FOR UPDATE;
   SELECT * INTO v_doc FROM public.opportunity_documents WHERE id=p_information_memo_document_id;
-  IF v_match.id IS NULL OR v_match.status <> 'active_pursuit' OR NOT public.journey_gate_2_satisfied(p_match_id) OR NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='manual_package_dispatched') THEN RAISE EXCEPTION 'Gate 2 and recorded manual dispatch are required before confidential access.'; END IF;
+  IF v_match.id IS NULL OR v_match.status <> 'active_pursuit' OR NOT public.journey_gate_2_satisfied(p_match_id) OR NOT EXISTS (SELECT 1 FROM public.opportunity_pursuit_evidence dispatch WHERE dispatch.match_id=p_match_id AND dispatch.event_type='manual_package_dispatched' AND dispatch.recorded_at >= (SELECT max(gate.recorded_at) FROM public.opportunity_pursuit_evidence gate WHERE gate.match_id=p_match_id AND gate.event_type='gate_2_passed')) THEN RAISE EXCEPTION 'Gate 2 and recorded manual dispatch are required before confidential access.'; END IF;
   IF v_doc.id IS NULL OR v_doc.opportunity_id <> v_match.opportunity_id OR v_doc.document_type <> 'deal_book'
     OR NULLIF(BTRIM(v_doc.storage_path), '') IS NULL THEN RAISE EXCEPTION 'Select a retained Information Memorandum for this opportunity.'; END IF;
   SELECT firm.id, firm.name, office.id, office.name INTO v_firm_id, v_firm_name, v_office_id, v_office_name
