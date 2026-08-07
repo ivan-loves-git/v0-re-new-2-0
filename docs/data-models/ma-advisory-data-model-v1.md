@@ -132,6 +132,7 @@ Every non-archived firm has at least one active office. A firm without a known b
 4. When a real active office becomes known, WAVE removes the synthetic default from intake selection and rejects it for new or changed opportunity source contexts. Historical links remain until staff resolves any active records.
 5. An office with referenced contacts, opportunities or interactions is archived, never hard deleted.
 6. Contacts, opportunities and interactions attach to an office, never directly to the firm.
+7. Staff may add a real office only through the audited `create_ma_office_for_existing_firm` service. It requires an active firm, serializes the lower-trimmed office name within that firm, rejects an active real-office duplicate and creates no contact, legacy source or automatic reassignment. A synthetic default remains historical attribution but disappears from new intake selection when the real office exists.
 
 ## 3. Contact
 
@@ -255,7 +256,7 @@ W-063 adds an additional person to an existing office, or links an existing cano
 
 ### Atomic intake write boundary
 
-W-063 and W-020 save opportunity source context, contact selection, description, target status and optional intake fields through the audited `save_opportunity_office_context` and `create_opportunity_with_office_context` RPCs. Their final parameter is `p_opportunity_fields JSONB`, which accepts exactly:
+W-063 and W-020 save opportunity source context, contact selection, description, target status and optional intake fields through the audited `save_opportunity_office_context` and `create_opportunity_with_office_context` RPCs. New opportunity creation requires both a reference and a non-blank safe public title, returns the persisted opportunity identity on success, and otherwise returns one global message with optional field errors without changing the submitted draft. Their final parameter is `p_opportunity_fields JSONB`, which accepts exactly:
 
 `sector`, `activity`, `location`, `revenue_meur`, `ebitda_keur`, `headcount`, `headcount_range`, `date_added`, `public_title`, `teaser_summary`, and `internal_notes`.
 
@@ -823,6 +824,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-08-07 | 4.2.4 | Added the checked-in W-082/W-088 intake reliability candidate: new opportunity creation now requires a reference and safe public title and returns committed identity for deterministic success feedback; failed validation remains field-addressable without client-side false success. Migration 086 adds the service-only, audited real-office creation service for an existing active firm, with normalized-name serialization, an active real-office duplicate backstop, no automatic contact/legacy record creation and retained synthetic-default history. | W-082, W-088 and migration 086 |
 | 2026-08-07 | 4.2.3 | Added W-078's staff-only WAVE AI next-action advisory projection. The server sends OpenAI only derived opportunity status, source-review, profile-completeness, date-precision and freshness buckets, match and active-pursuit counts, readiness, interaction unknowns, as-of time and the existing eligible action identifiers. It adds no M&A field, relationship, visibility rule, mutation or schema change. A staff member separately completes an existing deterministic source-review or profile-save action; the HMAC-linked ledger outcome is evidence only and a ledger failure cannot roll back that action. | W-078 implementation |
 | 2026-08-07 | 4.2.2 | Added W-074's staff-only, server-authorized one-row-per-opportunity CSV export. It carries the approved operational fields, uses WAVE's derived Opportunity journey as `pipeline_status`, omits tags and Repreneur Journey stage, preserves month-only dates and retained canonical or legacy historical source identity without exporting `source_label`, calculates margin only from present revenue and EBITDA, emits no source email or phone, uses snapshot-bounded keyset reads and bounded match chunks past backend caps, uses formula-safe CSV cells and adds a UTF-8 BOM for Excel. No schema, repreneur projection or API route was added. | W-074 implementation |
 | 2026-07-30 | 4.2.1 | Hardened migration 084 after rollback-only production proof found a retained legacy signed label without its required timestamp. Interest now fails closed before mutating an incomplete signed or waived legacy match, leaving confidentiality history unchanged and avoiding a raw constraint failure; the disposable rehearsal mirrors the production `NOT VALID` evidence constraints. | W-067 and migration 084 production-compatibility correction |

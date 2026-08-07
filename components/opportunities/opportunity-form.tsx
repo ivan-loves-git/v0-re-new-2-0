@@ -1,6 +1,7 @@
 "use client"
 
 import { type FormEvent, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -41,6 +42,7 @@ import {
 } from "@/lib/types/opportunity"
 import {
   createMaFirmOfficeContext,
+  createMaOfficeForExistingFirm,
   createMaOfficeContact,
   listMaCanonicalContactOptions,
 } from "@/lib/actions/opportunity-intake"
@@ -62,6 +64,7 @@ const NO_OFFICE_OPTION_VALUE = "__no_office__"
 const NO_CANONICAL_CONTACT_OPTION_VALUE = "__no_canonical_contact__"
 
 type OfficeContactMode = "existing" | "new"
+type OfficeContextMode = "new_firm" | "existing_firm"
 
 interface OpportunityFormProps {
   opportunity?: OpportunityWithSource
@@ -82,6 +85,7 @@ export function OpportunityForm({
   submitLabel = "Save opportunity",
   officeOptions,
 }: OpportunityFormProps) {
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const normalizedExistingSector = normalizeOpportunitySector(
@@ -113,6 +117,9 @@ export function OpportunityForm({
     MaOfficeIntakeOffice[]
   >([])
   const [createOfficeDialogOpen, setCreateOfficeDialogOpen] = useState(false)
+  const [officeContextMode, setOfficeContextMode] =
+    useState<OfficeContextMode>("new_firm")
+  const [existingFirmId, setExistingFirmId] = useState("")
   const [isCreatingOffice, setIsCreatingOffice] = useState(false)
   const [officeContextFieldErrors, setOfficeContextFieldErrors] = useState<
     Record<string, string>
@@ -155,6 +162,20 @@ export function OpportunityForm({
       ) ?? null,
     [availableOfficeOptions, selectedOfficeId],
   )
+  const availableFirms = useMemo(() => {
+    const firms = new Map<string, { id: string; name: string }>()
+    for (const office of availableOfficeOptions) {
+      if (office.firm_status === "active") {
+        firms.set(office.firm_id, {
+          id: office.firm_id,
+          name: office.firm_name,
+        })
+      }
+    }
+    return [...firms.values()].sort((left, right) =>
+      left.name.localeCompare(right.name),
+    )
+  }, [availableOfficeOptions])
   const affiliateableCanonicalContacts = useMemo(() => {
     const selectedOfficeContactIds = new Set(
       selectedOffice?.contacts.map((contact) => contact.contact_id) ?? [],
@@ -174,11 +195,15 @@ export function OpportunityForm({
 
     try {
       const result = await action(formData)
-      if (result?.fieldErrors) {
-        setFieldErrors(result.fieldErrors)
-        toast.error(result.message)
-      } else if (result?.success) {
+      if (!result?.success) {
+        setFieldErrors(result?.fieldErrors ?? {})
+        toast.error(result?.message ?? "Opportunity could not be saved.")
+      } else {
         toast.success(result.message)
+        if (!opportunity && result.opportunityId) {
+          router.push(`/opportunities/${result.opportunityId}`)
+          router.refresh()
+        }
       }
     } catch (error) {
       console.error("Opportunity save failed")
@@ -245,7 +270,8 @@ export function OpportunityForm({
   }
 
   function chooseContactMode(value: string) {
-    const nextMode: OfficeContactMode = value === "existing" ? "existing" : "new"
+    const nextMode: OfficeContactMode =
+      value === "existing" ? "existing" : "new"
     setContactMode(nextMode)
     setExistingContactId("")
     if (nextMode === "existing") {
@@ -269,9 +295,11 @@ export function OpportunityForm({
     setOfficeContextFieldErrors({})
     setIsCreatingOffice(true)
     try {
-      const result = await createMaFirmOfficeContext(
-        new FormData(event.currentTarget),
-      )
+      const formData = new FormData(event.currentTarget)
+      const result =
+        officeContextMode === "existing_firm"
+          ? await createMaOfficeForExistingFirm(formData)
+          : await createMaFirmOfficeContext(formData)
       if (!result.success || !result.office) {
         setOfficeContextFieldErrors(result.fieldErrors ?? {})
         toast.error("M&A source not created", { description: result.message })
@@ -279,23 +307,19 @@ export function OpportunityForm({
       }
 
       const office = result.office
-      const firstContact = office.contacts[0]
-      if (!firstContact) {
-        toast.error("M&A source not created", {
-          description:
-            "The approved service did not return the first office contact.",
-        })
-        return
-      }
 
       setCreatedOfficeOptions((current) => [
         ...current.filter((item) => item.office_id !== office.office_id),
         office,
       ])
       setSelectedOfficeId(office.office_id)
-      setSelectedAffiliationIds([firstContact.affiliation_id])
-      setPrimaryAffiliationId(firstContact.affiliation_id)
+      const firstContact = office.contacts[0]
+      setSelectedAffiliationIds(
+        firstContact ? [firstContact.affiliation_id] : [],
+      )
+      setPrimaryAffiliationId(firstContact?.affiliation_id ?? null)
       setCreateOfficeDialogOpen(false)
+      setExistingFirmId("")
       toast.success(result.message)
     } catch (error) {
       toast.error(
@@ -770,11 +794,12 @@ export function OpportunityForm({
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="public_title">Public title</Label>
+                <Label htmlFor="public_title">Public title *</Label>
                 <Input
                   id="public_title"
                   name="public_title"
                   defaultValue={opportunity?.public_title ?? ""}
+                  required={!opportunity}
                   disabled={isHistorical}
                 />
                 {errorFor("public_title")}
@@ -822,6 +847,10 @@ export function OpportunityForm({
           if (!isCreatingOffice) {
             setCreateOfficeDialogOpen(open)
             if (!open) setOfficeContextFieldErrors({})
+            if (!open) {
+              setOfficeContextMode("new_firm")
+              setExistingFirmId("")
+            }
           }
         }}
       >
@@ -829,62 +858,182 @@ export function OpportunityForm({
           <DialogHeader>
             <DialogTitle>Add M&A firm context</DialogTitle>
             <DialogDescription>
-              This creates one staff-only M&A advisory firm, an operating
-              office, and its first named contact. It does not publish or
-              activate an opportunity.
+              Create a new firm context, or add a real operating office to an
+              existing active firm. Neither action publishes an opportunity.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateOfficeContext} className="space-y-4">
+            <input
+              type="hidden"
+              name="existing_firm_id"
+              value={existingFirmId}
+            />
+            <p id="office_context_mode_label" className="text-sm font-medium">
+              Context type
+            </p>
+            <RadioGroup
+              aria-labelledby="office_context_mode_label"
+              value={officeContextMode}
+              onValueChange={(value) =>
+                setOfficeContextMode(
+                  value === "existing_firm" ? "existing_firm" : "new_firm",
+                )
+              }
+              disabled={isCreatingOffice}
+              className="gap-2"
+            >
+              <label
+                htmlFor="new_firm_context"
+                className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
+              >
+                <RadioGroupItem
+                  id="new_firm_context"
+                  value="new_firm"
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    New firm context
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    Create a firm, its first office and its first contact.
+                  </span>
+                </span>
+              </label>
+              <label
+                htmlFor="existing_firm_context"
+                className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
+              >
+                <RadioGroupItem
+                  id="existing_firm_context"
+                  value="existing_firm"
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    Existing firm
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    Add one real operating office; add contacts separately if
+                    needed.
+                  </span>
+                </span>
+              </label>
+            </RadioGroup>
+            {officeContextMode === "existing_firm" ? (
+              <div className="space-y-2">
+                <Label htmlFor="existing_firm_id">M&A advisory firm *</Label>
+                <Select
+                  value={existingFirmId || "__no_existing_firm__"}
+                  onValueChange={(value) =>
+                    setExistingFirmId(
+                      value === "__no_existing_firm__" ? "" : value,
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    id="existing_firm_id"
+                    aria-invalid={Boolean(
+                      officeContextFieldErrors.existing_firm_id,
+                    )}
+                  >
+                    <SelectValue placeholder="Choose an active firm" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="__no_existing_firm__" disabled>
+                        Choose an active firm
+                      </SelectItem>
+                      {availableFirms.map((firm) => (
+                        <SelectItem key={firm.id} value={firm.id}>
+                          {firm.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {officeContextFieldErrors.existing_firm_id ? (
+                  <p className="text-xs text-destructive" role="alert">
+                    {officeContextFieldErrors.existing_firm_id}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {officeContextMode === "new_firm" ? (
+              <div className="space-y-2">
+                <Label htmlFor="firm_name">M&A advisory firm *</Label>
+                <Input
+                  id="firm_name"
+                  name="firm_name"
+                  required
+                  aria-invalid={Boolean(officeContextFieldErrors.firm_name)}
+                />
+                {officeContextFieldErrors.firm_name ? (
+                  <p className="text-xs text-destructive" role="alert">
+                    {officeContextFieldErrors.firm_name}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-2">
-              <Label htmlFor="firm_name">M&A advisory firm *</Label>
-              <Input
-                id="firm_name"
-                name="firm_name"
-                required
-                aria-invalid={Boolean(officeContextFieldErrors.firm_name)}
-              />
-              {officeContextFieldErrors.firm_name ? (
-                <p className="text-xs text-destructive" role="alert">
-                  {officeContextFieldErrors.firm_name}
-                </p>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="office_name">Operating office</Label>
+              <Label htmlFor="office_name">
+                Operating office{" "}
+                {officeContextMode === "existing_firm" ? "*" : ""}
+              </Label>
               <Input
                 id="office_name"
                 name="office_name"
-                placeholder="Leave empty when the actual office is not known yet"
+                required={officeContextMode === "existing_firm"}
+                placeholder={
+                  officeContextMode === "existing_firm"
+                    ? "Example: Paris"
+                    : "Leave empty when the actual office is not known yet"
+                }
               />
-              <p className="text-xs text-muted-foreground">
-                An empty office creates a temporary default office named after
-                the firm.
-              </p>
+              {officeContextMode === "new_firm" ? (
+                <p className="text-xs text-muted-foreground">
+                  An empty office creates a temporary default office named after
+                  the firm.
+                </p>
+              ) : null}
+              {officeContextFieldErrors.office_name ? (
+                <p className="text-xs text-destructive" role="alert">
+                  {officeContextFieldErrors.office_name}
+                </p>
+              ) : null}
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="contact_first_name">First name</Label>
-                <Input id="contact_first_name" name="contact_first_name" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact_last_name">Last name</Label>
-                <Input id="contact_last_name" name="contact_last_name" />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="contact_email">Email</Label>
-                <Input id="contact_email" name="contact_email" type="email" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact_phone">Phone</Label>
-                <Input id="contact_phone" name="contact_phone" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact_job_title">Job title</Label>
-              <Input id="contact_job_title" name="contact_job_title" />
-            </div>
+            {officeContextMode === "new_firm" ? (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_first_name">First name</Label>
+                    <Input id="contact_first_name" name="contact_first_name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_last_name">Last name</Label>
+                    <Input id="contact_last_name" name="contact_last_name" />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_email">Email</Label>
+                    <Input
+                      id="contact_email"
+                      name="contact_email"
+                      type="email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_phone">Phone</Label>
+                    <Input id="contact_phone" name="contact_phone" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_job_title">Job title</Label>
+                  <Input id="contact_job_title" name="contact_job_title" />
+                </div>
+              </>
+            ) : null}
             <DialogFooter>
               <Button
                 type="button"
@@ -952,8 +1101,8 @@ export function OpportunityForm({
                     Use an existing canonical contact
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    Add a new office affiliation without creating another
-                    person record.
+                    Add a new office affiliation without creating another person
+                    record.
                   </span>
                 </span>
               </label>
@@ -971,8 +1120,7 @@ export function OpportunityForm({
                     Create a new contact
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    Create a named canonical person and this office
-                    affiliation.
+                    Create a named canonical person and this office affiliation.
                   </span>
                 </span>
               </label>
@@ -987,9 +1135,7 @@ export function OpportunityForm({
                 />
                 <Label htmlFor="existing_contact_id">Canonical contact</Label>
                 <Select
-                  value={
-                    existingContactId || NO_CANONICAL_CONTACT_OPTION_VALUE
-                  }
+                  value={existingContactId || NO_CANONICAL_CONTACT_OPTION_VALUE}
                   onValueChange={(value) =>
                     setExistingContactId(
                       value === NO_CANONICAL_CONTACT_OPTION_VALUE ? "" : value,
