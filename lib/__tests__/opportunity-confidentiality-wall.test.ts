@@ -38,9 +38,9 @@ describe("opportunity confidentiality wall", () => {
     )
     expect(portalActions).not.toContain('@/lib/supabase/client')
     expect(portalActions).toContain("safeRepreneurTeaserSummary")
-    expect(portalActions).toContain("getRepreneurMemoAvailability")
-    expect(portalActions).toContain("nda_signed_at")
-    expect(portalActions).toContain("repreneur_approved_at")
+    expect(portalActions).toContain("visible_documents: []")
+    expect(portalActions).not.toContain("canAccessOpportunityMemo")
+    expect(portalActions).not.toContain("getRepreneurMemoAvailability")
   })
 
   it("enforces source evidence and never treats legacy metadata as disclosure approval", () => {
@@ -60,18 +60,14 @@ describe("opportunity confidentiality wall", () => {
   it("opens signed memo routes as documents instead of app-navigation prefetches", () => {
     const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
-    expect(detail).toContain('<a href={documentHref}>')
-    expect(detail).not.toContain('<Link href={documentHref}>')
+    expect(detail).toContain('<a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.information_memo_document_id}`}>')
+    expect(detail).not.toContain("<Link href=")
   })
 
   it("does not imply that a legacy not-required label bypasses explicit waiver evidence", () => {
     const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
-    expect(detail).toContain(
-      "Re-New must still record an explicit waiver before approving memo access.",
-    )
-    expect(detail).not.toContain(
-      "No NDA required. Memo awaiting Re-New document approval.",
-    )
+    expect(detail).toContain("canonical confidentiality journey")
+    expect(detail).not.toContain("NDA marked not required")
   })
 })

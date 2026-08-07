@@ -18,7 +18,6 @@ import {
 } from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
 import { maContactEmailPurposeForTemplate } from "@/lib/ma-contact-email-policy"
-import { canAccessOpportunityMemo } from "@/lib/opportunity-confidentiality"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
 import type { EmailTemplateKey } from "@/lib/types/email"
 import type {
@@ -622,22 +621,9 @@ export async function getMaOpportunityWorkflow(
     }),
   )
 
-  let memoAvailable = false
-  if (activeMatch) {
-    const { data: memoDocuments, error: memoDocumentsError } = await supabase
-      .from("opportunity_documents")
-      .select(
-        "document_type, visibility, storage_path, external_url, repreneur_approved_at, repreneur_approved_by",
-      )
-      .eq("opportunity_id", opportunityId)
-      .eq("document_type", "deal_book")
-      .eq("visibility", "approved_for_repreneur")
-
-    if (memoDocumentsError) throw new Error(memoDocumentsError.message)
-    memoAvailable = (memoDocuments ?? []).some((document) =>
-      canAccessOpportunityMemo(activeMatch, document),
-    )
-  }
+  // Legacy NDA and visibility metadata no longer establishes confidential
+  // access. The canonical pursuit projection is the only disclosure authority.
+  const memoAvailable = false
 
   const recommendation = deriveMaWorkflowRecommendation({
     opportunity,

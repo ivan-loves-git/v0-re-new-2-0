@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { CheckCircle2, FileCheck2, FileText, History, LockKeyhole, Send, ShieldCheck } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
+import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
 import { toast } from "sonner"
 import {
@@ -25,6 +25,7 @@ import {
   validateOpportunityPursuitTemplate,
 } from "@/lib/actions/opportunity-pursuit-journey"
 import type { OpportunityPursuitProjectionView } from "@/lib/data/opportunity-pursuit-projection"
+import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import type { OpportunityDocument, OpportunityMatch, OpportunityNdaArtifact } from "@/lib/types/opportunity"
 
 interface OpportunityPursuitPanelProps {
@@ -129,7 +130,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
 
       <Card>
         <CardHeader><CardTitle>NDA artifacts</CardTitle><CardDescription>Staff records the blank template and Re-New copy. The repreneur uploads their own signed copy in the portal after Gate 1.</CardDescription></CardHeader>
-        <CardContent className="flex flex-col gap-5"><OpportunityNdaArtifactManager opportunityId={opportunityId} activeMatchId={activeMatch?.id ?? null} artifacts={ndaArtifacts} staffOnlyRoles />{activeMatch ? <section className="flex flex-col gap-3 border-t pt-5"><div><h3 className="font-medium">Repreneur-signed copies</h3><p className="text-sm text-muted-foreground">The repreneur uploads these in the portal. Staff can review retained versions and validate only the current copy.</p></div>{repreneurArtifacts.length ? <div className="divide-y rounded-md border">{repreneurArtifacts.map((artifact) => <div key={artifact.id} className="flex items-center justify-between gap-3 p-3"><span className="text-sm">v{artifact.version_number} · {artifact.document?.title ?? "Signed NDA"}</span><Button asChild size="sm" variant="outline"><Link href={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`} target="_blank" rel="noreferrer">View</Link></Button></div>)}</div> : <p className="text-sm text-muted-foreground">No repreneur-signed copy has been uploaded yet.</p>}</section> : null}</CardContent>
+        <CardContent className="flex flex-col gap-5"><OpportunityNdaArtifactManager opportunityId={opportunityId} activeMatchId={activeMatch?.id ?? null} artifacts={ndaArtifacts} />{activeMatch ? <section className="flex flex-col gap-3 border-t pt-5"><div><h3 className="font-medium">Repreneur-signed copies</h3><p className="text-sm text-muted-foreground">The repreneur uploads these in the portal. Staff can review retained versions and validate only the current copy.</p></div>{repreneurArtifacts.length ? <div className="divide-y rounded-md border">{repreneurArtifacts.map((artifact) => <div key={artifact.id} className="flex items-center justify-between gap-3 p-3"><span className="text-sm">v{artifact.version_number} · {artifact.document?.title ?? "Signed NDA"}</span><DocumentRowActions policy={getOpportunityDocumentPolicy("nda", true)} state="locked" viewHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`} /></div>)}</div> : <p className="text-sm text-muted-foreground">No repreneur-signed copy has been uploaded yet.</p>}</section> : null}</CardContent>
       </Card>
 
       {activeMatch && projection?.gate2Passed && projection.dispatched ? <Card>

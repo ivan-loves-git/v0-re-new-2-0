@@ -1,23 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ExternalLink, FileCheck2, LockKeyhole, Upload } from "lucide-react"
+import { FileCheck2, LockKeyhole, Upload } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { registerOpportunityNdaArtifact } from "@/lib/actions/opportunity-nda-artifacts"
+import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import type { OpportunityNdaArtifact, OpportunityNdaArtifactRole } from "@/lib/types/opportunity"
 
 interface OpportunityNdaArtifactManagerProps {
   opportunityId: string
   activeMatchId: string | null
   artifacts: OpportunityNdaArtifact[]
-  /** The repreneur signs and uploads their own copy in the portal after Gate 1. */
-  staffOnlyRoles?: boolean
 }
 
 interface ArtifactRoleDefinition {
@@ -77,7 +76,6 @@ export function OpportunityNdaArtifactManager({
   opportunityId,
   activeMatchId,
   artifacts,
-  staffOnlyRoles = false,
 }: OpportunityNdaArtifactManagerProps) {
   const router = useRouter()
   const [pendingRole, setPendingRole] = useState<OpportunityNdaArtifactRole | null>(null)
@@ -120,7 +118,7 @@ export function OpportunityNdaArtifactManager({
         </AlertDescription>
       </Alert>
 
-      {ARTIFACT_ROLES.filter((definition) => !staffOnlyRoles || definition.role !== "repreneur_signed_copy").map((definition) => {
+      {ARTIFACT_ROLES.filter((definition) => definition.role !== "repreneur_signed_copy").map((definition) => {
         const roleArtifacts = artifacts.filter((artifact) => artifact.artifact_role === definition.role)
         const current = currentArtifact(definition.role, roleArtifacts, activeMatchId)
         const requiresPursuit = definition.role !== "blank_template"
@@ -227,16 +225,11 @@ export function OpportunityNdaArtifactManager({
                         </p>
                       </div>
                     </div>
-                    <Button asChild variant="outline" size="sm">
-                      <Link
-                        href={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        View
-                        <ExternalLink data-icon="inline-end" />
-                      </Link>
-                    </Button>
+                    <DocumentRowActions
+                      policy={getOpportunityDocumentPolicy("nda", true)}
+                      state="locked"
+                      viewHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`}
+                    />
                   </div>
                 ))}
               </div>

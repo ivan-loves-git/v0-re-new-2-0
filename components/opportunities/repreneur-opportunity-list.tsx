@@ -15,8 +15,6 @@ import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
-  getOpportunityNdaStatusLabel,
-  getOpportunityPursuitStageLabel,
   type RepreneurDealFlowOpportunity,
   type RepreneurOpportunityExposure,
   type RepreneurOpportunityProfile,
@@ -157,8 +155,7 @@ function DealCard({
           {staffRecommended && !isDeclined ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status ? <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge> : null}
-          {opportunity.pursuit_stage ? <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge> : null}
-          {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">{getOpportunityNdaStatusLabel(opportunity.nda_status ?? "not_required")}</Badge> : null}
+          {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">Confidential journey</Badge> : null}
           {publicRelevance ? <Badge variant="outline">Relevance: {getOpportunityMatchRecommendationLabel(publicRelevance)}</Badge> : null}
           </div>
           <div className="mt-2 flex min-w-0 flex-col gap-1">
