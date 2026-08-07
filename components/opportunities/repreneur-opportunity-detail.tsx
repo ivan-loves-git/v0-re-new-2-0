@@ -231,7 +231,16 @@ export function RepreneurOpportunityDetail({
               {!journey.gate2Passed && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
             </> : null}
 
-            {memoAvailable && journey?.confidentialGrant ? <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Information memorandum (IM)</p><p className="text-xs text-muted-foreground">This exact IM was explicitly granted to this pursuit.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.informationMemoDocumentId}`}><Download data-icon="inline-start" />Download IM</a></Button></div> : null}
+            {memoAvailable && journey?.confidentialGrant ? <>
+              <div className="rounded-md border p-3">
+                <p className="font-medium">Disclosed source</p>
+                <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+                  <div><dt className="text-xs text-muted-foreground">Firm and office</dt><dd>{journey.confidentialGrant.source.firmName} · {journey.confidentialGrant.source.officeName}</dd></div>
+                  <div><dt className="text-xs text-muted-foreground">Named contact{journey.confidentialGrant.source.contactNames.length === 1 ? "" : "s"}</dt><dd>{journey.confidentialGrant.source.contactNames.join(", ")}</dd></div>
+                </dl>
+              </div>
+              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Information memorandum (IM)</p><p className="text-xs text-muted-foreground">This exact IM was explicitly granted to this pursuit.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.informationMemoDocumentId}`}><Download data-icon="inline-start" />Download IM</a></Button></div>
+            </> : null}
           </CardContent>
         </Card>
       )}
