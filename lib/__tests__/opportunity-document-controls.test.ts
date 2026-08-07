@@ -1,29 +1,43 @@
-import fs from "node:fs"
-import path from "node:path"
 import { describe, expect, it } from "vitest"
+import {
+  assertGenericOpportunityDocumentPolicy,
+  getOpportunityDocumentPolicy,
+} from "@/lib/opportunity-document-policy"
 
-const root = path.resolve(__dirname, "../..")
-const source = fs.readFileSync(path.join(root, "lib/actions/opportunity-documents.ts"), "utf8")
-const migration = fs.readFileSync(path.join(root, "scripts/087_opportunity_document_controls.sql"), "utf8")
+function pdf(name = "document.pdf") {
+  return new File(["pdf"], name, { type: "application/pdf" })
+}
+
+function textFile(name = "document.txt") {
+  return new File(["text"], name, { type: "text/plain" })
+}
 
 describe("opportunity document controls", () => {
-  it("keeps source teasers explicit, private, PDF-only and retained", () => {
-    expect(source).toContain('"source_teaser"')
-    expect(source).toContain("PDF_ONLY_DOCUMENT_TYPES")
-    expect(source).toContain("STAFF_ONLY_DOCUMENT_TYPES")
-    expect(migration).toContain("opportunity_documents_source_teaser_staff_only")
-    expect(migration).toContain("opportunity_documents_retain_source_and_im")
+  it("rejects non-PDF source teasers and IMs", () => {
+    expect(() => assertGenericOpportunityDocumentPolicy("source_teaser", "staff_only", textFile(), null)).toThrow("must be uploaded as a PDF")
+    expect(() => assertGenericOpportunityDocumentPolicy("deal_book", "staff_only", textFile(), null)).toThrow("must be uploaded as a PDF")
+    expect(() => assertGenericOpportunityDocumentPolicy("deal_book", "staff_only", pdf(), "https://example.test/memo.pdf")).toThrow("must be uploaded as a PDF")
   })
 
-  it("does not allow generic approval or deletion of a source teaser or IM", () => {
-    expect(source).toContain("granted through the pursuit access workflow")
-    expect(source).toContain("cannot be removed. Upload a corrected PDF as a new document")
+  it("rejects generic repreneur approval for retained source or IM documents", () => {
+    expect(() => assertGenericOpportunityDocumentPolicy("source_teaser", "approved_for_repreneur", pdf(), null)).toThrow("stay staff-only")
+    expect(() => assertGenericOpportunityDocumentPolicy("deal_book", "approved_for_repreneur", pdf(), null)).toThrow("stay staff-only")
   })
 
-  it("keeps canonical NDA artifact protection ahead of generic mutations", () => {
-    const visibility = source.indexOf("export async function updateOpportunityDocumentVisibility")
-    const removal = source.indexOf("export async function removeOpportunityDocument")
-    expect(source.indexOf("await assertDocumentIsNotCanonicalNdaArtifact(documentId)", visibility)).toBeGreaterThan(visibility)
-    expect(source.indexOf("await assertDocumentIsNotCanonicalNdaArtifact(documentId)", removal)).toBeGreaterThan(removal)
+  it("requires a new row rather than generic replacement or deletion of retained documents", () => {
+    for (const documentType of ["source_teaser", "deal_book"] as const) {
+      const policy = getOpportunityDocumentPolicy(documentType)
+      expect(policy.retained).toBe(true)
+      expect(policy.canRemove).toBe(false)
+      expect(policy.canReplace).toBe(false)
+      expect(policy.canChangeVisibility).toBe(false)
+      expect(policy.requiresPdf).toBe(true)
+    }
+  })
+
+  it("preserves CV/LdC-compatible mutable policy for ordinary documents", () => {
+    const policy = getOpportunityDocumentPolicy("other")
+    expect(policy.canRemove).toBe(true)
+    expect(policy.canChangeVisibility).toBe(true)
   })
 })

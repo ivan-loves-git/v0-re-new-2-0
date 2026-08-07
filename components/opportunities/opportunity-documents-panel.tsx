@@ -3,17 +3,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Download, ExternalLink, FileText, MoreHorizontal, Trash2, Upload } from "lucide-react"
+import { ExternalLink, FileText, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -23,6 +17,8 @@ import {
   removeOpportunityDocument,
   updateOpportunityDocumentVisibility,
 } from "@/lib/actions/opportunity-documents"
+import { DocumentRowActions, type DocumentInteractionState } from "@/components/opportunities/document-row-actions"
+import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import {
   OPPORTUNITY_DOCUMENT_TYPE_OPTIONS,
   OPPORTUNITY_DOCUMENT_VISIBILITY_OPTIONS,
@@ -51,10 +47,6 @@ function documentTypeLabel(type: OpportunityDocumentType) {
   return OPPORTUNITY_DOCUMENT_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type.replaceAll("_", " ")
 }
 
-function hasRetainedPolicy(document: OpportunityDocument) {
-  return document.document_type === "source_teaser" || document.document_type === "deal_book"
-}
-
 export function OpportunityDocumentsPanel({
   opportunityId,
   documents,
@@ -62,6 +54,7 @@ export function OpportunityDocumentsPanel({
 }: OpportunityDocumentsPanelProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null)
   const [documentType, setDocumentType] = useState<OpportunityDocumentType>("teaser")
   const canonicalNdaDocumentIdSet = new Set(canonicalNdaDocumentIds)
   const selectedTypeIsStaffOnly = documentType === "source_teaser" || documentType === "deal_book"
@@ -84,6 +77,7 @@ export function OpportunityDocumentsPanel({
   }
 
   async function handleVisibility(documentId: string, visibility: OpportunityDocumentVisibility) {
+    setPendingDocumentId(documentId)
     try {
       const result = await updateOpportunityDocumentVisibility(documentId, opportunityId, visibility)
       if (!result.success) {
@@ -94,10 +88,13 @@ export function OpportunityDocumentsPanel({
       router.refresh()
     } catch {
       toast.error("Document visibility not changed", { description: "Please try again." })
+    } finally {
+      setPendingDocumentId(null)
     }
   }
 
   async function handleRemove(documentId: string) {
+    setPendingDocumentId(documentId)
     try {
       const result = await removeOpportunityDocument(documentId, opportunityId)
       if (!result.success) {
@@ -108,6 +105,8 @@ export function OpportunityDocumentsPanel({
       router.refresh()
     } catch {
       toast.error("Document not removed", { description: "Please try again." })
+    } finally {
+      setPendingDocumentId(null)
     }
   }
 
@@ -211,7 +210,12 @@ export function OpportunityDocumentsPanel({
                 ) : (
                   documents.map((document) => {
                     const isCanonicalNdaArtifact = canonicalNdaDocumentIdSet.has(document.id)
-                    const isRetained = hasRetainedPolicy(document)
+                    const policy = getOpportunityDocumentPolicy(document.document_type, isCanonicalNdaArtifact)
+                    const state: DocumentInteractionState = pendingDocumentId === document.id
+                      ? "pending"
+                      : policy.retained
+                        ? "locked"
+                        : "available"
                     return (
                     <TableRow key={document.id}>
                       <TableCell>
@@ -246,43 +250,14 @@ export function OpportunityDocumentsPanel({
                       <TableCell>{formatBytes(document.size_bytes)}</TableCell>
                       <TableCell>{formatDate(document.uploaded_at)}</TableCell>
                       <TableCell>
-                        {isCanonicalNdaArtifact || isRetained ? (
-                          <span className="text-xs text-muted-foreground">Locked</span>
-                        ) : (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <a href={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`} target="_blank" rel="noreferrer">
-                                <Download className="size-4" />
-                                View or download
-                              </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisibility(document.id, "staff_only")}>
-                              Mark staff-only
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisibility(document.id, "approved_for_repreneur")}>
-                              Mark approved
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRemove(document.id)}>
-                              <Trash2 className="size-4" />
-                              Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        )}
-                        {(isCanonicalNdaArtifact || isRetained) && (
-                          <Button asChild variant="ghost" size="sm" className="h-8">
-                            <a href={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`} target="_blank" rel="noreferrer">
-                              <Download className="size-4" />
-                              View
-                            </a>
-                          </Button>
-                        )}
+                        <DocumentRowActions
+                          policy={policy}
+                          state={state}
+                          viewHref={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`}
+                          onMarkStaffOnly={() => handleVisibility(document.id, "staff_only")}
+                          onMarkApproved={() => handleVisibility(document.id, "approved_for_repreneur")}
+                          onRemove={() => handleRemove(document.id)}
+                        />
                       </TableCell>
                     </TableRow>
                     )

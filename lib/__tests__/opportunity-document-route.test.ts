@@ -13,11 +13,9 @@ import { GET } from "@/app/(dashboard)/opportunities/[id]/documents/[documentId]
 function setupAdminClient(document: {
   storage_bucket: string
   storage_path: string | null
-  external_url: string | null
 } | null = {
   storage_bucket: "opportunity-documents",
   storage_path: "opportunity-1/documents/memo.pdf",
-  external_url: null,
 }) {
   const maybeSingle = vi.fn().mockResolvedValue({ data: document, error: null })
   const opportunityEq = vi.fn(() => ({ maybeSingle }))
@@ -71,7 +69,24 @@ describe("staff opportunity document route", () => {
     const { createSignedUrl } = setupAdminClient({
       storage_bucket: "opportunity-documents",
       storage_path: null,
-      external_url: null,
+    })
+    expect((await requestDocument()).status).toBe(404)
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("rejects a document stored outside the private opportunity bucket", async () => {
+    const { createSignedUrl } = setupAdminClient({
+      storage_bucket: "other-bucket",
+      storage_path: "opportunity-1/documents/memo.pdf",
+    })
+    expect((await requestDocument()).status).toBe(404)
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("rejects a document path outside the exact opportunity prefix", async () => {
+    const { createSignedUrl } = setupAdminClient({
+      storage_bucket: "opportunity-documents",
+      storage_path: "opportunity-10/documents/memo.pdf",
     })
     expect((await requestDocument()).status).toBe(404)
     expect(createSignedUrl).not.toHaveBeenCalled()
