@@ -19,7 +19,7 @@ describe("opportunity intake source guard execution context", () => {
       "FROM PUBLIC, anon, authenticated, service_role",
     )
     expect(migration).not.toMatch(
-      /GRANT\s+(SELECT|INSERT|UPDATE|DELETE).*ma_source_email_send_reservations/is,
+      /GRANT\s+(SELECT|INSERT|UPDATE|DELETE)[\s\S]*ma_source_email_send_reservations/i,
     )
   })
 })
