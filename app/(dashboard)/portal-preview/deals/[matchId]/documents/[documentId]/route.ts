@@ -25,7 +25,7 @@ export async function GET(
     !projection.gate2Passed ||
     !projection.dispatched ||
     projection.revoked ||
-    projection.confidentialGrant?.information_memo_document_id !== documentId
+    projection.confidentialGrant?.informationMemoDocumentId !== documentId
   ) {
     return NextResponse.json({ error: "Confidential access has not been granted for this pursuit." }, { status: 404 })
   }

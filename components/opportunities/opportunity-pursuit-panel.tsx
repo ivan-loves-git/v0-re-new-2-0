@@ -18,6 +18,7 @@ import {
   passOpportunityPursuitGate1,
   passOpportunityPursuitGate2,
   qualifyOpportunityPursuit,
+  requestOpportunityPursuitQualification,
   recordOpportunityPursuitDispatch,
   runOpportunityPursuitJourneyAction,
   transitionOpportunityPursuit,
@@ -110,7 +111,8 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
           {projection?.blockers.length ? <Alert><LockKeyhole /><AlertTitle>Current blockers</AlertTitle><AlertDescription><ul className="list-disc space-y-1 pl-5">{projection.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul></AlertDescription></Alert> : null}
           {message ? <p role={message.tone === "error" ? "alert" : "status"} className={message.tone === "error" ? "text-sm text-destructive" : "text-sm text-emerald-700 dark:text-emerald-400"}>{message.text}</p> : null}
           {activeMatch && projection ? <div className="flex flex-wrap gap-2">
-            {nextAction === "qualify" ? <Button disabled={pending} onClick={() => run(() => qualifyOpportunityPursuit(activeMatch.id))}><CheckCircle2 data-icon="inline-start" />{pending ? "Recording..." : "Record qualification"}</Button> : null}
+            {nextAction === "request_qualification" ? <Button disabled={pending} onClick={() => run(() => requestOpportunityPursuitQualification(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Recording..." : "Record qualification request"}</Button> : null}
+            {nextAction === "qualify" ? <Button disabled={pending} onClick={() => run(() => qualifyOpportunityPursuit(activeMatch.id))}><CheckCircle2 data-icon="inline-start" />{pending ? "Recording..." : "Record intermediary qualification"}</Button> : null}
             {nextAction === "validate_template" ? <Button disabled={pending || !currentTemplate} onClick={() => currentTemplate && run(() => validateOpportunityPursuitTemplate(activeMatch.id, currentTemplate.id))}><FileCheck2 data-icon="inline-start" />{pending ? "Validating..." : "Validate blank template"}</Button> : null}
             {nextAction === "pass_gate_1" ? <Button disabled={pending} onClick={() => run(() => passOpportunityPursuitGate1(activeMatch.id))}><ShieldCheck data-icon="inline-start" />{pending ? "Recording..." : "Pass Gate 1"}</Button> : null}
             {nextAction === "validate_renew_copy" ? <Button disabled={pending || !currentRenew} onClick={() => currentRenew && run(() => validateOpportunityPursuitSignedCopy(activeMatch.id, "renew", currentRenew.id))}><FileCheck2 data-icon="inline-start" />{pending ? "Validating..." : "Validate Re-New copy"}</Button> : null}

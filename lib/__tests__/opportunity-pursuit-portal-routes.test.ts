@@ -39,7 +39,7 @@ describe("canonical portal pursuit routes", () => {
       enabled: true,
       gate2Passed: true,
       revoked: false,
-      confidentialGrant: { information_memo_document_id: "memo-granted" },
+      confidentialGrant: { informationMemoDocumentId: "memo-granted" },
     })
 
     const response = await getInformationMemo(

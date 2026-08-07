@@ -51,7 +51,7 @@ describe("staff portal preview confidential route", () => {
       gate2Passed: true,
       dispatched: true,
       revoked: false,
-      confidentialGrant: { information_memo_document_id: "memo-granted" },
+      confidentialGrant: { informationMemoDocumentId: "memo-granted" },
     })
 
     expect((await requestPreview()).status).toBe(404)
@@ -67,7 +67,7 @@ describe("staff portal preview confidential route", () => {
       gate2Passed: true,
       dispatched: true,
       revoked: true,
-      confidentialGrant: { information_memo_document_id: "memo-1" },
+      confidentialGrant: { informationMemoDocumentId: "memo-1" },
     })
 
     expect((await requestPreview()).status).toBe(404)

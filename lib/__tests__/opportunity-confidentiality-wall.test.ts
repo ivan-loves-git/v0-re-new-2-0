@@ -60,7 +60,7 @@ describe("opportunity confidentiality wall", () => {
   it("opens signed memo routes as documents instead of app-navigation prefetches", () => {
     const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
-    expect(detail).toContain('<a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.information_memo_document_id}`}>')
+    expect(detail).toContain('<a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.informationMemoDocumentId}`}>')
     expect(detail).not.toContain("<Link href=")
   })
 

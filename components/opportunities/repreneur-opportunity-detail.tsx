@@ -29,7 +29,15 @@ interface RepreneurOpportunityDetailProps {
     gate1Passed: boolean
     gate2Passed: boolean
     dispatched: boolean
-    confidentialGrant: { information_memo_document_id: string } | null
+    confidentialGrant: {
+      informationMemoDocumentId: string
+      grantedAt: string
+      source: {
+        firmName: string
+        officeName: string
+        contactNames: string[]
+      }
+    } | null
     revoked: boolean
     evidenceRequired: boolean
   } | null
@@ -223,7 +231,7 @@ export function RepreneurOpportunityDetail({
               {!journey.gate2Passed && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
             </> : null}
 
-            {memoAvailable && journey?.confidentialGrant ? <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Information memorandum (IM)</p><p className="text-xs text-muted-foreground">This exact IM was explicitly granted to this pursuit.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.information_memo_document_id}`}><Download data-icon="inline-start" />Download IM</a></Button></div> : null}
+            {memoAvailable && journey?.confidentialGrant ? <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Information memorandum (IM)</p><p className="text-xs text-muted-foreground">This exact IM was explicitly granted to this pursuit.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.informationMemoDocumentId}`}><Download data-icon="inline-start" />Download IM</a></Button></div> : null}
           </CardContent>
         </Card>
       )}
