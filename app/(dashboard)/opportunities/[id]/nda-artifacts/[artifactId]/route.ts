@@ -8,7 +8,7 @@ function privateRedirect(location: string) {
   return response
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
   await requireStaffAccess()
   const { id: opportunityId, artifactId } = await context.params
   const supabase = createAdminClient()
@@ -29,7 +29,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
   const { data: document, error: documentError } = await supabase
     .from("opportunity_documents")
-    .select("storage_bucket, storage_path")
+    .select("storage_bucket, storage_path, file_name")
     .eq("id", artifact.document_id)
     .eq("opportunity_id", opportunityId)
     .eq("document_type", "nda")
@@ -47,9 +47,13 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "Artifact file is unavailable." }, { status: 404 })
   }
 
-  const { data: signedUrl, error: signedUrlError } = await supabase.storage
-    .from(document.storage_bucket || "opportunity-documents")
-    .createSignedUrl(document.storage_path, 60)
+  const storage = supabase.storage.from(document.storage_bucket || "opportunity-documents")
+  const shouldDownload = new URL(request.url).searchParams.has("download")
+  const { data: signedUrl, error: signedUrlError } = shouldDownload
+    ? await storage.createSignedUrl(document.storage_path, 60, {
+        download: document.file_name || true,
+      })
+    : await storage.createSignedUrl(document.storage_path, 60)
 
   if (signedUrlError) {
     return NextResponse.json({ error: signedUrlError.message }, { status: 500 })

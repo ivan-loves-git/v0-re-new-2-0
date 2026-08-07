@@ -79,7 +79,7 @@ describe("canonical portal pursuit routes", () => {
     mocks.getPortalAuthorizedNdaTemplate.mockResolvedValue({
       documentId: "template-document-v2",
       storageBucket: "opportunity-documents",
-      storagePath: "opportunity-1/nda-artifacts/blank_template/template-v2.pdf",
+      storagePath: "opportunity-1/nda-artifacts/blank_template/template-v2.docx",
     })
     const { createSignedUrl, storageFrom } = setupTemplateDownload()
 
@@ -93,8 +93,9 @@ describe("canonical portal pursuit routes", () => {
     expect(mocks.getPortalAuthorizedNdaTemplate).toHaveBeenCalledWith("match-1")
     expect(storageFrom).toHaveBeenCalledWith("opportunity-documents")
     expect(createSignedUrl).toHaveBeenCalledWith(
-      "opportunity-1/nda-artifacts/blank_template/template-v2.pdf",
+      "opportunity-1/nda-artifacts/blank_template/template-v2.docx",
       60,
+      { download: true },
     )
   })
 })

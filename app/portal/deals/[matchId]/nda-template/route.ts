@@ -19,7 +19,7 @@ export async function GET(_request: Request, context: { params: Promise<{ matchI
   const supabase = createAdminClient()
   const { data: signedUrl, error: signedUrlError } = await supabase.storage
     .from(template.storageBucket)
-    .createSignedUrl(template.storagePath, 60)
+    .createSignedUrl(template.storagePath, 60, { download: true })
   if (signedUrlError) return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
   return privateRedirect(signedUrl.signedUrl)
 }

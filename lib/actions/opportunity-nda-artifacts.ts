@@ -14,6 +14,8 @@ const ARTIFACT_ROLES = new Set<OpportunityNdaArtifactRole>([
   "blank_template",
   "renew_signed_copy",
 ])
+const PDF_MIME_TYPE = "application/pdf"
+const DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 function readString(formData: FormData, key: string): string | null {
   const value = formData.get(key)
@@ -33,6 +35,24 @@ function safeFileName(fileName: string) {
 
 function isArtifactRole(value: string | null): value is OpportunityNdaArtifactRole {
   return Boolean(value && ARTIFACT_ROLES.has(value as OpportunityNdaArtifactRole))
+}
+
+function artifactMimeType(role: OpportunityNdaArtifactRole, file: File) {
+  const lowerName = file.name.toLowerCase()
+  const expectedMimeType = lowerName.endsWith(".pdf")
+    ? PDF_MIME_TYPE
+    : lowerName.endsWith(".docx") && role === "blank_template"
+      ? DOCX_MIME_TYPE
+      : null
+
+  if (!expectedMimeType || (file.type && file.type !== expectedMimeType)) {
+    if (role === "blank_template") {
+      throw new Error("The blank NDA template must be a PDF or DOCX file")
+    }
+    throw new Error("Signed NDA copies must be PDF files")
+  }
+
+  return expectedMimeType
 }
 
 export async function listOpportunityNdaArtifacts(opportunityId: string): Promise<OpportunityNdaArtifact[]> {
@@ -76,15 +96,13 @@ export async function registerOpportunityNdaArtifact(formData: FormData) {
     throw new Error("A signed NDA copy requires an active pursuit")
   }
   if (!(file instanceof File) || file.size <= 0) {
-    throw new Error("Upload one PDF file")
+    throw new Error(artifactRole === "blank_template" ? "Upload one PDF or DOCX template" : "Upload one signed PDF file")
   }
 
   if (file.size > MAX_DOCUMENT_BYTES) {
     throw new Error("NDA artifacts must be smaller than 4MB")
   }
-  if (!file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf")) {
-    throw new Error("NDA artifacts must be PDF files")
-  }
+  const mimeType = artifactMimeType(artifactRole, file)
 
   const fileBuffer = Buffer.from(await file.arrayBuffer())
   const contentSha256 = createHash("sha256").update(fileBuffer).digest("hex")
@@ -93,7 +111,7 @@ export async function registerOpportunityNdaArtifact(formData: FormData) {
   const { error: uploadError } = await supabase.storage
     .from(OPPORTUNITY_DOCUMENTS_BUCKET)
     .upload(storagePath, fileBuffer, {
-      contentType: "application/pdf",
+      contentType: mimeType,
       upsert: false,
     })
 

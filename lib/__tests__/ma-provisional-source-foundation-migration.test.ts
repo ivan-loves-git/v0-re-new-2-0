@@ -245,7 +245,7 @@ describe("W-064 provisional Acme source foundation", () => {
   it("keeps the implementation and a synthetic-only rehearsal visible in the canonical contract", () => {
     expect(contract).toContain("W-064, provisional source foundation")
     expect(contract).toContain(
-      "Migrations 076 to 083 are live and schema-verified",
+      "Migrations 076 to 089 are live and schema-verified",
     )
     expect(contract).toContain(
       "W-064 and W-065 live and production-verified on 2026-07-27",

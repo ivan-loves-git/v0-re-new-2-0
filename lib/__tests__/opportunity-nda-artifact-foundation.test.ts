@@ -16,6 +16,7 @@ describe("W-043 canonical NDA artifact foundation", () => {
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
   const verifier = source("scripts/verify-ma-data-model-schema.sql")
   const rehearsal = source("scripts/rehearse-opportunity-nda-artifact-foundation.sql")
+  const journeyRehearsal = source("scripts/rehearse-canonical-pursuit-evidence.sql")
   const raceRunner = source("scripts/rehearse-opportunity-nda-artifact-foundation.sh")
 
   it("stores the three approved roles in distinct opportunity and pursuit scopes", () => {
@@ -53,12 +54,28 @@ describe("W-043 canonical NDA artifact foundation", () => {
     expect(actions).toContain("upsert: false")
     expect(actions).not.toContain("p_external_url")
     expect(manager).toContain("Retained version history")
-    expect(manager).toContain("Upload one retained PDF file")
+    expect(manager).toContain("Upload one retained PDF or DOCX template")
+    expect(actions).toContain("Signed NDA copies must be PDF files")
+    expect(actions).toContain("The blank NDA template must be a PDF or DOCX file")
+    expect(actions).toContain("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    expect(actions).toContain("contentType: mimeType")
     expect(manager).toContain("4 MB")
     expect(actions).toContain("4 * 1024 * 1024")
     expect(manager).not.toContain("external_url")
     expect(manager).not.toContain("Delete")
     expect(manager).not.toContain("Replace")
+  })
+
+  it("allows DOCX only for the blank opportunity template", () => {
+    const docxMigration = source("scripts/090_blank_nda_docx_template.sql")
+
+    expect(docxMigration).toContain("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    expect(docxMigration).toContain("Stored blank NDA templates must be PDF or DOCX files.")
+    expect(docxMigration).toContain("Signed NDA artifacts must be PDFs.")
+    expect(docxMigration).toContain("journey_repreneur_authorized_template")
+    expect(manager).toContain("PDF or DOCX file")
+    expect(manager).toContain("canView: artifact.document?.mime_type !==")
+    expect(journeyRehearsal).toContain("090_blank_nda_docx_template.sql")
   })
 
   it("keeps browser roles out and service writes behind the RPC", () => {
@@ -163,6 +180,8 @@ describe("W-043 canonical NDA artifact foundation", () => {
     expect(rehearsal).toContain("requires one active staff identity")
     expect(rehearsal).toContain("require a SHA-256 content digest")
     expect(rehearsal).toContain("must be PDF")
+    expect(journeyRehearsal).toContain("Signed NDA artifacts must be PDFs")
+    expect(journeyRehearsal).toContain("DOCX blank template")
     expect(rehearsal).toContain("storage paths must be unique")
     expect(rehearsal).toContain("retained canonical NDA evidence")
     expect(raceRunner).toContain("immutable-path boundaries")

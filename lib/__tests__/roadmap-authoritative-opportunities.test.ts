@@ -107,6 +107,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-07")')
+    expect(roadmapStatus).toContain('new Date("2026-08-08")')
   })
 })

@@ -24,6 +24,9 @@ interface ArtifactRoleDefinition {
   title: string
   description: string
   defaultTitle: string
+  acceptedFileLabel: string
+  acceptedFileTypes: string
+  uploadHelp: string
 }
 
 const ARTIFACT_ROLES: ArtifactRoleDefinition[] = [
@@ -32,12 +35,18 @@ const ARTIFACT_ROLES: ArtifactRoleDefinition[] = [
     title: "Blank NDA template",
     description: "Opportunity-level source document. This is not proof that either party has signed.",
     defaultTitle: "Blank NDA template",
+    acceptedFileLabel: "PDF or DOCX file",
+    acceptedFileTypes: "application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx",
+    uploadHelp: "Upload one retained PDF or DOCX template. Files are limited to 4 MB.",
   },
   {
     role: "renew_signed_copy",
     title: "Re-New-signed copy",
     description: "Pursuit-level copy carrying Re-New’s signature. It does not prove the repreneur has signed.",
     defaultTitle: "NDA signed by Re-New",
+    acceptedFileLabel: "PDF file",
+    acceptedFileTypes: "application/pdf,.pdf",
+    uploadHelp: "Upload one retained PDF file. Files are limited to 4 MB.",
   },
   {
     role: "repreneur_signed_copy",
@@ -45,6 +54,9 @@ const ARTIFACT_ROLES: ArtifactRoleDefinition[] = [
     description:
       "Pursuit-level copy carrying the repreneur’s signature. Gate validation remains a separate staff action.",
     defaultTitle: "NDA signed by repreneur",
+    acceptedFileLabel: "PDF file",
+    acceptedFileTypes: "application/pdf,.pdf",
+    uploadHelp: "Upload one retained PDF file. Files are limited to 4 MB.",
   },
 ]
 
@@ -171,12 +183,12 @@ export function OpportunityNdaArtifactManager({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor={`${definition.role}-file`}>PDF file</Label>
+                    <Label htmlFor={`${definition.role}-file`}>{definition.acceptedFileLabel}</Label>
                     <Input
                       id={`${definition.role}-file`}
                       name="file"
                       type="file"
-                      accept="application/pdf,.pdf"
+                      accept={definition.acceptedFileTypes}
                       required
                     />
                   </div>
@@ -187,7 +199,7 @@ export function OpportunityNdaArtifactManager({
                 </form>
 
                 <p className="text-xs text-muted-foreground">
-                  Upload one retained PDF file. Files are limited to 4 MB.
+                  {definition.uploadHelp}
                 </p>
               </>
             )}
@@ -226,7 +238,10 @@ export function OpportunityNdaArtifactManager({
                       </div>
                     </div>
                     <DocumentRowActions
-                      policy={getOpportunityDocumentPolicy("nda", true)}
+                      policy={{
+                        ...getOpportunityDocumentPolicy("nda", true),
+                        canView: artifact.document?.mime_type !== "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                      }}
                       state="locked"
                       viewHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`}
                       downloadHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}?download`}

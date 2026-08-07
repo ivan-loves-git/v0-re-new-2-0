@@ -20,12 +20,14 @@ function setupAdminClient({
   document = {
     storage_bucket: "opportunity-documents",
     storage_path: "opportunity-1/nda-artifacts/blank_template/blank.pdf",
+    file_name: "blank.pdf",
   },
 }: {
   artifact?: { document_id: string } | null
   document?: {
     storage_bucket: string
     storage_path: string | null
+    file_name: string
   } | null
 } = {}) {
   const artifactMaybeSingle = vi.fn().mockResolvedValue({
@@ -73,8 +75,9 @@ function setupAdminClient({
   return { createSignedUrl, documentSelect }
 }
 
-function requestArtifact() {
-  return GET(new Request("http://localhost/opportunities/opportunity-1/nda-artifacts/artifact-1"), {
+function requestArtifact(download = false) {
+  const suffix = download ? "?download" : ""
+  return GET(new Request(`http://localhost/opportunities/opportunity-1/nda-artifacts/artifact-1${suffix}`), {
     params: Promise.resolve({
       id: "opportunity-1",
       artifactId: "artifact-1",
@@ -120,11 +123,31 @@ describe("staff NDA artifact route", () => {
     expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.pdf", 60)
   })
 
+  it("downloads a retained DOCX with its original file name", async () => {
+    const { createSignedUrl } = setupAdminClient({
+      document: {
+        storage_bucket: "opportunity-documents",
+        storage_path: "opportunity-1/nda-artifacts/blank_template/blank.docx",
+        file_name: "Blank NDA.docx",
+      },
+    })
+
+    const response = await requestArtifact(true)
+
+    expect(response.status).toBe(307)
+    expect(createSignedUrl).toHaveBeenCalledWith(
+      "opportunity-1/nda-artifacts/blank_template/blank.docx",
+      60,
+      { download: "Blank NDA.docx" },
+    )
+  })
+
   it("refuses a canonical artifact without retained private storage", async () => {
     const { createSignedUrl } = setupAdminClient({
       document: {
         storage_bucket: "opportunity-documents",
         storage_path: null,
+        file_name: "blank.pdf",
       },
     })
 

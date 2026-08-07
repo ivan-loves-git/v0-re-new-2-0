@@ -43,6 +43,7 @@ INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,v
 
 \ir 082_opportunity_nda_artifact_foundation.sql
 \ir 088_canonical_pursuit_evidence_and_confidentiality.sql
+\ir 090_blank_nda_docx_template.sql
 DO $$ BEGIN
   IF has_function_privilege('anon','public.journey_grant_confidential_access(uuid,uuid,text,text,timestamp with time zone)','EXECUTE')
     OR has_function_privilege('authenticated','public.journey_grant_confidential_access(uuid,uuid,text,text,timestamp with time zone)','EXECUTE')
@@ -65,9 +66,9 @@ SELECT public.test_assert_raises($$SELECT public.journey_record_evidence('400000
 SELECT public.journey_start_pursuit('40000000-0000-4000-8000-000000000001','staff@test.invalid','test:start');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','qualification_requested','staff@test.invalid','test:request');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','intermediary_qualified','staff@test.invalid','test:qualified');
-SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST blank','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test.pdf','test.pdf',1,repeat('a',64),'staff@test.invalid');
+SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST DOCX blank template','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test.docx','test.docx',1,repeat('a',64),'staff@test.invalid');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:template',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template'));
-SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST blank replacement','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test-v2.pdf','test-v2.pdf',1,repeat('e',64),'staff@test.invalid');
+SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST DOCX blank template replacement','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test-v2.docx','test-v2.docx',1,repeat('e',64),'staff@test.invalid');
 DO $$ BEGIN
   IF EXISTS(SELECT 1 FROM public.journey_repreneur_authorized_template('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001')) THEN
     RAISE EXCEPTION 'A superseding unvalidated template remained downloadable';
@@ -76,6 +77,7 @@ END $$;
 SELECT public.test_assert_raises($$SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','gate_1_passed','staff@test.invalid','test:stale-gate1')$$,'exact current-template validation');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:template-v2',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template' ORDER BY version_number DESC LIMIT 1));
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','gate_1_passed','staff@test.invalid','test:gate1');
+SELECT public.test_assert_raises($$SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','renew_signed_copy','TEST invalid DOCX signed copy','20000000-0000-4000-8000-000000000001/nda-artifacts/renew_signed_copy/invalid.docx','invalid.docx',1,repeat('9',64),'staff@test.invalid')$$,'Signed NDA artifacts must be PDFs');
 DO $$ DECLARE v_template RECORD; BEGIN
   SELECT * INTO v_template FROM public.journey_repreneur_authorized_template('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001');
   IF v_template.document_id IS DISTINCT FROM (SELECT document_id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template' ORDER BY version_number DESC LIMIT 1) THEN

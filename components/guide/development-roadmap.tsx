@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 8, 2026",
+    version: "0.9.40",
+    title: "Blank NDA templates can keep their Word format",
+    isCompleted: true,
+    events: [
+      {
+        title: "Staff can retain the intermediary's original template format",
+        type: "feature",
+        description: "A blank NDA template may now be uploaded as PDF or Word, and the active repreneur downloads the exact version released through Gate 1.",
+      },
+      {
+        title: "Final evidence remains simple and fixed",
+        type: "decision",
+        description: "Signed NDA copies and the Information Memorandum remain PDF-only. Editing, conversion and signing still happen outside WAVE.",
+      },
+    ],
+  },
+  {
     period: "Aug 7, 2026",
     version: "0.9.39",
     title: "The opportunity-to-memo journey is now controlled end to end",

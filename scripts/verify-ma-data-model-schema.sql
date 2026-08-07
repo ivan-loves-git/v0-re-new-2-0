@@ -383,8 +383,23 @@ SELECT
           OR document.storage_path IS NULL
           OR document.external_url IS NOT NULL
           OR document.file_name IS NULL
-          OR LOWER(document.file_name) NOT LIKE '%.pdf'
-          OR document.mime_type <> 'application/pdf'
+          OR (
+            artifact.artifact_role = 'blank_template'
+            AND NOT (
+              (LOWER(document.file_name) LIKE '%.pdf' AND document.mime_type = 'application/pdf')
+              OR (
+                LOWER(document.file_name) LIKE '%.docx'
+                AND document.mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+              )
+            )
+          )
+          OR (
+            artifact.artifact_role IN ('renew_signed_copy', 'repreneur_signed_copy')
+            AND (
+              LOWER(document.file_name) NOT LIKE '%.pdf'
+              OR document.mime_type <> 'application/pdf'
+            )
+          )
           OR document.size_bytes IS NULL
           OR document.size_bytes <= 0
           OR document.storage_path NOT LIKE (
