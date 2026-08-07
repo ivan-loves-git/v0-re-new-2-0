@@ -11,7 +11,7 @@ export async function GET(
   if (!projection?.enabled || projection.revoked || !projection.gate2Passed || !projection.confidentialGrant) {
     return NextResponse.json({ error: "Confidential access has not been granted for this pursuit." }, { status: 404 })
   }
-  if (projection.confidentialGrant.information_memo_document_id !== documentId) {
+  if (projection.confidentialGrant.informationMemoDocumentId !== documentId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
   const supabase = createAdminClient()
