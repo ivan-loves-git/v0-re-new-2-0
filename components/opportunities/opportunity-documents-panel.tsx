@@ -254,6 +254,7 @@ export function OpportunityDocumentsPanel({
                           policy={policy}
                           state={state}
                           viewHref={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`}
+                          downloadHref={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}?download`}
                           onMarkStaffOnly={() => handleVisibility(document.id, "staff_only")}
                           onMarkApproved={() => handleVisibility(document.id, "approved_for_repreneur")}
                           onRemove={() => handleRemove(document.id)}

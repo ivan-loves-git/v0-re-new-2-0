@@ -2,16 +2,11 @@
 
 import { useState, useRef } from "react"
 import {
-  Download,
-  ExternalLink,
   FileText,
   FolderOpen,
-  Loader2,
-  Trash2,
-  Upload,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { DocumentRowActions, type DocumentRowPolicy } from "@/components/opportunities/document-row-actions"
 import { toast } from "sonner"
 
 interface DocumentsCardProps {
@@ -25,6 +20,15 @@ interface DocumentRowProps {
   label: string
   field: "cv_url" | "ldc_url"
   url: string | null | undefined
+}
+
+const CV_LDC_DOCUMENT_POLICY: DocumentRowPolicy = {
+  canUpload: true,
+  canView: true,
+  canDownload: true,
+  canReplace: true,
+  canRemove: true,
+  canChangeVisibility: false,
 }
 
 function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
@@ -130,69 +134,15 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
-        {currentUrl ? (
-          <>
-            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
-              <a href={documentUrl} target="_blank" rel="noreferrer">
-                <ExternalLink className="size-3.5" />
-                <span className="hidden sm:inline">View</span>
-              </a>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
-              <a href={`${documentUrl}?download`}>
-                <Download className="size-3.5" />
-                <span className="hidden md:inline">Download</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              aria-label={`Replace ${label}`}
-              title={`Replace ${label}`}
-            >
-              {isUploading ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Upload className="size-3.5" />
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8 text-muted-foreground hover:text-red-500 hover:border-red-200"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              aria-label={`Delete ${label}`}
-              title={`Delete ${label}`}
-            >
-              {isDeleting ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="size-3.5" />
-              )}
-            </Button>
-          </>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
-            {isUploading ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Upload className="size-3.5" />
-            )}
-            <span>Upload</span>
-          </Button>
-        )}
-      </div>
+      <DocumentRowActions
+        policy={CV_LDC_DOCUMENT_POLICY}
+        state={isUploading || isDeleting ? "pending" : "available"}
+        viewHref={currentUrl ? documentUrl : undefined}
+        downloadHref={currentUrl ? `${documentUrl}?download` : undefined}
+        onUpload={!currentUrl ? () => fileInputRef.current?.click() : undefined}
+        onReplace={currentUrl ? () => fileInputRef.current?.click() : undefined}
+        onRemove={currentUrl ? handleDelete : undefined}
+      />
     </div>
   )
 }

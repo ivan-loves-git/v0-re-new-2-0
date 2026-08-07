@@ -1,6 +1,6 @@
 "use client"
 
-import { Download, MoreHorizontal, Replace, Trash2, Upload } from "lucide-react"
+import { Download, Eye, MoreHorizontal, Replace, Trash2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -8,14 +8,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { OpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
-
 export type DocumentInteractionState = "available" | "locked" | "failed" | "pending"
 
+/**
+ * A deliberately domain-neutral capability set. Opportunity policies and
+ * repreneur CV/LdC rows both map their existing behavior into this vocabulary.
+ */
+export interface DocumentRowPolicy {
+  canUpload: boolean
+  canView: boolean
+  canDownload: boolean
+  canReplace: boolean
+  canRemove: boolean
+  canChangeVisibility: boolean
+}
+
 interface DocumentRowActionsProps {
-  policy: OpportunityDocumentPolicy
+  policy: DocumentRowPolicy
   state: DocumentInteractionState
   viewHref?: string
+  downloadHref?: string
   onUpload?: () => void
   onReplace?: () => void
   onMarkStaffOnly?: () => void
@@ -32,6 +44,7 @@ export function DocumentRowActions({
   policy,
   state,
   viewHref,
+  downloadHref,
   onUpload,
   onReplace,
   onMarkStaffOnly,
@@ -41,8 +54,9 @@ export function DocumentRowActions({
   if (state === "failed") return <span className="text-xs text-destructive">Action failed</span>
   if (state === "pending") return <span className="text-xs text-muted-foreground">Saving…</span>
 
+  const showDirectUpload = Boolean(!viewHref && policy.canUpload && onUpload)
   const hasMutations = Boolean(
-    (policy.canUpload && onUpload) ||
+    (!showDirectUpload && policy.canUpload && onUpload) ||
       (policy.canReplace && onReplace) ||
       (policy.canChangeVisibility && (onMarkStaffOnly || onMarkApproved)) ||
       (policy.canRemove && onRemove),
@@ -53,12 +67,26 @@ export function DocumentRowActions({
       {policy.canView && viewHref && (
         <Button asChild variant="ghost" size="sm" className="h-8">
           <a href={viewHref} target="_blank" rel="noreferrer">
+            <Eye className="size-4" />
+            View
+          </a>
+        </Button>
+      )}
+      {policy.canDownload && downloadHref && (
+        <Button asChild variant="ghost" size="sm" className="h-8">
+          <a href={downloadHref}>
             <Download className="size-4" />
-            {policy.canDownload ? "View or download" : "View"}
+            Download
           </a>
         </Button>
       )}
       {state === "locked" && <span className="text-xs text-muted-foreground">Locked</span>}
+      {showDirectUpload && (
+        <Button type="button" variant="outline" size="sm" onClick={onUpload}>
+          <Upload className="size-4" />
+          Upload
+        </Button>
+      )}
       {hasMutations && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
