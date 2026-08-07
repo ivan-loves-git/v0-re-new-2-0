@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { projectOpportunityPursuitEvidence, type OpportunityPursuitEvidence, type OpportunityPursuitJourneyAction } from "@/lib/opportunity-pursuit-evidence"
 
 export interface PursuitArtifactProjection { id: string; artifact_role: string; version_number: number; document_id: string; recorded_at: string }
-export interface PursuitConfidentialGrantProjection { information_memo_document_id: string; source_disclosed_at: string; revoked_at?: string | null; revoked_reason?: string | null }
+export interface PursuitConfidentialGrantProjection { information_memo_document_id: string; source_disclosed_at: string; source_firm_id: string; source_firm_name: string; source_office_id: string; source_office_name: string; disclosed_contacts: Array<{ opportunity_contact_id: string; contact_id: string; name: string; email?: string | null }>; revoked_at?: string | null; revoked_reason?: string | null }
 export interface OpportunityPursuitProjectionView {
   matchId: string; opportunityId: string; repreneurId: string; enabled: boolean; status: string
   entries: OpportunityPursuitEvidence[]; currentTemplate: PursuitArtifactProjection | null
@@ -27,7 +27,7 @@ async function loadProjection(matchId: string): Promise<OpportunityPursuitProjec
     supabase.from("opportunity_pursuit_evidence").select("*").eq("match_id", matchId).order("recorded_at", { ascending: true }),
     supabase.from("opportunity_nda_artifacts").select("id, artifact_role, version_number, document_id, recorded_at").eq("match_id", matchId).order("version_number", { ascending: false }),
     supabase.from("opportunity_nda_artifacts").select("id, artifact_role, version_number, document_id, recorded_at").eq("opportunity_id", match.opportunity_id).is("match_id", null).eq("artifact_role", "blank_template").order("version_number", { ascending: false }).limit(1),
-    supabase.from("opportunity_pursuit_confidential_grants").select("information_memo_document_id, source_disclosed_at, revoked_at, revoked_reason").eq("match_id", matchId).maybeSingle(),
+    supabase.from("opportunity_pursuit_confidential_grants").select("information_memo_document_id, source_disclosed_at, source_firm_id, source_firm_name, source_office_id, source_office_name, disclosed_contacts, revoked_at, revoked_reason").eq("match_id", matchId).maybeSingle(),
   ])
   const entries = (rows ?? []) as OpportunityPursuitEvidence[]
   const byRole = (role: string) => ((artifacts ?? []) as PursuitArtifactProjection[]).find((artifact) => artifact.artifact_role === role) ?? null
