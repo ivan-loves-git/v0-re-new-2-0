@@ -64,26 +64,35 @@ export async function runOpportunityPursuitJourneyAction(input: {
   }
 }
 
-export const qualifyOpportunityPursuit = (matchId: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "qualify", idempotencyKey })
-export const requestOpportunityPursuitQualification = (matchId: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "request_qualification", idempotencyKey })
+export async function qualifyOpportunityPursuit(matchId: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: "qualify", idempotencyKey })
+}
+export async function requestOpportunityPursuitQualification(matchId: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: "request_qualification", idempotencyKey })
+}
 export async function startOpportunityPursuit(matchId: string, evidenceReference?: string, idempotencyKey = randomUUID()): Promise<OpportunityPursuitJourneyResult> {
   const staff = await requireStaffAccess()
   const { data, error } = await createAdminClient().rpc("journey_start_pursuit", { p_match_id: matchId, p_actor: staff.user.email, p_idempotency_key: idempotencyKey, p_evidence_reference: evidenceReference ?? null })
   return error ? { success: false, message: error.message } : { success: true, message: "Active pursuit started.", eventId: data }
 }
-export const validateOpportunityPursuitTemplate = (matchId: string, artifactId: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "validate_template", artifactId, idempotencyKey })
-export const passOpportunityPursuitGate1 = (matchId: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "pass_gate_1", idempotencyKey })
-export const validateOpportunityPursuitSignedCopy = (matchId: string, role: "renew" | "repreneur", artifactId: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: role === "renew" ? "validate_renew_copy" : "validate_repreneur_copy", artifactId, idempotencyKey })
-export const passOpportunityPursuitGate2 = (matchId: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "pass_gate_2", idempotencyKey })
-export const recordOpportunityPursuitDispatch = (matchId: string, reference?: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "record_dispatch", reason: reference, idempotencyKey })
-export const grantOpportunityPursuitConfidentialAccess = (matchId: string, documentId: string, ndaExpiresAt: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action: "grant_confidential_access", documentId, ndaExpiresAt, idempotencyKey })
-export const transitionOpportunityPursuit = (matchId: string, action: Extract<OpportunityPursuitJourneyAction, "continue" | "drop" | "reopen" | "complete">, reason?: string, idempotencyKey?: string) =>
-  runOpportunityPursuitJourneyAction({ matchId, action, reason, idempotencyKey })
+export async function validateOpportunityPursuitTemplate(matchId: string, artifactId: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: "validate_template", artifactId, idempotencyKey })
+}
+export async function passOpportunityPursuitGate1(matchId: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: "pass_gate_1", idempotencyKey })
+}
+export async function validateOpportunityPursuitSignedCopy(matchId: string, role: "renew" | "repreneur", artifactId: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: role === "renew" ? "validate_renew_copy" : "validate_repreneur_copy", artifactId, idempotencyKey })
+}
+export async function passOpportunityPursuitGate2(matchId: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: "pass_gate_2", idempotencyKey })
+}
+export async function recordOpportunityPursuitDispatch(matchId: string, reference?: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: "record_dispatch", reason: reference, idempotencyKey })
+}
+export async function grantOpportunityPursuitConfidentialAccess(matchId: string, documentId: string, ndaExpiresAt: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action: "grant_confidential_access", documentId, ndaExpiresAt, idempotencyKey })
+}
+export async function transitionOpportunityPursuit(matchId: string, action: Extract<OpportunityPursuitJourneyAction, "continue" | "drop" | "reopen" | "complete">, reason?: string, idempotencyKey?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action, reason, idempotencyKey })
+}
