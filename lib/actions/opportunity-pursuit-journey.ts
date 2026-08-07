@@ -8,7 +8,7 @@ import type { OpportunityPursuitJourneyAction } from "@/lib/opportunity-pursuit-
 export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string } | { success: false; message: string }
 
 const evidenceAction: Partial<Record<OpportunityPursuitJourneyAction, string>> = {
-  qualify: "intermediary_qualified", validate_template: "template_validated", pass_gate_1: "gate_1_passed",
+  request_qualification: "qualification_requested", qualify: "intermediary_qualified", validate_template: "template_validated", pass_gate_1: "gate_1_passed",
   validate_renew_copy: "renew_signed_copy_validated", validate_repreneur_copy: "repreneur_signed_copy_validated",
   pass_gate_2: "gate_2_passed", record_dispatch: "manual_package_dispatched",
 }

@@ -16,6 +16,7 @@ describe("projectOpportunityPursuitEvidence", () => {
       enabled: true, status: "active_pursuit", currentRenewArtifactId: renew, currentRepreneurArtifactId: repreneur,
       events: [
         { id: "cycle", event_type: "mutual_interest_validated", nda_artifact_id: null },
+        { event_type: "qualification_requested", nda_artifact_id: null },
         { event_type: "intermediary_qualified", nda_artifact_id: null },
         { event_type: "template_validated", nda_artifact_id: null },
         { event_type: "gate_1_passed", nda_artifact_id: null },
@@ -34,6 +35,7 @@ describe("projectOpportunityPursuitEvidence", () => {
       enabled: true, status: "active_pursuit", currentRenewArtifactId: renew, currentRepreneurArtifactId: repreneur,
       events: [
         { id: "cycle", event_type: "mutual_interest_validated", nda_artifact_id: null },
+        { event_type: "qualification_requested", nda_artifact_id: null },
         { event_type: "intermediary_qualified", nda_artifact_id: null },
         { event_type: "template_validated", nda_artifact_id: null },
         { event_type: "gate_1_passed", nda_artifact_id: null },
