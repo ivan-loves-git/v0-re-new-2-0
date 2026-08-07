@@ -38,6 +38,7 @@ export type OpportunityMatchStatus =
   | "declined"
   | "active_pursuit"
   | "dropped"
+  | "completed"
 
 export type OpportunityPursuitStage =
   | "interest"
@@ -164,6 +165,7 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
   { value: "declined", label: "Declined" },
   { value: "active_pursuit", label: "Active pursuit" },
   { value: "dropped", label: "Dropped" },
+  { value: "completed", label: "Completed" },
 ] as const
 
 export const OPPORTUNITY_PURSUIT_STAGE_OPTIONS = [
