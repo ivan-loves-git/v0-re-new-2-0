@@ -9,13 +9,13 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
-    WHERE conname = 'opportunity_documents_source_teaser_staff_only'
+    WHERE conname = 'opportunity_documents_retained_staff_only'
       AND conrelid = 'public.opportunity_documents'::regclass
   ) THEN
     ALTER TABLE public.opportunity_documents
-      ADD CONSTRAINT opportunity_documents_source_teaser_staff_only
+      ADD CONSTRAINT opportunity_documents_retained_staff_only
       CHECK (
-        document_type <> 'source_teaser'
+        document_type::TEXT NOT IN ('source_teaser', 'deal_book')
         OR visibility = 'staff_only'
       ) NOT VALID;
   END IF;
@@ -27,7 +27,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  IF OLD.document_type IN ('source_teaser', 'deal_book') THEN
+  IF OLD.document_type::TEXT IN ('source_teaser', 'deal_book') THEN
     RAISE EXCEPTION
       'Retained % documents cannot be deleted; upload a corrected version instead.',
       OLD.document_type;
@@ -43,8 +43,8 @@ CREATE TRIGGER opportunity_documents_retain_source_and_im
   FOR EACH ROW
   EXECUTE FUNCTION public.prevent_retained_opportunity_document_delete();
 
-COMMENT ON CONSTRAINT opportunity_documents_source_teaser_staff_only
+COMMENT ON CONSTRAINT opportunity_documents_retained_staff_only
   ON public.opportunity_documents IS
-  'Source teasers are permanent staff-only evidence and cannot be promoted.';
+  'Source teasers and Information Memoranda are permanent staff-only evidence; pursuit grants are separate.';
 COMMENT ON FUNCTION public.prevent_retained_opportunity_document_delete() IS
   'Source teasers and Information Memoranda are retained. Corrections create new document rows.';
