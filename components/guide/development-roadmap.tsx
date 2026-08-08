@@ -26,6 +26,34 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 8, 2026",
+    version: "0.9.42",
+    title: "M&A relationship work is now a first-class staff workspace",
+    isCompleted: true,
+    events: [
+      {
+        title: "Activity, firms and contacts are directly reachable",
+        type: "feature",
+        description: "Staff can enter each M&A operating area from its own sidebar destination while existing relationship links continue to land safely.",
+      },
+      {
+        title: "Firm and office workload is visible without stored totals",
+        type: "feature",
+        description: "Expandable firm rows and dedicated firm and office workspaces derive current contacts, source opportunities, freshness, closings and latest opportunity dates from canonical records.",
+      },
+      {
+        title: "Manual evidence can no longer be mistaken for a WAVE send",
+        type: "decision",
+        description: "The shared activity history labels every row as Manual or System-recorded and claims delivery only when retained provider evidence confirms it.",
+      },
+      {
+        title: "Relationship changes remain office-centred and staff-controlled",
+        type: "decision",
+        description: "Notes retain staff audit evidence, contacts and opportunities remain attached to real offices, and no M&A relationship data is exposed to repreneurs.",
+      },
+    ],
+  },
+  {
+    period: "Aug 8, 2026",
     version: "0.9.41",
     title: "Staff forms now explain and resolve missing information",
     isCompleted: true,

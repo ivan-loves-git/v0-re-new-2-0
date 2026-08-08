@@ -29,7 +29,7 @@ describe("W-066 staff relationship workspace", () => {
   it("keeps legacy relationship links as safe aliases for the staff workspace", () => {
     expect(page).toContain("redirect(")
     expect(page).toContain('view === "firms" || view === "contacts"')
-    expect(page).toContain('`/opportunities/ma/${destination}`')
+    expect(page).toContain("`/opportunities/ma/${destination}`")
     expect(workspace).toContain("One chronological M&A relationship record")
     expect(workspace).toContain('idPrefix="desktop"')
     expect(workspace).toContain('idPrefix="mobile"')
@@ -102,17 +102,13 @@ describe("W-066 staff relationship workspace", () => {
     expect(rehearsal).toContain(
       "w066_acme_linked_interaction_rejection_missing",
     )
-    expect(rehearsal).toContain(
-      "w066_acme_resolution_remains_possible_missing",
-    )
+    expect(rehearsal).toContain("w066_acme_resolution_remains_possible_missing")
     expect(rehearsal).toContain(
       "w066_canonical_contact_multi_affiliation_fixture_missing",
     )
     expect(rehearsal).toContain("w066_pause_after_relationship_lock")
     const raceRunner = source("scripts/rehearse-ma-relationship-workspace.sh")
-    expect(raceRunner).toContain(
-      "W-066 two-session source-change races passed",
-    )
+    expect(raceRunner).toContain("W-066 two-session source-change races passed")
     expect(raceRunner).toContain(
       "ma_interaction_history_blocks_source_office_change",
     )
@@ -122,9 +118,7 @@ describe("W-066 staff relationship workspace", () => {
     expect(rehearsal).toContain(
       "w066_cross_office_affiliation_rejection_missing",
     )
-    expect(rehearsal).toContain(
-      "w066_clean_rerun_changed_relationship_history",
-    )
+    expect(rehearsal).toContain("w066_clean_rerun_changed_relationship_history")
     expect(workspace).toContain("Verify mine")
     expect(workspace).toMatch(
       /interaction\.ownerStaffUserId\s*===\s*workspace\.currentUserId/,
@@ -139,7 +133,7 @@ describe("W-066 staff relationship workspace", () => {
     expect(workspace).toContain("onValueChange={selectView}")
     expect(workspace).toContain("router.replace(")
     expect(workspace).toContain('"/opportunities/ma/activity"')
-    expect(workspace).toContain('`/opportunities/ma/${nextView}`')
+    expect(workspace).toContain("`/opportunities/ma/${nextView}`")
     expect(workspace).toContain("RelationshipFirmsDirectory")
     expect(workspace).toContain("RelationshipContactsDirectory")
     expect(workspace).toContain("workspace.offices")
@@ -228,6 +222,7 @@ describe("W-066 staff relationship workspace", () => {
     expect(workspace).toContain("Manual")
     expect(workspace).toContain("System-recorded")
     expect(workspace).toContain("No provider delivery evidence recorded")
+    expect(workspace).toContain("delivery unconfirmed")
     expect(workspace).not.toContain("sendMaSourceWorkflowEmail")
   })
 })

@@ -16,7 +16,8 @@ const pathNames: Record<string, string> = {
   analytics_op: "Analytics",
   repreneurs: "Repreneurs",
   opportunities: "Opportunities",
-  ma: "Relationships",
+  ma: "M&A",
+  activity: "Activity",
   firms: "Firms",
   contacts: "Contacts",
   pipeline: "Pipeline",
@@ -48,27 +49,53 @@ export function FloatingNav() {
   const pathname = usePathname()
   const { toggleSidebar, open, isMobile } = useSidebar()
 
-  // Generate breadcrumb items from pathname
   const segments = pathname.split("/").filter(Boolean)
+  const maDetailKind =
+    segments[0] === "opportunities" &&
+    segments[1] === "ma" &&
+    (segments[2] === "firms" || segments[2] === "offices") &&
+    /^[0-9a-f-]{36}$/i.test(segments[3] ?? "")
+      ? segments[2]
+      : null
 
-  // Filter out UUID segments and map to readable names
-  const breadcrumbItems = segments
-    .filter((segment) => !/^[0-9a-f-]{36}$/i.test(segment)) // Filter out UUIDs
-    .map((segment, index, filtered) => {
-      // Find the original index to build correct href
-      const originalIndex = segments.findIndex(
-        (s, i) =>
-          s === segment &&
-          segments.slice(0, i).filter((seg) => !/^[0-9a-f-]{36}$/i.test(seg))
-            .length === index,
-      )
-      const href = "/" + segments.slice(0, originalIndex + 1).join("/")
-      const name =
-        pathNames[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
-      const isLast = index === filtered.length - 1
+  const breadcrumbItems = maDetailKind
+    ? [
+        {
+          href: "/opportunities",
+          name: "Opportunities",
+          isLast: false,
+        },
+        { href: "/opportunities/ma", name: "M&A", isLast: false },
+        {
+          href: "/opportunities/ma/firms",
+          name: "Firms",
+          isLast: false,
+        },
+        {
+          href: pathname,
+          name: maDetailKind === "firms" ? "Firm detail" : "Office detail",
+          isLast: true,
+        },
+      ]
+    : segments
+        .filter((segment) => !/^[0-9a-f-]{36}$/i.test(segment))
+        .map((segment, index, filtered) => {
+          const originalIndex = segments.findIndex(
+            (s, i) =>
+              s === segment &&
+              segments
+                .slice(0, i)
+                .filter((seg) => !/^[0-9a-f-]{36}$/i.test(seg)).length ===
+                index,
+          )
+          const href = "/" + segments.slice(0, originalIndex + 1).join("/")
+          const name =
+            pathNames[segment] ||
+            segment.charAt(0).toUpperCase() + segment.slice(1)
+          const isLast = index === filtered.length - 1
 
-      return { href, name, isLast }
-    })
+          return { href, name, isLast }
+        })
   const contextualRoot =
     segments.length === 1 ? topLevelContexts[segments[0]] : undefined
   const visibleBreadcrumbItems = contextualRoot

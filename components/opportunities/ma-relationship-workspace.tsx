@@ -107,11 +107,13 @@ type MaRelationshipView = "timeline" | "firms" | "contacts"
 interface MaRelationshipWorkspaceProps {
   workspace: MaRelationshipWorkspace
   initialView?: MaRelationshipView
+  initialContactId?: string | null
 }
 
 export function MaRelationshipWorkspace({
   workspace,
   initialView = "timeline",
+  initialContactId = null,
 }: MaRelationshipWorkspaceProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -255,7 +257,8 @@ export function MaRelationshipWorkspace({
     },
     contacts: {
       title: "Contacts",
-      description: "Canonical M&A contacts and their active office affiliations.",
+      description:
+        "Canonical M&A contacts and their active office affiliations.",
     },
   }[activeView]
 
@@ -384,8 +387,7 @@ export function MaRelationshipWorkspace({
                         hasConfirmedProviderDelivery(interaction)
                       const mayVerify =
                         interaction.ownerVerificationState === "provisional" &&
-                        interaction.ownerStaffUserId ===
-                          workspace.currentUserId
+                        interaction.ownerStaffUserId === workspace.currentUserId
                       return (
                         <article
                           key={interaction.id}
@@ -423,7 +425,9 @@ export function MaRelationshipWorkspace({
                                   >
                                     {confirmedProviderDelivery
                                       ? "sent"
-                                      : interaction.deliveryStatus}
+                                      : interaction.deliveryStatus === "sent"
+                                        ? "delivery unconfirmed"
+                                        : interaction.deliveryStatus}
                                   </span>
                                 ) : null}
                                 {interaction.ownerVerificationState ===
@@ -547,6 +551,7 @@ export function MaRelationshipWorkspace({
           <RelationshipContactsDirectory
             contacts={workspace.contacts}
             offices={workspace.offices}
+            initialContactId={initialContactId}
           />
         </TabsContent>
       </Tabs>
@@ -947,9 +952,7 @@ function RelationshipFirmRow({
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <Button asChild size="sm" variant="ghost">
-              <Link href={`/opportunities/ma/firms/${firm.id}`}>
-                Open firm
-              </Link>
+              <Link href={`/opportunities/ma/firms/${firm.id}`}>Open firm</Link>
             </Button>
             <CollapsibleTrigger asChild>
               <Button
@@ -1071,10 +1074,15 @@ function RelationshipFirmsDirectory({
 function RelationshipContactsDirectory({
   contacts,
   offices,
-}: Pick<MaRelationshipWorkspace, "contacts" | "offices">) {
+  initialContactId,
+}: Pick<MaRelationshipWorkspace, "contacts" | "offices"> & {
+  initialContactId: string | null
+}) {
   const router = useRouter()
   const [isPolicyPending, startPolicyTransition] = useTransition()
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(
+    contacts.find((contact) => contact.id === initialContactId)?.label ?? "",
+  )
   const [policyContact, setPolicyContact] = useState<
     MaRelationshipWorkspace["contacts"][number] | null
   >(null)
@@ -1118,7 +1126,9 @@ function RelationshipContactsDirectory({
         reason: policyReason,
       })
       if (!result.success) {
-        toast.error("Email policy not changed", { description: result.message })
+        toast.error("Email policy not changed", {
+          description: result.message,
+        })
         return
       }
       toast.success(
@@ -1268,8 +1278,8 @@ function RelationshipContactsDirectory({
             </div>
             {policyContact?.campaignEmailSuppressed ? (
               <p className="text-xs text-muted-foreground">
-                Removing this block does not erase the original W-010 warning
-                or any earlier policy event.
+                Removing this block does not erase the original W-010 warning or
+                any earlier policy event.
               </p>
             ) : null}
           </div>
