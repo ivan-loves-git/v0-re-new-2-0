@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ExternalLink, FileText, Upload } from "lucide-react"
@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
@@ -19,6 +18,14 @@ import {
 } from "@/lib/actions/opportunity-documents"
 import { DocumentRowActions, type DocumentInteractionState } from "@/components/opportunities/document-row-actions"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
+import {
+  FieldError,
+  type FieldErrors,
+  fieldErrorProps,
+  focusValidationSummary,
+  FormFieldLabel,
+  ValidationSummary,
+} from "@/components/forms/validation-feedback"
 import {
   OPPORTUNITY_DOCUMENT_TYPE_OPTIONS,
   OPPORTUNITY_DOCUMENT_VISIBILITY_OPTIONS,
@@ -54,22 +61,44 @@ export function OpportunityDocumentsPanel({
 }: OpportunityDocumentsPanelProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const validationSummaryRef = useRef<HTMLDivElement>(null)
   const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null)
   const [documentType, setDocumentType] = useState<OpportunityDocumentType>("teaser")
   const canonicalNdaDocumentIdSet = new Set(canonicalNdaDocumentIds)
   const selectedTypeIsStaffOnly = documentType === "source_teaser" || documentType === "deal_book"
 
+  function validate(formData: FormData): FieldErrors {
+    const errors: FieldErrors = {}
+    if (!String(formData.get("title") ?? "").trim()) errors["document-title"] = "Enter a document title."
+    const file = formData.get("file")
+    if (!(file instanceof File) || file.size <= 0) errors["document-file"] = "Select a file to upload."
+    return errors
+  }
+
   async function handleSubmit(formData: FormData) {
+    const errors = validate(formData)
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      focusValidationSummary(validationSummaryRef)
+      return
+    }
+
     setIsSubmitting(true)
+    setFieldErrors({})
     try {
       const result = await registerOpportunityDocument(formData)
       if (!result.success) {
+        setFieldErrors({ form: result.message })
+        focusValidationSummary(validationSummaryRef)
         toast.error("Document not added", { description: result.message })
         return
       }
       toast.success("Document added", { description: result.message })
       router.refresh()
     } catch {
+      setFieldErrors({ form: "Please try again." })
+      focusValidationSummary(validationSummaryRef)
       toast.error("Document not added", { description: "Please try again." })
     } finally {
       setIsSubmitting(false)
@@ -121,14 +150,29 @@ export function OpportunityDocumentsPanel({
           <CardDescription>Source teasers and Information Memoranda stay staff-only; access is granted only from the pursuit workflow.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleSubmit} className="grid gap-4 lg:grid-cols-[1fr_180px_220px_1fr_auto] lg:items-end">
+          <form noValidate action={handleSubmit} className="grid gap-4 lg:grid-cols-[1fr_180px_220px_1fr_auto] lg:items-end">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
-            <div className="space-y-2">
-              <Label htmlFor="document-title">Title</Label>
-              <Input id="document-title" name="title" placeholder="Teaser, IM, analysis..." required />
+            <div className="lg:col-span-5">
+              <ValidationSummary
+                ref={validationSummaryRef}
+                errors={fieldErrors}
+                labels={{ "document-title": "Title", "document-file": "File", form: "Document details" }}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="document-type">Type</Label>
+              <FormFieldLabel htmlFor="document-title" requirement="required">Title</FormFieldLabel>
+              <Input
+                id="document-title"
+                name="title"
+                placeholder="Teaser, IM, analysis..."
+                required
+                {...fieldErrorProps("document-title", fieldErrors["document-title"])}
+                onChange={() => setFieldErrors((current) => ({ ...current, "document-title": "", form: "" }))}
+              />
+              <FieldError id="document-title" message={fieldErrors["document-title"]} />
+            </div>
+            <div className="space-y-2">
+              <FormFieldLabel htmlFor="document-type" requirement="required">Type</FormFieldLabel>
               <Select name="document_type" value={documentType} onValueChange={(value) => setDocumentType(value as OpportunityDocumentType)}>
                 <SelectTrigger id="document-type">
                   <SelectValue />
@@ -145,7 +189,7 @@ export function OpportunityDocumentsPanel({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="document-visibility">Visibility</Label>
+              <FormFieldLabel htmlFor="document-visibility" requirement="optional">Visibility</FormFieldLabel>
               {selectedTypeIsStaffOnly ? (
                 <>
                   <input type="hidden" name="visibility" value="staff_only" />
@@ -169,8 +213,17 @@ export function OpportunityDocumentsPanel({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="document-file">File</Label>
-              <Input id="document-file" name="file" type="file" accept={selectedTypeIsStaffOnly ? "application/pdf,.pdf" : undefined} />
+              <FormFieldLabel htmlFor="document-file" requirement="required">File</FormFieldLabel>
+              <Input
+                id="document-file"
+                name="file"
+                type="file"
+                accept={selectedTypeIsStaffOnly ? "application/pdf,.pdf" : undefined}
+                required
+                {...fieldErrorProps("document-file", fieldErrors["document-file"])}
+                onChange={() => setFieldErrors((current) => ({ ...current, "document-file": "", form: "" }))}
+              />
+              <FieldError id="document-file" message={fieldErrors["document-file"]} />
             </div>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Adding..." : "Add"}

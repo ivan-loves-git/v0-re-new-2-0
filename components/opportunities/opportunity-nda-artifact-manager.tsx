@@ -1,16 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { FileCheck2, LockKeyhole, Upload } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { registerOpportunityNdaArtifact } from "@/lib/actions/opportunity-nda-artifacts"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
+import {
+  FieldError,
+  type FieldErrors,
+  fieldErrorProps,
+  focusValidationSummary,
+  FormFieldLabel,
+  ValidationSummary,
+} from "@/components/forms/validation-feedback"
 import type { OpportunityNdaArtifact, OpportunityNdaArtifactRole } from "@/lib/types/opportunity"
 
 interface OpportunityNdaArtifactManagerProps {
@@ -96,10 +103,25 @@ export function OpportunityNdaArtifactManager({
     tone: "success" | "error"
     text: string
   } | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<OpportunityNdaArtifactRole, FieldErrors>>>({})
+  const summaryRefs = useRef<Partial<Record<OpportunityNdaArtifactRole, HTMLDivElement | null>>>({})
 
   async function handleRegister(role: OpportunityNdaArtifactRole, formData: FormData) {
+    const errors: FieldErrors = {}
+    if (!String(formData.get("title") ?? "").trim()) errors[`${role}-title`] = "Enter a document title."
+    const file = formData.get("file")
+    if (!(file instanceof File) || file.size <= 0) {
+      errors[`${role}-file`] = role === "blank_template" ? "Select a PDF or DOCX template." : "Select a signed PDF file."
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors((current) => ({ ...current, [role]: errors }))
+      focusValidationSummary({ current: summaryRefs.current[role] ?? null })
+      return
+    }
+
     setPendingRole(role)
     setMessage(null)
+    setFieldErrors((current) => ({ ...current, [role]: {} }))
     try {
       const result = await registerOpportunityNdaArtifact(formData)
       setMessage({
@@ -109,6 +131,11 @@ export function OpportunityNdaArtifactManager({
       })
       router.refresh()
     } catch (error) {
+      setFieldErrors((current) => ({
+        ...current,
+        [role]: { form: error instanceof Error ? error.message : "Could not record the artifact." },
+      }))
+      focusValidationSummary({ current: summaryRefs.current[role] ?? null })
       setMessage({
         role,
         tone: "error",
@@ -136,6 +163,7 @@ export function OpportunityNdaArtifactManager({
         const requiresPursuit = definition.role !== "blank_template"
         const isLockedSignedCopy = requiresPursuit && !activeMatchId
         const roleMessage = message?.role === definition.role ? message : null
+        const roleErrors = fieldErrors[definition.role] ?? {}
 
         return (
           <section key={definition.role} className="flex flex-col gap-4 rounded-md border p-4">
@@ -167,30 +195,56 @@ export function OpportunityNdaArtifactManager({
             ) : (
               <>
                 <form
+                  noValidate
                   action={handleRegister.bind(null, definition.role)}
                   className="grid gap-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_auto] lg:items-end"
                 >
                   <input type="hidden" name="opportunity_id" value={opportunityId} />
                   <input type="hidden" name="artifact_role" value={definition.role} />
                   {requiresPursuit && activeMatchId && <input type="hidden" name="match_id" value={activeMatchId} />}
+                  <div className="lg:col-span-3">
+                    <ValidationSummary
+                      ref={(element) => { summaryRefs.current[definition.role] = element }}
+                      errors={roleErrors}
+                      labels={{
+                        [`${definition.role}-title`]: "Title",
+                        [`${definition.role}-file`]: definition.acceptedFileLabel,
+                        form: "NDA version",
+                      }}
+                    />
+                  </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor={`${definition.role}-title`}>Title</Label>
+                    <FormFieldLabel htmlFor={`${definition.role}-title`} requirement="required">Title</FormFieldLabel>
                     <Input
                       id={`${definition.role}-title`}
                       name="title"
                       defaultValue={definition.defaultTitle}
                       required
+                      {...fieldErrorProps(`${definition.role}-title`, roleErrors[`${definition.role}-title`] )}
+                      onChange={() => setFieldErrors((current) => ({
+                        ...current,
+                        [definition.role]: { ...current[definition.role], [`${definition.role}-title`]: "", form: "" },
+                      }))}
                     />
+                    <FieldError id={`${definition.role}-title`} message={roleErrors[`${definition.role}-title`]} />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor={`${definition.role}-file`}>{definition.acceptedFileLabel}</Label>
+                    <FormFieldLabel htmlFor={`${definition.role}-file`} requirement="required">
+                      {definition.acceptedFileLabel}
+                    </FormFieldLabel>
                     <Input
                       id={`${definition.role}-file`}
                       name="file"
                       type="file"
                       accept={definition.acceptedFileTypes}
                       required
+                      {...fieldErrorProps(`${definition.role}-file`, roleErrors[`${definition.role}-file`] )}
+                      onChange={() => setFieldErrors((current) => ({
+                        ...current,
+                        [definition.role]: { ...current[definition.role], [`${definition.role}-file`]: "", form: "" },
+                      }))}
                     />
+                    <FieldError id={`${definition.role}-file`} message={roleErrors[`${definition.role}-file`]} />
                   </div>
                   <Button type="submit" disabled={pendingRole === definition.role}>
                     <Upload data-icon="inline-start" />

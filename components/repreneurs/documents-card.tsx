@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DocumentRowActions, type DocumentRowPolicy } from "@/components/opportunities/document-row-actions"
+import { FieldError, fieldErrorProps } from "@/components/forms/validation-feedback"
 import { toast } from "sonner"
 
 interface DocumentsCardProps {
@@ -35,6 +36,7 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
   const [currentUrl, setCurrentUrl] = useState(url)
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const documentType = field === "ldc_url" ? "ldc" : "cv"
   const documentUrl = `/api/repreneurs/${encodeURIComponent(repreneurId)}/documents/${documentType}`
@@ -42,16 +44,19 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
   const handleUpload = async (file: File) => {
     // Validate file type (PDF only)
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setUploadError("Choose a PDF file.")
       toast.error("Please upload a PDF file")
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
+      setUploadError("Choose a PDF smaller than 10 MB.")
       toast.error("File size must be less than 10MB")
       return
     }
 
     setIsUploading(true)
+    setUploadError(null)
     try {
       const formData = new FormData()
       formData.append("file", file)
@@ -74,7 +79,9 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       toast.success(`${label} uploaded successfully`)
     } catch (error) {
       console.error("Document upload failed")
-      toast.error(error instanceof Error ? error.message : "Failed to upload")
+      const message = error instanceof Error ? error.message : "Failed to upload"
+      setUploadError(message)
+      toast.error(message)
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ""
@@ -112,37 +119,41 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
   }
 
   return (
-    <div className="flex items-center justify-between py-3 border-b last:border-b-0">
+    <div className="border-b py-3 last:border-b-0">
       <input
         ref={fileInputRef}
         type="file"
         accept=".pdf,application/pdf"
         className="hidden"
+        {...fieldErrorProps(`${field}-file`, uploadError ?? undefined)}
         onChange={(e) => {
           const file = e.target.files?.[0]
           if (file) handleUpload(file)
         }}
       />
 
-      <div className="flex items-center gap-3">
-        <FileText className="size-5 text-muted-foreground" />
-        <div>
-          <p className="font-medium text-sm">{label}</p>
-          <p className="text-xs text-muted-foreground">
-            {currentUrl ? "PDF uploaded" : "No file uploaded"}
-          </p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <FileText className="size-5 text-muted-foreground" />
+          <div>
+            <p className="font-medium text-sm">{label} <span className="text-xs font-normal text-muted-foreground">Optional</span></p>
+            <p className="text-xs text-muted-foreground">
+              {currentUrl ? "PDF uploaded" : "No file uploaded"}
+            </p>
+          </div>
         </div>
-      </div>
 
-      <DocumentRowActions
-        policy={CV_LDC_DOCUMENT_POLICY}
-        state={isUploading || isDeleting ? "pending" : "available"}
-        viewHref={currentUrl ? documentUrl : undefined}
-        downloadHref={currentUrl ? `${documentUrl}?download` : undefined}
-        onUpload={!currentUrl ? () => fileInputRef.current?.click() : undefined}
-        onReplace={currentUrl ? () => fileInputRef.current?.click() : undefined}
-        onRemove={currentUrl ? handleDelete : undefined}
-      />
+        <DocumentRowActions
+          policy={CV_LDC_DOCUMENT_POLICY}
+          state={isUploading || isDeleting ? "pending" : "available"}
+          viewHref={currentUrl ? documentUrl : undefined}
+          downloadHref={currentUrl ? `${documentUrl}?download` : undefined}
+          onUpload={!currentUrl ? () => fileInputRef.current?.click() : undefined}
+          onReplace={currentUrl ? () => fileInputRef.current?.click() : undefined}
+          onRemove={currentUrl ? handleDelete : undefined}
+        />
+      </div>
+      <FieldError id={`${field}-file`} message={uploadError ?? undefined} className="mt-2" />
     </div>
   )
 }

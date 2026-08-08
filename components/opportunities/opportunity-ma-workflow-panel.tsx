@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useMemo, useRef, useState } from "react"
+import { FormEvent, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { AlertTriangle, Mail, Send, UserRound } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -9,11 +9,18 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { suppressionBlocksMaTemplate } from "@/lib/ma-contact-email-policy"
+import {
+  FieldError,
+  type FieldErrors,
+  fieldErrorProps,
+  focusValidationSummary,
+  FormFieldLabel,
+  ValidationSummary,
+} from "@/components/forms/validation-feedback"
 
 interface OpportunityMaWorkflowPanelProps {
   opportunityId: string
@@ -49,6 +56,8 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
   const [body, setBody] = useState(selectedDraft?.body ?? "")
   const [recipientContactId, setRecipientContactId] = useState(workflow.recipientContactId ?? "")
   const [isSending, setIsSending] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const validationSummaryRef = useRef<HTMLDivElement>(null)
   const sendOperationRef = useRef<{ fingerprint: string; key: string } | null>(null)
   const selectedRecipient = workflow.contacts.find((contact) => contact.id === recipientContactId) ?? null
   const recipientEmail = selectedRecipient?.email ?? null
@@ -58,13 +67,6 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
         templateKey,
       )
     : false
-  const canSend = Boolean(
-    recipientEmail &&
-      templateKey &&
-      subject.trim() &&
-      body.trim() &&
-      !suppressionBlocksSend,
-  )
   const recipientName = selectedRecipient?.name || selectedRecipient?.email || selectedRecipient?.phone || workflow.sourceName
 
   const selectTemplate = (value: string) => {
@@ -75,10 +77,29 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
     setBody(draft.body)
   }
 
-  const handleSend = async () => {
-    if (!canSend || isSending) return
+  const validate = (): FieldErrors => {
+    const errors: FieldErrors = {}
+    if (!templateKey) errors.ma_template = "Choose a template."
+    if (!recipientContactId) errors.ma_recipient = "Choose a linked contact."
+    else if (!recipientEmail) errors.ma_recipient = "Choose a contact with an email address."
+    else if (suppressionBlocksSend) errors.ma_recipient = "This contact cannot receive this template."
+    if (!subject.trim()) errors.ma_subject = "Enter an email subject."
+    if (!body.trim()) errors.ma_body = "Enter an email message."
+    return errors
+  }
+
+  const handleSend = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (isSending) return
+    const errors = validate()
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      focusValidationSummary(validationSummaryRef)
+      return
+    }
 
     setIsSending(true)
+    setFieldErrors({})
     try {
       const formData = new FormData()
       formData.set("template_key", templateKey)
@@ -128,6 +149,8 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
         operationState?: "pending" | "failed" | "sent"
       }
       if (!result.success) {
+        setFieldErrors({ form: result.message })
+        focusValidationSummary(validationSummaryRef)
         if (result.operationState !== "pending") {
           sendOperationRef.current = null
           try {
@@ -144,8 +167,11 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
       toast.success("M&A email sent", { description: result.message })
       router.refresh()
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected error while sending the intermediary email."
+      setFieldErrors({ form: message })
+      focusValidationSummary(validationSummaryRef)
       toast.error("M&A email not sent", {
-        description: error instanceof Error ? error.message : "Unexpected error while sending the intermediary email.",
+        description: message,
       })
     } finally {
       setIsSending(false)
@@ -163,7 +189,12 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
           <CardDescription>Send a contextual M&A template to the linked source without leaving this opportunity.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form noValidate onSubmit={handleSend} className="space-y-4">
+            <ValidationSummary
+              ref={validationSummaryRef}
+              errors={fieldErrors}
+              labels={{ ma_template: "Template", ma_recipient: "Recipient", ma_subject: "Subject", ma_body: "Message", form: "Email" }}
+            />
             {workflow.stalledReminder ? (
               <Alert className="border-amber-200 bg-amber-50 text-amber-950">
                 <AlertTriangle />
@@ -183,7 +214,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="min-w-0 space-y-2">
-                <Label>Source</Label>
+                <FormFieldLabel>Source</FormFieldLabel>
                 <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
                   <p className="font-medium">{workflow.sourceName}</p>
                   <p className="text-muted-foreground">{workflow.contacts.length} linked contacts</p>
@@ -191,9 +222,12 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
               </div>
 
               <div className="min-w-0 space-y-2">
-                <Label htmlFor="ma_template">Template</Label>
-                <Select value={templateKey} onValueChange={selectTemplate}>
-                  <SelectTrigger id="ma_template" className="w-full min-w-0">
+                <FormFieldLabel htmlFor="ma_template" requirement="required">Template</FormFieldLabel>
+                <Select value={templateKey} onValueChange={(value) => {
+                  setFieldErrors((current) => ({ ...current, ma_template: "", form: "" }))
+                  selectTemplate(value)
+                }}>
+                  <SelectTrigger id="ma_template" className="w-full min-w-0" {...fieldErrorProps("ma_template", fieldErrors.ma_template)}>
                     <SelectValue placeholder="Choose template" />
                   </SelectTrigger>
                   <SelectContent>
@@ -207,14 +241,18 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                   </SelectContent>
                 </Select>
                 {selectedDraft?.description ? <p className="text-xs text-muted-foreground">{selectedDraft.description}</p> : null}
+                <FieldError id="ma_template" message={fieldErrors.ma_template} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ma_recipient">Recipient</Label>
+              <FormFieldLabel htmlFor="ma_recipient" requirement="required">Recipient</FormFieldLabel>
               {workflow.contacts.length > 0 ? (
-                <Select value={recipientContactId} onValueChange={setRecipientContactId}>
-                  <SelectTrigger id="ma_recipient" className="w-full min-w-0">
+                <Select value={recipientContactId} onValueChange={(value) => {
+                  setRecipientContactId(value)
+                  setFieldErrors((current) => ({ ...current, ma_recipient: "", form: "" }))
+                }}>
+                  <SelectTrigger id="ma_recipient" className="w-full min-w-0" {...fieldErrorProps("ma_recipient", fieldErrors.ma_recipient)}>
                     <SelectValue placeholder="Choose a linked contact" />
                   </SelectTrigger>
                   <SelectContent>
@@ -238,6 +276,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                   Link a contact to this opportunity before sending an intermediary follow-up.
                 </div>
               )}
+              <FieldError id="ma_recipient" message={fieldErrors.ma_recipient} />
               {selectedRecipient ? (
                 <p className="break-all text-xs text-muted-foreground">
                   {selectedRecipient.email ?? "No email"}
@@ -275,19 +314,34 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="ma_subject">Subject</Label>
-              <Input id="ma_subject" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Example: Opportunity still active?" />
+              <FormFieldLabel htmlFor="ma_subject" requirement="required">Subject</FormFieldLabel>
+              <Input
+                id="ma_subject"
+                value={subject}
+                {...fieldErrorProps("ma_subject", fieldErrors.ma_subject)}
+                onChange={(event) => {
+                  setSubject(event.target.value)
+                  setFieldErrors((current) => ({ ...current, ma_subject: "", form: "" }))
+                }}
+                placeholder="Example: Opportunity still active?"
+              />
+              <FieldError id="ma_subject" message={fieldErrors.ma_subject} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ma_body">Message</Label>
+              <FormFieldLabel htmlFor="ma_body" requirement="required">Message</FormFieldLabel>
               <Textarea
                 id="ma_body"
                 rows={12}
                 value={body}
-                onChange={(event) => setBody(event.target.value)}
+                {...fieldErrorProps("ma_body", fieldErrors.ma_body)}
+                onChange={(event) => {
+                  setBody(event.target.value)
+                  setFieldErrors((current) => ({ ...current, ma_body: "", form: "" }))
+                }}
                 placeholder="Write the intermediary follow-up..."
               />
+              <FieldError id="ma_body" message={fieldErrors.ma_body} />
             </div>
 
             {recipientEmail ? (
@@ -320,12 +374,12 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
             )}
 
             <div className="flex justify-end">
-              <Button type="button" onClick={handleSend} disabled={!canSend || isSending}>
+              <Button type="submit" disabled={isSending}>
                 <Send data-icon="inline-start" />
                 {isSending ? "Sending..." : "Send to contact"}
               </Button>
             </div>
-          </div>
+          </form>
         </CardContent>
       </Card>
 
