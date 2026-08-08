@@ -538,7 +538,10 @@ export function MaRelationshipWorkspace({
           </div>
         </TabsContent>
         <TabsContent value="firms">
-          <RelationshipFirmsDirectory offices={workspace.offices} />
+          <RelationshipFirmsDirectory
+            firms={workspace.firms}
+            offices={workspace.offices}
+          />
         </TabsContent>
         <TabsContent value="contacts">
           <RelationshipContactsDirectory
@@ -875,29 +878,150 @@ function RelationshipFilterControls({
   )
 }
 
-function RelationshipFirmsDirectory({
+function formatKnownDate(value: string | null) {
+  if (!value) return "No recorded date"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "No recorded date"
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date)
+}
+
+function RelationshipFirmIndicators({
+  indicators,
+  includeOfficeCount = false,
+}: {
+  indicators:
+    | MaRelationshipWorkspace["firms"][number]["indicators"]
+    | MaRelationshipWorkspace["offices"][number]["indicators"]
+  includeOfficeCount?: boolean
+}) {
+  const officeCount =
+    "officeCount" in indicators ? indicators.officeCount : null
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      {includeOfficeCount && officeCount !== null ? (
+        <span>
+          {officeCount} office{officeCount === 1 ? "" : "s"}
+        </span>
+      ) : null}
+      <span>
+        {indicators.activeContactCount} active contact
+        {indicators.activeContactCount === 1 ? "" : "s"}
+      </span>
+      <span>{indicators.sourcedOpportunityCount} sourced</span>
+      <span>{indicators.openOpportunityCount} open</span>
+      <span>{indicators.candidateStaleCount} candidate-stale</span>
+      <span>Latest: {formatKnownDate(indicators.latestKnownAt)}</span>
+    </div>
+  )
+}
+
+function RelationshipFirmRow({
+  firm,
   offices,
-}: Pick<MaRelationshipWorkspace, "offices">) {
+}: {
+  firm: MaRelationshipWorkspace["firms"][number]
+  offices: MaRelationshipWorkspace["offices"]
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="px-4 py-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-medium">{firm.name}</p>
+              <Badge variant="outline" className="capitalize">
+                {firm.status}
+              </Badge>
+            </div>
+            <RelationshipFirmIndicators
+              indicators={firm.indicators}
+              includeOfficeCount
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button asChild size="sm" variant="ghost">
+              <Link href={`/opportunities/ma/firms/${firm.id}`}>
+                Open firm
+              </Link>
+            </Button>
+            <CollapsibleTrigger asChild>
+              <Button
+                aria-label={`${open ? "Hide" : "Show"} offices for ${firm.name}`}
+                size="sm"
+                variant="outline"
+              >
+                {open ? "Hide offices" : "Show offices"}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+        </div>
+        <CollapsibleContent>
+          <div className="mt-3 border-t pt-3">
+            <div className="divide-y rounded-md border">
+              {offices.map((office) => (
+                <div
+                  className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-start sm:justify-between"
+                  key={office.id}
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">{office.officeName}</p>
+                      <Badge variant="outline" className="capitalize">
+                        {office.status}
+                      </Badge>
+                    </div>
+                    <RelationshipFirmIndicators
+                      indicators={office.indicators}
+                    />
+                  </div>
+                  <Button asChild size="sm" variant="ghost">
+                    <Link href={`/opportunities/ma/offices/${office.id}`}>
+                      Open office
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  )
+}
+
+function RelationshipFirmsDirectory({
+  firms,
+  offices,
+}: Pick<MaRelationshipWorkspace, "firms" | "offices">) {
   const [query, setQuery] = useState("")
   const normalizedQuery = query.trim().toLocaleLowerCase()
-  const firms = useMemo(() => {
-    const byFirm = new Map<string, MaRelationshipWorkspace["offices"]>()
+  const byFirm = useMemo(() => {
+    const grouped = new Map<string, MaRelationshipWorkspace["offices"]>()
     for (const office of offices) {
-      byFirm.set(office.firmName, [...(byFirm.get(office.firmName) ?? []), office])
+      grouped.set(office.firmId, [
+        ...(grouped.get(office.firmId) ?? []),
+        office,
+      ])
     }
-    return [...byFirm.entries()]
-      .map(([firmName, firmOffices]) => ({
-        firmName,
-        offices: firmOffices.sort((left, right) => left.officeName.localeCompare(right.officeName)),
-      }))
-      .filter(
-        (firm) =>
-          !normalizedQuery ||
-          firm.firmName.toLocaleLowerCase().includes(normalizedQuery) ||
-          firm.offices.some((office) => office.officeName.toLocaleLowerCase().includes(normalizedQuery)),
-      )
-      .sort((left, right) => left.firmName.localeCompare(right.firmName))
-  }, [normalizedQuery, offices])
+    return grouped
+  }, [offices])
+  const matchingFirms = useMemo(() => {
+    return firms.filter(
+      (firm) =>
+        !normalizedQuery ||
+        firm.name.toLocaleLowerCase().includes(normalizedQuery) ||
+        (byFirm.get(firm.id) ?? []).some((office) =>
+          office.officeName.toLocaleLowerCase().includes(normalizedQuery),
+        ),
+    )
+  }, [byFirm, firms, normalizedQuery])
 
   return (
     <Card>
@@ -922,33 +1046,20 @@ function RelationshipFirmsDirectory({
           <p className="text-sm text-muted-foreground">
             No canonical firms or offices are available yet.
           </p>
-        ) : firms.length === 0 ? (
+        ) : matchingFirms.length === 0 ? (
           <p className="rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
             No firms or offices match this search.
           </p>
         ) : (
           <div className="divide-y rounded-md border">
-            {firms.map((firm) => (
-              <div
-                key={firm.firmName}
-                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium">{firm.firmName}</p>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    {firm.offices.map((office) => (
-                      <span key={office.id}>
-                        {office.officeName} · {office.contacts.length} contact
-                        {office.contacts.length === 1 ? "" : "s"}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {firm.offices.length} office
-                  {firm.offices.length === 1 ? "" : "s"}
-                </span>
-              </div>
+            {matchingFirms.map((firm) => (
+              <RelationshipFirmRow
+                firm={firm}
+                offices={[...(byFirm.get(firm.id) ?? [])].sort((left, right) =>
+                  left.officeName.localeCompare(right.officeName),
+                )}
+                key={firm.id}
+              />
             ))}
           </div>
         )}

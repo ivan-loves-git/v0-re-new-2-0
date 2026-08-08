@@ -8,8 +8,12 @@ import {
   type MaRelationshipActivityProvenance,
 } from "@/lib/ma-relationship-activity-provenance"
 import { isValidMaRelationshipEmail } from "@/lib/ma-relationship-validation"
+import { buildMaRelationshipStatistics } from "@/lib/ma-relationship-statistics"
 import { createAdminClient } from "@/lib/supabase/admin"
-import type { OpportunityWithSource } from "@/lib/types/opportunity"
+import type {
+  OpportunityStatus,
+  OpportunityWithSource,
+} from "@/lib/types/opportunity"
 
 export type MaInteractionChannel =
   | "call"
@@ -39,10 +43,33 @@ export interface MaRelationshipContactFilterOption {
 
 export interface MaRelationshipOfficeOption {
   id: string
+  firmId: string
   firmName: string
+  status: "active" | "archived"
   officeName: string
   label: string
   contacts: MaRelationshipOfficeContactOption[]
+  indicators: {
+    activeContactCount: number
+    sourcedOpportunityCount: number
+    openOpportunityCount: number
+    candidateStaleCount: number
+    latestKnownAt: string | null
+  }
+}
+
+export interface MaRelationshipFirmOption {
+  id: string
+  name: string
+  status: "prospect" | "active" | "archived"
+  indicators: {
+    officeCount: number
+    activeContactCount: number
+    sourcedOpportunityCount: number
+    openOpportunityCount: number
+    candidateStaleCount: number
+    latestKnownAt: string | null
+  }
 }
 
 export interface MaRelationshipOpportunityOption {
@@ -86,6 +113,7 @@ export interface MaRelationshipTimelineItem {
 
 export interface MaRelationshipWorkspace {
   currentUserId: string
+  firms: MaRelationshipFirmOption[]
   offices: MaRelationshipOfficeOption[]
   contacts: MaRelationshipContactFilterOption[]
   opportunities: MaRelationshipOpportunityOption[]
@@ -117,7 +145,12 @@ type Relation<T> = T | T[] | null | undefined
 interface OfficeRow {
   id: string
   name: string
-  firm?: Relation<{ id: string; name: string }>
+  status: "active" | "archived"
+  firm?: Relation<{
+    id: string
+    name: string
+    status: "prospect" | "active" | "archived"
+  }>
 }
 
 interface AffiliationRow {
@@ -129,6 +162,7 @@ interface AffiliationRow {
     id: string
     display_name: string | null
     email: string | null
+    status: "active" | "archived"
     campaign_email_suppressed: boolean
     campaign_email_suppression_reason: string | null
   }>
@@ -140,7 +174,8 @@ interface OpportunityRow {
   public_title: string | null
   activity: string | null
   source_office_id: string | null
-  status: string
+  status: OpportunityStatus
+  date_added: string | null
 }
 
 interface InteractionRow {
@@ -287,47 +322,99 @@ export async function listMaRelationshipTimeline(options?: {
 export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorkspace> {
   const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
-  const [officeResult, affiliationResult, opportunityResult, interactions] =
-    await Promise.all([
-      supabase
-        .from("ma_offices")
-        .select("id, name, firm:ma_firms(id, name)")
-        .order("name"),
-      supabase
-        .from("ma_contact_office_affiliations")
-        .select(
-          `id, office_id, is_active, ended_at,
+  const [
+    officeResult,
+    affiliationResult,
+    opportunityResult,
+    interactions,
+    activePursuitResult,
+  ] = await Promise.all([
+    supabase
+      .from("ma_offices")
+      .select("id, name, status, firm:ma_firms(id, name, status)")
+      .order("name"),
+    supabase
+      .from("ma_contact_office_affiliations")
+      .select(
+        `id, office_id, is_active, ended_at,
            contact:ma_contacts(
              id,
              display_name,
              email,
+             status,
              campaign_email_suppressed,
              campaign_email_suppression_reason
            )`,
-        )
-        .eq("is_active", true)
-        .is("ended_at", null),
-      supabase
-        .from("opportunities")
-        .select(
-          "id, reference, public_title, activity, source_office_id, status",
-        )
-        .not("source_office_id", "is", null)
-        .order("updated_at", { ascending: false }),
-      listMaRelationshipTimeline(),
-    ])
+      )
+      .eq("is_active", true)
+      .is("ended_at", null),
+    supabase
+      .from("opportunities")
+      .select(
+        "id, reference, public_title, activity, source_office_id, status, date_added",
+      )
+      .not("source_office_id", "is", null)
+      .order("updated_at", { ascending: false }),
+    listMaRelationshipTimeline(),
+    supabase
+      .from("opportunity_matches")
+      .select("opportunity_id")
+      .eq("status", "active_pursuit"),
+  ])
 
   if (officeResult.error) throw new Error(officeResult.error.message)
   if (affiliationResult.error) throw new Error(affiliationResult.error.message)
   if (opportunityResult.error) throw new Error(opportunityResult.error.message)
+  if (activePursuitResult.error)
+    throw new Error(activePursuitResult.error.message)
+
+  const officeRows = (officeResult.data ?? []) as unknown as OfficeRow[]
+  const affiliationRows = (affiliationResult.data ??
+    []) as unknown as AffiliationRow[]
+  const opportunityRows = (opportunityResult.data ??
+    []) as unknown as OpportunityRow[]
+  const officeFirmIds = new Map(
+    officeRows.flatMap((office) => {
+      const firm = one(office.firm)
+      return firm ? [[office.id, firm.id] as const] : []
+    }),
+  )
+  const statistics = buildMaRelationshipStatistics(
+    officeRows.map((office) => ({
+      id: office.id,
+      firmId: officeFirmIds.get(office.id) ?? null,
+    })),
+    affiliationRows.flatMap((relation) => {
+      const contact = one(relation.contact)
+      return contact
+        ? [
+            {
+              officeId: relation.office_id,
+              contactId: contact.id,
+              isActive: relation.is_active,
+              endedAt: relation.ended_at,
+              contactStatus: contact.status,
+            },
+          ]
+        : []
+    }),
+    opportunityRows.map((opportunity) => ({
+      id: opportunity.id,
+      officeId: opportunity.source_office_id,
+      status: opportunity.status,
+      dateAdded: opportunity.date_added,
+    })),
+    (activePursuitResult.data ?? [])
+      .map((match) => match.opportunity_id)
+      .filter((id): id is string => Boolean(id)),
+  )
 
   const contactsByOffice = new Map<
     string,
     MaRelationshipOfficeContactOption[]
   >()
   const contactsById = new Map<string, MaRelationshipContactFilterOption>()
-  for (const relation of (affiliationResult.data ??
-    []) as unknown as AffiliationRow[]) {
+  for (const relation of affiliationRows) {
     const contact = one(relation.contact)
     if (!contact) continue
     const contacts = contactsByOffice.get(relation.office_id) ?? []
@@ -355,24 +442,55 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     })
   }
 
-  const offices = ((officeResult.data ?? []) as unknown as OfficeRow[])
+  const offices = officeRows
     .map((office) => {
       const firm = one(office.firm)
+      const firmId = firm?.id ?? `unknown-firm:${office.id}`
       return {
         id: office.id,
+        firmId,
         firmName: firm?.name ?? "Unknown firm",
+        status: office.status,
         officeName: office.name,
         label: [firm?.name, office.name].filter(Boolean).join(" · "),
         contacts: (contactsByOffice.get(office.id) ?? []).sort((left, right) =>
           left.label.localeCompare(right.label),
         ),
+        indicators: statistics.byOfficeId.get(office.id) ?? {
+          activeContactCount: 0,
+          sourcedOpportunityCount: 0,
+          openOpportunityCount: 0,
+          candidateStaleCount: 0,
+          latestKnownAt: null,
+        },
       }
     })
     .sort((left, right) => left.label.localeCompare(right.label))
 
+  const firms = [...new Map(
+    officeRows.flatMap((office) => {
+      const firm = one(office.firm)
+      return firm ? [[firm.id, firm] as const] : []
+    }),
+  )]
+    .map(([id, firm]) => ({
+      id,
+      name: firm.name,
+      status: firm.status,
+      indicators: statistics.byFirmId.get(id) ?? {
+        officeCount: offices.filter((office) => office.firmId === id).length,
+        activeContactCount: 0,
+        sourcedOpportunityCount: 0,
+        openOpportunityCount: 0,
+        candidateStaleCount: 0,
+        latestKnownAt: null,
+      },
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name))
+
   const opportunitiesWithReview = await withStaffSourceReviewState(
     supabase,
-    (opportunityResult.data ?? []) as unknown as OpportunityWithSource[],
+    opportunityRows as OpportunityWithSource[],
   )
   const opportunities = opportunitiesWithReview
     .filter((opportunity) => Boolean(opportunity.source_office_id))
@@ -390,6 +508,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
 
   return {
     currentUserId: user.id,
+    firms,
     offices,
     contacts,
     opportunities,
