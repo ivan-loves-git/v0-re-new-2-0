@@ -83,6 +83,7 @@ export interface CreateMaFirmOfficeContextResult {
 export interface CreateMaOfficeContactResult {
   success: boolean
   message: string
+  fieldErrors?: Record<string, string>
   contact?: MaOfficeIntakeContact
 }
 
@@ -615,16 +616,26 @@ export async function createMaFirmOfficeContext(
   const jobTitle = readOpportunityFormString(formData, "contact_job_title")
 
   if (!firmName) {
-    return { success: false, message: "M&A advisory firm name is required." }
-  }
-  if (!firstName && !lastName) {
     return {
       success: false,
-      message: "Add a first name or last name for the first contact.",
+      message: "M&A advisory firm name is required.",
+      fieldErrors: { firm_name: "Enter the M&A advisory firm name." },
+    }
+  }
+  if (!firstName && !lastName) {
+    const message = "Add a first name or last name for the first contact."
+    return {
+      success: false,
+      message,
+      fieldErrors: { contact_first_name: message, contact_last_name: message },
     }
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { success: false, message: "Contact email must be valid." }
+    return {
+      success: false,
+      message: "Contact email must be valid.",
+      fieldErrors: { contact_email: "Enter a valid email address, or leave it blank." },
+    }
   }
 
   const supabase = createAdminClient()
@@ -864,6 +875,9 @@ export async function createMaOfficeContact(
         success: false,
         message:
           "Choose an active canonical contact to affiliate with this office.",
+        fieldErrors: {
+          existing_contact_id: "Choose an active canonical contact.",
+        },
       }
     }
 
@@ -890,13 +904,19 @@ export async function createMaOfficeContact(
     }
   } else {
     if (!firstName && !lastName) {
+      const message = "Add a first name or last name for the contact."
       return {
         success: false,
-        message: "Add a first name or last name for the contact.",
+        message,
+        fieldErrors: { contact_first_name: message, contact_last_name: message },
       }
     }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { success: false, message: "Contact email must be valid." }
+      return {
+        success: false,
+        message: "Contact email must be valid.",
+        fieldErrors: { contact_email: "Enter a valid email address, or leave it blank." },
+      }
     }
   }
 

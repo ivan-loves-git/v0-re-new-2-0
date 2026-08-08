@@ -55,10 +55,12 @@ describe("Engagement decline reasons", () => {
     expect(engagementSource).toContain("DECLINE_REASON_OPTIONS")
     expect(engagementSource).toContain("DeclineReasonCategory")
     expect(engagementSource).not.toContain("OPPORTUNITY_DECLINE_REASON_OPTIONS")
-    expect(engagementSource).toContain("if (!decliningOffer || !declineReasonCategory) return")
+    expect(engagementSource).toContain("if (!decliningOffer) return")
+    expect(engagementSource).toContain('setDeclineErrors({ reason: "Select the main reason')
+    expect(engagementSource).toContain("<ValidationSummary")
     expect(engagementSource).toContain("declineReasonCategory,")
     expect(engagementSource).toContain("declineReasonText,")
-    expect(engagementSource).toContain("Details (optional)")
+    expect(engagementSource).toContain('requirement="optional">Details')
   })
 
   it("validates supplied commercial values while preserving legacy status transitions and analytics labels", () => {

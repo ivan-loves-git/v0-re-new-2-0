@@ -46,11 +46,20 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
     const firstName = String(formData.get("first_name") ?? "").trim()
     const lastName = String(formData.get("last_name") ?? "").trim()
     const email = String(formData.get("email") ?? "").trim()
+    const linkedinUrl = String(formData.get("linkedin_url") ?? "").trim()
 
     if (!firstName) nextErrors.first_name = "Enter a first name."
     if (!lastName) nextErrors.last_name = "Enter a last name."
     if (!email) nextErrors.email = "Enter an email address."
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nextErrors.email = "Enter a valid email address."
+    if (linkedinUrl) {
+      try {
+        const parsedLinkedIn = new URL(linkedinUrl)
+        if (parsedLinkedIn.protocol !== "https:" && parsedLinkedIn.protocol !== "http:") throw new Error()
+      } catch {
+        nextErrors.linkedin_url = "Enter a complete web address, or leave this blank."
+      }
+    }
 
     setErrors(nextErrors)
     setSubmissionError(undefined)
@@ -64,13 +73,26 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
       await action(formData)
     } catch (error) {
       console.error("Repreneur form submission failed")
-      setSubmissionError(error instanceof Error ? error.message : "We could not save this profile. Please try again.")
+      const message = error instanceof Error ? error.message : "We could not save this profile. Please try again."
+      const normalizedMessage = message.toLowerCase()
+      const serverErrors: FieldErrors = {}
+      if (normalizedMessage.includes("first name")) serverErrors.first_name = message
+      if (normalizedMessage.includes("last name") || normalizedMessage.includes("surname")) serverErrors.last_name = message
+      if (normalizedMessage.includes("email")) serverErrors.email = message
+      if (normalizedMessage.includes("linkedin") || normalizedMessage.includes("web address")) serverErrors.linkedin_url = message
+
+      if (Object.keys(serverErrors).length > 0) {
+        setErrors(serverErrors)
+        focusValidationSummary(summaryRef)
+      } else {
+        setSubmissionError(message)
+      }
       setIsSubmitting(false)
     }
   }
 
   return (
-    <form action={handleSubmit} className="mx-auto max-w-4xl">
+    <form action={handleSubmit} className="mx-auto max-w-4xl" noValidate>
       <Card>
         <CardHeader>
           <CardTitle>{repreneur ? "Edit core profile" : "Core profile"}</CardTitle>
@@ -83,7 +105,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           <ValidationSummary
             ref={summaryRef}
             errors={errors}
-            labels={{ first_name: "First name", last_name: "Last name", email: "Email" }}
+            labels={{ first_name: "First name", last_name: "Last name", email: "Email", linkedin_url: "LinkedIn URL" }}
           />
           {submissionError ? <p role="alert" className="text-sm text-destructive">{submissionError}</p> : null}
           <section className="grid gap-5 rounded-lg border bg-muted/20 p-5 md:grid-cols-2">
@@ -118,7 +140,10 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
                 type="url"
                 placeholder="https://linkedin.com/in/..."
                 defaultValue={repreneur?.linkedin_url}
+                {...fieldErrorProps("linkedin_url", errors.linkedin_url)}
+                onChange={() => setErrors(current => ({ ...current, linkedin_url: "" }))}
               />
+              <FieldError id="linkedin_url" message={errors.linkedin_url} />
             </div>
 
             <div className="space-y-2">

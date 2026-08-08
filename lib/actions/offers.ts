@@ -19,32 +19,41 @@ import { MilestoneCompletedEmail } from "@/lib/email/templates/milestone-complet
 
 function parseOfferForm(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim()
-  const price = Number(formData.get("price"))
+  const priceRaw = String(formData.get("price") ?? "").trim()
+  const price = priceRaw ? Number(priceRaw) : Number.NaN
   const durationDays = Number(formData.get("duration_days"))
 
   if (!name) throw new Error("Offer name is required.")
+  if (!priceRaw) throw new Error("Price is required.")
   if (!Number.isFinite(price) || price < 0) throw new Error("Price must be €0 or more.")
   if (!Number.isInteger(durationDays) || durationDays < 1) throw new Error("Duration must be at least one day.")
 
-  return { name, price, durationDays }
+  const acceptanceDeadlineRaw = String(formData.get("acceptance_deadline_days") ?? "").trim()
+  const includesHoursRaw = String(formData.get("includes_hours") ?? "").trim()
+  const acceptanceDeadlineDays = acceptanceDeadlineRaw ? Number(acceptanceDeadlineRaw) : null
+  const includesHours = includesHoursRaw ? Number(includesHoursRaw) : null
+  if (acceptanceDeadlineDays !== null && (!Number.isInteger(acceptanceDeadlineDays) || acceptanceDeadlineDays < 1)) {
+    throw new Error("Acceptance deadline must be at least one day.")
+  }
+  if (includesHours !== null && (!Number.isInteger(includesHours) || includesHours < 0)) {
+    throw new Error("Coaching hours must be a whole number of zero or more.")
+  }
+
+  return { name, price, durationDays, acceptanceDeadlineDays, includesHours }
 }
 
 export async function createOffer(formData: FormData) {
   await requireStaffAccess()
   const supabase = createAdminClient()
-  const { name, price, durationDays } = parseOfferForm(formData)
+  const { name, price, durationDays, acceptanceDeadlineDays, includesHours } = parseOfferForm(formData)
 
   const offer: Offer_Insert = {
     name,
     description: (formData.get("description") as string) || undefined,
     price,
     duration_days: durationDays,
-    acceptance_deadline_days: formData.get("acceptance_deadline_days")
-      ? parseInt(formData.get("acceptance_deadline_days") as string)
-      : 14, // Default 14 days to accept
-    includes_hours: formData.get("includes_hours")
-      ? parseInt(formData.get("includes_hours") as string)
-      : 0,
+    acceptance_deadline_days: acceptanceDeadlineDays ?? 14,
+    includes_hours: includesHours ?? 0,
     includes_resources: formData.get("includes_resources") === "true",
     is_active: formData.get("is_active") !== "false",
   }
@@ -63,19 +72,15 @@ export async function createOffer(formData: FormData) {
 export async function updateOffer(id: string, formData: FormData) {
   await requireStaffAccess()
   const supabase = createAdminClient()
-  const { name, price, durationDays } = parseOfferForm(formData)
+  const { name, price, durationDays, acceptanceDeadlineDays, includesHours } = parseOfferForm(formData)
 
   const updates = {
     name,
     description: (formData.get("description") as string) || null,
     price,
     duration_days: durationDays,
-    acceptance_deadline_days: formData.get("acceptance_deadline_days")
-      ? parseInt(formData.get("acceptance_deadline_days") as string)
-      : null,
-    includes_hours: formData.get("includes_hours")
-      ? parseInt(formData.get("includes_hours") as string)
-      : null,
+    acceptance_deadline_days: acceptanceDeadlineDays,
+    includes_hours: includesHours,
     includes_resources: formData.get("includes_resources") === "true",
     is_active: formData.get("is_active") === "true",
   }

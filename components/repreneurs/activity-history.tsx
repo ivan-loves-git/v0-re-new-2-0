@@ -90,7 +90,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
       setActivityType("welcome_email")
       setIsOpen(false)
       router.refresh()
-    } catch (error) {
+    } catch {
       console.error("Activity creation failed")
       toast.error("Failed to log activity. Please try again.")
     } finally {
@@ -105,7 +105,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
       await deleteActivity(activityId, repreneurId)
       toast.success("Activity deleted")
       router.refresh()
-    } catch (error) {
+    } catch {
       console.error("Activity deletion failed")
       toast.error("Failed to delete activity. Please try again.")
     } finally {

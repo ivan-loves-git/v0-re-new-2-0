@@ -404,7 +404,14 @@ export function OpportunityForm({
         new FormData(event.currentTarget),
       )
       if (!result.success || !result.contact) {
-        setOfficeContactFieldErrors({ form: result.message })
+        const resultErrors = result.fieldErrors
+        setOfficeContactFieldErrors(resultErrors ? {
+          form: resultErrors.form,
+          existing_contact_id: resultErrors.existing_contact_id,
+          office_contact_first_name: resultErrors.contact_first_name,
+          office_contact_last_name: resultErrors.contact_last_name,
+          office_contact_email: resultErrors.contact_email,
+        } : { form: result.message })
         toast.error("Office contact not added", {
           description: result.message,
         })
@@ -492,6 +499,11 @@ export function OpportunityForm({
                 revenue_meur: "CA M€",
                 ebitda_keur: "EBE K€",
                 date_added: "Date added",
+              }}
+              targets={{
+                source_office_id: "source_office",
+                affiliation_ids: "office-contacts",
+                primary_affiliation_id: "office-contacts",
               }}
             />
             <input
@@ -946,7 +958,15 @@ export function OpportunityForm({
             <ValidationSummary
               ref={officeContextSummaryRef}
               errors={officeContextFieldErrors}
-              labels={{ form: "M&A source", existing_firm_id: "M&A advisory firm", firm_name: "M&A advisory firm", office_name: "Operating office" }}
+              labels={{
+                form: "M&A source",
+                existing_firm_id: "M&A advisory firm",
+                firm_name: "M&A advisory firm",
+                office_name: "Operating office",
+                contact_first_name: "Contact first name",
+                contact_last_name: "Contact last name",
+                contact_email: "Contact email",
+              }}
             />
             <input
               type="hidden"
@@ -1080,11 +1100,29 @@ export function OpportunityForm({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <FormFieldLabel htmlFor="contact_first_name" requirement="conditional" requirementText="One name is required">First name</FormFieldLabel>
-                    <Input id="contact_first_name" name="contact_first_name" />
+                    <Input
+                      id="contact_first_name"
+                      name="contact_first_name"
+                      {...fieldErrorProps("contact_first_name", officeContextFieldErrors.contact_first_name)}
+                      onChange={() => {
+                        clearOfficeContextFieldError("contact_first_name")
+                        clearOfficeContextFieldError("contact_last_name")
+                      }}
+                    />
+                    <FieldError id="contact_first_name" message={officeContextFieldErrors.contact_first_name} />
                   </div>
                   <div className="space-y-2">
                     <FormFieldLabel htmlFor="contact_last_name" requirement="conditional" requirementText="One name is required">Last name</FormFieldLabel>
-                    <Input id="contact_last_name" name="contact_last_name" />
+                    <Input
+                      id="contact_last_name"
+                      name="contact_last_name"
+                      {...fieldErrorProps("contact_last_name", officeContextFieldErrors.contact_last_name)}
+                      onChange={() => {
+                        clearOfficeContextFieldError("contact_first_name")
+                        clearOfficeContextFieldError("contact_last_name")
+                      }}
+                    />
+                    <FieldError id="contact_last_name" message={officeContextFieldErrors.contact_last_name} />
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -1094,7 +1132,10 @@ export function OpportunityForm({
                       id="contact_email"
                       name="contact_email"
                       type="email"
+                      {...fieldErrorProps("contact_email", officeContextFieldErrors.contact_email)}
+                      onChange={() => clearOfficeContextFieldError("contact_email")}
                     />
+                    <FieldError id="contact_email" message={officeContextFieldErrors.contact_email} />
                   </div>
                   <div className="space-y-2">
                     <FormFieldLabel htmlFor="contact_phone" requirement="optional">Phone</FormFieldLabel>
@@ -1152,7 +1193,13 @@ export function OpportunityForm({
             <ValidationSummary
               ref={officeContactSummaryRef}
               errors={officeContactFieldErrors}
-              labels={{ form: "Office contact", existing_contact_id: "Canonical contact", contact_first_name: "Contact name", contact_email: "Email" }}
+              labels={{
+                form: "Office contact",
+                existing_contact_id: "Canonical contact",
+                office_contact_first_name: "Contact first name",
+                office_contact_last_name: "Contact last name",
+                office_contact_email: "Email",
+              }}
             />
             <input type="hidden" name="contact_mode" value={contactMode} />
             <p id="office_contact_mode_label" className="text-sm font-medium">
@@ -1225,7 +1272,11 @@ export function OpportunityForm({
                     canonicalContactLookupFailed
                   }
                 >
-                  <SelectTrigger id="existing_contact_id" className="w-full">
+                  <SelectTrigger
+                    id="existing_contact_id"
+                    className="w-full"
+                    {...fieldErrorProps("existing_contact_id", officeContactFieldErrors.existing_contact_id)}
+                  >
                     <SelectValue placeholder="Choose a canonical contact" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1250,6 +1301,7 @@ export function OpportunityForm({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                <FieldError id="existing_contact_id" message={officeContactFieldErrors.existing_contact_id} />
                 {isLoadingCanonicalContacts ? (
                   <p className="text-xs text-muted-foreground">
                     Loading canonical contacts…
@@ -1289,14 +1341,30 @@ export function OpportunityForm({
                     <Input
                       id="office_contact_first_name"
                       name="contact_first_name"
+                      {...fieldErrorProps("office_contact_first_name", officeContactFieldErrors.office_contact_first_name)}
+                      onChange={() => {
+                        clearOfficeContactFieldError("contact_first_name")
+                        clearOfficeContactFieldError("contact_last_name")
+                        clearOfficeContactFieldError("office_contact_first_name")
+                        clearOfficeContactFieldError("office_contact_last_name")
+                      }}
                     />
+                    <FieldError id="office_contact_first_name" message={officeContactFieldErrors.office_contact_first_name} />
                   </div>
                   <div className="space-y-2">
                     <FormFieldLabel htmlFor="office_contact_last_name" requirement="conditional" requirementText="One name is required">Last name</FormFieldLabel>
                     <Input
                       id="office_contact_last_name"
                       name="contact_last_name"
+                      {...fieldErrorProps("office_contact_last_name", officeContactFieldErrors.office_contact_last_name)}
+                      onChange={() => {
+                        clearOfficeContactFieldError("contact_first_name")
+                        clearOfficeContactFieldError("contact_last_name")
+                        clearOfficeContactFieldError("office_contact_first_name")
+                        clearOfficeContactFieldError("office_contact_last_name")
+                      }}
                     />
+                    <FieldError id="office_contact_last_name" message={officeContactFieldErrors.office_contact_last_name} />
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -1306,7 +1374,13 @@ export function OpportunityForm({
                       id="office_contact_email"
                       name="contact_email"
                       type="email"
+                      {...fieldErrorProps("office_contact_email", officeContactFieldErrors.office_contact_email)}
+                      onChange={() => {
+                        clearOfficeContactFieldError("contact_email")
+                        clearOfficeContactFieldError("office_contact_email")
+                      }}
                     />
+                    <FieldError id="office_contact_email" message={officeContactFieldErrors.office_contact_email} />
                   </div>
                   <div className="space-y-2">
                     <FormFieldLabel htmlFor="office_contact_phone" requirement="optional">Phone</FormFieldLabel>

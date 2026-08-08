@@ -430,6 +430,9 @@ describe("canonical opportunity contact persistence", () => {
           success: false,
           message:
             "Choose an active canonical contact to affiliate with this office.",
+          fieldErrors: {
+            existing_contact_id: "Choose an active canonical contact.",
+          },
         },
       )
     }

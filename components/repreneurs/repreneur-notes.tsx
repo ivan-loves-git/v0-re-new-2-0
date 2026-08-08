@@ -99,7 +99,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
       setNoteType("other")
       setIsOpen(false)
       router.refresh()
-    } catch (error) {
+    } catch {
       console.error("Repreneur note creation failed")
       toast.error("Failed to add note. Please try again.")
     } finally {
@@ -114,7 +114,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
       await deleteNote(noteId, repreneurId)
       toast.success("Note deleted")
       router.refresh()
-    } catch (error) {
+    } catch {
       console.error("Repreneur note deletion failed")
       toast.error("Failed to delete note. Please try again.")
     } finally {

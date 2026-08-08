@@ -17,6 +17,18 @@ import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 
+function optionalWebUrl(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "").trim()
+  if (!normalized) return undefined
+  try {
+    const parsed = new URL(normalized)
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error()
+    return normalized
+  } catch {
+    throw new Error("Enter a complete LinkedIn web address, or leave it blank.")
+  }
+}
+
 /**
  * Create a new repreneur from the admin form.
  *
@@ -67,6 +79,7 @@ export async function createRepreneur(formData: FormData) {
   const email = (formData.get("email") as string || "").toLowerCase().trim()
   const first_name = (formData.get("first_name") as string || "").trim()
   const last_name = (formData.get("last_name") as string || "").trim()
+  const linkedinUrl = optionalWebUrl(formData.get("linkedin_url"))
 
   if (!first_name) throw new Error("First name is required")
   if (!last_name) throw new Error("Last name is required")
@@ -77,7 +90,7 @@ export async function createRepreneur(formData: FormData) {
     first_name,
     last_name,
     phone: (formData.get("phone") as string) || undefined,
-    linkedin_url: (formData.get("linkedin_url") as string) || undefined,
+    linkedin_url: linkedinUrl,
     company_background: (formData.get("company_background") as string) || undefined,
     investment_capacity: (formData.get("investment_capacity") as string) || undefined,
     sector_preferences: sector_preferences.length > 0 ? sector_preferences : undefined,
@@ -118,6 +131,16 @@ export async function createRepreneur(formData: FormData) {
  */
 export async function updateRepreneur(id: string, formData: FormData) {
   const supabase = createAdminClient()
+  const firstName = String(formData.get("first_name") ?? "").trim()
+  const lastName = String(formData.get("last_name") ?? "").trim()
+  const email = String(formData.get("email") ?? "").trim().toLowerCase()
+  const linkedinUrl = optionalWebUrl(formData.get("linkedin_url"))
+
+  if (!firstName) throw new Error("Enter a first name.")
+  if (!lastName) throw new Error("Enter a last name.")
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Enter a valid email address.")
+  }
 
   // Parse sector preferences (now sent as JSON array)
   const sectorPrefsRaw = formData.get("sector_preferences") as string
@@ -158,11 +181,11 @@ export async function updateRepreneur(id: string, formData: FormData) {
   const consentChanged = existing?.marketing_consent !== marketingConsent
 
   const updates: Record<string, unknown> = {
-    email: formData.get("email") as string,
-    first_name: formData.get("first_name") as string,
-    last_name: formData.get("last_name") as string,
+    email,
+    first_name: firstName,
+    last_name: lastName,
     phone: (formData.get("phone") as string) || null,
-    linkedin_url: (formData.get("linkedin_url") as string) || null,
+    linkedin_url: linkedinUrl ?? null,
     company_background: (formData.get("company_background") as string) || null,
     investment_capacity: (formData.get("investment_capacity") as string) || null,
     sector_preferences: sector_preferences.length > 0 ? sector_preferences : null,
@@ -237,6 +260,14 @@ export async function updateRepreneurField(id: string, field: string, value: str
   await requireStaffAccess()
   if (!ALLOWED_REPRENEUR_FIELD_UPDATES.has(field)) {
     throw new Error("Field is not editable from this action")
+  }
+
+  if (field === "email") {
+    const email = typeof value === "string" ? value.trim().toLowerCase() : ""
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Enter a valid email address.")
+    }
+    value = email
   }
 
   const supabase = createAdminClient()

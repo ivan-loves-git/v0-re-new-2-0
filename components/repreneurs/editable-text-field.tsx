@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Pencil, Check, X } from "lucide-react"
 import { toast } from "sonner"
-import { FieldError, fieldErrorProps } from "@/components/forms/validation-feedback"
+import { FieldError, FormFieldLabel, fieldErrorProps } from "@/components/forms/validation-feedback"
 
 interface EditableTextFieldProps {
   repreneurId: string
@@ -48,7 +48,6 @@ export function EditableTextField({
 
   const handleSave = async () => {
     const newValue = editValue || null
-    const oldValue = value || ""
 
     if (field === "email") {
       if (!editValue.trim()) {
@@ -72,10 +71,11 @@ export function EditableTextField({
       toast.success("Saved successfully")
     } catch (error) {
       console.error("Repreneur field update failed")
-      toast.error("Failed to save. Please try again.")
-      // Revert on error
+      const message = error instanceof Error ? error.message : "Failed to save. Please try again."
+      setError(message)
+      setIsEditing(true)
       setOptimisticValue(null)
-      setEditValue(oldValue)
+      toast.error("Failed to save", { description: message })
     } finally {
       setIsSaving(false)
     }
@@ -95,10 +95,18 @@ export function EditableTextField({
   }
 
   if (isEditing) {
+    const fieldId = `repreneur-${field}`
     return (
       <div className="space-y-2">
+        <FormFieldLabel
+          htmlFor={fieldId}
+          requirement={field === "email" ? "required" : "optional"}
+        >
+          {label}
+        </FormFieldLabel>
         {type === "textarea" ? (
           <Textarea
+            id={fieldId}
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
             value={editValue}
             onChange={(e) => { setEditValue(e.target.value); setError(undefined) }}
@@ -110,6 +118,7 @@ export function EditableTextField({
           />
         ) : (
           <Input
+            id={fieldId}
             ref={inputRef as React.RefObject<HTMLInputElement>}
             type={type}
             value={editValue}

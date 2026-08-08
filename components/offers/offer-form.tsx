@@ -32,11 +32,23 @@ export function OfferForm({ offer }: OfferFormProps) {
   const handleSubmit = async (formData: FormData) => {
     const nextErrors: FieldErrors = {}
     const name = String(formData.get("name") ?? "").trim()
-    const price = Number(formData.get("price"))
+    const priceRaw = String(formData.get("price") ?? "").trim()
+    const price = priceRaw ? Number(priceRaw) : Number.NaN
     const duration = Number(formData.get("duration_days"))
+    const acceptanceDeadlineRaw = String(formData.get("acceptance_deadline_days") ?? "").trim()
+    const coachingHoursRaw = String(formData.get("includes_hours") ?? "").trim()
+    const acceptanceDeadline = acceptanceDeadlineRaw ? Number(acceptanceDeadlineRaw) : null
+    const coachingHours = coachingHoursRaw ? Number(coachingHoursRaw) : null
     if (!name) nextErrors.name = "Enter an offer name."
-    if (!Number.isFinite(price) || price < 0) nextErrors.price = "Enter a price of €0 or more."
+    if (!priceRaw) nextErrors.price = "Enter a price."
+    else if (!Number.isFinite(price) || price < 0) nextErrors.price = "Enter a price of €0 or more."
     if (!Number.isInteger(duration) || duration < 1) nextErrors.duration_days = "Enter a duration of at least one day."
+    if (acceptanceDeadline !== null && (!Number.isInteger(acceptanceDeadline) || acceptanceDeadline < 1)) {
+      nextErrors.acceptance_deadline_days = "Enter at least one day, or leave this blank."
+    }
+    if (coachingHours !== null && (!Number.isInteger(coachingHours) || coachingHours < 0)) {
+      nextErrors.includes_hours = "Enter a whole number of zero or more, or leave this blank."
+    }
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) {
       focusValidationSummary(summaryRef)
@@ -52,9 +64,23 @@ export function OfferForm({ offer }: OfferFormProps) {
         await createOffer(formData)
         toast.success("Offer created")
       }
-    } catch {
+    } catch (error) {
       console.error("Offer save failed")
-      toast.error("Failed to save offer. Please try again.")
+      const message = error instanceof Error ? error.message : "Failed to save offer. Please try again."
+      const normalizedMessage = message.toLowerCase()
+      const serverErrors: FieldErrors = {}
+      if (normalizedMessage.includes("name")) serverErrors.name = message
+      if (normalizedMessage.includes("price")) serverErrors.price = message
+      if (normalizedMessage.includes("duration")) serverErrors.duration_days = message
+      if (normalizedMessage.includes("acceptance")) serverErrors.acceptance_deadline_days = message
+      if (normalizedMessage.includes("coaching") || normalizedMessage.includes("hours")) serverErrors.includes_hours = message
+
+      if (Object.keys(serverErrors).length > 0) {
+        setErrors(serverErrors)
+        focusValidationSummary(summaryRef)
+      } else {
+        toast.error(message)
+      }
     }
   }
 
@@ -64,12 +90,18 @@ export function OfferForm({ offer }: OfferFormProps) {
         <CardTitle>{isEditing ? "Edit Offer" : "Create New Offer"}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-6">
+        <form action={handleSubmit} className="space-y-6" noValidate>
           <p className="text-sm text-muted-foreground">Fields marked Required must be completed. All other fields are optional.</p>
           <ValidationSummary
             ref={summaryRef}
             errors={errors}
-            labels={{ name: "Offer name", price: "Price", duration_days: "Duration" }}
+            labels={{
+              name: "Offer name",
+              price: "Price",
+              duration_days: "Duration",
+              acceptance_deadline_days: "Acceptance deadline",
+              includes_hours: "Coaching hours",
+            }}
           />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -142,7 +174,10 @@ export function OfferForm({ offer }: OfferFormProps) {
                 min="1"
                 placeholder="e.g., 14"
                 defaultValue={offer?.acceptance_deadline_days || ""}
+                {...fieldErrorProps("acceptance_deadline_days", errors.acceptance_deadline_days)}
+                onChange={() => setErrors(current => ({ ...current, acceptance_deadline_days: "" }))}
               />
+              <FieldError id="acceptance_deadline_days" message={errors.acceptance_deadline_days} />
               <p className="text-xs text-muted-foreground">Days to accept after being offered</p>
             </div>
 
@@ -155,7 +190,10 @@ export function OfferForm({ offer }: OfferFormProps) {
                 min="0"
                 placeholder="e.g., 10"
                 defaultValue={offer?.includes_hours || ""}
+                {...fieldErrorProps("includes_hours", errors.includes_hours)}
+                onChange={() => setErrors(current => ({ ...current, includes_hours: "" }))}
               />
+              <FieldError id="includes_hours" message={errors.includes_hours} />
               <p className="text-xs text-muted-foreground">Hours included in the package</p>
             </div>
           </div>

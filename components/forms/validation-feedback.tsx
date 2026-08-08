@@ -87,12 +87,13 @@ export function FieldError({
 interface ValidationSummaryProps {
   errors: FieldErrors
   labels: Record<string, string>
+  targets?: Record<string, string>
   title?: string
   className?: string
 }
 
 export const ValidationSummary = React.forwardRef<HTMLDivElement, ValidationSummaryProps>(
-  function ValidationSummary({ errors, labels, title = "Check the highlighted fields", className }, ref) {
+  function ValidationSummary({ errors, labels, targets, title = "Check the highlighted fields", className }, ref) {
     const fields = Object.keys(errors).filter((field) => Boolean(errors[field]))
     if (fields.length === 0) return null
 
@@ -111,7 +112,7 @@ export const ValidationSummary = React.forwardRef<HTMLDivElement, ValidationSumm
             {fields.map((field, index) => (
               <React.Fragment key={field}>
                 {index > 0 ? index === fields.length - 1 ? " and " : ", " : null}
-                <a className="font-medium underline underline-offset-2" href={`#${field}`}>
+                <a className="font-medium underline underline-offset-2" href={`#${targets?.[field] ?? field}`}>
                   {labels[field] ?? field.replaceAll("_", " ")}
                 </a>
               </React.Fragment>

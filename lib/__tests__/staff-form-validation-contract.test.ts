@@ -35,7 +35,7 @@ describe("staff form validation feedback contract", () => {
 
   it("provides a focusable linked summary for invalid Save or Next attempts", () => {
     expect(source).toContain('tabIndex={-1}')
-    expect(source).toContain('href={`#${field}`}')
+    expect(source).toContain('href={`#${targets?.[field] ?? field}`}')
     expect(source).toContain('requestAnimationFrame')
   })
 

@@ -52,7 +52,7 @@ export function EditableRepreneurIdentity({
       setDisplayLastName(normalizedLastName)
       setIsEditing(false)
       toast.success("Name updated")
-    } catch (error) {
+    } catch {
       console.error("Repreneur identity update failed")
       toast.error("Failed to update the name. Please try again.")
     } finally {
