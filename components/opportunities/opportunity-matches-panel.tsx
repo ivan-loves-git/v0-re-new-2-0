@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
@@ -19,11 +19,17 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { StaffRepreneurCombobox } from "@/components/repreneurs/staff-repreneur-combobox"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  FieldError as ValidationFieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+} from "@/components/forms/validation-feedback"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   dropOpportunityPursuit,
@@ -127,16 +133,12 @@ function FieldInfo({ label, description, example }: FieldInfoProps) {
   )
 }
 
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null
-  return <p className="text-xs text-destructive">{message}</p>
-}
-
 export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: OpportunityMatchesPanelProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const validationSummaryRef = useRef<HTMLDivElement>(null)
   const [selectedRepreneurId, setSelectedRepreneurId] = useState("")
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
   const selectedCandidate = candidates.find((candidate) => candidate.id === selectedRepreneurId)
@@ -145,6 +147,10 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     .filter((candidate) => !savedRepreneurIds.has(candidate.id))
     .sort((left, right) => (right.platform_score ?? -1) - (left.platform_score ?? -1))
     .slice(0, 5)
+
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length > 0) focusValidationSummary(validationSummaryRef)
+  }, [fieldErrors])
 
   function handleRepreneurChange(value: string) {
     setSelectedRepreneurId(value)
@@ -190,7 +196,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     try {
       const result = await saveOpportunityMatch(formData)
       if (!result.ok) {
-        setFieldErrors(result.field ? { [result.field]: result.message } : {})
+        setFieldErrors(result.field ? { [result.field]: result.message } : { form: result.message })
         showFeedback({
           type: "error",
           title: "Recommendation not saved",
@@ -341,8 +347,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             </div>
           ) : null}
 
-          <form action={handleSave} noValidate className="flex flex-col gap-5">
+          <form id="opportunity-match-form" action={handleSave} noValidate className="flex flex-col gap-5">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
+            <ValidationSummary
+              ref={validationSummaryRef}
+              errors={fieldErrors}
+              labels={{ repreneur_id: "Repreneur", status: "Match status" }}
+            />
             {feedback ? (
               <Alert
                 role={feedback.type === "success" ? "status" : "alert"}
@@ -360,14 +371,14 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             ) : null}
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="repreneur_id">
+                <FormFieldLabel htmlFor="repreneur_id" requirement="required">
                   Repreneur
                   <FieldInfo
                     label="Repreneur"
                     description="The person who may receive this opportunity."
                     example="Ivan Demo Repreneur - myworkmail4@gmail.com."
                   />
-                </Label>
+                </FormFieldLabel>
                 <StaffRepreneurCombobox
                   id="repreneur_id"
                   name="repreneur_id"
@@ -376,21 +387,21 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                   onValueChange={handleRepreneurChange}
                   placeholder={candidates.length === 0 ? "No repreneurs available" : "Choose a repreneur, e.g. Ivan Demo Repreneur"}
                   disabled={candidates.length === 0}
-                  aria-invalid={Boolean(fieldErrors.repreneur_id)}
+                  {...fieldErrorProps("repreneur_id", fieldErrors.repreneur_id)}
                 />
-                <FieldError message={fieldErrors.repreneur_id} />
+                <ValidationFieldError id="repreneur_id" message={fieldErrors.repreneur_id} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="match_status">
+                <FormFieldLabel htmlFor="match_status" requirement="required">
                   Match status
                   <FieldInfo
                     label="Match status"
                     description="Proposed appears in the repreneur portal. Draft and Shortlisted stay internal. Interested records the repreneur flow. Active pursuit is only created with Validate."
                     example="Use Shortlisted while staff is still discussing; use Proposed when it should reach the repreneur portal."
                   />
-                </Label>
+                </FormFieldLabel>
                 <Select name="status" defaultValue="proposed" onValueChange={() => clearFieldError("status")}>
-                  <SelectTrigger id="match_status" className="w-full" aria-invalid={Boolean(fieldErrors.status)}>
+                  <SelectTrigger id="match_status" className="w-full" {...fieldErrorProps("match_status", fieldErrors.status)}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -403,17 +414,17 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <FieldError message={fieldErrors.status} />
+                <ValidationFieldError id="match_status" message={fieldErrors.status} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="platform_recommendation_preview">
+                <FormFieldLabel htmlFor="platform_recommendation_preview" requirement="optional">
                   Platform recommendation
                   <FieldInfo
                     label="Platform recommendation"
                     description="Automatic, rule-based guidance calculated from the selected repreneur and this opportunity."
                     example="Possible fit, 72/100, with sector and geography aligned but missing deal-size proof."
                   />
-                </Label>
+                </FormFieldLabel>
                 <div id="platform_recommendation_preview" className="min-h-[58px] rounded-md border bg-muted/40 px-3 py-2">
                   {selectedCandidate?.platform_recommendation ? (
                     <div className="flex flex-col gap-2">
@@ -441,14 +452,14 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 </Button>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="human_recommendation">
+                <FormFieldLabel htmlFor="human_recommendation" requirement="optional">
                   Human recommendation
                   <FieldInfo
                     label="Human recommendation"
                     description="Staff confirmation, override, or caution after human review."
                     example="Strong fit after Bertrand confirms strategic relevance."
                   />
-                </Label>
+                </FormFieldLabel>
                 <Select name="human_recommendation" defaultValue="not_evaluated">
                   <SelectTrigger id="human_recommendation" className="w-full">
                     <SelectValue />
@@ -476,14 +487,14 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="human_notes">
+                <FormFieldLabel htmlFor="human_notes" requirement="optional">
                   Human notes
                   <FieldInfo
                     label="Human notes"
                     description="Internal staff rationale, caveats, or next-step context."
                     example="Wait for updated teaser before proposing; Bertrand wants seller access confirmed."
                   />
-                </Label>
+                </FormFieldLabel>
                 <Textarea
                   id="human_notes"
                   name="human_notes"

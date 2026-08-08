@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -24,6 +24,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+} from "@/components/forms/validation-feedback";
 import type {
   MaOfficeIntakeOffice,
   OpportunityActionResult,
@@ -44,6 +51,7 @@ export function OpportunitySourceReviewPanel({
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const validationSummaryRef = useRef<HTMLDivElement>(null);
   const [officeId, setOfficeId] = useState("");
   const [affiliationIds, setAffiliationIds] = useState<string[]>([]);
   const [primaryAffiliationId, setPrimaryAffiliationId] = useState("");
@@ -61,13 +69,29 @@ export function OpportunitySourceReviewPanel({
     [officeId, realOfficeOptions],
   );
 
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length > 0) focusValidationSummary(validationSummaryRef);
+  }, [fieldErrors]);
+
+  function clearFieldError(field: string) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
   function chooseOffice(nextOfficeId: string) {
     setOfficeId(nextOfficeId);
+    clearFieldError("source_office_id");
     setAffiliationIds([]);
     setPrimaryAffiliationId("");
   }
 
   function toggleAffiliation(affiliationId: string, checked: boolean) {
+    clearFieldError("affiliation_ids");
+    clearFieldError("primary_affiliation_id");
     setAffiliationIds((current) => {
       const next = checked
         ? [...new Set([...current, affiliationId])]
@@ -88,13 +112,14 @@ export function OpportunitySourceReviewPanel({
     try {
       const result = await action(new FormData(event.currentTarget));
       if (!result.success) {
-        setFieldErrors(result.fieldErrors ?? {});
+        setFieldErrors(result.fieldErrors ?? { form: result.message });
         toast.error(result.message);
         return;
       }
       toast.success(result.message);
       setOpen(false);
     } catch (error) {
+      setFieldErrors({ form: "The source correction could not be saved. Try again." });
       toast.error(
         error instanceof Error
           ? error.message
@@ -104,11 +129,6 @@ export function OpportunitySourceReviewPanel({
       setIsSubmitting(false);
     }
   }
-
-  const errorFor = (key: string) =>
-    fieldErrors[key] ? (
-      <p className="text-xs text-destructive">{fieldErrors[key]}</p>
-    ) : null;
 
   return (
     <Alert
@@ -142,7 +162,12 @@ export function OpportunitySourceReviewPanel({
             </DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          <form id="source-review-form" className="space-y-5" onSubmit={handleSubmit} noValidate>
+            <ValidationSummary
+              ref={validationSummaryRef}
+              errors={fieldErrors}
+              labels={{ form: "Source correction", source_office_id: "Verified operating office", affiliation_ids: "Office contacts", primary_affiliation_id: "Primary contact", source_review_reason: "Verification note" }}
+            />
             <input type="hidden" name="source_office_id" value={officeId} />
             {affiliationIds.map((id) => (
               <input key={id} type="hidden" name="affiliation_ids" value={id} />
@@ -154,13 +179,13 @@ export function OpportunitySourceReviewPanel({
             />
 
             <div className="space-y-2">
-              <Label htmlFor="source-review-office">
+              <FormFieldLabel htmlFor="source-review-office" requirement="required">
                 Verified operating office
-              </Label>
+              </FormFieldLabel>
               <Select value={officeId} onValueChange={chooseOffice}>
                 <SelectTrigger
                   id="source-review-office"
-                  aria-invalid={Boolean(fieldErrors.source_office_id)}
+                  {...fieldErrorProps("source-review-office", fieldErrors.source_office_id)}
                 >
                   <SelectValue placeholder="Choose the real office" />
                 </SelectTrigger>
@@ -177,12 +202,12 @@ export function OpportunitySourceReviewPanel({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              {errorFor("source_office_id")}
+              <FieldError id="source-review-office" message={fieldErrors.source_office_id} />
             </div>
 
             <fieldset className="space-y-3" disabled={!selectedOffice}>
               <div>
-                <Label>Office contacts</Label>
+                <FormFieldLabel requirement="required">Office contacts</FormFieldLabel>
                 <p className="text-sm text-muted-foreground">
                   Select active contacts at the verified office, then designate
                   one primary contact.
@@ -249,22 +274,25 @@ export function OpportunitySourceReviewPanel({
                   })}
                 </div>
               )}
-              {errorFor("affiliation_ids")}
-              {errorFor("primary_affiliation_id")}
+              <FieldError id="affiliation_ids" message={fieldErrors.affiliation_ids} />
+              <FieldError id="primary_affiliation_id" message={fieldErrors.primary_affiliation_id} />
             </fieldset>
 
             <div className="space-y-2">
-              <Label htmlFor="source-review-reason">Verification note</Label>
+              <FormFieldLabel htmlFor="source-review-reason" requirement="required">Verification note</FormFieldLabel>
               <Textarea
                 id="source-review-reason"
                 name="source_review_reason"
                 value={reason}
-                onChange={(event) => setReason(event.target.value)}
+                onChange={(event) => {
+                  setReason(event.target.value);
+                  clearFieldError("source_review_reason");
+                }}
                 maxLength={4096}
                 placeholder="Why this office and contact set is the verified source"
-                aria-invalid={Boolean(fieldErrors.source_review_reason)}
+                {...fieldErrorProps("source-review-reason", fieldErrors.source_review_reason)}
               />
-              {errorFor("source_review_reason")}
+              <FieldError id="source-review-reason" message={fieldErrors.source_review_reason} />
             </div>
 
             <DialogFooter>

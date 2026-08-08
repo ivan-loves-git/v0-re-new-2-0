@@ -1,6 +1,6 @@
 "use client"
 
-import { type FormEvent, useMemo, useState } from "react"
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Dialog,
@@ -33,6 +32,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+} from "@/components/forms/validation-feedback"
 import {
   OPPORTUNITY_STATUS_OPTIONS,
   type MaCanonicalContactOption,
@@ -88,6 +94,7 @@ export function OpportunityForm({
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const validationSummaryRef = useRef<HTMLDivElement>(null)
   const normalizedExistingSector = normalizeOpportunitySector(
     opportunity?.sector,
   )
@@ -124,8 +131,13 @@ export function OpportunityForm({
   const [officeContextFieldErrors, setOfficeContextFieldErrors] = useState<
     Record<string, string>
   >({})
+  const officeContextSummaryRef = useRef<HTMLDivElement>(null)
   const [createContactDialogOpen, setCreateContactDialogOpen] = useState(false)
   const [isCreatingContact, setIsCreatingContact] = useState(false)
+  const [officeContactFieldErrors, setOfficeContactFieldErrors] = useState<
+    Record<string, string>
+  >({})
+  const officeContactSummaryRef = useRef<HTMLDivElement>(null)
   const [contactMode, setContactMode] = useState<OfficeContactMode>("new")
   const [existingContactId, setExistingContactId] = useState("")
   const [canonicalContactOptions, setCanonicalContactOptions] = useState<
@@ -185,6 +197,49 @@ export function OpportunityForm({
     )
   }, [canonicalContactOptions, selectedOffice])
 
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length > 0) focusValidationSummary(validationSummaryRef)
+  }, [fieldErrors])
+
+  useEffect(() => {
+    if (Object.keys(officeContextFieldErrors).length > 0) {
+      focusValidationSummary(officeContextSummaryRef)
+    }
+  }, [officeContextFieldErrors])
+
+  useEffect(() => {
+    if (Object.keys(officeContactFieldErrors).length > 0) {
+      focusValidationSummary(officeContactSummaryRef)
+    }
+  }, [officeContactFieldErrors])
+
+  function clearFieldError(field: string) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
+  function clearOfficeContextFieldError(field: string) {
+    setOfficeContextFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
+  function clearOfficeContactFieldError(field: string) {
+    setOfficeContactFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (isHistorical) return
@@ -196,7 +251,7 @@ export function OpportunityForm({
     try {
       const result = await action(formData)
       if (!result?.success) {
-        setFieldErrors(result?.fieldErrors ?? {})
+        setFieldErrors(result?.fieldErrors ?? { form: result?.message ?? "The opportunity could not be saved." })
         toast.error(result?.message ?? "Opportunity could not be saved.")
       } else {
         toast.success(result.message)
@@ -207,6 +262,7 @@ export function OpportunityForm({
       }
     } catch (error) {
       console.error("Opportunity save failed")
+      setFieldErrors({ form: "The opportunity could not be saved. Check the details and try again." })
       toast.error(
         error instanceof Error
           ? error.message
@@ -217,21 +273,17 @@ export function OpportunityForm({
     }
   }
 
-  function errorFor(...fields: string[]) {
-    const message = fields.map((field) => fieldErrors[field]).find(Boolean)
-    return message ? (
-      <p className="text-xs text-destructive">{message}</p>
-    ) : null
-  }
-
   function chooseOffice(value: string) {
     const nextOfficeId = value === NO_OFFICE_OPTION_VALUE ? "" : value
     setSelectedOfficeId(nextOfficeId)
+    clearFieldError("source_office_id")
     setSelectedAffiliationIds([])
     setPrimaryAffiliationId(null)
   }
 
   function toggleAffiliation(affiliationId: string, checked: boolean) {
+    clearFieldError("affiliation_ids")
+    clearFieldError("primary_affiliation_id")
     setSelectedAffiliationIds((current) => {
       const next = checked
         ? [...new Set([...current, affiliationId])]
@@ -301,7 +353,7 @@ export function OpportunityForm({
           ? await createMaOfficeForExistingFirm(formData)
           : await createMaFirmOfficeContext(formData)
       if (!result.success || !result.office) {
-        setOfficeContextFieldErrors(result.fieldErrors ?? {})
+        setOfficeContextFieldErrors(result.fieldErrors ?? { form: result.message })
         toast.error("M&A source not created", { description: result.message })
         return
       }
@@ -322,6 +374,7 @@ export function OpportunityForm({
       setExistingFirmId("")
       toast.success(result.message)
     } catch (error) {
+      setOfficeContextFieldErrors({ form: "The M&A source could not be created. Try again." })
       toast.error(
         error instanceof Error
           ? error.message
@@ -336,6 +389,8 @@ export function OpportunityForm({
     event.preventDefault()
     if (!selectedOffice) return
 
+    setOfficeContactFieldErrors({})
+
     const selectedCanonicalContact =
       contactMode === "existing"
         ? canonicalContactOptions.find(
@@ -349,6 +404,7 @@ export function OpportunityForm({
         new FormData(event.currentTarget),
       )
       if (!result.success || !result.contact) {
+        setOfficeContactFieldErrors({ form: result.message })
         toast.error("Office contact not added", {
           description: result.message,
         })
@@ -394,6 +450,7 @@ export function OpportunityForm({
       setCanonicalContactLookupFailed(false)
       toast.success(result.message)
     } catch (error) {
+      setOfficeContactFieldErrors({ form: "The office contact could not be added. Try again." })
       toast.error(
         error instanceof Error
           ? error.message
@@ -406,7 +463,7 @@ export function OpportunityForm({
 
   return (
     <>
-      <form noValidate onSubmit={handleSubmit} className="mx-auto max-w-5xl">
+      <form id="opportunity-form" noValidate onSubmit={handleSubmit} className="mx-auto max-w-5xl">
         <Card>
           <CardHeader>
             <CardTitle>
@@ -419,6 +476,24 @@ export function OpportunityForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
+            <ValidationSummary
+              ref={validationSummaryRef}
+              errors={fieldErrors}
+              labels={{
+                form: "Opportunity details",
+                reference: "Ref. Mandat",
+                public_title: "Public title",
+                status: "Status",
+                source_office_id: "Operating office",
+                affiliation_ids: "Office contacts",
+                primary_affiliation_id: "Primary recipient",
+                sector_choice: "Sector",
+                sector_other: "Sector",
+                revenue_meur: "CA M€",
+                ebitda_keur: "EBE K€",
+                date_added: "Date added",
+              }}
+            />
             <input
               type="hidden"
               name="source_office_id"
@@ -445,19 +520,20 @@ export function OpportunityForm({
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="reference">Ref. Mandat *</Label>
+                  <FormFieldLabel htmlFor="reference" requirement="required">Ref. Mandat</FormFieldLabel>
                   <Input
                     id="reference"
                     name="reference"
                     defaultValue={opportunity?.reference ?? ""}
                     required
                     disabled={isHistorical}
-                    aria-invalid={Boolean(fieldErrors.reference)}
+                    onChange={() => clearFieldError("reference")}
+                    {...fieldErrorProps("reference", fieldErrors.reference)}
                   />
-                  {errorFor("reference")}
+                  <FieldError id="reference" message={fieldErrors.reference} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
+                  <FormFieldLabel htmlFor="status" requirement="required">Status</FormFieldLabel>
                   {isHistorical ? (
                     <Input
                       id="status"
@@ -470,11 +546,11 @@ export function OpportunityForm({
                     <Select
                       name="status"
                       value={status}
-                      onValueChange={setStatus}
+                      onValueChange={(value) => { setStatus(value); clearFieldError("status") }}
                     >
                       <SelectTrigger
                         id="status"
-                        aria-invalid={Boolean(fieldErrors.status)}
+                        {...fieldErrorProps("status", fieldErrors.status)}
                       >
                         <SelectValue />
                       </SelectTrigger>
@@ -489,20 +565,20 @@ export function OpportunityForm({
                       </SelectContent>
                     </Select>
                   )}
-                  {errorFor("status")}
+                  <FieldError id="status" message={fieldErrors.status} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sector_choice">Secteur</Label>
+                  <FormFieldLabel htmlFor="sector_choice" requirement="conditional" requirementText="Required before proposal">Secteur</FormFieldLabel>
                   <Select
                     name="sector_choice"
                     value={sectorChoice}
-                    onValueChange={setSectorChoice}
+                    onValueChange={(value) => { setSectorChoice(value); clearFieldError("sector_choice") }}
                     disabled={isHistorical}
                   >
                     <SelectTrigger
                       id="sector_choice"
                       className="w-full"
-                      aria-invalid={Boolean(fieldErrors.sector_choice)}
+                      {...fieldErrorProps("sector_choice", fieldErrors.sector_choice)}
                     >
                       <SelectValue placeholder="Optional sector" />
                     </SelectTrigger>
@@ -516,7 +592,7 @@ export function OpportunityForm({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  {errorFor("sector_choice")}
+                  <FieldError id="sector_choice" message={fieldErrors.sector_choice} />
                   {opportunity?.sector &&
                   isAmbiguousLegacySector(opportunity.sector) &&
                   !sectorChoice ? (
@@ -527,7 +603,7 @@ export function OpportunityForm({
                   ) : null}
                   {sectorChoice === OTHER_SECTOR ? (
                     <div className="space-y-2 pt-1">
-                      <Label htmlFor="sector_other">Specify sector</Label>
+                      <FormFieldLabel htmlFor="sector_other" requirement="required">Specify sector</FormFieldLabel>
                       <Input
                         id="sector_other"
                         name="sector_other"
@@ -539,24 +615,24 @@ export function OpportunityForm({
                         }
                         maxLength={120}
                         disabled={isHistorical}
-                        aria-invalid={Boolean(fieldErrors.sector_other)}
+                        onChange={() => clearFieldError("sector_other")}
+                        {...fieldErrorProps("sector_other", fieldErrors.sector_other)}
                       />
-                      {errorFor("sector_other")}
+                      <FieldError id="sector_other" message={fieldErrors.sector_other} />
                     </div>
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="location">Localisation</Label>
+                  <FormFieldLabel htmlFor="location" requirement="conditional" requirementText="Required before proposal">Localisation</FormFieldLabel>
                   <Input
                     id="location"
                     name="location"
                     defaultValue={opportunity?.location ?? ""}
                     disabled={isHistorical}
                   />
-                  {errorFor("location")}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="date_added">Date ajout</Label>
+                  <FormFieldLabel htmlFor="date_added" requirement="optional">Date ajout</FormFieldLabel>
                   <Input
                     id="date_added"
                     name="date_added"
@@ -564,10 +640,10 @@ export function OpportunityForm({
                     defaultValue={opportunity?.date_added ?? ""}
                     disabled={isHistorical}
                   />
-                  {errorFor("date_added")}
+                  <FieldError id="date_added" message={fieldErrors.date_added} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="revenue_meur">CA M€</Label>
+                  <FormFieldLabel htmlFor="revenue_meur" requirement="optional">CA M€</FormFieldLabel>
                   <Input
                     id="revenue_meur"
                     name="revenue_meur"
@@ -575,10 +651,10 @@ export function OpportunityForm({
                     defaultValue={opportunity?.revenue_meur ?? ""}
                     disabled={isHistorical}
                   />
-                  {errorFor("revenue_meur")}
+                  <FieldError id="revenue_meur" message={fieldErrors.revenue_meur} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ebitda_keur">EBE K€</Label>
+                  <FormFieldLabel htmlFor="ebitda_keur" requirement="optional">EBE K€</FormFieldLabel>
                   <Input
                     id="ebitda_keur"
                     name="ebitda_keur"
@@ -586,10 +662,10 @@ export function OpportunityForm({
                     defaultValue={opportunity?.ebitda_keur ?? ""}
                     disabled={isHistorical}
                   />
-                  {errorFor("ebitda_keur")}
+                  <FieldError id="ebitda_keur" message={fieldErrors.ebitda_keur} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="headcount_range">Effectif</Label>
+                  <FormFieldLabel htmlFor="headcount_range" requirement="optional">Effectif</FormFieldLabel>
                   <Input
                     id="headcount_range"
                     name="headcount_range"
@@ -600,20 +676,20 @@ export function OpportunityForm({
                     }
                     disabled={isHistorical}
                   />
-                  {errorFor("headcount_range")}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <FormFieldLabel htmlFor="description" requirement="conditional" requirementText="Required to activate or pause">Description</FormFieldLabel>
                 <Textarea
                   id="description"
                   name="description"
                   rows={4}
                   defaultValue={opportunity?.description ?? ""}
                   disabled={isHistorical}
-                  aria-invalid={Boolean(fieldErrors.description)}
+                  onChange={() => clearFieldError("description")}
+                  {...fieldErrorProps("description", fieldErrors.description)}
                 />
-                {errorFor("description")}
+                <FieldError id="description" message={fieldErrors.description} />
               </div>
             </section>
 
@@ -643,7 +719,7 @@ export function OpportunityForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="source_office">Operating office</Label>
+                <FormFieldLabel htmlFor="source_office" requirement="conditional" requirementText="Required to activate or pause">Operating office</FormFieldLabel>
                 <Select
                   value={selectedOfficeId || NO_OFFICE_OPTION_VALUE}
                   onValueChange={chooseOffice}
@@ -651,7 +727,7 @@ export function OpportunityForm({
                 >
                   <SelectTrigger
                     id="source_office"
-                    aria-invalid={Boolean(fieldErrors.source_office_id)}
+                    {...fieldErrorProps("source_office", fieldErrors.source_office_id)}
                   >
                     <SelectValue placeholder="Choose an operating office" />
                   </SelectTrigger>
@@ -671,7 +747,7 @@ export function OpportunityForm({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                {errorFor("source_office_id")}
+                <FieldError id="source_office" message={fieldErrors.source_office_id} />
                 {selectedOffice ? (
                   <p className="text-xs text-muted-foreground">
                     Firm: {selectedOffice.firm_name} · Office:{" "}
@@ -777,7 +853,10 @@ export function OpportunityForm({
                       })}
                     </div>
                   )}
-                  {errorFor("affiliation_ids", "primary_affiliation_id")}
+                  <div id="office-contacts" className="space-y-2">
+                    <FieldError id="office-contacts" message={fieldErrors.affiliation_ids} />
+                    <FieldError id="office-contacts-primary" message={fieldErrors.primary_affiliation_id} />
+                  </div>
                 </div>
               ) : null}
             </section>
@@ -794,18 +873,20 @@ export function OpportunityForm({
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="public_title">Public title *</Label>
+                <FormFieldLabel htmlFor="public_title" requirement="required">Public title</FormFieldLabel>
                 <Input
                   id="public_title"
                   name="public_title"
                   defaultValue={opportunity?.public_title ?? ""}
                   required={!opportunity}
                   disabled={isHistorical}
+                  onChange={() => clearFieldError("public_title")}
+                  {...fieldErrorProps("public_title", fieldErrors.public_title)}
                 />
-                {errorFor("public_title")}
+                <FieldError id="public_title" message={fieldErrors.public_title} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="teaser_summary">Teaser summary</Label>
+                <FormFieldLabel htmlFor="teaser_summary" requirement="conditional" requirementText="Required before proposal">Teaser summary</FormFieldLabel>
                 <Textarea
                   id="teaser_summary"
                   name="teaser_summary"
@@ -813,15 +894,14 @@ export function OpportunityForm({
                   defaultValue={opportunity?.teaser_summary ?? ""}
                   disabled={isHistorical}
                 />
-                {errorFor("teaser_summary")}
               </div>
             </section>
 
             <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
               <div className="space-y-2">
-                <Label htmlFor="internal_notes">
+                <FormFieldLabel htmlFor="internal_notes" requirement="optional">
                   Opportunity internal notes
-                </Label>
+                </FormFieldLabel>
                 <Textarea
                   id="internal_notes"
                   name="internal_notes"
@@ -862,7 +942,12 @@ export function OpportunityForm({
               existing active firm. Neither action publishes an opportunity.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateOfficeContext} className="space-y-4">
+          <form id="office-context-form" noValidate onSubmit={handleCreateOfficeContext} className="space-y-4">
+            <ValidationSummary
+              ref={officeContextSummaryRef}
+              errors={officeContextFieldErrors}
+              labels={{ form: "M&A source", existing_firm_id: "M&A advisory firm", firm_name: "M&A advisory firm", office_name: "Operating office" }}
+            />
             <input
               type="hidden"
               name="existing_firm_id"
@@ -922,20 +1007,18 @@ export function OpportunityForm({
             </RadioGroup>
             {officeContextMode === "existing_firm" ? (
               <div className="space-y-2">
-                <Label htmlFor="existing_firm_id">M&A advisory firm *</Label>
+                <FormFieldLabel htmlFor="existing_firm_id" requirement="required">M&A advisory firm</FormFieldLabel>
                 <Select
                   value={existingFirmId || "__no_existing_firm__"}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
                     setExistingFirmId(
                       value === "__no_existing_firm__" ? "" : value,
-                    )
-                  }
+                    ); clearOfficeContextFieldError("existing_firm_id")
+                  }}
                 >
                   <SelectTrigger
                     id="existing_firm_id"
-                    aria-invalid={Boolean(
-                      officeContextFieldErrors.existing_firm_id,
-                    )}
+                    {...fieldErrorProps("existing_firm_id", officeContextFieldErrors.existing_firm_id)}
                   >
                     <SelectValue placeholder="Choose an active firm" />
                   </SelectTrigger>
@@ -952,38 +1035,32 @@ export function OpportunityForm({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                {officeContextFieldErrors.existing_firm_id ? (
-                  <p className="text-xs text-destructive" role="alert">
-                    {officeContextFieldErrors.existing_firm_id}
-                  </p>
-                ) : null}
+                <FieldError id="existing_firm_id" message={officeContextFieldErrors.existing_firm_id} />
               </div>
             ) : null}
             {officeContextMode === "new_firm" ? (
               <div className="space-y-2">
-                <Label htmlFor="firm_name">M&A advisory firm *</Label>
+                <FormFieldLabel htmlFor="firm_name" requirement="required">M&A advisory firm</FormFieldLabel>
                 <Input
                   id="firm_name"
                   name="firm_name"
                   required
-                  aria-invalid={Boolean(officeContextFieldErrors.firm_name)}
+                  onChange={() => clearOfficeContextFieldError("firm_name")}
+                  {...fieldErrorProps("firm_name", officeContextFieldErrors.firm_name)}
                 />
-                {officeContextFieldErrors.firm_name ? (
-                  <p className="text-xs text-destructive" role="alert">
-                    {officeContextFieldErrors.firm_name}
-                  </p>
-                ) : null}
+                <FieldError id="firm_name" message={officeContextFieldErrors.firm_name} />
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label htmlFor="office_name">
-                Operating office{" "}
-                {officeContextMode === "existing_firm" ? "*" : ""}
-              </Label>
+              <FormFieldLabel htmlFor="office_name" requirement={officeContextMode === "existing_firm" ? "required" : "optional"}>
+                Operating office
+              </FormFieldLabel>
               <Input
                 id="office_name"
                 name="office_name"
                 required={officeContextMode === "existing_firm"}
+                onChange={() => clearOfficeContextFieldError("office_name")}
+                {...fieldErrorProps("office_name", officeContextFieldErrors.office_name)}
                 placeholder={
                   officeContextMode === "existing_firm"
                     ? "Example: Paris"
@@ -996,27 +1073,23 @@ export function OpportunityForm({
                   the firm.
                 </p>
               ) : null}
-              {officeContextFieldErrors.office_name ? (
-                <p className="text-xs text-destructive" role="alert">
-                  {officeContextFieldErrors.office_name}
-                </p>
-              ) : null}
+              <FieldError id="office_name" message={officeContextFieldErrors.office_name} />
             </div>
             {officeContextMode === "new_firm" ? (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="contact_first_name">First name</Label>
+                    <FormFieldLabel htmlFor="contact_first_name" requirement="conditional" requirementText="One name is required">First name</FormFieldLabel>
                     <Input id="contact_first_name" name="contact_first_name" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact_last_name">Last name</Label>
+                    <FormFieldLabel htmlFor="contact_last_name" requirement="conditional" requirementText="One name is required">Last name</FormFieldLabel>
                     <Input id="contact_last_name" name="contact_last_name" />
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="contact_email">Email</Label>
+                    <FormFieldLabel htmlFor="contact_email" requirement="optional">Email</FormFieldLabel>
                     <Input
                       id="contact_email"
                       name="contact_email"
@@ -1024,12 +1097,12 @@ export function OpportunityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact_phone">Phone</Label>
+                    <FormFieldLabel htmlFor="contact_phone" requirement="optional">Phone</FormFieldLabel>
                     <Input id="contact_phone" name="contact_phone" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contact_job_title">Job title</Label>
+                  <FormFieldLabel htmlFor="contact_job_title" requirement="optional">Job title</FormFieldLabel>
                   <Input id="contact_job_title" name="contact_job_title" />
                 </div>
               </>
@@ -1075,7 +1148,12 @@ export function OpportunityForm({
               until explicitly used in an opportunity.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateOfficeContact} className="space-y-4">
+          <form id="office-contact-form" noValidate onSubmit={handleCreateOfficeContact} className="space-y-4">
+            <ValidationSummary
+              ref={officeContactSummaryRef}
+              errors={officeContactFieldErrors}
+              labels={{ form: "Office contact", existing_contact_id: "Canonical contact", contact_first_name: "Contact name", contact_email: "Email" }}
+            />
             <input type="hidden" name="contact_mode" value={contactMode} />
             <p id="office_contact_mode_label" className="text-sm font-medium">
               Contact type
@@ -1133,14 +1211,14 @@ export function OpportunityForm({
                   name="existing_contact_id"
                   value={existingContactId}
                 />
-                <Label htmlFor="existing_contact_id">Canonical contact</Label>
+                <FormFieldLabel htmlFor="existing_contact_id" requirement="required">Canonical contact</FormFieldLabel>
                 <Select
                   value={existingContactId || NO_CANONICAL_CONTACT_OPTION_VALUE}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
                     setExistingContactId(
                       value === NO_CANONICAL_CONTACT_OPTION_VALUE ? "" : value,
-                    )
-                  }
+                    ); clearOfficeContactFieldError("existing_contact_id")
+                  }}
                   disabled={
                     isCreatingContact ||
                     isLoadingCanonicalContacts ||
@@ -1203,18 +1281,18 @@ export function OpportunityForm({
               </div>
             ) : (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="office_contact_first_name">
+                    <FormFieldLabel htmlFor="office_contact_first_name" requirement="conditional" requirementText="One name is required">
                       First name
-                    </Label>
+                    </FormFieldLabel>
                     <Input
                       id="office_contact_first_name"
                       name="contact_first_name"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="office_contact_last_name">Last name</Label>
+                    <FormFieldLabel htmlFor="office_contact_last_name" requirement="conditional" requirementText="One name is required">Last name</FormFieldLabel>
                     <Input
                       id="office_contact_last_name"
                       name="contact_last_name"
@@ -1223,7 +1301,7 @@ export function OpportunityForm({
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="office_contact_email">Email</Label>
+                    <FormFieldLabel htmlFor="office_contact_email" requirement="optional">Email</FormFieldLabel>
                     <Input
                       id="office_contact_email"
                       name="contact_email"
@@ -1231,14 +1309,14 @@ export function OpportunityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="office_contact_phone">Phone</Label>
+                    <FormFieldLabel htmlFor="office_contact_phone" requirement="optional">Phone</FormFieldLabel>
                     <Input id="office_contact_phone" name="contact_phone" />
                   </div>
                 </div>
               </>
             )}
             <div className="space-y-2">
-              <Label htmlFor="office_contact_job_title">Job title</Label>
+              <FormFieldLabel htmlFor="office_contact_job_title" requirement="optional">Job title</FormFieldLabel>
               <Input id="office_contact_job_title" name="contact_job_title" />
             </div>
             <DialogFooter>
