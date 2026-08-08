@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
 import { isValidMaRelationshipEmail } from "@/lib/ma-relationship-validation"
+import {
+  activityProvenance,
+  hasConfirmedProviderDelivery,
+} from "@/lib/ma-relationship-activity-provenance"
 import type { MaRelationshipTimelineItem } from "@/lib/actions/ma-relationships"
 
 const root = process.cwd()
@@ -197,5 +201,37 @@ describe("W-066 staff relationship workspace", () => {
   it("rejects malformed manual outbound recipient evidence before the RPC", () => {
     expect(isValidMaRelationshipEmail("recipient@example.test")).toBe(true)
     expect(isValidMaRelationshipEmail("not-an-email")).toBe(false)
+  })
+
+  it("labels manual activity separately from persisted provider delivery", () => {
+    const manualOutboundEmail = {
+      deliveryStatus: null,
+      providerIdempotencyKey: null,
+      providerMessageId: null,
+      deliveryFinalizedAt: null,
+      sentAt: null,
+    } as const
+    expect(activityProvenance(manualOutboundEmail)).toBe("manual")
+    expect(hasConfirmedProviderDelivery(manualOutboundEmail)).toBe(false)
+
+    const sentByProvider = {
+      deliveryStatus: "sent",
+      providerIdempotencyKey: "provider-key",
+      providerMessageId: "provider-message",
+      deliveryFinalizedAt: "2026-08-08T09:00:00.000Z",
+      sentAt: "2026-08-08T09:00:00.000Z",
+    } as const
+    expect(activityProvenance(sentByProvider)).toBe("system-recorded")
+    expect(hasConfirmedProviderDelivery(sentByProvider)).toBe(true)
+  })
+
+  it("keeps labels tied to the canonical ledger and does not treat manual email as sent", () => {
+    expect(actions).toContain("provider_idempotency_key")
+    expect(actions).toContain("activityProvenance")
+    expect(workspace).toContain("Add activity")
+    expect(workspace).toContain("Manual")
+    expect(workspace).toContain("System-recorded")
+    expect(workspace).toContain("No provider delivery evidence recorded")
+    expect(workspace).not.toContain("sendMaSourceWorkflowEmail")
   })
 })

@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { withStaffSourceReviewState } from "@/lib/data/provisional-source-review"
+import {
+  activityProvenance,
+  type MaRelationshipActivityProvenance,
+} from "@/lib/ma-relationship-activity-provenance"
 import { isValidMaRelationshipEmail } from "@/lib/ma-relationship-validation"
 import { buildMaRelationshipStatistics } from "@/lib/ma-relationship-statistics"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -94,6 +98,11 @@ export interface MaRelationshipTimelineItem {
   nextAction: string | null
   nextActionDueAt: string | null
   deliveryStatus: "pending" | "sent" | "failed" | null
+  activityProvenance: MaRelationshipActivityProvenance
+  providerIdempotencyKey: string | null
+  providerMessageId: string | null
+  deliveryFinalizedAt: string | null
+  sentAt: string | null
   recipientEmail: string | null
   deliveryError: string | null
   ownerStaffUserId: string
@@ -183,6 +192,10 @@ interface InteractionRow {
   next_action: string | null
   next_action_due_at: string | null
   delivery_status: "pending" | "sent" | "failed" | null
+  provider_idempotency_key: string | null
+  provider_message_id: string | null
+  delivery_finalized_at: string | null
+  sent_at: string | null
   recipient_email_snapshot: string | null
   delivery_error: string | null
   owner_staff_user_id: string
@@ -249,6 +262,17 @@ function interactionTimelineItem(
     nextAction: row.next_action,
     nextActionDueAt: row.next_action_due_at,
     deliveryStatus: row.delivery_status,
+    activityProvenance: activityProvenance({
+      deliveryStatus: row.delivery_status,
+      providerIdempotencyKey: row.provider_idempotency_key,
+      providerMessageId: row.provider_message_id,
+      deliveryFinalizedAt: row.delivery_finalized_at,
+      sentAt: row.sent_at,
+    }),
+    providerIdempotencyKey: row.provider_idempotency_key,
+    providerMessageId: row.provider_message_id,
+    deliveryFinalizedAt: row.delivery_finalized_at,
+    sentAt: row.sent_at,
     recipientEmail: row.recipient_email_snapshot,
     deliveryError: row.delivery_error,
     ownerStaffUserId: row.owner_staff_user_id,
@@ -271,6 +295,7 @@ export async function listMaRelationshipTimeline(options?: {
     .select(
       `id, office_id, affiliation_id, opportunity_id, channel, direction, occurred_at,
        title, summary, outcome, next_action, next_action_due_at, delivery_status,
+       provider_idempotency_key, provider_message_id, delivery_finalized_at, sent_at,
        recipient_email_snapshot, delivery_error, owner_staff_user_id,
        owner_verification_state, owner_verified_at, created_at,
        office:ma_offices(id, name, firm:ma_firms(id, name)),
