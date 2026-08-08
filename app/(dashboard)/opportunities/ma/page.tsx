@@ -1,5 +1,4 @@
-import { MaRelationshipWorkspace } from "@/components/opportunities/ma-relationship-workspace"
-import { getMaRelationshipWorkspace } from "@/lib/actions/ma-relationships"
+import { redirect } from "next/navigation"
 
 interface MaPageProps {
   searchParams: Promise<{ view?: string }>
@@ -7,13 +6,7 @@ interface MaPageProps {
 
 export default async function MaPage({ searchParams }: MaPageProps) {
   const { view } = await searchParams
-  const initialView = view === "firms" || view === "contacts" ? view : "timeline"
-  const workspace = await getMaRelationshipWorkspace()
-  return (
-    <MaRelationshipWorkspace
-      key={initialView}
-      workspace={workspace}
-      initialView={initialView}
-    />
-  )
+  const destination =
+    view === "firms" || view === "contacts" ? view : "activity"
+  redirect(`/opportunities/ma/${destination}`)
 }

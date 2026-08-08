@@ -26,12 +26,10 @@ describe("W-066 staff relationship workspace", () => {
   const rehearsal = source("scripts/rehearse-ma-relationship-workspace.sql")
   const verifier = source("scripts/verify-ma-data-model-schema.sql")
 
-  it("replaces the legacy redirect with one staff-only relationship workspace", () => {
-    expect(page).toContain("getMaRelationshipWorkspace")
-    expect(page).toContain("MaRelationshipWorkspace")
-    expect(page).not.toContain("redirect(")
+  it("keeps legacy relationship links as safe aliases for the staff workspace", () => {
+    expect(page).toContain("redirect(")
     expect(page).toContain('view === "firms" || view === "contacts"')
-    expect(page).toContain("initialView={initialView}")
+    expect(page).toContain('`/opportunities/ma/${destination}`')
     expect(workspace).toContain("One chronological M&A relationship record")
     expect(workspace).toContain('idPrefix="desktop"')
     expect(workspace).toContain('idPrefix="mobile"')
@@ -140,7 +138,8 @@ describe("W-066 staff relationship workspace", () => {
     expect(workspace).toContain("value={activeView}")
     expect(workspace).toContain("onValueChange={selectView}")
     expect(workspace).toContain("router.replace(")
-    expect(page).toContain("key={initialView}")
+    expect(workspace).toContain('"/opportunities/ma/activity"')
+    expect(workspace).toContain('`/opportunities/ma/${nextView}`')
     expect(workspace).toContain("RelationshipFirmsDirectory")
     expect(workspace).toContain("RelationshipContactsDirectory")
     expect(workspace).toContain("workspace.offices")
