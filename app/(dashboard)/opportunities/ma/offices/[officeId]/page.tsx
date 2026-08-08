@@ -1,24 +1,14 @@
 import { notFound } from "next/navigation"
-import { MaOfficeIndicatorDetail } from "@/components/opportunities/ma-relationship-indicator-detail"
-import { getMaRelationshipWorkspace } from "@/lib/actions/ma-relationships"
+import { MaOfficeWorkspaceDetail } from "@/components/opportunities/ma-relationship-workspace-detail"
+import { getMaOfficeWorkspace } from "@/lib/actions/ma-relationship-workspaces"
 
-export default async function MaOfficeIndicatorPage({
+export default async function MaOfficeWorkspacePage({
   params,
 }: {
   params: Promise<{ officeId: string }>
 }) {
   const { officeId } = await params
-  const workspace = await getMaRelationshipWorkspace()
-  const office = workspace.offices.find(
-    (candidate) => candidate.id === officeId,
-  )
-
-  if (!office) notFound()
-
-  return (
-    <MaOfficeIndicatorDetail
-      office={office}
-      firm={workspace.firms.find((firm) => firm.id === office.firmId) ?? null}
-    />
-  )
+  const workspace = await getMaOfficeWorkspace(officeId)
+  if (!workspace) notFound()
+  return <MaOfficeWorkspaceDetail workspace={workspace} />
 }
