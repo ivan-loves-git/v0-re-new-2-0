@@ -1,12 +1,15 @@
 "use server"
 
 import { requireStaffAccess } from "@/lib/access-control"
+import {
+  CANDIDATE_STALE_OPPORTUNITY_STATUSES,
+  STALE_OPPORTUNITY_DAYS,
+  isCandidateStaleOpportunity,
+  opportunityDaysOpen,
+  parseOpportunityDate,
+} from "@/lib/opportunity-freshness-policy"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { OpportunityStatus } from "@/lib/types/opportunity"
-
-const STALE_OPPORTUNITY_DAYS = 90
-
-const OPEN_OPPORTUNITY_STATUSES: OpportunityStatus[] = ["active", "paused", "draft"]
 
 export interface OpportunityFreshnessReminder {
   id: string
@@ -38,17 +41,11 @@ interface OpportunityFreshnessRow {
   source_office:
     | {
         name: string | null
-        firm:
-          | { name: string | null }
-          | Array<{ name: string | null }>
-          | null
+        firm: { name: string | null } | Array<{ name: string | null }> | null
       }
     | Array<{
         name: string | null
-        firm:
-          | { name: string | null }
-          | Array<{ name: string | null }>
-          | null
+        firm: { name: string | null } | Array<{ name: string | null }> | null
       }>
     | null
   location: string | null
@@ -56,18 +53,6 @@ interface OpportunityFreshnessRow {
   status: OpportunityStatus
   date_added: string | null
   created_at: string
-}
-
-function parseDate(value: string | null | undefined) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-function daysSince(date: Date, now: Date) {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return Math.max(0, Math.floor((today.getTime() - start.getTime()) / 86_400_000))
 }
 
 function formatExactDate(date: Date) {
@@ -117,7 +102,7 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
       .select(
         "id, reference, public_title, source_label, location, sector, status, date_added, created_at, source_office:ma_offices(name, firm:ma_firms(name))",
       )
-      .in("status", OPEN_OPPORTUNITY_STATUSES)
+      .in("status", [...CANDIDATE_STALE_OPPORTUNITY_STATUSES])
       .order("date_added", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true }),
     supabase
@@ -126,21 +111,23 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
       .eq("status", "active_pursuit"),
   ])
 
-  if (opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
-  if (activePursuitsResult.error) throw new Error(activePursuitsResult.error.message)
+  if (opportunitiesResult.error)
+    throw new Error(opportunitiesResult.error.message)
+  if (activePursuitsResult.error)
+    throw new Error(activePursuitsResult.error.message)
 
   const now = new Date()
   const activePursuitOpportunityIds = new Set(
     (activePursuitsResult.data ?? [])
       .map((match) => match.opportunity_id)
-      .filter((id): id is string => Boolean(id))
+      .filter((id): id is string => Boolean(id)),
   )
 
   const rows = (opportunitiesResult.data ?? []) as OpportunityFreshnessRow[]
   const reminders = rows
     .map((opportunity) => {
-      const date = parseDate(opportunity.date_added)
-      const daysOpen = date ? daysSince(date, now) : null
+      const date = parseOpportunityDate(opportunity.date_added)
+      const daysOpen = opportunityDaysOpen(opportunity.date_added, now)
 
       return {
         id: opportunity.id,
@@ -156,23 +143,31 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
         daysOpen,
       }
     })
-    .filter((opportunity) => {
-      if (opportunity.daysOpen === null) return false
-      if (opportunity.daysOpen < STALE_OPPORTUNITY_DAYS) return false
-      return !activePursuitOpportunityIds.has(opportunity.id)
-    })
+    .filter((opportunity) =>
+      isCandidateStaleOpportunity(
+        {
+          id: opportunity.id,
+          status: opportunity.status,
+          dateAdded: opportunity.dateAdded,
+        },
+        activePursuitOpportunityIds,
+        now,
+      ),
+    )
     .sort((a, b) => (b.daysOpen ?? 0) - (a.daysOpen ?? 0))
 
   const datedOpenDays = rows
-    .map((opportunity) => parseDate(opportunity.date_added))
-    .filter((date): date is Date => Boolean(date))
-    .map((date) => daysSince(date, now))
+    .map((opportunity) => opportunityDaysOpen(opportunity.date_added, now))
+    .filter((daysOpen): daysOpen is number => daysOpen !== null)
 
   return {
     staleThresholdDays: STALE_OPPORTUNITY_DAYS,
     staleTotal: reminders.length,
     staleOpportunities: reminders.slice(0, 12),
-    openWithoutDate: rows.filter((opportunity) => !parseDate(opportunity.date_added)).length,
-    oldestOpenDays: datedOpenDays.length > 0 ? Math.max(...datedOpenDays) : null,
+    openWithoutDate: rows.filter(
+      (opportunity) => !parseOpportunityDate(opportunity.date_added),
+    ).length,
+    oldestOpenDays:
+      datedOpenDays.length > 0 ? Math.max(...datedOpenDays) : null,
   }
 }

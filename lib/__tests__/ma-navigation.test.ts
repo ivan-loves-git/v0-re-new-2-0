@@ -20,6 +20,7 @@ describe("W-084 M&A navigation", () => {
   const workspace = source(
     "components/opportunities/ma-relationship-workspace.tsx",
   )
+  const floatingNav = source("components/floating-nav.tsx")
 
   it("gives staff a dedicated M&A section with direct destinations", () => {
     expect(sidebar).toContain("const maNavigation")
@@ -27,11 +28,14 @@ describe("W-084 M&A navigation", () => {
     expect(sidebar).toContain('href: "/opportunities/ma/activity"')
     expect(sidebar).toContain('href: "/opportunities/ma/firms"')
     expect(sidebar).toContain('href: "/opportunities/ma/contacts"')
-    expect(sidebar).not.toContain(
-      'href: "/opportunities/ma", icon: UsersRound',
-    )
+    expect(sidebar).not.toContain('href: "/opportunities/ma", icon: UsersRound')
     expect(sidebar).toContain("if (isMobile) setOpenMobile(false)")
     expect(sidebar).toContain("{...linkWarmupProps(item.href)}")
+    expect(floatingNav).toContain('ma: "M&A"')
+    expect(floatingNav).toContain('activity: "Activity"')
+    expect(floatingNav).toContain('"Firm detail"')
+    expect(floatingNav).toContain('"Office detail"')
+    expect(floatingNav).toContain('href: "/opportunities/ma/firms"')
   })
 
   it("renders each direct route with the same staff-gated canonical workspace", () => {
@@ -46,9 +50,9 @@ describe("W-084 M&A navigation", () => {
   it("redirects the former relationship URLs to safe direct equivalents", () => {
     expect(legacyRoute).toContain("redirect(")
     expect(legacyRoute).toContain('view === "firms" || view === "contacts"')
-    expect(legacyRoute).toContain('`/opportunities/ma/${destination}`')
+    expect(legacyRoute).toContain("`/opportunities/ma/${destination}`")
     expect(workspace).toContain('"/opportunities/ma/activity"')
-    expect(workspace).toContain('`/opportunities/ma/${nextView}`')
+    expect(workspace).toContain("`/opportunities/ma/${nextView}`")
   })
 
   it("does not alter the canonical M&A interaction ledger or repreneur navigation", () => {

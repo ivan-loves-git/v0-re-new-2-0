@@ -26,6 +26,29 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 8, 2026",
+    version: "0.9.42",
+    title: "M&A firms are now faster to reach and compare",
+    isCompleted: true,
+    events: [
+      {
+        title: "Activity, Firms and Contacts have direct staff navigation",
+        type: "feature",
+        description: "The staff sidebar now treats M&A as its own operating area, with stable direct routes, breadcrumbs and safe redirects from the former Relationships view.",
+      },
+      {
+        title: "Firm and office indicators reconcile with canonical records",
+        type: "feature",
+        description: "Staff can search one compact firm list, expand each firm into its offices and compare distinct active contacts, sourced opportunities, open work, candidate-stale items and the latest known opportunity date.",
+      },
+      {
+        title: "Indicator details remain read-only and office-centred",
+        type: "decision",
+        description: "Firm totals are derived through canonical offices, aggregates are never persisted and the new firm and office indicator pages add no relationship mutation or repreneur visibility.",
+      },
+    ],
+  },
+  {
+    period: "Aug 8, 2026",
     version: "0.9.41",
     title: "Staff forms now explain and resolve missing information",
     isCompleted: true,

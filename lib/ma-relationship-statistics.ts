@@ -1,4 +1,8 @@
-export const CANDIDATE_STALE_DAYS = 90
+import {
+  isCandidateStaleOpportunity,
+  isCountedSourcedOpportunity,
+  isOpenRelationshipOpportunity,
+} from "@/lib/opportunity-freshness-policy"
 
 export interface MaRelationshipStatisticOffice {
   id: string
@@ -53,28 +57,6 @@ function laterDate(
   return currentTimestamp === null || candidateTimestamp > currentTimestamp
     ? candidate!
     : current
-}
-
-function isCandidateStale(
-  opportunity: MaRelationshipStatisticOpportunity,
-  activePursuitOpportunityIds: Set<string>,
-  now: Date,
-) {
-  if (!["draft", "active", "paused"].includes(opportunity.status)) return false
-  if (activePursuitOpportunityIds.has(opportunity.id)) return false
-  const dateAdded = opportunity.dateAdded ? new Date(opportunity.dateAdded) : null
-  if (!dateAdded || Number.isNaN(dateAdded.getTime())) return false
-  const start = new Date(
-    dateAdded.getFullYear(),
-    dateAdded.getMonth(),
-    dateAdded.getDate(),
-  )
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const daysOpen = Math.max(
-    0,
-    Math.floor((today.getTime() - start.getTime()) / 86_400_000),
-  )
-  return daysOpen >= CANDIDATE_STALE_DAYS
 }
 
 function emptyOfficeStatistics(): MaRelationshipOfficeStatistics {
@@ -142,12 +124,12 @@ export function buildMaRelationshipStatistics(
       statistics.latestKnownAt,
       opportunity.dateAdded,
     )
-    if (opportunity.status === "archived") continue
+    if (!isCountedSourcedOpportunity(opportunity.status)) continue
     statistics.sourcedOpportunityCount += 1
-    if (opportunity.status === "active" || opportunity.status === "paused") {
+    if (isOpenRelationshipOpportunity(opportunity.status)) {
       statistics.openOpportunityCount += 1
     }
-    if (isCandidateStale(opportunity, activePursuits, now)) {
+    if (isCandidateStaleOpportunity(opportunity, activePursuits, now)) {
       statistics.candidateStaleCount += 1
     }
   }
