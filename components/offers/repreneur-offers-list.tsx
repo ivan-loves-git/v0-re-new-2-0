@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { MoreHorizontal, Check, Clock, Trash2, Package, Eye } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -33,6 +32,14 @@ import { AssignOfferForm } from "./assign-offer-form"
 import { OfferMilestones } from "./offer-milestones"
 import { updateRepreneurOfferStatus, deleteRepreneurOffer } from "@/lib/actions/offers"
 import { toast } from "sonner"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+  type FieldErrors,
+} from "@/components/forms/validation-feedback"
 import type { Offer, RepreneurOffer, OfferStatus, OfferMilestone } from "@/lib/types/offer"
 import {
   DECLINE_REASON_OPTIONS,
@@ -53,6 +60,8 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
   const [decliningOffer, setDecliningOffer] = useState<RepreneurOffer | null>(null)
   const [declineReasonCategory, setDeclineReasonCategory] = useState<DeclineReasonCategory | "">("")
   const [declineReasonText, setDeclineReasonText] = useState("")
+  const [declineErrors, setDeclineErrors] = useState<FieldErrors>({})
+  const declineSummaryRef = useRef<HTMLDivElement>(null)
 
   // Track if we're in a mutation to prevent useEffect from overwriting optimistic updates
   const isMutatingRef = useRef(false)
@@ -132,10 +141,18 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
     setDecliningOffer(null)
     setDeclineReasonCategory("")
     setDeclineReasonText("")
+    setDeclineErrors({})
   }
 
   const handleOfferDecline = async () => {
-    if (!decliningOffer || !declineReasonCategory) return
+    if (!decliningOffer) return
+    if (!declineReasonCategory) {
+      setDeclineErrors({ reason: "Select the main reason for declining this offer." })
+      focusValidationSummary(declineSummaryRef)
+      return
+    }
+
+    setDeclineErrors({})
 
     const wasUpdated = await handleStatusChange(
       decliningOffer.id,
@@ -145,6 +162,10 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
     )
 
     if (wasUpdated) resetDeclineDialog()
+    else {
+      setDeclineErrors({ form: "The offer could not be marked as declined. Try again." })
+      focusValidationSummary(declineSummaryRef)
+    }
   }
 
   const handleDelete = async (repreneurOfferId: string) => {
@@ -377,13 +398,14 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          <ValidationSummary ref={declineSummaryRef} errors={declineErrors} labels={{ reason: "Decline reason", form: "Offer status" }} />
           <div className="space-y-2">
-            <Label htmlFor="engagement-decline-reason">Decline reason</Label>
+            <FormFieldLabel htmlFor="engagement-decline-reason" requirement="required">Decline reason</FormFieldLabel>
             <Select
               value={declineReasonCategory}
-              onValueChange={(value) => setDeclineReasonCategory(value as DeclineReasonCategory)}
+              onValueChange={(value) => { setDeclineReasonCategory(value as DeclineReasonCategory); setDeclineErrors((current) => ({ ...current, reason: "", form: "" })) }}
             >
-              <SelectTrigger id="engagement-decline-reason">
+              <SelectTrigger id="engagement-decline-reason" {...fieldErrorProps("engagement-decline-reason", declineErrors.reason)}>
                 <SelectValue placeholder="Select a reason..." />
               </SelectTrigger>
               <SelectContent>
@@ -394,9 +416,10 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
                 ))}
               </SelectContent>
             </Select>
+            <FieldError id="engagement-decline-reason" message={declineErrors.reason} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="engagement-decline-details">Details (optional)</Label>
+            <FormFieldLabel htmlFor="engagement-decline-details" requirement="optional">Details</FormFieldLabel>
             <Textarea
               id="engagement-decline-details"
               value={declineReasonText}
@@ -413,7 +436,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
           <Button
             variant="secondary"
             onClick={handleOfferDecline}
-            disabled={!declineReasonCategory || isLoading === decliningOffer?.id}
+            disabled={isLoading === decliningOffer?.id}
           >
             {isLoading === decliningOffer?.id ? "Declining..." : "Mark as declined"}
           </Button>

@@ -32,6 +32,14 @@ import {
 } from "@/components/ui/select"
 import { createMilestone, toggleMilestoneComplete, updateMilestone, deleteMilestone } from "@/lib/actions/offers"
 import type { OfferMilestone, MilestoneType } from "@/lib/types/offer"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+  type FieldErrors,
+} from "@/components/forms/validation-feedback"
 
 interface OfferMilestonesProps {
   repreneurOfferId: string
@@ -67,6 +75,8 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
   const [notes, setNotes] = useState("")
   const [dueDate, setDueDate] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const summaryRef = useRef<HTMLDivElement>(null)
 
   const isMutatingRef = useRef(false)
 
@@ -81,35 +91,27 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
     setTitle("")
     setNotes("")
     setDueDate("")
+    setFieldErrors({})
+  }
+
+  function validateTitle() {
+    if (title.trim()) return true
+    setFieldErrors({ title: "Enter a milestone title." })
+    focusValidationSummary(summaryRef)
+    return false
   }
 
   async function handleCreate() {
-    if (!title.trim()) return
+    if (!validateTitle()) return
 
     const savedType = milestoneType
     const savedTitle = title.trim()
     const savedNotes = notes.trim()
     const savedDueDate = dueDate
 
-    // Create optimistic milestone
-    const tempMilestone: OfferMilestone = {
-      id: `temp-${Date.now()}`,
-      repreneur_offer_id: repreneurOfferId,
-      milestone_type: savedType,
-      title: savedTitle,
-      notes: savedNotes || undefined,
-      is_completed: false,
-      due_date: savedDueDate || undefined,
-      created_at: new Date().toISOString(),
-      created_by: "",
-      created_by_email: "You",
-    }
-
     isMutatingRef.current = true
-    setLocalMilestones(prev => [...prev, tempMilestone])
-    resetForm()
-    setIsAddOpen(false)
     setIsSubmitting(true)
+    setFieldErrors({})
 
     try {
       await createMilestone(
@@ -122,10 +124,13 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
       )
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
+      resetForm()
+      setIsAddOpen(false)
       setTimeout(() => { isMutatingRef.current = false }, 500)
     } catch {
       console.error("Offer milestone creation failed")
-      setLocalMilestones(prev => prev.filter(m => m.id !== tempMilestone.id))
+      setFieldErrors({ form: "The milestone could not be added. Check the details and try again." })
+      focusValidationSummary(summaryRef)
       isMutatingRef.current = false
     } finally {
       setIsSubmitting(false)
@@ -161,7 +166,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
   }
 
   async function handleUpdate() {
-    if (!selectedMilestone || !title.trim()) return
+    if (!selectedMilestone || !validateTitle()) return
 
     const savedTitle = title.trim()
     const savedNotes = notes.trim()
@@ -175,9 +180,8 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
           : m
       )
     )
-    setIsEditOpen(false)
-    setSelectedMilestone(null)
     setIsSubmitting(true)
+    setFieldErrors({})
 
     try {
       await updateMilestone(
@@ -189,9 +193,14 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
       )
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
+      setIsEditOpen(false)
+      setSelectedMilestone(null)
+      resetForm()
       setTimeout(() => { isMutatingRef.current = false }, 500)
     } catch {
       console.error("Offer milestone update failed")
+      setFieldErrors({ form: "The milestone could not be saved. Check the details and try again." })
+      focusValidationSummary(summaryRef)
       isMutatingRef.current = false
     } finally {
       setIsSubmitting(false)
@@ -223,6 +232,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
     setTitle(milestone.title)
     setNotes(milestone.notes || "")
     setDueDate(milestone.due_date || "")
+    setFieldErrors({})
     setIsEditOpen(true)
   }
 
@@ -267,6 +277,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <ValidationSummary ref={summaryRef} errors={fieldErrors} labels={{ title: "Title", form: "Milestone" }} />
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <Select value={milestoneType} onValueChange={(v) => setMilestoneType(v as MilestoneType)}>
@@ -288,16 +299,20 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Title</Label>
+                  <FormFieldLabel htmlFor="milestone-title" requirement="required">Title</FormFieldLabel>
                   <Input
+                    id="milestone-title"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => { setTitle(e.target.value); setFieldErrors((current) => ({ ...current, title: "", form: "" })) }}
                     placeholder="e.g., Final report delivered"
+                    {...fieldErrorProps("milestone-title", fieldErrors.title)}
                   />
+                  <FieldError id="milestone-title" message={fieldErrors.title} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Notes (optional)</Label>
+                  <FormFieldLabel htmlFor="milestone-notes" requirement="optional">Notes</FormFieldLabel>
                   <Textarea
+                    id="milestone-notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Additional details..."
@@ -305,8 +320,9 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Due Date (optional)</Label>
+                  <FormFieldLabel htmlFor="milestone-due-date" requirement="optional">Due date</FormFieldLabel>
                   <Input
+                    id="milestone-due-date"
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
@@ -317,7 +333,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
                 <Button variant="outline" onClick={() => { setIsAddOpen(false); resetForm(); }}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreate} disabled={isSubmitting || !title.trim()}>
+                <Button onClick={handleCreate} disabled={isSubmitting}>
                   {isSubmitting ? "Adding..." : "Add Milestone"}
                 </Button>
               </DialogFooter>
@@ -381,17 +397,22 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
             <DialogTitle>Edit Milestone</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <ValidationSummary ref={summaryRef} errors={fieldErrors} labels={{ title: "Title", form: "Milestone" }} />
             <div className="space-y-2">
-              <Label>Title</Label>
+              <FormFieldLabel htmlFor="edit-milestone-title" requirement="required">Title</FormFieldLabel>
               <Input
+                id="edit-milestone-title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => { setTitle(e.target.value); setFieldErrors((current) => ({ ...current, title: "", form: "" })) }}
                 placeholder="e.g., Final report delivered"
+                {...fieldErrorProps("edit-milestone-title", fieldErrors.title)}
               />
+              <FieldError id="edit-milestone-title" message={fieldErrors.title} />
             </div>
             <div className="space-y-2">
-              <Label>Notes (optional)</Label>
+              <FormFieldLabel htmlFor="edit-milestone-notes" requirement="optional">Notes</FormFieldLabel>
               <Textarea
+                id="edit-milestone-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Additional details..."
@@ -399,8 +420,9 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
               />
             </div>
             <div className="space-y-2">
-              <Label>Due Date (optional)</Label>
+              <FormFieldLabel htmlFor="edit-milestone-due-date" requirement="optional">Due date</FormFieldLabel>
               <Input
+                id="edit-milestone-due-date"
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
@@ -411,7 +433,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
             <Button variant="outline" onClick={() => { setIsEditOpen(false); setSelectedMilestone(null); }}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate} disabled={isSubmitting || !title.trim()}>
+            <Button onClick={handleUpdate} disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>

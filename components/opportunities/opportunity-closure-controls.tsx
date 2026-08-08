@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { CircleX, History } from "lucide-react"
 import { toast } from "sonner"
@@ -12,7 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+  type FieldErrors,
+} from "@/components/forms/validation-feedback"
 import {
   Select,
   SelectContent,
@@ -62,6 +69,8 @@ export function OpportunityClosureControls({
     OpportunityClosureReason | ""
   >("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const summaryRef = useRef<HTMLDivElement>(null)
   const isClosed = opportunityStatus === "closed"
   const isHistorical = isClosed || opportunityStatus === "archived"
 
@@ -70,20 +79,22 @@ export function OpportunityClosureControls({
     try {
       const result = await action()
       if (!result.success) {
+        setFieldErrors({ form: result.message })
+        focusValidationSummary(summaryRef)
         toast.error(result.message)
         return
       }
 
       toast.success(result.message)
       setSelectedReason("")
+      setFieldErrors({})
       router.refresh()
     } catch (error) {
       console.error("Opportunity closure update failed")
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Opportunity closure could not be updated.",
-      )
+      const message = error instanceof Error ? error.message : "Opportunity closure could not be updated."
+      setFieldErrors({ form: message })
+      focusValidationSummary(summaryRef)
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -117,16 +128,13 @@ export function OpportunityClosureControls({
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="min-w-0 flex-1 space-y-2">
-              <Label htmlFor="opportunity-closure-reason">
-                Closure reason *
-              </Label>
+              <ValidationSummary ref={summaryRef} errors={fieldErrors} labels={{ reason: "Closure reason", form: "Closure" }} />
+              <FormFieldLabel htmlFor="opportunity-closure-reason" requirement="required">Closure reason</FormFieldLabel>
               <Select
                 value={selectedReason}
-                onValueChange={(value) =>
-                  setSelectedReason(value as OpportunityClosureReason)
-                }
+                onValueChange={(value) => { setSelectedReason(value as OpportunityClosureReason); setFieldErrors({}) }}
               >
-                <SelectTrigger id="opportunity-closure-reason">
+                <SelectTrigger id="opportunity-closure-reason" {...fieldErrorProps("opportunity-closure-reason", fieldErrors.reason)}>
                   <SelectValue placeholder="Choose a closure reason" />
                 </SelectTrigger>
                 <SelectContent>
@@ -139,6 +147,7 @@ export function OpportunityClosureControls({
                   </SelectGroup>
                 </SelectContent>
               </Select>
+              <FieldError id="opportunity-closure-reason" message={fieldErrors.reason} />
             </div>
             <Button
               type="button"
