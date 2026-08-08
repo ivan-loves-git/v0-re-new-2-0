@@ -44,7 +44,7 @@ describe("M&A networks and contact history", () => {
     expect(migration).toContain("FOR UPDATE")
   })
 
-  it("retires legacy staff firm and contact routes in favor of canonical intake", () => {
+  it("keeps staff firm and contact destinations on the canonical relationship workspace", () => {
     const sidebar = source("components/app-sidebar.tsx")
     const relationshipsRoute = source("app/(dashboard)/opportunities/ma/page.tsx")
     const firmsPage = source("app/(dashboard)/opportunities/ma/firms/page.tsx")
@@ -52,11 +52,13 @@ describe("M&A networks and contact history", () => {
       "app/(dashboard)/opportunities/ma/contacts/page.tsx",
     )
 
-    expect(sidebar).not.toContain('href: "/opportunities/ma/firms"')
-    expect(sidebar).not.toContain('href: "/opportunities/ma/contacts"')
-    expect(relationshipsRoute).toContain("MaRelationshipWorkspace")
-    for (const route of [firmsPage, contactsPage]) {
-      expect(route).toContain('redirect("/opportunities/ma?view=')
-    }
+    expect(sidebar).toContain('href: "/opportunities/ma/firms"')
+    expect(sidebar).toContain('href: "/opportunities/ma/contacts"')
+    expect(relationshipsRoute).toContain("redirect(")
+    expect(relationshipsRoute).toContain('`/opportunities/ma/${destination}`')
+    expect(firmsPage).toContain('initialView="firms"')
+    expect(contactsPage).toContain('initialView="contacts"')
+    expect(firmsPage).not.toContain("redirect(")
+    expect(contactsPage).not.toContain("redirect(")
   })
 })

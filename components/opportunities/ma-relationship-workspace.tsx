@@ -101,9 +101,11 @@ function timelineTitle(interaction: MaRelationshipTimelineItem) {
   return `${channel ?? "Relationship"} activity`
 }
 
+type MaRelationshipView = "timeline" | "firms" | "contacts"
+
 interface MaRelationshipWorkspaceProps {
   workspace: MaRelationshipWorkspace
-  initialView?: "timeline" | "firms" | "contacts"
+  initialView?: MaRelationshipView
 }
 
 export function MaRelationshipWorkspace({
@@ -112,7 +114,7 @@ export function MaRelationshipWorkspace({
 }: MaRelationshipWorkspaceProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [activeView, setActiveView] = useState(initialView)
+  const [activeView, setActiveView] = useState<MaRelationshipView>(initialView)
   const [officeFilter, setOfficeFilter] = useState("all")
   const [contactFilter, setContactFilter] = useState("all")
   const [opportunityFilter, setOpportunityFilter] = useState("all")
@@ -229,16 +231,32 @@ export function MaRelationshipWorkspace({
   }
 
   const selectView = (view: string) => {
-    const nextView =
+    const nextView: MaRelationshipView =
       view === "firms" || view === "contacts" ? view : "timeline"
     setActiveView(nextView)
     router.replace(
       nextView === "timeline"
-        ? "/opportunities/ma"
-        : `/opportunities/ma?view=${nextView}`,
+        ? "/opportunities/ma/activity"
+        : `/opportunities/ma/${nextView}`,
       { scroll: false },
     )
   }
+
+  const pageCopy = {
+    timeline: {
+      title: "Activity",
+      description:
+        "One chronological M&A relationship record, before or alongside an opportunity.",
+    },
+    firms: {
+      title: "Firms",
+      description: "Canonical M&A firms and their operating offices.",
+    },
+    contacts: {
+      title: "Contacts",
+      description: "Canonical M&A contacts and their active office affiliations.",
+    },
+  }[activeView]
 
   const activeFilterCount = [
     officeFilter,
@@ -310,11 +328,10 @@ export function MaRelationshipWorkspace({
         <div>
           <p className="wave-micro-label">Staff workspace</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Relationships
+            {pageCopy.title}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            One chronological M&A relationship record, before or alongside an
-            opportunity.
+            {pageCopy.description}
           </p>
         </div>
         <Button
@@ -335,8 +352,8 @@ export function MaRelationshipWorkspace({
       </Alert>
 
       <Tabs value={activeView} onValueChange={selectView} className="space-y-4">
-        <TabsList aria-label="Relationships views">
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+        <TabsList aria-label="M&A views">
+          <TabsTrigger value="timeline">Activity</TabsTrigger>
           <TabsTrigger value="firms">Firms</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
         </TabsList>

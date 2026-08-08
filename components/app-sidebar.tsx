@@ -7,13 +7,15 @@ import {
   LayoutDashboard,
   FolderKanban,
   Search,
-  UsersRound,
   GitBranch,
   Mail,
   Package,
   BarChart3,
   BookOpenCheck,
   Map,
+  Building2,
+  ContactRound,
+  ListChecks,
   ChevronsUpDown,
   LogOut,
   Settings,
@@ -72,8 +74,13 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
   { name: "Groups", href: "/opportunities/groups", icon: FolderKanban },
   { name: "Find", href: "/opportunities/find", icon: Search },
-  { name: "Relationships", href: "/opportunities/ma", icon: UsersRound },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
+]
+
+const maNavigation: NavigationItem[] = [
+  { name: "Activity", href: "/opportunities/ma/activity", icon: ListChecks },
+  { name: "Firms", href: "/opportunities/ma/firms", icon: Building2 },
+  { name: "Contacts", href: "/opportunities/ma/contacts", icon: ContactRound },
 ]
 
 const toolsNavigation: NavigationItem[] = [
@@ -271,6 +278,37 @@ export function AppSidebar({
                           {item.badge}
                         </span>
                       )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator className="opacity-60" />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>M&amp;A</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {maNavigation.map((item) => (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      getIsActive(item.href) || pendingHref === item.href
+                    }
+                    tooltip={`M&A · ${item.name}`}
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
+                  >
+                    <Link
+                      href={item.href}
+                      aria-current={getIsActive(item.href) ? "page" : undefined}
+                      {...linkWarmupProps(item.href)}
+                    >
+                      <item.icon />
+                      <span>{item.name}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

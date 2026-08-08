@@ -49,7 +49,7 @@ describe("canonical multi-contact M&A intake", () => {
     expect(actions).not.toContain("p_origin_channel")
   })
 
-  it("retires legacy directory mutation routes and removes their sidebar entry", () => {
+  it("retires legacy directory mutation routes while retaining staff directory navigation", () => {
     const sidebar = source("components/app-sidebar.tsx")
     const legacyActions = source("lib/actions/ma-sources.ts")
     const firmRoute = source("app/(dashboard)/opportunities/ma/firms/page.tsx")
@@ -57,12 +57,16 @@ describe("canonical multi-contact M&A intake", () => {
       "app/(dashboard)/opportunities/ma/contacts/page.tsx",
     )
 
-    expect(sidebar).not.toContain('href: "/opportunities/ma/firms"')
-    expect(sidebar).not.toContain('href: "/opportunities/ma/contacts"')
+    expect(sidebar).toContain('href: "/opportunities/ma/firms"')
+    expect(sidebar).toContain('href: "/opportunities/ma/contacts"')
     expect(legacyActions).toContain("Legacy M&A directory editing is retired")
     expect(legacyActions).not.toContain("move_ma_source_contact")
-    expect(firmRoute).toContain('redirect("/opportunities/ma?view=firms")')
-    expect(contactRoute).toContain('redirect("/opportunities/ma?view=contacts")')
+    expect(firmRoute).toContain("getMaRelationshipWorkspace")
+    expect(firmRoute).toContain('initialView="firms"')
+    expect(contactRoute).toContain("getMaRelationshipWorkspace")
+    expect(contactRoute).toContain('initialView="contacts"')
+    expect(firmRoute).not.toContain("redirect(")
+    expect(contactRoute).not.toContain("redirect(")
   })
 
   it("uses canonical contacts and interaction persistence for workflow email evidence", () => {
