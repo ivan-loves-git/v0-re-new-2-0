@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Pencil, Check, X } from "lucide-react"
 import { toast } from "sonner"
+import { FieldError, fieldErrorProps } from "@/components/forms/validation-feedback"
 
 interface EditableTextFieldProps {
   repreneurId: string
@@ -31,6 +32,7 @@ export function EditableTextField({
   const [editValue, setEditValue] = useState(value || "")
   const [optimisticValue, setOptimisticValue] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string>()
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -47,6 +49,18 @@ export function EditableTextField({
   const handleSave = async () => {
     const newValue = editValue || null
     const oldValue = value || ""
+
+    if (field === "email") {
+      if (!editValue.trim()) {
+        setError("Enter an email address.")
+        return
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editValue.trim())) {
+        setError("Enter a valid email address.")
+        return
+      }
+    }
+    setError(undefined)
 
     // Optimistic update - immediately close and show new value
     setOptimisticValue(editValue)
@@ -87,23 +101,26 @@ export function EditableTextField({
           <Textarea
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
             value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
+            onChange={(e) => { setEditValue(e.target.value); setError(undefined) }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={4}
             className="text-sm"
+            {...fieldErrorProps(`repreneur-${field}`, error)}
           />
         ) : (
           <Input
             ref={inputRef as React.RefObject<HTMLInputElement>}
             type={type}
             value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="text-sm"
+            {...fieldErrorProps(`repreneur-${field}`, error)}
+            onChange={(e) => { setEditValue(e.target.value); setError(undefined) }}
           />
         )}
+        <FieldError id={`repreneur-${field}`} message={error} />
         <div className="flex gap-2">
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
             <Check className="size-3 mr-1" />

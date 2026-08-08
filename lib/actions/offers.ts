@@ -17,15 +17,28 @@ import { OfferReceivedEmail } from "@/lib/email/templates/offer-received"
 import { OfferAcceptedEmail } from "@/lib/email/templates/offer-accepted"
 import { MilestoneCompletedEmail } from "@/lib/email/templates/milestone-completed"
 
+function parseOfferForm(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim()
+  const price = Number(formData.get("price"))
+  const durationDays = Number(formData.get("duration_days"))
+
+  if (!name) throw new Error("Offer name is required.")
+  if (!Number.isFinite(price) || price < 0) throw new Error("Price must be €0 or more.")
+  if (!Number.isInteger(durationDays) || durationDays < 1) throw new Error("Duration must be at least one day.")
+
+  return { name, price, durationDays }
+}
+
 export async function createOffer(formData: FormData) {
   await requireStaffAccess()
   const supabase = createAdminClient()
+  const { name, price, durationDays } = parseOfferForm(formData)
 
   const offer: Offer_Insert = {
-    name: formData.get("name") as string,
+    name,
     description: (formData.get("description") as string) || undefined,
-    price: parseFloat(formData.get("price") as string),
-    duration_days: parseInt(formData.get("duration_days") as string),
+    price,
+    duration_days: durationDays,
     acceptance_deadline_days: formData.get("acceptance_deadline_days")
       ? parseInt(formData.get("acceptance_deadline_days") as string)
       : 14, // Default 14 days to accept
@@ -50,12 +63,13 @@ export async function createOffer(formData: FormData) {
 export async function updateOffer(id: string, formData: FormData) {
   await requireStaffAccess()
   const supabase = createAdminClient()
+  const { name, price, durationDays } = parseOfferForm(formData)
 
   const updates = {
-    name: formData.get("name") as string,
+    name,
     description: (formData.get("description") as string) || null,
-    price: parseFloat(formData.get("price") as string),
-    duration_days: parseInt(formData.get("duration_days") as string),
+    price,
+    duration_days: durationDays,
     acceptance_deadline_days: formData.get("acceptance_deadline_days")
       ? parseInt(formData.get("acceptance_deadline_days") as string)
       : null,

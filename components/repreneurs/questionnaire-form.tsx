@@ -22,6 +22,7 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
   const [isExpanded, setIsExpanded] = useState(!repreneur.questionnaire_completed_at)
   const [isSaving, setIsSaving] = useState(false)
   const [savedScore, setSavedScore] = useState<number | null>(repreneur.tier1_score ?? null)
+  const [submissionError, setSubmissionError] = useState<string>()
 
   // Form state initialized from repreneur data
   const [formData, setFormData] = useState<QuestionnaireFormData>({
@@ -46,6 +47,7 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
 
   const handleSubmit = async () => {
     setIsSaving(true)
+    setSubmissionError(undefined)
     try {
       // Convert to the expected QuestionnaireInput format
       const input: QuestionnaireInput = {
@@ -72,6 +74,7 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
       setIsExpanded(false)
     } catch (error) {
       console.error("Questionnaire save failed")
+      setSubmissionError(error instanceof Error ? error.message : "We could not save this questionnaire. Please try again.")
     } finally {
       setIsSaving(false)
     }
@@ -129,6 +132,10 @@ export function QuestionnaireForm({ repreneur }: QuestionnaireFormProps) {
 
       {isExpanded && (
         <CardContent className="space-y-8">
+          <p className="text-sm text-muted-foreground">
+            All questions in this legacy questionnaire are optional. Complete the answers available to improve the score.
+          </p>
+          {submissionError ? <p role="alert" className="text-sm text-destructive">{submissionError}</p> : null}
           {/* Render each section using shared components */}
           {INTERNAL_STEPS.map((step) => (
             <SectionRenderer

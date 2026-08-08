@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,6 +16,13 @@ import { FlagBadges } from "@/components/scoring-v2/flag-badges"
 import { RecommendationBadge } from "@/components/scoring-v2/recommendation-badge"
 import type { Repreneur } from "@/lib/types/repreneur"
 import type { WhoAnswers, WhenAnswers, DualScoreResult, RecommendedAction } from "@/lib/types/scoring-v2"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  focusValidationSummary,
+  type FieldErrors,
+} from "@/components/forms/validation-feedback"
 
 interface QuestionnaireFormV2Props {
   repreneur: Repreneur
@@ -43,6 +50,9 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
   const [isExpanded, setIsExpanded] = useState(!repreneur.questionnaire_completed_at)
   const [showLegacy, setShowLegacy] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const [submissionError, setSubmissionError] = useState<string>()
+  const summaryRef = useRef<HTMLDivElement>(null)
 
   // Form state initialized from repreneur data
   const [formData, setFormData] = useState<V2FormData>({
@@ -94,12 +104,28 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
   }, [formData])
 
   const handleSubmit = async () => {
+    if (formData.q13_target_sectors_v2.length === 0) {
+      setErrors({ q13_target_sectors_v2: "Select at least one approved sector." })
+      setSubmissionError(undefined)
+      focusValidationSummary(summaryRef)
+      return
+    }
+
     setIsSaving(true)
+    setErrors({})
+    setSubmissionError(undefined)
     try {
       await saveQuestionnaireV2(repreneur.id, formData)
       setIsExpanded(false)
     } catch (error) {
       console.error("Questionnaire save failed")
+      const message = error instanceof Error ? error.message : "We could not save this questionnaire. Please try again."
+      if (message.includes("approved sector")) {
+        setErrors({ q13_target_sectors_v2: "Select at least one approved sector." })
+        focusValidationSummary(summaryRef)
+      } else {
+        setSubmissionError(message)
+      }
     } finally {
       setIsSaving(false)
     }
@@ -112,6 +138,9 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
       ? current.filter(v => v !== value)
       : [...current, value]
     setFormData(prev => ({ ...prev, [field]: updated }))
+    if (field === "q13_target_sectors_v2") {
+      setErrors(current => ({ ...current, q13_target_sectors_v2: "" }))
+    }
   }
 
   const hasV2Data = repreneur.who_score !== null && repreneur.who_score !== undefined
@@ -161,6 +190,15 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
 
       {isExpanded && (
         <CardContent className="space-y-8">
+          <p className="text-sm text-muted-foreground">
+            The target-sector selection is required to save. Other answers are optional and improve the scoring preview.
+          </p>
+          <ValidationSummary
+            ref={summaryRef}
+            errors={errors}
+            labels={{ q13_target_sectors_v2: "Target sectors" }}
+          />
+          {submissionError ? <p role="alert" className="text-sm text-destructive">{submissionError}</p> : null}
           {/* Score Preview Panel */}
           {previewScore && (
             <div className="bg-muted/50 border rounded-lg p-4 space-y-3">
@@ -379,8 +417,8 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
             </div>
 
             {/* Q13 - Target Sectors */}
-            <div className="space-y-2">
-              <Label>{WHEN_QUESTIONS.q13.label}</Label>
+            <div id="q13_target_sectors_v2" className="space-y-2">
+              <FormFieldLabel requirement="required">{WHEN_QUESTIONS.q13.label}</FormFieldLabel>
               <div className="grid grid-cols-2 gap-2">
                 {WHEN_QUESTIONS.q13.options.map((option) => (
                   <div key={option.value} className="flex items-center space-x-2">
@@ -388,6 +426,8 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
                       id={`q13-${option.value}`}
                       checked={formData.q13_target_sectors_v2.includes(option.value)}
                       onCheckedChange={() => toggleArrayValue('q13_target_sectors_v2', option.value)}
+                      aria-invalid={Boolean(errors.q13_target_sectors_v2)}
+                      aria-describedby={errors.q13_target_sectors_v2 ? "q13_target_sectors_v2-error" : undefined}
                     />
                     <Label htmlFor={`q13-${option.value}`} className="font-normal cursor-pointer text-sm">
                       {option.label}
@@ -395,6 +435,7 @@ export function QuestionnaireFormV2({ repreneur }: QuestionnaireFormV2Props) {
                   </div>
                 ))}
               </div>
+              <FieldError id="q13_target_sectors_v2" message={errors.q13_target_sectors_v2} />
             </div>
 
             {/* Q14 - Deal Size */}

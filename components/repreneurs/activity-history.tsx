@@ -6,7 +6,7 @@ import { Plus, Mail, Phone, FileText, CheckCircle, XCircle, Calendar, Trash2, Mo
 import { createActivity, deleteActivity } from "@/lib/actions/activities"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { FieldError, FormFieldLabel, fieldErrorProps } from "@/components/forms/validation-feedback"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
@@ -64,8 +64,15 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewingActivity, setViewingActivity] = useState<ActivityType_DB | null>(null)
+  const [durationError, setDurationError] = useState<string>()
 
   async function handleSubmit() {
+    const duration = durationMinutes ? Number(durationMinutes) : undefined
+    if (duration !== undefined && (!Number.isInteger(duration) || duration < 1)) {
+      setDurationError("Enter a whole number of at least one minute.")
+      return
+    }
+    setDurationError(undefined)
     setIsSubmitting(true)
 
     try {
@@ -73,7 +80,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
         repreneurId,
         activityType,
         notes || undefined,
-        durationMinutes ? parseInt(durationMinutes) : undefined,
+        duration,
         eventDate || undefined
       )
       toast.success("Activity logged")
@@ -127,7 +134,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Activity Type</Label>
+                <FormFieldLabel requirement="optional">Activity type</FormFieldLabel>
                 <Select
                   value={activityType}
                   onValueChange={(value) => setActivityType(value as ActivityType)}
@@ -153,7 +160,7 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Notes (optional)</Label>
+                <FormFieldLabel requirement="optional">Notes</FormFieldLabel>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -162,17 +169,20 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                 />
               </div>
               <div className="space-y-2">
-                <Label>Duration (minutes, optional)</Label>
+                <FormFieldLabel htmlFor="activity-duration" requirement="optional">Duration (minutes)</FormFieldLabel>
                 <Input
+                  id="activity-duration"
                   type="number"
                   value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  onChange={(e) => { setDurationMinutes(e.target.value); setDurationError(undefined) }}
                   placeholder="e.g., 30"
                   min="1"
+                  {...fieldErrorProps("activity-duration", durationError)}
                 />
+                <FieldError id="activity-duration" message={durationError} />
               </div>
               <div className="space-y-2">
-                <Label>Event date (optional)</Label>
+                <FormFieldLabel requirement="optional">Event date</FormFieldLabel>
                 <Input
                   type="date"
                   value={eventDate}

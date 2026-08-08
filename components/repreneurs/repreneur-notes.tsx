@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { FieldError, FormFieldLabel, fieldErrorProps } from "@/components/forms/validation-feedback"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
@@ -81,9 +81,14 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewingNote, setViewingNote] = useState<Note | null>(null)
+  const [contentError, setContentError] = useState<string>()
 
   async function handleSubmit() {
-    if (!content.trim()) return
+    if (!content.trim()) {
+      setContentError("Write a note before saving.")
+      return
+    }
+    setContentError(undefined)
 
     setIsSubmitting(true)
 
@@ -141,7 +146,7 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="note-type">Type</Label>
+                  <FormFieldLabel htmlFor="note-type" requirement="optional">Type</FormFieldLabel>
                   <Select value={noteType} onValueChange={(v) => setNoteType(v as NoteType)}>
                     <SelectTrigger id="note-type">
                       <SelectValue />
@@ -161,15 +166,17 @@ export function RepreneurNotes({ repreneurId, notes }: RepreneurNotesProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="note-content">Content</Label>
+                  <FormFieldLabel htmlFor="note-content" requirement="required">Content</FormFieldLabel>
                   <Textarea
                     id="note-content"
                     placeholder="Write your note here..."
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
                     rows={6}
                     className="resize-none"
+                    {...fieldErrorProps("note-content", contentError)}
+                    onChange={(e) => { setContent(e.target.value); setContentError(undefined) }}
                   />
+                  <FieldError id="note-content" message={contentError} />
                 </div>
               </div>
               <DialogFooter>

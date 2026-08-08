@@ -1,15 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS, PERSONA_OPTIONS } from "@/lib/types/repreneur"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+  type FieldErrors,
+} from "@/components/forms/validation-feedback"
 
 interface RepreneurFormProps {
   repreneur?: Repreneur
@@ -30,13 +37,34 @@ interface RepreneurFormProps {
  */
 export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: RepreneurFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const [submissionError, setSubmissionError] = useState<string>()
+  const summaryRef = useRef<HTMLDivElement>(null)
 
   async function handleSubmit(formData: FormData) {
+    const nextErrors: FieldErrors = {}
+    const firstName = String(formData.get("first_name") ?? "").trim()
+    const lastName = String(formData.get("last_name") ?? "").trim()
+    const email = String(formData.get("email") ?? "").trim()
+
+    if (!firstName) nextErrors.first_name = "Enter a first name."
+    if (!lastName) nextErrors.last_name = "Enter a last name."
+    if (!email) nextErrors.email = "Enter an email address."
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nextErrors.email = "Enter a valid email address."
+
+    setErrors(nextErrors)
+    setSubmissionError(undefined)
+    if (Object.keys(nextErrors).length > 0) {
+      focusValidationSummary(summaryRef)
+      return
+    }
+
     setIsSubmitting(true)
     try {
       await action(formData)
     } catch (error) {
       console.error("Repreneur form submission failed")
+      setSubmissionError(error instanceof Error ? error.message : "We could not save this profile. Please try again.")
       setIsSubmitting(false)
     }
   }
@@ -51,29 +79,39 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <p className="text-sm text-muted-foreground">Fields marked Required must be completed. All other fields are optional.</p>
+          <ValidationSummary
+            ref={summaryRef}
+            errors={errors}
+            labels={{ first_name: "First name", last_name: "Last name", email: "Email" }}
+          />
+          {submissionError ? <p role="alert" className="text-sm text-destructive">{submissionError}</p> : null}
           <section className="grid gap-5 rounded-lg border bg-muted/20 p-5 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="first_name">First Name *</Label>
-              <Input id="first_name" name="first_name" defaultValue={repreneur?.first_name} required />
+              <FormFieldLabel htmlFor="first_name" requirement="required">First name</FormFieldLabel>
+              <Input id="first_name" name="first_name" defaultValue={repreneur?.first_name} required {...fieldErrorProps("first_name", errors.first_name)} onChange={() => setErrors(current => ({ ...current, first_name: "" }))} />
+              <FieldError id="first_name" message={errors.first_name} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name *</Label>
-              <Input id="last_name" name="last_name" defaultValue={repreneur?.last_name} required />
+              <FormFieldLabel htmlFor="last_name" requirement="required">Last name</FormFieldLabel>
+              <Input id="last_name" name="last_name" defaultValue={repreneur?.last_name} required {...fieldErrorProps("last_name", errors.last_name)} onChange={() => setErrors(current => ({ ...current, last_name: "" }))} />
+              <FieldError id="last_name" message={errors.last_name} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input id="email" name="email" type="email" defaultValue={repreneur?.email} required />
+              <FormFieldLabel htmlFor="email" requirement="required">Email</FormFieldLabel>
+              <Input id="email" name="email" type="email" defaultValue={repreneur?.email} required {...fieldErrorProps("email", errors.email)} onChange={() => setErrors(current => ({ ...current, email: "" }))} />
+              <FieldError id="email" message={errors.email} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <FormFieldLabel htmlFor="phone" requirement="optional">Phone</FormFieldLabel>
               <Input id="phone" name="phone" type="tel" defaultValue={repreneur?.phone} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="linkedin_url">LinkedIn URL</Label>
+              <FormFieldLabel htmlFor="linkedin_url" requirement="optional">LinkedIn URL</FormFieldLabel>
               <Input
                 id="linkedin_url"
                 name="linkedin_url"
@@ -84,7 +122,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lifecycle_status">Status</Label>
+              <FormFieldLabel htmlFor="lifecycle_status" requirement="optional">Status</FormFieldLabel>
               <Select name="lifecycle_status" defaultValue={repreneur?.lifecycle_status || "lead"}>
                 <SelectTrigger>
                   <SelectValue />
@@ -100,7 +138,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="source">Source</Label>
+              <FormFieldLabel htmlFor="source" requirement="optional">Source</FormFieldLabel>
               <Select name="source" defaultValue={repreneur?.source || ""}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select source..." />
@@ -118,7 +156,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="persona">Persona</Label>
+              <FormFieldLabel htmlFor="persona" requirement="optional">Persona</FormFieldLabel>
               <Select name="persona" defaultValue={repreneur?.persona || ""}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select persona..." />
@@ -137,7 +175,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           </section>
 
           <div className="space-y-2 rounded-lg border bg-muted/20 p-5">
-            <Label htmlFor="company_background">Company Background</Label>
+            <FormFieldLabel htmlFor="company_background" requirement="optional">Company Background</FormFieldLabel>
             <Textarea
               id="company_background"
               name="company_background"
@@ -156,9 +194,9 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
                   name="marketing_consent"
                   defaultChecked={repreneur?.marketing_consent}
                 />
-                <Label htmlFor="marketing_consent" className="text-sm font-normal">
+                <FormFieldLabel htmlFor="marketing_consent" requirement="optional" className="text-sm font-normal">
                   Marketing consent given
-                </Label>
+                </FormFieldLabel>
               </div>
               {repreneur?.consent_timestamp && (
                 <p className="text-xs text-muted-foreground">

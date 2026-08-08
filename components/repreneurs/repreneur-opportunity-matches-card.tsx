@@ -1,10 +1,21 @@
+"use client"
+
 import Link from "next/link"
+import { useRef, useState } from "react"
 import { BriefcaseBusiness, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { saveOpportunityMatch } from "@/lib/actions/opportunity-matches"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+  type FieldErrors,
+} from "@/components/forms/validation-feedback"
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
@@ -48,9 +59,26 @@ function opportunityTitle(match: RepreneurOpportunityMatch) {
 }
 
 export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidates }: RepreneurOpportunityMatchesCardProps) {
+  const [recommendationErrors, setRecommendationErrors] = useState<FieldErrors>({})
+  const [recommendationError, setRecommendationError] = useState<string>()
+  const recommendationSummaryRef = useRef<HTMLDivElement>(null)
+
   async function recommendOpportunity(formData: FormData) {
-    "use server"
-    await saveOpportunityMatch(formData)
+    if (!String(formData.get("opportunity_id") ?? "").trim()) {
+      setRecommendationErrors({ opportunity_id: "Select an opportunity to recommend." })
+      setRecommendationError(undefined)
+      focusValidationSummary(recommendationSummaryRef)
+      return
+    }
+
+    setRecommendationErrors({})
+    setRecommendationError(undefined)
+    try {
+      await saveOpportunityMatch(formData)
+    } catch (error) {
+      console.error("Opportunity recommendation failed")
+      setRecommendationError(error instanceof Error ? error.message : "We could not save this recommendation. Please try again.")
+    }
   }
 
   return (
@@ -70,8 +98,15 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
             <input type="hidden" name="human_recommendation" value="possible_fit" />
             <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
               <label className="flex flex-col gap-2 text-sm">
-                <span className="font-medium">Recommend an opportunity</span>
-                <select name="opportunity_id" required className="h-9 rounded-md border bg-background px-3 text-sm">
+                <FormFieldLabel htmlFor="opportunity_id" requirement="required">Recommend an opportunity</FormFieldLabel>
+                <select
+                  id="opportunity_id"
+                  name="opportunity_id"
+                  required
+                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                  {...fieldErrorProps("opportunity_id", recommendationErrors.opportunity_id)}
+                  onChange={() => setRecommendationErrors({})}
+                >
                   <option value="">Select opportunity...</option>
                   {candidates.slice(0, 50).map((candidate) => (
                     <option key={candidate.id} value={candidate.id}>
@@ -82,6 +117,14 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
               </label>
               <Button type="submit">Push to portal</Button>
             </div>
+            <ValidationSummary
+              ref={recommendationSummaryRef}
+              className="mt-3"
+              errors={recommendationErrors}
+              labels={{ opportunity_id: "Opportunity" }}
+            />
+            <FieldError className="mt-2" id="opportunity_id" message={recommendationErrors.opportunity_id} />
+            {recommendationError ? <p role="alert" className="mt-2 text-sm text-destructive">{recommendationError}</p> : null}
             <p className="mt-2 text-xs text-muted-foreground">
               New recommendations are saved as Proposed, so they appear in the repreneur portal when the opportunity is repreneur-visible.
             </p>

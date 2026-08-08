@@ -1,15 +1,23 @@
 "use client"
 
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createOffer, updateOffer } from "@/lib/actions/offers"
 import { toast } from "sonner"
 import type { Offer } from "@/lib/types/offer"
+import {
+  FieldError,
+  FormFieldLabel,
+  ValidationSummary,
+  fieldErrorProps,
+  focusValidationSummary,
+  type FieldErrors,
+} from "@/components/forms/validation-feedback"
 
 interface OfferFormProps {
   offer?: Offer
@@ -18,8 +26,23 @@ interface OfferFormProps {
 export function OfferForm({ offer }: OfferFormProps) {
   const router = useRouter()
   const isEditing = !!offer
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const summaryRef = useRef<HTMLDivElement>(null)
 
   const handleSubmit = async (formData: FormData) => {
+    const nextErrors: FieldErrors = {}
+    const name = String(formData.get("name") ?? "").trim()
+    const price = Number(formData.get("price"))
+    const duration = Number(formData.get("duration_days"))
+    if (!name) nextErrors.name = "Enter an offer name."
+    if (!Number.isFinite(price) || price < 0) nextErrors.price = "Enter a price of €0 or more."
+    if (!Number.isInteger(duration) || duration < 1) nextErrors.duration_days = "Enter a duration of at least one day."
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) {
+      focusValidationSummary(summaryRef)
+      return
+    }
+
     try {
       if (isEditing) {
         await updateOffer(offer.id, formData)
@@ -42,20 +65,29 @@ export function OfferForm({ offer }: OfferFormProps) {
       </CardHeader>
       <CardContent>
         <form action={handleSubmit} className="space-y-6">
+          <p className="text-sm text-muted-foreground">Fields marked Required must be completed. All other fields are optional.</p>
+          <ValidationSummary
+            ref={summaryRef}
+            errors={errors}
+            labels={{ name: "Offer name", price: "Price", duration_days: "Duration" }}
+          />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Offer Name *</Label>
+              <FormFieldLabel htmlFor="name" requirement="required">Offer name</FormFieldLabel>
               <Input
                 id="name"
                 name="name"
                 placeholder="e.g., Starter Pack"
                 defaultValue={offer?.name}
                 required
+                {...fieldErrorProps("name", errors.name)}
+                onChange={() => setErrors(current => ({ ...current, name: "" }))}
               />
+              <FieldError id="name" message={errors.name} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="price">Price (EUR) *</Label>
+              <FormFieldLabel htmlFor="price" requirement="required">Price (EUR)</FormFieldLabel>
               <Input
                 id="price"
                 name="price"
@@ -65,12 +97,15 @@ export function OfferForm({ offer }: OfferFormProps) {
                 placeholder="e.g., 2500"
                 defaultValue={offer?.price}
                 required
+                {...fieldErrorProps("price", errors.price)}
+                onChange={() => setErrors(current => ({ ...current, price: "" }))}
               />
+              <FieldError id="price" message={errors.price} />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <FormFieldLabel htmlFor="description" requirement="optional">Description</FormFieldLabel>
             <Textarea
               id="description"
               name="description"
@@ -82,7 +117,7 @@ export function OfferForm({ offer }: OfferFormProps) {
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="duration_days">Duration (days) *</Label>
+              <FormFieldLabel htmlFor="duration_days" requirement="required">Duration (days)</FormFieldLabel>
               <Input
                 id="duration_days"
                 name="duration_days"
@@ -91,12 +126,15 @@ export function OfferForm({ offer }: OfferFormProps) {
                 placeholder="e.g., 90"
                 defaultValue={offer?.duration_days}
                 required
+                {...fieldErrorProps("duration_days", errors.duration_days)}
+                onChange={() => setErrors(current => ({ ...current, duration_days: "" }))}
               />
+              <FieldError id="duration_days" message={errors.duration_days} />
               <p className="text-xs text-muted-foreground">How long the offer lasts after acceptance</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="acceptance_deadline_days">Acceptance Deadline (days)</Label>
+              <FormFieldLabel htmlFor="acceptance_deadline_days" requirement="optional">Acceptance Deadline (days)</FormFieldLabel>
               <Input
                 id="acceptance_deadline_days"
                 name="acceptance_deadline_days"
@@ -109,7 +147,7 @@ export function OfferForm({ offer }: OfferFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="includes_hours">Coaching Hours</Label>
+              <FormFieldLabel htmlFor="includes_hours" requirement="optional">Coaching Hours</FormFieldLabel>
               <Input
                 id="includes_hours"
                 name="includes_hours"
@@ -130,7 +168,7 @@ export function OfferForm({ offer }: OfferFormProps) {
                 defaultChecked={offer?.includes_resources ?? true}
                 value="true"
               />
-              <Label htmlFor="includes_resources">Includes Resources</Label>
+              <FormFieldLabel htmlFor="includes_resources" requirement="optional">Includes Resources</FormFieldLabel>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -140,7 +178,7 @@ export function OfferForm({ offer }: OfferFormProps) {
                 defaultChecked={offer?.is_active ?? true}
                 value="true"
               />
-              <Label htmlFor="is_active">Active</Label>
+              <FormFieldLabel htmlFor="is_active" requirement="optional">Active</FormFieldLabel>
             </div>
           </div>
 
