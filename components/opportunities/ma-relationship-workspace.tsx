@@ -59,6 +59,7 @@ import {
 } from "@/lib/actions/ma-relationships"
 import { setMaContactCampaignEmailSuppression } from "@/lib/actions/ma-contact-email-policy"
 import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
+import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
 
 const CHANNELS: Array<{ value: MaInteractionChannel; label: string }> = [
   { value: "call", label: "Call" },
@@ -322,15 +323,15 @@ export function MaRelationshipWorkspace({
           disabled={!workspace.offices.length}
         >
           <Plus data-icon="inline-start" />
-          Record activity
+          Add activity
         </Button>
       </div>
 
       <Alert>
         <AlertTitle>Internal relationship history</AlertTitle>
         <AlertDescription>
-          This workspace records staff evidence only. Recording an email here
-          never sends one; attachments and general editing remain out of scope.
+          Add manual staff evidence here. Recording an email here never sends
+          one; only provider delivery evidence can show a system-recorded send.
         </AlertDescription>
       </Alert>
 
@@ -362,6 +363,8 @@ export function MaRelationshipWorkspace({
                   <div className="space-y-3">
                     {filteredInteractions.map((interaction) => {
                       const Icon = channelIcons[interaction.channel]
+                      const confirmedProviderDelivery =
+                        hasConfirmedProviderDelivery(interaction)
                       const mayVerify =
                         interaction.ownerVerificationState === "provisional" &&
                         interaction.ownerStaffUserId ===
@@ -386,7 +389,14 @@ export function MaRelationshipWorkspace({
                                     {interaction.direction}
                                   </span>
                                 ) : null}
-                                {interaction.deliveryStatus ? (
+                                <Badge variant="outline">
+                                  {interaction.activityProvenance === "manual"
+                                    ? "Manual"
+                                    : "System-recorded"}
+                                </Badge>
+                                {interaction.activityProvenance ===
+                                  "system-recorded" &&
+                                interaction.deliveryStatus ? (
                                   <span
                                     className={
                                       interaction.deliveryStatus === "failed"
@@ -394,7 +404,9 @@ export function MaRelationshipWorkspace({
                                         : "text-xs capitalize text-muted-foreground"
                                     }
                                   >
-                                    {interaction.deliveryStatus}
+                                    {confirmedProviderDelivery
+                                      ? "sent"
+                                      : interaction.deliveryStatus}
                                   </span>
                                 ) : null}
                                 {interaction.ownerVerificationState ===
@@ -441,7 +453,9 @@ export function MaRelationshipWorkspace({
                           </div>
                           {interaction.outcome ||
                           interaction.nextAction ||
-                          interaction.deliveryError ? (
+                          interaction.deliveryError ||
+                          (interaction.channel === "email" &&
+                            interaction.activityProvenance === "manual") ? (
                             <div className="mt-3 grid gap-2 border-t pt-3 text-sm sm:grid-cols-2">
                               {interaction.outcome ? (
                                 <p>
@@ -464,6 +478,15 @@ export function MaRelationshipWorkspace({
                                     Delivery:{" "}
                                   </span>
                                   {interaction.deliveryError}
+                                </p>
+                              ) : null}
+                              {interaction.channel === "email" &&
+                              interaction.activityProvenance === "manual" ? (
+                                <p className="text-muted-foreground sm:col-span-2">
+                                  <span className="font-medium">
+                                    Delivery:{" "}
+                                  </span>
+                                  No provider delivery evidence recorded.
                                 </p>
                               ) : null}
                             </div>
