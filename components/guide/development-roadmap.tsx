@@ -26,6 +26,24 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 8, 2026",
+    version: "0.9.41",
+    title: "Staff forms now explain and resolve missing information",
+    isCompleted: true,
+    events: [
+      {
+        title: "Required and optional fields are explicit",
+        type: "style",
+        description: "Staff forms now state what must be completed, what may be left blank and which information is required only for a later opportunity step.",
+      },
+      {
+        title: "A failed save points to every field that needs attention",
+        type: "fix",
+        description: "WAVE preserves entered values, shows a persistent summary with links to each invalid field and explains the correction beside that field instead of relying on a transient browser message.",
+      },
+    ],
+  },
+  {
+    period: "Aug 8, 2026",
     version: "0.9.40",
     title: "Blank NDA templates can keep their Word format",
     isCompleted: true,
