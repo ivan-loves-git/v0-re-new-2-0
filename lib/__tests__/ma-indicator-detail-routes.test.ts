@@ -32,6 +32,7 @@ describe("W-083 read-only indicator detail routes", () => {
     expect(detail).toContain("Open office")
     expect(detail).toContain("Relationship indicators")
     expect(detail).toContain("Candidate-stale")
+    expect(detail).toContain('timeZone: "Europe/Paris"')
   })
 
   it("does not release the W-086 or W-087 mutation workspace", () => {

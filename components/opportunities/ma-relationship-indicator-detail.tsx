@@ -23,6 +23,7 @@ function formatKnownDate(value: string | null) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "Europe/Paris",
   }).format(date)
 }
 

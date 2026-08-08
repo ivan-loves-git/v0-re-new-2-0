@@ -161,6 +161,10 @@ describe("W-066 staff relationship workspace", () => {
     expect(workspace).toContain("text-warning")
   })
 
+  it("renders timeline dates in one canonical timezone on the server and client", () => {
+    expect(workspace).toContain('timeZone: "Europe/Paris"')
+  })
+
   it("keeps opportunity history on the same canonical interaction ledger", () => {
     expect(workflow).toContain('.from("ma_interactions")')
     expect(workflow).toContain('.eq("opportunity_id", opportunityId)')

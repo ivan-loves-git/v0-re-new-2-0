@@ -85,6 +85,7 @@ function formatDate(value: string) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Paris",
   }).format(date)
 }
 
@@ -863,6 +864,7 @@ function formatKnownDate(value: string | null) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "Europe/Paris",
   }).format(date)
 }
 
