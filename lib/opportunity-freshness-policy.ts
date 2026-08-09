@@ -54,3 +54,7 @@ export function isOpenRelationshipOpportunity(status: OpportunityStatus) {
 export function isCountedSourcedOpportunity(status: OpportunityStatus) {
   return status !== "archived"
 }
+
+export function isClosedOpportunity(status: OpportunityStatus) {
+  return status === "closed"
+}

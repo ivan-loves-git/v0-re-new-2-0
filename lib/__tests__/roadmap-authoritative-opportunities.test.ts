@@ -11,6 +11,19 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the staff M&A workspace release", () => {
+    expect(roadmap).toContain('version: "0.9.43"')
+    expect(roadmap).toContain(
+      "Activity now distinguishes manual records from system-recorded delivery",
+    )
+    expect(roadmap).toContain(
+      "Each operating office has one staff workspace",
+    )
+    expect(roadmap).toContain(
+      "Firm workspaces combine offices without changing ownership",
+    )
+  })
+
   it("records the released opportunity-to-memo journey", () => {
     expect(roadmap).toContain('version: "0.9.39"')
     expect(roadmap).toContain(
@@ -107,6 +120,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-08")')
+    expect(roadmapStatus).toContain('new Date("2026-08-09")')
   })
 })

@@ -223,6 +223,17 @@ describe("W-066 staff relationship workspace", () => {
     } as const
     expect(activityProvenance(sentByProvider)).toBe("system-recorded")
     expect(hasConfirmedProviderDelivery(sentByProvider)).toBe(true)
+
+    const unconfirmedProviderStatus = {
+      ...sentByProvider,
+      providerMessageId: null,
+      deliveryFinalizedAt: null,
+      sentAt: null,
+    } as const
+    expect(activityProvenance(unconfirmedProviderStatus)).toBe(
+      "system-recorded",
+    )
+    expect(hasConfirmedProviderDelivery(unconfirmedProviderStatus)).toBe(false)
   })
 
   it("keeps labels tied to the canonical ledger and does not treat manual email as sent", () => {
@@ -232,6 +243,7 @@ describe("W-066 staff relationship workspace", () => {
     expect(workspace).toContain("Manual")
     expect(workspace).toContain("System-recorded")
     expect(workspace).toContain("No provider delivery evidence recorded")
+    expect(workspace).toContain("delivery unconfirmed")
     expect(workspace).not.toContain("sendMaSourceWorkflowEmail")
   })
 })

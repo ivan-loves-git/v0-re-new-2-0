@@ -108,11 +108,13 @@ type MaRelationshipView = "timeline" | "firms" | "contacts"
 interface MaRelationshipWorkspaceProps {
   workspace: MaRelationshipWorkspace
   initialView?: MaRelationshipView
+  initialContactId?: string | null
 }
 
 export function MaRelationshipWorkspace({
   workspace,
   initialView = "timeline",
+  initialContactId = null,
 }: MaRelationshipWorkspaceProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -424,7 +426,9 @@ export function MaRelationshipWorkspace({
                                   >
                                     {confirmedProviderDelivery
                                       ? "sent"
-                                      : interaction.deliveryStatus}
+                                      : interaction.deliveryStatus === "sent"
+                                        ? "delivery unconfirmed"
+                                        : interaction.deliveryStatus}
                                   </span>
                                 ) : null}
                                 {interaction.ownerVerificationState ===
@@ -548,6 +552,7 @@ export function MaRelationshipWorkspace({
           <RelationshipContactsDirectory
             contacts={workspace.contacts}
             offices={workspace.offices}
+            initialContactId={initialContactId}
           />
         </TabsContent>
       </Tabs>
@@ -1073,10 +1078,15 @@ function RelationshipFirmsDirectory({
 function RelationshipContactsDirectory({
   contacts,
   offices,
-}: Pick<MaRelationshipWorkspace, "contacts" | "offices">) {
+  initialContactId,
+}: Pick<MaRelationshipWorkspace, "contacts" | "offices"> & {
+  initialContactId: string | null
+}) {
   const router = useRouter()
   const [isPolicyPending, startPolicyTransition] = useTransition()
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(
+    contacts.find((contact) => contact.id === initialContactId)?.label ?? "",
+  )
   const [policyContact, setPolicyContact] = useState<
     MaRelationshipWorkspace["contacts"][number] | null
   >(null)

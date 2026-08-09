@@ -45,6 +45,8 @@ describe("W-084 M&A navigation", () => {
     expect(firmsRoute).toContain('initialView="firms"')
     expect(contactsRoute).toContain("getMaRelationshipWorkspace")
     expect(contactsRoute).toContain('initialView="contacts"')
+    expect(contactsRoute).toContain("initialContactId")
+    expect(contactsRoute).toContain("workspace.contacts.some")
   })
 
   it("redirects the former relationship URLs to safe direct equivalents", () => {
@@ -58,5 +60,10 @@ describe("W-084 M&A navigation", () => {
   it("does not alter the canonical M&A interaction ledger or repreneur navigation", () => {
     expect(workspace).toContain("createMaRelationshipInteraction(input)")
     expect(sidebar).not.toContain('href: "/portal/')
+  })
+
+  it("keeps a valid contact deep link inside the canonical directory", () => {
+    expect(workspace).toContain("initialContactId")
+    expect(workspace).toContain("contacts.find((contact) => contact.id === initialContactId)")
   })
 })

@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 9, 2026",
+    version: "0.9.43",
+    title: "M&A relationship workspaces now support daily staff work",
+    isCompleted: true,
+    events: [
+      {
+        title: "Activity now distinguishes manual records from system-recorded delivery",
+        type: "feature",
+        description: "Staff can see whether an activity was entered as evidence or is backed by confirmed provider delivery, without WAVE claiming that a manually recorded email was sent.",
+      },
+      {
+        title: "Each operating office has one staff workspace",
+        type: "feature",
+        description: "Staff can review the office's contacts, source opportunities, activity, indicators and internal notes, then add a new person or affiliate an existing person without duplicating identity.",
+      },
+      {
+        title: "Firm workspaces combine offices without changing ownership",
+        type: "decision",
+        description: "Firm pages bring together their offices and derived relationship information, while opportunities and activity remain owned by their operating office. Staff can add a real office through the existing controlled workflow.",
+      },
+    ],
+  },
+  {
     period: "Aug 8, 2026",
     version: "0.9.42",
     title: "M&A firms are now faster to reach and compare",

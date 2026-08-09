@@ -1,36 +1,38 @@
-import Link from "next/link";
-import { ArrowLeft, Building2, MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import Link from "next/link"
+import { ArrowLeft, Building2, MapPin } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { MaOfficeContactAction } from "@/components/opportunities/ma-office-contact-action";
-import { MaRelationshipWorkspaceNotes } from "@/components/opportunities/ma-relationship-workspace-notes";
-import { MaFirmOfficeAction } from "@/components/opportunities/ma-firm-office-action";
+} from "@/components/ui/card"
+import { MaOfficeContactAction } from "@/components/opportunities/ma-office-contact-action"
+import { MaRelationshipWorkspaceNotes } from "@/components/opportunities/ma-relationship-workspace-notes"
+import { MaFirmOfficeAction } from "@/components/opportunities/ma-firm-office-action"
 import {
   type MaFirmWorkspace,
   type MaOfficeWorkspace,
   type MaWorkspaceIndicators,
-} from "@/lib/actions/ma-relationship-workspaces";
+} from "@/lib/actions/ma-relationship-workspaces"
+import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
 
 function dateLabel(value: string | null | undefined) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (!value) return "—"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
   return new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(date);
+    timeZone: "Europe/Paris",
+  }).format(date)
 }
 
 function statusVariant(status: string) {
-  return status === "active" ? "default" : "secondary";
+  return status === "active" ? "default" : "secondary"
 }
 
 function Indicators({ indicators }: { indicators: MaWorkspaceIndicators }) {
@@ -48,7 +50,7 @@ function Indicators({ indicators }: { indicators: MaWorkspaceIndicators }) {
         </div>
       ))}
     </div>
-  );
+  )
 }
 
 function Notes({
@@ -59,12 +61,12 @@ function Notes({
   updatedAt,
   updatedBy,
 }: {
-  target: "office" | "firm";
-  id: string;
-  notes: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-  updatedBy: string | null;
+  target: "office" | "firm"
+  id: string
+  notes: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  updatedBy: string | null
 }) {
   return (
     <Card>
@@ -83,18 +85,18 @@ function Notes({
         <p className="text-xs text-muted-foreground">
           Created {dateLabel(createdAt)} · Last changed {dateLabel(updatedAt)}
           {updatedBy
-            ? " by the recorded staff actor"
+            ? ` · Actor ${updatedBy}`
             : " · No staff actor was retained"}
         </p>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function Activity({
   activity,
 }: {
-  activity: MaOfficeWorkspace["activity"] | MaFirmWorkspace["activity"];
+  activity: MaOfficeWorkspace["activity"] | MaFirmWorkspace["activity"]
 }) {
   return (
     <Card>
@@ -111,48 +113,77 @@ function Activity({
           </p>
         ) : (
           <ul className="space-y-3">
-            {activity.slice(0, 12).map((item) => (
-              <li
-                key={item.id}
-                className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    {item.title || `${item.channel} activity`}
-                  </p>
-                  {item.opportunityId && item.opportunityLabel ? (
-                    <Link
-                      className="text-xs text-muted-foreground hover:underline"
-                      href={`/opportunities/${item.opportunityId}`}
-                    >
-                      {item.opportunityLabel}
-                    </Link>
-                  ) : null}
-                </div>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {dateLabel(item.occurredAt)}
-                </span>
-              </li>
-            ))}
+            {activity.slice(0, 12).map((item) => {
+              const confirmedProviderDelivery = hasConfirmedProviderDelivery(item)
+              return (
+                <li
+                  key={item.id}
+                  className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">
+                        {item.title || `${item.channel} activity`}
+                      </p>
+                      <Badge variant="outline">
+                        {item.activityProvenance === "manual"
+                          ? "Manual"
+                          : "System-recorded"}
+                      </Badge>
+                      {item.activityProvenance === "system-recorded" &&
+                      item.deliveryStatus ? (
+                        <span
+                          className={
+                            item.deliveryStatus === "failed"
+                              ? "text-xs text-destructive"
+                              : "text-xs text-muted-foreground"
+                          }
+                        >
+                          {confirmedProviderDelivery
+                            ? "sent"
+                            : item.deliveryStatus === "sent"
+                              ? "delivery unconfirmed"
+                              : item.deliveryStatus}
+                        </span>
+                      ) : null}
+                    </div>
+                    {item.opportunityId && item.opportunityLabel ? (
+                      <Link
+                        className="text-xs text-muted-foreground hover:underline"
+                        href={`/opportunities/${item.opportunityId}`}
+                      >
+                        {item.opportunityLabel}
+                      </Link>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {dateLabel(item.occurredAt)}
+                  </span>
+                </li>
+              )
+            })}
           </ul>
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function Contacts({
   contacts,
+  includeHistorical = false,
 }: {
-  contacts: MaOfficeWorkspace["contacts"] | MaFirmWorkspace["contacts"];
+  contacts: MaOfficeWorkspace["contacts"] | MaFirmWorkspace["contacts"]
+  includeHistorical?: boolean
 }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Contacts</CardTitle>
         <CardDescription>
-          Current and historical office affiliations remain distinct from the
-          canonical person identity.
+          {includeHistorical
+            ? "Current and historical office affiliations remain distinct from the canonical person identity."
+            : "Distinct active canonical people across this firm's offices."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -169,7 +200,7 @@ function Contacts({
               >
                 <div>
                   <Link
-                    href={`/opportunities/ma?view=contacts&contactId=${contact.id}`}
+                    href={`/opportunities/ma/contacts?contactId=${contact.id}`}
                     className="text-sm font-medium hover:underline"
                   >
                     {contact.name}
@@ -189,7 +220,7 @@ function Contacts({
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function Opportunities({
@@ -197,7 +228,7 @@ function Opportunities({
 }: {
   opportunities:
     | MaOfficeWorkspace["opportunities"]
-    | MaFirmWorkspace["opportunities"];
+    | MaFirmWorkspace["opportunities"]
 }) {
   return (
     <Card>
@@ -242,13 +273,13 @@ function Opportunities({
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export function MaOfficeWorkspaceDetail({
   workspace,
 }: {
-  workspace: MaOfficeWorkspace;
+  workspace: MaOfficeWorkspace
 }) {
   return (
     <div className="space-y-5">
@@ -283,7 +314,10 @@ export function MaOfficeWorkspaceDetail({
             ) : null}
           </p>
         </div>
-        <MaOfficeContactAction officeId={workspace.id} />
+        <MaOfficeContactAction
+          officeId={workspace.id}
+          disabled={workspace.status !== "active"}
+        />
       </header>
       <Indicators indicators={workspace.indicators} />
       <p className="text-xs text-muted-foreground">
@@ -292,7 +326,7 @@ export function MaOfficeWorkspaceDetail({
         Historical affiliations: {workspace.indicators.historicalAffiliations}
       </p>
       <div className="grid gap-5 lg:grid-cols-2">
-        <Contacts contacts={workspace.contacts} />
+        <Contacts contacts={workspace.contacts} includeHistorical />
         <Opportunities opportunities={workspace.opportunities} />
         <Activity activity={workspace.activity} />
         <Notes
@@ -305,20 +339,20 @@ export function MaOfficeWorkspaceDetail({
         />
       </div>
     </div>
-  );
+  )
 }
 
 export function MaFirmWorkspaceDetail({
   workspace,
 }: {
-  workspace: MaFirmWorkspace;
+  workspace: MaFirmWorkspace
 }) {
   return (
     <div className="space-y-5">
       <Button asChild variant="ghost" size="sm">
-        <Link href="/opportunities/ma">
+        <Link href="/opportunities/ma/firms">
           <ArrowLeft data-icon="inline-start" />
-          Back to M&A relationships
+          Back to firms
         </Link>
       </Button>
       <header className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
@@ -334,12 +368,19 @@ export function MaFirmWorkspaceDetail({
             through its offices.
           </p>
         </div>
-        <MaFirmOfficeAction firmId={workspace.id} firmName={workspace.name} />
+        <MaFirmOfficeAction
+          firmId={workspace.id}
+          firmName={workspace.name}
+          disabled={workspace.status !== "active"}
+        />
       </header>
       <Indicators indicators={workspace.indicators} />
       <p className="text-xs text-muted-foreground">
-        {workspace.offices.length} offices · {workspace.contacts.length}{" "}
-        distinct canonical contacts · Latest known opportunity date:{" "}
+        {workspace.offices.length}{" "}
+        {workspace.offices.length === 1 ? "office" : "offices"} ·{" "}
+        {workspace.indicators.activeContacts} distinct active{" "}
+        {workspace.indicators.activeContacts === 1 ? "contact" : "contacts"} ·
+        Latest known opportunity date:{" "}
         {dateLabel(workspace.indicators.latestKnownOpportunityDate)}
       </p>
       <Card>
@@ -371,7 +412,11 @@ export function MaFirmWorkspaceDetail({
                     </Link>
                     <p className="text-xs text-muted-foreground">
                       {office.city || "City not recorded"} ·{" "}
-                      {office.indicators.activeContacts} active contacts ·{" "}
+                      {office.indicators.activeContacts} active{" "}
+                      {office.indicators.activeContacts === 1
+                        ? "contact"
+                        : "contacts"}{" "}
+                      ·{" "}
                       {office.indicators.openOpportunities} open opportunities
                     </p>
                   </div>
@@ -402,5 +447,5 @@ export function MaFirmWorkspaceDetail({
         />
       </div>
     </div>
-  );
+  )
 }
