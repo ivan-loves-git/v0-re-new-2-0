@@ -1,4 +1,4 @@
-<!-- Migrated from CLAUDE.md for Codex on 2026-05-13. Keep this file as the Codex-readable source of local instructions. -->
+<!-- Canonical shared instructions for AI-assisted work in this repository. -->
 
 # Re-New Platform Project
 

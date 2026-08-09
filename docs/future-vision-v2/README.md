@@ -4,7 +4,7 @@
 
 These documents describe a *possible* evolution of the Re-New platform from internal CRM to repreneur-facing acceleration platform. They were written by Ivan in February 2026 as a conversation starter for the founding team.
 
-**None of this is approved, planned, or in development.** Do not use these documents as specifications, requirements, or current architecture references. The current platform is an internal CRM as described in the main project CLAUDE.md.
+**None of this is approved, planned, or in development.** Do not use these documents as specifications, requirements, or current architecture references. Current scope comes from the live WAVE Strategic PDR; implementation guardrails are in the root `AGENTS.md`.
 
 ## Contents
 
