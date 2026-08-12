@@ -59,6 +59,7 @@ import {
   normalizeOpportunitySector,
   OTHER_SECTOR,
 } from "@/lib/utils/opportunity-sector"
+import { selectCreatedOfficeContext } from "@/lib/utils/opportunity-created-office-selection"
 
 const INTAKE_STATUS_OPTIONS = OPPORTUNITY_STATUS_OPTIONS.filter(
   (option) =>
@@ -359,17 +360,15 @@ export function OpportunityForm({
       }
 
       const office = result.office
+      const selection = selectCreatedOfficeContext(office, officeContextMode)
 
       setCreatedOfficeOptions((current) => [
         ...current.filter((item) => item.office_id !== office.office_id),
         office,
       ])
-      setSelectedOfficeId(office.office_id)
-      const firstContact = office.contacts[0]
-      setSelectedAffiliationIds(
-        firstContact ? [firstContact.affiliation_id] : [],
-      )
-      setPrimaryAffiliationId(firstContact?.affiliation_id ?? null)
+      setSelectedOfficeId(selection.selectedOfficeId)
+      setSelectedAffiliationIds(selection.affiliationIds)
+      setPrimaryAffiliationId(selection.primaryAffiliationId)
       setCreateOfficeDialogOpen(false)
       setExistingFirmId("")
       toast.success(result.message)
