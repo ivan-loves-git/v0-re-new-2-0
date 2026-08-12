@@ -23,7 +23,7 @@ describe("W-098 legacy opportunity date reconciliation", () => {
     ]
 
     expect(migration).toContain("W-098 — narrow, source-backed repair")
-    expect(migration).toContain("a4b5062c7dc45c62285b8b9887a4b11c3e1edaa7a1adce9f69432a0a5ca0d6a5")
+    expect(migration).toContain("a4b50611de0578a4a2b36f8c6da284c6e53d10b2fd4f418ab560dd31a9a0d6a5")
     expect(migration).not.toContain("run-w010-cutover")
     expect(migration).not.toContain("COPY public.opportunities")
 

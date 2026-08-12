@@ -112,7 +112,7 @@ BEGIN
         repair.prior_date_added,
         repair.corrected_date_added,
         'month',
-        'a4b5062c7dc45c62285b8b9887a4b11c3e1edaa7a1adce9f69432a0a5ca0d6a5',
+        'a4b50611de0578a4a2b36f8c6da284c6e53d10b2fd4f418ab560dd31a9a0d6a5',
         'W-098 legacy month-year repair'
       );
     ELSIF actual_date = repair.corrected_date_added AND actual_precision = 'month' THEN
@@ -120,7 +120,7 @@ BEGIN
         OR existing_event.prior_date_added <> repair.prior_date_added
         OR existing_event.corrected_date_added <> repair.corrected_date_added
         OR existing_event.corrected_precision <> 'month'
-        OR existing_event.source_evidence_hash <> 'a4b5062c7dc45c62285b8b9887a4b11c3e1edaa7a1adce9f69432a0a5ca0d6a5'
+        OR existing_event.source_evidence_hash <> 'a4b50611de0578a4a2b36f8c6da284c6e53d10b2fd4f418ab560dd31a9a0d6a5'
       THEN
         RAISE EXCEPTION 'w098_existing_repair_evidence_mismatch';
       END IF;
