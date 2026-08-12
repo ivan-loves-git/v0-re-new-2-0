@@ -131,15 +131,11 @@ describe("W-066 staff relationship workspace", () => {
     )
   })
 
-  it("keeps canonical directories reachable and makes mobile timeline-first", () => {
-    expect(workspace).toContain('value="timeline"')
-    expect(workspace).toContain('value="firms"')
-    expect(workspace).toContain('value="contacts"')
-    expect(workspace).toContain("value={activeView}")
-    expect(workspace).toContain("onValueChange={selectView}")
-    expect(workspace).toContain("router.replace(")
-    expect(workspace).toContain('"/opportunities/ma/activity"')
-    expect(workspace).toContain('`/opportunities/ma/${nextView}`')
+  it("renders one dedicated M&A page at a time while preserving its directories", () => {
+    expect(workspace).toContain('initialView === "timeline"')
+    expect(workspace).toContain('initialView === "firms"')
+    expect(workspace).not.toContain("TabsTrigger")
+    expect(workspace).not.toContain("router.replace(")
     expect(workspace).toContain("RelationshipFirmsDirectory")
     expect(workspace).toContain("RelationshipContactsDirectory")
     expect(workspace).toContain("workspace.offices")

@@ -49,12 +49,19 @@ describe("W-084 M&A navigation", () => {
     expect(contactsRoute).toContain("workspace.contacts.some")
   })
 
-  it("redirects the former relationship URLs to safe direct equivalents", () => {
+  it("keeps cross-section navigation in the dedicated sidebar, not inside a page", () => {
+    expect(workspace).not.toContain("M&A views")
+    expect(workspace).not.toContain("TabsTrigger")
+    expect(workspace).not.toContain("Internal relationship history")
+    expect(workspace).not.toContain("router.replace(")
+    expect(workspace).toContain('initialView === "timeline"')
+    expect(workspace).toContain('initialView === "firms"')
+  })
+
+  it("redirects former relationship URLs to the dedicated pages", () => {
     expect(legacyRoute).toContain("redirect(")
     expect(legacyRoute).toContain('view === "firms" || view === "contacts"')
     expect(legacyRoute).toContain("`/opportunities/ma/${destination}`")
-    expect(workspace).toContain('"/opportunities/ma/activity"')
-    expect(workspace).toContain("`/opportunities/ma/${nextView}`")
   })
 
   it("does not alter the canonical M&A interaction ledger or repreneur navigation", () => {

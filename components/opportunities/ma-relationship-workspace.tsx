@@ -48,7 +48,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   createMaRelationshipInteraction,
   verifyMaRelationshipInteractionOwner,
@@ -118,7 +117,6 @@ export function MaRelationshipWorkspace({
 }: MaRelationshipWorkspaceProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [activeView, setActiveView] = useState<MaRelationshipView>(initialView)
   const [officeFilter, setOfficeFilter] = useState("all")
   const [contactFilter, setContactFilter] = useState("all")
   const [opportunityFilter, setOpportunityFilter] = useState("all")
@@ -234,18 +232,6 @@ export function MaRelationshipWorkspace({
     })
   }
 
-  const selectView = (view: string) => {
-    const nextView: MaRelationshipView =
-      view === "firms" || view === "contacts" ? view : "timeline"
-    setActiveView(nextView)
-    router.replace(
-      nextView === "timeline"
-        ? "/opportunities/ma/activity"
-        : `/opportunities/ma/${nextView}`,
-      { scroll: false },
-    )
-  }
-
   const pageCopy = {
     timeline: {
       title: "Activity",
@@ -260,7 +246,7 @@ export function MaRelationshipWorkspace({
       title: "Contacts",
       description: "Canonical M&A contacts and their active office affiliations.",
     },
-  }[activeView]
+  }[initialView]
 
   const activeFilterCount = [
     officeFilter,
@@ -347,21 +333,8 @@ export function MaRelationshipWorkspace({
         </Button>
       </div>
 
-      <Alert>
-        <AlertTitle>Internal relationship history</AlertTitle>
-        <AlertDescription>
-          Add manual staff evidence here. Recording an email here never sends
-          one; only provider delivery evidence can show a system-recorded send.
-        </AlertDescription>
-      </Alert>
-
-      <Tabs value={activeView} onValueChange={selectView} className="space-y-4">
-        <TabsList aria-label="M&A views">
-          <TabsTrigger value="timeline">Activity</TabsTrigger>
-          <TabsTrigger value="firms">Firms</TabsTrigger>
-          <TabsTrigger value="contacts">Contacts</TabsTrigger>
-        </TabsList>
-        <TabsContent value="timeline" className="space-y-4">
+      {initialView === "timeline" ? (
+        <section className="space-y-4" aria-label="Relationship timeline">
           <div className="flex flex-col gap-4">
             {timelineFilters}
             <Card className="order-1 md:order-2">
@@ -541,21 +514,19 @@ export function MaRelationshipWorkspace({
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-        <TabsContent value="firms">
-          <RelationshipFirmsDirectory
-            firms={workspace.firms}
-            offices={workspace.offices}
-          />
-        </TabsContent>
-        <TabsContent value="contacts">
-          <RelationshipContactsDirectory
-            contacts={workspace.contacts}
-            offices={workspace.offices}
-            initialContactId={initialContactId}
-          />
-        </TabsContent>
-      </Tabs>
+        </section>
+      ) : initialView === "firms" ? (
+        <RelationshipFirmsDirectory
+          firms={workspace.firms}
+          offices={workspace.offices}
+        />
+      ) : (
+        <RelationshipContactsDirectory
+          contacts={workspace.contacts}
+          offices={workspace.offices}
+          initialContactId={initialContactId}
+        />
+      )}
 
       <Dialog
         open={dialogOpen}
@@ -569,8 +540,8 @@ export function MaRelationshipWorkspace({
             <div className="px-6 pt-6">
               <DialogTitle>Record relationship activity</DialogTitle>
               <DialogDescription className="mt-2">
-                Capture staff evidence. This does not send an email or upload an
-                attachment.
+                Recording an email here does not send it. Capture staff
+                evidence without uploading an attachment.
               </DialogDescription>
             </div>
           </DialogHeader>

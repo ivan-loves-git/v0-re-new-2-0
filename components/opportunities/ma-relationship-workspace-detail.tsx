@@ -206,10 +206,13 @@ function Contacts({
                     {contact.name}
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    {contact.jobTitle ||
-                      contact.email ||
-                      "No role or email recorded"}
+                    {contact.jobTitle || "No role recorded"}
                   </p>
+                  {includeHistorical ? (
+                    <p className="text-xs text-muted-foreground">
+                      Email: {contact.email || "Email not recorded"}
+                    </p>
+                  ) : null}
                 </div>
                 <Badge variant={contact.isActive ? "outline" : "secondary"}>
                   {contact.isActive ? "Active" : "Historical"}

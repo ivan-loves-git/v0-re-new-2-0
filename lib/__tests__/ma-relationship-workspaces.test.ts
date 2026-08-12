@@ -68,6 +68,13 @@ describe("W-086/W-087 relationship workspaces", () => {
     expect(contactAction).not.toContain('.from("ma_contacts")')
   })
 
+  it("shows office contact emails read-only without inventing an edit workflow", () => {
+    expect(actions).toContain("contact:ma_contacts(id, display_name, email, status)")
+    expect(detail).toContain("Email: {contact.email || \"Email not recorded\"}")
+    expect(detail).toContain("includeHistorical ?")
+    expect(detail).not.toContain("Edit contact")
+  })
+
   it("carries the W-085 evidence boundary into both workspace activity views", () => {
     expect(actions).toContain("provider_idempotency_key")
     expect(actions).toContain("activityProvenance")
