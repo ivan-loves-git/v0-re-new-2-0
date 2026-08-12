@@ -10,12 +10,13 @@ function source(relativePath: string) {
 describe("project document routing", () => {
   const routing = source("docs/project-status.md")
 
-  it("keeps current authority separate from communications, sent evidence and archives", () => {
+  it("keeps current authority separate from public-safe delivery material, private evidence and archives", () => {
     for (const rule of [
       "The PDR is the only current source for goals, cards, decisions, owners and delivery status.",
-      "`docs/communications/` and `docs/reports/`",
-      "`docs/emails-sent/`",
-      "Retain as sent evidence. Do not rewrite it into an editable draft",
+      "Public-safe delivery communication and release reporting",
+      "The existing private Pushapp project repository",
+      "legacy source locations, not approval to keep sensitive content public",
+      "Retain sent evidence as sent; never rewrite it into an editable draft.",
       "`docs/archive/`, `_archive/`, `.planning/`, `TASKS.md`",
     ]) {
       expect(routing).toContain(rule)
@@ -29,6 +30,9 @@ describe("project document routing", () => {
     expect(routing).toContain(
       "A document move, rename, deletion, GitHub visibility or access change, or any change to a local-only boundary requires a separate explicit decision from Ivan",
     )
-    expect(routing).toContain("None is approved by this routing policy.")
+    expect(routing).toContain("None is approved by this routing policy;")
+    expect(routing).toContain(
+      "legacy source locations remain an unresolved exposure queue until that decision is made",
+    )
   })
 })
