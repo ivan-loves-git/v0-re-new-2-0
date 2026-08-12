@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 12, 2026",
+    version: "0.9.44",
+    title: "M&A office work is clearer and faster",
+    isCompleted: true,
+    events: [
+      {
+        title: "Office contacts now show their email address",
+        type: "feature",
+        description: "Staff can see each linked contact's email directly from the office workspace, without opening the contact or adding another editing route.",
+      },
+      {
+        title: "Each M&A page now has one navigation system",
+        type: "fix",
+        description: "Activity, Firms and Contacts use their dedicated sidebar routes without a second in-page tab switcher that could show content from the wrong route.",
+      },
+    ],
+  },
+  {
     period: "Aug 9, 2026",
     version: "0.9.43",
     title: "M&A relationship workspaces now support daily staff work",
