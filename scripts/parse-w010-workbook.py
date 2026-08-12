@@ -657,6 +657,10 @@ def parse_workbook(path: str) -> dict[str, Any]:
                 else None
             ),
             "sourceLocation": trimmed(opportunities_sheet.value("D", row)),
+            "sourceGeographyCode": (
+                (trimmed(opportunities_sheet.value("E", row)) or "").upper()
+                or None
+            ),
             "locationDecision": "approved" if geo_confirmed else "review",
             "revenueMeur": revenue,
             "ebitdaKeur": parse_decimal(opportunities_sheet.value("L", row)),

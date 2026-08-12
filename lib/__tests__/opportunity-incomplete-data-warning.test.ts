@@ -33,12 +33,14 @@ import {
 describe("opportunity intake draft rules", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    process.env.WAVE_W039_GEOGRAPHY_MANDATES_ENABLED = "true"
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "qa-staff" } })
   })
 
   it("requires a safe public title for a new staff-only draft", async () => {
     const formData = new FormData()
     formData.set("reference", "OPP-DRAFT-001")
+    formData.set("geography_node_id", "00000000-0000-4092-8000-000000000001")
     formData.set("status", "draft")
     await expect(createOpportunityIntake(formData)).resolves.toMatchObject({
       success: false,
@@ -50,19 +52,20 @@ describe("opportunity intake draft rules", () => {
   it("returns committed identity for a valid staff-only draft", async () => {
     const formData = new FormData()
     formData.set("reference", "OPP-DRAFT-001")
+    formData.set("geography_node_id", "00000000-0000-4092-8000-000000000001")
     formData.set("public_title", "Anonymized industrial services business")
     formData.set("status", "draft")
     const rpc = vi.fn().mockResolvedValue({
-      data: { id: "created-opportunity" },
+      data: { id: "created-opportunity", reference: "Re-New - FR - 001" },
       error: null,
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
 
     await expect(createOpportunityIntake(formData)).resolves.toEqual({
       success: true,
-      message: "Opportunity OPP-DRAFT-001 created.",
+      message: "Opportunity Re-New - FR - 001 created.",
       opportunityId: "created-opportunity",
-      opportunityReference: "OPP-DRAFT-001",
+      opportunityReference: "Re-New - FR - 001",
     })
 
     expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
@@ -74,6 +77,7 @@ describe("opportunity intake draft rules", () => {
       p_target_status: "draft",
       p_actor: "qa-staff",
       p_opportunity_fields: expect.objectContaining({
+        geography_node_id: "00000000-0000-4092-8000-000000000001",
         revenue_meur: null,
         ebitda_keur: null,
         headcount: null,

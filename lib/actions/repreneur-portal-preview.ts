@@ -9,6 +9,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -55,6 +56,7 @@ interface PreviewOpportunityRow {
   headcount: number | null
   headcount_range: string | null
   date_added: string | null
+  date_added_precision: "day" | "month" | null
 }
 
 interface PreviewOpportunityMatchRow {
@@ -130,6 +132,10 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
+    date_added_display: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+    ),
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -216,7 +222,8 @@ async function listVisibleOpportunitiesForRepreneur(
         ebitda_keur,
         headcount,
         headcount_range,
-        date_added
+        date_added,
+        date_added_precision
       )
     `)
     .eq("repreneur_id", repreneurId)

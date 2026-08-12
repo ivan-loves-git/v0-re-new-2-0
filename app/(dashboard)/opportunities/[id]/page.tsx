@@ -20,9 +20,11 @@ import {
 } from "@/lib/actions/opportunities"
 import {
   listMaOfficeIntakeOptions,
+  listOpportunityGeographyOptions,
   resolveAcmeProvisionalSource,
   updateOpportunityIntake,
 } from "@/lib/actions/opportunity-intake"
+import { isFranceGeographyMandatesEnabled } from "@/lib/opportunity-geography-release"
 import type { OpportunityClosureReason } from "@/lib/types/opportunity"
 
 export default function OpportunityDetailPage({
@@ -72,11 +74,15 @@ async function OpportunityDetailContent({
     notFound()
   }
 
-  const officeOptions = await listMaOfficeIntakeOptions({
-    includeCurrentProvisionalOfficeId: opportunity.source_review_required
-      ? opportunity.source_office_id
-      : null,
-  })
+  const geographyMandatesEnabled = isFranceGeographyMandatesEnabled()
+  const [officeOptions, geographyOptions] = await Promise.all([
+    listMaOfficeIntakeOptions({
+      includeCurrentProvisionalOfficeId: opportunity.source_review_required
+        ? opportunity.source_office_id
+        : null,
+    }),
+    geographyMandatesEnabled ? listOpportunityGeographyOptions() : [],
+  ])
   const journeyMatch = matches.find((match) => match.status === "active_pursuit")
     ?? matches.find((match) => match.status === "dropped")
     ?? null
@@ -124,6 +130,8 @@ async function OpportunityDetailContent({
         closureHistory={closureHistory}
         closeAction={closeAction}
         officeOptions={officeOptions}
+        geographyOptions={geographyOptions}
+        geographyMandatesEnabled={geographyMandatesEnabled}
         defaultTab={tab}
       />
     </div>

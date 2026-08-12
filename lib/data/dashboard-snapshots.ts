@@ -109,6 +109,7 @@ const OPPORTUNITY_LIST_FIELDS = `
   headcount,
   headcount_range,
   date_added,
+  date_added_precision,
   repreneur_exposure,
   public_title,
   teaser_summary,

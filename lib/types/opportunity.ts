@@ -312,6 +312,7 @@ export interface MaSourceDirectoryEntry extends MaSource {
   open_opportunity_count: number
   stale_opportunity_count: number
   latest_opportunity_date?: string | null
+  latest_opportunity_date_precision?: "day" | "month" | null
   latest_opportunity_title?: string | null
 }
 
@@ -377,6 +378,8 @@ export interface MaInteraction {
 export interface Opportunity {
   id: string
   reference: string
+  /** Canonical staff-only W-039 geography identity; literal location remains reader-facing. */
+  geography_node_id?: string | null
   status: OpportunityStatus
   source_id?: string | null
   source_office_id?: string | null
@@ -390,7 +393,7 @@ export interface Opportunity {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
-  /** Source date precision; month-only dates must never be exported as a day. */
+  /** Source date precision; month-only dates must never be displayed or computed as a day. */
   date_added_precision?: "day" | "month" | null
   repreneur_exposure: OpportunityVisibility
   public_title?: string | null
@@ -403,6 +406,15 @@ export interface Opportunity {
   updated_by?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface OpportunityGeographyOption {
+  id: string
+  stable_key: string
+  code: string
+  label: string
+  node_level: "country" | "macro_zone" | "region"
+  parent_id?: string | null
 }
 
 /** Staff-only canonical operating-office context used by Opportunity Intake. */
@@ -534,6 +546,7 @@ export interface Opportunity_Insert {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
+  date_added_precision?: "day" | "month" | null
   repreneur_exposure?: OpportunityVisibility
   public_title?: string | null
   teaser_summary?: string | null
@@ -558,6 +571,7 @@ export interface Opportunity_Update {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
+  date_added_precision?: "day" | "month" | null
   repreneur_exposure?: OpportunityVisibility
   public_title?: string | null
   teaser_summary?: string | null
@@ -790,6 +804,8 @@ export interface RepreneurOpportunityExposure {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
+  /** Server-formatted; the staff-only precision enum is never serialized to the portal. */
+  date_added_display?: string
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
@@ -819,6 +835,8 @@ export interface RepreneurDealFlowOpportunity {
   headcount?: number | null
   headcount_range?: string | null
   date_added?: string | null
+  /** Server-formatted; the staff-only precision enum is never serialized to the portal. */
+  date_added_display?: string
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null

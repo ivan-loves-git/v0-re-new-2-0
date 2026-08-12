@@ -39,6 +39,10 @@ import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
+import {
+  formatOpportunitySourceDate,
+  formatOpportunitySourceMonth,
+} from "@/lib/utils/opportunity-source-date"
 
 interface OpportunityTableProps {
   opportunities: OpportunityWithSource[]
@@ -47,31 +51,6 @@ interface OpportunityTableProps {
 function formatNumber(value: number | null | undefined, suffix: string) {
   if (value === null || value === undefined) return "-"
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(value)} ${suffix}`
-}
-
-function parseDate(value: string | null | undefined) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-function formatExactDate(value: string | null | undefined) {
-  const date = parseDate(value)
-  if (!date) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date)
-}
-
-function formatMonth(value: string | null | undefined) {
-  const date = parseDate(value)
-  if (!date) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
-    month: "long",
-    year: "numeric",
-  }).format(date)
 }
 
 function sourceContextLabel(opportunity: OpportunityWithSource) {
@@ -247,9 +226,11 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span>{formatExactDate(opportunity.date_added)}</span>
+                      <span>{formatOpportunitySourceDate(opportunity.date_added, opportunity.date_added_precision)}</span>
                       <span className="text-xs text-muted-foreground">
-                        Month: {formatMonth(opportunity.date_added)}
+                        {opportunity.date_added_precision === "month"
+                          ? "Month-only source date"
+                          : `Month: ${formatOpportunitySourceMonth(opportunity.date_added)}`}
                       </span>
                     </div>
                   </TableCell>

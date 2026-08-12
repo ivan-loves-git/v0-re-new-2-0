@@ -39,6 +39,7 @@ import type {
   OpportunityClosureReason,
   OpportunityDocument,
   MaOfficeIntakeOffice,
+  OpportunityGeographyOption,
   OpportunityMatch,
   OpportunityMatchCandidate,
   OpportunityNdaArtifact,
@@ -50,6 +51,10 @@ import {
   getOpportunityMatchStatusLabel,
   getOpportunityPursuitStageLabel,
 } from "@/lib/types/opportunity"
+import {
+  formatOpportunitySourceDate,
+  formatOpportunitySourceMonth,
+} from "@/lib/utils/opportunity-source-date"
 
 const OPPORTUNITY_DETAIL_TAB_VALUES = [
   "overview",
@@ -77,33 +82,14 @@ interface OpportunityDetailProps {
     reason: OpportunityClosureReason,
   ) => Promise<OpportunityActionResult>
   officeOptions: MaOfficeIntakeOffice[]
+  geographyOptions: OpportunityGeographyOption[]
+  geographyMandatesEnabled: boolean
   defaultTab?: string
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
   if (value === null || value === undefined) return "-"
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(value)} ${suffix}`
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "-"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date)
-}
-
-function formatMonth(value: string | null | undefined) {
-  if (!value) return "-"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
-    month: "long",
-    year: "numeric",
-  }).format(date)
 }
 
 function formatScore(value: number | null | undefined) {
@@ -158,6 +144,8 @@ export function OpportunityDetail({
   closureHistory,
   closeAction,
   officeOptions,
+  geographyOptions,
+  geographyMandatesEnabled,
   defaultTab,
 }: OpportunityDetailProps) {
   const initialTab =
@@ -230,8 +218,10 @@ export function OpportunityDetail({
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="size-4" />
-              Added {formatDate(opportunity.date_added)} / Month:{" "}
-              {formatMonth(opportunity.date_added)}
+              Added {formatOpportunitySourceDate(opportunity.date_added, opportunity.date_added_precision)}
+              {opportunity.date_added_precision === "month"
+                ? " (month-only source date)"
+                : ` / Month: ${formatOpportunitySourceMonth(opportunity.date_added)}`}
             </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-4" />
@@ -593,6 +583,8 @@ export function OpportunityDetail({
             action={updateAction}
             submitLabel="Save changes"
             officeOptions={officeOptions}
+            geographyOptions={geographyOptions}
+            geographyMandatesEnabled={geographyMandatesEnabled}
           />
         </TabsContent>
 

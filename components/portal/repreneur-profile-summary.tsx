@@ -118,11 +118,6 @@ function formatOpportunityMetric(value: number | null | undefined, suffix: strin
   return `${formatNumber(value)} ${suffix}`
 }
 
-function formatOpportunityDate(value: string | null | undefined) {
-  if (!value) return "—"
-  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
-}
-
 function formatOpportunityMargin(opportunity: RepreneurOpportunityExposure) {
   const margin = getEbitdaMarginPercentage(opportunity)
   return margin === null ? "—" : `${formatNumber(margin)}%`
@@ -173,7 +168,7 @@ function DealGroup({
                     </div>
                     <div className="flex flex-col gap-1">
                       <WaveMicroLabel asChild><dt>Date added</dt></WaveMicroLabel>
-                      <dd className="text-foreground">{formatOpportunityDate(opportunity.date_added)}</dd>
+                      <dd className="text-foreground">{opportunity.date_added_display ?? "-"}</dd>
                     </div>
                   </dl>
                   <p className="line-clamp-2 text-muted-foreground">

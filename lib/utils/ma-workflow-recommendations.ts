@@ -1,4 +1,5 @@
 import type { EmailTemplateKey } from "@/lib/types/email"
+import { dayLevelOpportunityDate } from "@/lib/utils/opportunity-source-date"
 
 export type MaWorkflowTemplateKey = Extract<
   EmailTemplateKey,
@@ -16,6 +17,7 @@ const OPPORTUNITY_MONTHLY_RECHECK_DAYS = 30
 interface OpportunityContext {
   status: string
   date_added: string | null
+  date_added_precision?: "day" | "month" | null
   created_at: string
   updated_at: string
 }
@@ -118,7 +120,15 @@ function deriveOpportunityFreshnessReminder(
 
   const lastValidityCheck = latestSentInteraction(interactions, "ma_opportunity_validity_check")
   const lastValidityCheckDate = interactionDate(lastValidityCheck)
-  const ageReferenceDate = opportunity.date_added ?? opportunity.created_at ?? opportunity.updated_at
+  // A month-only CRM date has a technical first day for storage. Do not use it
+  // to trigger a daily SLA; fall back to the precise internal record date.
+  const preciseSourceDate = dayLevelOpportunityDate(
+    opportunity.date_added,
+    opportunity.date_added_precision,
+  )
+  const ageReferenceDate = preciseSourceDate
+    ? opportunity.date_added
+    : opportunity.created_at ?? opportunity.updated_at
 
   if (!lastValidityCheckDate) {
     const ageDays = calendarDaysSince(ageReferenceDate, now)

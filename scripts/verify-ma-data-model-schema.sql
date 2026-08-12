@@ -8,6 +8,11 @@ WITH target_tables(table_name) AS (
     ('ma_contacts'),
     ('ma_contact_office_affiliations'),
     ('ma_contact_email_policy_events'),
+    ('geography_nodes'),
+    ('repreneur_geography_targets'),
+    ('opportunity_mandate_reference_counters'),
+    ('ma_w039_geography_adoption_runs'),
+    ('ma_w039_geography_adoption_evidence'),
     ('ma_provisional_source_contexts'),
     ('ma_provisional_source_review_events'),
     ('ma_source_email_send_reservations'),
@@ -208,6 +213,8 @@ schema_evidence AS (
       'activate_ma_cutover_run',
       'move_ma_source_contact',
       'register_opportunity_nda_artifact'
+      ,'replace_repreneur_geography_targets'
+      ,'apply_w039_geography_adoption'
     )
 
   UNION ALL

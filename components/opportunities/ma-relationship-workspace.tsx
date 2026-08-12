@@ -59,6 +59,7 @@ import {
 import { setMaContactCampaignEmailSuppression } from "@/lib/actions/ma-contact-email-policy"
 import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
 import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
 const CHANNELS: Array<{ value: MaInteractionChannel; label: string }> = [
   { value: "call", label: "Call" },
@@ -855,18 +856,6 @@ function RelationshipFilterControls({
   )
 }
 
-function formatKnownDate(value: string | null) {
-  if (!value) return "No recorded date"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "No recorded date"
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "Europe/Paris",
-  }).format(date)
-}
-
 function RelationshipFirmIndicators({
   indicators,
   includeOfficeCount = false,
@@ -893,7 +882,7 @@ function RelationshipFirmIndicators({
       <span>{indicators.sourcedOpportunityCount} sourced</span>
       <span>{indicators.openOpportunityCount} open</span>
       <span>{indicators.candidateStaleCount} candidate-stale</span>
-      <span>Latest: {formatKnownDate(indicators.latestKnownAt)}</span>
+      <span>Latest: {formatOpportunitySourceDate(indicators.latestKnownAt, indicators.latestKnownAtPrecision, { fallback: "No recorded date" })}</span>
     </div>
   )
 }

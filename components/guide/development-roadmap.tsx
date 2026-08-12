@@ -26,6 +26,34 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 12, 2026",
+    version: "0.9.45",
+    title: "New opportunities now start with a stable source and reference",
+    isCompleted: true,
+    events: [
+      {
+        title: "New source choices stay selected",
+        type: "fix",
+        description: "When staff create a firm or office while adding an opportunity, WAVE keeps that office selected so they can continue in the same form. A first contact is selected only when the new firm flow created one.",
+      },
+      {
+        title: "New opportunities receive one permanent reference",
+        type: "feature",
+        description: "After staff choose the opportunity geography, WAVE assigns a unique mandate reference that remains attached to that record.",
+      },
+      {
+        title: "Geography is recorded before a reference is assigned",
+        type: "decision",
+        description: "Staff choose France, a broad area or a region. Existing locations and references remain intact, and matching rules do not change in this phase.",
+      },
+      {
+        title: "Legacy opportunity dates now reflect the CRM source",
+        type: "fix",
+        description: "Six historic dates are corrected against the original CRM file, and a source that supplied only a month continues to display only that month.",
+      },
+    ],
+  },
+  {
+    period: "Aug 12, 2026",
     version: "0.9.44",
     title: "M&A office work is clearer and faster",
     isCompleted: true,

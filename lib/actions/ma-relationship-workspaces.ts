@@ -39,6 +39,7 @@ export interface MaWorkspaceOpportunity {
   label: string
   status: OpportunityStatus
   dateAdded: string | null
+  dateAddedPrecision: "day" | "month" | null
   isCandidateStale: boolean
 }
 
@@ -65,6 +66,7 @@ export interface MaWorkspaceIndicators {
   staleOpportunities: number
   closedOpportunities: number
   latestKnownOpportunityDate: string | null
+  latestKnownOpportunityDatePrecision: "day" | "month" | null
 }
 
 export interface MaOfficeWorkspace {
@@ -119,6 +121,11 @@ function buildIndicators(
   contacts: MaWorkspaceContact[],
   opportunities: MaWorkspaceOpportunity[],
 ): MaWorkspaceIndicators {
+  const latestOpportunity = opportunities
+    .filter((opportunity) => Boolean(opportunity.dateAdded))
+    .sort((left, right) =>
+      (right.dateAdded ?? "").localeCompare(left.dateAdded ?? ""),
+    )[0]
   return {
     activeContacts: contacts.filter((contact) => contact.isActive).length,
     historicalAffiliations: contacts.filter((contact) => !contact.isActive)
@@ -135,11 +142,9 @@ function buildIndicators(
     closedOpportunities: opportunities.filter((opportunity) =>
       isClosedOpportunity(opportunity.status),
     ).length,
-    latestKnownOpportunityDate:
-      opportunities
-        .map((opportunity) => opportunity.dateAdded)
-        .filter((date): date is string => Boolean(date))
-        .sort((left, right) => right.localeCompare(left))[0] ?? null,
+    latestKnownOpportunityDate: latestOpportunity?.dateAdded ?? null,
+    latestKnownOpportunityDatePrecision:
+      latestOpportunity?.dateAddedPrecision ?? null,
   }
 }
 
@@ -161,7 +166,7 @@ async function getWorkspaceRows(officeIds: string[]) {
     supabase
       .from("opportunities")
       .select(
-        "id, reference, public_title, activity, status, date_added, source_office_id",
+        "id, reference, public_title, activity, status, date_added, date_added_precision, source_office_id",
       )
       .in("source_office_id", officeIds)
       .order("date_added", { ascending: false, nullsFirst: false }),
@@ -225,11 +230,13 @@ async function getWorkspaceRows(officeIds: string[]) {
       label: opportunityLabel(row),
       status: row.status as OpportunityStatus,
       dateAdded: row.date_added,
+      dateAddedPrecision: row.date_added_precision,
       isCandidateStale: isCandidateStaleOpportunity(
         {
           id: row.id,
           status: row.status as OpportunityStatus,
           dateAdded: row.date_added,
+          dateAddedPrecision: row.date_added_precision,
         },
         activePursuitIds,
         now,

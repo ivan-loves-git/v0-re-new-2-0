@@ -32,6 +32,7 @@ import {
   type OpportunityNdaStatus,
   type OpportunityPursuitStage,
 } from "@/lib/types/opportunity"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
 
 interface ActivePursuitRow {
@@ -54,15 +55,6 @@ interface ActivePursuitRow {
     last_name: string | null
     email: string | null
   } | null
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value))
 }
 
 function opportunityTitle(row: { reference: string; public_title?: string | null; sector?: string | null }) {
@@ -315,7 +307,7 @@ export default async function OpportunityDashboardPage() {
                       <p className="text-xs text-muted-foreground">{opportunity.reference}</p>
                     </TableCell>
                     <TableCell>{opportunity.location ?? "-"}</TableCell>
-                    <TableCell>{formatDate(opportunity.date_added)}</TableCell>
+                    <TableCell>{formatOpportunitySourceDate(opportunity.date_added, opportunity.date_added_precision)}</TableCell>
                     <TableCell>
                       <OpportunityStatusBadge status={opportunity.status} />
                     </TableCell>

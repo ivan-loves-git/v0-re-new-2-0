@@ -106,4 +106,28 @@ describe("opportunity freshness source context", () => {
       ]),
     )
   })
+
+  it("does not turn a month-only CRM date into a stale day-level reminder", async () => {
+    const { from } = freshnessClient([
+      {
+        id: "month-only-opportunity",
+        reference: "OPP-MONTH",
+        public_title: null,
+        source_label: null,
+        source_office: null,
+        location: null,
+        sector: null,
+        status: "active",
+        date_added: "2026-01-01",
+        date_added_precision: "month",
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ])
+    mocks.createAdminClient.mockReturnValue({ from })
+
+    const data = await getOpportunityFreshnessData()
+
+    expect(data.staleTotal).toBe(0)
+    expect(data.openWithoutDate).toBe(0)
+  })
 })

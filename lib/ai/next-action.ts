@@ -14,6 +14,7 @@ import {
 } from "@/lib/ai/next-action-contract";
 import { getWaveAiOpenAiClient } from "@/lib/ai/openai-client";
 import { findIncompleteOpportunityDataFields } from "@/lib/utils/opportunity-incomplete-data";
+import { dayLevelOpportunityDate } from "@/lib/utils/opportunity-source-date";
 
 const actionMeta = {
   resolve_source_review: {
@@ -79,9 +80,18 @@ export async function generateWaveAiNextActions(input: {
     date_precision: opportunity.date_added
       ? `Recorded opportunity added date precision: ${opportunity.date_added_precision ?? "unknown"}.`
       : "Recorded opportunity added date precision is unknown.",
-    freshness: opportunity.date_added
-      ? `Opportunity age bucket: ${Math.floor((Date.now() - new Date(opportunity.date_added).getTime()) / 86_400_000) > 90 ? "over_90_days" : "under_90_days"}.`
-      : "Opportunity age bucket is unknown.",
+    freshness: (() => {
+      const exactDate = dayLevelOpportunityDate(
+        opportunity.date_added,
+        opportunity.date_added_precision,
+      );
+      if (!exactDate) {
+        return opportunity.date_added_precision === "month"
+          ? "Opportunity age bucket is unknown because the source supplied only a month, not an exact day."
+          : "Opportunity age bucket is unknown.";
+      }
+      return `Opportunity age bucket: ${Math.floor((Date.now() - exactDate.getTime()) / 86_400_000) > 90 ? "over_90_days" : "under_90_days"}.`;
+    })(),
     readiness: activePursuit
       ? "Readiness gate: an active pursuit exists."
       : "Readiness gate: no active pursuit exists.",

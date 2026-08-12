@@ -48,6 +48,10 @@ import {
   SECTOR_OPTIONS,
   type Sector,
 } from "@/lib/utils/opportunity-sector"
+import {
+  dayLevelOpportunityDate,
+  formatOpportunitySourceDate,
+} from "@/lib/utils/opportunity-source-date"
 
 type WorkSurfaceMode = "find" | "groups"
 type FreshnessFilter = "all" | "fresh" | "stale" | "no_date"
@@ -103,22 +107,6 @@ const GROUP_PAGE_DEFAULTS: Record<OpportunityGroupKey, number> = {
   closed: 1,
 }
 
-function parseDate(value: string | null | undefined) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-function formatDate(value: string | null | undefined) {
-  const date = parseDate(value)
-  if (!date) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date)
-}
-
 function formatDealSize(opportunity: OpportunityWorkSurfaceRecord) {
   const revenue =
     opportunity.revenue_meur === null || opportunity.revenue_meur === undefined
@@ -136,8 +124,11 @@ function formatDealSize(opportunity: OpportunityWorkSurfaceRecord) {
   return [revenue, ebitda, headcount]
 }
 
-function getAgeDays(value: string | null | undefined) {
-  const date = parseDate(value)
+function getAgeDays(
+  value: string | null | undefined,
+  precision: OpportunityWorkSurfaceRecord["date_added_precision"],
+) {
+  const date = dayLevelOpportunityDate(value, precision)
   if (!date) return null
   const diff = Date.now() - date.getTime()
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
@@ -208,7 +199,7 @@ function prepareOpportunity(
     proposedCount: opportunity.matches.filter(
       (match) => match.status === "proposed",
     ).length,
-    ageDays: getAgeDays(opportunity.date_added),
+    ageDays: getAgeDays(opportunity.date_added, opportunity.date_added_precision),
   }
 }
 
@@ -217,7 +208,7 @@ function freshnessMatches(
   freshness: FreshnessFilter,
 ) {
   if (freshness === "all") return true
-  if (freshness === "no_date") return item.ageDays === null
+  if (freshness === "no_date") return !item.opportunity.date_added
   if (freshness === "fresh") return item.ageDays !== null && item.ageDays <= 90
   return (
     item.ageDays !== null &&
@@ -409,7 +400,7 @@ function OpportunityRow({
       </TableCell>
       <TableCell>
         <div className="flex flex-col gap-1">
-          <span>{formatDate(opportunity.date_added)}</span>
+          <span>{formatOpportunitySourceDate(opportunity.date_added, opportunity.date_added_precision)}</span>
           {item.ageDays !== null &&
             item.ageDays > 90 &&
             !item.activeMatch &&

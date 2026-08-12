@@ -22,6 +22,7 @@ export interface MaRelationshipStatisticOpportunity {
   officeId: string | null
   status: "draft" | "active" | "paused" | "archived" | "closed"
   dateAdded: string | null
+  dateAddedPrecision?: "day" | "month" | null
 }
 
 export interface MaRelationshipOfficeStatistics {
@@ -30,6 +31,7 @@ export interface MaRelationshipOfficeStatistics {
   openOpportunityCount: number
   candidateStaleCount: number
   latestKnownAt: string | null
+  latestKnownAtPrecision: "day" | "month" | null
 }
 
 export interface MaRelationshipFirmStatistics extends MaRelationshipOfficeStatistics {
@@ -66,6 +68,7 @@ function emptyOfficeStatistics(): MaRelationshipOfficeStatistics {
     openOpportunityCount: 0,
     candidateStaleCount: 0,
     latestKnownAt: null,
+    latestKnownAtPrecision: null,
   }
 }
 
@@ -120,10 +123,11 @@ export function buildMaRelationshipStatistics(
     if (!opportunity.officeId) continue
     const statistics = byOfficeId.get(opportunity.officeId)
     if (!statistics) continue
-    statistics.latestKnownAt = laterDate(
-      statistics.latestKnownAt,
-      opportunity.dateAdded,
-    )
+    const latestKnownAt = laterDate(statistics.latestKnownAt, opportunity.dateAdded)
+    if (latestKnownAt !== statistics.latestKnownAt) {
+      statistics.latestKnownAt = latestKnownAt
+      statistics.latestKnownAtPrecision = opportunity.dateAddedPrecision ?? null
+    }
     if (!isCountedSourcedOpportunity(opportunity.status)) continue
     statistics.sourcedOpportunityCount += 1
     if (isOpenRelationshipOpportunity(opportunity.status)) {
@@ -148,10 +152,14 @@ export function buildMaRelationshipStatistics(
       officeStatistics.sourcedOpportunityCount
     firmStatistics.openOpportunityCount += officeStatistics.openOpportunityCount
     firmStatistics.candidateStaleCount += officeStatistics.candidateStaleCount
-    firmStatistics.latestKnownAt = laterDate(
+    const latestKnownAt = laterDate(
       firmStatistics.latestKnownAt,
       officeStatistics.latestKnownAt,
     )
+    if (latestKnownAt !== firmStatistics.latestKnownAt) {
+      firmStatistics.latestKnownAt = latestKnownAt
+      firmStatistics.latestKnownAtPrecision = officeStatistics.latestKnownAtPrecision
+    }
     byFirmId.set(office.firmId, firmStatistics)
   }
 

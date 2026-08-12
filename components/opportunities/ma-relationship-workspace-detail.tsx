@@ -18,6 +18,7 @@ import {
   type MaWorkspaceIndicators,
 } from "@/lib/actions/ma-relationship-workspaces"
 import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
 function dateLabel(value: string | null | undefined) {
   if (!value) return "—"
@@ -261,7 +262,7 @@ function Opportunities({
                     {opportunity.label}
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    Added {dateLabel(opportunity.dateAdded)}
+                    Added {formatOpportunitySourceDate(opportunity.dateAdded, opportunity.dateAddedPrecision)}
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -325,7 +326,7 @@ export function MaOfficeWorkspaceDetail({
       <Indicators indicators={workspace.indicators} />
       <p className="text-xs text-muted-foreground">
         Latest known opportunity date:{" "}
-        {dateLabel(workspace.indicators.latestKnownOpportunityDate)} ·
+        {formatOpportunitySourceDate(workspace.indicators.latestKnownOpportunityDate, workspace.indicators.latestKnownOpportunityDatePrecision)} ·
         Historical affiliations: {workspace.indicators.historicalAffiliations}
       </p>
       <div className="grid gap-5 lg:grid-cols-2">
@@ -384,7 +385,7 @@ export function MaFirmWorkspaceDetail({
         {workspace.indicators.activeContacts} distinct active{" "}
         {workspace.indicators.activeContacts === 1 ? "contact" : "contacts"} ·
         Latest known opportunity date:{" "}
-        {dateLabel(workspace.indicators.latestKnownOpportunityDate)}
+        {formatOpportunitySourceDate(workspace.indicators.latestKnownOpportunityDate, workspace.indicators.latestKnownOpportunityDatePrecision)}
       </p>
       <Card>
         <CardHeader>

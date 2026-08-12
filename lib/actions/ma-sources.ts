@@ -9,6 +9,7 @@ import type {
   MaSourceDirectoryEntry,
   OpportunityStatus,
 } from "@/lib/types/opportunity"
+import { dayLevelOpportunityDate } from "@/lib/utils/opportunity-source-date"
 
 interface SourceOpportunityRow {
   source_id: string | null
@@ -16,16 +17,16 @@ interface SourceOpportunityRow {
   public_title: string | null
   status: OpportunityStatus
   date_added: string | null
+  date_added_precision: "day" | "month" | null
   created_at: string
 }
 
 const OPEN_STATUSES = new Set<OpportunityStatus>(["draft", "active", "paused"])
 const STALE_DAYS = 90
 
-function getAgeDays(value: string | null | undefined) {
-  if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
+function getAgeDays(value: string | null | undefined, precision?: "day" | "month" | null) {
+  const date = dayLevelOpportunityDate(value, precision)
+  if (!date) return null
   return Math.max(
     0,
     Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24)),
@@ -62,7 +63,7 @@ export async function listMaSourceDirectory(): Promise<
     supabase
       .from("opportunities")
       .select(
-        "source_id, reference, public_title, status, date_added, created_at",
+        "source_id, reference, public_title, status, date_added, date_added_precision, created_at",
       )
       .not("source_id", "is", null),
   ])
@@ -96,6 +97,7 @@ export async function listMaSourceDirectory(): Promise<
     const staleOpportunityCount = openOpportunities.filter((opportunity) => {
       const ageDays = getAgeDays(
         opportunity.date_added ?? opportunity.created_at,
+        opportunity.date_added ? opportunity.date_added_precision : "day",
       )
       return ageDays !== null && ageDays > STALE_DAYS
     }).length
@@ -111,6 +113,9 @@ export async function listMaSourceDirectory(): Promise<
       latest_opportunity_date: latestOpportunity
         ? latestDate(latestOpportunity)
         : null,
+      latest_opportunity_date_precision: latestOpportunity?.date_added
+        ? latestOpportunity.date_added_precision
+        : "day",
       latest_opportunity_title:
         latestOpportunity?.public_title ?? latestOpportunity?.reference ?? null,
     }

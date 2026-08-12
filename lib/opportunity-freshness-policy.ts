@@ -1,4 +1,8 @@
 import type { OpportunityStatus } from "@/lib/types/opportunity"
+import {
+  dayLevelOpportunityDate,
+  type OpportunitySourceDatePrecision,
+} from "@/lib/utils/opportunity-source-date"
 
 export const STALE_OPPORTUNITY_DAYS = 90
 
@@ -12,17 +16,19 @@ const candidateStaleStatuses = new Set<OpportunityStatus>(
   CANDIDATE_STALE_OPPORTUNITY_STATUSES,
 )
 
-export function parseOpportunityDate(value: string | null | undefined) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
+export function parseOpportunityDate(
+  value: string | null | undefined,
+  precision?: OpportunitySourceDatePrecision,
+) {
+  return dayLevelOpportunityDate(value, precision)
 }
 
 export function opportunityDaysOpen(
   value: string | null | undefined,
   now: Date,
+  precision?: OpportunitySourceDatePrecision,
 ) {
-  const date = parseOpportunityDate(value)
+  const date = parseOpportunityDate(value, precision)
   if (!date) return null
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -37,13 +43,18 @@ export function isCandidateStaleOpportunity(
     id: string
     status: OpportunityStatus
     dateAdded: string | null
+    dateAddedPrecision?: OpportunitySourceDatePrecision
   },
   activePursuitOpportunityIds: ReadonlySet<string>,
   now: Date,
 ) {
   if (!candidateStaleStatuses.has(opportunity.status)) return false
   if (activePursuitOpportunityIds.has(opportunity.id)) return false
-  const daysOpen = opportunityDaysOpen(opportunity.dateAdded, now)
+  const daysOpen = opportunityDaysOpen(
+    opportunity.dateAdded,
+    now,
+    opportunity.dateAddedPrecision,
+  )
   return daysOpen !== null && daysOpen >= STALE_OPPORTUNITY_DAYS
 }
 

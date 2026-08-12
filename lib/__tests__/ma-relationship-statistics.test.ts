@@ -62,6 +62,7 @@ describe("W-083 firm and office relationship statistics", () => {
           officeId: "lyon",
           status: "archived",
           dateAdded: "2026-01-04",
+          dateAddedPrecision: "month",
         },
       ],
       [],
@@ -81,6 +82,7 @@ describe("W-083 firm and office relationship statistics", () => {
       openOpportunityCount: 0,
       candidateStaleCount: 0,
       latestKnownAt: "2026-01-04",
+      latestKnownAtPrecision: "month",
     })
     expect(statistics.byFirmId.get("firm-a")).toMatchObject({
       officeCount: 2,
@@ -89,6 +91,7 @@ describe("W-083 firm and office relationship statistics", () => {
       openOpportunityCount: 2,
       candidateStaleCount: 1,
       latestKnownAt: "2026-01-04",
+      latestKnownAtPrecision: "month",
     })
   })
 

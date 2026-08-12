@@ -52,11 +52,6 @@ function formatNumber(value: number | null | undefined, suffix: string) {
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(value)} ${suffix}`
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return "-"
-  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
-}
-
 function formatEbitdaMargin(opportunity: RepreneurOpportunityDetailItem) {
   const margin = getEbitdaMarginPercentage(opportunity)
   if (margin === null) return "—"
@@ -101,7 +96,7 @@ export function RepreneurOpportunityDetail({
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="size-4" />
-              Added {formatDate(opportunity.date_added)}
+              Added {opportunity.date_added_display ?? "-"}
             </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-4" />

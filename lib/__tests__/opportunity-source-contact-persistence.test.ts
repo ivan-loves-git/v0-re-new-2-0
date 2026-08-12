@@ -37,10 +37,12 @@ const OFFICE_ID = "00000000-0000-4000-8000-000000000001"
 const AFFILIATION_ID = "00000000-0000-4000-8000-000000000002"
 const EXISTING_CONTACT_ID = "00000000-0000-4000-8000-000000000003"
 const SECOND_CONTACT_ID = "00000000-0000-4000-8000-000000000004"
+const FRANCE_GEOGRAPHY_ID = "00000000-0000-4092-8000-000000000001"
 
 function activeForm() {
   const formData = new FormData()
   formData.set("reference", "OPP-001")
+  formData.set("geography_node_id", FRANCE_GEOGRAPHY_ID)
   formData.set("status", "active")
   formData.set("source_office_id", OFFICE_ID)
   formData.append("affiliation_ids", AFFILIATION_ID)
@@ -76,12 +78,13 @@ function sourceCorrectionForm() {
 describe("canonical opportunity contact persistence", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    process.env.WAVE_W039_GEOGRAPHY_MANDATES_ENABLED = "true"
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-001" } })
   })
 
   it("creates through one canonical RPC with office affiliations, never legacy delete/reinsert", async () => {
     const rpc = vi.fn().mockResolvedValue({
-      data: { id: "opportunity-created" },
+      data: { id: "opportunity-created", reference: "Re-New - FR - 001" },
       error: null,
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
@@ -100,10 +103,101 @@ describe("canonical opportunity contact persistence", () => {
       p_target_status: "active",
       p_actor: "staff-001",
       p_opportunity_fields: expect.objectContaining({
+        geography_node_id: FRANCE_GEOGRAPHY_ID,
         public_title: "An anonymized opportunity title",
         teaser_summary: "An anonymized opportunity summary.",
       }),
     })
+  })
+
+  it("requires staff to choose canonical geography before a new opportunity reaches the database", async () => {
+    const formData = activeForm()
+    formData.delete("geography_node_id")
+    const priorFlag = process.env.WAVE_W039_GEOGRAPHY_MANDATES_ENABLED
+    process.env.WAVE_W039_GEOGRAPHY_MANDATES_ENABLED = "true"
+    try {
+      await expect(createOpportunityIntake(formData)).resolves.toMatchObject({
+        success: false,
+        fieldErrors: {
+          geography_node_id:
+            "Choose the canonical geography before creating an opportunity.",
+        },
+      })
+      expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    } finally {
+      if (priorFlag === undefined) delete process.env.WAVE_W039_GEOGRAPHY_MANDATES_ENABLED
+      else process.env.WAVE_W039_GEOGRAPHY_MANDATES_ENABLED = priorFlag
+    }
+  })
+
+  it("returns a field repair when a stale geography selection reaches the controlled service", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "opportunity_geography_not_found" },
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createOpportunityIntake(activeForm())).resolves.toMatchObject({
+      success: false,
+      fieldErrors: {
+        geography_node_id: "Choose a current canonical geography.",
+      },
+    })
+  })
+
+  it("does not force a geography onto an existing historical opportunity during an ordinary edit", async () => {
+    const formData = activeForm()
+    formData.delete("geography_node_id")
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(
+      updateOpportunityIntake("opportunity-001", formData),
+    ).resolves.toEqual({ success: true, message: "Opportunity saved." })
+
+    const payload = rpc.mock.calls[0]?.[1] as {
+      p_opportunity_fields: Record<string, unknown>
+    }
+    expect(payload.p_opportunity_fields).not.toHaveProperty("geography_node_id")
+  })
+
+  it("omits a month-only source date on an unrelated edit, and exposes no client precision field", async () => {
+    const formData = activeForm()
+    formData.set("date_added_preserve_month", "true")
+    formData.set("date_added_precision", "day")
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(
+      updateOpportunityIntake("opportunity-001", formData),
+    ).resolves.toEqual({ success: true, message: "Opportunity saved." })
+
+    const payload = rpc.mock.calls[0]?.[1] as {
+      p_opportunity_fields: Record<string, unknown>
+    }
+    expect(payload.p_opportunity_fields).not.toHaveProperty("date_added")
+    expect(payload.p_opportunity_fields).not.toHaveProperty("date_added_precision")
+    expect(payload.p_opportunity_fields).not.toHaveProperty("date_added_confirm_day")
+  })
+
+  it("sends only a narrow confirmation intent with an explicitly verified day", async () => {
+    const formData = activeForm()
+    formData.set("date_added_preserve_month", "true")
+    formData.set("date_added_confirm_day", "on")
+    formData.set("date_added", "2026-01-01")
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await updateOpportunityIntake("opportunity-001", formData)
+
+    const payload = rpc.mock.calls[0]?.[1] as {
+      p_opportunity_fields: Record<string, unknown>
+    }
+    expect(payload.p_opportunity_fields).toMatchObject({
+      date_added: "2026-01-01",
+      date_added_confirm_day: true,
+    })
+    expect(payload.p_opportunity_fields).not.toHaveProperty("date_added_precision")
   })
 
   it("saves an edit through the canonical office-context RPC", async () => {
@@ -131,7 +225,7 @@ describe("canonical opportunity contact persistence", () => {
     formData.set("repreneur_exposure", "repreneur_visible")
     formData.set("origin_channel", "forged")
     const rpc = vi.fn().mockResolvedValue({
-      data: { id: "opportunity-created" },
+      data: { id: "opportunity-created", reference: "Re-New - FR - 001" },
       error: null,
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
@@ -502,6 +596,46 @@ describe("canonical opportunity contact persistence", () => {
     })
   })
 
+  it("returns the committed new-firm context without refreshing away local form state", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        {
+          firm_id: "00000000-0000-4000-8000-000000000010",
+          office_id: "00000000-0000-4000-8000-000000000011",
+          affiliation_id: AFFILIATION_ID,
+          contact_id: EXISTING_CONTACT_ID,
+        },
+      ],
+      error: null,
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(createMaFirmOfficeContext(firmContextForm())).resolves.toEqual({
+      success: true,
+      message: "M&A firm, operating office, and first contact created.",
+      office: {
+        office_id: "00000000-0000-4000-8000-000000000011",
+        firm_id: "00000000-0000-4000-8000-000000000010",
+        firm_name: "Acme Conseil",
+        firm_status: "prospect",
+        office_name: "Paris",
+        office_label: "Acme Conseil — Paris",
+        contacts: [
+          {
+            affiliation_id: AFFILIATION_ID,
+            contact_id: EXISTING_CONTACT_ID,
+            contact_name: "Camille Durand",
+            contact_email: "camille@example.com",
+            job_title: null,
+          },
+        ],
+      },
+    })
+
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    expect(mocks.revalidateOpportunityDashboardTags).not.toHaveBeenCalled()
+  })
+
   it("adds a real office to an existing active firm through the dedicated atomic service", async () => {
     const formData = new FormData()
     formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
@@ -526,6 +660,7 @@ describe("canonical opportunity contact persistence", () => {
         office_id: "00000000-0000-4000-8000-000000000011",
         firm_id: "00000000-0000-4000-8000-000000000010",
         firm_name: "Acme Conseil",
+        firm_status: "active",
         office_name: "Lyon",
         office_label: "Acme Conseil — Lyon",
         contacts: [],
@@ -536,6 +671,8 @@ describe("canonical opportunity contact persistence", () => {
       p_office_name: "Lyon",
       p_actor: "staff-001",
     })
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    expect(mocks.revalidateOpportunityDashboardTags).not.toHaveBeenCalled()
   })
 
   it("surfaces duplicate office creation without changing form state", async () => {

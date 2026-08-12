@@ -87,7 +87,7 @@ describe("repreneur portal profile scope", () => {
     expect(dealList).not.toMatch(/line-clamp-[23]/)
     expect(dealList).toContain("View detail")
     expect(profileSummary).toContain("View detail")
-    expect(dealList).toContain("Added {formatDate(opportunity.date_added)}")
+    expect(dealList).toContain('Added {opportunity.date_added_display ?? "-"}')
     expect(dealList).toContain("opportunity.match_id ?? opportunity.opportunity_id")
     expect(profileSummary).toContain("Date added")
   })

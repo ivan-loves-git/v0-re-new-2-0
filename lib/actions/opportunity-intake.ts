@@ -10,6 +10,7 @@ import {
   type MaCanonicalContactOption,
   type MaOfficeIntakeContact,
   type MaOfficeIntakeOffice,
+  type OpportunityGeographyOption,
   type Opportunity,
   type OpportunityActionResult,
   type OpportunityStatus,
@@ -20,6 +21,7 @@ import {
   readOpportunityFormString,
 } from "@/lib/utils/opportunity-incomplete-data"
 import { resolveNewOpportunitySector } from "@/lib/utils/opportunity-sector"
+import { isFranceGeographyMandatesEnabled } from "@/lib/opportunity-geography-release"
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -31,13 +33,18 @@ const INTAKE_STATUSES = new Set<OpportunityStatus>([
 ])
 
 type IntakeOptionalFields = {
+  /** Omitted on an existing record unless staff explicitly chooses a correction. */
+  geography_node_id?: string
   sector: string | null
   location: string | null
   revenue_meur: number | null
   ebitda_keur: number | null
   headcount: number | null
   headcount_range: string | null
-  date_added: string | null
+  /** Omitted for an unchanged month-only source date. */
+  date_added?: string | null
+  /** A staff confirmation, never a caller-supplied precision value. */
+  date_added_confirm_day?: boolean
   public_title: string | null
   teaser_summary: string | null
   internal_notes: string | null
@@ -64,7 +71,7 @@ interface MaCanonicalContactProjectionRow {
 }
 
 interface ParsedOpportunityIntake {
-  reference: string
+  reference: string | null
   status: OpportunityStatus
   sourceOfficeId: string | null
   affiliationIds: string[]
@@ -98,6 +105,14 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
   opportunity_reference_required: {
     field: "reference",
     message: "Ref. Mandat is required.",
+  },
+  opportunity_geography_required: {
+    field: "geography_node_id",
+    message: "Choose the canonical geography before creating an opportunity.",
+  },
+  opportunity_geography_not_found: {
+    field: "geography_node_id",
+    message: "Choose a current canonical geography.",
   },
   opportunity_activation_requires_source_office: {
     field: "source_office_id",
@@ -299,7 +314,11 @@ function parseOptionalNumber(formData: FormData, key: string) {
 
 function parseOpportunityIntake(
   formData: FormData,
-  options?: { requirePublicTitle?: boolean },
+  options?: {
+    requirePublicTitle?: boolean
+    requireReference?: boolean
+    requireGeography?: boolean
+  },
 ): ParsedOpportunityIntake | OpportunityActionResult {
   const reference = readOpportunityFormString(formData, "reference")
   const rawStatus = readOpportunityFormString(formData, "status") ?? "draft"
@@ -310,9 +329,14 @@ function parseOpportunityIntake(
   const sector = parseOptionalSector(formData)
   const revenue = parseOptionalNumber(formData, "revenue_meur")
   const ebitda = parseOptionalNumber(formData, "ebitda_keur")
+  const geographyNodeId = readOpportunityFormString(formData, "geography_node_id")
   const fieldErrors: Record<string, string> = {}
 
-  if (!reference) fieldErrors.reference = "Ref. Mandat is required."
+  if (options?.requireReference && !reference) fieldErrors.reference = "Ref. Mandat is required."
+  if (options?.requireGeography && !geographyNodeId) {
+    fieldErrors.geography_node_id =
+      "Choose the canonical geography before creating an opportunity."
+  }
   if (
     options?.requirePublicTitle &&
     !readOpportunityFormString(formData, "public_title")
@@ -335,13 +359,41 @@ function parseOpportunityIntake(
   if (ebitda.error) fieldErrors.ebitda_keur = "EBE K€ must be a number."
 
   const dateAdded = readOpportunityFormString(formData, "date_added")
+  const dateAddedConfirmedDay =
+    readOpportunityFormString(formData, "date_added_confirm_day") === "on"
+  const dateAddedClearRequested =
+    readOpportunityFormString(formData, "date_added_clear") === "on"
+  const dateAddedPreserveMonth =
+    readOpportunityFormString(formData, "date_added_preserve_month") === "true"
   if (dateAdded && Number.isNaN(Date.parse(`${dateAdded}T00:00:00Z`))) {
     fieldErrors.date_added = "Date ajout must be a valid date."
+  }
+  if (dateAddedConfirmedDay && dateAddedClearRequested) {
+    fieldErrors.date_added =
+      "Choose either an exact calendar day or clear this source date."
+  }
+  if (dateAddedPreserveMonth && dateAddedConfirmedDay && !dateAdded) {
+    fieldErrors.date_added =
+      "Enter the verified exact calendar day before confirming it."
   }
 
   if (Object.keys(fieldErrors).length > 0) {
     return actionFailure("Check the highlighted intake fields.", fieldErrors)
   }
+
+  const dateFields: Pick<
+    IntakeOptionalFields,
+    "date_added" | "date_added_confirm_day"
+  > = dateAddedPreserveMonth
+    ? dateAddedClearRequested
+      ? { date_added: null }
+      : dateAddedConfirmedDay
+        ? { date_added: dateAdded, date_added_confirm_day: true }
+        : {}
+    : {
+        date_added: dateAdded,
+        ...(dateAddedConfirmedDay ? { date_added_confirm_day: true } : {}),
+      }
 
   return {
     reference: reference!,
@@ -351,18 +403,32 @@ function parseOpportunityIntake(
     primaryAffiliationId: primaryAffiliation.value,
     description: readRawFormText(formData, "description"),
     optionalFields: {
+      ...(geographyNodeId ? { geography_node_id: geographyNodeId } : {}),
       sector: sector.value,
       location: readOpportunityFormString(formData, "location"),
       revenue_meur: revenue.value,
       ebitda_keur: ebitda.value,
       headcount: readOpportunityHeadcount(formData),
       headcount_range: readOpportunityFormString(formData, "headcount_range"),
-      date_added: dateAdded,
+      ...dateFields,
       public_title: readOpportunityFormString(formData, "public_title"),
       teaser_summary: readOpportunityFormString(formData, "teaser_summary"),
       internal_notes: readOpportunityFormString(formData, "internal_notes"),
     },
   }
+}
+
+/** France-first matching identities are staff-only; no office or location inference is allowed. */
+export async function listOpportunityGeographyOptions(): Promise<OpportunityGeographyOption[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("geography_nodes")
+    .select("id, stable_key, code, label, node_level, parent_id")
+    .order("node_level")
+    .order("label")
+  if (error) throw new Error(error.message)
+  return (data ?? []) as OpportunityGeographyOption[]
 }
 
 function isActionFailure(
@@ -470,7 +536,11 @@ export async function createOpportunityIntake(
   formData: FormData,
 ): Promise<OpportunityActionResult> {
   const { user } = await requireStaffAccess()
-  const parsed = parseOpportunityIntake(formData, { requirePublicTitle: true })
+  const parsed = parseOpportunityIntake(formData, {
+    requirePublicTitle: true,
+    requireReference: !isFranceGeographyMandatesEnabled(),
+    requireGeography: isFranceGeographyMandatesEnabled(),
+  })
   if (isActionFailure(parsed)) return parsed
 
   const supabase = createAdminClient()
@@ -493,7 +563,7 @@ export async function createOpportunityIntake(
   }
 
   const opportunity = data as Opportunity
-  if (!opportunity?.id) {
+  if (!opportunity?.id || !opportunity.reference) {
     return actionFailure(
       "Opportunity was saved but its confirmation could not be read. Refresh the opportunity list before retrying.",
     )
@@ -501,9 +571,9 @@ export async function createOpportunityIntake(
   revalidateOpportunityIntake(opportunity.id)
   return {
     success: true,
-    message: `Opportunity ${parsed.reference} created.`,
+    message: `Opportunity ${opportunity.reference} created.`,
     opportunityId: opportunity.id,
-    opportunityReference: parsed.reference,
+    opportunityReference: opportunity.reference,
   }
 }
 
@@ -512,7 +582,7 @@ export async function updateOpportunityIntake(
   formData: FormData,
 ): Promise<OpportunityActionResult> {
   const { user } = await requireStaffAccess()
-  const parsed = parseOpportunityIntake(formData)
+  const parsed = parseOpportunityIntake(formData, { requireReference: true })
   if (isActionFailure(parsed)) return parsed
 
   const supabase = createAdminClient()
@@ -690,6 +760,7 @@ export async function createMaFirmOfficeContext(
     office_id: identity.office_id as string,
     firm_id: identity.firm_id as string,
     firm_name: firmName,
+    firm_status: "prospect",
     office_name: resolvedOfficeName,
     office_label:
       resolvedOfficeName.trim() === firmName.trim()
@@ -706,7 +777,6 @@ export async function createMaFirmOfficeContext(
     ],
   }
 
-  revalidateOpportunityIntake()
   return {
     success: true,
     message: "M&A firm, operating office, and first contact created.",
@@ -786,6 +856,7 @@ export async function createMaOfficeForExistingFirm(
     office_id: identity.office_id as string,
     firm_id: identity.firm_id as string,
     firm_name: firmName,
+    firm_status: "active",
     office_name: resolvedOfficeName,
     office_label:
       resolvedOfficeName.trim() === firmName.trim()
@@ -794,7 +865,6 @@ export async function createMaOfficeForExistingFirm(
     contacts: [],
   }
 
-  revalidateOpportunityIntake()
   return {
     success: true,
     message: "Operating office added to the existing firm.",

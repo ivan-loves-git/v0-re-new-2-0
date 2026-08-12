@@ -10,6 +10,7 @@ import {
 } from "@/lib/opportunity-freshness-policy"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { OpportunityStatus } from "@/lib/types/opportunity"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
 export interface OpportunityFreshnessReminder {
   id: string
@@ -20,6 +21,7 @@ export interface OpportunityFreshnessReminder {
   sector: string | null
   status: OpportunityStatus
   dateAdded: string | null
+  dateAddedPrecision: "day" | "month" | null
   exactDateAdded: string | null
   monthAdded: string | null
   daysOpen: number | null
@@ -52,6 +54,7 @@ interface OpportunityFreshnessRow {
   sector: string | null
   status: OpportunityStatus
   date_added: string | null
+  date_added_precision: "day" | "month" | null
   created_at: string
 }
 
@@ -59,13 +62,6 @@ function formatExactDate(date: Date) {
   return new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",
     month: "short",
-    year: "numeric",
-  }).format(date)
-}
-
-function formatMonth(date: Date) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    month: "long",
     year: "numeric",
   }).format(date)
 }
@@ -100,7 +96,7 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
     supabase
       .from("opportunities")
       .select(
-        "id, reference, public_title, source_label, location, sector, status, date_added, created_at, source_office:ma_offices(name, firm:ma_firms(name))",
+        "id, reference, public_title, source_label, location, sector, status, date_added, date_added_precision, created_at, source_office:ma_offices(name, firm:ma_firms(name))",
       )
       .in("status", [...CANDIDATE_STALE_OPPORTUNITY_STATUSES])
       .order("date_added", { ascending: true, nullsFirst: false })
@@ -126,8 +122,15 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
   const rows = (opportunitiesResult.data ?? []) as OpportunityFreshnessRow[]
   const reminders = rows
     .map((opportunity) => {
-      const date = parseOpportunityDate(opportunity.date_added)
-      const daysOpen = opportunityDaysOpen(opportunity.date_added, now)
+      const date = parseOpportunityDate(
+        opportunity.date_added,
+        opportunity.date_added_precision,
+      )
+      const daysOpen = opportunityDaysOpen(
+        opportunity.date_added,
+        now,
+        opportunity.date_added_precision,
+      )
 
       return {
         id: opportunity.id,
@@ -138,8 +141,18 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
         sector: opportunity.sector,
         status: opportunity.status,
         dateAdded: opportunity.date_added,
-        exactDateAdded: date ? formatExactDate(date) : null,
-        monthAdded: date ? formatMonth(date) : null,
+        dateAddedPrecision: opportunity.date_added_precision,
+        exactDateAdded:
+          date && opportunity.date_added_precision !== "month"
+            ? formatExactDate(date)
+            : null,
+        monthAdded: opportunity.date_added
+          ? formatOpportunitySourceDate(
+              opportunity.date_added,
+              "month",
+              { fallback: "" },
+            )
+          : null,
         daysOpen,
       }
     })
@@ -149,6 +162,7 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
           id: opportunity.id,
           status: opportunity.status,
           dateAdded: opportunity.dateAdded,
+          dateAddedPrecision: opportunity.dateAddedPrecision,
         },
         activePursuitOpportunityIds,
         now,
@@ -157,7 +171,13 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
     .sort((a, b) => (b.daysOpen ?? 0) - (a.daysOpen ?? 0))
 
   const datedOpenDays = rows
-    .map((opportunity) => opportunityDaysOpen(opportunity.date_added, now))
+    .map((opportunity) =>
+      opportunityDaysOpen(
+        opportunity.date_added,
+        now,
+        opportunity.date_added_precision,
+      ),
+    )
     .filter((daysOpen): daysOpen is number => daysOpen !== null)
 
   return {
@@ -165,7 +185,9 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
     staleTotal: reminders.length,
     staleOpportunities: reminders.slice(0, 12),
     openWithoutDate: rows.filter(
-      (opportunity) => !parseOpportunityDate(opportunity.date_added),
+      (opportunity) =>
+        !opportunity.date_added ||
+        Number.isNaN(new Date(`${opportunity.date_added.slice(0, 10)}T00:00:00Z`).getTime()),
     ).length,
     oldestOpenDays:
       datedOpenDays.length > 0 ? Math.max(...datedOpenDays) : null,

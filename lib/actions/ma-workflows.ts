@@ -54,6 +54,7 @@ interface OpportunityWorkflowRow {
   activity: string | null
   location: string | null
   date_added: string | null
+  date_added_precision: "day" | "month" | null
   created_at: string
   updated_at: string
   source_id: string | null
@@ -451,6 +452,7 @@ async function loadOpportunityContext(opportunityId: string) {
         activity,
         location,
         date_added,
+        date_added_precision,
         created_at,
         updated_at,
         source_id,

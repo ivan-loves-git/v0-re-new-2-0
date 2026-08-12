@@ -95,7 +95,9 @@ describe("WAVE AI next-action projection", () => {
     expect(request.input).toContain(
       "Recorded opportunity added date precision: month.",
     );
-    expect(request.input).toContain("Opportunity age bucket: over_90_days.");
+    expect(request.input).toContain(
+      "Opportunity age bucket is unknown because the source supplied only a month, not an exact day.",
+    );
     expect(request.input).toContain("active pursuit: yes.");
     expect(request.input).toContain(
       "Readiness gate: an active pursuit exists.",

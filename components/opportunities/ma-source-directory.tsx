@@ -58,6 +58,7 @@ import {
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
 interface MaSourceDirectoryProps {
   sources: MaSourceDirectoryEntry[]
@@ -93,17 +94,6 @@ const BASE_FILTER_DEFINITIONS: CollectionFilterDefinition[] = [
     ],
   },
 ]
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "-"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date)
-}
 
 function SourceTypeBadge({ sourceType }: { sourceType: MaSourceType }) {
   return (
@@ -494,7 +484,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
                               {source.latest_opportunity_title ?? "-"}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {formatDate(source.latest_opportunity_date)}
+                              {formatOpportunitySourceDate(source.latest_opportunity_date, source.latest_opportunity_date_precision)}
                             </span>
                           </div>
                         </TableCell>

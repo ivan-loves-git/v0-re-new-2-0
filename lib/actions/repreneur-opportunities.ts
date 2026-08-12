@@ -4,6 +4,7 @@ import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import {
   sortRepreneurDealFlow,
@@ -54,6 +55,7 @@ type RepreneurDealFlowOpportunityRow = {
   headcount: number | null
   headcount_range: string | null
   date_added: string | null
+  date_added_precision: "day" | "month" | null
   updated_at: string
 }
 
@@ -99,6 +101,10 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
+    date_added_display: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+    ),
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -219,6 +225,10 @@ function toDealFlowOpportunity(
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
+    date_added_display: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+    ),
     updated_at: opportunity.updated_at,
     is_staff_recommended: false,
     is_outside_current_criteria: relevance.recommendation === "not_fit",
@@ -248,6 +258,7 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     headcount: opportunity.headcount,
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
+    date_added_display: opportunity.date_added_display,
     decline_reason_categories: opportunity.decline_reason_categories,
     decline_reason_text: opportunity.decline_reason_text,
     interest_expressed_at: opportunity.interest_expressed_at,
@@ -298,7 +309,8 @@ export async function listMyRepreneurOpportunities(): Promise<{
         ebitda_keur,
         headcount,
         headcount_range,
-        date_added
+        date_added,
+        date_added_precision
       )
     `)
     .eq("repreneur_id", repreneur.id)
@@ -379,7 +391,8 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
           ebitda_keur,
           headcount,
           headcount_range,
-          date_added
+          date_added,
+          date_added_precision
         )
       `)
       .eq("repreneur_id", repreneur.id)
@@ -403,6 +416,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         headcount,
         headcount_range,
         date_added,
+        date_added_precision,
         updated_at
       `)
       .eq("status", "active")
@@ -498,7 +512,8 @@ export async function getMyRepreneurOpportunity(
           ebitda_keur,
           headcount,
           headcount_range,
-          date_added
+          date_added,
+          date_added_precision
         )
       `)
       .eq("id", dealId)
@@ -523,6 +538,7 @@ export async function getMyRepreneurOpportunity(
         headcount,
         headcount_range,
         date_added,
+        date_added_precision,
         updated_at
       `)
       .eq("id", dealId)

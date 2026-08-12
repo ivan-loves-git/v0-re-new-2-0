@@ -5,11 +5,17 @@ import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { OpportunityForm } from "@/components/opportunities/opportunity-form"
 import {
   createOpportunityIntake,
+  listOpportunityGeographyOptions,
   listMaOfficeIntakeOptions,
 } from "@/lib/actions/opportunity-intake"
+import { isFranceGeographyMandatesEnabled } from "@/lib/opportunity-geography-release"
 
 export default async function NewOpportunityPage() {
-  const officeOptions = await listMaOfficeIntakeOptions()
+  const geographyMandatesEnabled = isFranceGeographyMandatesEnabled()
+  const [officeOptions, geographyOptions] = await Promise.all([
+    listMaOfficeIntakeOptions(),
+    geographyMandatesEnabled ? listOpportunityGeographyOptions() : [],
+  ])
 
   return (
     <div className="space-y-6">
@@ -32,6 +38,8 @@ export default async function NewOpportunityPage() {
         action={createOpportunityIntake}
         submitLabel="Create opportunity"
         officeOptions={officeOptions}
+        geographyOptions={geographyOptions}
+        geographyMandatesEnabled={geographyMandatesEnabled}
       />
     </div>
   )

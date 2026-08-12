@@ -44,6 +44,7 @@ import {
   type MaCanonicalContactOption,
   type MaOfficeIntakeOffice,
   type OpportunityActionResult,
+  type OpportunityGeographyOption,
   type OpportunityWithSource,
 } from "@/lib/types/opportunity"
 import {
@@ -59,6 +60,11 @@ import {
   normalizeOpportunitySector,
   OTHER_SECTOR,
 } from "@/lib/utils/opportunity-sector"
+import {
+  resolveOpportunityOfficeChoice,
+  selectCreatedOfficeContext,
+} from "@/lib/utils/opportunity-created-office-selection"
+import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
 const INTAKE_STATUS_OPTIONS = OPPORTUNITY_STATUS_OPTIONS.filter(
   (option) =>
@@ -77,6 +83,8 @@ interface OpportunityFormProps {
   action: (formData: FormData) => Promise<OpportunityActionResult | void>
   submitLabel?: string
   officeOptions: MaOfficeIntakeOffice[]
+  geographyOptions: OpportunityGeographyOption[]
+  geographyMandatesEnabled?: boolean
 }
 
 function currentAffiliationIds(opportunity?: OpportunityWithSource) {
@@ -90,9 +98,13 @@ export function OpportunityForm({
   action,
   submitLabel = "Save opportunity",
   officeOptions,
+  geographyOptions,
+  geographyMandatesEnabled = false,
 }: OpportunityFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [dateAddedConfirmedDay, setDateAddedConfirmedDay] = useState(false)
+  const [clearMonthOnlyDate, setClearMonthOnlyDate] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const validationSummaryRef = useRef<HTMLDivElement>(null)
   const normalizedExistingSector = normalizeOpportunitySector(
@@ -112,6 +124,8 @@ export function OpportunityForm({
   )
   const isHistorical =
     opportunity?.status === "closed" || opportunity?.status === "archived"
+  const hasMonthOnlyDate =
+    opportunity?.date_added_precision === "month" && Boolean(opportunity.date_added)
   const [status, setStatus] = useState(
     opportunity?.status === "active" || opportunity?.status === "paused"
       ? opportunity.status
@@ -119,6 +133,9 @@ export function OpportunityForm({
   )
   const [selectedOfficeId, setSelectedOfficeId] = useState(
     opportunity?.source_office_id ?? "",
+  )
+  const [selectedGeographyNodeId, setSelectedGeographyNodeId] = useState(
+    opportunity?.geography_node_id ?? "",
   )
   const [createdOfficeOptions, setCreatedOfficeOptions] = useState<
     MaOfficeIntakeOffice[]
@@ -274,7 +291,11 @@ export function OpportunityForm({
   }
 
   function chooseOffice(value: string) {
-    const nextOfficeId = value === NO_OFFICE_OPTION_VALUE ? "" : value
+    const nextOfficeId = resolveOpportunityOfficeChoice(
+      value,
+      NO_OFFICE_OPTION_VALUE,
+    )
+    if (nextOfficeId === null) return
     setSelectedOfficeId(nextOfficeId)
     clearFieldError("source_office_id")
     setSelectedAffiliationIds([])
@@ -359,17 +380,15 @@ export function OpportunityForm({
       }
 
       const office = result.office
+      const selection = selectCreatedOfficeContext(office, officeContextMode)
 
       setCreatedOfficeOptions((current) => [
         ...current.filter((item) => item.office_id !== office.office_id),
         office,
       ])
-      setSelectedOfficeId(office.office_id)
-      const firstContact = office.contacts[0]
-      setSelectedAffiliationIds(
-        firstContact ? [firstContact.affiliation_id] : [],
-      )
-      setPrimaryAffiliationId(firstContact?.affiliation_id ?? null)
+      setSelectedOfficeId(selection.selectedOfficeId)
+      setSelectedAffiliationIds(selection.affiliationIds)
+      setPrimaryAffiliationId(selection.primaryAffiliationId)
       setCreateOfficeDialogOpen(false)
       setExistingFirmId("")
       toast.success(result.message)
@@ -489,6 +508,7 @@ export function OpportunityForm({
               labels={{
                 form: "Opportunity details",
                 reference: "Ref. Mandat",
+                geography_node_id: "Canonical geography",
                 public_title: "Public title",
                 status: "Status",
                 source_office_id: "Operating office",
@@ -511,6 +531,9 @@ export function OpportunityForm({
               name="source_office_id"
               value={selectedOfficeId}
             />
+            {geographyMandatesEnabled ? (
+              <input type="hidden" name="geography_node_id" value={selectedGeographyNodeId} />
+            ) : null}
 
             {isHistorical ? (
               <Alert>
@@ -526,24 +549,37 @@ export function OpportunityForm({
               <div>
                 <h3 className="text-sm font-medium">Core fields</h3>
                 <p className="text-sm text-muted-foreground">
-                  A reference is sufficient for a staff-only draft. Financial
-                  data may remain unknown.
+                  {geographyMandatesEnabled
+                    ? "New records receive an immutable Re-New reference after you select geography. Financial data may remain unknown."
+                    : "A reference is sufficient for a staff-only draft. Financial data may remain unknown."}
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <FormFieldLabel htmlFor="reference" requirement="required">Ref. Mandat</FormFieldLabel>
-                  <Input
-                    id="reference"
-                    name="reference"
-                    defaultValue={opportunity?.reference ?? ""}
-                    required
-                    disabled={isHistorical}
-                    onChange={() => clearFieldError("reference")}
-                    {...fieldErrorProps("reference", fieldErrors.reference)}
-                  />
-                  <FieldError id="reference" message={fieldErrors.reference} />
-                </div>
+                {opportunity ? (
+                  <div className="space-y-2">
+                    <FormFieldLabel htmlFor="reference" requirement="required">Ref. Mandat</FormFieldLabel>
+                    <Input id="reference" name="reference" value={opportunity.reference} readOnly aria-readonly="true" />
+                    <p className="text-xs text-muted-foreground">References are permanent and cannot change when geography is corrected.</p>
+                  </div>
+                ) : geographyMandatesEnabled ? (
+                  <div className="space-y-2">
+                    <FormFieldLabel htmlFor="generated-reference" requirement="optional" requirementText="Generated by WAVE">Ref. Mandat</FormFieldLabel>
+                    <Input id="generated-reference" value="Generated after creation" disabled />
+                    <p className="text-xs text-muted-foreground">WAVE allocates the next reference atomically after geography is selected.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <FormFieldLabel htmlFor="reference" requirement="required">Ref. Mandat</FormFieldLabel>
+                    <Input
+                      id="reference"
+                      name="reference"
+                      required
+                      onChange={() => clearFieldError("reference")}
+                      {...fieldErrorProps("reference", fieldErrors.reference)}
+                    />
+                    <FieldError id="reference" message={fieldErrors.reference} />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <FormFieldLabel htmlFor="status" requirement="required">Status</FormFieldLabel>
                   {isHistorical ? (
@@ -634,6 +670,29 @@ export function OpportunityForm({
                     </div>
                   ) : null}
                 </div>
+                {geographyMandatesEnabled ? (
+                <div className="space-y-2">
+                  <FormFieldLabel htmlFor="geography_node_id" requirement={opportunity ? "optional" : "required"}>Canonical geography</FormFieldLabel>
+                  <Select
+                    value={selectedGeographyNodeId}
+                    onValueChange={(value) => { setSelectedGeographyNodeId(value); clearFieldError("geography_node_id") }}
+                    disabled={isHistorical}
+                  >
+                    <SelectTrigger id="geography_node_id" {...fieldErrorProps("geography_node_id", fieldErrors.geography_node_id)}>
+                      <SelectValue placeholder="Choose France, a zone, or a region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(["country", "macro_zone", "region"] as const).map((level) => {
+                        const options = geographyOptions.filter((option) => option.node_level === level)
+                        if (options.length === 0) return null
+                        const label = level === "country" ? "France" : level === "macro_zone" ? "Macro-zones" : "Regions"
+                        return <SelectGroup key={level}><span className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{label}</span>{options.map((option) => <SelectItem key={option.id} value={option.id}>{option.label} · {option.code}</SelectItem>)}</SelectGroup>
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <FieldError id="geography_node_id" message={fieldErrors.geography_node_id} />
+                </div>
+                ) : null}
                 <div className="space-y-2">
                   <FormFieldLabel htmlFor="location" requirement="conditional" requirementText="Required before proposal">Localisation</FormFieldLabel>
                   <Input
@@ -643,15 +702,69 @@ export function OpportunityForm({
                     disabled={isHistorical}
                   />
                 </div>
-                <div className="space-y-2">
-                  <FormFieldLabel htmlFor="date_added" requirement="optional">Date ajout</FormFieldLabel>
-                  <Input
-                    id="date_added"
-                    name="date_added"
-                    type="date"
-                    defaultValue={opportunity?.date_added ?? ""}
-                    disabled={isHistorical}
-                  />
+                <div className="space-y-2" id="date_added-field">
+                  <FormFieldLabel
+                    htmlFor={hasMonthOnlyDate ? "date_added_confirm_day" : "date_added"}
+                    requirement="optional"
+                  >
+                    Date ajout
+                  </FormFieldLabel>
+                  {hasMonthOnlyDate ? (
+                    <>
+                      <input type="hidden" name="date_added_preserve_month" value="true" />
+                      <p className="text-sm text-muted-foreground">
+                        Source recorded: {formatOpportunitySourceDate(opportunity?.date_added, "month")} (month only)
+                      </p>
+                      <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Checkbox
+                          id="date_added_confirm_day"
+                          name="date_added_confirm_day"
+                          checked={dateAddedConfirmedDay}
+                          disabled={isHistorical || clearMonthOnlyDate}
+                          onCheckedChange={(checked) => {
+                            const next = checked === true
+                            setDateAddedConfirmedDay(next)
+                            if (next) setClearMonthOnlyDate(false)
+                          }}
+                        />
+                        <span>I have verified the exact calendar day.</span>
+                      </label>
+                      {dateAddedConfirmedDay ? (
+                        <Input
+                          id="date_added"
+                          name="date_added"
+                          type="date"
+                          required
+                          disabled={isHistorical}
+                          aria-describedby="date-added-confirmation-help"
+                        />
+                      ) : null}
+                      <p id="date-added-confirmation-help" className="text-xs text-muted-foreground">
+                        Confirming replaces the month-only source with the exact day you enter.
+                      </p>
+                      <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Checkbox
+                          name="date_added_clear"
+                          checked={clearMonthOnlyDate}
+                          disabled={isHistorical || dateAddedConfirmedDay}
+                          onCheckedChange={(checked) => {
+                            const next = checked === true
+                            setClearMonthOnlyDate(next)
+                            if (next) setDateAddedConfirmedDay(false)
+                          }}
+                        />
+                        <span>Remove this source date.</span>
+                      </label>
+                    </>
+                  ) : (
+                    <Input
+                      id="date_added"
+                      name="date_added"
+                      type="date"
+                      defaultValue={opportunity?.date_added ?? ""}
+                      disabled={isHistorical}
+                    />
+                  )}
                   <FieldError id="date_added" message={fieldErrors.date_added} />
                 </div>
                 <div className="space-y-2">

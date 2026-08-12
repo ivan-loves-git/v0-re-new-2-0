@@ -55,6 +55,7 @@ export interface MaRelationshipOfficeOption {
     openOpportunityCount: number
     candidateStaleCount: number
     latestKnownAt: string | null
+    latestKnownAtPrecision: "day" | "month" | null
   }
 }
 
@@ -69,6 +70,7 @@ export interface MaRelationshipFirmOption {
     openOpportunityCount: number
     candidateStaleCount: number
     latestKnownAt: string | null
+    latestKnownAtPrecision: "day" | "month" | null
   }
 }
 
@@ -176,6 +178,7 @@ interface OpportunityRow {
   source_office_id: string | null
   status: OpportunityStatus
   date_added: string | null
+  date_added_precision: "day" | "month" | null
 }
 
 interface InteractionRow {
@@ -351,7 +354,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     supabase
       .from("opportunities")
       .select(
-        "id, reference, public_title, activity, source_office_id, status, date_added",
+        "id, reference, public_title, activity, source_office_id, status, date_added, date_added_precision",
       )
       .not("source_office_id", "is", null)
       .order("updated_at", { ascending: false }),
@@ -403,6 +406,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       officeId: opportunity.source_office_id,
       status: opportunity.status,
       dateAdded: opportunity.date_added,
+      dateAddedPrecision: opportunity.date_added_precision,
     })),
     (activePursuitResult.data ?? [])
       .map((match) => match.opportunity_id)
@@ -462,6 +466,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
           openOpportunityCount: 0,
           candidateStaleCount: 0,
           latestKnownAt: null,
+          latestKnownAtPrecision: null,
         },
       }
     })
@@ -484,6 +489,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
         openOpportunityCount: 0,
         candidateStaleCount: 0,
         latestKnownAt: null,
+        latestKnownAtPrecision: null,
       },
     }))
     .sort((left, right) => left.name.localeCompare(right.name))

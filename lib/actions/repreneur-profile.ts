@@ -159,10 +159,12 @@ export async function updateMyTargetThesis(input: TargetThesisInput) {
       target_ebitda_margin_min_pct: ebitdaMarginMin,
       target_staff_size_min: staffSizeMin,
       target_staff_size_max: staffSizeMax,
-    })
+  })
     .eq("id", access.repreneurId)
 
   if (error) throw new Error(error.message)
+  // Migration 092 atomically mirrors exact France-first legacy values into
+  // repreneur_geography_targets. Foreign/custom values stay legacy-only.
   await recalculateRepreneurScoresAndMatches(access.repreneurId)
   revalidatePath("/portal/profile")
 }
