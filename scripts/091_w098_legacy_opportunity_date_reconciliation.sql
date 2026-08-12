@@ -55,8 +55,21 @@ DECLARE
   repair RECORD;
   actual_date DATE;
   actual_precision TEXT;
+  canonical_cutover_count INTEGER;
   existing_event public.ma_opportunity_date_correction_events%ROWTYPE;
 BEGIN
+  -- A literal hash is not sufficient evidence. The approved workbook snapshot
+  -- must still be represented by one activated canonical cutover manifest.
+  SELECT COUNT(*)
+    INTO canonical_cutover_count
+  FROM public.ma_cutover_runs run
+  WHERE run.source_hash = 'a4b50611de0578a4a2b36f8c6da284c6e53d10b2fd4f418ab560dd31a9a0d6a5'
+    AND run.status = 'activated';
+
+  IF canonical_cutover_count <> 1 THEN
+    RAISE EXCEPTION 'w098_canonical_cutover_manifest_missing_or_not_activated';
+  END IF;
+
   -- These are the only mappings authorised by the approved, hash-bound CRM
   -- snapshot. Month-only values use day 01; the source supplied no day.
   FOR repair IN

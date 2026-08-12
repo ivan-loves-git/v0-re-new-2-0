@@ -24,6 +24,9 @@ describe("W-098 legacy opportunity date reconciliation", () => {
 
     expect(migration).toContain("W-098 — narrow, source-backed repair")
     expect(migration).toContain("a4b50611de0578a4a2b36f8c6da284c6e53d10b2fd4f418ab560dd31a9a0d6a5")
+    expect(migration).toContain("FROM public.ma_cutover_runs run")
+    expect(migration).toContain("run.status = 'activated'")
+    expect(migration).toContain("w098_canonical_cutover_manifest_missing_or_not_activated")
     expect(migration).not.toContain("run-w010-cutover")
     expect(migration).not.toContain("COPY public.opportunities")
 
