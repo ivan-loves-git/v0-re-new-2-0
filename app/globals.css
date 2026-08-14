@@ -158,6 +158,11 @@
   --duration-wave-fast: 180ms;
   --duration-wave-standard: 220ms;
   --duration-wave-drawer: 280ms;
+  --transition-duration-wave-instant: var(--duration-wave-instant);
+  --transition-duration-wave-press: var(--duration-wave-press);
+  --transition-duration-wave-fast: var(--duration-wave-fast);
+  --transition-duration-wave-standard: var(--duration-wave-standard);
+  --transition-duration-wave-drawer: var(--duration-wave-drawer);
   /* computed shadow variables below - do not modify */
   --shadow-2xs: var(--shadow-x) var(--shadow-y) color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
   --shadow-xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);

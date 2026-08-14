@@ -8,6 +8,7 @@ describe("WAVE motion system", () => {
   it("defines the shared tokens and preserves reduced-motion feedback", () => {
     const css = source("app/globals.css")
     for (const token of ["--ease-wave-out: cubic-bezier(0.23, 1, 0.32, 1)", "--ease-wave-in-out: cubic-bezier(0.77, 0, 0.175, 1)", "--ease-wave-drawer: cubic-bezier(0.32, 0.72, 0, 1)", "--duration-wave-instant: 0ms", "--duration-wave-press: 160ms", "--duration-wave-fast: 180ms", "--duration-wave-standard: 220ms", "--duration-wave-drawer: 280ms"]) expect(css).toContain(token)
+    for (const alias of ["--transition-duration-wave-instant: var(--duration-wave-instant)", "--transition-duration-wave-press: var(--duration-wave-press)", "--transition-duration-wave-fast: var(--duration-wave-fast)", "--transition-duration-wave-standard: var(--duration-wave-standard)", "--transition-duration-wave-drawer: var(--duration-wave-drawer)"]) expect(css).toContain(alias)
     expect(css).not.toContain("transition-duration: 0.01ms")
     expect(css).not.toContain(".wave-trigger-overlay")
     expect(css).not.toContain(".wave-expandable-motion")
