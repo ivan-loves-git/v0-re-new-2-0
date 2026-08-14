@@ -5,7 +5,6 @@ import { CircleAlert, XCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { declineMyOpportunity } from "@/lib/actions/repreneur-opportunity-responses"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
@@ -43,6 +42,7 @@ export function RepreneurOpportunityDeclineAction({
   const triggerRef = useRef<HTMLButtonElement>(null)
   const restoreTriggerFocusRef = useRef(false)
   const canSubmit = selectedReasons.size > 0 && details.trim().length > 0
+  const disclosureId = `decline-feedback-${matchId}`
 
   useEffect(() => {
     if (isExpanded) firstReasonRef.current?.focus()
@@ -67,15 +67,22 @@ export function RepreneurOpportunityDeclineAction({
   }
 
   return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <CollapsibleTrigger asChild>
-        <Button ref={triggerRef} type="button" variant="outline" disabled={pending}>
-          <XCircle data-icon="inline-start" />
-          Not a fit
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="mt-3">
-    <form action={formAction} className="rounded-lg border p-4">
+    <>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="outline"
+        aria-expanded={isExpanded}
+        aria-controls={disclosureId}
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+        disabled={pending}
+      >
+        <XCircle data-icon="inline-start" />
+        Not a fit
+      </Button>
+      {isExpanded ? (
+        <div id={disclosureId} className="mt-3">
+          <form action={formAction} className="rounded-lg border p-4">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium">Tell Re-New why this is not a fit</p>
@@ -133,8 +140,9 @@ export function RepreneurOpportunityDeclineAction({
           </Button>
         </div>
       </div>
-    </form>
-      </CollapsibleContent>
-    </Collapsible>
+          </form>
+        </div>
+      ) : null}
+    </>
   )
 }
