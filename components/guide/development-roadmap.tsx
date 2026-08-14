@@ -25,6 +25,18 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 14, 2026",
+    version: "0.9.46",
+    title: "WAVE now responds with one quiet motion system",
+    isCompleted: true,
+    events: [
+      { title: "Operational information appears immediately", type: "fix", description: "Dashboard charts, keyboard navigation and repeated labels no longer delay routine work." },
+      { title: "State changes feel consistent", type: "style", description: "Controls share one restrained timing and easing system while unnecessary property animation is removed." },
+      { title: "Motion remains accessible", type: "fix", description: "Reduced-motion users keep useful color and opacity feedback without movement." },
+      { title: "Rare decisions receive restrained confirmation", type: "style", description: "Button press, decline disclosure and fresh submission success now explain what happened without decorative motion." },
+    ],
+  },
+  {
     period: "Aug 12, 2026",
     version: "0.9.45",
     title: "New opportunities now start with a stable source and reference",

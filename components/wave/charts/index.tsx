@@ -214,7 +214,7 @@ export function WaveRadarChart<TData extends object>({
         <PolarAngleAxis dataKey={categoryKey} tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
         <PolarRadiusAxis domain={[0, maxValue]} tick={false} axisLine={false} />
         <RadarTooltip roundness="md" />
-        {series.map((item) => <Radar key={item.key} dataKey={item.key} variant="filled" fillOpacity={0.25} isGlowing={false} />)}
+        {series.map((item) => <Radar key={item.key} dataKey={item.key} variant="filled" fillOpacity={0.25} isGlowing={false} radarProps={{ isAnimationActive: false }} />)}
       </EvilRadarChart>
       <AccessibleDataTable data={data} label={label} columns={[
         { key: categoryKey, label: categoryKey },
@@ -253,7 +253,7 @@ export function WaveDonutChart<TData extends object>({
   return (
     <figure aria-label={label} className="min-w-0">
       <EvilPieChart data={chartData} config={config} nameKey={internalNameKey} dataKey={valueKey} className={cn("h-[180px] aspect-auto", className)}>
-        <Pie variant="gradient" innerRadius="48%" outerRadius="78%" cornerRadius={3} paddingAngle={2} />
+        <Pie variant="gradient" innerRadius="48%" outerRadius="78%" cornerRadius={3} paddingAngle={2} pieProps={{ isAnimationActive: false }} />
         <PieTooltip roundness="md" />
       </EvilPieChart>
       <AccessibleDataTable data={data} label={label} columns={[

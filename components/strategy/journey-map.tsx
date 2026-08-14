@@ -64,7 +64,7 @@ export function JourneyMap({ currentPhase, personaName }: JourneyMapProps) {
                   key={phase.num}
                   onClick={() => setSelectedPhase(phase)}
                   className={cn(
-                    "w-[130px] p-2.5 rounded-lg border text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer",
+                    "w-[130px] p-2.5 rounded-lg border text-left transition-[background-color,border-color,box-shadow,opacity] duration-wave-fast ease-wave-out cursor-pointer",
                     STATUS_STYLES[status]
                   )}
                 >

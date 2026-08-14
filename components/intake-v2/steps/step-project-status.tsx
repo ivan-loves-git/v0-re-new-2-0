@@ -82,7 +82,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
           {priorityQuestion.options.map((option) => (
             <div
               key={option.value}
-              className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+              className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out cursor-pointer ${
                 priorityValue === option.value
                   ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
                   : 'border-border hover:bg-muted/50 hover:border-input'
@@ -125,7 +125,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
             return (
               <div
                 key={option.value}
-                className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-all cursor-pointer ${
+                className={`flex items-start space-x-3 p-3 rounded-md border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out cursor-pointer ${
                   isSelected
                     ? isHighest
                       ? 'bg-blue-100 border-blue-500 ring-1 ring-blue-300'

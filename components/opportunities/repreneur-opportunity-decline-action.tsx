@@ -5,6 +5,7 @@ import { CircleAlert, XCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { declineMyOpportunity } from "@/lib/actions/repreneur-opportunity-responses"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
@@ -39,11 +40,22 @@ export function RepreneurOpportunityDeclineAction({
   const [selectedReasons, setSelectedReasons] = useState(() => new Set(initialReasons))
   const [details, setDetails] = useState(initialDetails)
   const firstReasonRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const restoreTriggerFocusRef = useRef(false)
   const canSubmit = selectedReasons.size > 0 && details.trim().length > 0
 
   useEffect(() => {
     if (isExpanded) firstReasonRef.current?.focus()
+    if (!isExpanded && restoreTriggerFocusRef.current) {
+      restoreTriggerFocusRef.current = false
+      triggerRef.current?.focus()
+    }
   }, [isExpanded])
+
+  function closeDisclosure() {
+    restoreTriggerFocusRef.current = true
+    setIsExpanded(false)
+  }
 
   function setReason(reason: OpportunityDeclineReasonCategory, checked: boolean) {
     setSelectedReasons((current) => {
@@ -54,16 +66,15 @@ export function RepreneurOpportunityDeclineAction({
     })
   }
 
-  if (!isExpanded) {
-    return (
-      <Button type="button" variant="outline" onClick={() => setIsExpanded(true)}>
-        <XCircle data-icon="inline-start" />
-        Not a fit
-      </Button>
-    )
-  }
-
   return (
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <CollapsibleTrigger asChild>
+        <Button ref={triggerRef} type="button" variant="outline" disabled={pending}>
+          <XCircle data-icon="inline-start" />
+          Not a fit
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="wave-expandable-motion mt-3">
     <form action={formAction} className="rounded-lg border p-4">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -113,7 +124,7 @@ export function RepreneurOpportunityDeclineAction({
         </label>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="ghost" onClick={() => setIsExpanded(false)} disabled={pending}>
+          <Button type="button" variant="ghost" onClick={closeDisclosure} disabled={pending}>
             Cancel
           </Button>
           <Button type="submit" variant="outline" disabled={!canSubmit || pending}>
@@ -123,5 +134,7 @@ export function RepreneurOpportunityDeclineAction({
         </div>
       </div>
     </form>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

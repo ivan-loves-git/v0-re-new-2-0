@@ -22,9 +22,17 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
   const projectedTotal = total + projectedCommission
   const displayMax = Math.max(total, projectedCommission > 0 ? projectedTotal : total) * 1.1 || 1
 
-  function pct(v: number) {
-    return `${((v / displayMax) * 100).toFixed(1)}%`
-  }
+  const segments = [
+    { key: "subscription", value: revenue.subscription, color: REVENUE_COLORS.subscription, label: "Subscription" },
+    { key: "consulting", value: revenue.consulting, color: REVENUE_COLORS.consulting, label: "Consulting" },
+    { key: "certification", value: revenue.certification, color: REVENUE_COLORS.certification, label: "Certification" },
+    { key: "commission", value: revenue.commission, color: REVENUE_COLORS.commission, label: "Commission" },
+    { key: "projectedCommission", value: projectedCommission, color: "bg-primary/25", label: "Projected commission" },
+  ].map((segment, index, all) => ({
+    ...segment,
+    startPercent: (all.slice(0, index).reduce((sum, item) => sum + item.value, 0) / displayMax) * 100,
+    scale: segment.value / displayMax,
+  }))
 
   return (
     <Card>
@@ -62,49 +70,26 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
         </div>
 
         {/* Stacked bar */}
-        <div className="h-8 bg-muted rounded-md overflow-hidden flex">
+        <div className="relative h-8 overflow-hidden rounded-md bg-muted">
           {total === 0 ? (
             <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground">
               No revenue yet. Journey begins here.
             </div>
           ) : (
-            <>
-              {revenue.subscription > 0 && (
+            segments.map((segment) => (
+              <div
+                key={segment.key}
+                className="absolute inset-y-0 left-0 w-full transition-transform duration-wave-standard ease-wave-out motion-reduce:transition-none"
+                style={{ transform: `translateX(${segment.startPercent}%)` }}
+                aria-hidden={segment.value === 0}
+              >
                 <div
-                  className={cn("h-full transition-all duration-500", REVENUE_COLORS.subscription)}
-                  style={{ width: pct(revenue.subscription) }}
-                  title={`Subscription: ${revenue.subscription} EUR`}
+                  className={cn("h-full w-full origin-left transition-transform duration-wave-standard ease-wave-out motion-reduce:transition-none", segment.color, segment.value === 0 && "hidden")}
+                  style={{ transform: `scaleX(${segment.scale})` }}
+                  title={`${segment.label}: ${segment.value} EUR`}
                 />
-              )}
-              {revenue.consulting > 0 && (
-                <div
-                  className={cn("h-full transition-all duration-500", REVENUE_COLORS.consulting)}
-                  style={{ width: pct(revenue.consulting) }}
-                  title={`Consulting: ${revenue.consulting} EUR`}
-                />
-              )}
-              {revenue.certification > 0 && (
-                <div
-                  className={cn("h-full transition-all duration-500", REVENUE_COLORS.certification)}
-                  style={{ width: pct(revenue.certification) }}
-                  title={`Certification: ${revenue.certification} EUR`}
-                />
-              )}
-              {revenue.commission > 0 && (
-                <div
-                  className={cn("h-full transition-all duration-500", REVENUE_COLORS.commission)}
-                  style={{ width: pct(revenue.commission) }}
-                  title={`Commission: ${revenue.commission} EUR`}
-                />
-              )}
-              {projectedCommission > 0 && (
-                <div
-                  className="h-full bg-primary/25 transition-all duration-500"
-                  style={{ width: pct(projectedCommission) }}
-                  title={`Projected commission: ${projectedCommission} EUR`}
-                />
-              )}
-            </>
+              </div>
+            ))
           )}
         </div>
 

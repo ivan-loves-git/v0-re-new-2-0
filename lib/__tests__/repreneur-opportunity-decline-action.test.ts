@@ -29,8 +29,11 @@ describe("repreneur opportunity not-a-fit response", () => {
     expect(declineForm).not.toContain("required={otherSelected}")
     expect(declineForm).toContain('disabled={!canSubmit || pending}')
     expect(declineForm).toContain("Response not saved")
-    expect(declineForm).toContain("type=\"button\" variant=\"outline\" onClick={() => setIsExpanded(true)}")
+    expect(declineForm).toContain("<Collapsible open={isExpanded} onOpenChange={setIsExpanded}>")
+    expect(declineForm).toContain("<CollapsibleTrigger asChild>")
+    expect(declineForm).toContain("wave-expandable-motion")
     expect(declineForm).toContain("firstReasonRef.current?.focus()")
+    expect(declineForm).toContain("triggerRef.current?.focus()")
     expect(declineForm).toContain("Confirm not a fit")
     expect(declineForm).toContain("Cancel")
   })
@@ -42,9 +45,7 @@ describe("repreneur opportunity not-a-fit response", () => {
     expect(detail.indexOf("I'm interested")).toBeLessThan(
       detail.indexOf("<RepreneurOpportunityDeclineAction"),
     )
-    expect(declineForm.indexOf("if (!isExpanded)")).toBeLessThan(
-      declineForm.indexOf("<fieldset"),
-    )
+    expect(declineForm.indexOf("<CollapsibleTrigger asChild>")).toBeLessThan(declineForm.indexOf("<fieldset"))
   })
 
   it("keeps the decline control scoped to an owned opportunity match", () => {

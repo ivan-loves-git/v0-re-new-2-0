@@ -60,7 +60,7 @@ export function StepBlocB({ data, onChange, onNext, onBack, errors }: Assessment
                       type="button"
                       onClick={() => handleSelect(question.id, option.value)}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg border-2 transition-all text-sm',
+                        'w-full text-left p-3 rounded-lg border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out text-sm',
                         isSelected
                           ? 'border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600'
                           : 'border-border hover:border-muted-foreground/40 hover:bg-muted/50'

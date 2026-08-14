@@ -71,7 +71,7 @@ export function YesNoButtons({
         type="button"
         variant={value === true ? "default" : "outline"}
         className={cn(
-          "flex-1 h-12 text-base transition-all",
+          "flex-1 h-12 text-base",
           value === true && "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
         )}
         onClick={() => onChange(true)}
@@ -83,7 +83,7 @@ export function YesNoButtons({
         type="button"
         variant={value === false ? "default" : "outline"}
         className={cn(
-          "flex-1 h-12 text-base transition-all",
+          "flex-1 h-12 text-base",
           value === false && "bg-slate-600 hover:bg-slate-700"
         )}
         onClick={() => onChange(false)}
@@ -146,7 +146,7 @@ export function RadioOptionGrid({
         <div
           key={opt.value}
           className={cn(
-            "flex items-center space-x-3 p-4 rounded-xl border-2 transition-all cursor-pointer",
+            "flex items-center space-x-3 p-4 rounded-xl border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out cursor-pointer",
             value === opt.value
               ? "border-blue-500 bg-blue-50"
               : "border-border/60 hover:border-border hover:bg-muted/50"
@@ -228,7 +228,7 @@ export function CheckboxGrid({
         <div
           key={opt.value}
           className={cn(
-            "flex items-center space-x-3 p-3 rounded-xl border-2 transition-all cursor-pointer",
+            "flex items-center space-x-3 p-3 rounded-xl border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out cursor-pointer",
             value.includes(opt.value)
               ? "border-blue-500 bg-blue-50"
               : "border-border/60 hover:border-border hover:bg-muted/50"
@@ -423,7 +423,7 @@ export function ConsentCheckbox({
   return (
     <div
       className={cn(
-        "flex items-start space-x-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
+        "flex items-start space-x-4 p-4 rounded-xl border-2 cursor-pointer transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out",
         checked
           ? "border-blue-500 bg-blue-50"
           : "border-border bg-white hover:border-blue-300"

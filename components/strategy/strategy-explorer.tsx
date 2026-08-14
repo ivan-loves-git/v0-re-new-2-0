@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback } from "react"
 import { PERSONAS } from "@/lib/data/strategy-data"
 import { PersonaSelector } from "./persona-selector"
 import { ReadinessRadar } from "./readiness-radar"
@@ -12,7 +12,6 @@ export function StrategyExplorer() {
   const [selectedPersona, setSelectedPersona] = useState(0)
   const [scores, setScores] = useState<number[]>([...PERSONAS[0].scores])
   const [sellerView, setSellerView] = useState(false)
-  const animRef = useRef<number | null>(null)
 
   const persona = PERSONAS[selectedPersona]
 
@@ -20,29 +19,7 @@ export function StrategyExplorer() {
     setSelectedPersona(index)
     setSellerView(false)
 
-    const targetScores = [...PERSONAS[index].scores]
-
-    // Cancel any running animation
-    if (animRef.current) cancelAnimationFrame(animRef.current)
-
-    // Animate scores transition
-    setScores((prev) => {
-      const start = [...prev]
-      const startTime = performance.now()
-      const duration = 400
-
-      function step(now: number) {
-        const t = Math.min((now - startTime) / duration, 1)
-        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-        const interpolated = start.map((s, i) => s + (targetScores[i] - s) * ease)
-        setScores(interpolated)
-        if (t < 1) {
-          animRef.current = requestAnimationFrame(step)
-        }
-      }
-      animRef.current = requestAnimationFrame(step)
-      return start
-    })
+    setScores([...PERSONAS[index].scores])
   }, [])
 
   const handleScoreChange = useCallback((index: number, value: number) => {

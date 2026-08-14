@@ -11,6 +11,14 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the WAVE motion-system release", () => {
+    expect(roadmap).toContain('version: "0.9.46"')
+    expect(roadmap).toContain("WAVE now responds with one quiet motion system")
+    expect(roadmap).toContain("Dashboard charts, keyboard navigation and repeated labels no longer delay routine work.")
+    expect(roadmap).toContain("Controls share one restrained timing and easing system while unnecessary property animation is removed.")
+    expect(roadmap).toContain("Reduced-motion users keep useful color and opacity feedback without movement.")
+  })
+
   it("records the simplified staff M&A office experience", () => {
     expect(roadmap).toContain('version: "0.9.44"')
     expect(roadmap).toContain("Office contacts now show their email address")
@@ -126,6 +134,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-12")')
+    expect(roadmapStatus).toContain('new Date("2026-08-14")')
   })
 })
