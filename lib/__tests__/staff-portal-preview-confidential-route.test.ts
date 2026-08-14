@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   getCurrentUserAccess: vi.fn(),
-  getStaffPortalPreviewPursuitProjection: vi.fn(),
+  resolvePortalPursuitResource: vi.fn(),
   createAdminClient: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({ getCurrentUserAccess: mocks.getCurrentUserAccess }))
-vi.mock("@/lib/data/opportunity-pursuit-projection", () => ({ getStaffPortalPreviewPursuitProjection: mocks.getStaffPortalPreviewPursuitProjection }))
+vi.mock("@/lib/data/current-pursuit", () => ({
+  resolvePortalPursuitResource: mocks.resolvePortalPursuitResource,
+}))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
 
 import { GET } from "@/app/(dashboard)/portal-preview/deals/[matchId]/documents/[documentId]/route"
@@ -27,55 +29,35 @@ describe("staff portal preview confidential route", () => {
   })
 
   it("fails closed when the preview pursuit lacks an exact canonical IM grant", async () => {
-    mocks.getStaffPortalPreviewPursuitProjection.mockResolvedValue({
-      enabled: true,
-      status: "active_pursuit",
-      opportunityStatus: "active",
-      gate2Passed: true,
-      dispatched: true,
-      revoked: false,
-      confidentialGrant: null,
-    })
+    mocks.resolvePortalPursuitResource.mockResolvedValue(null)
 
     expect((await requestPreview()).status).toBe(404)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
   it("fails closed when the selected IM differs from the exact grant", async () => {
-    mocks.getStaffPortalPreviewPursuitProjection.mockResolvedValue({
-      enabled: true,
-      status: "active_pursuit",
-      opportunityStatus: "active",
-      gate2Passed: true,
-      dispatched: true,
-      revoked: false,
-      confidentialGrant: { informationMemoDocumentId: "memo-granted" },
-    })
+    mocks.resolvePortalPursuitResource.mockResolvedValue(null)
 
     expect((await requestPreview()).status).toBe(404)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
   it("fails closed after a revocation without loading the IM", async () => {
-    mocks.getStaffPortalPreviewPursuitProjection.mockResolvedValue({
-      enabled: true,
-      status: "active_pursuit",
-      opportunityStatus: "active",
-      gate2Passed: true,
-      dispatched: true,
-      revoked: true,
-      confidentialGrant: { informationMemoDocumentId: "memo-1" },
-    })
+    mocks.resolvePortalPursuitResource.mockResolvedValue(null)
 
     expect((await requestPreview()).status).toBe(404)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
   it("uses the exact staff-preview helper scope rather than a raw staff projection", async () => {
-    mocks.getStaffPortalPreviewPursuitProjection.mockResolvedValue(null)
+    mocks.resolvePortalPursuitResource.mockResolvedValue(null)
 
     await requestPreview()
 
-    expect(mocks.getStaffPortalPreviewPursuitProjection).toHaveBeenCalledWith("match-1", "repreneur-1")
+    expect(mocks.resolvePortalPursuitResource).toHaveBeenCalledWith({
+      matchId: "match-1",
+      viewer: { kind: "staff-preview", repreneurId: "repreneur-1" },
+      resource: { kind: "information-memorandum", documentId: "memo-1" },
+    })
   })
 })

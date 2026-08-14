@@ -32,7 +32,7 @@ import {
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
-import type { OpportunityPursuitProjectionView } from "@/lib/data/opportunity-pursuit-projection"
+import type { StaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import type {
   OpportunityActionResult,
   OpportunityClosureHistoryEntry,
@@ -73,7 +73,7 @@ interface OpportunityDetailProps {
   matches: OpportunityMatch[]
   matchCandidates: OpportunityMatchCandidate[]
   pursuitEvents: OpportunityPursuitEvent[]
-  pursuitProjection: OpportunityPursuitProjectionView | null
+  pursuitProjection: StaffCurrentPursuit | null
   maWorkflow: MaOpportunityWorkflow
   updateAction: (formData: FormData) => Promise<OpportunityActionResult | void>
   resolveSourceAction: (formData: FormData) => Promise<OpportunityActionResult>

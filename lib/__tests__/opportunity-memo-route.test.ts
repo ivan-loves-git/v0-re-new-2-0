@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
-  getPortalPursuitProjection: vi.fn(),
+  resolvePortalPursuitResource: vi.fn(),
 }))
 
-vi.mock("@/lib/data/opportunity-pursuit-projection", () => ({
-  getPortalPursuitProjection: mocks.getPortalPursuitProjection,
+vi.mock("@/lib/data/current-pursuit", () => ({
+  resolvePortalPursuitResource: mocks.resolvePortalPursuitResource,
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -70,34 +70,20 @@ const informationMemo = {
   storage_path: "opportunities/opportunity-1/info-memo.pdf",
 }
 
-const exactLiveGrant = {
-  enabled: true,
-  gate1Passed: true,
-  gate2Passed: true,
-  dispatched: true,
-  revoked: false,
-  confidentialGrant: {
-    informationMemoDocumentId: "memo-1",
-    grantedAt: "2026-08-07T10:00:00.000Z",
-    source: { firmName: "Source firm", officeName: "Milan", contactNames: ["Contact"] },
-  },
-}
-
 describe("repreneur info-memo download route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.getPortalPursuitProjection.mockResolvedValue(exactLiveGrant)
+    mocks.resolvePortalPursuitResource.mockResolvedValue({
+      kind: "information-memorandum",
+      documentId: "memo-1",
+    })
   })
 
   it("denies a legacy signed label without consulting memo metadata", async () => {
     const { createSignedUrl, documentSelect } = setupAdminClient({
       document: informationMemo,
     })
-    mocks.getPortalPursuitProjection.mockResolvedValue({
-      ...exactLiveGrant,
-      gate2Passed: false,
-      confidentialGrant: null,
-    })
+    mocks.resolvePortalPursuitResource.mockResolvedValue(null)
 
     expect((await requestMemo()).status).toBe(404)
     expect(documentSelect).not.toHaveBeenCalled()
@@ -108,10 +94,7 @@ describe("repreneur info-memo download route", () => {
     const { createSignedUrl, documentSelect } = setupAdminClient({
       document: informationMemo,
     })
-    mocks.getPortalPursuitProjection.mockResolvedValue({
-      ...exactLiveGrant,
-      revoked: true,
-    })
+    mocks.resolvePortalPursuitResource.mockResolvedValue(null)
 
     expect((await requestMemo()).status).toBe(404)
     expect(documentSelect).not.toHaveBeenCalled()
@@ -122,6 +105,7 @@ describe("repreneur info-memo download route", () => {
     const { createSignedUrl, documentSelect } = setupAdminClient({
       document: informationMemo,
     })
+    mocks.resolvePortalPursuitResource.mockResolvedValue(null)
     const response = await GET(
       new NextRequest("http://localhost/portal/deals/match-1/documents/other-memo"),
       { params: Promise.resolve({ matchId: "match-1", documentId: "other-memo" }) },
@@ -145,6 +129,10 @@ describe("repreneur info-memo download route", () => {
       "opportunities/opportunity-1/info-memo.pdf",
       60,
     )
-    expect(mocks.getPortalPursuitProjection).toHaveBeenCalledWith("match-1")
+    expect(mocks.resolvePortalPursuitResource).toHaveBeenCalledWith({
+      matchId: "match-1",
+      viewer: { kind: "portal" },
+      resource: { kind: "information-memorandum", documentId: "memo-1" },
+    })
   })
 })

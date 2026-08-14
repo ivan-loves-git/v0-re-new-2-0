@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getPortalPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
+import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export async function GET(
@@ -7,13 +7,16 @@ export async function GET(
   context: { params: Promise<unknown> }
 ) {
   const { matchId, documentId } = (await context.params) as { matchId: string; documentId: string }
-  const projection = await getPortalPursuitProjection(matchId)
-  if (!projection?.enabled || projection.revoked || !projection.gate2Passed || !projection.confidentialGrant) {
-    return NextResponse.json({ error: "Confidential access has not been granted for this pursuit." }, { status: 404 })
-  }
-  if (projection.confidentialGrant.informationMemoDocumentId !== documentId) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
-  }
+  const authorized = await resolvePortalPursuitResource({
+    matchId,
+    viewer: { kind: "portal" },
+    resource: { kind: "information-memorandum", documentId },
+  })
+  if (
+    authorized?.kind !== "information-memorandum"
+    || authorized.documentId !== documentId
+  ) return NextResponse.json({ error: "Confidential access has not been granted for this pursuit." }, { status: 404 })
+
   const supabase = createAdminClient()
 
   const { data: match, error: matchError } = await supabase

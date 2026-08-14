@@ -7,6 +7,7 @@ import { LockedOpportunityInterestAction } from "@/components/opportunities/lock
 import { RepreneurNdaSignatureUpload } from "@/components/opportunities/repreneur-nda-signature-upload"
 import { RepreneurOpportunityDeclineAction } from "@/components/opportunities/repreneur-opportunity-decline-action"
 import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity-responses"
+import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 import {
   getOpportunityMatchStatusLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
@@ -24,23 +25,7 @@ interface RepreneurOpportunityDetailProps {
   readOnly?: boolean
   /** Legacy staff preview link factory; portal disclosure is now canonical and ignores it. */
   documentHrefForDocument?: (document: RepreneurOpportunityDocument) => string | null
-  journey?: {
-    enabled: boolean
-    gate1Passed: boolean
-    gate2Passed: boolean
-    dispatched: boolean
-    confidentialGrant: {
-      informationMemoDocumentId: string
-      grantedAt: string
-      source: {
-        firmName: string
-        officeName: string
-        contactNames: string[]
-      }
-    } | null
-    revoked: boolean
-    evidenceRequired: boolean
-  } | null
+  journey?: PortalCurrentPursuit | null
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityDetailItem) {

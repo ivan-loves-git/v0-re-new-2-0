@@ -25,7 +25,7 @@ import {
   validateOpportunityPursuitSignedCopy,
   validateOpportunityPursuitTemplate,
 } from "@/lib/actions/opportunity-pursuit-journey"
-import type { OpportunityPursuitProjectionView } from "@/lib/data/opportunity-pursuit-projection"
+import type { StaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import type { OpportunityDocument, OpportunityMatch, OpportunityNdaArtifact } from "@/lib/types/opportunity"
 
@@ -34,7 +34,7 @@ interface OpportunityPursuitPanelProps {
   matches: OpportunityMatch[]
   documents: OpportunityDocument[]
   ndaArtifacts: OpportunityNdaArtifact[]
-  projection: OpportunityPursuitProjectionView | null
+  projection: StaffCurrentPursuit | null
   legacyEventCount: number
 }
 

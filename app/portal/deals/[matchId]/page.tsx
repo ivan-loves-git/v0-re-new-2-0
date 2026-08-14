@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RepreneurOpportunityDetail } from "@/components/opportunities/repreneur-opportunity-detail"
 import { getMyRepreneurOpportunity } from "@/lib/actions/repreneur-opportunities"
-import { getPortalPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
+import { readPortalCurrentPursuit } from "@/lib/data/current-pursuit"
 
 
 export default async function PortalDealDetailPage({ params }: { params: Promise<{ matchId: string }> }) {
@@ -18,7 +18,10 @@ export default async function PortalDealDetailPage({ params }: { params: Promise
   }
 
   const journey = opportunity.match_id && opportunity.match_status === "active_pursuit"
-    ? await getPortalPursuitProjection(opportunity.match_id)
+    ? await readPortalCurrentPursuit({
+        matchId: opportunity.match_id,
+        viewer: { kind: "portal" },
+      })
     : null
 
   return (

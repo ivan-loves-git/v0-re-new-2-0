@@ -7,7 +7,7 @@ import { OpportunityDetail } from "@/components/opportunities/opportunity-detail
 import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
 import { listOpportunityNdaArtifacts } from "@/lib/actions/opportunity-nda-artifacts"
-import { getStaffPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
+import { readStaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import {
   listOpportunityMatchCandidates,
   listOpportunityMatches,
@@ -87,7 +87,7 @@ async function OpportunityDetailContent({
     ?? matches.find((match) => match.status === "dropped")
     ?? null
   const pursuitProjection = journeyMatch
-    ? await getStaffPursuitProjection(journeyMatch.id)
+    ? await readStaffCurrentPursuit(journeyMatch.id)
     : null
 
   async function updateAction(formData: FormData) {

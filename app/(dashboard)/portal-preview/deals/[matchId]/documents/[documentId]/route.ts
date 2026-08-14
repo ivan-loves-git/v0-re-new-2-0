@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getCurrentUserAccess } from "@/lib/access-control"
-import { getStaffPortalPreviewPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
+import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export async function GET(
@@ -15,14 +15,14 @@ export async function GET(
   if (!repreneurId) return NextResponse.json({ error: "Missing repreneurId" }, { status: 400 })
 
   const { matchId, documentId } = (await context.params) as { matchId: string; documentId: string }
-  const projection = await getStaffPortalPreviewPursuitProjection(matchId, repreneurId)
+  const authorized = await resolvePortalPursuitResource({
+    matchId,
+    viewer: { kind: "staff-preview", repreneurId },
+    resource: { kind: "information-memorandum", documentId },
+  })
   if (
-    !projection ||
-    !projection.enabled ||
-    !projection.gate2Passed ||
-    !projection.dispatched ||
-    projection.revoked ||
-    projection.confidentialGrant?.informationMemoDocumentId !== documentId
+    authorized?.kind !== "information-memorandum"
+    || authorized.documentId !== documentId
   ) {
     return NextResponse.json({ error: "Confidential access has not been granted for this pursuit." }, { status: 404 })
   }

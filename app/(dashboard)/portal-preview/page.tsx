@@ -15,7 +15,7 @@ import {
   listStaffPortalPreviewOpportunities,
   listStaffPortalPreviewOptions,
 } from "@/lib/actions/repreneur-portal-preview"
-import { getStaffPortalPreviewPursuitProjection } from "@/lib/data/opportunity-pursuit-projection"
+import { readPortalCurrentPursuit } from "@/lib/data/current-pursuit"
 
 
 interface StaffPortalPreviewPageProps {
@@ -58,7 +58,10 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
 
   const defaultTab = params.view === "profile" ? "profile" : "deals"
   const previewJourney = selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
-    ? await getStaffPortalPreviewPursuitProjection(selectedOpportunity.match_id, selectedRepreneurId)
+    ? await readPortalCurrentPursuit({
+        matchId: selectedOpportunity.match_id,
+        viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId },
+      })
     : null
 
   return (

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getPortalAuthorizedNdaTemplate } from "@/lib/data/opportunity-pursuit-projection"
+import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 function privateRedirect(url: string) {
@@ -11,8 +11,12 @@ function privateRedirect(url: string) {
 /** The portal may read the exact opportunity template only after canonical Gate 1. */
 export async function GET(_request: Request, context: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await context.params
-  const template = await getPortalAuthorizedNdaTemplate(matchId)
-  if (!template) {
+  const template = await resolvePortalPursuitResource({
+    matchId,
+    viewer: { kind: "portal" },
+    resource: { kind: "nda-template" },
+  })
+  if (template?.kind !== "nda-template") {
     return NextResponse.json({ error: "Gate 1 is required before the template can be downloaded." }, { status: 404 })
   }
 
