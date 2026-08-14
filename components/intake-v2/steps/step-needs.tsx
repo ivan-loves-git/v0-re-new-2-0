@@ -143,7 +143,7 @@ export function StepNeeds({
             return (
               <div
                 key={option.value}
-                className={`flex items-center gap-3 p-3 rounded-md border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out cursor-pointer ${
+                className={`flex items-center gap-3 p-3 rounded-md border-2 cursor-pointer ${
                   isSelected
                     ? "bg-blue-50 border-blue-400 ring-1 ring-blue-200"
                     : "border-border hover:bg-muted/50 hover:border-input"

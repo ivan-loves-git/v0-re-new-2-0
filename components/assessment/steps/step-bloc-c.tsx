@@ -61,7 +61,7 @@ export function StepBlocC({ data, onChange, onNext, onBack, errors }: Assessment
                         onClick={() => handleSelect(question.id, value)}
                         title={label}
                         className={cn(
-                          'flex-1 flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out',
+                          'flex-1 flex flex-col items-center gap-1 p-2 rounded-lg border-2',
                           isSelected
                             ? 'border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600'
                             : 'border-border hover:border-muted-foreground/40 hover:bg-muted/50'

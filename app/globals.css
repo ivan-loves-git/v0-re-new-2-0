@@ -280,52 +280,6 @@
     @apply fixed left-3 top-3 z-[100] -translate-y-20 rounded-md bg-foreground px-3 py-2 text-sm font-semibold text-background shadow-lg transition-transform focus:translate-y-0;
   }
 
-  .wave-trigger-overlay {
-    --wave-overlay-x: 0;
-    --wave-overlay-y: 0;
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    transition: opacity var(--duration-wave-fast) var(--ease-wave-out), transform var(--duration-wave-fast) var(--ease-wave-out);
-  }
-
-  .wave-trigger-overlay[data-side="bottom"] { --wave-overlay-y: -0.5rem; }
-  .wave-trigger-overlay[data-side="top"] { --wave-overlay-y: 0.5rem; }
-  .wave-trigger-overlay[data-side="right"] { --wave-overlay-x: -0.5rem; }
-  .wave-trigger-overlay[data-side="left"] { --wave-overlay-x: 0.5rem; }
-  .wave-trigger-overlay[data-state="closed"] {
-    opacity: 0;
-    transform: translate3d(var(--wave-overlay-x), var(--wave-overlay-y), 0) scale(0.95);
-  }
-
-  .wave-expandable-motion {
-    display: grid;
-    grid-template-rows: 0fr;
-    opacity: 0;
-    transition: grid-template-rows var(--duration-wave-standard) var(--ease-wave-in-out), opacity var(--duration-wave-fast) var(--ease-wave-out);
-  }
-
-  .wave-expandable-motion[data-state="open"] {
-    grid-template-rows: 1fr;
-    opacity: 1;
-  }
-
-  .wave-expandable-motion > * {
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  @starting-style {
-    .wave-trigger-overlay[data-state="open"] {
-      opacity: 0;
-      transform: translate3d(var(--wave-overlay-x), var(--wave-overlay-y), 0) scale(0.95);
-    }
-
-    .wave-expandable-motion[data-state="open"] {
-      grid-template-rows: 0fr;
-      opacity: 0;
-    }
-  }
-
   @keyframes wave-success-confirm {
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }
@@ -343,24 +297,6 @@
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-  }
-
-  .wave-trigger-overlay,
-  .wave-trigger-overlay[data-state="closed"] {
-    transform: none;
-    transition: opacity var(--duration-wave-fast) var(--ease-wave-out);
-  }
-
-  @starting-style {
-    .wave-trigger-overlay[data-state="open"] { transform: none; }
-  }
-
-  .wave-expandable-motion {
-    transition: grid-template-rows var(--duration-wave-instant), opacity var(--duration-wave-fast) var(--ease-wave-out);
-  }
-
-  @starting-style {
-    .wave-expandable-motion[data-state="open"] { grid-template-rows: 1fr; }
   }
 
   .wave-success-confirm { animation: none !important; }

@@ -45,7 +45,7 @@ Charts should not rely on color alone. Every chart includes a screen-reader tabl
 ### Motion
 
 - Use the WAVE motion tokens: instant (0ms), press (160ms), fast (180ms), standard (220ms), and drawer (280ms).
-- Use the strong WAVE easing curves for deliberate state changes. Prefer transform and opacity over layout or paint properties.
+- Use the strong WAVE easing curves for deliberate state changes. Prefer transform and opacity over layout or paint properties. Radix overlays use compatible short keyframes and are not guaranteed to reverse mid-flight.
 - Operational content, including charts, renders immediately; motion explains an explicit state change rather than page arrival.
 - Every movement transition needs an explicit reduced-motion variant. Reduced motion removes movement while retaining useful color and opacity feedback.
 

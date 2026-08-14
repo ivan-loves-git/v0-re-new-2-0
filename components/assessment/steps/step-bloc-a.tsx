@@ -48,7 +48,7 @@ export function StepBlocA({ data, onChange, onNext, errors }: AssessmentStepProp
                   type="button"
                   onClick={() => handleSelect(question.id, 'A')}
                   className={cn(
-                    'w-full text-left p-3 rounded-lg border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out text-sm',
+                    'w-full text-left p-3 rounded-lg border-2 text-sm',
                     selectedValue === 'A'
                       ? 'border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600'
                       : 'border-border hover:border-muted-foreground/40 hover:bg-muted/50'
@@ -63,7 +63,7 @@ export function StepBlocA({ data, onChange, onNext, errors }: AssessmentStepProp
                   type="button"
                   onClick={() => handleSelect(question.id, 'B')}
                   className={cn(
-                    'w-full text-left p-3 rounded-lg border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out text-sm',
+                    'w-full text-left p-3 rounded-lg border-2 text-sm',
                     selectedValue === 'B'
                       ? 'border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600'
                       : 'border-border hover:border-muted-foreground/40 hover:bg-muted/50'

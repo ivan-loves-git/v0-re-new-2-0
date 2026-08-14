@@ -26,7 +26,7 @@ export function PersonaSelector({ personas, selectedIndex, onSelect }: PersonaSe
           <Card
             key={persona.id}
             className={cn(
-              "cursor-pointer transition-[background-color,border-color,box-shadow] duration-wave-fast ease-wave-out hover:shadow-md py-4",
+              "cursor-pointer py-4",
               isActive
                 ? "ring-2 ring-emerald-500 bg-emerald-50/50"
                 : "hover:border-input"

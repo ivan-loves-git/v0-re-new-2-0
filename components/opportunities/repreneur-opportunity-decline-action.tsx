@@ -74,7 +74,7 @@ export function RepreneurOpportunityDeclineAction({
           Not a fit
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="wave-expandable-motion mt-3">
+      <CollapsibleContent className="mt-3">
     <form action={formAction} className="rounded-lg border p-4">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">

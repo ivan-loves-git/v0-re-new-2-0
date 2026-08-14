@@ -146,7 +146,7 @@ export function RadioOptionGrid({
         <div
           key={opt.value}
           className={cn(
-            "flex items-center space-x-3 p-4 rounded-xl border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out cursor-pointer",
+            "flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer",
             value === opt.value
               ? "border-blue-500 bg-blue-50"
               : "border-border/60 hover:border-border hover:bg-muted/50"
@@ -228,7 +228,7 @@ export function CheckboxGrid({
         <div
           key={opt.value}
           className={cn(
-            "flex items-center space-x-3 p-3 rounded-xl border-2 transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out cursor-pointer",
+            "flex items-center space-x-3 p-3 rounded-xl border-2 cursor-pointer",
             value.includes(opt.value)
               ? "border-blue-500 bg-blue-50"
               : "border-border/60 hover:border-border hover:bg-muted/50"
@@ -423,7 +423,7 @@ export function ConsentCheckbox({
   return (
     <div
       className={cn(
-        "flex items-start space-x-4 p-4 rounded-xl border-2 cursor-pointer transition-[background-color,border-color,box-shadow,color] duration-wave-fast ease-wave-out",
+        "flex items-start space-x-4 p-4 rounded-xl border-2 cursor-pointer",
         checked
           ? "border-blue-500 bg-blue-50"
           : "border-border bg-white hover:border-blue-300"

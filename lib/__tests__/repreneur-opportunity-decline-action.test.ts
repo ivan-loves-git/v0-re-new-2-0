@@ -31,7 +31,7 @@ describe("repreneur opportunity not-a-fit response", () => {
     expect(declineForm).toContain("Response not saved")
     expect(declineForm).toContain("<Collapsible open={isExpanded} onOpenChange={setIsExpanded}>")
     expect(declineForm).toContain("<CollapsibleTrigger asChild>")
-    expect(declineForm).toContain("wave-expandable-motion")
+    expect(declineForm).toContain("<CollapsibleContent className=\"mt-3\">")
     expect(declineForm).toContain("firstReasonRef.current?.focus()")
     expect(declineForm).toContain("triggerRef.current?.focus()")
     expect(declineForm).toContain("Confirm not a fit")
