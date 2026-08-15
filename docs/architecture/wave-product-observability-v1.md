@@ -87,6 +87,27 @@ Allowed properties include schema version, environment, release, route template,
 
 Do not send raw prompts, generated drafts, notes, names, email addresses, company names, CRM or business-record IDs, document IDs, identifier-bearing URLs, free-text feedback, provider responses, request/response bodies, cookies, tokens or headers.
 
+### M2 controlled-opening funnel
+
+The M2 technical-readiness release adds a narrow, **server-confirmed** funnel for
+the controlled repreneur opening. It uses the existing event names and
+allowlisted properties only:
+
+| Confirmed point | Metadata-only contract |
+| --- | --- |
+| Portal entry | `portal_access` + `access` + `success` |
+| Deal list or detail read | `portal_deals` + `open` + `success` |
+| Interest or decline saved | `portal_deals` + `express_interest` or `decline` + `success`, `failure`, or `validation_error` |
+| Signed NDA upload | `portal_pursuit` + `upload` + `success`, `failure`, or `validation_error` |
+| Staff starts/progresses a pursuit, records a gate, or grants/revokes confidential access | `portal_pursuit` + `confirm` or `update` + `success`, `failure`, or `validation_error` |
+
+Failure events may include only one fixed category: `access_denied`,
+`validation_failed`, `unavailable`, `persistence_failed`,
+`notification_failed`, `upload_failed`, or `internal_error`. They never include
+an error message. Server capture runs after the underlying action is committed
+or rejected and is swallowed if PostHog is unavailable; analytics cannot change
+the outcome of an access, response, document, or pursuit action.
+
 ## Replay and automatic diagnostics
 
 Replay and diagnostics are useful for product-learning only when they preserve the same content boundary:

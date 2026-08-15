@@ -1,12 +1,17 @@
 import "server-only"
 
+import { after } from "next/server"
 import { BUILD_HASH, BUILD_NUMBER } from "@/lib/version"
-import type { WaveAiGenerationCapture } from "@/lib/telemetry/contract"
+import type {
+  WaveAiGenerationCapture,
+  WaveServerEventCapture,
+} from "@/lib/telemetry/contract"
 import { buildAiGenerationPayload } from "@/lib/telemetry/ai-payload"
 import {
   POSTHOG_EU_INGESTION_HOST,
   resolveServerTelemetryConfig,
 } from "@/lib/telemetry/config"
+import { isOpaqueUuid, sanitizeWaveProperties } from "@/lib/telemetry/privacy"
 
 function serverTelemetryConfig() {
   return resolveServerTelemetryConfig({
@@ -50,4 +55,47 @@ export async function captureWaveAiGeneration(
   } catch {
     return false
   }
+}
+
+/**
+ * Send a metadata-only event after a business action has already committed.
+ * This never controls, delays, or retries the business workflow itself.
+ */
+export async function captureWaveServerEvent(capture: WaveServerEventCapture) {
+  const config = serverTelemetryConfig()
+  if (!config.enabled || !config.projectToken || !isOpaqueUuid(capture.distinctId)) return false
+
+  const properties = sanitizeWaveProperties(capture.properties, {
+    environment: config.environment,
+    release: config.release,
+    isTest: config.isTest,
+  })
+
+  try {
+    const response = await fetch(`${POSTHOG_EU_INGESTION_HOST}/capture/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: config.projectToken,
+        event: capture.event,
+        properties: {
+          ...properties,
+          distinct_id: capture.distinctId,
+          $geoip_disable: true,
+        },
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(4_000),
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+/** Queue telemetry after the response without making product success depend on it. */
+export function queueWaveServerEvent(capture: WaveServerEventCapture) {
+  after(() => {
+    void captureWaveServerEvent(capture)
+  })
 }

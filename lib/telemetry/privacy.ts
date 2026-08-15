@@ -5,6 +5,7 @@ import {
   WAVE_AI_FEATURES,
   WAVE_AI_STATUSES,
   WAVE_EVENT_NAMES,
+  WAVE_ERROR_CODES,
   WAVE_LATENCY_BUCKETS,
   WAVE_OUTCOMES,
   WAVE_ROLES,
@@ -295,7 +296,7 @@ function sanitizeApplicationProperties(properties: Properties, context: Telemetr
       case "latency_bucket": if (isOneOf(value, WAVE_LATENCY_BUCKETS)) safe.latency_bucket = value; break
       case "feature": if (isOneOf(value, WAVE_AI_FEATURES)) safe.feature = value; break
       case "status": if (isOneOf(value, WAVE_AI_STATUSES)) safe.status = value; break
-      case "error_code": if (isOneOf(value, WAVE_AI_ERROR_CODES)) safe.error_code = value; break
+      case "error_code": if (isOneOf(value, [...WAVE_AI_ERROR_CODES, ...WAVE_ERROR_CODES])) safe.error_code = value; break
       case "input_tokens": case "cached_input_tokens": case "cache_write_tokens": case "output_tokens": case "reasoning_tokens": {
         const count = finiteNumber(value, 10_000_000)
         if (count !== undefined) safe[key] = Math.trunc(count)

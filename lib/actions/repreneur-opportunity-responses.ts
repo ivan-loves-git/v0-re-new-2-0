@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import type { OpportunityDeclineReasonCategory, OpportunityMatchStatus } from "@/lib/types/opportunity"
 
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined"]
@@ -38,8 +39,12 @@ function readDeclineReasonText(formData?: FormData) {
   return trimmed.length > 0 ? trimmed : null
 }
 
-async function updateMyOpportunityResponse(matchId: string, status: "interested" | "declined", formData?: FormData) {
-  const access = await requirePortalAccess()
+async function updateMyOpportunityResponse(
+  matchId: string,
+  status: "interested" | "declined",
+  access: Awaited<ReturnType<typeof requirePortalAccess>>,
+  formData?: FormData,
+) {
   if (!access.repreneurId) throw new Error("No linked repreneur profile")
 
   const supabase = createAdminClient()
@@ -81,7 +86,7 @@ async function updateMyOpportunityResponse(matchId: string, status: "interested"
 
   if (error) throw new Error(error.message)
 
-  return match.opportunity_id
+  return { opportunityId: match.opportunity_id, userId: access.user?.id ?? "" }
 }
 
 function refreshMyOpportunityResponse(matchId: string, opportunityId: string) {
@@ -92,8 +97,29 @@ function refreshMyOpportunityResponse(matchId: string, opportunityId: string) {
 }
 
 export async function markMyOpportunityInterested(matchId: string) {
-  const opportunityId = await updateMyOpportunityResponse(matchId, "interested")
-  refreshMyOpportunityResponse(matchId, opportunityId)
+  const access = await requirePortalAccess()
+  let result: { opportunityId: string; userId: string }
+  try {
+    result = await updateMyOpportunityResponse(matchId, "interested", access)
+  } catch (error) {
+    queueM2RepreneurEvent({
+      userId: access.user?.id ?? "",
+      routeTemplate: "/portal/deals/:matchId",
+      workflow: "portal_deals",
+      action: "express_interest",
+      outcome: error instanceof RepreneurOpportunityResponseError ? "validation_error" : "failure",
+      errorCode: error instanceof RepreneurOpportunityResponseError ? "validation_failed" : "persistence_failed",
+    })
+    throw error
+  }
+  queueM2RepreneurEvent({
+    userId: result.userId,
+    routeTemplate: "/portal/deals/:matchId",
+    workflow: "portal_deals",
+    action: "express_interest",
+    outcome: "success",
+  })
+  refreshMyOpportunityResponse(matchId, result.opportunityId)
   redirect("/portal/deals")
 }
 
@@ -102,11 +128,20 @@ export async function declineMyOpportunity(
   _previousState: RepreneurOpportunityDeclineActionState,
   formData: FormData,
 ): Promise<RepreneurOpportunityDeclineActionState> {
-  let opportunityId: string
+  const access = await requirePortalAccess()
+  let result: { opportunityId: string; userId: string }
 
   try {
-    opportunityId = await updateMyOpportunityResponse(matchId, "declined", formData)
+    result = await updateMyOpportunityResponse(matchId, "declined", access, formData)
   } catch (error) {
+    queueM2RepreneurEvent({
+      userId: access.user?.id ?? "",
+      routeTemplate: "/portal/deals/:matchId",
+      workflow: "portal_deals",
+      action: "decline",
+      outcome: error instanceof RepreneurOpportunityResponseError ? "validation_error" : "failure",
+      errorCode: error instanceof RepreneurOpportunityResponseError ? "validation_failed" : "persistence_failed",
+    })
     if (error instanceof RepreneurOpportunityResponseError) {
       return { status: "error", message: error.message }
     }
@@ -118,6 +153,13 @@ export async function declineMyOpportunity(
     }
   }
 
-  refreshMyOpportunityResponse(matchId, opportunityId)
+  queueM2RepreneurEvent({
+    userId: result.userId,
+    routeTemplate: "/portal/deals/:matchId",
+    workflow: "portal_deals",
+    action: "decline",
+    outcome: "success",
+  })
+  refreshMyOpportunityResponse(matchId, result.opportunityId)
   redirect("/portal/deals")
 }

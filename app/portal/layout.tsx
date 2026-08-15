@@ -4,6 +4,7 @@ import { requirePortalAccess } from "@/lib/access-control"
 import { PortalShell } from "@/components/portal/portal-shell"
 import { getOpaqueTelemetryUserId } from "@/lib/telemetry/identity"
 import { WaveTelemetryIdentity } from "@/lib/telemetry/provider"
+import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 
 async function PortalGate({
   children,
@@ -11,6 +12,13 @@ async function PortalGate({
   children: React.ReactNode
 }) {
   const { user } = await requirePortalAccess()
+  queueM2RepreneurEvent({
+    userId: user.id,
+    routeTemplate: "/portal",
+    workflow: "portal_access",
+    action: "access",
+    outcome: "success",
+  })
 
   return (
     <>

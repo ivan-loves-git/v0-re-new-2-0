@@ -7,6 +7,7 @@ import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
+import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
   sortRepreneurDealFlow,
   type RepreneurDealFlowSortCandidate,
@@ -470,12 +471,21 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     sort,
   ).map(withoutRelevanceScore) : []
 
-  return {
+  const result = {
     repreneur,
     staffRecommended,
     dealFlow,
     automaticMatching,
   }
+  const access = await requirePortalAccess()
+  queueM2RepreneurEvent({
+    userId: access.user.id,
+    routeTemplate: "/portal/deals",
+    workflow: "portal_deals",
+    action: "open",
+    outcome: "success",
+  })
+  return result
 }
 
 export async function getMyRepreneurOpportunity(
@@ -560,7 +570,7 @@ export async function getMyRepreneurOpportunity(
     if (!opportunity) return null
 
     const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [opportunity.id])
-    return withoutRelevanceScore({
+    const result = withoutRelevanceScore({
       ...toDealFlowOpportunity(opportunity, repreneur),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
         opportunity.id,
@@ -568,12 +578,21 @@ export async function getMyRepreneurOpportunity(
         activeOwnerByOpportunity,
       ),
     })
+    const access = await requirePortalAccess()
+    queueM2RepreneurEvent({
+      userId: access.user.id,
+      routeTemplate: "/portal/deals/:matchId",
+      workflow: "portal_deals",
+      action: "open",
+      outcome: "success",
+    })
+    return result
   }
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
 
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(supabase, [exposure.match_id])
-  return {
+  const result = {
     ...exposure,
     ...interestStateByMatch.get(exposure.match_id),
     is_locked_for_other_repreneur: isLockedForOtherRepreneur(
@@ -584,4 +603,13 @@ export async function getMyRepreneurOpportunity(
     visible_documents: [],
     memo_availability: undefined,
   }
+  const access = await requirePortalAccess()
+  queueM2RepreneurEvent({
+    userId: access.user.id,
+    routeTemplate: "/portal/deals/:matchId",
+    workflow: "portal_deals",
+    action: "open",
+    outcome: "success",
+  })
+  return result
 }

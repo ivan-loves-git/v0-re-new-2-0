@@ -8,6 +8,7 @@ import {
   LockedOpportunityInterestUnavailableError,
   expressOpportunityInterest,
 } from "@/lib/locked-opportunity-interest"
+import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 
 type LockedOpportunityInterestActionState =
   | { status: "idle"; message: ""; recorded: false }
@@ -64,6 +65,14 @@ export async function expressOpportunityInterestAction(
     revalidatePath(`/opportunities/${opportunityId}`)
 
     if (outcome.status === "notification_failed") {
+      queueM2RepreneurEvent({
+        userId: access.user.id,
+        routeTemplate: "/portal/deals",
+        workflow: "portal_deals",
+        action: "express_interest",
+        outcome: "failure",
+        errorCode: "notification_failed",
+      })
       return {
         status: "error",
         message: "Your interest is recorded, but the email alert did not go through yet. Retry to notify Re-New.",
@@ -71,12 +80,27 @@ export async function expressOpportunityInterestAction(
       }
     }
 
+    queueM2RepreneurEvent({
+      userId: access.user.id,
+      routeTemplate: "/portal/deals",
+      workflow: "portal_deals",
+      action: "express_interest",
+      outcome: "success",
+    })
     return {
       status: "success",
       message: "Thank you. Re-New has received your interest and will follow up with you directly.",
       recorded: true,
     }
   } catch (error) {
+    queueM2RepreneurEvent({
+      userId: access.user.id,
+      routeTemplate: "/portal/deals",
+      workflow: "portal_deals",
+      action: "express_interest",
+      outcome: error instanceof LockedOpportunityInterestUnavailableError ? "validation_error" : "failure",
+      errorCode: error instanceof LockedOpportunityInterestUnavailableError ? "validation_failed" : "persistence_failed",
+    })
     if (error instanceof LockedOpportunityInterestUnavailableError) {
       return {
         status: "error",

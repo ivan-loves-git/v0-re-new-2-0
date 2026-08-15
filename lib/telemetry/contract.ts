@@ -43,6 +43,8 @@ export const WAVE_WORKFLOWS = [
   "email",
   "portal_deals",
   "portal_profile",
+  "portal_access",
+  "portal_pursuit",
   "wave_ai",
   "navigation",
   "unknown",
@@ -72,6 +74,7 @@ export const WAVE_ACTIONS = [
   "navigate",
   "feedback",
   "discard",
+  "access",
 ] as const
 
 export type WaveAction = (typeof WAVE_ACTIONS)[number]
@@ -93,6 +96,23 @@ export const WAVE_OUTCOMES = [
 ] as const
 
 export type WaveOutcome = (typeof WAVE_OUTCOMES)[number]
+
+/**
+ * Product-level categories only. They deliberately describe the class of a
+ * failure without carrying a provider response, a record identifier, or any
+ * user-entered text.
+ */
+export const WAVE_ERROR_CODES = [
+  "access_denied",
+  "validation_failed",
+  "unavailable",
+  "persistence_failed",
+  "notification_failed",
+  "upload_failed",
+  "internal_error",
+] as const
+
+export type WaveErrorCode = (typeof WAVE_ERROR_CODES)[number]
 
 export const WAVE_AI_FEATURES = [
   "email_draft",
@@ -155,7 +175,7 @@ export interface WaveTelemetryProperties {
   latency_bucket?: WaveLatencyBucket
   feature?: WaveAiFeature
   status?: WaveAiStatus
-  error_code?: WaveAiErrorCode
+  error_code?: WaveAiErrorCode | WaveErrorCode
   input_tokens?: number
   cached_input_tokens?: number
   cache_write_tokens?: number
@@ -182,4 +202,11 @@ export interface WaveAiGenerationCapture {
   estimatedCostUsd?: number
   errorCode?: WaveAiErrorCode
   isTest?: boolean
+}
+
+export interface WaveServerEventCapture {
+  /** An analytics-only UUID derived from the authenticated user ID. */
+  distinctId: string
+  event: Exclude<WaveEventName, "$ai_generation">
+  properties: WaveTelemetryProperties
 }
