@@ -163,10 +163,20 @@ export function RepreneurTargetThesisEditor({
   repreneur,
   onSave,
   successMessage = "Target thesis updated. Your deal matching has been refreshed.",
+  triggerLabel = "Edit thesis",
+  title = "Update your target thesis",
+  description = "Keep the criteria Re-New uses to surface relevant opportunities current. Your readiness milestones remain managed by Re-New.",
+  saveLabel = "Save target thesis",
+  errorMessage = "Could not update your target thesis.",
 }: {
   repreneur: TargetThesisProfile
   onSave?: (input: TargetThesisInput) => Promise<void>
   successMessage?: string
+  triggerLabel?: string
+  title?: string
+  description?: string
+  saveLabel?: string
+  errorMessage?: string
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -193,7 +203,7 @@ export function RepreneurTargetThesisEditor({
         setOpen(false)
         router.refresh()
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Could not update your target thesis.")
+        toast.error(error instanceof Error ? error.message : errorMessage)
       }
     })
   }
@@ -209,15 +219,13 @@ export function RepreneurTargetThesisEditor({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Pencil data-icon="inline-start" />
-          Edit thesis
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Update your target thesis</DialogTitle>
-          <DialogDescription>
-            Keep the criteria Re-New uses to surface relevant opportunities current. Your readiness milestones remain managed by Re-New.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="flex-1 space-y-6 overflow-y-auto pr-1">
           <SelectionGroup
@@ -333,7 +341,7 @@ export function RepreneurTargetThesisEditor({
           </Button>
           <Button type="button" onClick={save} disabled={isPending}>
             {isPending && <Loader2 data-icon="inline-start" className="animate-spin" />}
-            Save target thesis
+            {saveLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

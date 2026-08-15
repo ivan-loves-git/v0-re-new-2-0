@@ -40,8 +40,31 @@ describe("server-confirmed WAVE telemetry", () => {
     await expect(captureWaveServerEvent(capture)).resolves.toBe(false)
   })
 
-  it("queues a sanitized capture after the request response lifecycle", () => {
-    queueWaveServerEvent(capture)
+  it("queues a sanitized capture after the request response lifecycle", async () => {
+    expect(queueWaveServerEvent(capture)).toBe(true)
     expect(mocks.after).toHaveBeenCalledTimes(1)
+    await expect(mocks.after.mock.calls[0]?.[0]()).resolves.toBeUndefined()
+  })
+
+  it("rejects event names outside the runtime allowlist", async () => {
+    vi.stubEnv("POSTHOG_ENABLED", "true")
+    vi.stubEnv("POSTHOG_PROJECT_TOKEN", "phc_wave_project_token_1234567890")
+    vi.stubEnv("POSTHOG_ENVIRONMENT", "production")
+    const transport = vi.fn()
+    vi.stubGlobal("fetch", transport)
+
+    await expect(captureWaveServerEvent({
+      ...capture,
+      event: "private_record_exported",
+    } as never)).resolves.toBe(false)
+    expect(transport).not.toHaveBeenCalled()
+  })
+
+  it("swallows queue failures before they can affect product work", () => {
+    mocks.after.mockImplementationOnce(() => {
+      throw new Error("request context closed")
+    })
+
+    expect(queueWaveServerEvent(capture)).toBe(false)
   })
 })

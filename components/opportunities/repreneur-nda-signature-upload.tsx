@@ -22,7 +22,7 @@ export function RepreneurNdaSignatureUpload({ matchId }: { matchId: string }) {
     } else {
       toast.error(result.message)
     }
-  })} className="flex flex-col gap-3 rounded-md border p-4">
+  })} className="flex flex-col gap-3 rounded-md border p-4" data-wave-action="upload" data-wave-workflow="portal_pursuit">
     <input type="hidden" name="match_id" value={matchId} />
     <div><h3 className="font-medium">Upload your signed NDA</h3><p className="mt-1 text-sm text-muted-foreground">Upload the exact Gate 1 template as a PDF. Re-New will validate it before Gate 2.</p></div>
     <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="signed-nda-title">Document title</Label><Input id="signed-nda-title" name="title" defaultValue="NDA signed by repreneur" required /></div><div className="space-y-2"><Label htmlFor="signed-nda-file">Signed PDF</Label><Input id="signed-nda-file" name="file" type="file" accept="application/pdf,.pdf" required /></div></div>

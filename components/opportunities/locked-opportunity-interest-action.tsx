@@ -80,7 +80,7 @@ export function LockedOpportunityInterestAction({
             </Alert>
           ) : null}
 
-          <form action={formAction}>
+          <form action={formAction} data-wave-action="express_interest" data-wave-workflow="portal_deals">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
             <Button type="submit" disabled={pending}>
               {pending ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}

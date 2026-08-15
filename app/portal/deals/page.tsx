@@ -30,14 +30,14 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
             <h2 id="deal-flow" className="text-base font-semibold">Deal flow</h2>
             <p className="text-sm text-muted-foreground">Opportunities ordered for your profile.</p>
           </div>
-          <RepreneurDealSortSelector value={sort} />
+          {automaticMatching.complete ? <RepreneurDealSortSelector value={sort} /> : null}
         </div>
         {!automaticMatching.complete && repreneur ? (
           <Alert>
             <BriefcaseBusiness />
             <AlertTitle>Complete your acquisition project to see the full deal flow</AlertTitle>
             <AlertDescription className="flex flex-col gap-3">
-              <span>Re-New selections remain available. Add your {automaticMatching.missing.join(", ")} so WAVE can order the wider deal flow for your profile.</span>
+              <span>Re-New selections remain available. Complete the missing profile and acquisition-project information so WAVE can order the wider deal flow for you.</span>
               <Button asChild className="w-fit" size="sm" variant="outline">
                 <Link href="/portal/profile#target-thesis">Edit acquisition project</Link>
               </Button>

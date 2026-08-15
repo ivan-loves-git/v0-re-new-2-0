@@ -161,7 +161,7 @@ export function RepreneurOpportunityDetail({
 
           {!readOnly && !lockedForAnotherRepreneur && interestAction && canRespond(opportunity.match_status) && (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <form action={interestAction}>
+              <form action={interestAction} data-wave-action="express_interest" data-wave-workflow="portal_deals">
                 <Button type="submit" disabled={opportunity.match_status === "interested"}>
                   <CheckCircle2 data-icon="inline-start" />
                   {opportunity.match_status === "interested" ? "Interest sent" : "I'm interested"}

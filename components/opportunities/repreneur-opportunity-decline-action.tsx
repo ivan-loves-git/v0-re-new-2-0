@@ -82,7 +82,7 @@ export function RepreneurOpportunityDeclineAction({
       </Button>
       {isExpanded ? (
         <div id={disclosureId} className="mt-3">
-          <form action={formAction} className="rounded-lg border p-4">
+          <form action={formAction} className="rounded-lg border p-4" data-wave-action="decline" data-wave-workflow="portal_deals">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium">Tell Re-New why this is not a fit</p>

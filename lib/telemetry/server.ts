@@ -6,12 +6,17 @@ import type {
   WaveAiGenerationCapture,
   WaveServerEventCapture,
 } from "@/lib/telemetry/contract"
+import { WAVE_EVENT_NAMES } from "@/lib/telemetry/contract"
 import { buildAiGenerationPayload } from "@/lib/telemetry/ai-payload"
 import {
   POSTHOG_EU_INGESTION_HOST,
   resolveServerTelemetryConfig,
 } from "@/lib/telemetry/config"
 import { isOpaqueUuid, sanitizeWaveProperties } from "@/lib/telemetry/privacy"
+
+const SERVER_EVENT_NAMES = new Set(
+  WAVE_EVENT_NAMES.filter((event) => event !== "$ai_generation"),
+)
 
 function serverTelemetryConfig() {
   return resolveServerTelemetryConfig({
@@ -63,7 +68,12 @@ export async function captureWaveAiGeneration(
  */
 export async function captureWaveServerEvent(capture: WaveServerEventCapture) {
   const config = serverTelemetryConfig()
-  if (!config.enabled || !config.projectToken || !isOpaqueUuid(capture.distinctId)) return false
+  if (
+    !config.enabled ||
+    !config.projectToken ||
+    !isOpaqueUuid(capture.distinctId) ||
+    !SERVER_EVENT_NAMES.has(capture.event)
+  ) return false
 
   const properties = sanitizeWaveProperties(capture.properties, {
     environment: config.environment,
@@ -95,7 +105,12 @@ export async function captureWaveServerEvent(capture: WaveServerEventCapture) {
 
 /** Queue telemetry after the response without making product success depend on it. */
 export function queueWaveServerEvent(capture: WaveServerEventCapture) {
-  after(() => {
-    void captureWaveServerEvent(capture)
-  })
+  try {
+    after(async () => {
+      await captureWaveServerEvent(capture)
+    })
+    return true
+  } catch {
+    return false
+  }
 }
