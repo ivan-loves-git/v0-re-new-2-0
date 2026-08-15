@@ -170,4 +170,24 @@ describe("repreneur portal profile scope", () => {
     expect(detailGetter).toContain('.eq("repreneur_id", repreneur.id)')
     expect(detailGetter).toContain('.neq("repreneur_exposure", "staff_only")')
   })
+
+  it("suppresses only automatic discovery when the shared thesis is incomplete", () => {
+    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
+    const dealFlowGetter = portalOpportunities.slice(
+      portalOpportunities.indexOf("export async function listMyRepreneurDealFlow"),
+      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
+    )
+    const detailGetter = portalOpportunities.slice(
+      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
+      portalOpportunities.indexOf("async function updateMyOpportunityResponse"),
+    )
+    const dealsPage = source("app/portal/deals/page.tsx")
+
+    expect(dealFlowGetter).toContain("const staffRecommended = matchedOpportunities")
+    expect(dealFlowGetter).toContain("const automaticMatching = automaticMatchingThesisCompleteness(repreneur)")
+    expect(dealFlowGetter).toContain("const dealFlow = automaticMatching.complete ?")
+    expect(detailGetter).toContain("if (!automaticMatchingThesisCompleteness(repreneur).complete) return null")
+    expect(dealsPage).toContain("Re-New selections remain available")
+    expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
+  })
 })

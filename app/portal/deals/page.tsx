@@ -5,6 +5,9 @@ import { listMyRepreneurDealFlow } from "@/lib/actions/repreneur-opportunities"
 import { parseRepreneurDealSort } from "@/lib/utils/repreneur-deal-flow"
 import { BriefcaseBusiness } from "lucide-react"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
+import Link from "next/link"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 
 interface PortalDealsPageProps {
   searchParams: Promise<{ sort?: string }>
@@ -14,7 +17,7 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
   await connection()
   const params = await searchParams
   const sort = parseRepreneurDealSort(params.sort)
-  const { repreneur, staffRecommended, dealFlow } = await listMyRepreneurDealFlow(sort)
+  const { repreneur, staffRecommended, dealFlow, automaticMatching } = await listMyRepreneurDealFlow(sort)
   const opportunities = [...staffRecommended, ...dealFlow]
 
   return (
@@ -29,6 +32,18 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
           </div>
           <RepreneurDealSortSelector value={sort} />
         </div>
+        {!automaticMatching.complete && repreneur ? (
+          <Alert>
+            <BriefcaseBusiness />
+            <AlertTitle>Complete your acquisition project to see the full deal flow</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3">
+              <span>Re-New selections remain available. Add your {automaticMatching.missing.join(", ")} so WAVE can order the wider deal flow for your profile.</span>
+              <Button asChild className="w-fit" size="sm" variant="outline">
+                <Link href="/portal/profile#target-thesis">Edit acquisition project</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <RepreneurOpportunityList
           repreneur={repreneur}
           opportunities={opportunities}

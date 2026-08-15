@@ -6,6 +6,7 @@ import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opp
 import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
+import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
 import {
   sortRepreneurDealFlow,
   type RepreneurDealFlowSortCandidate,
@@ -355,9 +356,10 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   repreneur: RepreneurOpportunityProfile | null
   staffRecommended: RepreneurDealFlowOpportunity[]
   dealFlow: RepreneurDealFlowOpportunity[]
+  automaticMatching: { complete: boolean; missing: string[] }
 }> {
   const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [] }
+  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], automaticMatching: { complete: false, missing: [] } }
 
   const supabase = createAdminClient()
   const [matchesResult, opportunitiesResult] = await Promise.all([
@@ -452,8 +454,9 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       memo_availability: undefined,
     }))
     .map(withStaffRecommendation)
+  const automaticMatching = automaticMatchingThesisCompleteness(repreneur)
   const recommendedOpportunityIds = new Set(staffRecommended.map((opportunity) => opportunity.opportunity_id))
-  const dealFlow = sortRepreneurDealFlow(
+  const dealFlow = automaticMatching.complete ? sortRepreneurDealFlow(
     allOpportunities
       .filter((opportunity) => !recommendedOpportunityIds.has(opportunity.id))
       .map((opportunity) => ({
@@ -465,12 +468,13 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         ),
       })),
     sort,
-  ).map(withoutRelevanceScore)
+  ).map(withoutRelevanceScore) : []
 
   return {
     repreneur,
     staffRecommended,
     dealFlow,
+    automaticMatching,
   }
 }
 
@@ -551,6 +555,7 @@ export async function getMyRepreneurOpportunity(
   if (opportunityResult.error) throw new Error(opportunityResult.error.message)
   const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null
   if (!exposure) {
+    if (!automaticMatchingThesisCompleteness(repreneur).complete) return null
     const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
     if (!opportunity) return null
 

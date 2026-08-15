@@ -90,6 +90,12 @@ describe("high-severity authorization boundaries", () => {
     }
   })
 
+  it("requires staff access before correcting another repreneur's target thesis", () => {
+    const source = functionSource("lib/actions/repreneur-profile.ts", "updateRepreneurTargetThesis")
+    expect(source).toContain("requireStaffAccess")
+    expect(source).toContain("updateTargetThesisForRepreneur")
+  })
+
   it("keeps the SQL role and CRM policies closed to browser API roles", () => {
     const repreneurMigration = readFileSync(
       `${platformRoot}/scripts/029_fix_rls_policies.sql`,

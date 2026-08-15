@@ -243,7 +243,7 @@ export function RepreneurProfileSummary({
         <h1 className="text-2xl font-semibold tracking-normal">{repreneur.first_name} {repreneur.last_name}</h1>
       </header>
 
-      <Card>
+      <Card id="target-thesis">
         <CardHeader>
           <CardTitle className="inline-flex items-center gap-2">
             <Target data-icon="inline-start" />

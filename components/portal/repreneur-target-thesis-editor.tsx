@@ -159,7 +159,15 @@ function SelectionGroup({
   )
 }
 
-export function RepreneurTargetThesisEditor({ repreneur }: { repreneur: TargetThesisProfile }) {
+export function RepreneurTargetThesisEditor({
+  repreneur,
+  onSave,
+  successMessage = "Target thesis updated. Your deal matching has been refreshed.",
+}: {
+  repreneur: TargetThesisProfile
+  onSave?: (input: TargetThesisInput) => Promise<void>
+  successMessage?: string
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => initialDraft(repreneur))
@@ -170,7 +178,7 @@ export function RepreneurTargetThesisEditor({ repreneur }: { repreneur: TargetTh
   const save = () => {
     startTransition(async () => {
       try {
-        await updateMyTargetThesis({
+        await (onSave ?? updateMyTargetThesis)({
           q12_geo_zones: draft.q12_geo_zones,
           q13_target_sectors_v2: draft.q13_target_sectors_v2,
           q14_deal_size: draft.q14_deal_size,
@@ -181,7 +189,7 @@ export function RepreneurTargetThesisEditor({ repreneur }: { repreneur: TargetTh
           target_staff_size_min: optionalNumber(draft.target_staff_size_min),
           target_staff_size_max: optionalNumber(draft.target_staff_size_max),
         })
-        toast.success("Target thesis updated. Your deal matching has been refreshed.")
+        toast.success(successMessage)
         setOpen(false)
         router.refresh()
       } catch (error) {

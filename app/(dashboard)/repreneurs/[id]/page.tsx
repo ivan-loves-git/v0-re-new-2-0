@@ -56,6 +56,7 @@ import { getRepreneurPortalAccessStatus } from "@/lib/actions/portal-access"
 import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { ScoringAccuracy } from "@/components/repreneurs/scoring-accuracy"
+import { StaffRepreneurTargetThesisEditor } from "@/components/repreneurs/repreneur-target-thesis-editor"
 import { SECTORS } from "@/lib/constants/sectors"
 import { WHO_QUESTIONS, WHEN_QUESTIONS, NEEDS_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
@@ -179,6 +180,18 @@ function formatShortDate(value: string | null | undefined): string {
     month: "short",
     day: "numeric",
   }).format(date)
+}
+
+function formatThesisRange(
+  minimum: number | null | undefined,
+  maximum: number | null | undefined,
+  unit: string,
+) {
+  if (minimum === null || minimum === undefined) {
+    return maximum === null || maximum === undefined ? null : `Up to ${maximum} ${unit}`
+  }
+  if (maximum === null || maximum === undefined) return `From ${minimum} ${unit}`
+  return `${minimum}–${maximum} ${unit}`
 }
 
 function muted(value: string | null | undefined, fallback = "Not set") {
@@ -628,11 +641,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             </Card>
 
             <Card className="xl:col-start-1 xl:row-start-2">
-              <CardHeader className="pb-3">
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Target className="size-5" />
                   Acquisition Project
                 </CardTitle>
+                <StaffRepreneurTargetThesisEditor repreneur={profile} />
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <FieldSummary label="Target sectors">
@@ -646,6 +660,17 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 </FieldSummary>
                 <FieldSummary label="Equity">
                   {equity || <EmptyText>Not set</EmptyText>}
+                </FieldSummary>
+                <FieldSummary label="Revenue range">
+                  {formatThesisRange(profile.target_revenue_min_meur, profile.target_revenue_max_meur, "M€") || <EmptyText>Not set</EmptyText>}
+                </FieldSummary>
+                <FieldSummary label="Minimum EBITDA margin">
+                  {profile.target_ebitda_margin_min_pct === null || profile.target_ebitda_margin_min_pct === undefined
+                    ? <EmptyText>Not set</EmptyText>
+                    : `${profile.target_ebitda_margin_min_pct}%`}
+                </FieldSummary>
+                <FieldSummary label="Staff-size range">
+                  {formatThesisRange(profile.target_staff_size_min, profile.target_staff_size_max, "people") || <EmptyText>Not set</EmptyText>}
                 </FieldSummary>
               </CardContent>
             </Card>

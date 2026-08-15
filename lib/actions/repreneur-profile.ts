@@ -1,6 +1,6 @@
 "use server"
 
-import { requirePortalAccess } from "@/lib/access-control"
+import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import {
@@ -25,6 +25,15 @@ export type TargetThesisInput = {
 }
 
 export type ProfileContribution = "ldc" | "advisory_team"
+
+type TargetThesisRow = {
+  q12_geo_zones: unknown
+  q13_target_sectors_v2: unknown
+  q14_deal_size: unknown
+  target_location: unknown
+  sector_preferences: unknown
+  target_acquisition_size: unknown
+}
 
 function arrayValue(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
@@ -82,28 +91,26 @@ export async function getMyRepreneurProfile(): Promise<PortalRepreneurProfile | 
 }
 
 /** Updates only the authenticated repreneur's matching thesis. */
-export async function updateMyTargetThesis(input: TargetThesisInput) {
-  const access = await requirePortalAccess()
-  if (!access.repreneurId) throw new Error("No linked repreneur profile")
-
+async function updateTargetThesisForRepreneur(repreneurId: string, input: TargetThesisInput) {
   const supabase = createAdminClient()
   const { data: currentThesis, error: currentThesisError } = await supabase
     .from("repreneurs")
     .select("q12_geo_zones, q13_target_sectors_v2, q14_deal_size, target_location, sector_preferences, target_acquisition_size")
-    .eq("id", access.repreneurId)
+    .eq("id", repreneurId)
     .maybeSingle()
 
   if (currentThesisError) throw new Error(currentThesisError.message)
   if (!currentThesis) throw new Error("Repreneur profile not found")
+  const thesis = currentThesis as TargetThesisRow
 
   const geoZones = validOptions(
     canonicalTargetThesisValues(input.q12_geo_zones, WHEN_QUESTIONS.q12.options, "geography"),
     WHEN_QUESTIONS.q12.options,
     "Geography",
     canonicalTargetThesisValues(
-      arrayValue(currentThesis.q12_geo_zones).length > 0
-        ? arrayValue(currentThesis.q12_geo_zones)
-        : arrayValue(currentThesis.target_location),
+      arrayValue(thesis.q12_geo_zones).length > 0
+        ? arrayValue(thesis.q12_geo_zones)
+        : arrayValue(thesis.target_location),
       WHEN_QUESTIONS.q12.options,
       "geography",
     ),
@@ -113,9 +120,9 @@ export async function updateMyTargetThesis(input: TargetThesisInput) {
     WHEN_QUESTIONS.q13.options,
     "Sectors",
     canonicalTargetThesisValues(
-      arrayValue(currentThesis.q13_target_sectors_v2).length > 0
-        ? arrayValue(currentThesis.q13_target_sectors_v2)
-        : arrayValue(currentThesis.sector_preferences),
+      arrayValue(thesis.q13_target_sectors_v2).length > 0
+        ? arrayValue(thesis.q13_target_sectors_v2)
+        : arrayValue(thesis.sector_preferences),
       WHEN_QUESTIONS.q13.options,
       "sector",
     ),
@@ -125,9 +132,9 @@ export async function updateMyTargetThesis(input: TargetThesisInput) {
     WHEN_QUESTIONS.q14.options,
     "Deal size",
     canonicalTargetThesisValues(
-      arrayValue(currentThesis.q14_deal_size).length > 0
-        ? arrayValue(currentThesis.q14_deal_size)
-        : currentThesis.target_acquisition_size ? [currentThesis.target_acquisition_size] : [],
+      arrayValue(thesis.q14_deal_size).length > 0
+        ? arrayValue(thesis.q14_deal_size)
+        : typeof thesis.target_acquisition_size === "string" ? [thesis.target_acquisition_size] : [],
       WHEN_QUESTIONS.q14.options,
     ),
   )
@@ -160,13 +167,30 @@ export async function updateMyTargetThesis(input: TargetThesisInput) {
       target_staff_size_min: staffSizeMin,
       target_staff_size_max: staffSizeMax,
   })
-    .eq("id", access.repreneurId)
+    .eq("id", repreneurId)
 
   if (error) throw new Error(error.message)
   // Migration 092 atomically mirrors exact France-first legacy values into
   // repreneur_geography_targets. Foreign/custom values stay legacy-only.
-  await recalculateRepreneurScoresAndMatches(access.repreneurId)
+  await recalculateRepreneurScoresAndMatches(repreneurId)
+}
+
+/** Updates only the authenticated repreneur's matching thesis. */
+export async function updateMyTargetThesis(input: TargetThesisInput) {
+  const access = await requirePortalAccess()
+  if (!access.repreneurId) throw new Error("No linked repreneur profile")
+
+  await updateTargetThesisForRepreneur(access.repreneurId, input)
   revalidatePath("/portal/profile")
+}
+
+/** Staff may correct the same persisted thesis fields for a named repreneur. */
+export async function updateRepreneurTargetThesis(repreneurId: string, input: TargetThesisInput) {
+  await requireStaffAccess()
+  if (!repreneurId.trim()) throw new Error("Repreneur profile is required.")
+
+  await updateTargetThesisForRepreneur(repreneurId, input)
+  revalidatePath(`/repreneurs/${repreneurId}`)
 }
 
 /** Keeps repreneur declarations separate from staff-owned milestones. */
