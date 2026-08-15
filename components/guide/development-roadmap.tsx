@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 15, 2026",
+    version: "0.9.47",
+    title: "Repreneur matching now starts from shared, complete criteria",
+    isCompleted: true,
+    events: [
+      {
+        title: "Staff and repreneurs now maintain one acquisition project",
+        type: "feature",
+        description: "The full sector, geography, size, investment and operating ranges can be corrected from either side without creating a second version of the target thesis.",
+      },
+      {
+        title: "Automatic discovery waits for enough matching information",
+        type: "decision",
+        description: "WAVE pauses the wider deal flow when the current matcher lacks a required input, while every opportunity selected by Re-New remains available.",
+      },
+      {
+        title: "The controlled opening can be measured without copying client data",
+        type: "feature",
+        description: "Entry, discovery, responses, NDA gates and pursuit progress now produce privacy-safe outcome evidence without names, emails, notes, documents or record identifiers.",
+      },
+      {
+        title: "M2 completion still requires real repreneur evidence",
+        type: "decision",
+        description: "This release establishes technical readiness for a controlled opening; the milestone remains open until the agreed real participants complete and validate the journey.",
+      },
+    ],
+  },
+  {
     period: "Aug 14, 2026",
     version: "0.9.46",
     title: "WAVE now responds with one quiet motion system",

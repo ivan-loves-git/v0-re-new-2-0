@@ -11,6 +11,14 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the controlled-opening technical-readiness release", () => {
+    expect(roadmap).toContain('version: "0.9.47"')
+    expect(roadmap).toContain("Staff and repreneurs now maintain one acquisition project")
+    expect(roadmap).toContain("Automatic discovery waits for enough matching information")
+    expect(roadmap).toContain("The controlled opening can be measured without copying client data")
+    expect(roadmap).toContain("M2 completion still requires real repreneur evidence")
+  })
+
   it("records the WAVE motion-system release", () => {
     expect(roadmap).toContain('version: "0.9.46"')
     expect(roadmap).toContain("WAVE now responds with one quiet motion system")
@@ -134,6 +142,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-14")')
+    expect(roadmapStatus).toContain('new Date("2026-08-15")')
   })
 })
