@@ -7,6 +7,18 @@ type ThesisOption = { value: string; label: string }
 
 type SelectionKind = "geography" | "sector"
 
+type TargetThesisValidationInput = {
+  q12_geo_zones: string[]
+  q13_target_sectors_v2: string[]
+  q14_deal_size: string[]
+  q16_equity: string
+  target_revenue_min_meur: number | null
+  target_revenue_max_meur: number | null
+  target_ebitda_margin_min_pct: number | null
+  target_staff_size_min: number | null
+  target_staff_size_max: number | null
+}
+
 const LEGACY_SELECTION_ALIASES: Record<SelectionKind, Record<string, string>> = {
   geography: {},
   sector: {},
@@ -27,6 +39,55 @@ function comparable(value: string) {
 
 function unique(values: string[]) {
   return [...new Set(values)]
+}
+
+function optionalNumberValidationMessage(
+  value: number | null,
+  fieldName: string,
+  maximum: number,
+  integer = false,
+) {
+  if (value === null) return null
+  if (!Number.isFinite(value) || value < 0 || value > maximum) {
+    return `${fieldName} must be a number between 0 and ${maximum}.`
+  }
+  if (integer && !Number.isInteger(value)) {
+    return `${fieldName} must be a whole number.`
+  }
+  return null
+}
+
+/** Gives both staff and repreneurs immediate feedback before a server save. */
+export function targetThesisInputValidationMessage(input: TargetThesisValidationInput) {
+  if (input.q12_geo_zones.length === 0) return "Geography needs at least one selection."
+  if (input.q13_target_sectors_v2.length === 0) return "Sectors needs at least one selection."
+  if (input.q14_deal_size.length === 0) return "Deal size needs at least one selection."
+  if (!input.q16_equity) return "Investment capacity needs at least one selection."
+
+  const numberError =
+    optionalNumberValidationMessage(input.target_revenue_min_meur, "Revenue minimum", 100000) ??
+    optionalNumberValidationMessage(input.target_revenue_max_meur, "Revenue maximum", 100000) ??
+    optionalNumberValidationMessage(input.target_ebitda_margin_min_pct, "Minimum EBITDA margin", 100) ??
+    optionalNumberValidationMessage(input.target_staff_size_min, "Staff-size minimum", 100000, true) ??
+    optionalNumberValidationMessage(input.target_staff_size_max, "Staff-size maximum", 100000, true)
+  if (numberError) return numberError
+
+  if (
+    input.target_revenue_min_meur !== null &&
+    input.target_revenue_max_meur !== null &&
+    input.target_revenue_min_meur > input.target_revenue_max_meur
+  ) {
+    return "Revenue range minimum cannot be greater than its maximum."
+  }
+  if (
+    input.target_staff_size_min !== null &&
+    input.target_staff_size_max !== null &&
+    input.target_staff_size_min > input.target_staff_size_max
+  ) {
+    return "Staff-size range minimum cannot be greater than its maximum."
+  }
+
+  return null
 }
 
 /**

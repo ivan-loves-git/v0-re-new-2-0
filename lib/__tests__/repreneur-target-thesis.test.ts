@@ -3,6 +3,7 @@ import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import {
   canonicalTargetThesisValues,
   legacyTargetThesisValues,
+  targetThesisInputValidationMessage,
   targetThesisLabels,
 } from "@/lib/repreneur-target-thesis"
 
@@ -58,5 +59,48 @@ describe("target thesis compatibility", () => {
       "Transport & Logistique",
       "Autre",
     ])
+  })
+
+  it("returns a clear client-side error for reversed optional ranges", () => {
+    const input = {
+      q12_geo_zones: ["ile-de-france"],
+      q13_target_sectors_v2: ["Tech & Digital"],
+      q14_deal_size: ["1-3m"],
+      q16_equity: "351-450k",
+      target_revenue_min_meur: 10,
+      target_revenue_max_meur: 1,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    }
+
+    expect(targetThesisInputValidationMessage(input)).toBe(
+      "Revenue range minimum cannot be greater than its maximum.",
+    )
+    expect(
+      targetThesisInputValidationMessage({
+        ...input,
+        target_revenue_min_meur: 1,
+        target_revenue_max_meur: 10,
+        target_staff_size_min: 50,
+        target_staff_size_max: 10,
+      }),
+    ).toBe("Staff-size range minimum cannot be greater than its maximum.")
+  })
+
+  it("accepts complete criteria with truthful optional ranges", () => {
+    expect(
+      targetThesisInputValidationMessage({
+        q12_geo_zones: ["ile-de-france"],
+        q13_target_sectors_v2: ["Tech & Digital"],
+        q14_deal_size: ["1-3m"],
+        q16_equity: "351-450k",
+        target_revenue_min_meur: 1,
+        target_revenue_max_meur: 10,
+        target_ebitda_margin_min_pct: 15,
+        target_staff_size_min: 10,
+        target_staff_size_max: 50,
+      }),
+    ).toBeNull()
   })
 })

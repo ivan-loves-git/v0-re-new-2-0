@@ -23,6 +23,7 @@ import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import {
   canonicalTargetThesisValues,
   legacyTargetThesisValues,
+  targetThesisInputValidationMessage,
 } from "@/lib/repreneur-target-thesis"
 import {
   certifyMyProfileContribution,
@@ -186,19 +187,26 @@ export function RepreneurTargetThesisEditor({
   const reset = () => setDraft(initialDraft(repreneur))
 
   const save = () => {
+    const input: TargetThesisInput = {
+      q12_geo_zones: draft.q12_geo_zones,
+      q13_target_sectors_v2: draft.q13_target_sectors_v2,
+      q14_deal_size: draft.q14_deal_size,
+      q16_equity: draft.q16_equity,
+      target_revenue_min_meur: optionalNumber(draft.target_revenue_min_meur),
+      target_revenue_max_meur: optionalNumber(draft.target_revenue_max_meur),
+      target_ebitda_margin_min_pct: optionalNumber(draft.target_ebitda_margin_min_pct),
+      target_staff_size_min: optionalNumber(draft.target_staff_size_min),
+      target_staff_size_max: optionalNumber(draft.target_staff_size_max),
+    }
+    const validationMessage = targetThesisInputValidationMessage(input)
+    if (validationMessage) {
+      toast.error(validationMessage)
+      return
+    }
+
     startTransition(async () => {
       try {
-        await (onSave ?? updateMyTargetThesis)({
-          q12_geo_zones: draft.q12_geo_zones,
-          q13_target_sectors_v2: draft.q13_target_sectors_v2,
-          q14_deal_size: draft.q14_deal_size,
-          q16_equity: draft.q16_equity,
-          target_revenue_min_meur: optionalNumber(draft.target_revenue_min_meur),
-          target_revenue_max_meur: optionalNumber(draft.target_revenue_max_meur),
-          target_ebitda_margin_min_pct: optionalNumber(draft.target_ebitda_margin_min_pct),
-          target_staff_size_min: optionalNumber(draft.target_staff_size_min),
-          target_staff_size_max: optionalNumber(draft.target_staff_size_max),
-        })
+        await (onSave ?? updateMyTargetThesis)(input)
         toast.success(successMessage)
         setOpen(false)
         router.refresh()
