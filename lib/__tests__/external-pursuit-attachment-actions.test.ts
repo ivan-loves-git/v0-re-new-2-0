@@ -105,8 +105,17 @@ describe("External Pursuit attachment actions", () => {
   it("stops individual deletion before metadata finalization when object removal fails", async () => {
     mocks.rpc.mockResolvedValueOnce({ data: "dossier-1/object.pdf", error: null })
     mocks.remove.mockResolvedValue({ data: null, error: new Error("storage unavailable") })
-    await expect(deleteExternalPursuitAttachment("dossier-1", "attachment-1", key(5))).resolves.toMatchObject({ success: false })
+    await expect(deleteExternalPursuitAttachment("dossier-1", "attachment-1", key(5))).resolves.toMatchObject({ success: false, retryExact: true })
     expect(mocks.rpc).not.toHaveBeenCalledWith("finalize_external_pursuit_attachment_deletion", expect.anything())
+  })
+
+  it("marks a lost initial replay response for the same upload key", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: new Error("fetch failed"), status: 0 })
+    await expect(uploadExternalPursuitAttachment("dossier-1", uploadForm(), key(8))).resolves.toMatchObject({
+      success: false,
+      retryExact: true,
+    })
+    expect(mocks.upload).not.toHaveBeenCalled()
   })
 
   it("stops dossier fulfillment before metadata/tombstone when any object cleanup fails", async () => {

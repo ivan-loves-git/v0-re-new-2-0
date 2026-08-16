@@ -6,6 +6,8 @@ const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8")
 const migration = source("scripts/097_external_pursuit_attachments.sql")
 const rehearsal = source("scripts/rehearse-external-pursuit-attachments.sql")
 const config = source("next.config.mjs")
+const panel = source("components/pursuits/external-pursuit-attachments-panel.tsx")
+const board = source("components/pursuits/external-pursuit-board.tsx")
 
 describe("W-108 private attachment foundation", () => {
   it("sets matching 20 MiB application and private-bucket limits", () => {
@@ -36,5 +38,15 @@ describe("W-108 private attachment foundation", () => {
     expect(rehearsal).toContain("w108_table_path_mismatch_was_allowed")
     expect(rehearsal).toContain("w108_bucket_controls_invalid")
     expect(rehearsal).toContain("ROLLBACK")
+  })
+
+  it("keeps browser delivery retries on the exact file action and blocks dialog dismissal", () => {
+    expect(panel).toContain("uploadAttempt.current")
+    expect(panel).toContain("deleteAttempt.current")
+    expect(panel).toContain("attempt.idempotencyKey")
+    expect(panel).toContain("onLockChange?.(true)")
+    expect(panel).toContain("Retry exact upload")
+    expect(board).toContain("onLockChange={setManagerLocked}")
+    expect(board).toContain("if (!nextOpen && managerLocked)")
   })
 })

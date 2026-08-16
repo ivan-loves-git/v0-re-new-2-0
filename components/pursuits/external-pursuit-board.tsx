@@ -569,6 +569,7 @@ export function ExternalPursuitBoard({
                 pursuitId={managing.id}
                 attachments={attachmentsByPursuit[managing.id] ?? []}
                 readOnly={managing.deletionStatus !== "active"}
+                onLockChange={setManagerLocked}
               />
             </div>
           ) : null}
