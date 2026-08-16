@@ -26,7 +26,7 @@ describe("W-108 private attachment foundation", () => {
     expect(migration).toContain("public.assert_external_pursuit_access")
     expect(migration).toContain("p.deletion_status <> 'delete_requested'")
     expect(migration).toContain("external_pursuit_attachment_path_matches_dossier")
-    expect(migration).toContain("split_part(p_storage_path, '/', 1) <> p_dossier_id::TEXT")
+    expect(migration).toContain("/[0-9a-f]{64}\\.[a-z0-9]{2,5}$")
   })
 
   it("ships a disposable role, replay, privilege, bucket and safe-fulfillment rehearsal", () => {

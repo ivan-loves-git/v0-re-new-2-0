@@ -199,14 +199,20 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    and the complete bounded file structure: PDFs require a complete, inactive
    PDF envelope and no active-document hooks, including hex-escaped PDF names;
    OOXML files require valid package contents, relationships and
-   document/workbook roots and reject macro, nested archive and polyglot
-   content; CSV is scanned as UTF-8 text and rejects spreadsheet-formula cells;
+   document/workbook roots and reject macro, nested archive, executable and
+   polyglot signatures anywhere in each bounded inflated part. This deliberately
+   fails closed on a rare signature collision rather than accepting disguised
+   binary payloads. CSV is scanned as UTF-8 text and rejects spreadsheet-formula cells;
    and images require their complete type envelope. Executables, HTML, SVG and generic archives are
    rejected. Legacy binary DOC and XLS are deliberately excluded because a
    lightweight signature check cannot distinguish them safely from a generic
-   compound file. Objects have random safe paths in the private
-   `external-pursuit-attachments` bucket; the database requires the first path
-   segment to equal that attachment's dossier UUID. Browser storage policies and public
+   compound file. Objects use opaque deterministic paths derived server-side
+   from the dossier, authorized actor, a validated single-use upload key, safe
+   filename, declared MIME, byte size and the complete-file SHA-256 digest in the private
+   `external-pursuit-attachments` bucket. Exact retries therefore converge on
+   one object while changed metadata, bytes or keys cannot alias. The database
+   requires the first path segment to equal that
+   attachment's dossier UUID. Browser storage policies and public
    URLs are never created.
 17. The owner or authorized staff may list, upload, download and remove an
    active dossier's attachments. Downloads are 60-second signed redirects after
@@ -227,6 +233,13 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    tokens. Releasing one child never unlocks another child. A successful
    single-file deletion also notifies the parent attachment projection before
    the manager can close and reopen, so stale props cannot restore the row.
+13. Upload storage uses `upsert: false`. A confirmed same-path already-exists
+    response is recoverable only after exact replay lookup: if no row exists,
+    the server registers that deterministic object; if a row already points to
+    another content path, the deterministic losing path is cleaned. Ambiguous
+    cleanup retains the same file/key recovery lock until that exact path is
+    reconciled. Other confirmed Storage API 4xx responses remain ordinary,
+    unlocked failures.
 
 ## Acceptance matrix
 

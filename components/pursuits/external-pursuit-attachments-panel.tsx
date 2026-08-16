@@ -42,7 +42,7 @@ export function ExternalPursuitAttachmentsPanel({
   const [pending, startTransition] = useTransition()
   const [recovery, setRecovery] = useState<"upload" | { attachmentId: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const uploadAttempt = useRef<{ formData: FormData; idempotencyKey: string } | null>(null)
+  const uploadAttempt = useRef<{ formData: FormData; idempotencyKey: string; cleanupRecovery: boolean } | null>(null)
   const deleteAttempt = useRef<{ attachmentId: string; idempotencyKey: string } | null>(null)
   const operationLockHeld = useRef(false)
   const controlsLocked = pending || recovery !== null
@@ -61,20 +61,24 @@ export function ExternalPursuitAttachmentsPanel({
 
   function upload(formData: FormData) {
     if (recovery && recovery !== "upload") return
-    const attempt = uploadAttempt.current ?? { formData, idempotencyKey: crypto.randomUUID() }
+    const attempt = uploadAttempt.current ?? { formData, idempotencyKey: crypto.randomUUID(), cleanupRecovery: false }
     uploadAttempt.current = attempt
     holdOperationLock()
     startTransition(async () => {
       let result
       try {
-        result = await uploadExternalPursuitAttachment(pursuitId, attempt.formData, attempt.idempotencyKey)
+        result = await uploadExternalPursuitAttachment(pursuitId, attempt.formData, attempt.idempotencyKey, attempt.cleanupRecovery)
       } catch {
+        // A lost action response can hide an upload/cleanup mutation. The next
+        // exact retry may therefore reconcile only its deterministic path.
+        attempt.cleanupRecovery = true
         setRecovery("upload")
         toast.error("The upload result is unclear. Retry the exact same file.")
         return
       }
       if (!result.success) {
         if (result.retryExact) {
+          attempt.cleanupRecovery = result.retryCleanup === true
           setRecovery("upload")
           toast.error(result.message)
           return

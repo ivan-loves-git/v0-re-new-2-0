@@ -1,6 +1,6 @@
 "use server"
 
-import { randomUUID } from "crypto"
+import { createHash, randomUUID } from "crypto"
 import { getCurrentUserAccess, requireStaffAccess } from "@/lib/access-control"
 import {
   EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET,
@@ -11,8 +11,20 @@ import { matchesExpectedFileStructure } from "@/lib/security/external-pursuit-at
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 
-type Result = { success: boolean; message: string; attachmentId?: string; retryExact?: boolean }
+type Result = { success: boolean; message: string; attachmentId?: string; retryExact?: boolean; retryCleanup?: boolean }
 type Registration = { attachmentId: string; storagePath: string }
+
+const IDEMPOTENCY_KEY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+const STORAGE_EXTENSION_BY_MIME: Readonly<Record<string, string>> = {
+  "application/pdf": "pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "text/csv": "csv",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+}
 
 function safeMessage(error: unknown, fallback: string) {
   return error instanceof Error && /denied|not found|not editable|required|invalid/i.test(error.message)
@@ -39,17 +51,58 @@ function numericStatus(value: unknown): number | null {
   return null
 }
 
+function storageFailureStatus(error: unknown) {
+  if (!error || typeof error !== "object") return null
+  return numericStatus("status" in error ? error.status : null)
+    ?? numericStatus("statusCode" in error ? error.statusCode : null)
+    ?? ("originalError" in error && error.originalError && typeof error.originalError === "object"
+      ? numericStatus("status" in error.originalError ? error.originalError.status : null)
+      : null)
+}
+
+function storageObjectAlreadyExists(error: unknown) {
+  const status = storageFailureStatus(error)
+  if (status === 409) return true
+  if (status === null || status < 400 || status >= 500 || !error || typeof error !== "object") return false
+  const message = "message" in error && typeof error.message === "string" ? error.message : ""
+  const code = "code" in error && typeof error.code === "string" ? error.code : ""
+  return /already exists|duplicate/i.test(`${code} ${message}`)
+}
+
 /** Structured Storage API errors prove a response; unknown/status-0 transport failures do not. */
 function storageFailureIsAmbiguous(error: unknown) {
-  if (!error || typeof error !== "object") return true
-  const direct = numericStatus("status" in error ? error.status : null)
-    ?? numericStatus("statusCode" in error ? error.statusCode : null)
-  if (direct !== null) return direct === 0
-  if ("originalError" in error && error.originalError && typeof error.originalError === "object") {
-    const original = numericStatus("status" in error.originalError ? error.originalError.status : null)
-    if (original !== null) return original === 0
-  }
-  return true
+  const status = storageFailureStatus(error)
+  return status === null || status === 0
+}
+
+function deterministicAttachmentStoragePath(
+  pursuitId: string,
+  actorUserId: string,
+  idempotencyKey: string,
+  bytes: Uint8Array,
+  safeFilename: string,
+  contentType: string,
+  byteSize: number,
+) {
+  const extension = STORAGE_EXTENSION_BY_MIME[contentType]
+  if (!extension) return null
+  const contentDigest = createHash("sha256").update(bytes).digest("hex")
+  const objectDigest = createHash("sha256")
+    .update(pursuitId)
+    .update("\0")
+    .update(actorUserId)
+    .update("\0")
+    .update(idempotencyKey)
+    .update("\0")
+    .update(safeFilename)
+    .update("\0")
+    .update(contentType)
+    .update("\0")
+    .update(String(byteSize))
+    .update("\0")
+    .update(contentDigest)
+    .digest("hex")
+  return `${pursuitId}/${objectDigest}.${extension}`
 }
 
 async function replayUploadRegistration(
@@ -105,6 +158,34 @@ async function removeStorageObjects(
   }
 }
 
+async function reconcileDifferentUploadPath(
+  supabase: ReturnType<typeof createAdminClient>,
+  expectedPath: string,
+): Promise<Result> {
+  const cleanupError = await removeUncommittedObject(supabase, expectedPath)
+  if (cleanupError) {
+    if (storageFailureStatus(cleanupError) === 404) return {
+      success: false,
+      message: "This upload key was already used for a different file. Start a new upload.",
+      retryExact: false,
+    }
+    const ambiguous = storageFailureIsAmbiguous(cleanupError)
+    return {
+      success: false,
+      message: ambiguous
+        ? "Duplicate storage cleanup was not confirmed. Retry the exact same file."
+        : "The upload key belongs to a different file; duplicate storage cleanup needs staff attention.",
+      retryExact: ambiguous,
+      retryCleanup: ambiguous,
+    }
+  }
+  return {
+    success: false,
+    message: "This upload key was already used for a different file. Start a new upload.",
+    retryExact: false,
+  }
+}
+
 export async function getExternalPursuitAttachments(pursuitId: string): Promise<ExternalPursuitAttachment[]> {
   const access = await actor()
   const { data, error } = await createAdminClient().rpc("external_pursuit_attachments_for_actor", {
@@ -137,6 +218,7 @@ export async function uploadExternalPursuitAttachment(
   pursuitId: string,
   formData: FormData,
   idempotencyKey: string = randomUUID(),
+  cleanupRecovery = false,
 ): Promise<Result> {
   let storagePath: string | null = null
   let supabase: ReturnType<typeof createAdminClient> | null = null
@@ -145,19 +227,29 @@ export async function uploadExternalPursuitAttachment(
     const access = await actor()
     actorUserId = access.user.id
     supabase = createAdminClient()
-    const existing = await replayUploadRegistration(supabase, pursuitId, actorUserId, idempotencyKey)
-    if (existing.error) return { success: false, message: safeMessage(existing.error, "Could not add attachment."), retryExact: existing.ambiguous }
-    if (existing.registration) return { success: true, message: "Attachment added.", attachmentId: existing.registration.attachmentId }
+    if (!IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) return { success: false, message: "The upload retry key is invalid." }
     const file = formData.get("file")
     if (!(file instanceof File)) return { success: false, message: "Choose a file to attach." }
     const validation = validateExternalPursuitAttachment(file)
     if (validation) return { success: false, message: validation }
     const bytes = new Uint8Array(await file.arrayBuffer())
     if (!matchesExpectedFileStructure(file.name, bytes)) return { success: false, message: "The file contents do not match its permitted type." }
-    const extension = file.name.trim().split(".").at(-1)?.toLowerCase()
-    if (!extension) return { success: false, message: "The file name is invalid." }
-    const attachmentObjectId = randomUUID()
-    storagePath = `${pursuitId}/${attachmentObjectId}.${extension}`
+    const originalFilename = safeAttachmentFilename(file.name)
+    storagePath = deterministicAttachmentStoragePath(pursuitId, actorUserId, idempotencyKey, bytes, originalFilename, file.type, file.size)
+    if (!storagePath) return { success: false, message: "The file type is invalid." }
+
+    // Compare the replay against the deterministic content path. A caller may
+    // not reuse one key for different bytes and silently receive the old row.
+    const existing = await replayUploadRegistration(supabase, pursuitId, actorUserId, idempotencyKey)
+    if (existing.error) return { success: false, message: safeMessage(existing.error, "Could not add attachment."), retryExact: existing.ambiguous }
+    if (existing.registration) {
+      return existing.registration.storagePath === storagePath
+        ? { success: true, message: "Attachment added.", attachmentId: existing.registration.attachmentId }
+        : cleanupRecovery
+          ? reconcileDifferentUploadPath(supabase, storagePath)
+          : { success: false, message: "This upload key was already used for a different file. Start a new upload.", retryExact: false }
+    }
+
     let uploadError: unknown = null
     try {
       const result = await supabase.storage
@@ -166,6 +258,25 @@ export async function uploadExternalPursuitAttachment(
       uploadError = result.error
     } catch (error) {
       uploadError = error
+    }
+    if (uploadError) {
+      if (storageObjectAlreadyExists(uploadError)) {
+        // A lost response or concurrent exact retry can leave the deterministic
+        // object present before registration. Recheck the row, then register
+        // this exact content path if no winner has committed yet.
+        const replay = await replayUploadRegistration(supabase, pursuitId, actorUserId, idempotencyKey)
+        if (replay.error) return {
+          success: false,
+          message: "Attachment registration is uncertain; retry the exact same file.",
+          retryExact: replay.ambiguous,
+        }
+        if (replay.registration) {
+          return replay.registration.storagePath === storagePath
+            ? { success: true, message: "Attachment added.", attachmentId: replay.registration.attachmentId }
+            : reconcileDifferentUploadPath(supabase, storagePath)
+        }
+        uploadError = null
+      }
     }
     if (uploadError) {
       const ambiguous = storageFailureIsAmbiguous(uploadError)
@@ -182,7 +293,7 @@ export async function uploadExternalPursuitAttachment(
       const result = await supabase.rpc("register_external_pursuit_attachment", {
         p_dossier_id: pursuitId,
         p_storage_path: storagePath,
-        p_original_filename: safeAttachmentFilename(file.name),
+        p_original_filename: originalFilename,
         p_content_type: file.type,
         p_byte_size: file.size,
         p_actor_user_id: actorUserId,
@@ -208,24 +319,23 @@ export async function uploadExternalPursuitAttachment(
       registration = replay.registration
       if (!registration) {
         const cleanupError = await removeUncommittedObject(supabase, storagePath)
-        return cleanupError
-          ? { success: false, message: "Attachment registration failed; storage cleanup needs staff attention." }
-          : { success: false, message: safeMessage(registrationError, "Could not register attachment.") }
+        if (cleanupError) {
+          const ambiguous = storageFailureIsAmbiguous(cleanupError)
+          return {
+            success: false,
+            message: ambiguous
+              ? "Attachment cleanup was not confirmed. Retry the exact same file."
+              : "Attachment registration failed; storage cleanup needs staff attention.",
+            retryExact: ambiguous,
+            retryCleanup: ambiguous,
+          }
+        }
+        return { success: false, message: safeMessage(registrationError, "Could not register attachment.") }
       }
     }
 
     if (registration.storagePath !== storagePath) {
-      // A concurrent request with the same idempotency key won. Remove only the
-      // losing request's newly uploaded random object, never the committed path.
-      const losingObjectCleanupError = await removeUncommittedObject(supabase, storagePath)
-      if (losingObjectCleanupError) return {
-        success: false,
-        message: "Attachment retry was accepted, but duplicate storage cleanup needs staff attention.",
-        // The canonical database row is already known. Replaying the business
-        // action cannot resolve cleanup of this non-authoritative random path,
-        // so release the UI lock and surface the operational exception.
-        retryExact: false,
-      }
+      return reconcileDifferentUploadPath(supabase, storagePath)
     }
     return { success: true, message: "Attachment added.", attachmentId: registration.attachmentId }
   } catch (error) {
@@ -234,17 +344,22 @@ export async function uploadExternalPursuitAttachment(
       if (replay.error) return { success: false, message: "Attachment registration is uncertain; retry the exact same file.", retryExact: replay.ambiguous }
       if (replay.registration) {
         if (replay.registration.storagePath !== storagePath) {
-          const cleanupError = await removeUncommittedObject(supabase, storagePath)
-          if (cleanupError) return {
-            success: false,
-            message: "Attachment retry was accepted, but duplicate storage cleanup needs staff attention.",
-            retryExact: false,
-          }
+          return reconcileDifferentUploadPath(supabase, storagePath)
         }
         return { success: true, message: "Attachment added.", attachmentId: replay.registration.attachmentId }
       }
       const cleanupError = await removeUncommittedObject(supabase, storagePath)
-      if (cleanupError) return { success: false, message: "Attachment registration failed; storage cleanup needs staff attention." }
+      if (cleanupError) {
+        const ambiguous = storageFailureIsAmbiguous(cleanupError)
+        return {
+          success: false,
+          message: ambiguous
+            ? "Attachment cleanup was not confirmed. Retry the exact same file."
+            : "Attachment registration failed; storage cleanup needs staff attention.",
+          retryExact: ambiguous,
+          retryCleanup: ambiguous,
+        }
+      }
     }
     return { success: false, message: safeMessage(error, "Could not add attachment.") }
   }

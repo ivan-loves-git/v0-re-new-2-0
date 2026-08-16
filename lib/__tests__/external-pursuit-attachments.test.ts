@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { deflateSync } from "node:zlib"
 import {
   EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES,
   safeAttachmentFilename,
@@ -23,12 +24,12 @@ function crc32(bytes: Uint8Array) {
   }
   return (crc ^ 0xffffffff) >>> 0
 }
-function storedZip(entries: Record<string, string>) {
+function storedZip(entries: Record<string, string | Uint8Array>) {
   const local: number[] = []
   const central: number[] = []
   for (const [name, value] of Object.entries(entries)) {
     const encodedName = [...encoder.encode(name)]
-    const content = encoder.encode(value)
+    const content = typeof value === "string" ? encoder.encode(value) : value
     const offset = local.length
     const crc = crc32(content)
     local.push(0x50,0x4b,0x03,0x04,...le16(20),...le16(0),...le16(0),...le16(0),...le16(0),...le32(crc),...le32(content.length),...le32(content.length),...le16(encodedName.length),...le16(0),...encodedName,...content)
@@ -56,6 +57,27 @@ function validPdf(extra = "") {
   return encoder.encode(`${header}xref\n0 2\n0000000000 65535 f \n0000000009 00000 n \ntrailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`)
 }
 
+function pdfWithCompressedObjectStream(payload: string) {
+  const compressed = new Uint8Array(deflateSync(encoder.encode(payload)))
+  const prefix = encoder.encode(`%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n2 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Length ${compressed.length} /Filter /FlateDecode >>\nstream\n`)
+  const beforeXref = new Uint8Array(prefix.length + compressed.length + encoder.encode("\nendstream\nendobj\n").length)
+  beforeXref.set(prefix)
+  beforeXref.set(compressed, prefix.length)
+  beforeXref.set(encoder.encode("\nendstream\nendobj\n"), prefix.length + compressed.length)
+  const suffix = encoder.encode(`xref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000050 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n${beforeXref.length}\n%%EOF\n`)
+  const result = new Uint8Array(beforeXref.length + suffix.length)
+  result.set(beforeXref)
+  result.set(suffix, beforeXref.length)
+  return result
+}
+
+function firstMarker(bytes: Uint8Array, marker: number) {
+  for (let index = 0; index + 1 < bytes.length; index += 1) {
+    if (bytes[index] === 0xff && bytes[index + 1] === marker) return index
+  }
+  return -1
+}
+
 describe("External Pursuit attachment validation", () => {
   it("accepts a complete passive PDF and rejects OpenAction and polyglot fixtures", () => {
     expect(matchesExpectedFileStructure("memo.pdf", validPdf())).toBe(true)
@@ -63,6 +85,8 @@ describe("External Pursuit attachment validation", () => {
     expect(matchesExpectedFileStructure("escaped-active.pdf", validPdf("/Open#41ction 2 0 R /Java#53cript 3 0 R"))).toBe(false)
     const polyglot = validPdf("/Comment (PK\u0003\u0004 payload)")
     expect(matchesExpectedFileStructure("polyglot.pdf", polyglot)).toBe(false)
+    expect(matchesExpectedFileStructure("compressed-passive.pdf", pdfWithCompressedObjectStream("3 0 << /Type /Page >>"))).toBe(true)
+    expect(matchesExpectedFileStructure("compressed-active.pdf", pdfWithCompressedObjectStream("3 0 << /Open#41ction 4 0 R /Java#53cript 5 0 R >>"))).toBe(false)
   })
 
   it("parses real OOXML package contents instead of trusting required filenames", () => {
@@ -81,6 +105,18 @@ describe("External Pursuit attachment validation", () => {
       "_rels/.rels": '<Relationships><Relationship Target="xl/workbook.xml"/></Relationships>',
       "xl/workbook.xml": '<workbook xmlns="urn:test"/>',
       "xl/media/payload.7z": "payload",
+    }))).toBe(false)
+    expect(matchesExpectedFileStructure("embedded-executable.docx", storedZip({
+      "[Content_Types].xml": '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+      "_rels/.rels": '<Relationships><Relationship Target="word/document.xml"/></Relationships>',
+      "word/document.xml": '<w:document xmlns:w="urn:test"><w:body/></w:document>',
+      "word/media/preview.dat": new Uint8Array([0x61,0x62,0x63,0x4d,0x5a,0x90,0x00,0x7f,0x45,0x4c,0x46]),
+    }))).toBe(false)
+    expect(matchesExpectedFileStructure("padded-executable.docx", storedZip({
+      "[Content_Types].xml": '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+      "_rels/.rels": '<Relationships><Relationship Target="word/document.xml"/></Relationships>',
+      "word/document.xml": '<w:document xmlns:w="urn:test"><w:body/></w:document>',
+      "word/media/preview.png": new Uint8Array([0x61,0x62,0x63,0x4d,0x5a,0x90,0x00]),
     }))).toBe(false)
   })
 
@@ -115,6 +151,21 @@ describe("External Pursuit attachment validation", () => {
       0xff,0xd9,
     ])
     expect(matchesExpectedFileStructure("fake.jpg", syntheticJpeg)).toBe(false)
+    const missingHuffmanTable = new Uint8Array(readFileSync(join(process.cwd(), "public/avatars/default-10.jpg")))
+    const scanMarker = firstMarker(missingHuffmanTable, 0xda)
+    expect(scanMarker).toBeGreaterThan(0)
+    missingHuffmanTable[scanMarker + 6] = 0x33
+    expect(matchesExpectedFileStructure("missing-table.jpg", missingHuffmanTable)).toBe(false)
+    const incompleteHuffmanTable = new Uint8Array(readFileSync(join(process.cwd(), "public/avatars/default-10.jpg")))
+    const huffmanMarker = firstMarker(incompleteHuffmanTable, 0xc4)
+    expect(huffmanMarker).toBeGreaterThan(0)
+    incompleteHuffmanTable[huffmanMarker + 5] = 0xff
+    expect(matchesExpectedFileStructure("incomplete-table.jpg", incompleteHuffmanTable)).toBe(false)
+    const missingQuantizationTable = new Uint8Array(readFileSync(join(process.cwd(), "public/avatars/default-10.jpg")))
+    const frameMarker = Math.max(firstMarker(missingQuantizationTable, 0xc0), firstMarker(missingQuantizationTable, 0xc2))
+    expect(frameMarker).toBeGreaterThan(0)
+    missingQuantizationTable[frameMarker + 12] = 0x03
+    expect(matchesExpectedFileStructure("missing-quantization-table.jpg", missingQuantizationTable)).toBe(false)
     const fakeCfb = new Uint8Array(128)
     fakeCfb.set([0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1])
     fakeCfb.set(encoder.encode("WordDocument"), 32)
