@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
@@ -95,5 +96,17 @@ describe("ExternalPursuitBoard component", () => {
     expect(html).toContain("Review follow-up &amp; files")
     expect(html).toContain("Permanently delete")
     expect(html).not.toContain("Move Pending target stage")
+  })
+
+  it("captures completed actions only after confirmed success, never before retry recovery", () => {
+    const board = readFileSync("components/pursuits/external-pursuit-board.tsx", "utf8")
+    const attachments = readFileSync("components/pursuits/external-pursuit-attachments-panel.tsx", "utf8")
+    const followUp = readFileSync("components/pursuits/external-pursuit-follow-up-panel.tsx", "utf8")
+
+    expect(board).toContain("captureExternalPursuitCompleted")
+    expect(board.indexOf("if (!result.success || !result.pursuitId)")).toBeLessThan(board.indexOf("captureExternalPursuitCompleted(isStaff"))
+    expect(board.indexOf("if (result.retryExact)")).toBeLessThan(board.indexOf("captureExternalPursuitCompleted(isStaff"))
+    expect(attachments.indexOf("if (!result.success)")).toBeLessThan(attachments.indexOf("captureExternalPursuitCompleted(role, \"upload\")"))
+    expect(followUp.indexOf("if (!result.success)")).toBeLessThan(followUp.indexOf("captureExternalPursuitCompleted(role, \"update\")"))
   })
 })

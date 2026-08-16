@@ -16,5 +16,5 @@ export function captureExternalPursuitCompleted(
     workflow: "external_pursuit",
     action,
     outcome: "success",
-  })
+  }, { sendInstantly: true })
 }

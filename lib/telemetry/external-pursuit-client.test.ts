@@ -10,6 +10,6 @@ describe("External Pursuit completion telemetry", () => {
     expect(capture).toHaveBeenCalledWith("wave_action_succeeded", {
       route_template: "/portal/pursuits", surface: "repreneur", role: "repreneur",
       workflow: "external_pursuit", action: "upload", outcome: "success",
-    })
+    }, { sendInstantly: true })
   })
 })

@@ -104,6 +104,29 @@ describe("WAVE telemetry identity lifecycle", () => {
     }))
   })
 
+  it("flushes a completed External Pursuit action immediately with only its allowlisted metadata", async () => {
+    const runtime = await import("@/lib/telemetry/runtime")
+    const { captureExternalPursuitCompleted } = await import("@/lib/telemetry/external-pursuit-client")
+    const calls: TransportCall[] = []
+    runtime.installWaveTelemetryTransport(recordingTransport(calls))
+    runtime.identifyTelemetryUser(OPAQUE_USER_ID, "staff")
+    calls.length = 0
+
+    captureExternalPursuitCompleted("staff", "delete")
+
+    expect(calls).toContainEqual({
+      type: "capture",
+      event: "wave_action_succeeded",
+      properties: expect.objectContaining({
+        route_template: "/opportunities/pursuits", surface: "staff", role: "staff",
+        workflow: "external_pursuit", action: "delete", outcome: "success",
+      }),
+      options: { sendInstantly: true },
+    })
+    const completion = calls.find((call) => call.type === "capture" && call.event === "wave_action_succeeded")
+    expect(JSON.stringify(completion)).not.toMatch(/dossier|attachment|filename|note|title|company|contact|idempotency/i)
+  })
+
   it("captures logout before resetting to a fresh anonymous identity", async () => {
     const runtime = await import("@/lib/telemetry/runtime")
     const calls: TransportCall[] = []
