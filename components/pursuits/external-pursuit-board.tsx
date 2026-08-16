@@ -133,6 +133,7 @@ export function ExternalPursuitBoard({
   const [query, setQuery] = useState("")
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [managing, setManaging] = useState<ExternalPursuitBoardRecord | null>(null)
+  const [managerLocked, setManagerLocked] = useState(false)
   const [submissionSnapshot, setSubmissionSnapshot] = useState<ExternalPursuitSubmissionSnapshot | null>(null)
   const [recoveryRequired, setRecoveryRequired] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -187,6 +188,11 @@ export function ExternalPursuitBoard({
     ))
     resetSubmissionRecovery()
     setOpen(true)
+  }
+
+  function openManager(record: ExternalPursuitBoardRecord) {
+    setManagerLocked(false)
+    setManaging(record)
   }
 
   function patch<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -388,7 +394,7 @@ export function ExternalPursuitBoard({
                         isStaff={isStaff}
                         pending={pending}
                         onEdit={openEdit}
-                        onManage={setManaging}
+                        onManage={openManager}
                         onMove={move}
                         onDelete={(selected) => setConfirmation({ kind: "request", record: selected })}
                         onFulfill={(selected) => setConfirmation({ kind: "fulfill", record: selected })}
@@ -513,7 +519,13 @@ export function ExternalPursuitBoard({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(managing)} onOpenChange={(nextOpen) => { if (!nextOpen) setManaging(null) }}>
+      <Dialog open={Boolean(managing)} onOpenChange={(nextOpen) => {
+        if (!nextOpen && managerLocked) {
+          toast.error("Finish the exact follow-up save recovery before closing this view.")
+          return
+        }
+        if (!nextOpen) setManaging(null)
+      }}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{managing?.title ?? "External pursuit"}</DialogTitle>
@@ -535,6 +547,7 @@ export function ExternalPursuitBoard({
                     sharedNotes: managing.sharedNotes,
                     ...(isStaff ? { staffInternalNotes: managing.staffInternalNotes ?? null } : {}),
                   }}
+                  onLockChange={setManagerLocked}
                   onSaved={() => window.location.reload()}
                 />
               ) : (

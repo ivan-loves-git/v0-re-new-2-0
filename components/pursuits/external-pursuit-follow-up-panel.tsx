@@ -28,6 +28,7 @@ export type ExternalPursuitFollowUpPanelProps = {
   role: "staff" | "repreneur"
   followUp: ExternalPursuitFollowUpSnapshot
   onSaved?: () => void
+  onLockChange?: (locked: boolean) => void
 }
 
 const availabilityLabels: Record<ExternalPursuitAvailability, string> = {
@@ -53,6 +54,7 @@ export function ExternalPursuitFollowUpPanel({
   role,
   followUp,
   onSaved,
+  onLockChange,
 }: ExternalPursuitFollowUpPanelProps) {
   const prefix = useId()
   const baselineRef = useRef<ExternalPursuitFollowUpSnapshot>(followUp)
@@ -97,6 +99,7 @@ export function ExternalPursuitFollowUpPanel({
     }
     attemptRef.current = attempt
     setFormError(null)
+    onLockChange?.(true)
     startTransition(async () => {
       let result
       try {
@@ -116,6 +119,7 @@ export function ExternalPursuitFollowUpPanel({
           toast.error("Follow-up not confirmed", { description: retryMessage })
           return
         }
+        onLockChange?.(false)
         setFormError(result.message)
         toast.error("Follow-up not updated", { description: result.message })
         return
@@ -129,6 +133,7 @@ export function ExternalPursuitFollowUpPanel({
       setDueAt(attempt.snapshot.dueAt ?? "")
       setSharedNotes(attempt.snapshot.sharedNotes ?? "")
       if (role === "staff") setStaffInternalNotes(attempt.snapshot.staffInternalNotes ?? "")
+      onLockChange?.(false)
       toast.success("Follow-up updated")
       onSaved?.()
     })
