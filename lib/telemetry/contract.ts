@@ -37,6 +37,7 @@ export const WAVE_WORKFLOWS = [
   "assessment",
   "repreneur_management",
   "opportunity_management",
+  "external_pursuit",
   "ma_advisory",
   "pipeline",
   "offer_management",

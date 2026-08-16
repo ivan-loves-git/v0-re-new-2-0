@@ -1,7 +1,7 @@
 -- W-110: staff-only capacity and freshness read model for External Pursuits.
 -- This is deliberately separate from Re-New opportunity KPIs, exports,
 -- matching and lifecycle state. The only mutable freshness evidence is a
--- deliberate staff confirmation.
+-- deliberate confirmation by the owner or authorised staff.
 
 ALTER TABLE public.external_pursuits
   ADD COLUMN IF NOT EXISTS last_confirmed_at TIMESTAMPTZ,
@@ -37,17 +37,14 @@ AS $$
 DECLARE
   dossier public.external_pursuits%ROWTYPE;
   actor TEXT := NULLIF(BTRIM(p_actor_user_id), '');
-  actor_role public.app_user_role;
 BEGIN
   IF actor IS NULL OR NULLIF(BTRIM(p_idempotency_key), '') IS NULL THEN
     RAISE EXCEPTION 'An actor and idempotency key are required.';
   END IF;
 
-  SELECT role INTO actor_role FROM public.external_pursuit_actor_context(actor);
-  IF actor_role <> 'staff' THEN
-    RAISE EXCEPTION 'External Pursuit access denied.';
-  END IF;
-
+  -- Migration 099 must follow the corrected migration 098. This is the same
+  -- dossier lock used by edit, deletion and conversion, so confirmation can
+  -- never race a terminal or converted-state transition.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_dossier_id::TEXT, 0));
   IF EXISTS (
     SELECT 1
@@ -71,7 +68,9 @@ BEGIN
     RAISE EXCEPTION 'External Pursuit confirmation idempotency conflict.';
   END IF;
 
-  dossier := public.assert_external_pursuit_access(p_dossier_id, actor, TRUE);
+  -- Staff may confirm any authorised dossier; a repreneur is restricted by
+  -- this shared assertion to their own active dossier.
+  dossier := public.assert_external_pursuit_access(p_dossier_id, actor, FALSE);
   IF dossier.deletion_status <> 'active'
      OR dossier.stage IN ('completed', 'dropped_archived')
      OR EXISTS (
@@ -113,6 +112,8 @@ DECLARE
   actor_role public.app_user_role;
   as_of_value TIMESTAMPTZ := COALESCE(p_as_of, clock_timestamp());
   paris_today DATE;
+  paris_offset_minutes INTEGER;
+  paris_timestamp TEXT;
   payload JSONB;
 BEGIN
   SELECT role INTO actor_role FROM public.external_pursuit_actor_context(actor);
@@ -121,6 +122,18 @@ BEGIN
   END IF;
 
   paris_today := (as_of_value AT TIME ZONE 'Europe/Paris')::DATE;
+  paris_offset_minutes := (
+    EXTRACT(EPOCH FROM (
+      (as_of_value AT TIME ZONE 'Europe/Paris')
+      - (as_of_value AT TIME ZONE 'UTC')
+    )) / 60
+  )::INTEGER;
+  paris_timestamp :=
+    to_char(as_of_value AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD"T"HH24:MI:SS')
+    || CASE WHEN paris_offset_minutes >= 0 THEN '+' ELSE '-' END
+    || lpad((ABS(paris_offset_minutes) / 60)::TEXT, 2, '0')
+    || ':'
+    || lpad((ABS(paris_offset_minutes) % 60)::TEXT, 2, '0');
 
   WITH open_dossiers AS (
     SELECT
@@ -132,7 +145,7 @@ BEGIN
       dossier.due_at,
       dossier.last_confirmed_at,
       CASE
-        WHEN dossier.last_confirmed_at IS NULL THEN 'never_confirmed'
+        WHEN dossier.last_confirmed_at IS NULL THEN 'unknown'
         WHEN paris_today - (dossier.last_confirmed_at AT TIME ZONE 'Europe/Paris')::DATE <= 30 THEN 'fresh'
         ELSE 'stale'
       END AS freshness,
@@ -163,8 +176,20 @@ BEGIN
   )
   SELECT jsonb_build_object(
     'as_of_paris_date', paris_today,
+    'as_of_paris_timestamp', paris_timestamp,
     'open_capacity', jsonb_build_object(
       'total', (SELECT count(*) FROM open_dossiers),
+      'stage', jsonb_build_object(
+        'identified', (SELECT count(*) FROM open_dossiers WHERE stage = 'identified'),
+        'contact_qualification', (SELECT count(*) FROM open_dossiers WHERE stage = 'contact_qualification'),
+        'information', (SELECT count(*) FROM open_dossiers WHERE stage = 'information'),
+        'meetings', (SELECT count(*) FROM open_dossiers WHERE stage = 'meetings'),
+        'negotiation', (SELECT count(*) FROM open_dossiers WHERE stage = 'negotiation'),
+        'loi', (SELECT count(*) FROM open_dossiers WHERE stage = 'loi'),
+        'due_diligence_financing', (SELECT count(*) FROM open_dossiers WHERE stage = 'due_diligence_financing'),
+        'completed', (SELECT count(*) FROM open_dossiers WHERE stage = 'completed'),
+        'dropped_archived', (SELECT count(*) FROM open_dossiers WHERE stage = 'dropped_archived')
+      ),
       'availability', jsonb_build_object(
         'available', (SELECT count(*) FROM open_dossiers WHERE availability = 'available'),
         'limited', (SELECT count(*) FROM open_dossiers WHERE availability = 'limited'),
@@ -174,7 +199,7 @@ BEGIN
       'freshness', jsonb_build_object(
         'fresh', (SELECT count(*) FROM open_dossiers WHERE freshness = 'fresh'),
         'stale', (SELECT count(*) FROM open_dossiers WHERE freshness = 'stale'),
-        'never_confirmed', (SELECT count(*) FROM open_dossiers WHERE freshness = 'never_confirmed')
+        'unknown', (SELECT count(*) FROM open_dossiers WHERE freshness = 'unknown')
       ),
       'due', jsonb_build_object(
         'overdue', (SELECT count(*) FROM open_dossiers WHERE due_state = 'overdue'),
@@ -226,6 +251,6 @@ GRANT EXECUTE ON FUNCTION
   TO service_role;
 
 COMMENT ON FUNCTION public.confirm_external_pursuit_current(UUID, TEXT, TEXT) IS
-  'W-110 staff-only explicit freshness evidence for one open, unconverted External Pursuit. It changes no Re-New opportunity, matching, canonical pursuit, Gate, export or KPI state.';
+  'W-110 owner-or-authorised-staff explicit freshness evidence for one open, unconverted External Pursuit. Owners are restricted to their own dossier. It uses the corrected W-109 shared dossier lock and changes no Re-New opportunity, matching, canonical pursuit, Gate, export or KPI state.';
 COMMENT ON FUNCTION public.external_pursuit_capacity_for_staff(TEXT, TIMESTAMPTZ) IS
   'W-110 staff-only External Pursuit capacity read model. Paris civil dates: fresh through day 30, stale day 31+, today is not overdue. Converted dossiers are reported separately and excluded from open capacity.';

@@ -54,6 +54,8 @@ describe("WAVE telemetry privacy", () => {
     expect(workflowForRoute("/opportunities/ma/contacts")).toBe("ma_advisory")
     expect(workflowForRoute("/portal/pursuits")).toBe("external_pursuit")
     expect(workflowForRoute("/opportunities/pursuits")).toBe("external_pursuit")
+    expect(workflowForRoute("/opportunities/pursuits/capacity")).toBe("external_pursuit")
+    expect(workflowForRoute("/portal/pursuits/private")).toBe("external_pursuit")
     expect(workflowForRoute("/opportunities/private")).toBe("opportunity_management")
     expect(workflowForRoute("/portal/deals/private")).toBe("portal_deals")
     expect(workflowForRoute("/tools/wave-ai")).toBe("wave_ai")

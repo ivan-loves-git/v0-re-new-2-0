@@ -1,10 +1,12 @@
 "use server"
 
-import { randomUUID } from "crypto"
 import { revalidatePath } from "next/cache"
-import { requireStaffAccess } from "@/lib/access-control"
+import { getCurrentUserAccess, requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
-import type { ExternalPursuitCapacitySnapshot } from "@/lib/types/external-pursuit-capacity"
+import type {
+  ExternalPursuitCapacitySnapshot,
+  ExternalPursuitConfirmationResult,
+} from "@/lib/types/external-pursuit-capacity"
 
 function friendlyError(error: unknown, fallback: string) {
   return error instanceof Error && /denied|not found|not open capacity|required/i.test(error.message)
@@ -26,23 +28,50 @@ export async function getExternalPursuitCapacitySnapshot(): Promise<ExternalPurs
   return data as ExternalPursuitCapacitySnapshot
 }
 
-/** A normal edit never refreshes capacity evidence. Staff must make this explicit action. */
+/**
+ * A normal edit never refreshes capacity evidence. The owner may confirm only
+ * their own dossier; authorised staff may confirm any dossier. The browser is
+ * responsible for retaining one exact key across an ambiguous network retry.
+ */
 export async function confirmExternalPursuitCurrent(
   pursuitId: string,
-  idempotencyKey: string = randomUUID(),
-): Promise<{ success: boolean; message: string }> {
-  if (!isUuid(pursuitId)) return { success: false, message: "External Pursuit not found." }
+  idempotencyKey: string,
+): Promise<ExternalPursuitConfirmationResult> {
+  if (!isUuid(pursuitId) || !idempotencyKey.trim()) {
+    return { success: false, outcome: "rejected", message: "External Pursuit confirmation is invalid." }
+  }
+
+  let access: Awaited<ReturnType<typeof getCurrentUserAccess>>
   try {
-    const staff = await requireStaffAccess()
-    const { error } = await createAdminClient().rpc("confirm_external_pursuit_current", {
+    access = await getCurrentUserAccess()
+  } catch {
+    // No mutation was attempted, so the browser may unlock this validation
+    // failure rather than retaining a retry snapshot.
+    return { success: false, outcome: "rejected", message: "External Pursuit access denied." }
+  }
+  if (!access || access.role === "unassigned" || (access.role === "repreneur" && !access.repreneurId)) {
+    return { success: false, outcome: "rejected", message: "External Pursuit access denied." }
+  }
+
+  try {
+    const { error, status } = await createAdminClient().rpc("confirm_external_pursuit_current", {
       p_dossier_id: pursuitId,
-      p_actor_user_id: staff.user.id,
+      p_actor_user_id: access.user.id,
       p_idempotency_key: idempotencyKey,
     })
-    if (error) return { success: false, message: friendlyError(error, "Could not confirm current status.") }
-    revalidatePath("/opportunities/pursuits/capacity")
-    return { success: true, message: "Current status confirmed." }
-  } catch (error) {
-    return { success: false, message: friendlyError(error, "Could not confirm current status.") }
+    if (status === 0) {
+      return { success: false, outcome: "ambiguous", message: "Confirmation result is unknown. Retry the same confirmation." }
+    }
+    if (error) {
+      return { success: false, outcome: "rejected", message: friendlyError(error, "Could not confirm current status.") }
+    }
+  } catch {
+    // A transport failure after dispatch has an ambiguous write outcome. The
+    // client must keep the immutable dossier/key snapshot for an exact retry.
+    return { success: false, outcome: "ambiguous", message: "Confirmation result is unknown. Retry the same confirmation." }
   }
+
+  revalidatePath("/opportunities/pursuits/capacity")
+  revalidatePath("/portal/pursuits")
+  return { success: true, outcome: "confirmed", message: "Current status confirmed." }
 }

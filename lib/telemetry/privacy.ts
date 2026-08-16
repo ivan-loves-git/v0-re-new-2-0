@@ -175,6 +175,10 @@ export function workflowForRoute(pathname: string): WaveWorkflow {
   ) return "ma_advisory"
   if (routeTemplate === "/portal/pursuits" || routeTemplate === "/opportunities/pursuits") return "external_pursuit"
   if (
+    routeTemplate.startsWith("/opportunities/pursuits") ||
+    routeTemplate.startsWith("/portal/pursuits")
+  ) return "external_pursuit"
+  if (
     routeTemplate.startsWith("/opportunities") ||
     routeTemplate.startsWith("/dashboard_op") ||
     routeTemplate.startsWith("/analytics_op")

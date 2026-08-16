@@ -110,7 +110,7 @@ canonical gate, source, match, document or disclosure rule.
 
 | Table | Purpose | Visibility / retention |
 | --- | --- | --- |
-| `external_pursuits` | Owner, title, macro stage, availability, paired next action/responsibility, in-product due date and staff confirmation timestamp/actor | Owner and staff receive dossier state; availability is `available`, `limited`, `unavailable` or `unknown` (the default). `next_action` is optional but when present requires `responsible_party`: `owner` or `staff`; confirmation actor/time remains staff-only capacity evidence. |
+| `external_pursuits` | Owner, title, macro stage, availability, paired next action/responsibility, in-product due date and explicit confirmation timestamp/actor | Owner and staff receive dossier state; availability is `available`, `limited`, `unavailable` or `unknown` (the default). `next_action` is optional but when present requires `responsible_party`: `owner` or `staff`; confirmation actor/time remains staff-only capacity evidence. |
 | `external_pursuit_notes` | Owner-visible notes | Owner and staff receive `shared_notes`; cleared on fulfillment |
 | `external_pursuit_staff_notes` | Separate staff-only notes | Never serialized to the owner; cleared on fulfillment |
 | `external_pursuit_contacts` | Repeatable people or organisations associated with a pursuit | Same owner/staff rule; deleted with pursuit content |
@@ -278,11 +278,16 @@ deterministic; an unknown PostgREST or gateway error remains ambiguous.
     It includes only active, unfinished, unconverted dossiers. Converted dossiers
     remain separately visible to staff for context and are excluded from every
     open-capacity and availability total. `last_confirmed_at` is changed only by
-    an explicit staff **Confirm current** action, which records actor/time in the
-    immutable audit. It uses Paris civil dates: confirmation is fresh through day
-    30 and stale from day 31; a missing confirmation stays distinct. A due date
-    equal to today's Paris date is due today, not overdue. Completed, dropped and
-    deletion-requested dossiers are not open capacity.
+    an explicit **Confirm current** action by the owner on their own dossier or by
+    authorised staff on any accessible dossier; the immutable audit records the
+    actor and time. A normal edit never confirms freshness. It uses Paris civil
+    dates: confirmation is fresh through day 30 and stale from day 31; a missing
+    confirmation is labelled `unknown`. A due date equal to today's Paris date is
+    due today, not overdue. The first staff view reports every macro-stage and
+    availability bucket, overdue/stale totals, and an actual Europe/Paris as-of
+    timestamp. Completed, dropped and deletion-requested dossiers are not open
+    capacity. Migration 099 follows corrected migration 098 and uses its shared
+    dossier lock so edit, deletion, conversion and confirmation cannot race.
 
 ## Acceptance matrix
 
@@ -304,7 +309,8 @@ deterministic; an unknown PostgREST or gateway error remains ambiguous.
 | Response is lost or transport outcome is ambiguous | Fields remain frozen; the exact snapshot/key is retried until the canonical result is confirmed |
 | Delete request or fulfillment after conversion | Denied before any dossier database content or attachment storage is removed |
 | Staff opens external capacity | Only aggregate and staff-detail external data is returned; no repreneur, export or canonical KPI read is involved |
-| Staff confirms an open dossier as current | The explicit action alone records freshness; a normal edit does not |
+| Owner confirms their own open dossier as current | Allowed; the explicit action alone records actor/time freshness, while another owner is denied |
+| Staff confirms an open dossier as current | Allowed for any authorised dossier; the explicit action alone records actor/time freshness and a normal edit does not |
 | Confirmation is 30 or 31 Paris civil days old | Day 30 is `fresh`; day 31 is `stale` |
 | Due date is today's Paris civil date | Shown as `Due today`, never `Overdue` |
 | Converted dossier | Shown separately to staff and excluded from open availability and capacity totals |
