@@ -4,7 +4,7 @@
 
 | Item | Value |
 | --- | --- |
-| Status | Approved implementation contract through W-109 |
+| Status | Approved implementation contract through W-110 |
 | Scope | A repreneur-owned record of work outside WAVE opportunities |
 | Implementation owner | Dev team |
 | Visibility | The owner repreneur and authorized staff only; all other repreneurs and unassigned users are denied |
@@ -110,7 +110,7 @@ canonical gate, source, match, document or disclosure rule.
 
 | Table | Purpose | Visibility / retention |
 | --- | --- | --- |
-| `external_pursuits` | Owner, title, macro stage, availability, paired next action/responsibility and in-product due date | Owner and staff receive this dossier state; availability is `available`, `limited`, `unavailable` or `unknown` (the default). `next_action` is optional but when present requires `responsible_party`: `owner` or `staff` |
+| `external_pursuits` | Owner, title, macro stage, availability, paired next action/responsibility, in-product due date and staff confirmation timestamp/actor | Owner and staff receive dossier state; availability is `available`, `limited`, `unavailable` or `unknown` (the default). `next_action` is optional but when present requires `responsible_party`: `owner` or `staff`; confirmation actor/time remains staff-only capacity evidence. |
 | `external_pursuit_notes` | Owner-visible notes | Owner and staff receive `shared_notes`; cleared on fulfillment |
 | `external_pursuit_staff_notes` | Separate staff-only notes | Never serialized to the owner; cleared on fulfillment |
 | `external_pursuit_contacts` | Repeatable people or organisations associated with a pursuit | Same owner/staff rule; deleted with pursuit content |
@@ -273,6 +273,17 @@ deterministic rejection may unlock the form for a corrected request.
 Only the explicitly allowlisted conversion-domain and validation rejections are
 deterministic; an unknown PostgREST or gateway error remains ambiguous.
 
+21. W-110 capacity is a staff-only read model for External Pursuits, never a
+    Re-New KPI, export, matching input, canonical pursuit or lifecycle state.
+    It includes only active, unfinished, unconverted dossiers. Converted dossiers
+    remain separately visible to staff for context and are excluded from every
+    open-capacity and availability total. `last_confirmed_at` is changed only by
+    an explicit staff **Confirm current** action, which records actor/time in the
+    immutable audit. It uses Paris civil dates: confirmation is fresh through day
+    30 and stale from day 31; a missing confirmation stays distinct. A due date
+    equal to today's Paris date is due today, not overdue. Completed, dropped and
+    deletion-requested dossiers are not open capacity.
+
 ## Acceptance matrix
 
 | Scenario | Expected result |
@@ -292,3 +303,8 @@ deterministic; an unknown PostgREST or gateway error remains ambiguous.
 | Retry after a confirmed conversion | Same actor/key returns the same opportunity; another key fails closed |
 | Response is lost or transport outcome is ambiguous | Fields remain frozen; the exact snapshot/key is retried until the canonical result is confirmed |
 | Delete request or fulfillment after conversion | Denied before any dossier database content or attachment storage is removed |
+| Staff opens external capacity | Only aggregate and staff-detail external data is returned; no repreneur, export or canonical KPI read is involved |
+| Staff confirms an open dossier as current | The explicit action alone records freshness; a normal edit does not |
+| Confirmation is 30 or 31 Paris civil days old | Day 30 is `fresh`; day 31 is `stale` |
+| Due date is today's Paris civil date | Shown as `Due today`, never `Overdue` |
+| Converted dossier | Shown separately to staff and excluded from open availability and capacity totals |

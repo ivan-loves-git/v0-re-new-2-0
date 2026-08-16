@@ -11,6 +11,7 @@ import {
   Mail,
   Package,
   BarChart3,
+  Gauge,
   BookOpenCheck,
   Map,
   Building2,
@@ -77,6 +78,7 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Find", href: "/opportunities/find", icon: Search },
   { name: "Pursuits", href: "/opportunities/pursuits", icon: ListTree },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
+  { name: "External capacity", href: "/opportunities/pursuits/capacity", icon: Gauge },
 ]
 
 const maNavigation: NavigationItem[] = [

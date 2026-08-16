@@ -39,7 +39,7 @@ const STATIC_ROUTE_SEGMENTS = new Set([
   "instructions", "intake-upload-token", "intake-v2", "journey", "login", "ma",
   "ma-workflow", "nda-artifacts", "documents",
   "my-opportunities", "new", "offers", "opportunities", "pipeline",
-  "portal", "portal-preview", "profile", "pursuits", "questionnaire", "repreneurs",
+  "portal", "portal-preview", "profile", "pursuits", "capacity", "questionnaire", "repreneurs",
   "reset-avatar", "reset-password", "review", "reviews", "roadmap", "routing",
   "scrapbook", "scrapbook-html", "settings", "strategy", "success",
   "tools", "update-journey-stages", "upload-avatar", "upload-cv", "wave-ai",

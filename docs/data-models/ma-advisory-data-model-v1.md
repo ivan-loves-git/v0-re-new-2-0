@@ -832,6 +832,11 @@ source teasers or M&A interaction evidence, and cannot feed exports, matching,
 Gates or disclosure. Its private bucket, server-only authorization and
 delete-before-fulfillment cleanup are defined in the External Pursuit contract.
 
+W-110's staff-only External Pursuit capacity/freshness view remains on that
+separate domain. It may read a converted link only to separate converted dossiers
+from the external capacity count; it does not alter or contribute to the linked
+opportunity, M&A analytics, matching, export, lifecycle, Gate or disclosure.
+
 ### W-063 staff intake reconciliation
 
 W-063 must route new firm identity creation through `create_ma_firm_with_default_office`, new or additional contact relationships through `create_or_affiliate_ma_contact`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.
@@ -889,6 +894,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-08-16 | 4.5.12 candidate | Recorded W-110's separate staff-only External Pursuit capacity boundary. Paris civil freshness is fresh through day 30 and stale from day 31; confirmations are explicit staff evidence, due-today is never overdue, and converted dossiers are a separate excluded bucket. No canonical opportunity, M&A KPI, export, matching, lifecycle, Gate or disclosure rule changes. | W-110; migration 099 |
 | 2026-08-16 | 4.5.11 candidate | Added and hardened the W-109 staff-only conversion boundary: one active External Pursuit may create one fresh canonical staff-only Draft only from staff-selected anonymous title, W-039 geography, real non-default non-Acme office and named active primary affiliation. The atomic canonical create RPC allocates the reference; an immutable one-way link retains only identities and retry evidence. Conversion, update and deletion share the exact dossier lock; W-108 receives a staff-only preflight before storage removal; ambiguous clients retry one frozen snapshot/key. No dossier content is copied and no match, pursuit, Gate, NDA, document or disclosure changes. | W-109; migration 098 |
 | 2026-08-16 | 4.5.10 candidate | Added the bounded W-107 External Pursuit follow-up contract: paired next action and owner/staff responsibility, Paris civil-date states, availability and distinct shared/staff-only notes through a narrow audited patch. It adds no task, notification, canonical lifecycle or M&A effect. | W-107; migration 096 |
 | 2026-08-16 | 4.5.9 candidate | Recorded the explicit boundary for the separate W-104–W-106 External Pursuit domain. Its owner dossier, contacts, notes, audit and deletion tombstone have no M&A foreign key, import, export, match, Gate or disclosure effect; W-106 projects each canonical match read-only and never lets an aggregate opportunity close mislabel sibling matches. The canonical M&A model is unchanged. | W-104, W-105, W-106; migrations 093–095 |

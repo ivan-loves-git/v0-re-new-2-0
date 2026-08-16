@@ -20,6 +20,8 @@ const pathNames: Record<string, string> = {
   activity: "Activity",
   firms: "Firms",
   contacts: "Contacts",
+  pursuits: "External pursuits",
+  capacity: "External capacity",
   pipeline: "Pipeline",
   emails: "Emails",
   journey: "Journey",
