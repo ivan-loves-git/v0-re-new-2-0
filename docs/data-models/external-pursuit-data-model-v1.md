@@ -270,6 +270,8 @@ freezes every field and retains the exact submitted snapshot and idempotency key
 The only retry sends that same snapshot and key; it never claims that nothing
 was created. A confirmed success navigates to the returned staff-only Draft. A
 deterministic rejection may unlock the form for a corrected request.
+Only the explicitly allowlisted conversion-domain and validation rejections are
+deterministic; an unknown PostgREST or gateway error remains ambiguous.
 
 ## Acceptance matrix
 

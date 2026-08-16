@@ -46,6 +46,7 @@ describe("W-109 External Pursuit conversion", () => {
     mocks.rpc.mockResolvedValue({
       data: [{ opportunity_id: "00000000-0000-4000-8000-000000000023", opportunity_reference: "Re-New - FR - 001" }],
       error: null,
+      status: 200,
     })
   })
 
@@ -89,10 +90,11 @@ describe("W-109 External Pursuit conversion", () => {
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
-  it("marks status-zero and thrown transport outcomes as ambiguous without denying a possible commit", async () => {
+  it("reads top-level Supabase status zero as an ambiguous commit outcome", async () => {
     mocks.rpc.mockResolvedValueOnce({
       data: null,
-      error: { status: 0, message: "Failed to fetch" },
+      error: { code: "", details: "", hint: "", message: "Load failed" },
+      status: 0,
     })
     const statusZero = await convertExternalPursuitToOpportunity(
       "00000000-0000-4000-8000-000000000020",
@@ -101,7 +103,9 @@ describe("W-109 External Pursuit conversion", () => {
     )
     expect(statusZero).toMatchObject({ success: false, ambiguous: true })
     expect(statusZero.message).not.toContain("Nothing was created")
+  })
 
+  it("keeps thrown transport and unknown gateway errors on the exact-retry path", async () => {
     mocks.rpc.mockRejectedValueOnce(new TypeError("fetch failed"))
     const thrown = await convertExternalPursuitToOpportunity(
       "00000000-0000-4000-8000-000000000020",
@@ -109,12 +113,33 @@ describe("W-109 External Pursuit conversion", () => {
       "00000000-0000-4000-8000-000000000024",
     )
     expect(thrown).toMatchObject({ success: false, ambiguous: true })
+
+    mocks.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: "PGRST002", message: "Could not query the schema cache" },
+      status: 503,
+    })
+    const gateway = await convertExternalPursuitToOpportunity(
+      "00000000-0000-4000-8000-000000000020",
+      input,
+      "00000000-0000-4000-8000-000000000024",
+    )
+    expect(gateway).toMatchObject({ success: false, ambiguous: true })
+
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: null, status: 200 })
+    const missingReceipt = await convertExternalPursuitToOpportunity(
+      "00000000-0000-4000-8000-000000000020",
+      input,
+      "00000000-0000-4000-8000-000000000024",
+    )
+    expect(missingReceipt).toMatchObject({ success: false, ambiguous: true })
   })
 
   it("keeps deterministic database rejection distinct from an ambiguous response", async () => {
     mocks.rpc.mockResolvedValueOnce({
       data: null,
       error: { code: "P0001", message: "external_pursuit_conversion_requires_active_dossier" },
+      status: 400,
     })
     const result = await convertExternalPursuitToOpportunity(
       "00000000-0000-4000-8000-000000000020",
@@ -208,6 +233,8 @@ describe("W-109 External Pursuit conversion", () => {
     expect(panel).not.toContain("staffInternalNotes")
     expect(panel).not.toContain("sharedNotes")
     expect(conversionAction).not.toContain("Nothing was created")
+    expect(conversionAction).toContain("const { data, error, status }")
+    expect(conversionAction).toContain("CONVERSION_DOMAIN_ERRORS")
     expect(EXTERNAL_PURSUIT_CONVERSION_MOUNT_CONTRACT).toMatchObject({
       role: "staff-only",
       defaults: expect.stringContaining("start empty"),

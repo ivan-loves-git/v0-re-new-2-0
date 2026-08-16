@@ -12,6 +12,41 @@ import type {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+const CONVERSION_DOMAIN_ERRORS = [
+  [
+    "external_pursuit_already_converted",
+    "This dossier was already converted. Refresh the board to open the linked opportunity.",
+  ],
+  [
+    "external_pursuit_conversion_requires_active_dossier",
+    "Only an active, unfinished External Pursuit can be converted.",
+  ],
+  [
+    "external_pursuit_conversion_rejects_acme_source",
+    "Choose a real operating office; the provisional Acme source cannot be used.",
+  ],
+  [
+    "external_pursuit_conversion_requires_active_real_office",
+    "Choose an active real operating office.",
+  ],
+  [
+    "external_pursuit_conversion_requires_active_named_primary_contact",
+    "Choose one active named primary contact at the selected office.",
+  ],
+  ["external_pursuit_conversion_fields_required", "Complete every required conversion field."],
+  [
+    "external_pursuit_conversion_public_title_too_long",
+    "Keep the public title under 240 characters.",
+  ],
+  [
+    "external_pursuit_conversion_actor_and_key_required",
+    "This conversion request is missing its staff identity or retry key.",
+  ],
+  ["opportunity_geography_required", "Choose a current canonical geography."],
+  ["opportunity_geography_not_found", "Choose a current canonical geography."],
+  ["External Pursuit access denied.", "Staff access is required to convert this dossier."],
+] as const
+
 function fieldErrors(input: ExternalPursuitConversionInput) {
   const errors: Record<string, string> = {}
   if (!input.publicTitle?.trim()) errors.publicTitle = "Write a safe anonymous public title."
@@ -30,13 +65,6 @@ function errorMessage(error: unknown) {
   return ""
 }
 
-function isAmbiguousTransportError(error: unknown) {
-  const candidate = error as { status?: unknown; code?: unknown }
-  const message = errorMessage(error)
-  return candidate?.status === 0 || candidate?.code === "0" ||
-    /failed to fetch|fetch failed|network|socket|connection|timed?\s*out/i.test(message)
-}
-
 function ambiguousResult(): ExternalPursuitConversionResult {
   return {
     success: false,
@@ -45,15 +73,9 @@ function ambiguousResult(): ExternalPursuitConversionResult {
   }
 }
 
-function readableError(error: unknown) {
+function readableConversionDomainError(error: unknown): string | null {
   const message = errorMessage(error)
-  if (message.includes("external_pursuit_already_converted")) return "This dossier was already converted. Refresh the board to open the linked opportunity."
-  if (message.includes("external_pursuit_conversion_requires_active_dossier")) return "Only an active, unfinished External Pursuit can be converted."
-  if (message.includes("external_pursuit_conversion_rejects_acme_source")) return "Choose a real operating office; the provisional Acme source cannot be used."
-  if (message.includes("external_pursuit_conversion_requires_active_real_office")) return "Choose an active real operating office."
-  if (message.includes("external_pursuit_conversion_requires_active_named_primary_contact")) return "Choose one active named primary contact at the selected office."
-  if (message.includes("opportunity_geography")) return "Choose a current canonical geography."
-  return "The conversion was rejected. Review the required fields and retry."
+  return CONVERSION_DOMAIN_ERRORS.find(([token]) => message.includes(token))?.[1] ?? null
 }
 
 function readableDeletionPreflightError(error: unknown) {
@@ -85,7 +107,7 @@ export async function convertExternalPursuitToOpportunity(
 
   const { user } = await requireStaffAccess()
   try {
-    const { data, error } = await createAdminClient().rpc(
+    const { data, error, status } = await createAdminClient().rpc(
       "convert_external_pursuit_to_opportunity",
       {
         p_dossier_id: pursuitId,
@@ -97,10 +119,14 @@ export async function convertExternalPursuitToOpportunity(
         p_idempotency_key: idempotencyKey.trim(),
       },
     )
+    // PostgREST exposes transport status beside the error object. Status zero
+    // means the client never received a trustworthy commit outcome.
+    if (status === 0) return ambiguousResult()
     if (error) {
-      return isAmbiguousTransportError(error)
-        ? ambiguousResult()
-        : { success: false, message: readableError(error) }
+      const domainMessage = readableConversionDomainError(error)
+      return domainMessage
+        ? { success: false, message: domainMessage }
+        : ambiguousResult()
     }
     const conversion = Array.isArray(data) ? data[0] : data
     if (!conversion?.opportunity_id || !conversion?.opportunity_reference) {
