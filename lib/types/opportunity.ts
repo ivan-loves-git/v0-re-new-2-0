@@ -439,6 +439,10 @@ export interface MaOfficeIntakeOffice {
   firm_id: string
   firm_name: string
   firm_status?: "prospect" | "active"
+  /** True only for the synthetic compatibility office; never eligible for W-109. */
+  is_default?: boolean
+  /** True for Acme or any later governed provisional source context. */
+  is_provisional_source?: boolean
   office_name: string
   office_label: string
   contacts: MaOfficeIntakeContact[]

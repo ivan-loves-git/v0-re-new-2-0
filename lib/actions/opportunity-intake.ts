@@ -55,6 +55,7 @@ interface MaOfficeIntakeProjectionRow {
   firm_id: string
   firm_name: string
   firm_status: "prospect" | "active"
+  office_is_default: boolean
   office_name: string
   office_label: string
   affiliation_id: string | null
@@ -453,7 +454,7 @@ export async function listMaOfficeIntakeOptions(options?: {
     supabase
       .from("staff_ma_office_intake_projection")
       .select(
-        "office_id, firm_id, firm_name, firm_status, office_name, office_label, affiliation_id, contact_id, contact_name, contact_email, job_title",
+        "office_id, firm_id, firm_name, firm_status, office_name, office_label, office_is_default, affiliation_id, contact_id, contact_name, contact_email, job_title",
       )
       .order("firm_name")
       .order("office_name")
@@ -486,6 +487,8 @@ export async function listMaOfficeIntakeOptions(options?: {
       firm_id: row.firm_id,
       firm_name: row.firm_name,
       firm_status: row.firm_status,
+      is_default: row.office_is_default,
+      is_provisional_source: row.office_id === provisionalOfficeId,
       office_name: row.office_name,
       office_label: row.office_label,
       contacts: [],

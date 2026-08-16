@@ -150,9 +150,10 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 6. Staff fulfillment removes the entire dossier row, shared/internal notes,
    contacts and ordinary audit events, while retaining only former dossier ID,
    owner ID, request/fulfil actor and time in the tombstone. W-108 owns private
-   attachments; its delete path must
-   remove objects before calling this fulfillment primitive and may not claim
-   success while cleanup remains.
+   attachments; its delete path must call the staff-only conversion-state
+   preflight before listing or removing any storage object, then remove the
+   objects before calling the final fulfillment primitive. The final fulfillment
+   rechecks the same boundary and may not claim success while cleanup remains.
 7. No historic interaction is imported in this phase. Any later supplied source
    material needs a separately approved mapping and retention decision.
 8. Creation is progressive: title alone creates an External Pursuit at
@@ -243,7 +244,7 @@ exported or treated as dossier content; a different fulfillment key is rejected.
     unlocked failures.
 19. Only staff may convert an active, unfinished, non-deletion-requested External
     Pursuit. The staff member must enter a safe anonymized public title and select
-    one canonical geography, an active real non-Acme office and exactly one active
+    one canonical geography, an active real non-default non-Acme office and exactly one active
     named primary affiliation. The database creates a new `staff_only` Draft
     through `create_opportunity_with_office_context`, which allocates the immutable
     reference atomically. It creates no match, pursuit, Gate, NDA, document,
@@ -252,7 +253,23 @@ exported or treated as dossier content; a different fulfillment key is rejected.
     staff actor and idempotency key return the original result; a different attempt
     fails rather than guessing or creating another opportunity. A converted dossier
     cannot be deletion-fulfilled. The attachment fulfillment path checks this state
-    before listing or removing any storage object.
+    before listing or removing any storage object. Conversion, dossier update and
+    dossier deletion use the same dossier advisory lock, so their outcomes are serialized.
+
+## W-109 application integration contract
+
+The conversion panel remains a standalone staff component. Its host may mount
+it only for one active, unfinished External Pursuit on a staff board or detail
+surface. All fields begin empty and must never be initialized from dossier
+content. Geography options come from W-039; source choices contain only active
+real non-default non-Acme offices and their active named affiliations.
+
+If a request returns status zero, throws during transport or cannot return a
+complete conversion receipt, the client treats the outcome as ambiguous. It
+freezes every field and retains the exact submitted snapshot and idempotency key.
+The only retry sends that same snapshot and key; it never claims that nothing
+was created. A confirmed success navigates to the returned staff-only Draft. A
+deterministic rejection may unlock the form for a corrected request.
 
 ## Acceptance matrix
 
@@ -271,4 +288,5 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 | Staff converts an active dossier with fresh canonical selections | Exactly one linked staff-only Draft and immutable mandate reference are created; no dossier content is copied and no match/pursuit/Gate changes |
 | Owner or unassigned user calls conversion | Denied; no opportunity or conversion link is created |
 | Retry after a confirmed conversion | Same actor/key returns the same opportunity; another key fails closed |
+| Response is lost or transport outcome is ambiguous | Fields remain frozen; the exact snapshot/key is retried until the canonical result is confirmed |
 | Delete request or fulfillment after conversion | Denied before any dossier database content or attachment storage is removed |
