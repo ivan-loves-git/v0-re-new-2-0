@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 16, 2026",
+    version: "0.9.48",
+    title: "External acquisition work now has its own protected foundation",
+    isCompleted: true,
+    events: [
+      {
+        title: "External pursuits remain separate from Re-New opportunities",
+        type: "decision",
+        description: "Independent acquisition dossiers cannot enter matching, source records, confidentiality gates, exports or Re-New performance indicators.",
+      },
+      {
+        title: "Every dossier has one owner and a clear staff boundary",
+        type: "feature",
+        description: "The owner and authorised Re-New staff can work with the dossier, while other repreneurs and unassigned users are denied and staff-only notes stay separate.",
+      },
+      {
+        title: "Deletion removes the dossier content without erasing accountability",
+        type: "decision",
+        description: "The owner requests deletion, staff fulfils it, and WAVE retains only the minimum actor-and-time evidence needed to prove that the request was completed.",
+      },
+      {
+        title: "The visible External Pursuit workspace comes next",
+        type: "direction",
+        description: "This release establishes the protected data and access boundary; progressive intake, the shared board, follow-up and private files remain the next delivery slice.",
+      },
+    ],
+  },
+  {
     period: "Aug 15, 2026",
     version: "0.9.47",
     title: "Repreneur matching now starts from shared, complete criteria",

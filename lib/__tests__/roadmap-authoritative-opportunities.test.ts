@@ -11,6 +11,14 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the protected External Pursuit foundation without claiming the workspace", () => {
+    expect(roadmap).toContain('version: "0.9.48"')
+    expect(roadmap).toContain("External pursuits remain separate from Re-New opportunities")
+    expect(roadmap).toContain("Every dossier has one owner and a clear staff boundary")
+    expect(roadmap).toContain("Deletion removes the dossier content without erasing accountability")
+    expect(roadmap).toContain("The visible External Pursuit workspace comes next")
+  })
+
   it("records the controlled-opening technical-readiness release", () => {
     expect(roadmap).toContain('version: "0.9.47"')
     expect(roadmap).toContain("Staff and repreneurs now maintain one acquisition project")
@@ -142,6 +150,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-15")')
+    expect(roadmapStatus).toContain('new Date("2026-08-16")')
   })
 })
