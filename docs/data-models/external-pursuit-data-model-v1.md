@@ -194,15 +194,18 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    information memoranda, source teasers and interaction evidence. They are
    never exported, matched, scored, used as a Gate input or projected to an
    opportunity or canonical pursuit.
-16. Only PDF, DOC, DOCX, XLS, XLSX, CSV, JPG/JPEG, PNG, WEBP and GIF are
+16. Only PDF, DOCX, XLSX, CSV, JPG/JPEG, PNG, WEBP and GIF are
    accepted, each at most 20 MiB. The server validates extension, declared MIME
    and the complete bounded file structure: PDFs require a complete, inactive
-   PDF envelope; OOXML files require their expected package entries and reject
-   macro/archive/polyglot content; legacy Office files require their expected
-   compound-document stream; CSV is scanned as UTF-8 text; and images require
+   PDF envelope and no active-document hooks; OOXML files require valid package
+   contents, relationships and document/workbook roots and reject
+   macro/archive/polyglot content; CSV is scanned as UTF-8 text; and images require
    their complete type envelope. Executables, HTML, SVG and generic archives are
-   rejected. Objects have random safe paths in the private
-   `external-pursuit-attachments` bucket; browser storage policies and public
+   rejected. Legacy binary DOC and XLS are deliberately excluded because a
+   lightweight signature check cannot distinguish them safely from a generic
+   compound file. Objects have random safe paths in the private
+   `external-pursuit-attachments` bucket; the database requires the first path
+   segment to equal that attachment's dossier UUID. Browser storage policies and public
    URLs are never created.
 17. The owner or authorized staff may list, upload, download and remove an
    active dossier's attachments. Downloads are 60-second signed redirects after

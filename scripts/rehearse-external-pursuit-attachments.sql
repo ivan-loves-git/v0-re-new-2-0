@@ -18,6 +18,8 @@ DO $$
 DECLARE d UUID; registered JSONB; replay JSONB; attachment UUID; expected_path TEXT; owner_label TEXT; staff_label TEXT;
 BEGIN
   d := public.create_external_pursuit('00000000-0000-4000-8000-000000010801','W-108 fixture','identified','unknown',NULL,NULL,NULL,'w108-owner-a-user','w108-create');
+  BEGIN PERFORM public.register_external_pursuit_attachment(d,'00000000-0000-4000-8000-000000010802/00000000-0000-4000-8000-000000010899.pdf','Wrong dossier.pdf','application/pdf',1,'w108-owner-a-user','w108-wrong-path-rpc'); RAISE EXCEPTION 'w108_rpc_path_mismatch_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit attachment path is invalid.' THEN RAISE; END IF; END;
+  BEGIN INSERT INTO public.external_pursuit_attachments(external_pursuit_id,storage_path,original_filename,content_type,byte_size,created_by) VALUES(d,'00000000-0000-4000-8000-000000010802/00000000-0000-4000-8000-000000010897.pdf','Wrong dossier.pdf','application/pdf',1,'w108-owner-a-user'); RAISE EXCEPTION 'w108_table_path_mismatch_was_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
   expected_path := d::TEXT || '/00000000-0000-4000-8000-000000010899.pdf';
   registered := public.register_external_pursuit_attachment(d,expected_path,'Source memo.pdf','application/pdf',1024,'w108-owner-a-user','w108-upload');
   replay := public.register_external_pursuit_attachment(d,d::TEXT || '/00000000-0000-4000-8000-000000010898.pdf','Changed.pdf','application/pdf',2,'w108-owner-a-user','w108-upload');
@@ -41,7 +43,7 @@ DO $$
 DECLARE bucket_limit BIGINT; bucket_public BOOLEAN; bucket_mimes TEXT[]; function_name TEXT;
 BEGIN
   SELECT file_size_limit,public,allowed_mime_types INTO bucket_limit,bucket_public,bucket_mimes FROM storage.buckets WHERE id='external-pursuit-attachments';
-  IF bucket_public OR bucket_limit <> 20971520 OR NOT bucket_mimes @> ARRAY['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','image/png']::TEXT[] THEN RAISE EXCEPTION 'w108_bucket_controls_invalid'; END IF;
+  IF bucket_public OR bucket_limit <> 20971520 OR NOT bucket_mimes @> ARRAY['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','image/png']::TEXT[] OR bucket_mimes && ARRAY['application/msword','application/vnd.ms-excel']::TEXT[] THEN RAISE EXCEPTION 'w108_bucket_controls_invalid'; END IF;
   IF has_table_privilege('anon','public.external_pursuit_attachments','select,insert,update,delete,truncate,references,trigger') OR has_table_privilege('authenticated','public.external_pursuit_attachments','select,insert,update,delete,truncate,references,trigger') OR has_table_privilege('service_role','public.external_pursuit_attachments','insert,update,delete,truncate,references,trigger') OR NOT has_table_privilege('service_role','public.external_pursuit_attachments','select') THEN RAISE EXCEPTION 'w108_table_privileges_invalid'; END IF;
   FOREACH function_name IN ARRAY ARRAY[
     'external_pursuit_attachments_for_actor(uuid,text)',

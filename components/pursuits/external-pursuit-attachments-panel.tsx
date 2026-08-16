@@ -78,9 +78,9 @@ export function ExternalPursuitAttachmentsPanel({
       </li>) : <li className="p-3 text-sm text-muted-foreground">No private attachments yet.</li>}
     </ul>
     {!readOnly ? <form action={upload} className="mt-4 flex flex-wrap items-end gap-3">
-      <div className="min-w-56 flex-1 space-y-2"><Label htmlFor={fileInputId}>Choose a private attachment</Label><Input id={fileInputId} ref={fileRef} name="file" type="file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/jpeg,image/png,image/webp,image/gif" disabled={pending} /></div>
+      <div className="min-w-56 flex-1 space-y-2"><Label htmlFor={fileInputId}>Choose a private attachment</Label><Input id={fileInputId} ref={fileRef} name="file" type="file" required accept=".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/jpeg,image/png,image/webp,image/gif" disabled={pending} /></div>
       <Button type="submit" disabled={pending}><Upload data-icon="inline-start" />{pending ? "Adding…" : "Add attachment"}</Button>
     </form> : <p className="mt-4 text-sm text-muted-foreground">Deletion is pending. Files are available for staff review but cannot be changed.</p>}
-    <p className="mt-2 text-xs text-muted-foreground">PDF, Office files, CSV and images only; maximum {EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MiB. Executables, archives, HTML and SVG are not accepted.</p>
+    <p className="mt-2 text-xs text-muted-foreground">PDF, DOCX, XLSX, CSV and images only; maximum {EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MiB. Legacy Office files, executables, archives, HTML and SVG are not accepted.</p>
   </section>
 }

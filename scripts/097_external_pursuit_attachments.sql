@@ -9,9 +9,8 @@ VALUES (
   false,
   20971520,
   ARRAY[
-    'application/pdf', 'application/msword',
+    'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/csv', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'
   ]::TEXT[]
@@ -28,14 +27,11 @@ ON CONFLICT (id) DO UPDATE SET
 CREATE TABLE IF NOT EXISTS public.external_pursuit_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   external_pursuit_id UUID NOT NULL REFERENCES public.external_pursuits(id) ON DELETE RESTRICT,
-  storage_path TEXT NOT NULL UNIQUE CHECK (
-    storage_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.[a-z0-9]{2,5}$'
-  ),
+  storage_path TEXT NOT NULL UNIQUE,
   original_filename TEXT NOT NULL CHECK (char_length(original_filename) BETWEEN 1 AND 255),
   content_type TEXT NOT NULL CHECK (content_type IN (
-    'application/pdf', 'application/msword',
+    'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/csv', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'
   )),
@@ -43,6 +39,15 @@ CREATE TABLE IF NOT EXISTS public.external_pursuit_attachments (
   created_by TEXT NOT NULL CHECK (NULLIF(BTRIM(created_by), '') IS NOT NULL),
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
+ALTER TABLE public.external_pursuit_attachments
+  DROP CONSTRAINT IF EXISTS external_pursuit_attachments_storage_path_check;
+ALTER TABLE public.external_pursuit_attachments
+  DROP CONSTRAINT IF EXISTS external_pursuit_attachment_path_matches_dossier;
+ALTER TABLE public.external_pursuit_attachments
+  ADD CONSTRAINT external_pursuit_attachment_path_matches_dossier CHECK (
+    storage_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.[a-z0-9]{2,5}$'
+    AND split_part(storage_path, '/', 1)::UUID = external_pursuit_id
+  );
 CREATE INDEX IF NOT EXISTS external_pursuit_attachments_dossier_idx
   ON public.external_pursuit_attachments (external_pursuit_id, created_at ASC);
 
@@ -105,6 +110,7 @@ BEGIN
   p := public.assert_external_pursuit_access(p_dossier_id, actor, FALSE);
   IF p.deletion_status <> 'active' THEN RAISE EXCEPTION 'External Pursuit is not editable.'; END IF;
   IF NULLIF(BTRIM(p_idempotency_key), '') IS NULL THEN RAISE EXCEPTION 'An idempotency key is required.'; END IF;
+  IF split_part(p_storage_path, '/', 1) <> p_dossier_id::TEXT THEN RAISE EXCEPTION 'External Pursuit attachment path is invalid.'; END IF;
   IF EXISTS (SELECT 1 FROM public.external_pursuit_audit_events e WHERE e.external_pursuit_id=p_dossier_id AND e.actor_user_id=actor AND e.idempotency_key=p_idempotency_key) THEN
     SELECT (metadata->>'attachment_id')::UUID INTO attachment_id FROM public.external_pursuit_audit_events e
     WHERE e.external_pursuit_id=p_dossier_id AND e.actor_user_id=actor AND e.idempotency_key=p_idempotency_key AND e.event_type='updated' AND e.metadata->>'kind'='attachment_uploaded'
@@ -119,11 +125,12 @@ BEGIN
   RETURN jsonb_build_object('attachment_id',attachment_id,'storage_path',p_storage_path);
 END $$;
 
-CREATE OR REPLACE FUNCTION public.external_pursuit_attachment_upload_replay(
+DROP FUNCTION IF EXISTS public.external_pursuit_attachment_upload_replay(UUID,TEXT,TEXT);
+CREATE FUNCTION public.external_pursuit_attachment_upload_replay(
   p_dossier_id UUID,
   p_actor_user_id TEXT,
   p_idempotency_key TEXT
-) RETURNS UUID
+) RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE attachment_id UUID;
 BEGIN
@@ -135,7 +142,8 @@ BEGIN
     AND e.idempotency_key=p_idempotency_key AND e.event_type='updated'
     AND e.metadata->>'kind'='attachment_uploaded'
   LIMIT 1;
-  RETURN attachment_id;
+  IF attachment_id IS NULL THEN RETURN NULL; END IF;
+  RETURN (SELECT jsonb_build_object('attachment_id',a.id,'storage_path',a.storage_path) FROM public.external_pursuit_attachments a WHERE a.id=attachment_id);
 END $$;
 
 CREATE OR REPLACE FUNCTION public.delete_external_pursuit_attachment_record(

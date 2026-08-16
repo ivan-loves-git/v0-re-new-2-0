@@ -4,14 +4,15 @@ import { randomUUID } from "crypto"
 import { getCurrentUserAccess, requireStaffAccess } from "@/lib/access-control"
 import {
   EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET,
-  matchesExpectedFileStructure,
   safeAttachmentFilename,
   validateExternalPursuitAttachment,
 } from "@/lib/external-pursuit-attachments"
+import { matchesExpectedFileStructure } from "@/lib/security/external-pursuit-attachment-content"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 
 type Result = { success: boolean; message: string; attachmentId?: string }
+type Registration = { attachmentId: string; storagePath: string }
 
 function safeMessage(error: unknown, fallback: string) {
   return error instanceof Error && /denied|not found|not editable|required|invalid/i.test(error.message)
@@ -23,6 +24,37 @@ async function actor() {
   const access = await getCurrentUserAccess()
   if (!access || access.role === "unassigned") throw new Error("External Pursuit access denied.")
   return access
+}
+
+function parseRegistration(value: unknown): Registration | null {
+  if (!value || typeof value !== "object") return null
+  const attachmentId = "attachment_id" in value && typeof value.attachment_id === "string" ? value.attachment_id : null
+  const storagePath = "storage_path" in value && typeof value.storage_path === "string" ? value.storage_path : null
+  return attachmentId && storagePath ? { attachmentId, storagePath } : null
+}
+
+async function replayUploadRegistration(
+  supabase: ReturnType<typeof createAdminClient>,
+  pursuitId: string,
+  actorUserId: string,
+  idempotencyKey: string,
+) {
+  try {
+    const { data, error } = await supabase.rpc("external_pursuit_attachment_upload_replay", {
+      p_dossier_id: pursuitId, p_actor_user_id: actorUserId, p_idempotency_key: idempotencyKey,
+    })
+    return { registration: parseRegistration(data), error }
+  } catch (error) {
+    return { registration: null, error }
+  }
+}
+
+async function removeUncommittedObject(
+  supabase: ReturnType<typeof createAdminClient>,
+  storagePath: string,
+) {
+  const { error } = await supabase.storage.from(EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET).remove([storagePath])
+  return error
 }
 
 export async function getExternalPursuitAttachments(pursuitId: string): Promise<ExternalPursuitAttachment[]> {
@@ -59,15 +91,15 @@ export async function uploadExternalPursuitAttachment(
   idempotencyKey = randomUUID(),
 ): Promise<Result> {
   let storagePath: string | null = null
-  let registeredStoragePath: string | null = null
+  let supabase: ReturnType<typeof createAdminClient> | null = null
+  let actorUserId: string | null = null
   try {
     const access = await actor()
-    const supabase = createAdminClient()
-    const { data: existingAttachmentId, error: replayError } = await supabase.rpc("external_pursuit_attachment_upload_replay", {
-      p_dossier_id: pursuitId, p_actor_user_id: access.user.id, p_idempotency_key: idempotencyKey,
-    })
-    if (replayError) return { success: false, message: safeMessage(replayError, "Could not add attachment.") }
-    if (existingAttachmentId) return { success: true, message: "Attachment added.", attachmentId: existingAttachmentId }
+    actorUserId = access.user.id
+    supabase = createAdminClient()
+    const existing = await replayUploadRegistration(supabase, pursuitId, actorUserId, idempotencyKey)
+    if (existing.error) return { success: false, message: safeMessage(existing.error, "Could not add attachment.") }
+    if (existing.registration) return { success: true, message: "Attachment added.", attachmentId: existing.registration.attachmentId }
     const file = formData.get("file")
     if (!(file instanceof File)) return { success: false, message: "Choose a file to attach." }
     const validation = validateExternalPursuitAttachment(file)
@@ -82,38 +114,58 @@ export async function uploadExternalPursuitAttachment(
       .from(EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET)
       .upload(storagePath, bytes, { contentType: file.type, upsert: false })
     if (uploadError) return { success: false, message: "Could not store attachment." }
-    const { data: registration, error: registrationError } = await supabase.rpc("register_external_pursuit_attachment", {
-      p_dossier_id: pursuitId,
-      p_storage_path: storagePath,
-      p_original_filename: safeAttachmentFilename(file.name),
-      p_content_type: file.type,
-      p_byte_size: file.size,
-      p_actor_user_id: access.user.id,
-      p_idempotency_key: idempotencyKey,
-    })
-    if (registrationError || !registration || typeof registration !== "object") {
-      const { error: cleanupError } = await supabase.storage.from(EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET).remove([storagePath])
-      if (cleanupError) return { success: false, message: "Attachment registration failed; storage cleanup needs staff attention." }
-      return { success: false, message: safeMessage(registrationError, "Could not register attachment.") }
+    let registration: Registration | null = null
+    let registrationError: unknown = null
+    try {
+      const result = await supabase.rpc("register_external_pursuit_attachment", {
+        p_dossier_id: pursuitId,
+        p_storage_path: storagePath,
+        p_original_filename: safeAttachmentFilename(file.name),
+        p_content_type: file.type,
+        p_byte_size: file.size,
+        p_actor_user_id: actorUserId,
+        p_idempotency_key: idempotencyKey,
+      })
+      registration = parseRegistration(result.data)
+      registrationError = result.error
+    } catch (error) {
+      registrationError = error
     }
-    const attachmentId = "attachment_id" in registration && typeof registration.attachment_id === "string" ? registration.attachment_id : null
-    registeredStoragePath = "storage_path" in registration && typeof registration.storage_path === "string" ? registration.storage_path : null
-    if (!attachmentId || !registeredStoragePath) {
-      const { error: cleanupError } = await supabase.storage.from(EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET).remove([storagePath])
-      return cleanupError
-        ? { success: false, message: "Attachment registration was ambiguous; storage cleanup needs staff attention." }
-        : { success: false, message: "Could not confirm attachment registration." }
+
+    if (registrationError || !registration) {
+      // A network/response failure can occur after the database commit. Resolve
+      // the exact actor+dossier+idempotency replay before touching storage.
+      const replay = await replayUploadRegistration(supabase, pursuitId, actorUserId, idempotencyKey)
+      if (replay.error) return { success: false, message: "Attachment registration is uncertain; the uploaded object was preserved for staff reconciliation." }
+      registration = replay.registration
+      if (!registration) {
+        const cleanupError = await removeUncommittedObject(supabase, storagePath)
+        return cleanupError
+          ? { success: false, message: "Attachment registration failed; storage cleanup needs staff attention." }
+          : { success: false, message: safeMessage(registrationError, "Could not register attachment.") }
+      }
     }
-    if (registeredStoragePath !== storagePath) {
+
+    if (registration.storagePath !== storagePath) {
       // A concurrent request with the same idempotency key won. Remove only the
       // losing request's newly uploaded random object, never the committed path.
-      const { error: losingObjectCleanupError } = await supabase.storage.from(EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET).remove([storagePath])
+      const losingObjectCleanupError = await removeUncommittedObject(supabase, storagePath)
       if (losingObjectCleanupError) return { success: false, message: "Attachment retry was accepted, but duplicate storage cleanup needs staff attention." }
     }
-    return { success: true, message: "Attachment added.", attachmentId }
+    return { success: true, message: "Attachment added.", attachmentId: registration.attachmentId }
   } catch (error) {
-    if (storagePath && registeredStoragePath !== storagePath) {
-      await createAdminClient().storage.from(EXTERNAL_PURSUIT_ATTACHMENTS_BUCKET).remove([storagePath])
+    if (storagePath && supabase && actorUserId) {
+      const replay = await replayUploadRegistration(supabase, pursuitId, actorUserId, idempotencyKey)
+      if (replay.error) return { success: false, message: "Attachment registration is uncertain; the uploaded object was preserved for staff reconciliation." }
+      if (replay.registration) {
+        if (replay.registration.storagePath !== storagePath) {
+          const cleanupError = await removeUncommittedObject(supabase, storagePath)
+          if (cleanupError) return { success: false, message: "Attachment retry was accepted, but duplicate storage cleanup needs staff attention." }
+        }
+        return { success: true, message: "Attachment added.", attachmentId: replay.registration.attachmentId }
+      }
+      const cleanupError = await removeUncommittedObject(supabase, storagePath)
+      if (cleanupError) return { success: false, message: "Attachment registration failed; storage cleanup needs staff attention." }
     }
     return { success: false, message: safeMessage(error, "Could not add attachment.") }
   }
