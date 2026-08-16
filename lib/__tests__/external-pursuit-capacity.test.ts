@@ -43,7 +43,7 @@ describe("W-110 External Pursuit capacity", () => {
     vi.clearAllMocks()
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-1" } })
     mocks.getCurrentUserAccess.mockResolvedValue({ user: { id: "staff-1" }, role: "staff", repreneurId: null })
-    mocks.rpc.mockResolvedValue({ data: { as_of_paris_date: "2026-05-01", as_of_paris_timestamp: "2026-05-01T00:30:00+02:00", open_capacity: {}, open_dossiers: [], linked_dossiers: [] }, error: null })
+    mocks.rpc.mockResolvedValue({ data: { as_of_paris_date: "2026-05-01", as_of_paris_timestamp: "2026-05-01T00:30:00+02:00", open_capacity: {}, open_dossiers: [], linked_dossiers: [] }, error: null, status: 204 })
   })
 
   it("uses staff access and a server-side capacity RPC", async () => {
@@ -73,12 +73,27 @@ describe("W-110 External Pursuit capacity", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("confirm_external_pursuit_current", expect.objectContaining({ p_actor_user_id: "owner-1" }))
   })
 
-  it("distinguishes confirmed validation rejection from an ambiguous dispatched result", async () => {
+  it("only unlocks on allowlisted domain rejections and retains exact retry state for uncertain receipts", async () => {
     mocks.rpc.mockResolvedValueOnce({ data: null, error: new Error("External Pursuit access denied."), status: 400 })
     await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "rejected-key")).resolves.toMatchObject({ success: false, outcome: "rejected" })
 
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: new Error("External Pursuit is not open capacity."), status: 409 })
+    await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "closed-key")).resolves.toMatchObject({ success: false, outcome: "rejected" })
+
     mocks.rpc.mockResolvedValueOnce({ data: null, error: new Error("fetch failed"), status: 0 })
     await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "status-zero-key")).resolves.toMatchObject({ success: false, outcome: "ambiguous" })
+
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: new Error("Bad Gateway"), status: 502 })
+    await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "gateway-key")).resolves.toMatchObject({ success: false, outcome: "ambiguous" })
+
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: new Error("Gateway Timeout"), status: 504 })
+    await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "timeout-key")).resolves.toMatchObject({ success: false, outcome: "ambiguous" })
+
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "PGRST301 upstream response was incomplete" }, status: 500 })
+    await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "postgrest-key")).resolves.toMatchObject({ success: false, outcome: "ambiguous" })
+
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: null })
+    await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "missing-receipt-key")).resolves.toMatchObject({ success: false, outcome: "ambiguous" })
 
     mocks.rpc.mockRejectedValueOnce(Object.assign(new Error("network"), { status: 0 }))
     await expect(confirmExternalPursuitCurrent("00000000-0000-4000-8000-000000011100", "ambiguous-key")).resolves.toMatchObject({ success: false, outcome: "ambiguous" })

@@ -14,6 +14,33 @@ function friendlyError(error: unknown, fallback: string) {
     : fallback
 }
 
+// Only errors raised by the confirmation contract itself are a trustworthy
+// negative result. A gateway/PostgREST error can arrive after PostgreSQL has
+// committed the mutation, so the browser must retain its exact retry key.
+const CONFIRMATION_DOMAIN_REJECTIONS = [
+  "External Pursuit access denied.",
+  "An actor and idempotency key are required.",
+  "External Pursuit confirmation idempotency conflict.",
+  "External Pursuit is not open capacity.",
+] as const
+
+function confirmationDomainRejection(error: unknown) {
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === "object" && "message" in error
+      ? String(error.message)
+      : ""
+  return CONFIRMATION_DOMAIN_REJECTIONS.find((candidate) => message.includes(candidate)) ?? null
+}
+
+function ambiguousConfirmationResult(): ExternalPursuitConfirmationResult {
+  return {
+    success: false,
+    outcome: "ambiguous",
+    message: "Confirmation result is unknown. Retry the same confirmation.",
+  }
+}
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
@@ -59,16 +86,19 @@ export async function confirmExternalPursuitCurrent(
       p_actor_user_id: access.user.id,
       p_idempotency_key: idempotencyKey,
     })
-    if (status === 0) {
-      return { success: false, outcome: "ambiguous", message: "Confirmation result is unknown. Retry the same confirmation." }
-    }
+    // A void RPC legitimately returns no data, but it must still return a
+    // concrete HTTP receipt. Missing/status-0 responses are ambiguous.
+    if (typeof status !== "number" || status === 0) return ambiguousConfirmationResult()
     if (error) {
-      return { success: false, outcome: "rejected", message: friendlyError(error, "Could not confirm current status.") }
+      const rejection = confirmationDomainRejection(error)
+      return rejection
+        ? { success: false, outcome: "rejected", message: rejection }
+        : ambiguousConfirmationResult()
     }
   } catch {
     // A transport failure after dispatch has an ambiguous write outcome. The
     // client must keep the immutable dossier/key snapshot for an exact retry.
-    return { success: false, outcome: "ambiguous", message: "Confirmation result is unknown. Retry the same confirmation." }
+    return ambiguousConfirmationResult()
   }
 
   revalidatePath("/opportunities/pursuits/capacity")
