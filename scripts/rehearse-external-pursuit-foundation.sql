@@ -1,0 +1,45 @@
+-- Disposable W-105 rehearsal. Run only against a temporary Supabase database.
+\set ON_ERROR_STOP on
+\ir 093_external_pursuit_foundation.sql
+BEGIN;
+INSERT INTO public.repreneurs (id,first_name,last_name,email) VALUES ('00000000-0000-4000-8000-000000010401','Owner','A','external-owner-a@example.test'),('00000000-0000-4000-8000-000000010402','Owner','B','external-owner-b@example.test') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.app_user_roles (user_id,email,role,repreneur_id) VALUES ('external-owner-a-user','external-owner-a@example.test','repreneur','00000000-0000-4000-8000-000000010401'),('external-owner-b-user','external-owner-b@example.test','repreneur','00000000-0000-4000-8000-000000010402'),('external-staff-user','external-staff@example.test','staff',NULL) ON CONFLICT DO NOTHING;
+
+DO $$
+DECLARE d UUID; repeated UUID; contact UUID; owner_view JSONB; staff_view JSONB; before_update TIMESTAMPTZ; after_update TIMESTAMPTZ; before_audit INT; after_audit INT; privilege_name TEXT;
+  opportunities_before BIGINT; matches_before BIGINT; pursuits_before BIGINT; ndas_before BIGINT; firms_before BIGINT; offices_before BIGINT; contacts_before BIGINT;
+BEGIN
+  SELECT count(*) INTO opportunities_before FROM public.opportunities; SELECT count(*) INTO matches_before FROM public.opportunity_matches; SELECT count(*) INTO pursuits_before FROM public.opportunity_pursuit_evidence; SELECT count(*) INTO ndas_before FROM public.opportunity_nda_artifacts; SELECT count(*) INTO firms_before FROM public.ma_firms; SELECT count(*) INTO offices_before FROM public.ma_offices; SELECT count(*) INTO contacts_before FROM public.ma_contacts;
+  d := public.create_external_pursuit('00000000-0000-4000-8000-000000010401','Fixture dossier','identified','unknown',NULL,'Shared fixture note',NULL,'external-owner-a-user','fixture-create');
+  repeated := public.create_external_pursuit('00000000-0000-4000-8000-000000010401','Changed replay ignored','identified','unknown',NULL,NULL,NULL,'external-owner-a-user','fixture-create');
+  IF d <> repeated OR (SELECT count(*) FROM public.external_pursuits WHERE created_by='external-owner-a-user' AND create_idempotency_key='fixture-create') <> 1 THEN RAISE EXCEPTION 'w105_create_replay_failed'; END IF;
+  PERFORM public.update_external_pursuit(d,'Staff update','meetings',TRUE,'limited',TRUE,NULL,FALSE,'Shared fixture note',TRUE,'Staff-only update',TRUE,'external-staff-user','fixture-update');
+  SELECT updated_at INTO before_update FROM public.external_pursuits WHERE id=d; SELECT count(*) INTO before_audit FROM public.external_pursuit_audit_events WHERE external_pursuit_id=d AND event_type='updated';
+  PERFORM public.update_external_pursuit(d,'Replay ignored','identified',TRUE,'unknown',TRUE,NULL,FALSE,NULL,FALSE,NULL,FALSE,'external-staff-user','fixture-update');
+  SELECT updated_at INTO after_update FROM public.external_pursuits WHERE id=d; SELECT count(*) INTO after_audit FROM public.external_pursuit_audit_events WHERE external_pursuit_id=d AND event_type='updated';
+  IF before_update <> after_update OR before_audit <> after_audit THEN RAISE EXCEPTION 'w105_update_replay_failed'; END IF;
+  contact := public.save_external_pursuit_contact(d,NULL,'Fixture contact',NULL,NULL,'fixture@example.test',NULL,'external-staff-user','fixture-contact');
+  IF contact <> public.save_external_pursuit_contact(d,NULL,'Changed contact',NULL,NULL,NULL,NULL,'external-staff-user','fixture-contact') OR (SELECT count(*) FROM public.external_pursuit_contacts WHERE external_pursuit_id=d) <> 1 THEN RAISE EXCEPTION 'w105_contact_replay_failed'; END IF;
+  owner_view := public.external_pursuit_for_actor(d,'external-owner-a-user'); staff_view := public.external_pursuit_for_actor(d,'external-staff-user');
+  IF owner_view::TEXT LIKE '%Staff-only update%' OR owner_view::TEXT LIKE '%idempotency%' OR owner_view ? 'audit' OR staff_view::TEXT LIKE '%create_idempotency_key%' OR staff_view::TEXT LIKE '%idempotency_key%' THEN RAISE EXCEPTION 'w105_projection_boundary_failed'; END IF;
+  BEGIN PERFORM public.external_pursuit_for_actor(d,'external-owner-b-user'); RAISE EXCEPTION 'w105_other_owner_read_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.update_external_pursuit(d,'Bad','identified',TRUE,'unknown',TRUE,NULL,FALSE,NULL,FALSE,NULL,FALSE,'external-owner-b-user','owner-b-update'); RAISE EXCEPTION 'w105_other_owner_update_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.save_external_pursuit_contact(d,NULL,'Bad',NULL,NULL,NULL,NULL,'external-owner-b-user','owner-b-contact'); RAISE EXCEPTION 'w105_other_owner_contact_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.request_external_pursuit_deletion(d,'external-owner-b-user','owner-b-delete'); RAISE EXCEPTION 'w105_other_owner_delete_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.request_external_pursuit_deletion(d,'external-staff-user','staff-delete'); RAISE EXCEPTION 'w105_staff_delete_request_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Only the owner repreneur may request deletion.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.external_pursuit_for_actor(d,'external-unassigned-user'); RAISE EXCEPTION 'w105_unassigned_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN UPDATE public.external_pursuit_audit_events SET actor_user_id='tampered' WHERE external_pursuit_id=d; RAISE EXCEPTION 'w105_audit_update_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit audit is immutable.' THEN RAISE; END IF; END;
+  BEGIN DELETE FROM public.external_pursuit_audit_events WHERE external_pursuit_id=d; RAISE EXCEPTION 'w105_audit_delete_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit audit is immutable.' THEN RAISE; END IF; END;
+  FOREACH privilege_name IN ARRAY ARRAY['external_pursuits','external_pursuit_notes','external_pursuit_staff_notes','external_pursuit_contacts','external_pursuit_audit_events','external_pursuit_deletion_tombstones'] LOOP
+    IF has_table_privilege('anon','public.'||privilege_name,'select,insert,update,delete') OR has_table_privilege('authenticated','public.'||privilege_name,'select,insert,update,delete') OR has_table_privilege('service_role','public.'||privilege_name,'insert,update,delete') OR NOT has_table_privilege('service_role','public.'||privilege_name,'select') THEN RAISE EXCEPTION 'w105_table_privilege_invalid:%',privilege_name; END IF;
+  END LOOP;
+  FOREACH privilege_name IN ARRAY ARRAY['create_external_pursuit(uuid,text,text,text,date,text,text,text,text)','update_external_pursuit(uuid,text,text,boolean,text,boolean,date,boolean,text,boolean,text,boolean,text,text)','save_external_pursuit_contact(uuid,uuid,text,text,text,text,text,text,text)','request_external_pursuit_deletion(uuid,text,text)','fulfill_external_pursuit_deletion(uuid,text,text)','external_pursuit_for_actor(uuid,text)'] LOOP
+    IF has_function_privilege('anon','public.'||privilege_name,'execute') OR has_function_privilege('authenticated','public.'||privilege_name,'execute') OR NOT has_function_privilege('service_role','public.'||privilege_name,'execute') THEN RAISE EXCEPTION 'w105_rpc_privilege_invalid:%',privilege_name; END IF;
+  END LOOP;
+  PERFORM public.request_external_pursuit_deletion(d,'external-owner-a-user','fixture-delete-request');
+  BEGIN PERFORM public.external_pursuit_for_actor(d,'external-owner-a-user'); RAISE EXCEPTION 'w105_delete_requested_owner_read_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  PERFORM public.fulfill_external_pursuit_deletion(d,'external-staff-user','fixture-delete-fulfill');
+  IF EXISTS (SELECT 1 FROM public.external_pursuits WHERE id=d) OR EXISTS (SELECT 1 FROM public.external_pursuit_notes WHERE external_pursuit_id=d) OR EXISTS (SELECT 1 FROM public.external_pursuit_contacts WHERE external_pursuit_id=d) OR EXISTS (SELECT 1 FROM public.external_pursuit_audit_events WHERE external_pursuit_id=d) OR NOT EXISTS (SELECT 1 FROM public.external_pursuit_deletion_tombstones WHERE former_dossier_id=d) THEN RAISE EXCEPTION 'w105_tombstone_or_purge_failed'; END IF;
+  IF (SELECT count(*) FROM public.opportunities) <> opportunities_before OR (SELECT count(*) FROM public.opportunity_matches) <> matches_before OR (SELECT count(*) FROM public.opportunity_pursuit_evidence) <> pursuits_before OR (SELECT count(*) FROM public.opportunity_nda_artifacts) <> ndas_before OR (SELECT count(*) FROM public.ma_firms) <> firms_before OR (SELECT count(*) FROM public.ma_offices) <> offices_before OR (SELECT count(*) FROM public.ma_contacts) <> contacts_before THEN RAISE EXCEPTION 'w105_canonical_records_changed'; END IF;
+END $$;
+ROLLBACK;

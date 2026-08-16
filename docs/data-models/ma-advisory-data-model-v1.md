@@ -783,6 +783,16 @@ Run `scripts/verify-ma-data-model-schema.sql` through the configured read-only S
 
 The live model is now office-centred. The pre-076 firm-level source, contact and contact-move objects remain read-only compatibility evidence alongside the confidentiality wall; they are not a second write model. Do not roll back current history or confidentiality controls.
 
+### External Pursuit boundary
+
+W-104/W-105 introduce `external_pursuits` as a separate repreneur-owned dossier
+domain under `external-pursuit-data-model-v1.md`. It has no relation to this
+M&A contract: it cannot create an opportunity, match, canonical pursuit,
+source-contact relationship, export, Gate 1/Gate 2 result or confidentiality
+grant. M&A records and their canonical staff/repreneur visibility rules remain
+unchanged. This note exists solely to make the boundary explicit for the
+data-model synchronization check.
+
 ### W-063 staff intake reconciliation
 
 W-063 must route new firm identity creation through `create_ma_firm_with_default_office`, new or additional contact relationships through `create_or_affiliate_ma_contact`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.
@@ -840,6 +850,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-08-16 | 4.5.9 candidate | Recorded the explicit boundary for the separate W-104/W-105 External Pursuit domain. Its owner dossier, contacts, notes, audit and deletion tombstone have no M&A foreign key, import, export, match, Gate or disclosure effect; the canonical M&A model is unchanged. | W-104, W-105; migration 093 |
 | 2026-08-14 | 4.5.8 candidate | Consolidated the existing staff pursuit workspace, portal-safe projection and exact NDA-template/Information-Memorandum authorization reads behind one role-safe application module. The canonical database resolvers remain authoritative, exact IM access is rechecked at download time, and portal output remains limited to the granted memo and snapshotted firm, office and contact display names. No schema, gate, disclosure, permission, route or visible product behavior changes. | W-101 implementation candidate |
 | 2026-08-12 | 4.5.7 candidate | Hardened the W-098 precision boundary: an ordinary edit omits an unchanged month-only source date; the atomic service locks and rejects an unconfirmed replacement; an explicit confirmed day, including a technical first-of-month value, becomes `day`; clearing removes both values. Repreneur responses carry only server-formatted date text, never the staff-only precision enum. | W-098; migrations 091 and 092 |
 | 2026-08-12 | 4.5.6 candidate | Added the France-first W-039 Phase A/B candidate and W-099 forward-only mandate reference boundary: 21 France nodes, staff-only opportunity and repreneur target identities, hash-bound CRM geography adoption evidence, immutable historical references and per-code transactional allocation for new opportunities. Literal locations, existing references and Matching v2 behavior remain unchanged. | W-039 Phase A/B, W-099; migration 092 |
