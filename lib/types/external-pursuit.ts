@@ -22,6 +22,9 @@ export const EXTERNAL_PURSUIT_AVAILABILITY = [
 export type ExternalPursuitAvailability =
   (typeof EXTERNAL_PURSUIT_AVAILABILITY)[number]
 
+/** W-107: paired with a concrete next action; never a task-manager assignment. */
+export type ExternalPursuitResponsibleParty = "owner" | "staff"
+
 export type ExternalPursuitDeletionStatus =
   | "active"
   | "delete_requested"
@@ -60,6 +63,31 @@ export type ExternalPursuitUpdateInput = Omit<ExternalPursuitInput, "ownerRepren
   stage?: ExternalPursuitStage
   availability?: ExternalPursuitAvailability
   dueAt?: string | null
+}
+
+/**
+ * Narrow W-107 patch. It intentionally cannot rename a dossier or move its
+ * stage, so a follow-up save cannot overwrite concurrent board work.
+ */
+export interface ExternalPursuitFollowUpInput {
+  nextAction?: string | null
+  responsibleParty?: ExternalPursuitResponsibleParty | null
+  availability?: ExternalPursuitAvailability
+  dueAt?: string | null
+  sharedNotes?: string | null
+  /** Staff-only; it is never passed by the owner form or returned to it. */
+  staffInternalNotes?: string | null
+}
+
+/** Read model accepted by the self-contained W-107 panel mount. */
+export interface ExternalPursuitFollowUpSnapshot {
+  nextAction?: string | null
+  responsibleParty?: ExternalPursuitResponsibleParty | null
+  availability: ExternalPursuitAvailability
+  dueAt?: string | null
+  sharedNotes?: string | null
+  /** Supplied only from the staff projection. */
+  staffInternalNotes?: string | null
 }
 
 export interface ExternalPursuitActionResult {

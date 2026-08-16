@@ -4,7 +4,7 @@
 
 | Item | Value |
 | --- | --- |
-| Status | Approved implementation contract for W-104 through W-106 |
+| Status | Approved implementation contract for W-104 through W-107 |
 | Scope | A repreneur-owned record of work outside WAVE opportunities |
 | Implementation owner | Dev team |
 | Visibility | The owner repreneur and authorized staff only; all other repreneurs and unassigned users are denied |
@@ -110,7 +110,7 @@ canonical gate, source, match, document or disclosure rule.
 
 | Table | Purpose | Visibility / retention |
 | --- | --- | --- |
-| `external_pursuits` | Owner, title, macro stage, availability and in-product due date | Owner and staff receive this dossier state; availability is `available`, `limited`, `unavailable` or `unknown` (the default) |
+| `external_pursuits` | Owner, title, macro stage, availability, paired next action/responsibility and in-product due date | Owner and staff receive this dossier state; availability is `available`, `limited`, `unavailable` or `unknown` (the default). `next_action` is optional but when present requires `responsible_party`: `owner` or `staff` |
 | `external_pursuit_notes` | Owner-visible notes | Owner and staff receive `shared_notes`; cleared on fulfillment |
 | `external_pursuit_staff_notes` | Separate staff-only notes | Never serialized to the owner; cleared on fulfillment |
 | `external_pursuit_contacts` | Repeatable people or organisations associated with a pursuit | Same owner/staff rule; deleted with pursuit content |
@@ -172,6 +172,17 @@ exported or treated as dossier content; a different fulfillment key is rejected.
     own operation key across an ambiguous network result. Deletion requires a
     confirmation naming the dossier. Staff can inspect all pending dossier
     metadata and contacts before confirming the irreversible purge.
+13. W-107 calculates due state from `due_at` as an `Europe/Paris` civil date:
+   no date, due today, upcoming, or overdue only when the date is before today.
+   It sends no reminder or other outbound communication.
+14. W-107's follow-up save is a narrow patch. It never writes title or stage,
+   and sends only fields changed since the form loaded, preventing a stale
+   follow-up form from overwriting a concurrent board or follow-up change. The
+   client retains one idempotency key for an identical retry until success is
+   confirmed; a changed payload receives a new key. The database serializes the
+   write and makes same-actor/same-key replay a no-op. It appends actor/time and
+   content-free changed-field metadata only; note text is not copied to audit,
+   errors, logs or analytics.
 
 ## Acceptance matrix
 
@@ -185,3 +196,5 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 | Owner requests deletion | A confirmation names the dossier; the retry-safe request is recorded and staff retains pending content to fulfil safely |
 | Staff fulfils deletion | Staff reviews the pending dossier, confirms the named irreversible purge, and can safely replay an ambiguous response; only the minimal tombstone remains |
 | W-108 attachment cleanup fails | Its fulfillment wrapper fails; no completion message is allowed |
+| Owner/staff saves W-107 follow-up | The permitted shared fields save with actor/time evidence; staff notes remain absent from the owner projection |
+| Other repreneur/unassigned caller saves W-107 follow-up | Denied at the server and database boundary |

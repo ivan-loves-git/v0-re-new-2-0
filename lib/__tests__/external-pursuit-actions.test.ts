@@ -22,6 +22,7 @@ import {
   requestExternalPursuitDeletion,
   saveExternalPursuitContact,
   updateExternalPursuit,
+  updateExternalPursuitFollowUp,
 } from "@/lib/actions/external-pursuits"
 
 describe("External Pursuit patch actions", () => {
@@ -169,6 +170,35 @@ describe("External Pursuit patch actions", () => {
       title: "Fractional headcount",
       headcount: 2.5,
     }, "fractional-headcount-key")).resolves.toMatchObject({ success: false, message: "Headcount must be a whole number." })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it("sends a narrow follow-up patch without title or stage", async () => {
+    await expect(updateExternalPursuitFollowUp("dossier-1", {
+      nextAction: "Request updated information",
+      responsibleParty: "staff",
+      availability: "limited",
+      dueAt: "2026-08-18",
+      sharedNotes: "Awaiting confirmation",
+      staffInternalNotes: "Use the approved internal route",
+    }, "00000000-0000-4000-8000-000000000003")).resolves.toMatchObject({ success: true })
+
+    expect(mocks.rpc).toHaveBeenCalledWith("update_external_pursuit_follow_up", expect.objectContaining({
+      p_next_action: "Request updated information",
+      p_responsible_party: "staff",
+      p_next_action_provided: true,
+      p_responsible_party_provided: true,
+      p_staff_notes_provided: true,
+    }))
+    expect(mocks.rpc.mock.calls.at(-1)?.[1]).not.toHaveProperty("p_title")
+    expect(mocks.rpc.mock.calls.at(-1)?.[1]).not.toHaveProperty("p_stage")
+  })
+
+  it("rejects a partial responsibility pair before calling the database", async () => {
+    await expect(updateExternalPursuitFollowUp("dossier-1", { nextAction: "Call owner" })).resolves.toMatchObject({
+      success: false,
+      message: "Set or clear the next action and responsible party together.",
+    })
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 })

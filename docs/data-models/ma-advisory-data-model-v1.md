@@ -800,6 +800,28 @@ to completed board cards, and only the genuinely terminal match is shown in a
 terminal column. This note exists solely to make the boundary explicit for the
 data-model synchronization check.
 
+### W-107 External Pursuit follow-up boundary
+
+W-107 adds only optional dossier-local follow-up facts: a concrete
+`next_action`, its paired `responsible_party` (`owner` or `staff`), the
+existing civil `due_at` date, availability, owner-and-staff shared notes, and
+separate staff-only notes. A next action and responsibility are set or cleared
+together. Due state is calculated from the civil date in `Europe/Paris`:
+no date, due today, upcoming, or overdue only when the date is before today.
+Saving a follow-up is a narrow dirty-field patch: it cannot rename the dossier
+or alter its stage, it preserves concurrent untouched-field changes, retains
+one idempotency key through an unconfirmed response, and writes actor/time plus
+content-free changed-field audit metadata.
+
+The owner may read and edit the shared follow-up fields only for their active
+dossier. Staff may read and edit the same fields and staff-only notes. Other
+repreneurs and unassigned users are denied at the server and database boundary;
+staff-only notes are absent from every owner projection, action result, error,
+log and analytics payload. There is deliberately no email, SMS, push,
+notification, cron, checklist, template, task-manager or AI behavior. These
+facts never create or modify a canonical opportunity, match, pursuit, Gate,
+M&A relationship, source, document, export or import record.
+
 ### W-063 staff intake reconciliation
 
 W-063 must route new firm identity creation through `create_ma_firm_with_default_office`, new or additional contact relationships through `create_or_affiliate_ma_contact`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.
@@ -857,6 +879,7 @@ Do not create a parallel M&A data model document. Link to this file instead.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-08-16 | 4.5.10 candidate | Added the bounded W-107 External Pursuit follow-up contract: paired next action and owner/staff responsibility, Paris civil-date states, availability and distinct shared/staff-only notes through a narrow audited patch. It adds no task, notification, canonical lifecycle or M&A effect. | W-107; migration 096 |
 | 2026-08-16 | 4.5.9 candidate | Recorded the explicit boundary for the separate W-104–W-106 External Pursuit domain. Its owner dossier, contacts, notes, audit and deletion tombstone have no M&A foreign key, import, export, match, Gate or disclosure effect; W-106 projects each canonical match read-only and never lets an aggregate opportunity close mislabel sibling matches. The canonical M&A model is unchanged. | W-104, W-105, W-106; migrations 093–095 |
 | 2026-08-14 | 4.5.8 candidate | Consolidated the existing staff pursuit workspace, portal-safe projection and exact NDA-template/Information-Memorandum authorization reads behind one role-safe application module. The canonical database resolvers remain authoritative, exact IM access is rechecked at download time, and portal output remains limited to the granted memo and snapshotted firm, office and contact display names. No schema, gate, disclosure, permission, route or visible product behavior changes. | W-101 implementation candidate |
 | 2026-08-12 | 4.5.7 candidate | Hardened the W-098 precision boundary: an ordinary edit omits an unchanged month-only source date; the atomic service locks and rejects an unconfirmed replacement; an explicit confirmed day, including a technical first-of-month value, becomes `day`; clearing removes both values. Repreneur responses carry only server-formatted date text, never the staff-only precision enum. | W-098; migrations 091 and 092 |

@@ -7,6 +7,7 @@ import type {
   ExternalPursuitActionResult,
   ExternalPursuitBoardRecord,
   ExternalPursuitContactInput,
+  ExternalPursuitFollowUpInput,
   ExternalPursuitInput,
   ExternalPursuitUpdateInput,
   ExternalPursuitStage,
@@ -206,6 +207,56 @@ export async function listExternalPursuitBoard(): Promise<ExternalPursuitBoardRe
     })),
     updatedAt: row.updated_at,
   })) as ExternalPursuitBoardRecord[]
+}
+
+/**
+ * W-107 follow-up patch. This is intentionally separate from the general
+ * dossier updater: it cannot write title or stage, avoiding stale-board
+ * overwrites when an owner and staff member work at the same time.
+ */
+export async function updateExternalPursuitFollowUp(
+  pursuitId: string,
+  input: ExternalPursuitFollowUpInput,
+  idempotencyKey: string = randomUUID(),
+): Promise<ExternalPursuitActionResult> {
+  try {
+    const access = await currentActor()
+    if (!validOptionalDate(input.dueAt)) {
+      return { success: false, message: "Due date must use a valid YYYY-MM-DD date." }
+    }
+    const nextActionProvided = input.nextAction !== undefined
+    const responsiblePartyProvided = input.responsibleParty !== undefined
+    if (nextActionProvided !== responsiblePartyProvided) {
+      return { success: false, message: "Set or clear the next action and responsible party together." }
+    }
+    const nextAction = input.nextAction?.trim() || null
+    if (nextActionProvided && ((nextAction && !input.responsibleParty) || (!nextAction && input.responsibleParty))) {
+      return { success: false, message: "A next action requires one responsible party." }
+    }
+    const { error } = await createAdminClient().rpc("update_external_pursuit_follow_up", {
+      p_dossier_id: pursuitId,
+      p_next_action: nextAction,
+      p_next_action_provided: nextActionProvided,
+      p_responsible_party: input.responsibleParty ?? null,
+      p_responsible_party_provided: responsiblePartyProvided,
+      p_availability: input.availability ?? null,
+      p_availability_provided: input.availability !== undefined,
+      p_due_at: dateOrNull(input.dueAt),
+      p_due_at_provided: input.dueAt !== undefined,
+      p_shared_notes: input.sharedNotes ?? null,
+      p_shared_notes_provided: input.sharedNotes !== undefined,
+      // The owner request never carries staff-only note text.
+      p_staff_internal_notes: access.role === "staff" ? input.staffInternalNotes ?? null : null,
+      p_staff_notes_provided: access.role === "staff" && input.staffInternalNotes !== undefined,
+      p_actor_user_id: access.user.id,
+      p_idempotency_key: idempotencyKey,
+    })
+    return error
+      ? { success: false, message: message(error, "Could not update follow-up.") }
+      : { success: true, message: "Follow-up updated.", pursuitId }
+  } catch (error) {
+    return { success: false, message: message(error, "Could not update follow-up.") }
+  }
 }
 
 export async function saveExternalPursuitContact(
