@@ -4,7 +4,7 @@
 
 | Item | Value |
 | --- | --- |
-| Status | Approved implementation contract for W-104 through W-108 |
+| Status | Approved implementation contract through W-109 |
 | Scope | A repreneur-owned record of work outside WAVE opportunities |
 | Implementation owner | Dev team |
 | Visibility | The owner repreneur and authorized staff only; all other repreneurs and unassigned users are denied |
@@ -117,6 +117,7 @@ canonical gate, source, match, document or disclosure rule.
 | `external_pursuit_audit_events` | Immutable actor/time event evidence | Staff only while the dossier exists; purged with it |
 | `external_pursuit_deletion_tombstones` | Minimum deletion attribution | Staff-only former dossier ID, owner ID and request/fulfil actor and time; no content |
 | `external_pursuit_attachments` | Private dossier file metadata | Owner and authorized staff only; metadata is purged with the dossier after private object cleanup |
+| `external_pursuit_opportunity_conversions` | Immutable one-way link from one eligible dossier to one new canonical opportunity | Staff-only dossier/opportunity IDs, conversion actor/time and opaque retry key; no dossier content, owner, note, contact, file, title, stage or source data is copied |
 
 W-106 stores optional `external_url`, `target_company`, descriptive
 `source_channel`, `revenue_meur`, `ebitda_keur` and `headcount` on the External
@@ -240,6 +241,18 @@ exported or treated as dossier content; a different fulfillment key is rejected.
     cleanup retains the same file/key recovery lock until that exact path is
     reconciled. Other confirmed Storage API 4xx responses remain ordinary,
     unlocked failures.
+19. Only staff may convert an active, unfinished, non-deletion-requested External
+    Pursuit. The staff member must enter a safe anonymized public title and select
+    one canonical geography, an active real non-Acme office and exactly one active
+    named primary affiliation. The database creates a new `staff_only` Draft
+    through `create_opportunity_with_office_context`, which allocates the immutable
+    reference atomically. It creates no match, pursuit, Gate, NDA, document,
+    repreneur assignment or disclosure.
+20. Conversion retains an immutable, one-way one-to-one identity link. The same
+    staff actor and idempotency key return the original result; a different attempt
+    fails rather than guessing or creating another opportunity. A converted dossier
+    cannot be deletion-fulfilled. The attachment fulfillment path checks this state
+    before listing or removing any storage object.
 
 ## Acceptance matrix
 
@@ -255,3 +268,7 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 | W-108 attachment cleanup fails | Its fulfillment wrapper fails; no completion message is allowed |
 | Owner/staff saves W-107 follow-up | The permitted shared fields save with actor/time evidence; staff notes remain absent from the owner projection |
 | Other repreneur/unassigned caller saves W-107 follow-up | Denied at the server and database boundary |
+| Staff converts an active dossier with fresh canonical selections | Exactly one linked staff-only Draft and immutable mandate reference are created; no dossier content is copied and no match/pursuit/Gate changes |
+| Owner or unassigned user calls conversion | Denied; no opportunity or conversion link is created |
+| Retry after a confirmed conversion | Same actor/key returns the same opportunity; another key fails closed |
+| Delete request or fulfillment after conversion | Denied before any dossier database content or attachment storage is removed |
