@@ -3,7 +3,7 @@
 import type React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BriefcaseBusiness, LogOut, UserRound, Waves } from "lucide-react"
+import { BriefcaseBusiness, ListTree, LogOut, UserRound, Waves } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +15,7 @@ interface PortalShellProps {
 
 const navItems = [
   { name: "Deals", href: "/portal/deals", icon: BriefcaseBusiness },
+  { name: "Pursuits", href: "/portal/pursuits", icon: ListTree },
   { name: "Profile", href: "/portal/profile", icon: UserRound },
 ]
 

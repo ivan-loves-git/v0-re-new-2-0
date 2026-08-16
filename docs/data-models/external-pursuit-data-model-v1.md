@@ -4,7 +4,7 @@
 
 | Item | Value |
 | --- | --- |
-| Status | Approved implementation contract for W-104 and W-105 |
+| Status | Approved implementation contract for W-104 through W-106 |
 | Scope | A repreneur-owned record of work outside WAVE opportunities |
 | Implementation owner | Dev team |
 | Visibility | The owner repreneur and authorized staff only; all other repreneurs and unassigned users are denied |
@@ -25,9 +25,19 @@ uses representative synthetic dossiers; and W-111 runs the final M2.1
 validation suite. No historical import, legacy
 backfill, reviewer loop or M2 validation is a dependency of this contract.
 
-This beta-safe release creates no UI route, outbound notification, email, SMS,
-push automation, export or canonical M&A record. The initial `due_at` field is
-only an in-product due/overdue state; it sends nothing.
+W-106 adds owner route `/portal/pursuits` and staff route
+`/opportunities/pursuits`. They present one provenance-labelled board: External
+Pursuits are editable standalone dossiers, while Re-New cards are read-only
+projections of the existing canonical journey. `/portal/deals` remains Re-New
+discovery. Every External card is visibly labelled `External`; every canonical
+card is visibly labelled `Re-New · read-only`. The mandatory notice states that
+External Pursuits are visible to their owner and authorised Re-New staff and
+never enter matching, source records, confidentiality gates, exports or Re-New
+KPIs. No acknowledgement is required.
+
+This release creates no outbound notification, email, SMS, push automation,
+export or canonical M&A record. The initial `due_at` field is only an
+in-product due/overdue state; it sends nothing.
 
 ## Purpose and lifecycle
 
@@ -65,6 +75,25 @@ lock and disclosure rules remain authoritative. No External Pursuit board move
 may guess a mapping or mutate a Re-New record; W-106 finalizes the exact
 projection display mapping only.
 
+| Canonical current journey stage | W-106 board column |
+| --- | --- |
+| Canonical draft, shortlisted or proposed journey | `identified` |
+| Canonical interested or current active-pursuit journey | `contact_qualification` |
+| `info_memo_received` | `information` |
+| `intermediary_meeting` or `seller_meeting` | `meetings` |
+| `loi` | `loi` |
+| `closed` | `completed` |
+| `dropped` | `dropped_archived` |
+
+The board derives this location through the existing canonical
+`deriveOpportunityJourney` helper and role-safe opportunity readers, one
+canonical match at a time. An opportunity-level closed state never turns its
+proposed or declined sibling matches into completed pursuits: only the match
+that genuinely reached `completed`/`closed` or `dropped` receives a terminal
+board card. This is only a visual location. It does not infer `negotiation` or
+`due_diligence_financing`, write a canonical pursuit stage, or change any
+canonical gate, source, match, document or disclosure rule.
+
 ## W-105–W-111 acceptance traceability
 
 | Card | Fixed rule or exception | Executable evidence |
@@ -87,6 +116,12 @@ projection display mapping only.
 | `external_pursuit_contacts` | Repeatable people or organisations associated with a pursuit | Same owner/staff rule; deleted with pursuit content |
 | `external_pursuit_audit_events` | Immutable actor/time event evidence | Staff only while the dossier exists; purged with it |
 | `external_pursuit_deletion_tombstones` | Minimum deletion attribution | Staff-only former dossier ID, owner ID and request/fulfil actor and time; no content |
+
+W-106 stores optional `external_url`, `target_company`, descriptive
+`source_channel`, `revenue_meur`, `ebitda_keur` and `headcount` on the External
+Pursuit dossier only. They are nullable, external-only context and never
+create, update or link an M&A source, firm, office, contact, opportunity,
+match or canonical pursuit.
 
 There are no browser database policies for these tables. All access is through
 server-side Better Auth checks and the service-role client. Direct anon and
@@ -118,6 +153,25 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    success while cleanup remains.
 7. No historic interaction is imported in this phase. Any later supplied source
    material needs a separately approved mapping and retention decision.
+8. Creation is progressive: title alone creates an External Pursuit at
+   `identified`; every other W-106 context field is optional. Contacts are
+   repeatable standalone records and may be added or revised later.
+9. A deletion-requested dossier is hidden and denied to its owner. It remains
+   visible to staff only so staff can fulfil the approved purge; it is not an
+   editable board item.
+10. A board stage move is a narrow patch containing dossier ID, new stage,
+    Better Auth actor and idempotency key only. It never resubmits title or
+    optional dossier fields, so a stale card cannot overwrite a concurrent
+    edit.
+11. The editor keeps one retry key for each dossier save and one stable client
+    identity and derived retry key for each contact. A partial multi-contact
+    save can replay exactly without duplicating an earlier contact. A row with
+    email, phone or role but no name or organisation is rejected visibly; it is
+    never silently discarded.
+12. Stage moves, owner deletion requests and staff fulfillment each keep their
+    own operation key across an ambiguous network result. Deletion requires a
+    confirmation naming the dossier. Staff can inspect all pending dossier
+    metadata and contacts before confirming the irreversible purge.
 
 ## Acceptance matrix
 
@@ -126,8 +180,8 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 | Owner creates or edits an active record | Allowed; immutable audit event records actor/time |
 | Staff creates or edits for an assigned owner | Allowed; immutable audit event records actor/time |
 | Other repreneur or unassigned user reads/writes | Denied before database access |
-| Owner reads record | In this phase sees title, shared notes and contacts only; there is no attachment field. W-108 later adds owner attachment metadata/downloads for that owner only |
-| Staff reads record | In this phase sees shared/internal notes, contacts and audit timeline; W-108 later adds attachment metadata |
-| Owner requests deletion | Request is recorded; staff retains pending content to fulfil safely |
-| Staff fulfils deletion | The dossier and content are purged; only the minimal tombstone remains |
+| Owner reads record | In W-106 sees the title, stage, availability, optional external URL/target company/descriptive source channel/external-only metrics and contacts of the owner’s active dossier. W-107 separately owns shared notes and follow-up surfaces; W-108 later adds owner attachment metadata/downloads for that owner only |
+| Staff reads record | In W-106 sees the same dossier metadata and contacts for every owner, including pending-deletion content for review. W-107 separately adds staff note/follow-up surfaces and W-108 later adds attachment metadata |
+| Owner requests deletion | A confirmation names the dossier; the retry-safe request is recorded and staff retains pending content to fulfil safely |
+| Staff fulfils deletion | Staff reviews the pending dossier, confirms the named irreversible purge, and can safely replay an ambiguous response; only the minimal tombstone remains |
 | W-108 attachment cleanup fails | Its fulfillment wrapper fails; no completion message is allowed |

@@ -23,6 +23,7 @@ import {
   Waves,
   Sparkles,
   Palette,
+  ListTree,
   type LucideIcon,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
@@ -74,6 +75,7 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_op", icon: LayoutDashboard },
   { name: "Groups", href: "/opportunities/groups", icon: FolderKanban },
   { name: "Find", href: "/opportunities/find", icon: Search },
+  { name: "Pursuits", href: "/opportunities/pursuits", icon: ListTree },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
 ]
 

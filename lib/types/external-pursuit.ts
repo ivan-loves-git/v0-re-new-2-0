@@ -40,6 +40,13 @@ export interface ExternalPursuitInput {
   /** Staff may select an owner. Repreneur callers are always bound to session ownership. */
   ownerRepreneurId?: string
   title: string
+  /** Optional, external-only context. It never creates a Re-New source record. */
+  externalUrl?: string | null
+  targetCompany?: string | null
+  sourceChannel?: string | null
+  revenueMeur?: number | null
+  ebitdaKeur?: number | null
+  headcount?: number | null
   stage?: ExternalPursuitStage
   availability?: ExternalPursuitAvailability
   dueAt?: string | null
@@ -59,4 +66,22 @@ export interface ExternalPursuitActionResult {
   success: boolean
   message: string
   pursuitId?: string
+}
+
+export interface ExternalPursuitBoardRecord {
+  id: string
+  ownerRepreneurId: string
+  ownerName: string | null
+  title: string
+  stage: ExternalPursuitStage
+  availability: ExternalPursuitAvailability
+  deletionStatus: Exclude<ExternalPursuitDeletionStatus, "deleted">
+  externalUrl: string | null
+  targetCompany: string | null
+  sourceChannel: string | null
+  revenueMeur: number | null
+  ebitdaKeur: number | null
+  headcount: number | null
+  contacts: ExternalPursuitContactInput[]
+  updatedAt: string
 }

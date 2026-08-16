@@ -16,7 +16,7 @@ describe("W-104/W-105 External Pursuit foundation", () => {
     ]) expect(migration).toContain(`'${stage}'`)
     expect(migration).toContain("'available', 'limited', 'unavailable', 'unknown'")
     expect(migration).toContain("due_at DATE")
-    expect(contract).toContain("no UI route, outbound notification, email, SMS")
+    expect(contract).toContain("creates no outbound notification, email, SMS")
     expect(migration).not.toContain("opportunity_matches")
     expect(migration).not.toContain("opportunity_pursuit")
   })

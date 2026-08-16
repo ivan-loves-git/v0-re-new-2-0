@@ -15,7 +15,14 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({ rpc: mocks.rpc }),
 }))
 
-import { updateExternalPursuit } from "@/lib/actions/external-pursuits"
+import {
+  createExternalPursuit,
+  fulfillExternalPursuitDeletion,
+  moveExternalPursuitStage,
+  requestExternalPursuitDeletion,
+  saveExternalPursuitContact,
+  updateExternalPursuit,
+} from "@/lib/actions/external-pursuits"
 
 describe("External Pursuit patch actions", () => {
   beforeEach(() => {
@@ -25,7 +32,44 @@ describe("External Pursuit patch actions", () => {
       repreneurId: null,
       user: { id: "staff-1" },
     })
+    mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-1" } })
     mocks.rpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it("creates a title-only dossier for an explicit staff-selected owner with safe defaults", async () => {
+    mocks.rpc.mockResolvedValue({ data: "dossier-1", error: null })
+
+    await expect(createExternalPursuit({
+      ownerRepreneurId: "owner-1",
+      title: "Title only",
+    }, "00000000-0000-4000-8000-000000000000")).resolves.toMatchObject({
+      success: true,
+      pursuitId: "dossier-1",
+    })
+
+    expect(mocks.rpc).toHaveBeenCalledWith("create_external_pursuit_v2", expect.objectContaining({
+      p_owner_repreneur_id: "owner-1",
+      p_title: "Title only",
+      p_stage: "identified",
+      p_availability: "unknown",
+      p_external_url: null,
+      p_target_company: null,
+      p_source_channel: null,
+      p_revenue_meur: null,
+      p_ebitda_keur: null,
+      p_headcount: null,
+    }))
+  })
+
+  it("requires staff to choose an owner and rejects unassigned actors before an RPC", async () => {
+    await expect(createExternalPursuit({ title: "No owner" }, "owner-required-key"))
+      .resolves.toMatchObject({ success: false, message: "Choose the dossier owner." })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+
+    mocks.getCurrentUserAccess.mockResolvedValue(null)
+    await expect(createExternalPursuit({ ownerRepreneurId: "owner-1", title: "Denied" }, "denied-key"))
+      .resolves.toMatchObject({ success: false })
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it("treats explicit undefined optional values as omitted", async () => {
@@ -38,7 +82,7 @@ describe("External Pursuit patch actions", () => {
       staffInternalNotes: undefined,
     }, "00000000-0000-4000-8000-000000000001")).resolves.toMatchObject({ success: true })
 
-    expect(mocks.rpc).toHaveBeenCalledWith("update_external_pursuit", expect.objectContaining({
+    expect(mocks.rpc).toHaveBeenCalledWith("update_external_pursuit_v2", expect.objectContaining({
       p_stage_provided: false,
       p_availability_provided: false,
       p_due_at_provided: false,
@@ -55,7 +99,7 @@ describe("External Pursuit patch actions", () => {
       staffInternalNotes: null,
     }, "00000000-0000-4000-8000-000000000002")
 
-    expect(mocks.rpc).toHaveBeenCalledWith("update_external_pursuit", expect.objectContaining({
+    expect(mocks.rpc).toHaveBeenCalledWith("update_external_pursuit_v2", expect.objectContaining({
       p_due_at: null,
       p_due_at_provided: true,
       p_shared_notes: null,
@@ -63,5 +107,68 @@ describe("External Pursuit patch actions", () => {
       p_staff_internal_notes: null,
       p_staff_notes_provided: true,
     }))
+  })
+
+  it("moves a stage through the narrow patch-only RPC", async () => {
+    await expect(moveExternalPursuitStage(
+      "dossier-1",
+      "meetings",
+      "00000000-0000-4000-8000-000000000003",
+    )).resolves.toMatchObject({ success: true })
+
+    expect(mocks.rpc).toHaveBeenCalledWith("move_external_pursuit_stage", {
+      p_actor_user_id: "staff-1",
+      p_dossier_id: "dossier-1",
+      p_idempotency_key: "00000000-0000-4000-8000-000000000003",
+      p_stage: "meetings",
+    })
+  })
+
+  it("passes durable contact and deletion operation keys through unchanged", async () => {
+    mocks.rpc.mockResolvedValue({ data: "contact-1", error: null })
+    await saveExternalPursuitContact("dossier-1", {
+      organisation: "Buyer Co",
+      email: "buyer@example.test",
+    }, "dossier-save:contact:stable-client-id")
+    expect(mocks.rpc).toHaveBeenLastCalledWith("save_external_pursuit_contact", expect.objectContaining({
+      p_dossier_id: "dossier-1",
+      p_idempotency_key: "dossier-save:contact:stable-client-id",
+      p_organisation: "Buyer Co",
+      p_email: "buyer@example.test",
+    }))
+
+    mocks.getCurrentUserAccess.mockResolvedValue({
+      role: "repreneur",
+      repreneurId: "owner-1",
+      user: { id: "owner-user" },
+    })
+    await requestExternalPursuitDeletion("dossier-1", "stable-delete-request")
+    expect(mocks.rpc).toHaveBeenLastCalledWith("request_external_pursuit_deletion", {
+      p_actor_user_id: "owner-user",
+      p_dossier_id: "dossier-1",
+      p_idempotency_key: "stable-delete-request",
+    })
+
+    await fulfillExternalPursuitDeletion("dossier-1", "stable-delete-fulfill")
+    expect(mocks.rpc).toHaveBeenLastCalledWith("fulfill_external_pursuit_deletion", {
+      p_actor_user_id: "staff-1",
+      p_dossier_id: "dossier-1",
+      p_idempotency_key: "stable-delete-fulfill",
+    })
+  })
+
+  it("validates external URLs and integer headcount before persistence", async () => {
+    await expect(createExternalPursuit({
+      ownerRepreneurId: "owner-1",
+      title: "Unsafe URL",
+      externalUrl: "javascript:alert(1)",
+    }, "unsafe-url-key")).resolves.toMatchObject({ success: false, message: "External URL must start with http:// or https://." })
+
+    await expect(createExternalPursuit({
+      ownerRepreneurId: "owner-1",
+      title: "Fractional headcount",
+      headcount: 2.5,
+    }, "fractional-headcount-key")).resolves.toMatchObject({ success: false, message: "Headcount must be a whole number." })
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 })

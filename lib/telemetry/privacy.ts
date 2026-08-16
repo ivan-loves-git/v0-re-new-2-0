@@ -39,7 +39,7 @@ const STATIC_ROUTE_SEGMENTS = new Set([
   "instructions", "intake-upload-token", "intake-v2", "journey", "login", "ma",
   "ma-workflow", "nda-artifacts", "documents",
   "my-opportunities", "new", "offers", "opportunities", "pipeline",
-  "portal", "portal-preview", "profile", "questionnaire", "repreneurs",
+  "portal", "portal-preview", "profile", "pursuits", "questionnaire", "repreneurs",
   "reset-avatar", "reset-password", "review", "reviews", "roadmap", "routing",
   "scrapbook", "scrapbook-html", "settings", "strategy", "success",
   "tools", "update-journey-stages", "upload-avatar", "upload-cv", "wave-ai",
@@ -52,6 +52,7 @@ const ROUTE_PATTERNS: Array<[RegExp, string]> = [
   [/^\/c\/[^/]+\/?$/, "/c/:slug"],
   [/^\/my-opportunities\/[^/]+\/?$/, "/my-opportunities/:matchId"],
   [/^\/offers\/[^/]+\/edit\/?$/, "/offers/:id/edit"],
+  [/^\/opportunities\/pursuits\/?$/, "/opportunities/pursuits"],
   [/^\/opportunities\/ma\/?$/, "/opportunities/ma"],
   [/^\/opportunities\/[^/]+\/?$/, "/opportunities/:id"],
   [/^\/portal\/deals\/[^/]+\/?$/, "/portal/deals/:matchId"],
@@ -172,6 +173,7 @@ export function workflowForRoute(pathname: string): WaveWorkflow {
     routeTemplate.startsWith("/ma") ||
     routeTemplate.startsWith("/deals")
   ) return "ma_advisory"
+  if (routeTemplate === "/portal/pursuits" || routeTemplate === "/opportunities/pursuits") return "external_pursuit"
   if (
     routeTemplate.startsWith("/opportunities") ||
     routeTemplate.startsWith("/dashboard_op") ||

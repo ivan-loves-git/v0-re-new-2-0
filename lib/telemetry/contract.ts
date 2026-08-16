@@ -45,6 +45,7 @@ export const WAVE_WORKFLOWS = [
   "portal_profile",
   "portal_access",
   "portal_pursuit",
+  "external_pursuit",
   "wave_ai",
   "navigation",
   "unknown",
