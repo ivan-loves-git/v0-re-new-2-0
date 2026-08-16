@@ -267,9 +267,9 @@ describe("External Pursuit attachment actions", () => {
 
   it("stops dossier fulfillment before metadata/tombstone when any object cleanup fails", async () => {
     mocks.rpc.mockImplementation(async (name: string) => {
-      if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null }
-      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null }
-      if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return { data: [{ id: "attachment-1", storage_path: "dossier-1/object.pdf" }], error: null }
+      if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null, status: 200 }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null, status: 200 }
+      if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return { data: [{ id: "attachment-1", storage_path: "dossier-1/object.pdf" }], error: null, status: 200 }
       throw new Error(`Unexpected RPC ${name}`)
     })
     mocks.remove.mockResolvedValue({ data: null, error: new Error("storage unavailable") })
@@ -336,11 +336,11 @@ describe("External Pursuit attachment actions", () => {
 
   it("routes the legacy fulfillment action through attachment cleanup before tombstoning", async () => {
     mocks.rpc.mockImplementation(async (name: string) => {
-      if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null }
-      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null }
-      if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return { data: [], error: null }
-      if (name === "clear_external_pursuit_attachment_records_for_fulfillment") return { data: null, error: null }
-      if (name === "fulfill_external_pursuit_deletion") return { data: null, error: null }
+      if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null, status: 200 }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null, status: 200 }
+      if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return { data: [], error: null, status: 200 }
+      if (name === "clear_external_pursuit_attachment_records_for_fulfillment") return { data: null, error: null, status: 200 }
+      if (name === "fulfill_external_pursuit_deletion") return { data: null, error: null, status: 200 }
       throw new Error(`Unexpected RPC ${name}`)
     })
     await expect(fulfillExternalPursuitDeletion("dossier-1", key(7))).resolves.toMatchObject({ success: true, pursuitId: "dossier-1" })
@@ -351,6 +351,31 @@ describe("External Pursuit attachment actions", () => {
       "clear_external_pursuit_attachment_records_for_fulfillment",
       "fulfill_external_pursuit_deletion",
     ])
+  })
+
+  it.each([
+    { label: "status zero", status: 0 },
+    { label: "missing status", status: undefined },
+  ])("fails closed before byte cleanup when the W-109 preflight has $label", async ({ status }) => {
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === "external_pursuit_deletion_fulfillment_replay") {
+        return { data: false, error: null, status: 200 }
+      }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") {
+        return { data: null, error: null, status }
+      }
+      throw new Error(`Unexpected RPC ${name}`)
+    })
+
+    await expect(fulfillExternalPursuitDeletionWithAttachments("dossier-1", key(21))).resolves.toMatchObject({
+      success: false,
+      retryExact: true,
+    })
+    expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual([
+      "external_pursuit_deletion_fulfillment_replay",
+      "prepare_external_pursuit_deletion_fulfillment",
+    ])
+    expect(mocks.remove).not.toHaveBeenCalled()
   })
 
   it("stops before listing or removing files when W-109 says the dossier is converted", async () => {

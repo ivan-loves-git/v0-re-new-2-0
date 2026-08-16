@@ -51,6 +51,8 @@ BEGIN
   SELECT count(*) INTO before_pursuits FROM public.opportunity_pursuit_evidence;
   SELECT count(*) INTO before_ndas FROM public.opportunity_nda_artifacts;
   dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Never copy this dossier title','meetings','available',NULL,'Never copy this note','Never copy staff note','conversion-staff-user','conversion-fixture-create');
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Unknown actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','missing-w109-user','missing-actor-convert'); RAISE EXCEPTION 'w109_unknown_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Missing actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',NULL,'missing-actor-convert'); RAISE EXCEPTION 'w109_missing_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_actor_and_key_required' THEN RAISE; END IF; END;
   SELECT opportunity_id INTO converted FROM public.convert_external_pursuit_to_opportunity(
     dossier,'Anonymous regional industrial specialist','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','conversion-staff-user','conversion-fixture-convert');
   SELECT opportunity_id INTO repeated FROM public.convert_external_pursuit_to_opportunity(
@@ -79,7 +81,11 @@ BEGIN
   deletion_dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Deletion preflight','meetings','available',NULL,NULL,NULL,'conversion-staff-user','conversion-preflight-create');
   PERFORM public.request_external_pursuit_deletion(deletion_dossier,'conversion-owner-user','conversion-preflight-request');
   PERFORM public.prepare_external_pursuit_deletion_fulfillment(deletion_dossier,'conversion-staff-user');
+  BEGIN PERFORM public.prepare_external_pursuit_deletion_fulfillment(deletion_dossier,'missing-w109-user'); RAISE EXCEPTION 'w109_unknown_preflight_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.prepare_external_pursuit_deletion_fulfillment(deletion_dossier,NULL); RAISE EXCEPTION 'w109_missing_preflight_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
   BEGIN PERFORM public.prepare_external_pursuit_deletion_fulfillment(deletion_dossier,'conversion-owner-user'); RAISE EXCEPTION 'w109_owner_preflight_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.fulfill_external_pursuit_deletion(deletion_dossier,'missing-w109-user','unknown-actor-fulfill'); RAISE EXCEPTION 'w109_unknown_fulfillment_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.fulfill_external_pursuit_deletion(deletion_dossier,NULL,'missing-actor-fulfill'); RAISE EXCEPTION 'w109_missing_fulfillment_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
 END $$;
 
 ROLLBACK;

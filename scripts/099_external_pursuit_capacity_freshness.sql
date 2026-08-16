@@ -117,7 +117,7 @@ DECLARE
   payload JSONB;
 BEGIN
   SELECT role INTO actor_role FROM public.external_pursuit_actor_context(actor);
-  IF actor_role <> 'staff' THEN
+  IF actor_role IS DISTINCT FROM 'staff' THEN
     RAISE EXCEPTION 'External Pursuit access denied.';
   END IF;
 

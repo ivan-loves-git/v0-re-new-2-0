@@ -114,7 +114,7 @@ BEGIN
   END IF;
 
   SELECT role INTO actor_role FROM public.external_pursuit_actor_context(actor);
-  IF actor_role <> 'staff' THEN
+  IF actor_role IS DISTINCT FROM 'staff' THEN
     RAISE EXCEPTION 'External Pursuit access denied.';
   END IF;
 
@@ -247,7 +247,7 @@ DECLARE
   dossier public.external_pursuits%ROWTYPE;
 BEGIN
   SELECT role INTO actor_role FROM public.external_pursuit_actor_context(actor);
-  IF actor_role <> 'staff' THEN
+  IF actor_role IS DISTINCT FROM 'staff' THEN
     RAISE EXCEPTION 'External Pursuit access denied.';
   END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(p_dossier_id::TEXT, 0));
@@ -269,7 +269,7 @@ DECLARE p public.external_pursuits%ROWTYPE; actor TEXT := NULLIF(BTRIM(p_actor_u
 BEGIN
   IF NULLIF(BTRIM(p_idempotency_key),'') IS NULL THEN RAISE EXCEPTION 'An idempotency key is required.'; END IF;
   SELECT role INTO actor_role FROM public.external_pursuit_actor_context(actor);
-  IF actor_role <> 'staff' THEN RAISE EXCEPTION 'External Pursuit access denied.'; END IF;
+  IF actor_role IS DISTINCT FROM 'staff' THEN RAISE EXCEPTION 'External Pursuit access denied.'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(p_dossier_id::TEXT, 0));
   SELECT fulfillment_idempotency_key INTO stored_key FROM public.external_pursuit_deletion_tombstones WHERE former_dossier_id=p_dossier_id;
   IF stored_key IS NOT NULL THEN

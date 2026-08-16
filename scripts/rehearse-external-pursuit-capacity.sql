@@ -130,6 +130,18 @@ BEGIN
     IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF;
   END;
   BEGIN
+    PERFORM public.external_pursuit_capacity_for_staff('missing-w110-user', '2026-04-30 22:30:00+00');
+    RAISE EXCEPTION 'w110_unknown_capacity_actor_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM public.external_pursuit_capacity_for_staff(NULL, '2026-04-30 22:30:00+00');
+    RAISE EXCEPTION 'w110_missing_capacity_actor_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF;
+  END;
+  BEGIN
     PERFORM public.confirm_external_pursuit_current(fresh_id, 'w110-other-owner', 'w110-other-owner-confirm');
     RAISE EXCEPTION 'w110_other_owner_confirmation_was_allowed';
   EXCEPTION WHEN OTHERS THEN

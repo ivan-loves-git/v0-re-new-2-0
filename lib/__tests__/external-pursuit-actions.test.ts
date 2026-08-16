@@ -150,11 +150,15 @@ describe("External Pursuit patch actions", () => {
       p_idempotency_key: "stable-delete-request",
     })
 
-    mocks.rpc.mockImplementation(async (name: string) => (
-      name === "external_pursuit_attachment_cleanup_for_fulfillment"
-        ? { data: [], error: null }
-        : { data: null, error: null }
-    ))
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === "external_pursuit_deletion_fulfillment_replay") {
+        return { data: false, error: null, status: 200 }
+      }
+      if (name === "external_pursuit_attachment_cleanup_for_fulfillment") {
+        return { data: [], error: null, status: 200 }
+      }
+      return { data: null, error: null, status: 200 }
+    })
     await fulfillExternalPursuitDeletion("dossier-1", "stable-delete-fulfill")
     expect(mocks.rpc).toHaveBeenCalledWith("prepare_external_pursuit_deletion_fulfillment", {
       p_actor_user_id: "staff-1",
