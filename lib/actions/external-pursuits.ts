@@ -76,6 +76,7 @@ export async function createExternalPursuit(
   input: ExternalPursuitInput,
   idempotencyKey: string = randomUUID(),
 ): Promise<ExternalPursuitActionResult> {
+  let rpcStarted = false
   try {
     const access = await currentActor()
     if (!validOptionalDate(input.dueAt)) return { success: false, message: "Due date must use a valid YYYY-MM-DD date." }
@@ -85,7 +86,8 @@ export async function createExternalPursuit(
     const ownerRepreneurId =
       access.role === "staff" ? input.ownerRepreneurId : access.repreneurId
     if (!ownerRepreneurId) return { success: false, message: "Choose the dossier owner." }
-    const { data, error } = await createAdminClient().rpc("create_external_pursuit_v2", {
+    rpcStarted = true
+    const { data, error, status } = await createAdminClient().rpc("create_external_pursuit_v2", {
       p_owner_repreneur_id: ownerRepreneurId,
       p_title: input.title,
       p_stage: input.stage ?? "identified",
@@ -102,10 +104,14 @@ export async function createExternalPursuit(
       p_actor_user_id: access.user.id,
       p_idempotency_key: idempotencyKey,
     })
-    if (error || !data) return { success: false, message: message(error, "Could not create External Pursuit.") }
+    if (error || !data) return {
+      success: false,
+      message: message(error, "Could not create External Pursuit."),
+      retryExact: status === 0 || (!error && !data),
+    }
     return { success: true, message: "External Pursuit created.", pursuitId: data }
   } catch (error) {
-    return { success: false, message: message(error, "Could not create External Pursuit.") }
+    return { success: false, message: message(error, "Could not create External Pursuit."), retryExact: rpcStarted }
   }
 }
 
@@ -114,13 +120,15 @@ export async function updateExternalPursuit(
   input: ExternalPursuitUpdateInput,
   idempotencyKey: string = randomUUID(),
 ): Promise<ExternalPursuitActionResult> {
+  let rpcStarted = false
   try {
     const access = await currentActor()
     if (!validOptionalDate(input.dueAt)) return { success: false, message: "Due date must use a valid YYYY-MM-DD date." }
     if (![input.revenueMeur, input.ebitdaKeur, input.headcount].every(validOptionalMetric)) return { success: false, message: "External metrics must be zero or greater." }
     if (input.headcount !== undefined && input.headcount !== null && !Number.isInteger(input.headcount)) return { success: false, message: "Headcount must be a whole number." }
     if (!validOptionalExternalUrl(input.externalUrl)) return { success: false, message: "External URL must start with http:// or https://." }
-    const { error } = await createAdminClient().rpc("update_external_pursuit_v2", {
+    rpcStarted = true
+    const { error, status } = await createAdminClient().rpc("update_external_pursuit_v2", {
       p_dossier_id: pursuitId,
       p_title: input.title,
       p_stage: input.stage ?? null,
@@ -148,9 +156,11 @@ export async function updateExternalPursuit(
       p_actor_user_id: access.user.id,
       p_idempotency_key: idempotencyKey,
     })
-    return error ? { success: false, message: message(error, "Could not update External Pursuit.") } : { success: true, message: "External Pursuit updated.", pursuitId }
+    return error
+      ? { success: false, message: message(error, "Could not update External Pursuit."), retryExact: status === 0 }
+      : { success: true, message: "External Pursuit updated.", pursuitId }
   } catch (error) {
-    return { success: false, message: message(error, "Could not update External Pursuit.") }
+    return { success: false, message: message(error, "Could not update External Pursuit."), retryExact: rpcStarted }
   }
 }
 
@@ -183,7 +193,7 @@ export async function listExternalPursuitBoard(): Promise<ExternalPursuitBoardRe
   })
   if (error) throw new Error(message(error, "Could not load External Pursuits."))
   type BoardContactRow = { id: string; name?: string | null; organisation?: string | null; role_title?: string | null; email?: string | null; phone?: string | null }
-  type BoardRow = { id: string; owner_repreneur_id: string; owner_name?: string | null; title: string; stage: ExternalPursuitBoardRecord["stage"]; availability: ExternalPursuitBoardRecord["availability"]; deletion_status: ExternalPursuitBoardRecord["deletionStatus"]; external_url?: string | null; target_company?: string | null; source_channel?: string | null; revenue_meur?: number | string | null; ebitda_keur?: number | string | null; headcount?: number | string | null; contacts?: BoardContactRow[]; updated_at: string }
+  type BoardRow = { id: string; owner_repreneur_id: string; owner_name?: string | null; title: string; stage: ExternalPursuitBoardRecord["stage"]; availability: ExternalPursuitBoardRecord["availability"]; deletion_status: ExternalPursuitBoardRecord["deletionStatus"]; external_url?: string | null; target_company?: string | null; source_channel?: string | null; revenue_meur?: number | string | null; ebitda_keur?: number | string | null; headcount?: number | string | null; contacts?: BoardContactRow[]; next_action?: string | null; responsible_party?: ExternalPursuitBoardRecord["responsibleParty"]; due_at?: string | null; shared_notes?: string | null; staff_internal_notes?: string | null; updated_at: string }
   return ((Array.isArray(data) ? data : []) as BoardRow[]).map((row) => ({
     id: row.id,
     ownerRepreneurId: row.owner_repreneur_id,
@@ -206,6 +216,11 @@ export async function listExternalPursuitBoard(): Promise<ExternalPursuitBoardRe
       email: contact.email ?? null,
       phone: contact.phone ?? null,
     })),
+    nextAction: row.next_action ?? null,
+    responsibleParty: row.responsible_party ?? null,
+    dueAt: row.due_at ?? null,
+    sharedNotes: row.shared_notes ?? null,
+    ...(access.role === "staff" ? { staffInternalNotes: row.staff_internal_notes ?? null } : {}),
     updatedAt: row.updated_at,
   })) as ExternalPursuitBoardRecord[]
 }
@@ -220,6 +235,7 @@ export async function updateExternalPursuitFollowUp(
   input: ExternalPursuitFollowUpInput,
   idempotencyKey: string = randomUUID(),
 ): Promise<ExternalPursuitActionResult> {
+  let rpcStarted = false
   try {
     const access = await currentActor()
     if (!validOptionalDate(input.dueAt)) {
@@ -234,7 +250,8 @@ export async function updateExternalPursuitFollowUp(
     if (nextActionProvided && ((nextAction && !input.responsibleParty) || (!nextAction && input.responsibleParty))) {
       return { success: false, message: "A next action requires one responsible party." }
     }
-    const { error } = await createAdminClient().rpc("update_external_pursuit_follow_up", {
+    rpcStarted = true
+    const { error, status } = await createAdminClient().rpc("update_external_pursuit_follow_up", {
       p_dossier_id: pursuitId,
       p_next_action: nextAction,
       p_next_action_provided: nextActionProvided,
@@ -253,10 +270,10 @@ export async function updateExternalPursuitFollowUp(
       p_idempotency_key: idempotencyKey,
     })
     return error
-      ? { success: false, message: message(error, "Could not update follow-up.") }
+      ? { success: false, message: message(error, "Could not update follow-up."), retryExact: status === 0 }
       : { success: true, message: "Follow-up updated.", pursuitId }
   } catch (error) {
-    return { success: false, message: message(error, "Could not update follow-up.") }
+    return { success: false, message: message(error, "Could not update follow-up."), retryExact: rpcStarted }
   }
 }
 

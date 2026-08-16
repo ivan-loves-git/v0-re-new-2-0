@@ -150,11 +150,46 @@ describe("External Pursuit patch actions", () => {
       p_idempotency_key: "stable-delete-request",
     })
 
+    mocks.rpc.mockImplementation(async (name: string) => (
+      name === "external_pursuit_attachment_cleanup_for_fulfillment"
+        ? { data: [], error: null }
+        : { data: null, error: null }
+    ))
     await fulfillExternalPursuitDeletion("dossier-1", "stable-delete-fulfill")
     expect(mocks.rpc).toHaveBeenLastCalledWith("fulfill_external_pursuit_deletion", {
       p_actor_user_id: "staff-1",
       p_dossier_id: "dossier-1",
       p_idempotency_key: "stable-delete-fulfill",
+    })
+  })
+
+  it("marks a lost parent RPC response for exact-key recovery", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: null,
+      error: { message: "TypeError: fetch failed" },
+      status: 0,
+    })
+
+    await expect(createExternalPursuit({
+      ownerRepreneurId: "owner-1",
+      title: "Possibly committed create",
+    }, "exact-create-retry-key")).resolves.toMatchObject({
+      success: false,
+      retryExact: true,
+    })
+
+    await expect(updateExternalPursuit("dossier-1", {
+      title: "Possibly committed update",
+    }, "exact-update-retry-key")).resolves.toMatchObject({
+      success: false,
+      retryExact: true,
+    })
+
+    await expect(updateExternalPursuitFollowUp("dossier-1", {
+      sharedNotes: "Possibly committed follow-up",
+    }, "exact-follow-up-retry-key")).resolves.toMatchObject({
+      success: false,
+      retryExact: true,
     })
   })
 

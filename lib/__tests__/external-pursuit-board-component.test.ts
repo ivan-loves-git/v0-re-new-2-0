@@ -9,6 +9,12 @@ vi.mock("@/lib/actions/external-pursuits", () => ({
   requestExternalPursuitDeletion: vi.fn(),
   saveExternalPursuitContact: vi.fn(),
   updateExternalPursuit: vi.fn(),
+  updateExternalPursuitFollowUp: vi.fn(),
+}))
+
+vi.mock("@/lib/actions/external-pursuit-attachments", () => ({
+  deleteExternalPursuitAttachment: vi.fn(),
+  uploadExternalPursuitAttachment: vi.fn(),
 }))
 
 import { ExternalPursuitBoard } from "@/components/pursuits/external-pursuit-board"
@@ -30,6 +36,10 @@ function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursu
     ebitdaKeur: null,
     headcount: null,
     contacts: [],
+    nextAction: null,
+    responsibleParty: null,
+    dueAt: null,
+    sharedNotes: null,
     updatedAt: "2026-08-16T10:00:00Z",
     ...overrides,
   }
@@ -82,7 +92,8 @@ describe("ExternalPursuitBoard component", () => {
     expect(html).toContain("Source channel: Direct")
     expect(html).toContain("Alex Buyer")
     expect(html).toContain("alex@example.invalid")
-    expect(html).toContain("Review and permanently delete")
+    expect(html).toContain("Review follow-up &amp; files")
+    expect(html).toContain("Permanently delete")
     expect(html).not.toContain("Move Pending target stage")
   })
 })

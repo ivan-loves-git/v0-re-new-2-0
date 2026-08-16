@@ -142,8 +142,52 @@ BEGIN
   RETURN jsonb_build_object('pursuit',jsonb_build_object('id',p.id,'owner_repreneur_id',p.owner_repreneur_id,'title',p.title,'stage',p.stage,'availability',p.availability,'next_action',p.next_action,'responsible_party',p.responsible_party,'due_at',p.due_at,'external_url',p.external_url,'target_company',p.target_company,'source_channel',p.source_channel,'revenue_meur',p.revenue_meur,'ebitda_keur',p.ebitda_keur,'headcount',p.headcount,'deletion_status',p.deletion_status,'created_at',p.created_at,'updated_at',p.updated_at),'shared_notes',COALESCE((SELECT shared_notes FROM public.external_pursuit_notes WHERE external_pursuit_id=p.id),NULL),'contacts',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',c.id,'name',c.name,'organisation',c.organisation,'role_title',c.role_title,'email',c.email,'phone',c.phone,'created_at',c.created_at,'updated_at',c.updated_at) ORDER BY c.created_at) FROM public.external_pursuit_contacts c WHERE c.external_pursuit_id=p.id),'[]'::jsonb));
 END $$;
 
-REVOKE ALL ON FUNCTION public.update_external_pursuit_follow_up(UUID,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,DATE,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,TEXT) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.update_external_pursuit_follow_up(UUID,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,DATE,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,TEXT) TO service_role;
+-- W-107 extends the W-106 board read model without creating another dossier
+-- surface. Staff-only notes are omitted entirely from owner payloads.
+CREATE OR REPLACE FUNCTION public.external_pursuit_board_for_actor(p_actor_user_id TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE actor TEXT := NULLIF(BTRIM(p_actor_user_id), ''); actor_role public.app_user_role; actor_owner UUID;
+BEGIN
+  SELECT role, repreneur_id INTO actor_role, actor_owner FROM public.external_pursuit_actor_context(actor);
+  IF actor_role IS NULL THEN RAISE EXCEPTION 'External Pursuit access denied.'; END IF;
+  RETURN COALESCE((
+    SELECT jsonb_agg(
+      jsonb_build_object(
+        'id', p.id, 'owner_repreneur_id', p.owner_repreneur_id,
+        'owner_name', NULLIF(BTRIM(CONCAT_WS(' ', r.first_name, r.last_name)), ''),
+        'title', p.title, 'stage', p.stage, 'availability', p.availability,
+        'deletion_status', p.deletion_status,
+        'external_url', p.external_url, 'target_company', p.target_company,
+        'source_channel', p.source_channel, 'revenue_meur', p.revenue_meur,
+        'ebitda_keur', p.ebitda_keur, 'headcount', p.headcount,
+        'next_action', p.next_action, 'responsible_party', p.responsible_party,
+        'due_at', p.due_at,
+        'shared_notes', (SELECT n.shared_notes FROM public.external_pursuit_notes n WHERE n.external_pursuit_id = p.id),
+        'contacts', COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'id', c.id, 'name', c.name, 'organisation', c.organisation,
+            'role_title', c.role_title, 'email', c.email, 'phone', c.phone
+          ) ORDER BY c.created_at)
+          FROM public.external_pursuit_contacts c WHERE c.external_pursuit_id = p.id
+        ), '[]'::jsonb),
+        'updated_at', p.updated_at
+      ) || CASE WHEN actor_role = 'staff' THEN jsonb_build_object(
+        'staff_internal_notes', (
+          SELECT n.staff_internal_notes FROM public.external_pursuit_staff_notes n
+          WHERE n.external_pursuit_id = p.id
+        )
+      ) ELSE '{}'::jsonb END
+      ORDER BY p.updated_at DESC
+    )
+    FROM public.external_pursuits p
+    JOIN public.repreneurs r ON r.id = p.owner_repreneur_id
+    WHERE actor_role = 'staff'
+      OR (p.owner_repreneur_id = actor_owner AND p.deletion_status = 'active')
+  ), '[]'::jsonb);
+END $$;
+
+REVOKE ALL ON FUNCTION public.update_external_pursuit_follow_up(UUID,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,DATE,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,TEXT), public.external_pursuit_board_for_actor(TEXT) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.update_external_pursuit_follow_up(UUID,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,DATE,BOOLEAN,TEXT,BOOLEAN,TEXT,BOOLEAN,TEXT,TEXT), public.external_pursuit_board_for_actor(TEXT) TO service_role;
 
 COMMENT ON COLUMN public.external_pursuits.next_action IS 'W-107 optional concrete next action for an isolated External Pursuit. No notification, task or canonical-pursuit effect.';
 COMMENT ON COLUMN public.external_pursuits.responsible_party IS 'W-107 owner or Re-New staff responsibility for the paired next action.';

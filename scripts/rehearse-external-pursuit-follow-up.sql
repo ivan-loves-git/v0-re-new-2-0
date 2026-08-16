@@ -23,6 +23,8 @@ DECLARE
   dossier UUID;
   owner_view JSONB;
   staff_view JSONB;
+  owner_board JSONB;
+  staff_board JSONB;
   updated_at_before TIMESTAMPTZ;
   updated_at_after TIMESTAMPTZ;
   audit_metadata JSONB;
@@ -91,6 +93,8 @@ BEGIN
   END IF;
   owner_view := public.external_pursuit_for_actor(dossier, 'follow-up-owner-user');
   staff_view := public.external_pursuit_for_actor(dossier, 'follow-up-staff-user');
+  SELECT item INTO owner_board FROM jsonb_array_elements(public.external_pursuit_board_for_actor('follow-up-owner-user')) item WHERE item->>'id' = dossier::TEXT;
+  SELECT item INTO staff_board FROM jsonb_array_elements(public.external_pursuit_board_for_actor('follow-up-staff-user')) item WHERE item->>'id' = dossier::TEXT;
   IF owner_view::TEXT LIKE '%Staff-only%' OR owner_view ? 'audit'
     OR owner_view->'pursuit'->>'next_action' <> 'Request refreshed information'
     OR owner_view->'pursuit'->>'responsible_party' <> 'staff'
@@ -102,6 +106,17 @@ BEGIN
     OR owner_view->'pursuit'->>'headcount' <> '34'
     OR staff_view->>'staff_internal_notes' <> 'Staff-only follow-up note' THEN
     RAISE EXCEPTION 'w107_projection_boundary_failed';
+  END IF;
+  IF owner_board IS NULL OR staff_board IS NULL
+    OR owner_board ? 'staff_internal_notes'
+    OR owner_board->>'next_action' <> 'Request refreshed information'
+    OR owner_board->>'responsible_party' <> 'staff'
+    OR owner_board->>'shared_notes' <> 'Owner added context'
+    OR staff_board->>'staff_internal_notes' <> 'Staff-only follow-up note'
+    OR owner_board->>'external_url' <> 'https://example.test/dossier'
+    OR owner_board->>'target_company' <> 'Target company'
+    OR owner_board->>'source_channel' <> 'Introducer' THEN
+    RAISE EXCEPTION 'w107_board_projection_boundary_failed';
   END IF;
   BEGIN
     PERFORM public.update_external_pursuit_follow_up(dossier, 'Bad', TRUE, 'owner', TRUE, NULL, FALSE, NULL, FALSE, NULL, FALSE, NULL, FALSE, 'follow-up-other-user', 'other-owner-save');

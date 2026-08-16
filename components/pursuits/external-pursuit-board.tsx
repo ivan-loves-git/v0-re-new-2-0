@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition, type ReactNode } from "react"
 import Link from "next/link"
-import { ExternalLink, Plus, Trash2 } from "lucide-react"
+import { CalendarClock, ExternalLink, Paperclip, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ExternalPursuitAttachmentsPanel } from "@/components/pursuits/external-pursuit-attachments-panel"
+import { ExternalPursuitFollowUpPanel } from "@/components/pursuits/external-pursuit-follow-up-panel"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -31,6 +33,7 @@ import {
   updateExternalPursuit,
 } from "@/lib/actions/external-pursuits"
 import type { ReNewPursuitBoardRecord } from "@/lib/actions/external-pursuit-board"
+import type { ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 import type {
   ExternalPursuitContactDraft,
   ExternalPursuitSubmissionSnapshot,
@@ -52,6 +55,7 @@ import {
   type ExternalPursuitInput,
   type ExternalPursuitStage,
 } from "@/lib/types/external-pursuit"
+import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
 
 const STAGE_LABELS: Record<ExternalPursuitStage, string> = {
   identified: "Identified",
@@ -109,11 +113,13 @@ function externalDetailParts(record: ExternalPursuitBoardRecord) {
 export function ExternalPursuitBoard({
   external,
   renew,
+  attachmentsByPursuit = {},
   isStaff,
   owners = [],
 }: {
   external: ExternalPursuitBoardRecord[]
   renew: ReNewPursuitBoardRecord[]
+  attachmentsByPursuit?: Record<string, ExternalPursuitAttachment[]>
   isStaff: boolean
   owners?: { id: string; name: string }[]
 }) {
@@ -126,6 +132,7 @@ export function ExternalPursuitBoard({
   const [advanced, setAdvanced] = useState(false)
   const [query, setQuery] = useState("")
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  const [managing, setManaging] = useState<ExternalPursuitBoardRecord | null>(null)
   const [submissionSnapshot, setSubmissionSnapshot] = useState<ExternalPursuitSubmissionSnapshot | null>(null)
   const [recoveryRequired, setRecoveryRequired] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -242,8 +249,13 @@ export function ExternalPursuitBoard({
             exactSnapshot.idempotencyKey,
           )
         if (!result.success || !result.pursuitId) {
-          // The dossier action returned a confirmed failure before a parent
-          // record was accepted, so this payload can safely be edited anew.
+          if (result.retryExact) {
+            setRecoveryRequired(true)
+            toast.error("The save result is unclear. Retry this unchanged save to recover it safely.")
+            return
+          }
+          // A confirmed validation/database rejection did not accept a parent,
+          // so this payload may be edited and submitted with a fresh key.
           resetSubmissionRecovery()
           toast.error(result.message)
           return
@@ -376,6 +388,7 @@ export function ExternalPursuitBoard({
                         isStaff={isStaff}
                         pending={pending}
                         onEdit={openEdit}
+                        onManage={setManaging}
                         onMove={move}
                         onDelete={(selected) => setConfirmation({ kind: "request", record: selected })}
                         onFulfill={(selected) => setConfirmation({ kind: "fulfill", record: selected })}
@@ -500,6 +513,55 @@ export function ExternalPursuitBoard({
         </DialogContent>
       </Dialog>
 
+      <Dialog open={Boolean(managing)} onOpenChange={(nextOpen) => { if (!nextOpen) setManaging(null) }}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{managing?.title ?? "External pursuit"}</DialogTitle>
+            <DialogDescription>
+              Follow-up and private files belong only to this external dossier. They never become Re-New Gate, matching or opportunity evidence.
+            </DialogDescription>
+          </DialogHeader>
+          {managing ? (
+            <div className="space-y-5">
+              {managing.deletionStatus === "active" ? (
+                <ExternalPursuitFollowUpPanel
+                  pursuitId={managing.id}
+                  role={isStaff ? "staff" : "repreneur"}
+                  followUp={{
+                    nextAction: managing.nextAction,
+                    responsibleParty: managing.responsibleParty,
+                    availability: managing.availability,
+                    dueAt: managing.dueAt,
+                    sharedNotes: managing.sharedNotes,
+                    ...(isStaff ? { staffInternalNotes: managing.staffInternalNotes ?? null } : {}),
+                  }}
+                  onSaved={() => window.location.reload()}
+                />
+              ) : (
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <CardTitle className="text-base">Follow-up review</CardTitle>
+                    <CardDescription>This deletion request is locked. Staff can review the last saved state before fulfilment.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <p><span className="font-medium">Next action:</span> {managing.nextAction || "Not recorded"}</p>
+                    <p><span className="font-medium">Responsible:</span> {managing.responsibleParty === "staff" ? "Re-New staff" : managing.responsibleParty === "owner" ? "Owner" : "Not recorded"}</p>
+                    <p><span className="font-medium">Due:</span> {externalPursuitDueStateLabel(externalPursuitDueState(managing.dueAt))}</p>
+                    <p><span className="font-medium">Shared notes:</span> {managing.sharedNotes || "Not recorded"}</p>
+                    {isStaff ? <p><span className="font-medium">Staff-only notes:</span> {managing.staffInternalNotes || "Not recorded"}</p> : null}
+                  </CardContent>
+                </Card>
+              )}
+              <ExternalPursuitAttachmentsPanel
+                pursuitId={managing.id}
+                attachments={attachmentsByPursuit[managing.id] ?? []}
+                readOnly={managing.deletionStatus !== "active"}
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={Boolean(confirmation)} onOpenChange={(nextOpen) => { if (!nextOpen) setConfirmation(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -612,6 +674,7 @@ function ExternalCard({
   isStaff,
   pending,
   onEdit,
+  onManage,
   onMove,
   onDelete,
   onFulfill,
@@ -620,6 +683,7 @@ function ExternalCard({
   isStaff: boolean
   pending: boolean
   onEdit: (record: ExternalPursuitBoardRecord) => void
+  onManage: (record: ExternalPursuitBoardRecord) => void
   onMove: (record: ExternalPursuitBoardRecord, stage: ExternalPursuitStage) => void
   onDelete: (record: ExternalPursuitBoardRecord) => void
   onFulfill: (record: ExternalPursuitBoardRecord) => void
@@ -628,6 +692,7 @@ function ExternalCard({
   const details = externalDetailParts(record)
   const hasOptionalDetails = details.length > 0 || Boolean(record.externalUrl)
   const stageId = `external-pursuit-stage-${record.id}`
+  const dueState = externalPursuitDueState(record.dueAt)
 
   return (
     <article className="space-y-3 rounded-md border bg-card p-3">
@@ -637,6 +702,11 @@ function ExternalCard({
       </div>
       <h3 className="font-medium leading-snug">{record.title}</h3>
       <p className="text-xs text-muted-foreground">Availability: {record.availability}</p>
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="outline"><CalendarClock className="size-3" /> {externalPursuitDueStateLabel(dueState)}</Badge>
+        <Badge variant="outline"><Paperclip className="size-3" /> Private files</Badge>
+      </div>
+      {record.nextAction ? <p className="text-xs"><span className="font-medium">Next:</span> {record.nextAction}</p> : null}
       {hasOptionalDetails ? (
         <div className="space-y-1 text-xs text-muted-foreground">
           {details.length > 0 ? <p>{details.join(" · ")}</p> : null}
@@ -669,6 +739,7 @@ function ExternalCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" disabled={pending} onClick={() => onEdit(record)}>Edit</Button>
+            <Button size="sm" variant="outline" disabled={pending} onClick={() => onManage(record)}>Follow-up &amp; files</Button>
             {!isStaff ? (
               <Button size="sm" variant="ghost" disabled={pending} onClick={() => onDelete(record)}>
                 <Trash2 data-icon="inline-start" />
@@ -680,10 +751,13 @@ function ExternalCard({
       )}
 
       {isStaff && deleteRequested ? (
-        <Button size="sm" variant="destructive" disabled={pending} onClick={() => onFulfill(record)}>
-          <Trash2 data-icon="inline-start" />
-          Review and permanently delete
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => onManage(record)}>Review follow-up &amp; files</Button>
+          <Button size="sm" variant="destructive" disabled={pending} onClick={() => onFulfill(record)}>
+            <Trash2 data-icon="inline-start" />
+            Permanently delete
+          </Button>
+        </div>
       ) : null}
     </article>
   )

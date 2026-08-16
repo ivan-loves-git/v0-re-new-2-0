@@ -94,6 +94,8 @@ export interface ExternalPursuitActionResult {
   success: boolean
   message: string
   pursuitId?: string
+  /** Keep the exact client snapshot and idempotency key until replay succeeds. */
+  retryExact?: boolean
 }
 
 export interface ExternalPursuitBoardRecord {
@@ -111,5 +113,11 @@ export interface ExternalPursuitBoardRecord {
   ebitdaKeur: number | null
   headcount: number | null
   contacts: ExternalPursuitContactInput[]
+  nextAction: string | null
+  responsibleParty: ExternalPursuitResponsibleParty | null
+  dueAt: string | null
+  sharedNotes: string | null
+  /** Populated only by the staff projection; never sent to the owner portal. */
+  staffInternalNotes?: string | null
   updatedAt: string
 }

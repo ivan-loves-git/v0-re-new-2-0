@@ -35,6 +35,24 @@ export async function getExternalPursuitAttachments(pursuitId: string): Promise<
   return (data ?? []) as ExternalPursuitAttachment[]
 }
 
+/** Batch the board's already-authorized dossier ids without exposing storage. */
+export async function getExternalPursuitAttachmentMap(
+  pursuitIds: string[],
+): Promise<Record<string, ExternalPursuitAttachment[]>> {
+  if (pursuitIds.length > 200) throw new Error("Too many External Pursuits requested.")
+  const access = await actor()
+  const supabase = createAdminClient()
+  const entries = await Promise.all([...new Set(pursuitIds)].map(async (pursuitId) => {
+    const { data, error } = await supabase.rpc("external_pursuit_attachments_for_actor", {
+      p_dossier_id: pursuitId,
+      p_actor_user_id: access.user.id,
+    })
+    if (error) throw new Error(safeMessage(error, "Could not load attachments."))
+    return [pursuitId, (data ?? []) as ExternalPursuitAttachment[]] as const
+  }))
+  return Object.fromEntries(entries)
+}
+
 export async function uploadExternalPursuitAttachment(
   pursuitId: string,
   formData: FormData,
@@ -130,7 +148,7 @@ export async function deleteExternalPursuitAttachment(
 /** W-108 wrapper: all private objects must be removed before W-105 may tombstone. */
 export async function fulfillExternalPursuitDeletionWithAttachments(
   pursuitId: string,
-  idempotencyKey = randomUUID(),
+  idempotencyKey: string = randomUUID(),
 ): Promise<Result> {
   try {
     const staff = await requireStaffAccess()

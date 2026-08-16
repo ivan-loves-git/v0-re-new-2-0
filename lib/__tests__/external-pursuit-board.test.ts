@@ -100,7 +100,9 @@ describe("W-106 pursuit board", () => {
     expect(board).not.toContain("contact.id ?? index")
     expect(board).toContain("Complete the highlighted contact rows")
     expect(board).toContain("Permanently delete “${confirmation.record.title}”?")
-    expect(board).toContain("Review and permanently delete")
+    expect(board).toContain("Permanently delete")
+    expect(board).toContain("result.retryExact")
+    expect(board).toContain("Retry this unchanged save")
   })
 
   it("freezes an exact dossier and contact snapshot through second-contact recovery, then permits a fresh edit", () => {

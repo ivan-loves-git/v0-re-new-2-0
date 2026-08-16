@@ -109,6 +109,13 @@ export function ExternalPursuitFollowUpPanel({
         return
       }
       if (!result.success) {
+        if (result.retryExact) {
+          const retryMessage = "The save result is unclear. Fields are locked until you retry this exact save."
+          setRecoveryAttempt(attempt)
+          setFormError(retryMessage)
+          toast.error("Follow-up not confirmed", { description: retryMessage })
+          return
+        }
         setFormError(result.message)
         toast.error("Follow-up not updated", { description: result.message })
         return
