@@ -164,11 +164,14 @@ exported or treated as dossier content; a different fulfillment key is rejected.
     Better Auth actor and idempotency key only. It never resubmits title or
     optional dossier fields, so a stale card cannot overwrite a concurrent
     edit.
-11. The editor keeps one retry key for each dossier save and one stable client
-    identity and derived retry key for each contact. A partial multi-contact
-    save can replay exactly without duplicating an earlier contact. A row with
-    email, phone or role but no name or organisation is rejected visibly; it is
-    never silently discarded.
+11. The editor captures one immutable dossier-and-contact submission snapshot,
+    with one parent retry key and one stable client identity and derived retry
+    key for each contact. After a partial or ambiguous save it locks editing and
+    dismissal until that exact snapshot replays successfully; a changed field
+    can never reuse an earlier key and be reported as saved when the database
+    correctly replayed the earlier payload. Further edits begin only from the
+    reloaded saved state with fresh keys. A row with email, phone or role but no
+    name or organisation is rejected visibly; it is never silently discarded.
 12. Stage moves, owner deletion requests and staff fulfillment each keep their
     own operation key across an ambiguous network result. Deletion requires a
     confirmation naming the dossier. Staff can inspect all pending dossier

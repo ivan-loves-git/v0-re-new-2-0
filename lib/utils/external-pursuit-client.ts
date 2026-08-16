@@ -1,8 +1,15 @@
-import type { ExternalPursuitContactInput } from "@/lib/types/external-pursuit"
+import type { ExternalPursuitContactInput, ExternalPursuitInput } from "@/lib/types/external-pursuit"
 
 export interface ExternalPursuitContactDraft extends ExternalPursuitContactInput {
   /** Stable for this editor session; never derived from the contact array index. */
   clientId: string
+}
+
+export interface ExternalPursuitSubmissionSnapshot {
+  idempotencyKey: string
+  pursuitId: string | null
+  input: Readonly<ExternalPursuitInput>
+  contacts: ReadonlyArray<Readonly<ExternalPursuitContactDraft>>
 }
 
 const CONTACT_FIELDS: ReadonlyArray<keyof ExternalPursuitContactInput> = [
@@ -23,6 +30,30 @@ export function isCompleteContact(contact: ExternalPursuitContactInput) {
 
 export function contactIdempotencyKey(submissionKey: string, clientId: string) {
   return `${submissionKey}:contact:${clientId}`
+}
+
+export function captureExternalPursuitSubmission(input: {
+  idempotencyKey: string
+  pursuitId: string | null
+  pursuit: ExternalPursuitInput
+  contacts: ExternalPursuitContactDraft[]
+}): ExternalPursuitSubmissionSnapshot {
+  const pursuit = Object.freeze({ ...input.pursuit })
+  const contacts = Object.freeze(input.contacts.map((contact) => Object.freeze({ ...contact })))
+  return Object.freeze({
+    idempotencyKey: input.idempotencyKey,
+    pursuitId: input.pursuitId,
+    input: pursuit,
+    contacts,
+  })
+}
+
+/** Keeps one immutable payload until the caller explicitly completes recovery. */
+export function beginOrRetryExternalPursuitSubmission(
+  current: ExternalPursuitSubmissionSnapshot | null,
+  capture: () => ExternalPursuitSubmissionSnapshot,
+) {
+  return current ?? capture()
 }
 
 export function retryKeyFor(

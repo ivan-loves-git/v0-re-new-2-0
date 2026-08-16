@@ -97,6 +97,94 @@ WHERE dossier.id = :'dossier_id'
   \quit 1
 \endif
 
+-- Simulate an ambiguous client failure after the second contact has committed.
+-- Reusing the old parent/contact keys with attempted edits proves PostgreSQL
+-- will replay the original payload. The UI must therefore freeze that exact
+-- snapshot through recovery, then use fresh keys for later edits.
+SET LOCAL ROLE service_role;
+SELECT public.create_external_pursuit_v2(
+  '10600000-0000-4000-8000-000000000001', 'Snapshot title', 'identified', 'unknown',
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  'w106-owner-user', 'w106-snapshot-parent'
+) AS snapshot_dossier_id \gset
+SELECT public.save_external_pursuit_contact(
+  :'snapshot_dossier_id', NULL, 'Alex Original', NULL, NULL, 'alex-original@example.invalid', NULL,
+  'w106-owner-user', 'w106-snapshot-parent:contact:client-a'
+) AS snapshot_first_contact_id \gset
+SELECT public.save_external_pursuit_contact(
+  :'snapshot_dossier_id', NULL, NULL, 'Buyer Original', NULL, NULL, '+33 1 00 00 00 00',
+  'w106-owner-user', 'w106-snapshot-parent:contact:client-b'
+) AS snapshot_second_contact_id \gset
+
+-- These are the edits the client must not send while recovering old keys.
+SELECT public.create_external_pursuit_v2(
+  '10600000-0000-4000-8000-000000000001', 'Attempted title edit', 'identified', 'unknown',
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  'w106-owner-user', 'w106-snapshot-parent'
+) AS snapshot_parent_changed_replay_id \gset
+SELECT public.save_external_pursuit_contact(
+  :'snapshot_dossier_id', NULL, 'Alex Attempted Edit', NULL, NULL, 'alex-edited@example.invalid', NULL,
+  'w106-owner-user', 'w106-snapshot-parent:contact:client-a'
+) AS snapshot_first_changed_replay_id \gset
+SELECT public.save_external_pursuit_contact(
+  :'snapshot_dossier_id', NULL, NULL, 'Buyer Attempted Edit', NULL, NULL, '+33 1 99 99 99 99',
+  'w106-owner-user', 'w106-snapshot-parent:contact:client-b'
+) AS snapshot_second_changed_replay_id \gset
+
+-- Exact recovery repeats the frozen original values and returns the same rows.
+SELECT public.save_external_pursuit_contact(
+  :'snapshot_dossier_id', NULL, 'Alex Original', NULL, NULL, 'alex-original@example.invalid', NULL,
+  'w106-owner-user', 'w106-snapshot-parent:contact:client-a'
+) AS snapshot_first_exact_replay_id \gset
+SELECT public.save_external_pursuit_contact(
+  :'snapshot_dossier_id', NULL, NULL, 'Buyer Original', NULL, NULL, '+33 1 00 00 00 00',
+  'w106-owner-user', 'w106-snapshot-parent:contact:client-b'
+) AS snapshot_second_exact_replay_id \gset
+
+-- Once recovery is complete, a new edit uses new keys and is persisted.
+SELECT public.update_external_pursuit_v2(
+  :'snapshot_dossier_id', 'Fresh title edit', NULL, FALSE, NULL, FALSE, NULL, FALSE,
+  NULL, FALSE, NULL, FALSE, NULL, FALSE, NULL, FALSE, NULL, FALSE,
+  NULL, FALSE, NULL, FALSE, NULL, FALSE,
+  'w106-owner-user', 'w106-snapshot-fresh-parent-edit'
+);
+SELECT public.save_external_pursuit_contact(
+  :'snapshot_dossier_id', :'snapshot_second_contact_id', NULL, 'Buyer Fresh Edit', NULL, NULL, '+33 1 11 11 11 11',
+  'w106-owner-user', 'w106-snapshot-fresh-contact-edit'
+) AS snapshot_second_fresh_id \gset
+RESET ROLE;
+
+SELECT (
+  :'snapshot_dossier_id'::UUID = :'snapshot_parent_changed_replay_id'::UUID
+  AND :'snapshot_first_contact_id'::UUID = :'snapshot_first_changed_replay_id'::UUID
+  AND :'snapshot_first_contact_id'::UUID = :'snapshot_first_exact_replay_id'::UUID
+  AND :'snapshot_second_contact_id'::UUID = :'snapshot_second_changed_replay_id'::UUID
+  AND :'snapshot_second_contact_id'::UUID = :'snapshot_second_exact_replay_id'::UUID
+  AND :'snapshot_second_contact_id'::UUID = :'snapshot_second_fresh_id'::UUID
+  AND dossier.title = 'Fresh title edit'
+  AND (SELECT COUNT(*) FROM public.external_pursuit_contacts contact WHERE contact.external_pursuit_id = dossier.id) = 2
+  AND EXISTS (
+    SELECT 1 FROM public.external_pursuit_contacts contact
+    WHERE contact.id = :'snapshot_first_contact_id' AND contact.name = 'Alex Original'
+      AND contact.email = 'alex-original@example.invalid'
+  )
+  AND EXISTS (
+    SELECT 1 FROM public.external_pursuit_contacts contact
+    WHERE contact.id = :'snapshot_second_contact_id' AND contact.organisation = 'Buyer Fresh Edit'
+      AND contact.phone = '+33 1 11 11 11 11'
+  )
+) AS snapshot_recovery_ok
+FROM public.external_pursuits dossier
+WHERE dossier.id = :'snapshot_dossier_id'
+\gset
+
+\if :snapshot_recovery_ok
+  \echo 'W-106 second-contact ambiguity, exact snapshot recovery and fresh-edit rehearsal passed.'
+\else
+  \echo 'W-106 submission snapshot recovery rehearsal failed.'
+  \quit 1
+\endif
+
 -- Deletion request and staff fulfillment also recover exactly with the same
 -- per-operation key. The pending card stays fully visible to staff, including
 -- contacts, and disappears from the owner projection before fulfillment.

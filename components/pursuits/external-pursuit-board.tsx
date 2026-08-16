@@ -33,8 +33,11 @@ import {
 import type { ReNewPursuitBoardRecord } from "@/lib/actions/external-pursuit-board"
 import type {
   ExternalPursuitContactDraft,
+  ExternalPursuitSubmissionSnapshot,
 } from "@/lib/utils/external-pursuit-client"
 import {
+  beginOrRetryExternalPursuitSubmission,
+  captureExternalPursuitSubmission,
   contactIdempotencyKey,
   hasContactValue,
   isCompleteContact,
@@ -123,9 +126,22 @@ export function ExternalPursuitBoard({
   const [advanced, setAdvanced] = useState(false)
   const [query, setQuery] = useState("")
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  const [submissionSnapshot, setSubmissionSnapshot] = useState<ExternalPursuitSubmissionSnapshot | null>(null)
+  const [recoveryRequired, setRecoveryRequired] = useState(false)
   const [pending, startTransition] = useTransition()
-  const submissionKey = useRef<string | null>(null)
+  const submissionSnapshotRef = useRef<ExternalPursuitSubmissionSnapshot | null>(null)
   const operationKeys = useRef(new Map<string, string>())
+  const editorLocked = submissionSnapshot !== null
+
+  function replaceSubmissionSnapshot(snapshot: ExternalPursuitSubmissionSnapshot | null) {
+    submissionSnapshotRef.current = snapshot
+    setSubmissionSnapshot(snapshot)
+  }
+
+  function resetSubmissionRecovery() {
+    replaceSubmissionSnapshot(null)
+    setRecoveryRequired(false)
+  }
 
   function openCreate() {
     setEditing(null)
@@ -134,7 +150,7 @@ export function ExternalPursuitBoard({
     setContactErrors({})
     setOwnerId("")
     setAdvanced(false)
-    submissionKey.current = null
+    resetSubmissionRecovery()
     setOpen(true)
   }
 
@@ -162,7 +178,7 @@ export function ExternalPursuitBoard({
       || record.ebitdaKeur !== null
       || record.headcount !== null,
     ))
-    submissionKey.current = null
+    resetSubmissionRecovery()
     setOpen(true)
   }
 
@@ -183,60 +199,86 @@ export function ExternalPursuitBoard({
   }
 
   function submit() {
-    if (!draft.title.trim()) {
-      toast.error("Add a title before saving.")
-      return
-    }
-    if (isStaff && !editing && !ownerId) {
-      toast.error("Choose the dossier owner.")
-      return
+    let snapshot = submissionSnapshotRef.current
+    if (!snapshot) {
+      if (!draft.title.trim()) {
+        toast.error("Add a title before saving.")
+        return
+      }
+      if (isStaff && !editing && !ownerId) {
+        toast.error("Choose the dossier owner.")
+        return
+      }
+
+      const invalidContacts = contacts.filter((contact) => !isCompleteContact(contact))
+      if (invalidContacts.length > 0) {
+        setContactErrors(Object.fromEntries(invalidContacts.map((contact) => [
+          contact.clientId,
+          "Add a name or organisation, or clear this contact row.",
+        ])))
+        toast.error("Complete the highlighted contact rows before saving.")
+        return
+      }
+
+      snapshot = beginOrRetryExternalPursuitSubmission(null, () => captureExternalPursuitSubmission({
+        idempotencyKey: crypto.randomUUID(),
+        pursuitId: editing?.id ?? null,
+        pursuit: editing
+          ? { ...draft, stage: undefined }
+          : { ...draft, ...(isStaff ? { ownerRepreneurId: ownerId } : {}) },
+        contacts: contacts.filter(hasContactValue),
+      }))
+      replaceSubmissionSnapshot(snapshot)
+      setRecoveryRequired(false)
     }
 
-    const invalidContacts = contacts.filter((contact) => !isCompleteContact(contact))
-    if (invalidContacts.length > 0) {
-      setContactErrors(Object.fromEntries(invalidContacts.map((contact) => [
-        contact.clientId,
-        "Add a name or organisation, or clear this contact row.",
-      ])))
-      toast.error("Complete the highlighted contact rows before saving.")
-      return
-    }
-
-    const idempotencyKey = submissionKey.current ?? crypto.randomUUID()
-    submissionKey.current = idempotencyKey
+    const exactSnapshot = snapshot
     startTransition(async () => {
       try {
-        const result = editing
-          ? await updateExternalPursuit(editing.id, { ...draft, stage: undefined }, idempotencyKey)
+        const result = exactSnapshot.pursuitId
+          ? await updateExternalPursuit(exactSnapshot.pursuitId, exactSnapshot.input, exactSnapshot.idempotencyKey)
           : await createExternalPursuit(
-            { ...draft, ...(isStaff ? { ownerRepreneurId: ownerId } : {}) },
-            idempotencyKey,
+            exactSnapshot.input,
+            exactSnapshot.idempotencyKey,
           )
         if (!result.success || !result.pursuitId) {
+          // The dossier action returned a confirmed failure before a parent
+          // record was accepted, so this payload can safely be edited anew.
+          resetSubmissionRecovery()
           toast.error(result.message)
           return
         }
 
-        for (const contact of contacts.filter(hasContactValue)) {
+        for (const contact of exactSnapshot.contacts) {
           const contactResult = await saveExternalPursuitContact(
             result.pursuitId,
             contact,
-            contactIdempotencyKey(idempotencyKey, contact.clientId),
+            contactIdempotencyKey(exactSnapshot.idempotencyKey, contact.clientId),
           )
           if (!contactResult.success) {
+            setRecoveryRequired(true)
             toast.error(contactResult.message)
             return
           }
         }
 
         toast.success(result.message)
-        submissionKey.current = null
+        resetSubmissionRecovery()
         setOpen(false)
         window.location.reload()
       } catch {
+        setRecoveryRequired(true)
         toast.error("The save could not be confirmed. Retry to recover the same operation safely.")
       }
     })
+  }
+
+  function changeEditorOpen(nextOpen: boolean) {
+    if (!nextOpen && submissionSnapshotRef.current) {
+      toast.error("Finish the unchanged save recovery before closing this editor.")
+      return
+    }
+    setOpen(nextOpen)
   }
 
   function move(record: ExternalPursuitBoardRecord, stage: ExternalPursuitStage) {
@@ -346,7 +388,7 @@ export function ExternalPursuitBoard({
         })}
       </section>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={changeEditorOpen}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit external pursuit" : "New external pursuit"}</DialogTitle>
@@ -354,7 +396,15 @@ export function ExternalPursuitBoard({
               {editing ? "Only this standalone dossier changes." : "Start with a title; add external context only when it is useful."}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          {recoveryRequired ? (
+            <Alert>
+              <AlertTitle>Retry the unchanged save</AlertTitle>
+              <AlertDescription>
+                Part of this save may already exist. Fields are locked so the same dossier and contact payload can recover without losing edits or creating duplicates. Make further changes after this exact retry completes and the board reloads.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <fieldset disabled={editorLocked} className="grid gap-4 py-2">
             {isStaff && !editing ? (
               <Field id="external-pursuit-owner" label="Owner">
                 <Select value={ownerId} onValueChange={setOwnerId}>
@@ -440,10 +490,12 @@ export function ExternalPursuitBoard({
                 Add contact
               </Button>
             </div>
-          </div>
+          </fieldset>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="button" disabled={pending} onClick={submit}>{pending ? "Saving…" : editing ? "Save changes" : "Create pursuit"}</Button>
+            <Button type="button" variant="outline" disabled={editorLocked} onClick={() => changeEditorOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={pending} onClick={submit}>
+              {pending ? "Saving…" : recoveryRequired ? "Retry unchanged save" : editing ? "Save changes" : "Create pursuit"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
