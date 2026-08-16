@@ -12,6 +12,7 @@ import {
 import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES, type ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { toast } from "sonner"
+import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
 
 function readableBytes(size: number) {
   return size < 1024 * 1024 ? `${Math.ceil(size / 1024)} KB` : `${(size / 1024 / 1024).toFixed(1)} MB`
@@ -21,6 +22,7 @@ const uploadDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "sh
 
 export interface ExternalPursuitAttachmentsPanelProps {
   pursuitId: string
+  role: "staff" | "repreneur"
   attachments: ExternalPursuitAttachment[]
   readOnly?: boolean
   onOperationLockChange?: ExternalPursuitOperationLockHandler
@@ -29,6 +31,7 @@ export interface ExternalPursuitAttachmentsPanelProps {
 
 export function ExternalPursuitAttachmentsPanel({
   pursuitId,
+  role,
   attachments: initialAttachments,
   readOnly = false,
   onOperationLockChange,
@@ -92,6 +95,7 @@ export function ExternalPursuitAttachmentsPanel({
       uploadAttempt.current = null
       setRecovery(null)
       releaseOperationLock()
+      captureExternalPursuitCompleted(role, "upload")
       toast.success(result.message)
       // Parent board integration refreshes the server projection. Clearing the
       // local chooser prevents an accidental duplicate submission meanwhile.
@@ -131,6 +135,7 @@ export function ExternalPursuitAttachmentsPanel({
       deleteAttempt.current = null
       setRecovery(null)
       releaseOperationLock()
+      captureExternalPursuitCompleted(role, "delete")
       setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId))
       onAttachmentRemoved?.(pursuitId, attachmentId)
       toast.success(result.message)

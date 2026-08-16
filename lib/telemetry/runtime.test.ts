@@ -85,6 +85,25 @@ describe("WAVE telemetry identity lifecycle", () => {
     expect(window.localStorage.getItem(IDENTIFIED_MARKER)).toBe("true")
   })
 
+  it("labels the External Pursuit page entry with its semantic workflow and de-duplicates refreshes", async () => {
+    const runtime = await import("@/lib/telemetry/runtime")
+    const calls: TransportCall[] = []
+    runtime.installWaveTelemetryTransport(recordingTransport(calls))
+    runtime.identifyTelemetryUser(OPAQUE_USER_ID, "repreneur")
+    calls.length = 0
+
+    expect(runtime.capturePageView("/portal/pursuits")).toBe(true)
+    expect(runtime.capturePageView("/portal/pursuits")).toBe(false)
+    expect(calls).toContainEqual(expect.objectContaining({
+      type: "capture",
+      event: "wave_page_viewed",
+      properties: expect.objectContaining({
+        workflow: "external_pursuit",
+        route_template: "/portal/pursuits",
+      }),
+    }))
+  })
+
   it("captures logout before resetting to a fresh anonymous identity", async () => {
     const runtime = await import("@/lib/telemetry/runtime")
     const calls: TransportCall[] = []

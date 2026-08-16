@@ -108,6 +108,28 @@ an error message. Server capture runs after the underlying action is committed
 or rejected and is swallowed if PostHog is unavailable; analytics cannot change
 the outcome of an access, response, document, or pursuit action.
 
+### M2.1 External Pursuit workflow
+
+External Pursuits use the same allowlisted event names and never send dossier,
+company, contact, attachment, note, URL, idempotency or database identifiers.
+The client page-view and started markers use the normalized `/portal/pursuits`
+or `/opportunities/pursuits` route and `external_pursuit` workflow.
+The UI emits a completed outcome only after it receives the server action's
+successful durable response. This deliberately avoids double-counting a server
+action whose first response was lost and then exactly retried.
+
+| Confirmed point | Metadata-only contract |
+| --- | --- |
+| Create a dossier | `external_pursuit` + `submit` + `success` |
+| Edit details, stage, follow-up or contacts | `external_pursuit` + `update` + `success` |
+| Add a private attachment | `external_pursuit` + `upload` + `success` |
+| Request or fulfil deletion; remove an attachment | `external_pursuit` + `delete` + `success` |
+
+No External Pursuit failure event is currently emitted: the server cannot
+always distinguish a rejected mutation from a committed mutation whose response
+was lost. Analytics remains optional and never changes access, persistence,
+storage or deletion behaviour.
+
 ## Replay and automatic diagnostics
 
 Replay and diagnostics are useful for product-learning only when they preserve the same content boundary:

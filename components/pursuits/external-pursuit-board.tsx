@@ -61,6 +61,7 @@ import {
   type ExternalPursuitStage,
 } from "@/lib/types/external-pursuit"
 import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
+import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
 
 const STAGE_LABELS: Record<ExternalPursuitStage, string> = {
   identified: "Identified",
@@ -298,6 +299,7 @@ export function ExternalPursuitBoard({
           }
         }
 
+        captureExternalPursuitCompleted(isStaff ? "staff" : "repreneur", exactSnapshot.pursuitId ? "update" : "submit")
         toast.success(result.message)
         resetSubmissionRecovery()
         setOpen(false)
@@ -330,6 +332,7 @@ export function ExternalPursuitBoard({
           toast.error(result.message)
           return
         }
+        captureExternalPursuitCompleted(isStaff ? "staff" : "repreneur", "update")
         toast.success("Stage updated.")
         window.location.reload()
       } catch {
@@ -353,6 +356,7 @@ export function ExternalPursuitBoard({
           toast.error(result.message)
           return
         }
+        captureExternalPursuitCompleted(isStaff ? "staff" : "repreneur", "delete")
         toast.success(result.message)
         window.location.reload()
       } catch {
@@ -588,6 +592,7 @@ export function ExternalPursuitBoard({
               )}
               <ExternalPursuitAttachmentsPanel
                 pursuitId={managing.id}
+                role={isStaff ? "staff" : "repreneur"}
                 attachments={managedAttachmentsByPursuit[managing.id] ?? []}
                 readOnly={managing.deletionStatus !== "active"}
                 onOperationLockChange={handleManagerOperationLockChange}

@@ -113,7 +113,7 @@ export function capturePageView(pathname: string) {
     route_template: routeTemplate,
     surface: surfaceForRoute(routeTemplate),
     role: currentRole,
-    workflow: "navigation",
+    workflow: workflowForRoute(routeTemplate),
     action: "navigate",
   })
 }

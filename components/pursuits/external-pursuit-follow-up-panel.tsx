@@ -23,6 +23,7 @@ import {
 } from "@/lib/external-pursuit-follow-up"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
+import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
 
 export type ExternalPursuitFollowUpPanelProps = {
   pursuitId: string
@@ -148,6 +149,7 @@ export function ExternalPursuitFollowUpPanel({
       setDueAt(attempt.snapshot.dueAt ?? "")
       setSharedNotes(attempt.snapshot.sharedNotes ?? "")
       if (role === "staff") setStaffInternalNotes(attempt.snapshot.staffInternalNotes ?? "")
+      captureExternalPursuitCompleted(role, "update")
       releaseOperationLock()
       toast.success("Follow-up updated")
       onSaved?.()
