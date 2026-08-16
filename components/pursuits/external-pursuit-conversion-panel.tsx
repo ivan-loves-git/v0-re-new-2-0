@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -33,6 +33,7 @@ export function ExternalPursuitConversionPanel({
   pursuitId,
   officeOptions,
   geographyOptions,
+  onOperationLockChange,
 }: ExternalPursuitConversionPanelProps) {
   const router = useRouter()
   const [publicTitle, setPublicTitle] = useState("")
@@ -43,6 +44,7 @@ export function ExternalPursuitConversionPanel({
     key: string
     input: Readonly<ExternalPursuitConversionInput>
   } | null>(null)
+  const lockToken = useRef(`conversion:${pursuitId}:${crypto.randomUUID()}`)
   const submitInFlight = useRef(false)
   const [ambiguous, setAmbiguous] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -56,6 +58,12 @@ export function ExternalPursuitConversionPanel({
     [eligibleOffices, sourceOfficeId],
   )
   const fieldsLocked = submitting || ambiguous
+
+  useEffect(() => {
+    if (!ambiguous) return
+    onOperationLockChange?.({ token: lockToken.current, delta: 1 })
+    return () => onOperationLockChange?.({ token: lockToken.current, delta: -1 })
+  }, [ambiguous, onOperationLockChange])
 
   async function submit() {
     if (submitInFlight.current) return

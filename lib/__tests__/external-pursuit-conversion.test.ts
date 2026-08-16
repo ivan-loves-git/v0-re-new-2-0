@@ -28,6 +28,8 @@ const migration = source("scripts/098_external_pursuit_opportunity_conversion.sq
 const externalContract = source("docs/data-models/external-pursuit-data-model-v1.md")
 const maContract = source("docs/data-models/ma-advisory-data-model-v1.md")
 const panel = source("components/pursuits/external-pursuit-conversion-panel.tsx")
+const board = source("components/pursuits/external-pursuit-board.tsx")
+const staffPursuitsPage = source("app/(dashboard)/opportunities/pursuits/page.tsx")
 const conversionAction = source("lib/actions/external-pursuit-conversion.ts")
 const officeIntakeAction = source("lib/actions/opportunity-intake.ts")
 const concurrencyRehearsal = source("scripts/rehearse-external-pursuit-conversion-concurrency.sh")
@@ -240,6 +242,20 @@ describe("W-109 External Pursuit conversion", () => {
       defaults: expect.stringContaining("start empty"),
       deletion: expect.stringContaining("before any attachment object"),
     })
+  })
+
+  it("mounts conversion only from the staff board with server-supplied canonical choices and composes the recovery lock", () => {
+    expect(staffPursuitsPage).toContain("listUnconvertedExternalPursuitIds")
+    expect(staffPursuitsPage).toContain("listMaOfficeIntakeOptions")
+    expect(staffPursuitsPage).toContain("listOpportunityGeographyOptions")
+    expect(staffPursuitsPage).toContain("conversionPursuitIds={conversionPursuitIds}")
+    expect(board).toContain("managerCanConvert")
+    expect(board).toContain('managing.deletionStatus === "active"')
+    expect(board).toContain('!["completed", "dropped_archived"].includes(managing.stage)')
+    expect(board).toContain("conversionPursuitIds.includes(managing.id)")
+    expect(board).toContain("<ExternalPursuitConversionPanel")
+    expect(board).toContain("onOperationLockChange={handleManagerOperationLockChange}")
+    expect(panel).toContain("conversion:${pursuitId}")
   })
 
   it("implements immutable one-way conversion and rejects unsafe lifecycle/source paths", () => {

@@ -172,3 +172,19 @@ export async function preflightExternalPursuitDeletionFulfillment(
     }
   }
 }
+
+/** Staff board mount guard. The panel itself still relies on the atomic RPC. */
+export async function listUnconvertedExternalPursuitIds(
+  pursuitIds: string[],
+): Promise<string[]> {
+  await requireStaffAccess()
+  const uniqueIds = [...new Set(pursuitIds.filter((id) => UUID_PATTERN.test(id)))]
+  if (uniqueIds.length === 0) return []
+  const { data, error } = await createAdminClient()
+    .from("external_pursuit_opportunity_conversions")
+    .select("external_pursuit_id")
+    .in("external_pursuit_id", uniqueIds)
+  if (error) throw new Error("Could not determine External Pursuit conversion state.")
+  const converted = new Set((data ?? []).map((row) => row.external_pursuit_id))
+  return uniqueIds.filter((id) => !converted.has(id))
+}

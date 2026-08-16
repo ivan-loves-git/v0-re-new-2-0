@@ -252,7 +252,7 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 20. Conversion retains an immutable, one-way one-to-one identity link. The same
     staff actor and idempotency key return the original result; a different attempt
     fails rather than guessing or creating another opportunity. A converted dossier
-    cannot be deletion-fulfilled. The attachment fulfillment path checks this state
+    cannot be deletion-fulfilled. The attachment fulfillment path must check this state
     before listing or removing any storage object. Conversion, dossier update and
     dossier deletion use the same dossier advisory lock, so their outcomes are serialized.
 
@@ -277,7 +277,10 @@ deterministic; an unknown PostgREST or gateway error remains ambiguous.
     Re-New KPI, export, matching input, canonical pursuit or lifecycle state.
     It includes only active, unfinished, unconverted dossiers. Converted dossiers
     remain separately visible to staff for context and are excluded from every
-    open-capacity and availability total. `last_confirmed_at` is changed only by
+    open-capacity and availability total. An owner board receives only a boolean
+    open-capacity eligibility signal, never linked opportunity identity, so it can
+    hide confirmation after conversion, completion, archive or deletion request.
+    `last_confirmed_at` is changed only by
     an explicit **Confirm current** action by the owner on their own dossier or by
     authorised staff on any accessible dossier; the immutable audit records the
     actor and time. A normal edit never confirms freshness. It uses Paris civil

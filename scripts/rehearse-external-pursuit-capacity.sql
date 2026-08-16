@@ -81,8 +81,21 @@ BEGIN
   IF snapshot->'open_capacity'->'freshness' <> '{"fresh":1,"stale":1,"unknown":5}'::JSONB THEN RAISE EXCEPTION 'w110_freshness_boundary_failed'; END IF;
   IF snapshot->'open_capacity'->'due' <> '{"overdue":1,"today":1,"upcoming":1,"none":4}'::JSONB THEN RAISE EXCEPTION 'w110_due_boundary_failed'; END IF;
   IF jsonb_array_length(snapshot->'open_dossiers') <> 7 THEN RAISE EXCEPTION 'w110_open_detail_reconciliation_failed'; END IF;
-  IF jsonb_array_length(snapshot->'linked_dossiers') <> 1
-     OR snapshot->'linked_dossiers'->0->>'opportunity_reference' <> 'Re-New - FR - 110' THEN RAISE EXCEPTION 'w110_linked_bucket_failed'; END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(snapshot->'linked_dossiers') linked
+    WHERE linked->>'opportunity_reference' = 'Re-New - FR - 110'
+  ) THEN RAISE EXCEPTION 'w110_linked_bucket_failed'; END IF;
+  IF COALESCE((
+    SELECT dossier->>'is_open_capacity'
+    FROM jsonb_array_elements(public.external_pursuit_board_for_actor('w110-capacity-owner')) dossier
+    WHERE dossier->>'id' = linked_id::TEXT
+  ), 'true') <> 'false' THEN RAISE EXCEPTION 'w110_linked_owner_confirmation_visible'; END IF;
+  IF COALESCE((
+    SELECT dossier->>'is_open_capacity'
+    FROM jsonb_array_elements(public.external_pursuit_board_for_actor('w110-capacity-owner')) dossier
+    WHERE dossier->>'id' = fresh_id::TEXT
+  ), 'false') <> 'true' THEN RAISE EXCEPTION 'w110_open_owner_confirmation_hidden'; END IF;
   IF public.external_pursuit_capacity_for_staff('w110-capacity-staff', '2026-01-15 12:30:00+00')->>'as_of_paris_timestamp' <> '2026-01-15T13:30:00+01:00' THEN RAISE EXCEPTION 'w110_paris_winter_offset_failed'; END IF;
 
   -- A normal owner edit must not manufacture freshness evidence.

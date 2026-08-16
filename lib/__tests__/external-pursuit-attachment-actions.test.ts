@@ -268,6 +268,7 @@ describe("External Pursuit attachment actions", () => {
   it("stops dossier fulfillment before metadata/tombstone when any object cleanup fails", async () => {
     mocks.rpc.mockImplementation(async (name: string) => {
       if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null }
       if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return { data: [{ id: "attachment-1", storage_path: "dossier-1/object.pdf" }], error: null }
       throw new Error(`Unexpected RPC ${name}`)
     })
@@ -280,6 +281,7 @@ describe("External Pursuit attachment actions", () => {
   it("unlocks dossier fulfillment after a confirmed storage 4xx without clearing metadata", async () => {
     mocks.rpc.mockImplementation(async (name: string) => {
       if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null, status: 200 }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null, status: 200 }
       if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return {
         data: [{ id: "attachment-1", storage_path: "dossier-1/object.pdf" }],
         error: null,
@@ -306,6 +308,7 @@ describe("External Pursuit attachment actions", () => {
         if (replayCalls === 2) return { data: null, error: new Error("replay transport lost"), status: 0 }
         return { data: true, error: null, status: 200 }
       }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null, status: 200 }
       if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return { data: [], error: null, status: 200 }
       if (name === "clear_external_pursuit_attachment_records_for_fulfillment") return { data: null, error: null, status: 200 }
       if (name === "fulfill_external_pursuit_deletion") return { data: null, error: new Error("final response lost"), status: 0 }
@@ -334,6 +337,7 @@ describe("External Pursuit attachment actions", () => {
   it("routes the legacy fulfillment action through attachment cleanup before tombstoning", async () => {
     mocks.rpc.mockImplementation(async (name: string) => {
       if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: null }
       if (name === "external_pursuit_attachment_cleanup_for_fulfillment") return { data: [], error: null }
       if (name === "clear_external_pursuit_attachment_records_for_fulfillment") return { data: null, error: null }
       if (name === "fulfill_external_pursuit_deletion") return { data: null, error: null }
@@ -342,9 +346,28 @@ describe("External Pursuit attachment actions", () => {
     await expect(fulfillExternalPursuitDeletion("dossier-1", key(7))).resolves.toMatchObject({ success: true, pursuitId: "dossier-1" })
     expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual([
       "external_pursuit_deletion_fulfillment_replay",
+      "prepare_external_pursuit_deletion_fulfillment",
       "external_pursuit_attachment_cleanup_for_fulfillment",
       "clear_external_pursuit_attachment_records_for_fulfillment",
       "fulfill_external_pursuit_deletion",
     ])
+  })
+
+  it("stops before listing or removing files when W-109 says the dossier is converted", async () => {
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === "external_pursuit_deletion_fulfillment_replay") return { data: false, error: null, status: 200 }
+      if (name === "prepare_external_pursuit_deletion_fulfillment") return { data: null, error: new Error("external_pursuit_already_converted"), status: 409 }
+      throw new Error(`Unexpected RPC ${name}`)
+    })
+
+    await expect(fulfillExternalPursuitDeletionWithAttachments("dossier-1", key(20))).resolves.toMatchObject({
+      success: false,
+      message: expect.stringMatching(/linked to a Re-New opportunity/i),
+    })
+    expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual([
+      "external_pursuit_deletion_fulfillment_replay",
+      "prepare_external_pursuit_deletion_fulfillment",
+    ])
+    expect(mocks.remove).not.toHaveBeenCalled()
   })
 })

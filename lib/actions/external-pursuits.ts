@@ -193,7 +193,7 @@ export async function listExternalPursuitBoard(): Promise<ExternalPursuitBoardRe
   })
   if (error) throw new Error(message(error, "Could not load External Pursuits."))
   type BoardContactRow = { id: string; name?: string | null; organisation?: string | null; role_title?: string | null; email?: string | null; phone?: string | null }
-  type BoardRow = { id: string; owner_repreneur_id: string; owner_name?: string | null; title: string; stage: ExternalPursuitBoardRecord["stage"]; availability: ExternalPursuitBoardRecord["availability"]; deletion_status: ExternalPursuitBoardRecord["deletionStatus"]; external_url?: string | null; target_company?: string | null; source_channel?: string | null; revenue_meur?: number | string | null; ebitda_keur?: number | string | null; headcount?: number | string | null; contacts?: BoardContactRow[]; next_action?: string | null; responsible_party?: ExternalPursuitBoardRecord["responsibleParty"]; due_at?: string | null; shared_notes?: string | null; staff_internal_notes?: string | null; updated_at: string }
+  type BoardRow = { id: string; owner_repreneur_id: string; owner_name?: string | null; title: string; stage: ExternalPursuitBoardRecord["stage"]; availability: ExternalPursuitBoardRecord["availability"]; deletion_status: ExternalPursuitBoardRecord["deletionStatus"]; is_open_capacity?: boolean; external_url?: string | null; target_company?: string | null; source_channel?: string | null; revenue_meur?: number | string | null; ebitda_keur?: number | string | null; headcount?: number | string | null; contacts?: BoardContactRow[]; next_action?: string | null; responsible_party?: ExternalPursuitBoardRecord["responsibleParty"]; due_at?: string | null; shared_notes?: string | null; staff_internal_notes?: string | null; updated_at: string }
   return ((Array.isArray(data) ? data : []) as BoardRow[]).map((row) => ({
     id: row.id,
     ownerRepreneurId: row.owner_repreneur_id,
@@ -202,6 +202,7 @@ export async function listExternalPursuitBoard(): Promise<ExternalPursuitBoardRe
     stage: row.stage,
     availability: row.availability,
     deletionStatus: row.deletion_status,
+    isOpenCapacity: row.is_open_capacity === true,
     externalUrl: row.external_url ?? null,
     targetCompany: row.target_company ?? null,
     sourceChannel: row.source_channel ?? null,

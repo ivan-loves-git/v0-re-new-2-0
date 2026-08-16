@@ -30,6 +30,7 @@ function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursu
     stage: "identified",
     availability: "unknown",
     deletionStatus: "active",
+    isOpenCapacity: true,
     externalUrl: null,
     targetCompany: null,
     sourceChannel: null,

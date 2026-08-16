@@ -2,6 +2,7 @@ import type {
   MaOfficeIntakeOffice,
   OpportunityGeographyOption,
 } from "@/lib/types/opportunity"
+import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 
 /** Staff must retain this key while retrying an uncertain conversion request. */
 export interface ExternalPursuitConversionInput {
@@ -44,4 +45,5 @@ export interface ExternalPursuitConversionPanelProps {
   pursuitId: string
   officeOptions: MaOfficeIntakeOffice[]
   geographyOptions: OpportunityGeographyOption[]
+  onOperationLockChange?: ExternalPursuitOperationLockHandler
 }

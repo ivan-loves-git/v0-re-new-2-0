@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ExternalPursuitAttachmentsPanel } from "@/components/pursuits/external-pursuit-attachments-panel"
+import { ExternalPursuitConfirmCurrentButton } from "@/components/pursuits/external-pursuit-confirm-current-button"
+import { ExternalPursuitConversionPanel } from "@/components/pursuits/external-pursuit-conversion-panel"
 import { ExternalPursuitFollowUpPanel } from "@/components/pursuits/external-pursuit-follow-up-panel"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -62,6 +64,7 @@ import {
 } from "@/lib/types/external-pursuit"
 import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
 import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
+import type { MaOfficeIntakeOffice, OpportunityGeographyOption } from "@/lib/types/opportunity"
 
 const STAGE_LABELS: Record<ExternalPursuitStage, string> = {
   identified: "Identified",
@@ -122,12 +125,19 @@ export function ExternalPursuitBoard({
   attachmentsByPursuit = {},
   isStaff,
   owners = [],
+  conversionPursuitIds = [],
+  conversionOfficeOptions = [],
+  conversionGeographyOptions = [],
 }: {
   external: ExternalPursuitBoardRecord[]
   renew: ReNewPursuitBoardRecord[]
   attachmentsByPursuit?: Record<string, ExternalPursuitAttachment[]>
   isStaff: boolean
   owners?: { id: string; name: string }[]
+  /** Server-derived, unconverted IDs only; the client also checks active state. */
+  conversionPursuitIds?: string[]
+  conversionOfficeOptions?: MaOfficeIntakeOffice[]
+  conversionGeographyOptions?: OpportunityGeographyOption[]
 }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ExternalPursuitBoardRecord | null>(null)
@@ -148,6 +158,18 @@ export function ExternalPursuitBoard({
   const operationKeys = useRef(new Map<string, string>())
   const editorLocked = submissionSnapshot !== null
   const managerLocked = hasExternalPursuitOperationLocks(managerOperationLocks)
+  const managerCanConvert = Boolean(
+    isStaff
+    && managing
+    && managing.deletionStatus === "active"
+    && !["completed", "dropped_archived"].includes(managing.stage)
+    && conversionPursuitIds.includes(managing.id),
+  )
+  const managerCanConfirm = Boolean(
+    !isStaff
+    && managing
+    && managing.isOpenCapacity,
+  )
 
   function handleManagerOperationLockChange(change: ExternalPursuitOperationLockChange) {
     setManagerOperationLocks((current) => updateExternalPursuitOperationLocks(current, change))
@@ -590,6 +612,33 @@ export function ExternalPursuitBoard({
                   </CardContent>
                 </Card>
               )}
+              {managerCanConfirm ? (
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <CardTitle className="text-base">Confirm current status</CardTitle>
+                    <CardDescription>Use this only after checking that this external dossier is still current. It updates freshness evidence, not the dossier itself.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ExternalPursuitConfirmCurrentButton
+                      pursuitId={managing.id}
+                      onOperationLockChange={handleManagerOperationLockChange}
+                      onConfirmed={() => window.location.reload()}
+                    />
+                  </CardContent>
+                </Card>
+              ) : null}
+              {managerCanConvert ? (
+                <Card className="shadow-none">
+                  <CardContent className="pt-6">
+                    <ExternalPursuitConversionPanel
+                      pursuitId={managing.id}
+                      officeOptions={conversionOfficeOptions}
+                      geographyOptions={conversionGeographyOptions}
+                      onOperationLockChange={handleManagerOperationLockChange}
+                    />
+                  </CardContent>
+                </Card>
+              ) : null}
               <ExternalPursuitAttachmentsPanel
                 pursuitId={managing.id}
                 role={isStaff ? "staff" : "repreneur"}

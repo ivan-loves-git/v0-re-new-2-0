@@ -156,7 +156,11 @@ describe("External Pursuit patch actions", () => {
         : { data: null, error: null }
     ))
     await fulfillExternalPursuitDeletion("dossier-1", "stable-delete-fulfill")
-    expect(mocks.rpc).toHaveBeenLastCalledWith("fulfill_external_pursuit_deletion", {
+    expect(mocks.rpc).toHaveBeenCalledWith("prepare_external_pursuit_deletion_fulfillment", {
+      p_actor_user_id: "staff-1",
+      p_dossier_id: "dossier-1",
+    })
+    expect(mocks.rpc).toHaveBeenCalledWith("fulfill_external_pursuit_deletion", {
       p_actor_user_id: "staff-1",
       p_dossier_id: "dossier-1",
       p_idempotency_key: "stable-delete-fulfill",

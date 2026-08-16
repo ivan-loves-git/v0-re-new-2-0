@@ -106,6 +106,8 @@ export interface ExternalPursuitBoardRecord {
   stage: ExternalPursuitStage
   availability: ExternalPursuitAvailability
   deletionStatus: Exclude<ExternalPursuitDeletionStatus, "deleted">
+  /** Role-safe W-110 eligibility signal; it exposes no linked opportunity identity. */
+  isOpenCapacity: boolean
   externalUrl: string | null
   targetCompany: string | null
   sourceChannel: string | null

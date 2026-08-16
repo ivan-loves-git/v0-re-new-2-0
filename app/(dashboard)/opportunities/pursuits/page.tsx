@@ -5,13 +5,20 @@ import { ExternalPursuitBoard } from "@/components/pursuits/external-pursuit-boa
 import { listExternalPursuitBoard } from "@/lib/actions/external-pursuits"
 import { getExternalPursuitAttachmentMap } from "@/lib/actions/external-pursuit-attachments"
 import { listExternalPursuitOwners, listStaffReNewPursuitBoard } from "@/lib/actions/external-pursuit-board"
+import { listUnconvertedExternalPursuitIds } from "@/lib/actions/external-pursuit-conversion"
+import { listMaOfficeIntakeOptions, listOpportunityGeographyOptions } from "@/lib/actions/opportunity-intake"
 
 export default async function StaffPursuitsPage() {
   await connection()
   const [external, renew, owners] = await Promise.all([listExternalPursuitBoard(), listStaffReNewPursuitBoard(), listExternalPursuitOwners()])
-  const attachmentsByPursuit = await getExternalPursuitAttachmentMap(external.map((record) => record.id))
+  const [attachmentsByPursuit, conversionPursuitIds, conversionOfficeOptions, conversionGeographyOptions] = await Promise.all([
+    getExternalPursuitAttachmentMap(external.map((record) => record.id)),
+    listUnconvertedExternalPursuitIds(external.map((record) => record.id)),
+    listMaOfficeIntakeOptions(),
+    listOpportunityGeographyOptions(),
+  ])
   return <div className="flex flex-col gap-6">
     <SectionPageHeader title="Pursuits" subtitle="External dossiers and read-only canonical Re-New journey context" icon={BriefcaseBusiness} tone="opportunity" />
-    <ExternalPursuitBoard external={external} renew={renew} attachmentsByPursuit={attachmentsByPursuit} isStaff owners={owners} />
+    <ExternalPursuitBoard external={external} renew={renew} attachmentsByPursuit={attachmentsByPursuit} isStaff owners={owners} conversionPursuitIds={conversionPursuitIds} conversionOfficeOptions={conversionOfficeOptions} conversionGeographyOptions={conversionGeographyOptions} />
   </div>
 }

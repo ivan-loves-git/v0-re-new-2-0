@@ -433,6 +433,25 @@ export async function fulfillExternalPursuitDeletionWithAttachments(
     }
     if (existing.fulfilled) return { success: true, message: "External Pursuit deleted." }
 
+    // This must happen before attachment listing, so a converted dossier never
+    // starts a storage cleanup attempt.
+    const { error: preflightError, status: preflightStatus } = await supabase.rpc(
+      "prepare_external_pursuit_deletion_fulfillment",
+      { p_dossier_id: pursuitId, p_actor_user_id: staffUserId },
+    )
+    if (preflightError) {
+      const converted = preflightError instanceof Error
+        ? preflightError.message.includes("external_pursuit_already_converted")
+        : false
+      return {
+        success: false,
+        message: converted
+          ? "This dossier is linked to a Re-New opportunity. No attachment was removed."
+          : "WAVE could not confirm deletion eligibility. No attachment should be removed.",
+        retryExact: preflightStatus === 0,
+      }
+    }
+
     const { data: attachments, error: listError, status: listStatus } = await supabase.rpc("external_pursuit_attachment_cleanup_for_fulfillment", {
       p_dossier_id: pursuitId, p_actor_user_id: staffUserId,
     })
