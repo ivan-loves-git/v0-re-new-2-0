@@ -93,8 +93,12 @@ describe("W-104/W-105 External Pursuit foundation", () => {
   })
 
   it("preserves omitted patch fields and rejects malformed due dates", () => {
-    expect(actions).toContain("p_stage_provided: Object.hasOwn(input, \"stage\")")
-    expect(actions).toContain("p_availability_provided: Object.hasOwn(input, \"availability\")")
+    expect(actions).toContain("p_stage_provided: input.stage !== undefined")
+    expect(actions).toContain("p_availability_provided: input.availability !== undefined")
+    expect(actions).toContain("p_due_at_provided: input.dueAt !== undefined")
+    expect(actions).toContain("p_shared_notes_provided: input.sharedNotes !== undefined")
+    expect(actions).toContain("input.staffInternalNotes !== undefined")
+    expect(actions).not.toContain("Object.hasOwn(input")
     expect(actions).toContain("Due date must use a valid YYYY-MM-DD date.")
     expect(migration).toContain("CASE WHEN p_stage_provided")
     expect(migration).toContain("CASE WHEN p_due_at_provided")
