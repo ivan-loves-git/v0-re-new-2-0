@@ -6,6 +6,7 @@ const migration = source("scripts/093_external_pursuit_foundation.sql")
 const contract = source("docs/data-models/external-pursuit-data-model-v1.md")
 const actions = source("lib/actions/external-pursuits.ts")
 const rehearsal = source("scripts/rehearse-external-pursuit-foundation.sql")
+const privilegeHardening = source("scripts/094_external_pursuit_service_role_privilege_hardening.sql")
 
 describe("W-104/W-105 External Pursuit foundation", () => {
   it("keeps the fixed stage map, availability and due state outside canonical pursuits", () => {
@@ -43,8 +44,11 @@ describe("W-104/W-105 External Pursuit foundation", () => {
   it("is append-only, service-role mutation-only and keeps a minimal tombstone", () => {
     expect(migration).toContain("External Pursuit audit is immutable.")
     expect(migration).toContain("BEFORE UPDATE OR DELETE ON public.external_pursuit_audit_events")
-    expect(migration).toContain("REVOKE INSERT,UPDATE,DELETE")
+    expect(migration).toContain("REVOKE ALL ON TABLE public.external_pursuits")
     expect(migration).toContain("GRANT SELECT ON TABLE")
+    expect(privilegeHardening).toContain("REVOKE ALL ON TABLE")
+    expect(privilegeHardening).toContain("FROM service_role")
+    expect(privilegeHardening).toContain("GRANT SELECT ON TABLE")
     expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.create_external_pursuit")
     expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.external_pursuit_deletion_tombstones")
     expect(migration).toContain("DELETE FROM public.external_pursuit_notes")
