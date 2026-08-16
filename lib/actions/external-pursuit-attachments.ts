@@ -439,7 +439,10 @@ export async function fulfillExternalPursuitDeletionWithAttachments(
       "prepare_external_pursuit_deletion_fulfillment",
       { p_dossier_id: pursuitId, p_actor_user_id: staffUserId },
     )
-    if (preflightError || typeof preflightStatus !== "number" || preflightStatus === 0) {
+    const preflightConfirmed = typeof preflightStatus === "number"
+      && preflightStatus >= 200
+      && preflightStatus < 300
+    if (preflightError || !preflightConfirmed) {
       const converted = preflightError instanceof Error
         ? preflightError.message.includes("external_pursuit_already_converted")
         : false
@@ -448,7 +451,7 @@ export async function fulfillExternalPursuitDeletionWithAttachments(
         message: converted
           ? "This dossier is linked to a Re-New opportunity. No attachment was removed."
           : "WAVE could not confirm deletion eligibility. No attachment should be removed.",
-        retryExact: preflightStatus === 0 || typeof preflightStatus !== "number",
+        retryExact: !preflightError || preflightStatus === 0 || typeof preflightStatus !== "number",
       }
     }
 

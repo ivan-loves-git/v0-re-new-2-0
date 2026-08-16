@@ -356,6 +356,8 @@ describe("External Pursuit attachment actions", () => {
   it.each([
     { label: "status zero", status: 0 },
     { label: "missing status", status: undefined },
+    { label: "status 500", status: 500 },
+    { label: "status 503", status: 503 },
   ])("fails closed before byte cleanup when the W-109 preflight has $label", async ({ status }) => {
     mocks.rpc.mockImplementation(async (name: string) => {
       if (name === "external_pursuit_deletion_fulfillment_replay") {
