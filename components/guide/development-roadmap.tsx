@@ -26,6 +26,34 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 16, 2026",
+    version: "0.9.50",
+    title: "External acquisition work can now inform Re-New without becoming Re-New data",
+    isCompleted: true,
+    events: [
+      {
+        title: "Staff can convert one qualified dossier into one controlled Re-New draft",
+        type: "feature",
+        description: "After choosing a real source office, named contact and approved geography, staff can create one new staff-only opportunity while the external dossier remains separate historical evidence.",
+      },
+      {
+        title: "Conversion never copies private dossier content",
+        type: "decision",
+        description: "External notes, files, contacts, metrics, ownership and progress do not enter the Re-New opportunity, matching, Pursuit, NDA or disclosure records.",
+      },
+      {
+        title: "Capacity is based on explicit confirmation rather than inferred activity",
+        type: "feature",
+        description: "Owners and authorised staff can confirm that an external pursuit is current, while staff see separate stage, availability, overdue, stale and unknown totals as of Paris time.",
+      },
+      {
+        title: "M2.1 technical scope is complete; real use still has to prove its value",
+        type: "decision",
+        description: "The protected External Pursuit workflow is ready for controlled use, but WAVE will treat ongoing maintenance and allocation impact as product evidence rather than assuming adoption.",
+      },
+    ],
+  },
+  {
+    period: "Aug 16, 2026",
     version: "0.9.49",
     title: "External acquisition work now has one controlled workspace",
     isCompleted: true,

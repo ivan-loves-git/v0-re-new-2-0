@@ -11,6 +11,14 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("groups External Pursuit conversion, capacity, and M2.1 technical closure", () => {
+    expect(roadmap).toContain('version: "0.9.50"')
+    expect(roadmap).toContain("Staff can convert one qualified dossier into one controlled Re-New draft")
+    expect(roadmap).toContain("Conversion never copies private dossier content")
+    expect(roadmap).toContain("Capacity is based on explicit confirmation rather than inferred activity")
+    expect(roadmap).toContain("M2.1 technical scope is complete; real use still has to prove its value")
+  })
+
   it("groups the controlled External Pursuit workspace release", () => {
     expect(roadmap).toContain('version: "0.9.49"')
     expect(roadmap).toContain("One board keeps external and Re-New work understandable")
