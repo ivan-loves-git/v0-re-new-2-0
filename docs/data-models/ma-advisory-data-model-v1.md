@@ -810,7 +810,8 @@ together. Due state is calculated from the civil date in `Europe/Paris`:
 no date, due today, upcoming, or overdue only when the date is before today.
 Saving a follow-up is a narrow dirty-field patch: it cannot rename the dossier
 or alter its stage, it preserves concurrent untouched-field changes, retains
-one idempotency key through an unconfirmed response, and writes actor/time plus
+the exact patch, snapshot and idempotency key through an unconfirmed response,
+freezes editing until that save is confirmed, and writes actor/time plus
 content-free changed-field audit metadata.
 
 The owner may read and edit the shared follow-up fields only for their active

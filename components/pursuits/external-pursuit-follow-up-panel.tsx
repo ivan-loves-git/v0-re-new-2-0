@@ -17,7 +17,10 @@ import {
   type ExternalPursuitFollowUpSnapshot,
   type ExternalPursuitResponsibleParty,
 } from "@/lib/types/external-pursuit"
-import { externalPursuitFollowUpAttempt, externalPursuitFollowUpPatch } from "@/lib/external-pursuit-follow-up"
+import {
+  externalPursuitFollowUpSubmission,
+  type FollowUpAttempt,
+} from "@/lib/external-pursuit-follow-up"
 import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
 
 export type ExternalPursuitFollowUpPanelProps = {
@@ -53,7 +56,8 @@ export function ExternalPursuitFollowUpPanel({
 }: ExternalPursuitFollowUpPanelProps) {
   const prefix = useId()
   const baselineRef = useRef<ExternalPursuitFollowUpSnapshot>(followUp)
-  const attemptRef = useRef<{ fingerprint: string; idempotencyKey: string } | null>(null)
+  const attemptRef = useRef<FollowUpAttempt | null>(null)
+  const [recoveryAttempt, setRecoveryAttempt] = useState<FollowUpAttempt | null>(null)
   const [isPending, startTransition] = useTransition()
   const [nextAction, setNextAction] = useState(followUp.nextAction ?? "")
   const [responsibleParty, setResponsibleParty] = useState<ExternalPursuitResponsibleParty | "">(followUp.responsibleParty ?? "")
@@ -63,10 +67,11 @@ export function ExternalPursuitFollowUpPanel({
   const [staffInternalNotes, setStaffInternalNotes] = useState(followUp.staffInternalNotes ?? "")
   const [formError, setFormError] = useState<string | null>(null)
   const dueState = externalPursuitDueState(dueAt || null)
+  const controlsLocked = isPending || recoveryAttempt !== null
 
   function submit() {
     const trimmedAction = nextAction.trim()
-    if (Boolean(trimmedAction) !== Boolean(responsibleParty)) {
+    if (!recoveryAttempt && Boolean(trimmedAction) !== Boolean(responsibleParty)) {
       setFormError("Set a responsible party for a next action, or clear both fields.")
       return
     }
@@ -78,24 +83,27 @@ export function ExternalPursuitFollowUpPanel({
       sharedNotes,
       ...(role === "staff" ? { staffInternalNotes } : {}),
     }
-    const patch = externalPursuitFollowUpPatch(baselineRef.current, current, role)
-    if (!patch) {
+    const attempt = externalPursuitFollowUpSubmission({
+      recovery: recoveryAttempt,
+      previous: attemptRef.current,
+      baseline: baselineRef.current,
+      current,
+      role,
+      makeKey: () => globalThis.crypto.randomUUID(),
+    })
+    if (!attempt) {
       toast.message("Follow-up is already current")
       return
     }
-    const attempt = externalPursuitFollowUpAttempt(
-      attemptRef.current,
-      patch,
-      () => globalThis.crypto.randomUUID(),
-    )
     attemptRef.current = attempt
     setFormError(null)
     startTransition(async () => {
       let result
       try {
-        result = await updateExternalPursuitFollowUp(pursuitId, patch, attempt.idempotencyKey)
+        result = await updateExternalPursuitFollowUp(pursuitId, attempt.patch, attempt.idempotencyKey)
       } catch {
-        const retryMessage = "The save result is unclear. Retry to safely confirm it."
+        const retryMessage = "The save result is unclear. Fields are locked until you retry this exact save."
+        setRecoveryAttempt(attempt)
         setFormError(retryMessage)
         toast.error("Follow-up not confirmed", { description: retryMessage })
         return
@@ -105,8 +113,15 @@ export function ExternalPursuitFollowUpPanel({
         toast.error("Follow-up not updated", { description: result.message })
         return
       }
-      baselineRef.current = current
+      baselineRef.current = attempt.snapshot
       attemptRef.current = null
+      setRecoveryAttempt(null)
+      setNextAction(attempt.snapshot.nextAction ?? "")
+      setResponsibleParty(attempt.snapshot.responsibleParty ?? "")
+      setAvailability(attempt.snapshot.availability)
+      setDueAt(attempt.snapshot.dueAt ?? "")
+      setSharedNotes(attempt.snapshot.sharedNotes ?? "")
+      if (role === "staff") setStaffInternalNotes(attempt.snapshot.staffInternalNotes ?? "")
       toast.success("Follow-up updated")
       onSaved?.()
     })
@@ -126,28 +141,28 @@ export function ExternalPursuitFollowUpPanel({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor={`${prefix}-next-action`}>Next action</Label>
-            <Input id={`${prefix}-next-action`} value={nextAction} onChange={(event) => setNextAction(event.target.value)} placeholder="For example, request the information memorandum" disabled={isPending} />
+            <Input id={`${prefix}-next-action`} value={nextAction} onChange={(event) => setNextAction(event.target.value)} placeholder="For example, request the information memorandum" disabled={controlsLocked} />
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${prefix}-responsible-party`}>Responsible</Label>
             <div className="flex gap-2">
-              <Select value={responsibleParty} onValueChange={(value) => setResponsibleParty(value as ExternalPursuitResponsibleParty)} disabled={isPending}>
+              <Select value={responsibleParty} onValueChange={(value) => setResponsibleParty(value as ExternalPursuitResponsibleParty)} disabled={controlsLocked}>
                 <SelectTrigger id={`${prefix}-responsible-party`} className="w-full"><SelectValue placeholder="Choose responsibility" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="owner">Owner</SelectItem>
                   <SelectItem value="staff">Re-New staff</SelectItem>
                 </SelectContent>
               </Select>
-              {responsibleParty ? <Button type="button" variant="outline" onClick={() => { setNextAction(""); setResponsibleParty("") }} disabled={isPending}>Clear</Button> : null}
+              {responsibleParty ? <Button type="button" variant="outline" onClick={() => { setNextAction(""); setResponsibleParty("") }} disabled={controlsLocked}>Clear</Button> : null}
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${prefix}-due-at`}>Due date</Label>
-            <Input id={`${prefix}-due-at`} type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} disabled={isPending} />
+            <Input id={`${prefix}-due-at`} type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} disabled={controlsLocked} />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor={`${prefix}-availability`}>Availability</Label>
-            <Select value={availability} onValueChange={(value) => setAvailability(value as ExternalPursuitAvailability)} disabled={isPending}>
+            <Select value={availability} onValueChange={(value) => setAvailability(value as ExternalPursuitAvailability)} disabled={controlsLocked}>
               <SelectTrigger id={`${prefix}-availability`} className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{EXTERNAL_PURSUIT_AVAILABILITY.map((value) => <SelectItem key={value} value={value}>{availabilityLabels[value]}</SelectItem>)}</SelectContent>
             </Select>
@@ -155,15 +170,15 @@ export function ExternalPursuitFollowUpPanel({
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-shared-notes`}>Shared notes</Label>
-          <Textarea id={`${prefix}-shared-notes`} value={sharedNotes} onChange={(event) => setSharedNotes(event.target.value)} disabled={isPending} />
+          <Textarea id={`${prefix}-shared-notes`} value={sharedNotes} onChange={(event) => setSharedNotes(event.target.value)} disabled={controlsLocked} />
         </div>
         {role === "staff" ? <div className="space-y-2 rounded-md border bg-muted/30 p-4">
           <Label htmlFor={`${prefix}-staff-notes`}>Staff-only notes</Label>
           <p className="text-sm text-muted-foreground">Visible to Re-New staff only; never shown in the owner portal.</p>
-          <Textarea id={`${prefix}-staff-notes`} value={staffInternalNotes} onChange={(event) => setStaffInternalNotes(event.target.value)} disabled={isPending} />
+          <Textarea id={`${prefix}-staff-notes`} value={staffInternalNotes} onChange={(event) => setStaffInternalNotes(event.target.value)} disabled={controlsLocked} />
         </div> : null}
         <Button type="button" onClick={submit} disabled={isPending}>
-          <Save className="size-4" /> {isPending ? "Saving…" : "Save follow-up"}
+          <Save className="size-4" /> {isPending ? "Saving…" : recoveryAttempt ? "Retry exact save" : "Save follow-up"}
         </Button>
       </CardContent>
     </Card>

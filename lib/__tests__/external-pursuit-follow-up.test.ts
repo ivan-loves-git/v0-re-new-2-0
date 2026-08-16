@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   externalPursuitFollowUpAttempt,
   externalPursuitFollowUpPatch,
+  externalPursuitFollowUpSubmission,
 } from "@/lib/external-pursuit-follow-up"
 
 const baseline = {
@@ -36,19 +37,71 @@ describe("External Pursuit follow-up behavior", () => {
   it("retains the idempotency key after a lost response and rotates it for a changed payload", () => {
     const makeKey = vi.fn().mockReturnValueOnce("attempt-1").mockReturnValueOnce("attempt-2")
     const patch = { sharedNotes: "Owner added context" }
-    const first = externalPursuitFollowUpAttempt(null, patch, makeKey)
-    const retry = externalPursuitFollowUpAttempt(first, patch, makeKey)
-    const changed = externalPursuitFollowUpAttempt(retry, { sharedNotes: "New context" }, makeKey)
+    const first = externalPursuitFollowUpAttempt(null, patch, baseline, makeKey)
+    const retry = externalPursuitFollowUpAttempt(first, patch, baseline, makeKey)
+    const changed = externalPursuitFollowUpAttempt(retry, { sharedNotes: "New context" }, baseline, makeKey)
     expect(first).toEqual(retry)
     expect(changed.idempotencyKey).toBe("attempt-2")
     expect(makeKey).toHaveBeenCalledTimes(2)
+  })
+
+  it("forces exact B confirmation when a lost response is followed by attempted B to A", () => {
+    const stateB = { ...baseline, nextAction: "Request the information memorandum" }
+    const attemptB = externalPursuitFollowUpSubmission({
+      recovery: null,
+      previous: null,
+      baseline,
+      current: stateB,
+      role: "staff",
+      makeKey: () => "attempt-b",
+    })
+    expect(attemptB).not.toBeNull()
+    const attemptedRevert = externalPursuitFollowUpSubmission({
+      recovery: attemptB,
+      previous: attemptB,
+      baseline,
+      current: baseline,
+      role: "staff",
+      makeKey: () => "must-not-rotate",
+    })
+    expect(attemptedRevert).toBe(attemptB)
+    expect(attemptedRevert?.patch).toEqual({
+      nextAction: "Request the information memorandum",
+      responsibleParty: "owner",
+    })
+    expect(attemptedRevert?.idempotencyKey).toBe("attempt-b")
+  })
+
+  it("forces exact B confirmation when an attempted revert also adds another change", () => {
+    const stateB = { ...baseline, nextAction: "Request the information memorandum" }
+    const attemptB = externalPursuitFollowUpSubmission({
+      recovery: null,
+      previous: null,
+      baseline,
+      current: stateB,
+      role: "staff",
+      makeKey: () => "attempt-b",
+    })
+    const attemptedRevertAndEdit = externalPursuitFollowUpSubmission({
+      recovery: attemptB,
+      previous: attemptB,
+      baseline,
+      current: { ...baseline, sharedNotes: "A different new edit" },
+      role: "staff",
+      makeKey: () => "must-not-rotate",
+    })
+    expect(attemptedRevertAndEdit).toBe(attemptB)
+    expect(attemptedRevertAndEdit?.snapshot).toEqual(stateB)
+    expect(attemptedRevertAndEdit?.idempotencyKey).toBe("attempt-b")
   })
 
   it("exposes one clean panel mount contract without owning a route", () => {
     const source = readFileSync(join(process.cwd(), "components/pursuits/external-pursuit-follow-up-panel.tsx"), "utf8")
     expect(source).toContain("ExternalPursuitFollowUpPanelProps")
     expect(source).toContain("followUp: ExternalPursuitFollowUpSnapshot")
-    expect(source).toContain("updateExternalPursuitFollowUp(pursuitId, patch, attempt.idempotencyKey)")
+    expect(source).toContain("updateExternalPursuitFollowUp(pursuitId, attempt.patch, attempt.idempotencyKey)")
+    expect(source).toContain("disabled={controlsLocked}")
+    expect(source).toContain("Retry exact save")
     expect(source.indexOf("if (!result.success)")).toBeLessThan(source.indexOf("attemptRef.current = null"))
     expect(source).not.toContain("p_title")
     expect(source).not.toContain("p_stage")

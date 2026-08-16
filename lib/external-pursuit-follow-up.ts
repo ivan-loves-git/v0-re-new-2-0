@@ -3,7 +3,7 @@ import type {
   ExternalPursuitFollowUpSnapshot,
 } from "@/lib/types/external-pursuit"
 
-type FollowUpRole = "staff" | "repreneur"
+export type FollowUpRole = "staff" | "repreneur"
 
 function nullableText(value: string | null | undefined) {
   return value ?? ""
@@ -38,16 +38,47 @@ export function externalPursuitFollowUpPatch(
   return Object.keys(patch).length > 0 ? patch : null
 }
 
-type FollowUpAttempt = { fingerprint: string; idempotencyKey: string }
+export type FollowUpAttempt = {
+  fingerprint: string
+  idempotencyKey: string
+  patch: ExternalPursuitFollowUpInput
+  snapshot: ExternalPursuitFollowUpSnapshot
+}
 
 /** Retains one key for the same payload until the caller confirms success. */
 export function externalPursuitFollowUpAttempt(
   previous: FollowUpAttempt | null,
   patch: ExternalPursuitFollowUpInput,
+  snapshot: ExternalPursuitFollowUpSnapshot,
   makeKey: () => string,
 ): FollowUpAttempt {
   const fingerprint = JSON.stringify(patch)
   return previous?.fingerprint === fingerprint
     ? previous
-    : { fingerprint, idempotencyKey: makeKey() }
+    : { fingerprint, idempotencyKey: makeKey(), patch, snapshot }
+}
+
+/**
+ * Once transport makes a result ambiguous, only the exact attempted request is
+ * eligible. Current controls are deliberately ignored until that request is
+ * confirmed, so reverting or adding another edit cannot bypass recovery.
+ */
+export function externalPursuitFollowUpSubmission({
+  recovery,
+  previous,
+  baseline,
+  current,
+  role,
+  makeKey,
+}: {
+  recovery: FollowUpAttempt | null
+  previous: FollowUpAttempt | null
+  baseline: ExternalPursuitFollowUpSnapshot
+  current: ExternalPursuitFollowUpSnapshot
+  role: FollowUpRole
+  makeKey: () => string
+}): FollowUpAttempt | null {
+  if (recovery) return recovery
+  const patch = externalPursuitFollowUpPatch(baseline, current, role)
+  return patch ? externalPursuitFollowUpAttempt(previous, patch, current, makeKey) : null
 }

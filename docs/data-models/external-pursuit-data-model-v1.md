@@ -182,9 +182,12 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 14. W-107's follow-up save is a narrow patch. It never writes title or stage,
    and sends only fields changed since the form loaded, preventing a stale
    follow-up form from overwriting a concurrent board or follow-up change. The
-   client retains one idempotency key for an identical retry until success is
-   confirmed; a changed payload receives a new key. The database serializes the
-   write and makes same-actor/same-key replay a no-op. It appends actor/time and
+   client retains the exact attempted patch, snapshot and idempotency key until
+   success is confirmed. When transport leaves the result ambiguous, all
+   follow-up inputs are frozen and only an exact retry is permitted; reverting
+   or adding another edit cannot bypass confirmation. Outside recovery, a
+   changed payload receives a new key. The database serializes the write and
+   makes same-actor/same-key replay a no-op. It appends actor/time and
    content-free changed-field metadata only; note text is not copied to audit,
    errors, logs or analytics.
 15. W-108 attachments are separate from `opportunity_documents`, NDA artifacts,
