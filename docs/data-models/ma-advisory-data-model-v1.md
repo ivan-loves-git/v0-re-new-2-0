@@ -822,6 +822,14 @@ notification, cron, checklist, template, task-manager or AI behavior. These
 facts never create or modify a canonical opportunity, match, pursuit, Gate,
 M&A relationship, source, document, export or import record.
 
+### W-108 External Pursuit attachment boundary
+
+W-108 adds private External Pursuit attachments only to that separate domain.
+They are never `opportunity_documents`, NDA artifacts, information memoranda,
+source teasers or M&A interaction evidence, and cannot feed exports, matching,
+Gates or disclosure. Its private bucket, server-only authorization and
+delete-before-fulfillment cleanup are defined in the External Pursuit contract.
+
 ### W-063 staff intake reconciliation
 
 W-063 must route new firm identity creation through `create_ma_firm_with_default_office`, new or additional contact relationships through `create_or_affiliate_ma_contact`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.

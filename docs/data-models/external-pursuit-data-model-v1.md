@@ -4,7 +4,7 @@
 
 | Item | Value |
 | --- | --- |
-| Status | Approved implementation contract for W-104 through W-107 |
+| Status | Approved implementation contract for W-104 through W-108 |
 | Scope | A repreneur-owned record of work outside WAVE opportunities |
 | Implementation owner | Dev team |
 | Visibility | The owner repreneur and authorized staff only; all other repreneurs and unassigned users are denied |
@@ -116,6 +116,7 @@ canonical gate, source, match, document or disclosure rule.
 | `external_pursuit_contacts` | Repeatable people or organisations associated with a pursuit | Same owner/staff rule; deleted with pursuit content |
 | `external_pursuit_audit_events` | Immutable actor/time event evidence | Staff only while the dossier exists; purged with it |
 | `external_pursuit_deletion_tombstones` | Minimum deletion attribution | Staff-only former dossier ID, owner ID and request/fulfil actor and time; no content |
+| `external_pursuit_attachments` | Private dossier file metadata | Owner and authorized staff only; metadata is purged with the dossier after private object cleanup |
 
 W-106 stores optional `external_url`, `target_company`, descriptive
 `source_channel`, `revenue_meur`, `ebitda_keur` and `headcount` on the External
@@ -183,6 +184,31 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    write and makes same-actor/same-key replay a no-op. It appends actor/time and
    content-free changed-field metadata only; note text is not copied to audit,
    errors, logs or analytics.
+15. W-108 attachments are separate from `opportunity_documents`, NDA artifacts,
+   information memoranda, source teasers and interaction evidence. They are
+   never exported, matched, scored, used as a Gate input or projected to an
+   opportunity or canonical pursuit.
+16. Only PDF, DOC, DOCX, XLS, XLSX, CSV, JPG/JPEG, PNG, WEBP and GIF are
+   accepted, each at most 20 MiB. The server validates extension, declared MIME
+   and the complete bounded file structure: PDFs require a complete, inactive
+   PDF envelope; OOXML files require their expected package entries and reject
+   macro/archive/polyglot content; legacy Office files require their expected
+   compound-document stream; CSV is scanned as UTF-8 text; and images require
+   their complete type envelope. Executables, HTML, SVG and generic archives are
+   rejected. Objects have random safe paths in the private
+   `external-pursuit-attachments` bucket; browser storage policies and public
+   URLs are never created.
+17. The owner or authorized staff may list, upload, download and remove an
+   active dossier's attachments. Downloads are 60-second signed redirects after
+   exact server-side dossier and attachment authorization. Unassigned users and
+   other repreneurs are denied. Every register/remove writes immutable actor/time
+   audit evidence. The role-safe list includes declared type, upload date and a
+   safe uploader label (`You`, `Re-New staff` or `Dossier owner`); raw staff user
+   identifiers are never sent to an owner.
+18. Staff fulfillment first removes every private object. Any storage failure
+   stops fulfillment before metadata/content purge and tombstone creation. Once
+   objects are gone, metadata is removed and W-105's existing fulfillment
+   primitive may write its minimal tombstone; retry is safe.
 
 ## Acceptance matrix
 

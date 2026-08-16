@@ -37,10 +37,11 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_NUMBER: gitCommitCount,
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
   },
-  // Allow file uploads up to 10MB (default is 1MB)
+  // W-108 accepts private External Pursuit attachments up to 20 MiB. Keep a
+  // small multipart/server-action envelope above the validated file limit.
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      bodySizeLimit: "22mb",
     },
   },
   // Redirect old intake form to v2

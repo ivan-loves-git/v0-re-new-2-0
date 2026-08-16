@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto"
 import { getCurrentUserAccess, requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { fulfillExternalPursuitDeletionWithAttachments } from "@/lib/actions/external-pursuit-attachments"
 import type {
   ExternalPursuitActionResult,
   ExternalPursuitBoardRecord,
@@ -305,15 +306,7 @@ export async function fulfillExternalPursuitDeletion(
   pursuitId: string,
   idempotencyKey: string = randomUUID(),
 ): Promise<ExternalPursuitActionResult> {
-  try {
-    const staff = await requireStaffAccess()
-    const { error } = await createAdminClient().rpc("fulfill_external_pursuit_deletion", {
-      p_dossier_id: pursuitId,
-      p_actor_user_id: staff.user.id,
-      p_idempotency_key: idempotencyKey,
-    })
-    return error ? { success: false, message: message(error, "Could not fulfil deletion.") } : { success: true, message: "External Pursuit deleted.", pursuitId }
-  } catch (error) {
-    return { success: false, message: message(error, "Could not fulfil deletion.") }
-  }
+  await requireStaffAccess()
+  const result = await fulfillExternalPursuitDeletionWithAttachments(pursuitId, idempotencyKey)
+  return { ...result, pursuitId: result.success ? pursuitId : undefined }
 }
