@@ -130,6 +130,16 @@ always distinguish a rejected mutation from a committed mutation whose response
 was lost. Analytics remains optional and never changes access, persistence,
 storage or deletion behaviour.
 
+### Client transport recovery
+
+WAVE has no user-facing analytics opt-out. A legacy client fail-safe could
+persistently opt a browser out after a transient transport failure; it is
+migrated once, at enabled PostHog initialization, by clearing that application-
+owned stale state and writing a namespaced recovery marker. The marker prevents
+WAVE from overriding any later deliberate PostHog opt-out. Future transient
+transport failures detach the local WAVE transport and stop replay only; they
+never persist an opt-out. Product actions remain independent of this recovery.
+
 ## Replay and automatic diagnostics
 
 Replay and diagnostics are useful for product-learning only when they preserve the same content boundary:

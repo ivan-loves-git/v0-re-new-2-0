@@ -21,8 +21,11 @@ describe("WAVE PostHog transport wiring", () => {
     expect(config).toContain("capture_console_errors: true")
     expect(config).toContain("network_timing: true")
     expect(provider).toContain("posthog.stopSessionRecording()")
-    expect(provider).toContain("posthog.opt_out_capturing()")
-    expect(provider).not.toContain("posthog.opt_in_capturing")
+    expect(provider).toContain("recoverLegacyPostHogOptOut(instance, window.localStorage)")
+    expect(provider).not.toContain("posthog.opt_out_capturing()")
+    expect(provider.indexOf("recoverLegacyPostHogOptOut(instance, window.localStorage)")).toBeLessThan(
+      provider.indexOf("instance.startSessionRecording(WAVE_REPLAY_START_OVERRIDE)"),
+    )
     expect(provider).toContain("options?.sendInstantly ? { send_instantly: true } : undefined")
   })
 

@@ -14,6 +14,7 @@ import {
   resetStaleIdentityOnLogin,
 } from "@/lib/telemetry/runtime"
 import { getClientTelemetryConfig } from "@/lib/telemetry/config"
+import { recoverLegacyPostHogOptOut } from "@/lib/telemetry/posthog-optout-recovery"
 import {
   buildPostHogBrowserConfig,
   WAVE_REPLAY_START_OVERRIDE,
@@ -78,6 +79,7 @@ export function WaveTelemetryProvider({ children }: { children: React.ReactNode 
         isHttps: window.location.protocol === "https:",
       }),
       loaded: (instance) => {
+        recoverLegacyPostHogOptOut(instance, window.localStorage)
         instance.startSessionRecording(WAVE_REPLAY_START_OVERRIDE)
       },
     })
@@ -101,7 +103,6 @@ export function WaveTelemetryProvider({ children }: { children: React.ReactNode 
       },
       suspend() {
         posthog.stopSessionRecording()
-        posthog.opt_out_capturing()
       },
     })
     resetStaleIdentityOnLogin(window.location.pathname)

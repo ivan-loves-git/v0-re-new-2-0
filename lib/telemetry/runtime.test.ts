@@ -127,6 +127,26 @@ describe("WAVE telemetry identity lifecycle", () => {
     expect(JSON.stringify(completion)).not.toMatch(/dossier|attachment|filename|note|title|company|contact|idempotency/i)
   })
 
+  it("captures one recovered page entry and one confirmed completion without replaying the action", async () => {
+    const runtime = await import("@/lib/telemetry/runtime")
+    const { captureExternalPursuitCompleted } = await import("@/lib/telemetry/external-pursuit-client")
+    const calls: TransportCall[] = []
+    runtime.installWaveTelemetryTransport(recordingTransport(calls))
+    runtime.identifyTelemetryUser(OPAQUE_USER_ID, "repreneur")
+    calls.length = 0
+
+    runtime.capturePageView("/portal/pursuits")
+    captureExternalPursuitCompleted("repreneur", "submit")
+
+    const captured = calls.filter((call) => call.type === "capture")
+    expect(captured).toHaveLength(2)
+    expect(captured.map((call) => call.event)).toEqual([
+      "wave_page_viewed",
+      "wave_action_succeeded",
+    ])
+    expect(JSON.stringify(captured)).not.toMatch(/dossier|attachment|filename|note|title|company|contact|idempotency|019fd674/i)
+  })
+
   it("captures logout before resetting to a fresh anonymous identity", async () => {
     const runtime = await import("@/lib/telemetry/runtime")
     const calls: TransportCall[] = []
