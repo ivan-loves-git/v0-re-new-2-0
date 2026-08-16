@@ -197,10 +197,11 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 16. Only PDF, DOCX, XLSX, CSV, JPG/JPEG, PNG, WEBP and GIF are
    accepted, each at most 20 MiB. The server validates extension, declared MIME
    and the complete bounded file structure: PDFs require a complete, inactive
-   PDF envelope and no active-document hooks; OOXML files require valid package
-   contents, relationships and document/workbook roots and reject
-   macro/archive/polyglot content; CSV is scanned as UTF-8 text; and images require
-   their complete type envelope. Executables, HTML, SVG and generic archives are
+   PDF envelope and no active-document hooks, including hex-escaped PDF names;
+   OOXML files require valid package contents, relationships and
+   document/workbook roots and reject macro, nested archive and polyglot
+   content; CSV is scanned as UTF-8 text and rejects spreadsheet-formula cells;
+   and images require their complete type envelope. Executables, HTML, SVG and generic archives are
    rejected. Legacy binary DOC and XLS are deliberately excluded because a
    lightweight signature check cannot distinguish them safely from a generic
    compound file. Objects have random safe paths in the private
@@ -217,7 +218,15 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 18. Staff fulfillment first removes every private object. Any storage failure
    stops fulfillment before metadata/content purge and tombstone creation. Once
    objects are gone, metadata is removed and W-105's existing fulfillment
-   primitive may write its minimal tombstone; retry is safe.
+   primitive may write its minimal tombstone. A retry checks the staff-only
+   tombstone using the exact dossier, actor and idempotency key before it reads
+   the live dossier, so a lost final response can be recovered without
+   resurrecting or re-deleting content. Confirmed Storage API 4xx failures are
+   editable failures; only transport/status-0 ambiguity requires exact retry.
+12. File and follow-up recovery locks compose by independent reference-counted
+   tokens. Releasing one child never unlocks another child. A successful
+   single-file deletion also notifies the parent attachment projection before
+   the manager can close and reopen, so stale props cannot restore the row.
 
 ## Acceptance matrix
 

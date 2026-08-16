@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import {
   EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES,
   safeAttachmentFilename,
@@ -58,6 +60,7 @@ describe("External Pursuit attachment validation", () => {
   it("accepts a complete passive PDF and rejects OpenAction and polyglot fixtures", () => {
     expect(matchesExpectedFileStructure("memo.pdf", validPdf())).toBe(true)
     expect(matchesExpectedFileStructure("active.pdf", validPdf("/OpenAction 2 0 R"))).toBe(false)
+    expect(matchesExpectedFileStructure("escaped-active.pdf", validPdf("/Open#41ction 2 0 R /Java#53cript 3 0 R"))).toBe(false)
     const polyglot = validPdf("/Comment (PK\u0003\u0004 payload)")
     expect(matchesExpectedFileStructure("polyglot.pdf", polyglot)).toBe(false)
   })
@@ -67,16 +70,32 @@ describe("External Pursuit attachment validation", () => {
     expect(matchesExpectedFileStructure("sheet.xlsx", validXlsx())).toBe(true)
     expect(matchesExpectedFileStructure("fake.docx", storedZip({ "[Content_Types].xml":"", "_rels/.rels":"", "word/document.xml":"" }))).toBe(false)
     expect(matchesExpectedFileStructure("macro.docx", storedZip({ "[Content_Types].xml":"<Types/>", "_rels/.rels":"<Relationships/>", "word/document.xml":"<w:document/>", "word/vbaProject.bin":"x" }))).toBe(false)
+    expect(matchesExpectedFileStructure("nested-archive.docx", storedZip({
+      "[Content_Types].xml": '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+      "_rels/.rels": '<Relationships><Relationship Target="word/document.xml"/></Relationships>',
+      "word/document.xml": '<w:document xmlns:w="urn:test"><w:body/></w:document>',
+      "word/media/payload.dat": "PK\u0003\u0004nested archive",
+    }))).toBe(false)
+    expect(matchesExpectedFileStructure("named-archive.xlsx", storedZip({
+      "[Content_Types].xml": '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>',
+      "_rels/.rels": '<Relationships><Relationship Target="xl/workbook.xml"/></Relationships>',
+      "xl/workbook.xml": '<workbook xmlns="urn:test"/>',
+      "xl/media/payload.7z": "payload",
+    }))).toBe(false)
   })
 
   it("scans the complete CSV payload for executable and HTML event content", () => {
     expect(matchesExpectedFileStructure("safe.csv", encoder.encode("name,city\nAda,Paris\n"))).toBe(true)
     expect(matchesExpectedFileStructure("page.csv", encoder.encode("name,value\nA,1\n<body onload=alert(1)>"))).toBe(false)
     expect(matchesExpectedFileStructure("event.csv", encoder.encode("name,value\nA,onload=alert(1)"))).toBe(false)
+    expect(matchesExpectedFileStructure("formula.csv", encoder.encode("name,value\nA,=HYPERLINK(\"https://example.test\")"))).toBe(false)
+    expect(matchesExpectedFileStructure("quoted-formula.csv", encoder.encode("name;value\nA;\"  @SUM(1,2)\""))).toBe(false)
+    expect(matchesExpectedFileStructure("tab-formula.csv", encoder.encode("name\tvalue\nA\t+CMD"))).toBe(false)
     expect(matchesExpectedFileStructure("binary.csv", new Uint8Array([65,44,66,0,67]))).toBe(false)
   })
 
   it("rejects fake image and legacy CFB fixtures plus extension/MIME mismatches", () => {
+    expect(matchesExpectedFileStructure("avatar.jpg", new Uint8Array(readFileSync(join(process.cwd(), "public/avatars/default-10.jpg"))))).toBe(true)
     const onePixelPng = Uint8Array.from(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"))
     expect(matchesExpectedFileStructure("pixel.png", onePixelPng)).toBe(true)
     const fakePng = new Uint8Array(33)
@@ -88,6 +107,14 @@ describe("External Pursuit attachment validation", () => {
     headerOnlyWebp.set(encoder.encode("WEBPVP8X"), 8)
     headerOnlyWebp.set(le32(10), 16)
     expect(matchesExpectedFileStructure("fake.webp", headerOnlyWebp)).toBe(false)
+    const syntheticJpeg = new Uint8Array([
+      0xff,0xd8,
+      0xff,0xe0,0x00,0x10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0xff,0xc0,0x00,0x08,0x08,0x00,0x01,0x00,0x01,0x01,
+      0xff,0xda,0x00,0x02,
+      0xff,0xd9,
+    ])
+    expect(matchesExpectedFileStructure("fake.jpg", syntheticJpeg)).toBe(false)
     const fakeCfb = new Uint8Array(128)
     fakeCfb.set([0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1])
     fakeCfb.set(encoder.encode("WordDocument"), 32)

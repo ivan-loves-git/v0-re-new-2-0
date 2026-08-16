@@ -21,6 +21,7 @@ import {
   externalPursuitFollowUpSubmission,
   type FollowUpAttempt,
 } from "@/lib/external-pursuit-follow-up"
+import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
 
 export type ExternalPursuitFollowUpPanelProps = {
@@ -28,7 +29,7 @@ export type ExternalPursuitFollowUpPanelProps = {
   role: "staff" | "repreneur"
   followUp: ExternalPursuitFollowUpSnapshot
   onSaved?: () => void
-  onLockChange?: (locked: boolean) => void
+  onOperationLockChange?: ExternalPursuitOperationLockHandler
 }
 
 const availabilityLabels: Record<ExternalPursuitAvailability, string> = {
@@ -54,9 +55,11 @@ export function ExternalPursuitFollowUpPanel({
   role,
   followUp,
   onSaved,
-  onLockChange,
+  onOperationLockChange,
 }: ExternalPursuitFollowUpPanelProps) {
   const prefix = useId()
+  const operationLockToken = `external-pursuit-follow-up:${pursuitId}:${prefix}`
+  const operationLockHeld = useRef(false)
   const baselineRef = useRef<ExternalPursuitFollowUpSnapshot>(followUp)
   const attemptRef = useRef<FollowUpAttempt | null>(null)
   const [recoveryAttempt, setRecoveryAttempt] = useState<FollowUpAttempt | null>(null)
@@ -70,6 +73,18 @@ export function ExternalPursuitFollowUpPanel({
   const [formError, setFormError] = useState<string | null>(null)
   const dueState = externalPursuitDueState(dueAt || null)
   const controlsLocked = isPending || recoveryAttempt !== null
+
+  function holdOperationLock() {
+    if (operationLockHeld.current) return
+    operationLockHeld.current = true
+    onOperationLockChange?.({ token: operationLockToken, delta: 1 })
+  }
+
+  function releaseOperationLock() {
+    if (!operationLockHeld.current) return
+    operationLockHeld.current = false
+    onOperationLockChange?.({ token: operationLockToken, delta: -1 })
+  }
 
   function submit() {
     const trimmedAction = nextAction.trim()
@@ -99,7 +114,7 @@ export function ExternalPursuitFollowUpPanel({
     }
     attemptRef.current = attempt
     setFormError(null)
-    onLockChange?.(true)
+    holdOperationLock()
     startTransition(async () => {
       let result
       try {
@@ -119,7 +134,7 @@ export function ExternalPursuitFollowUpPanel({
           toast.error("Follow-up not confirmed", { description: retryMessage })
           return
         }
-        onLockChange?.(false)
+        releaseOperationLock()
         setFormError(result.message)
         toast.error("Follow-up not updated", { description: result.message })
         return
@@ -133,7 +148,7 @@ export function ExternalPursuitFollowUpPanel({
       setDueAt(attempt.snapshot.dueAt ?? "")
       setSharedNotes(attempt.snapshot.sharedNotes ?? "")
       if (role === "staff") setStaffInternalNotes(attempt.snapshot.staffInternalNotes ?? "")
-      onLockChange?.(false)
+      releaseOperationLock()
       toast.success("Follow-up updated")
       onSaved?.()
     })

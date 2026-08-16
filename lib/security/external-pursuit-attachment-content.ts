@@ -68,7 +68,7 @@ function parseZip(bytes: Uint8Array): Map<string, ZipEntry> | null {
       const name = textDecoder.decode(bytes.subarray(cursor + 46, cursor + 46 + nameLength)).replaceAll("\\", "/")
       const normalized = name.toLowerCase()
       if (name.startsWith("/") || name.split("/").some((part) => part === "..") || entries.has(normalized)) return null
-      if (/(^|\/)([^/]+\.)?(exe|dll|com|bat|cmd|js|jse|vbs|vbe|ps1|sh|html?|svg|jar|bin)$/i.test(name) || /vbaproject/i.test(name)) return null
+      if (/(^|\/)([^/]+\.)?(exe|dll|com|bat|cmd|js|jse|vbs|vbe|ps1|sh|html?|svg|jar|bin|zip|rar|7z)$/i.test(name) || /vbaproject/i.test(name)) return null
       if (!startsWith(bytes, [0x50, 0x4b, 0x03, 0x04], localOffset)) return null
       const localNameLength = u16le(bytes, localOffset + 26)
       const localExtraLength = u16le(bytes, localOffset + 28)
@@ -82,6 +82,12 @@ function parseZip(bytes: Uint8Array): Map<string, ZipEntry> | null {
         ? Uint8Array.from(compressed)
         : Uint8Array.from(inflateRawSync(compressed, { maxOutputLength: uncompressedSize || 1 }))
       if (content.length !== uncompressedSize || crc32(content) !== expectedCrc) return null
+      if (
+        startsWith(content, [0x50,0x4b,0x03,0x04])
+        || startsWith(content, [0x52,0x61,0x72,0x21,0x1a,0x07,0x00])
+        || startsWith(content, [0x52,0x61,0x72,0x21,0x1a,0x07,0x01,0x00])
+        || startsWith(content, [0x37,0x7a,0xbc,0xaf,0x27,0x1c])
+      ) return null
       entries.set(normalized, { name, content })
       cursor = next
     }
@@ -120,7 +126,8 @@ function validPdf(bytes: Uint8Array) {
   if (bytes.length < 64 || !startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e])) return false
   const text = latinDecoder.decode(bytes)
   if (!/%%EOF\s*$/.test(text) || !/\d+\s+\d+\s+obj\b/.test(text)) return false
-  if (/\/(?:OpenAction|AA|AcroForm|XFA|JavaScript|JS|Launch|EmbeddedFile|RichMedia)\b/i.test(text)) return false
+  const decodedNames = text.replace(/#[0-9a-f]{2}/gi, (escape) => String.fromCharCode(Number.parseInt(escape.slice(1), 16)))
+  if (/\/(?:OpenAction|AA|AcroForm|XFA|JavaScript|JS|Launch|EmbeddedFile|RichMedia)\b/i.test(decodedNames)) return false
   if (/<!doctype\s+html|<html\b|<script\b|<svg\b/i.test(text)) return false
   if (text.includes("PK\u0003\u0004") || text.includes("MZ\u0090") || text.includes("\u007fELF")) return false
   const startXref = text.match(/startxref\s+(\d+)\s+%%EOF\s*$/)
@@ -158,30 +165,92 @@ function validPng(bytes: Uint8Array) {
   return false
 }
 
+function validJpegQuantizationTables(bytes: Uint8Array, cursor: number, length: number) {
+  let offset = cursor + 2
+  const end = cursor + length
+  let tables = 0
+  while (offset < end) {
+    const precision = bytes[offset] >>> 4
+    const tableId = bytes[offset] & 0x0f
+    if (precision > 1 || tableId > 3) return false
+    offset += 1 + 64 * (precision + 1)
+    tables += 1
+  }
+  return tables > 0 && offset === end
+}
+
+function validJpegHuffmanTables(bytes: Uint8Array, cursor: number, length: number) {
+  let offset = cursor + 2
+  const end = cursor + length
+  let tables = 0
+  while (offset < end) {
+    if (offset + 17 > end || (bytes[offset] >>> 4) > 1 || (bytes[offset] & 0x0f) > 3) return false
+    let symbols = 0
+    for (let index = 1; index <= 16; index += 1) symbols += bytes[offset + index]
+    if (!symbols || symbols > 256 || offset + 17 + symbols > end) return false
+    offset += 17 + symbols
+    tables += 1
+  }
+  return tables > 0 && offset === end
+}
+
 function validJpeg(bytes: Uint8Array) {
   if (bytes.length < 32 || !startsWith(bytes, [0xff, 0xd8])) return false
   let cursor = 2
   let sawFrame = false
+  let sawScan = false
+  let sawQuantizationTable = false
+  let sawHuffmanTable = false
   while (cursor < bytes.length) {
     if (bytes[cursor++] !== 0xff) return false
     while (bytes[cursor] === 0xff) cursor += 1
     const marker = bytes[cursor++]
-    if (marker === 0xd9) return sawFrame && cursor === bytes.length
+    if (marker === 0xd9) return sawFrame && sawScan && sawQuantizationTable && sawHuffmanTable && cursor === bytes.length
     if (marker === 0xda) {
-      if (!sawFrame || cursor + 2 > bytes.length) return false
+      if (!sawFrame || !sawQuantizationTable || !sawHuffmanTable || cursor + 3 > bytes.length) return false
       const scanLength = (bytes[cursor] << 8) | bytes[cursor + 1]
-      if (scanLength < 2 || cursor + scanLength > bytes.length) return false
-      for (let index = cursor + scanLength; index < bytes.length - 1; index += 1) {
-        if (bytes[index] === 0xff && bytes[index + 1] === 0xd9) return index + 2 === bytes.length
+      const scanComponents = bytes[cursor + 2]
+      if (!scanComponents || scanLength !== 6 + 2 * scanComponents || cursor + scanLength > bytes.length) return false
+      let index = cursor + scanLength
+      let sawEntropy = false
+      while (index < bytes.length) {
+        if (bytes[index] !== 0xff) {
+          sawEntropy = true
+          index += 1
+          continue
+        }
+        const markerStart = index
+        while (bytes[index] === 0xff) index += 1
+        const scanMarker = bytes[index++]
+        if (scanMarker === 0x00) {
+          sawEntropy = true
+          continue
+        }
+        if (scanMarker >= 0xd0 && scanMarker <= 0xd7) continue
+        if (!sawEntropy) return false
+        sawScan = true
+        if (scanMarker === 0xd9) return sawQuantizationTable && sawHuffmanTable && index === bytes.length
+        cursor = markerStart
+        break
       }
-      return false
+      if (index >= bytes.length) return false
+      continue
     }
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue
     if (cursor + 2 > bytes.length) return false
     const length = (bytes[cursor] << 8) | bytes[cursor + 1]
     if (length < 2 || cursor + length > bytes.length) return false
-    if ([0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf].includes(marker)) {
-      if (length < 8 || !((bytes[cursor + 3] << 8) | bytes[cursor + 4]) || !((bytes[cursor + 5] << 8) | bytes[cursor + 6])) return false
+    if (marker === 0xdb) {
+      if (!validJpegQuantizationTables(bytes, cursor, length)) return false
+      sawQuantizationTable = true
+    }
+    if (marker === 0xc4) {
+      if (!validJpegHuffmanTables(bytes, cursor, length)) return false
+      sawHuffmanTable = true
+    }
+    if ([0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7].includes(marker)) {
+      const components = bytes[cursor + 7]
+      if (!components || length !== 8 + 3 * components || !((bytes[cursor + 3] << 8) | bytes[cursor + 4]) || !((bytes[cursor + 5] << 8) | bytes[cursor + 6])) return false
       sawFrame = true
     }
     cursor += length
@@ -264,6 +333,7 @@ function validCsv(bytes: Uint8Array) {
     return !/<\s*[!?/]?[a-z][^>]*>/i.test(text)
       && !/\bon(?:load|error|click|mouseover|focus)\s*=/i.test(text)
       && !/javascript\s*:/i.test(text)
+      && !/(?:^|[,;\t\r\n])[ \t]*"*[ \t]*[=+\-@]/m.test(text)
   } catch { return false }
 }
 

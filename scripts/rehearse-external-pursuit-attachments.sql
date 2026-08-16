@@ -18,6 +18,8 @@ DO $$
 DECLARE d UUID; registered JSONB; replay JSONB; attachment UUID; expected_path TEXT; owner_label TEXT; staff_label TEXT;
 BEGIN
   d := public.create_external_pursuit('00000000-0000-4000-8000-000000010801','W-108 fixture','identified','unknown',NULL,NULL,NULL,'w108-owner-a-user','w108-create');
+  IF public.external_pursuit_deletion_fulfillment_replay(d,'w108-staff-user','w108-safe-fulfill') THEN RAISE EXCEPTION 'w108_live_dossier_reported_as_fulfilled'; END IF;
+  BEGIN PERFORM public.external_pursuit_deletion_fulfillment_replay(d,'w108-owner-a-user','w108-safe-fulfill'); RAISE EXCEPTION 'w108_owner_tombstone_replay_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
   BEGIN PERFORM public.register_external_pursuit_attachment(d,'00000000-0000-4000-8000-000000010802/00000000-0000-4000-8000-000000010899.pdf','Wrong dossier.pdf','application/pdf',1,'w108-owner-a-user','w108-wrong-path-rpc'); RAISE EXCEPTION 'w108_rpc_path_mismatch_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit attachment path is invalid.' THEN RAISE; END IF; END;
   BEGIN INSERT INTO public.external_pursuit_attachments(external_pursuit_id,storage_path,original_filename,content_type,byte_size,created_by) VALUES(d,'00000000-0000-4000-8000-000000010802/00000000-0000-4000-8000-000000010897.pdf','Wrong dossier.pdf','application/pdf',1,'w108-owner-a-user'); RAISE EXCEPTION 'w108_table_path_mismatch_was_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
   expected_path := d::TEXT || '/00000000-0000-4000-8000-000000010899.pdf';
@@ -37,6 +39,8 @@ BEGIN
   PERFORM public.clear_external_pursuit_attachment_records_for_fulfillment(d,'w108-staff-user');
   PERFORM public.fulfill_external_pursuit_deletion(d,'w108-staff-user','w108-safe-fulfill');
   IF EXISTS (SELECT 1 FROM public.external_pursuits WHERE id=d) OR EXISTS (SELECT 1 FROM public.external_pursuit_attachments WHERE external_pursuit_id=d) OR NOT EXISTS (SELECT 1 FROM public.external_pursuit_deletion_tombstones WHERE former_dossier_id=d) THEN RAISE EXCEPTION 'w108_safe_fulfill_failed'; END IF;
+  IF NOT public.external_pursuit_deletion_fulfillment_replay(d,'w108-staff-user','w108-safe-fulfill') THEN RAISE EXCEPTION 'w108_exact_tombstone_replay_failed'; END IF;
+  BEGIN PERFORM public.external_pursuit_deletion_fulfillment_replay(d,'w108-staff-user','w108-different-fulfill'); RAISE EXCEPTION 'w108_mismatched_tombstone_replay_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit deletion fulfillment idempotency conflict.' THEN RAISE; END IF; END;
 END $$;
 
 DO $$
@@ -49,6 +53,7 @@ BEGIN
     'external_pursuit_attachments_for_actor(uuid,text)',
     'external_pursuit_attachment_for_actor(uuid,uuid,text)',
     'register_external_pursuit_attachment(uuid,text,text,text,bigint,text,text)',
+    'external_pursuit_deletion_fulfillment_replay(uuid,text,text)',
     'external_pursuit_attachment_cleanup_for_fulfillment(uuid,text)',
     'clear_external_pursuit_attachment_records_for_fulfillment(uuid,text)'
   ] LOOP

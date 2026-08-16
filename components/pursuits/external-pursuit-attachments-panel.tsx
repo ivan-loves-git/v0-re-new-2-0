@@ -10,6 +10,7 @@ import {
   uploadExternalPursuitAttachment,
 } from "@/lib/actions/external-pursuit-attachments"
 import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES, type ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
+import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { toast } from "sonner"
 
 function readableBytes(size: number) {
@@ -18,33 +19,51 @@ function readableBytes(size: number) {
 
 const uploadDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" })
 
+export interface ExternalPursuitAttachmentsPanelProps {
+  pursuitId: string
+  attachments: ExternalPursuitAttachment[]
+  readOnly?: boolean
+  onOperationLockChange?: ExternalPursuitOperationLockHandler
+  onAttachmentRemoved?: (pursuitId: string, attachmentId: string) => void
+}
+
 export function ExternalPursuitAttachmentsPanel({
   pursuitId,
   attachments: initialAttachments,
   readOnly = false,
-  onLockChange,
-}: {
-  pursuitId: string
-  attachments: ExternalPursuitAttachment[]
-  readOnly?: boolean
-  onLockChange?: (locked: boolean) => void
-}) {
+  onOperationLockChange,
+  onAttachmentRemoved,
+}: ExternalPursuitAttachmentsPanelProps) {
   const generatedId = useId()
   const fileInputId = `external-pursuit-attachment-${pursuitId}-${generatedId}`
   const titleId = `external-pursuit-attachments-title-${pursuitId}-${generatedId}`
+  const operationLockToken = `external-pursuit-attachments:${pursuitId}:${generatedId}`
   const [attachments, setAttachments] = useState(initialAttachments)
   const [pending, startTransition] = useTransition()
   const [recovery, setRecovery] = useState<"upload" | { attachmentId: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const uploadAttempt = useRef<{ formData: FormData; idempotencyKey: string } | null>(null)
   const deleteAttempt = useRef<{ attachmentId: string; idempotencyKey: string } | null>(null)
+  const operationLockHeld = useRef(false)
   const controlsLocked = pending || recovery !== null
+
+  function holdOperationLock() {
+    if (operationLockHeld.current) return
+    operationLockHeld.current = true
+    onOperationLockChange?.({ token: operationLockToken, delta: 1 })
+  }
+
+  function releaseOperationLock() {
+    if (!operationLockHeld.current) return
+    operationLockHeld.current = false
+    onOperationLockChange?.({ token: operationLockToken, delta: -1 })
+  }
 
   function upload(formData: FormData) {
     if (recovery && recovery !== "upload") return
     const attempt = uploadAttempt.current ?? { formData, idempotencyKey: crypto.randomUUID() }
     uploadAttempt.current = attempt
-    onLockChange?.(true)
+    holdOperationLock()
     startTransition(async () => {
       let result
       try {
@@ -62,13 +81,13 @@ export function ExternalPursuitAttachmentsPanel({
         }
         uploadAttempt.current = null
         setRecovery(null)
-        onLockChange?.(false)
+        releaseOperationLock()
         toast.error(result.message)
         return
       }
       uploadAttempt.current = null
       setRecovery(null)
-      onLockChange?.(false)
+      releaseOperationLock()
       toast.success(result.message)
       // Parent board integration refreshes the server projection. Clearing the
       // local chooser prevents an accidental duplicate submission meanwhile.
@@ -83,7 +102,7 @@ export function ExternalPursuitAttachmentsPanel({
       ? deleteAttempt.current
       : { attachmentId, idempotencyKey: crypto.randomUUID() }
     deleteAttempt.current = attempt
-    onLockChange?.(true)
+    holdOperationLock()
     startTransition(async () => {
       let result
       try {
@@ -101,14 +120,15 @@ export function ExternalPursuitAttachmentsPanel({
         }
         deleteAttempt.current = null
         setRecovery(null)
-        onLockChange?.(false)
+        releaseOperationLock()
         toast.error(result.message)
         return
       }
       deleteAttempt.current = null
       setRecovery(null)
-      onLockChange?.(false)
+      releaseOperationLock()
       setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId))
+      onAttachmentRemoved?.(pursuitId, attachmentId)
       toast.success(result.message)
     })
   }

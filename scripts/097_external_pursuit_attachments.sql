@@ -146,6 +146,27 @@ BEGIN
   RETURN (SELECT jsonb_build_object('attachment_id',a.id,'storage_path',a.storage_path) FROM public.external_pursuit_attachments a WHERE a.id=attachment_id);
 END $$;
 
+-- Read only the minimum tombstone identity before a retry attempts to inspect
+-- a live dossier that may already have been purged by a lost final response.
+CREATE OR REPLACE FUNCTION public.external_pursuit_deletion_fulfillment_replay(
+  p_dossier_id UUID,
+  p_actor_user_id TEXT,
+  p_idempotency_key TEXT
+) RETURNS BOOLEAN
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE actor TEXT := NULLIF(BTRIM(p_actor_user_id), ''); actor_role public.app_user_role; stored_key TEXT;
+BEGIN
+  IF NULLIF(BTRIM(p_idempotency_key), '') IS NULL THEN RAISE EXCEPTION 'An idempotency key is required.'; END IF;
+  SELECT role INTO actor_role FROM public.external_pursuit_actor_context(actor);
+  IF actor_role <> 'staff' THEN RAISE EXCEPTION 'External Pursuit access denied.'; END IF;
+  SELECT fulfillment_idempotency_key INTO stored_key
+  FROM public.external_pursuit_deletion_tombstones
+  WHERE former_dossier_id=p_dossier_id;
+  IF stored_key IS NULL THEN RETURN FALSE; END IF;
+  IF stored_key <> p_idempotency_key THEN RAISE EXCEPTION 'External Pursuit deletion fulfillment idempotency conflict.'; END IF;
+  RETURN TRUE;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.delete_external_pursuit_attachment_record(
   p_dossier_id UUID,
   p_attachment_id UUID,
@@ -215,6 +236,7 @@ REVOKE ALL ON FUNCTION
   public.external_pursuit_attachments_for_actor(UUID,TEXT),
   public.external_pursuit_attachment_for_actor(UUID,UUID,TEXT),
   public.external_pursuit_attachment_upload_replay(UUID,TEXT,TEXT),
+  public.external_pursuit_deletion_fulfillment_replay(UUID,TEXT,TEXT),
   public.register_external_pursuit_attachment(UUID,TEXT,TEXT,TEXT,BIGINT,TEXT,TEXT),
   public.delete_external_pursuit_attachment_record(UUID,UUID,TEXT,TEXT),
   public.finalize_external_pursuit_attachment_deletion(UUID,UUID,TEXT,TEXT),
@@ -225,6 +247,7 @@ GRANT EXECUTE ON FUNCTION
   public.external_pursuit_attachments_for_actor(UUID,TEXT),
   public.external_pursuit_attachment_for_actor(UUID,UUID,TEXT),
   public.external_pursuit_attachment_upload_replay(UUID,TEXT,TEXT),
+  public.external_pursuit_deletion_fulfillment_replay(UUID,TEXT,TEXT),
   public.register_external_pursuit_attachment(UUID,TEXT,TEXT,TEXT,BIGINT,TEXT,TEXT),
   public.delete_external_pursuit_attachment_record(UUID,UUID,TEXT,TEXT),
   public.finalize_external_pursuit_attachment_deletion(UUID,UUID,TEXT,TEXT),

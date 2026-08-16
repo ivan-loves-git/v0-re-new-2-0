@@ -102,7 +102,8 @@ describe("External Pursuit follow-up behavior", () => {
     expect(source).toContain("updateExternalPursuitFollowUp(pursuitId, attempt.patch, attempt.idempotencyKey)")
     expect(source).toContain("disabled={controlsLocked}")
     expect(source).toContain("Retry exact save")
-    expect(source).toContain("onLockChange?.(true)")
+    expect(source).toContain("onOperationLockChange?.({ token: operationLockToken, delta: 1 })")
+    expect(source).toContain("onOperationLockChange?.({ token: operationLockToken, delta: -1 })")
     expect(source.indexOf("if (!result.success)")).toBeLessThan(source.indexOf("attemptRef.current = null"))
     expect(source).not.toContain("p_title")
     expect(source).not.toContain("p_stage")
@@ -112,8 +113,8 @@ describe("External Pursuit follow-up behavior", () => {
     const board = readFileSync(join(process.cwd(), "components/pursuits/external-pursuit-board.tsx"), "utf8")
     expect(board).toContain("if (!nextOpen && managerLocked)")
     expect(board).toContain("Finish the exact follow-up save recovery before closing this view")
-    expect(board).toContain("onLockChange={setManagerLocked}")
-    expect(board.indexOf("onLockChange={setManagerLocked}")).toBeLessThan(board.indexOf("onSaved={() => window.location.reload()}"))
+    expect(board).toContain("onOperationLockChange={handleManagerOperationLockChange}")
+    expect(board.indexOf("onOperationLockChange={handleManagerOperationLockChange}")).toBeLessThan(board.indexOf("onSaved={() => window.location.reload()}"))
   })
 
   it("rehearses 093 through 096 in order and preserves every W-106 detail field", () => {

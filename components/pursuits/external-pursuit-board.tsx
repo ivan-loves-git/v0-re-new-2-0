@@ -34,6 +34,11 @@ import {
 } from "@/lib/actions/external-pursuits"
 import type { ReNewPursuitBoardRecord } from "@/lib/actions/external-pursuit-board"
 import type { ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
+import {
+  hasExternalPursuitOperationLocks,
+  updateExternalPursuitOperationLocks,
+  type ExternalPursuitOperationLockChange,
+} from "@/lib/external-pursuit-operation-lock"
 import type {
   ExternalPursuitContactDraft,
   ExternalPursuitSubmissionSnapshot,
@@ -133,13 +138,26 @@ export function ExternalPursuitBoard({
   const [query, setQuery] = useState("")
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [managing, setManaging] = useState<ExternalPursuitBoardRecord | null>(null)
-  const [managerLocked, setManagerLocked] = useState(false)
+  const [managerOperationLocks, setManagerOperationLocks] = useState(new Map<string, number>())
+  const [managedAttachmentsByPursuit, setManagedAttachmentsByPursuit] = useState(attachmentsByPursuit)
   const [submissionSnapshot, setSubmissionSnapshot] = useState<ExternalPursuitSubmissionSnapshot | null>(null)
   const [recoveryRequired, setRecoveryRequired] = useState(false)
   const [pending, startTransition] = useTransition()
   const submissionSnapshotRef = useRef<ExternalPursuitSubmissionSnapshot | null>(null)
   const operationKeys = useRef(new Map<string, string>())
   const editorLocked = submissionSnapshot !== null
+  const managerLocked = hasExternalPursuitOperationLocks(managerOperationLocks)
+
+  function handleManagerOperationLockChange(change: ExternalPursuitOperationLockChange) {
+    setManagerOperationLocks((current) => updateExternalPursuitOperationLocks(current, change))
+  }
+
+  function handleAttachmentRemoved(pursuitId: string, attachmentId: string) {
+    setManagedAttachmentsByPursuit((current) => ({
+      ...current,
+      [pursuitId]: (current[pursuitId] ?? []).filter((attachment) => attachment.id !== attachmentId),
+    }))
+  }
 
   function replaceSubmissionSnapshot(snapshot: ExternalPursuitSubmissionSnapshot | null) {
     submissionSnapshotRef.current = snapshot
@@ -191,7 +209,7 @@ export function ExternalPursuitBoard({
   }
 
   function openManager(record: ExternalPursuitBoardRecord) {
-    setManagerLocked(false)
+    setManagerOperationLocks(new Map())
     setManaging(record)
   }
 
@@ -524,7 +542,10 @@ export function ExternalPursuitBoard({
           toast.error("Finish the exact follow-up save recovery before closing this view.")
           return
         }
-        if (!nextOpen) setManaging(null)
+        if (!nextOpen) {
+          setManaging(null)
+          setManagerOperationLocks(new Map())
+        }
       }}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
@@ -547,7 +568,7 @@ export function ExternalPursuitBoard({
                     sharedNotes: managing.sharedNotes,
                     ...(isStaff ? { staffInternalNotes: managing.staffInternalNotes ?? null } : {}),
                   }}
-                  onLockChange={setManagerLocked}
+                  onOperationLockChange={handleManagerOperationLockChange}
                   onSaved={() => window.location.reload()}
                 />
               ) : (
@@ -567,9 +588,10 @@ export function ExternalPursuitBoard({
               )}
               <ExternalPursuitAttachmentsPanel
                 pursuitId={managing.id}
-                attachments={attachmentsByPursuit[managing.id] ?? []}
+                attachments={managedAttachmentsByPursuit[managing.id] ?? []}
                 readOnly={managing.deletionStatus !== "active"}
-                onLockChange={setManagerLocked}
+                onOperationLockChange={handleManagerOperationLockChange}
+                onAttachmentRemoved={handleAttachmentRemoved}
               />
             </div>
           ) : null}
