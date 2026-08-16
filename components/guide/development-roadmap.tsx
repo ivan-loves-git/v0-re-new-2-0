@@ -26,6 +26,34 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 16, 2026",
+    version: "0.9.49",
+    title: "External acquisition work now has one controlled workspace",
+    isCompleted: true,
+    events: [
+      {
+        title: "One board keeps external and Re-New work understandable",
+        type: "feature",
+        description: "Repreneurs can manage their own external acquisition dossiers in one WAVE board, while linked Re-New journey cards remain read-only and keep their existing rules.",
+      },
+      {
+        title: "Follow-up remains an accountable shared record",
+        type: "feature",
+        description: "Owners and staff can record responsibility, due dates and shared progress; staff-only notes stay private, and WAVE does not send messages or automate follow-up.",
+      },
+      {
+        title: "Private external files stay outside opportunity documents",
+        type: "decision",
+        description: "Attachments belong only to the dossier owner and authorised staff. They remain separate from Re-New Opportunity Gates, NDA evidence and confidential deal documents.",
+      },
+      {
+        title: "External work stays out of Re-New reporting and matching",
+        type: "decision",
+        description: "External dossier data never enters matching, source records, Re-New performance indicators or exports, so the two operating models remain trustworthy.",
+      },
+    ],
+  },
+  {
+    period: "Aug 16, 2026",
     version: "0.9.48",
     title: "External acquisition work now has its own protected foundation",
     isCompleted: true,

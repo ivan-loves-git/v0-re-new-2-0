@@ -11,6 +11,14 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("groups the controlled External Pursuit workspace release", () => {
+    expect(roadmap).toContain('version: "0.9.49"')
+    expect(roadmap).toContain("One board keeps external and Re-New work understandable")
+    expect(roadmap).toContain("Follow-up remains an accountable shared record")
+    expect(roadmap).toContain("Private external files stay outside opportunity documents")
+    expect(roadmap).toContain("External work stays out of Re-New reporting and matching")
+  })
+
   it("records the protected External Pursuit foundation without claiming the workspace", () => {
     expect(roadmap).toContain('version: "0.9.48"')
     expect(roadmap).toContain("External pursuits remain separate from Re-New opportunities")
