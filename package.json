@@ -13,6 +13,8 @@
     "w098:source-preflight": "node scripts/verify-w098-source-workbook.mjs",
     "dev": "next dev",
     "lint": "pnpm data-model:check && eslint .",
+    "typecheck": "tsc --noEmit",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",

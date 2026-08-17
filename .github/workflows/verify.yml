@@ -1,0 +1,48 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://supabase.test.invalid
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      DATABASE_URL: postgresql://test:test@localhost:5432/renew_test
+      BETTER_AUTH_SECRET: test-only-auth-secret-that-is-long-enough
+      BETTER_AUTH_URL: http://localhost:3000
+      RESEND_API_KEY: test-resend-api-key
+      RESEND_FROM_EMAIL: noreply@test.invalid
+      CRON_SECRET: test-cron-secret
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Report production dependency audit
+        continue-on-error: true
+        run: pnpm audit --prod
+
+      - name: Run repository verification
+        run: pnpm verify
