@@ -35,7 +35,7 @@ type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDeal
 interface RepreneurOpportunityListProps {
   repreneur: RepreneurOpportunityProfile | null
   opportunities: RepreneurOpportunityListItem[]
-  detailHrefForOpportunity?: (opportunity: RepreneurOpportunityListItem) => string | null
+  detailHrefByOpportunityId?: Record<string, string>
   detailLabel?: string
   emptyDescription?: string
   readOnly?: boolean
@@ -257,7 +257,7 @@ function DealSection({
 export function RepreneurOpportunityList({
   repreneur,
   opportunities,
-  detailHrefForOpportunity,
+  detailHrefByOpportunityId,
   detailLabel = "View detail",
   emptyDescription,
   readOnly = false,
@@ -293,7 +293,7 @@ export function RepreneurOpportunityList({
   }
 
   const detailHref = (opportunity: RepreneurOpportunityListItem) =>
-    detailHrefForOpportunity?.(opportunity) ??
+    detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id] ??
     `/portal/deals/${opportunity.match_id ?? opportunity.opportunity_id}`
 
   return (

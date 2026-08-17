@@ -16,6 +16,7 @@ import {
   listStaffPortalPreviewOptions,
 } from "@/lib/actions/repreneur-portal-preview"
 import { readPortalCurrentPursuit } from "@/lib/data/current-pursuit"
+import { createPortalPreviewDealHrefMap, createPortalPreviewHref } from "@/lib/portal-preview-routes"
 
 
 interface StaffPortalPreviewPageProps {
@@ -24,12 +25,6 @@ interface StaffPortalPreviewPageProps {
     matchId?: string
     view?: string
   }>
-}
-
-function portalPreviewHref(repreneurId: string, matchId?: string) {
-  const params = new URLSearchParams({ repreneurId })
-  if (matchId) params.set("matchId", matchId)
-  return `/portal-preview?${params.toString()}`
 }
 
 export default async function StaffPortalPreviewPage({ searchParams }: StaffPortalPreviewPageProps) {
@@ -57,6 +52,15 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
       ]
 
   const defaultTab = params.view === "profile" ? "profile" : "deals"
+  const detailHrefByOpportunityId = selectedRepreneurId
+    ? createPortalPreviewDealHrefMap(
+        selectedRepreneurId,
+        opportunityData.opportunities.map((opportunity) => ({
+          opportunityId: opportunity.opportunity_id,
+          matchId: opportunity.match_id,
+        })),
+      )
+    : {}
   const previewJourney = selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
     ? await readPortalCurrentPursuit({
         matchId: selectedOpportunity.match_id,
@@ -106,7 +110,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
       {selectedRepreneurId && selectedMatchId && selectedOpportunity && (
         <div className="flex flex-col gap-6">
           <Button asChild variant="ghost" className="w-fit">
-            <Link href={portalPreviewHref(selectedRepreneurId)}>
+            <Link href={createPortalPreviewHref(selectedRepreneurId)}>
               <ArrowLeft data-icon="inline-start" />
               Back to preview
             </Link>
@@ -140,7 +144,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             <RepreneurOpportunityList
               repreneur={opportunityData.repreneur}
               opportunities={opportunityData.opportunities}
-              detailHrefForOpportunity={(opportunity) => portalPreviewHref(selectedRepreneurId, opportunity.match_id ?? undefined)}
+              detailHrefByOpportunityId={detailHrefByOpportunityId}
               detailLabel="Preview detail"
               readOnly
             />
@@ -149,10 +153,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             <RepreneurProfileSummary
               repreneur={profileData.repreneur}
               opportunities={opportunityData.opportunities}
-              dealsHref={portalPreviewHref(selectedRepreneurId)}
-              detailHrefForOpportunity={(opportunity) =>
-                portalPreviewHref(selectedRepreneurId, opportunity.match_id)
-              }
+              dealsHref={createPortalPreviewHref(selectedRepreneurId)}
+              detailHrefByOpportunityId={detailHrefByOpportunityId}
             />
           </TabsContent>
         </Tabs>

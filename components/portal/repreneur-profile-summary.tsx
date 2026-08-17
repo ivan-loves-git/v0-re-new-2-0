@@ -24,7 +24,7 @@ interface RepreneurProfileSummaryProps {
   repreneur: PortalRepreneurProfile | null
   opportunities: RepreneurOpportunityExposure[]
   dealsHref?: string
-  detailHrefForOpportunity?: (opportunity: RepreneurOpportunityExposure) => string
+  detailHrefByOpportunityId?: Record<string, string>
 }
 
 const SECTOR_LABELS: Record<string, string> = {
@@ -214,7 +214,7 @@ export function RepreneurProfileSummary({
   repreneur,
   opportunities,
   dealsHref = "/portal/deals",
-  detailHrefForOpportunity,
+  detailHrefByOpportunityId,
 }: RepreneurProfileSummaryProps) {
   if (!repreneur) {
     return (
@@ -234,7 +234,7 @@ export function RepreneurProfileSummary({
   const proposedDeals = opportunities.filter((opportunity) => opportunity.match_status === "proposed")
   const pursuedDeals = opportunities.filter((opportunity) => opportunity.match_status === "active_pursuit")
   const opportunityDetailHref = (opportunity: RepreneurOpportunityExposure) =>
-    detailHrefForOpportunity?.(opportunity) ?? `/portal/deals/${opportunity.match_id}`
+    detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id] ?? `/portal/deals/${opportunity.match_id}`
 
   return (
     <div className="flex flex-col gap-6">
