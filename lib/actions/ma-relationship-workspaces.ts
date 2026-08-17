@@ -154,6 +154,7 @@ async function getWorkspaceRows(officeIds: string[]) {
     affiliationsResult,
     opportunitiesResult,
     interactionsResult,
+    pursuitsResult,
   ] = await Promise.all([
     supabase
       .from("ma_contact_office_affiliations")
@@ -177,25 +178,24 @@ async function getWorkspaceRows(officeIds: string[]) {
       .in("office_id", officeIds)
       .order("occurred_at", { ascending: false })
       .order("id", { ascending: false }),
+    officeIds.length
+      ? supabase
+          .from("opportunity_matches")
+          .select(
+            "opportunity_id, opportunity:opportunities!inner(source_office_id)",
+          )
+          .eq("status", "active_pursuit")
+          .in("opportunity.source_office_id", officeIds)
+      : Promise.resolve({ data: [], error: null }),
   ])
   for (const result of [
     affiliationsResult,
     opportunitiesResult,
     interactionsResult,
+    pursuitsResult,
   ]) {
     if (result.error) throw new Error(result.error.message)
   }
-  const opportunityIds = (opportunitiesResult.data ?? []).map(
-    (opportunity) => opportunity.id,
-  )
-  const pursuitsResult = opportunityIds.length
-    ? await supabase
-        .from("opportunity_matches")
-        .select("opportunity_id")
-        .eq("status", "active_pursuit")
-        .in("opportunity_id", opportunityIds)
-    : { data: [], error: null }
-  if (pursuitsResult.error) throw new Error(pursuitsResult.error.message)
   const activePursuitIds = new Set(
     (pursuitsResult.data ?? [])
       .map((row) => row.opportunity_id)

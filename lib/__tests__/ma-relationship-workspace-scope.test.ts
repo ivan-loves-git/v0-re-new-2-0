@@ -15,7 +15,10 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
-import { getMaOfficeWorkspace } from "@/lib/actions/ma-relationship-workspaces"
+import {
+  getMaFirmWorkspace,
+  getMaOfficeWorkspace,
+} from "@/lib/actions/ma-relationship-workspaces"
 
 const officeId = "11111111-1111-4111-8111-111111111111"
 const opportunityId = "22222222-2222-4222-8222-222222222222"
@@ -27,6 +30,22 @@ function workspaceClient(opportunities: Array<Record<string, unknown>>) {
   })
   const pursuitStatusFilter = vi.fn(() => ({ in: pursuitOpportunityFilter }))
   const pursuitSelect = vi.fn(() => ({ eq: pursuitStatusFilter }))
+
+  const firmMaybeSingle = vi.fn().mockResolvedValue({
+    data: {
+      id: "firm-1",
+      name: "Atlas Advisory",
+      status: "active",
+      internal_notes: null,
+      created_at: null,
+      updated_at: null,
+      updated_by: null,
+      offices: [],
+    },
+    error: null,
+  })
+  const firmEq = vi.fn(() => ({ maybeSingle: firmMaybeSingle }))
+  const firmSelect = vi.fn(() => ({ eq: firmEq }))
 
   const affiliationsOrder = vi.fn().mockResolvedValue({ data: [], error: null })
   const affiliationsIn = vi.fn(() => ({ order: affiliationsOrder }))
@@ -68,6 +87,7 @@ function workspaceClient(opportunities: Array<Record<string, unknown>>) {
 
   const from = vi.fn((table: string) => {
     if (table === "ma_offices") return { select: officeSelect }
+    if (table === "ma_firms") return { select: firmSelect }
     if (table === "ma_contact_office_affiliations") {
       return { select: affiliationsSelect }
     }
@@ -86,7 +106,7 @@ describe("M&A workspace active-pursuit scope", () => {
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-1" } })
   })
 
-  it("asks active-pursuit status only for opportunities in the selected office workspace", async () => {
+  it("filters active pursuits through opportunities in the selected office workspace", async () => {
     const client = workspaceClient([
       {
         id: opportunityId,
@@ -103,18 +123,22 @@ describe("M&A workspace active-pursuit scope", () => {
 
     await getMaOfficeWorkspace(officeId)
 
+    expect(client.pursuitSelect).toHaveBeenCalledWith(
+      "opportunity_id, opportunity:opportunities!inner(source_office_id)",
+    )
     expect(client.pursuitOpportunityFilter).toHaveBeenCalledWith(
-      "opportunity_id",
-      [opportunityId],
+      "opportunity.source_office_id",
+      [officeId],
     )
   })
 
-  it("does not query active pursuits when the selected office has no opportunities", async () => {
+  it("does not query active pursuits when a selected firm has no office scope", async () => {
     const client = workspaceClient([])
     mocks.createAdminClient.mockReturnValue({ from: client.from })
 
-    await getMaOfficeWorkspace(officeId)
+    const workspace = await getMaFirmWorkspace("firm-1")
 
+    expect(workspace?.offices).toEqual([])
     expect(client.pursuitSelect).not.toHaveBeenCalled()
   })
 })
