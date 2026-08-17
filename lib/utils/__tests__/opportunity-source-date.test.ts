@@ -34,8 +34,14 @@ describe("opportunity source-date precision", () => {
   })
 
   it("retains day-level behavior for an exact or legacy source date", () => {
-    const now = new Date("2026-05-15T12:00:00")
-    expect(opportunityDaysOpen("2026-01-01", now, "day")).toBe(133)
-    expect(opportunityDaysOpen("2026-01-01", now, null)).toBe(133)
+    const now = new Date("2026-05-15T12:00:00.000Z")
+    expect(opportunityDaysOpen("2026-01-01", now, "day")).toBe(134)
+    expect(opportunityDaysOpen("2026-01-01", now, null)).toBe(134)
+  })
+
+  it("keeps the 89/90-day boundary stable across daylight-saving changes", () => {
+    const now = new Date("2026-04-02T12:00:00.000Z")
+    expect(opportunityDaysOpen("2026-01-03", now, "day")).toBe(89)
+    expect(opportunityDaysOpen("2026-01-02", now, "day")).toBe(90)
   })
 })

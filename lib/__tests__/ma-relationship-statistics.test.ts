@@ -73,7 +73,7 @@ describe("W-083 firm and office relationship statistics", () => {
       activeContactCount: 1,
       sourcedOpportunityCount: 2,
       openOpportunityCount: 2,
-      candidateStaleCount: 1,
+      candidateStaleCount: 2,
       latestKnownAt: "2026-01-02",
     })
     expect(statistics.byOfficeId.get("lyon")).toMatchObject({
@@ -89,7 +89,7 @@ describe("W-083 firm and office relationship statistics", () => {
       activeContactCount: 1,
       sourcedOpportunityCount: 3,
       openOpportunityCount: 2,
-      candidateStaleCount: 1,
+      candidateStaleCount: 2,
       latestKnownAt: "2026-01-04",
       latestKnownAtPrecision: "month",
     })

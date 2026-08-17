@@ -30,11 +30,19 @@ export function opportunityDaysOpen(
 ) {
   const date = parseOpportunityDate(value, precision)
   if (!date) return null
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const start = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+  )
+  const today = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  )
   return Math.max(
     0,
-    Math.floor((today.getTime() - start.getTime()) / 86_400_000),
+    Math.floor((today - start) / 86_400_000),
   )
 }
 
