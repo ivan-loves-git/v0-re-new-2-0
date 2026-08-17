@@ -363,6 +363,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], automaticMatching: { complete: false, missing: [] } }
 
   const supabase = createAdminClient()
+  const automaticMatching = automaticMatchingThesisCompleteness(repreneur)
   const [matchesResult, opportunitiesResult] = await Promise.all([
     supabase
       .from("opportunity_matches")
@@ -401,7 +402,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       .eq("repreneur_id", repreneur.id)
       .in("status", VISIBLE_MATCH_STATUSES)
       .order("updated_at", { ascending: false }),
-    supabase
+    automaticMatching.complete && supabase
       .from("opportunities")
       .select(`
         id,
@@ -427,15 +428,17 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   ])
 
   if (matchesResult.error) throw new Error(matchesResult.error.message)
-  if (opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
+  if (opportunitiesResult && opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
 
   const matchedOpportunities = (matchesResult.data ?? [])
     .map(normalizeExposure)
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
-  const allOpportunities = opportunitiesResult.data ?? []
+  const allOpportunities = opportunitiesResult ? opportunitiesResult.data ?? [] : []
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
-    allOpportunities.map((opportunity) => opportunity.id),
+    automaticMatching.complete
+      ? allOpportunities.map((opportunity) => opportunity.id)
+      : matchedOpportunities.map((opportunity) => opportunity.opportunity_id),
   )
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
     supabase,
@@ -455,7 +458,6 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       memo_availability: undefined,
     }))
     .map(withStaffRecommendation)
-  const automaticMatching = automaticMatchingThesisCompleteness(repreneur)
   const recommendedOpportunityIds = new Set(staffRecommended.map((opportunity) => opportunity.opportunity_id))
   const dealFlow = automaticMatching.complete ? sortRepreneurDealFlow(
     allOpportunities

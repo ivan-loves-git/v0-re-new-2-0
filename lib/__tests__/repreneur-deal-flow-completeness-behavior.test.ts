@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   responses: new Map<string, Array<{ data: unknown; error: null }>>(),
+  from: vi.fn(),
   access: vi.fn(async () => ({
     user: { id: "qa-auth-user", email: "qa@example.invalid" },
     repreneurId: "repreneur-qa",
@@ -18,7 +19,7 @@ vi.mock("@/lib/data/locked-opportunity-interest-state", () => ({
 vi.mock("@/lib/telemetry/m2-repreneur", () => ({ queueM2RepreneurEvent: mocks.queueEvent }))
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
-    from: (table: string) => {
+    from: mocks.from.mockImplementation((table: string) => {
       const response = mocks.responses.get(table)?.shift()
       if (!response) throw new Error(`Missing ${table} test response`)
       const builder: Record<string, unknown> = {}
@@ -29,7 +30,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
         Promise.resolve(response).then(resolve, reject)
       return builder
-    },
+    }),
   }),
 }))
 
@@ -53,6 +54,12 @@ const incompleteProfile = {
   target_location: [],
   target_acquisition_size: null,
   investment_capacity: null,
+}
+
+const completeProfile = {
+  ...incompleteProfile,
+  who_score: 72,
+  scoring_flags: ["service"],
 }
 
 const opportunity = {
@@ -100,14 +107,13 @@ describe("incomplete-thesis portal behavior", () => {
     mocks.responses = new Map()
   })
 
-  it("keeps staff selections while returning no automatic deal flow", async () => {
+  it("keeps staff selections while returning no automatic deal flow without loading or scoring the global inventory", async () => {
     setResponses({
       repreneurs: [{ data: incompleteProfile, error: null }],
       opportunity_matches: [
         { data: [staffMatch], error: null },
         { data: [], error: null },
       ],
-      opportunities: [{ data: [opportunity], error: null }],
     })
 
     const result = await listMyRepreneurDealFlow("relevance")
@@ -116,6 +122,26 @@ describe("incomplete-thesis portal behavior", () => {
     expect(result.staffRecommended).toHaveLength(1)
     expect(result.staffRecommended[0]?.opportunity_id).toBe("opportunity-staff")
     expect(result.dealFlow).toEqual([])
+    expect(mocks.from.mock.calls.map(([table]) => table)).not.toContain("opportunities")
+  })
+
+  it("keeps automatic matching available for a complete thesis", async () => {
+    setResponses({
+      repreneurs: [{ data: completeProfile, error: null }],
+      opportunity_matches: [
+        { data: [staffMatch], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ],
+      opportunities: [{ data: [opportunity], error: null }],
+    })
+
+    const result = await listMyRepreneurDealFlow("relevance")
+
+    expect(result.automaticMatching.complete).toBe(true)
+    expect(result.staffRecommended.map((item) => item.opportunity_id)).toEqual(["opportunity-staff"])
+    expect(result.dealFlow.map((item) => item.opportunity_id)).toEqual(["opportunity-auto"])
+    expect(mocks.from.mock.calls.map(([table]) => table)).toContain("opportunities")
   })
 
   it("blocks a direct unassigned deal lookup", async () => {
