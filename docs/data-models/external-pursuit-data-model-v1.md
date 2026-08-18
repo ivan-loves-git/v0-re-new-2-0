@@ -4,7 +4,7 @@
 
 | Item | Value |
 | --- | --- |
-| Status | Approved implementation contract through W-110 |
+| Status | Approved implementation contract through W-119 |
 | Scope | A repreneur-owned record of work outside WAVE opportunities |
 | Implementation owner | Dev team |
 | Visibility | The owner repreneur and authorized staff only; all other repreneurs and unassigned users are denied |
@@ -24,6 +24,14 @@ W-109 adds the staff-only conversion into a linked canonical opportunity; W-110
 uses representative synthetic dossiers; and W-111 runs the final M2.1
 validation suite. No historical import, legacy
 backfill, reviewer loop or M2 validation is a dependency of this contract.
+
+W-119 replaces the board's per-dossier attachment metadata reads with one
+role-safe batch projection. It retains the W-108 owner/staff/deletion access
+rule for every requested dossier and fails the entire read closed if any one
+requested dossier is unauthorized. It returns only the existing safe metadata,
+per-dossier chronological order and uploader labels; it never returns a storage
+path, bytes, raw uploader identity or staff note, and it changes no storage,
+download, retention or canonical-domain rule.
 
 W-106 adds owner route `/portal/pursuits` and staff route
 `/opportunities/pursuits`. They present one provenance-labelled board: External
@@ -105,6 +113,7 @@ canonical gate, source, match, document or disclosure rule.
 | W-109 | Staff-only conversion to a linked canonical opportunity | Explicit conversion action test; no generic board mutation or Gate shortcut |
 | W-110 | Dedicated external capacity, freshness and availability aggregates; explicit exclusion from Re-New KPI, export and analytics | Aggregate and exclusion tests using synthetic fixtures |
 | W-111 | Final M2.1 validation and owner notice | Full role, mobile, privacy and release suite |
+| W-119 | One fail-closed, role-safe attachment metadata map for a board's already-authorized dossiers | Batch action test, owner/staff/other-owner/unassigned SQL rehearsal and production browser QA |
 
 ## Tables and visibility
 
@@ -222,7 +231,10 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    other repreneurs are denied. Every register/remove writes immutable actor/time
    audit evidence. The role-safe list includes declared type, upload date and a
    safe uploader label (`You`, `Re-New staff` or `Dossier owner`); raw staff user
-   identifiers are never sent to an owner.
+   identifiers are never sent to an owner. W-119's board metadata map accepts
+   only already-projected dossier IDs, validates every ID with the same rule
+   before returning any row, and preserves this exact metadata-only projection
+   and per-dossier chronological order.
 18. Staff fulfillment first removes every private object. Any storage failure
    stops fulfillment before metadata/content purge and tombstone creation. Once
    objects are gone, metadata is removed and W-105's existing fulfillment

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 
 const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8")
 const migration = source("scripts/097_external_pursuit_attachments.sql")
+const batchMigration = source("scripts/100_external_pursuit_attachment_map.sql")
 const rehearsal = source("scripts/rehearse-external-pursuit-attachments.sql")
 const config = source("next.config.mjs")
 const panel = source("components/pursuits/external-pursuit-attachments-panel.tsx")
@@ -40,7 +41,19 @@ describe("W-108 private attachment foundation", () => {
     expect(rehearsal).toContain("w108_exact_tombstone_replay_failed")
     expect(rehearsal).toContain("w108_mismatched_tombstone_replay_was_allowed")
     expect(rehearsal).toContain("w108_bucket_controls_invalid")
+    expect(rehearsal).toContain("w119_mixed_authorization_was_allowed")
+    expect(rehearsal).toContain("w119_unassigned_was_allowed")
     expect(rehearsal).toContain("ROLLBACK")
+  })
+
+  it("keeps the board attachment batch as one privileged metadata-only projection", () => {
+    expect(batchMigration).toContain("SECURITY DEFINER SET search_path = ''")
+    expect(batchMigration).toContain("public.assert_external_pursuit_access")
+    expect(batchMigration).toContain("SELECT DISTINCT requested.id")
+    expect(batchMigration).toContain("REVOKE ALL ON FUNCTION public.external_pursuit_attachment_map_for_actor(UUID[],TEXT)")
+    expect(batchMigration).toContain("TO service_role")
+    expect(batchMigration).not.toContain("storage_path")
+    expect(batchMigration).not.toContain("staff_internal_notes")
   })
 
   it("exposes composed lock and parent attachment-map integration contracts", () => {

@@ -202,16 +202,29 @@ export async function getExternalPursuitAttachmentMap(
 ): Promise<Record<string, ExternalPursuitAttachment[]>> {
   if (pursuitIds.length > 200) throw new Error("Too many External Pursuits requested.")
   const access = await actor()
-  const supabase = createAdminClient()
-  const entries = await Promise.all([...new Set(pursuitIds)].map(async (pursuitId) => {
-    const { data, error } = await supabase.rpc("external_pursuit_attachments_for_actor", {
-      p_dossier_id: pursuitId,
-      p_actor_user_id: access.user.id,
+  const dossierIds = [...new Set(pursuitIds)]
+  const attachmentsByPursuit = Object.fromEntries(
+    dossierIds.map((pursuitId) => [pursuitId, [] as ExternalPursuitAttachment[]]),
+  )
+  if (!dossierIds.length) return attachmentsByPursuit
+
+  const { data, error } = await createAdminClient().rpc("external_pursuit_attachment_map_for_actor", {
+    p_dossier_ids: dossierIds,
+    p_actor_user_id: access.user.id,
+  })
+  if (error) throw new Error(safeMessage(error, "Could not load attachments."))
+
+  for (const row of (data ?? []) as Array<ExternalPursuitAttachment & { external_pursuit_id: string }>) {
+    attachmentsByPursuit[row.external_pursuit_id]?.push({
+      id: row.id,
+      original_filename: row.original_filename,
+      content_type: row.content_type,
+      byte_size: row.byte_size,
+      uploader_label: row.uploader_label,
+      created_at: row.created_at,
     })
-    if (error) throw new Error(safeMessage(error, "Could not load attachments."))
-    return [pursuitId, (data ?? []) as ExternalPursuitAttachment[]] as const
-  }))
-  return Object.fromEntries(entries)
+  }
+  return attachmentsByPursuit
 }
 
 export async function uploadExternalPursuitAttachment(
