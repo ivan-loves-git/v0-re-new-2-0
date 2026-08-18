@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
 const componentPath =
-  `${process.cwd()}/components/opportunities/opportunity-form.tsx`
+  `${process.cwd()}/components/opportunities/opportunity-source-context.tsx`
 
 function contactDialogSource() {
   const component = readFileSync(componentPath, "utf8")
@@ -11,7 +11,7 @@ function contactDialogSource() {
   return component.slice(dialogStart)
 }
 
-describe("OpportunityForm office contact mode", () => {
+describe("OpportunitySourceContext office contact mode", () => {
   it("makes existing-contact affiliation and new-person creation mutually exclusive", () => {
     const dialog = contactDialogSource()
     const existingModeStart = dialog.indexOf('{contactMode === "existing" ? (')

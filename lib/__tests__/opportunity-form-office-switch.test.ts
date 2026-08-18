@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 describe("OpportunityForm office switching", () => {
   it("updates the submitted office and clears stale contacts when staff switch offices", () => {
     const component = readFileSync(
-      `${process.cwd()}/components/opportunities/opportunity-form.tsx`,
+      `${process.cwd()}/components/opportunities/opportunity-source-context.tsx`,
       "utf8",
     )
     const handlerStart = component.indexOf("function chooseOffice")
@@ -25,7 +25,7 @@ describe("OpportunityForm office switching", () => {
 
   it("uses the committed inline source result to select the new office context", () => {
     const component = readFileSync(
-      `${process.cwd()}/components/opportunities/opportunity-form.tsx`,
+      `${process.cwd()}/components/opportunities/opportunity-source-context.tsx`,
       "utf8",
     )
     const handlerStart = component.indexOf("async function handleCreateOfficeContext")

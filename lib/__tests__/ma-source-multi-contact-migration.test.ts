@@ -26,7 +26,7 @@ describe("canonical multi-contact M&A intake", () => {
 
   it("uses the office and affiliation RPCs for new staff source context", () => {
     const actions = source("lib/actions/opportunity-intake.ts")
-    const form = source("components/opportunities/opportunity-form.tsx")
+    const form = source("components/opportunities/opportunity-source-context.tsx")
 
     expect(actions).toContain("create_opportunity_with_office_context")
     expect(actions).toContain("save_opportunity_office_context")
