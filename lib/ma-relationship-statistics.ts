@@ -27,9 +27,11 @@ export interface MaRelationshipStatisticOpportunity {
 
 export interface MaRelationshipOfficeStatistics {
   activeContactCount: number
+  historicalAffiliationCount: number
   sourcedOpportunityCount: number
   openOpportunityCount: number
   candidateStaleCount: number
+  closedOpportunityCount: number
   latestKnownAt: string | null
   latestKnownAtPrecision: "day" | "month" | null
 }
@@ -64,9 +66,11 @@ function laterDate(
 function emptyOfficeStatistics(): MaRelationshipOfficeStatistics {
   return {
     activeContactCount: 0,
+    historicalAffiliationCount: 0,
     sourcedOpportunityCount: 0,
     openOpportunityCount: 0,
     candidateStaleCount: 0,
+    closedOpportunityCount: 0,
     latestKnownAt: null,
     latestKnownAtPrecision: null,
   }
@@ -77,7 +81,7 @@ function emptyOfficeStatistics(): MaRelationshipOfficeStatistics {
  * contact counts deduplicate people who have active affiliations at multiple
  * offices in the same firm; opportunity totals remain office-source based.
  */
-export function buildMaRelationshipStatistics(
+export function buildMaRelationshipIndicators(
   offices: MaRelationshipStatisticOffice[],
   affiliations: MaRelationshipStatisticAffiliation[],
   opportunities: MaRelationshipStatisticOpportunity[],
@@ -100,6 +104,8 @@ export function buildMaRelationshipStatistics(
       affiliation.endedAt !== null ||
       affiliation.contactStatus !== "active"
     ) {
+      const statistics = byOfficeId.get(affiliation.officeId)
+      if (statistics) statistics.historicalAffiliationCount += 1
       continue
     }
     const officeContacts =
@@ -123,7 +129,10 @@ export function buildMaRelationshipStatistics(
     if (!opportunity.officeId) continue
     const statistics = byOfficeId.get(opportunity.officeId)
     if (!statistics) continue
-    const latestKnownAt = laterDate(statistics.latestKnownAt, opportunity.dateAdded)
+    const latestKnownAt = laterDate(
+      statistics.latestKnownAt,
+      opportunity.dateAdded,
+    )
     if (latestKnownAt !== statistics.latestKnownAt) {
       statistics.latestKnownAt = latestKnownAt
       statistics.latestKnownAtPrecision = opportunity.dateAddedPrecision ?? null
@@ -135,6 +144,9 @@ export function buildMaRelationshipStatistics(
     }
     if (isCandidateStaleOpportunity(opportunity, activePursuits, now)) {
       statistics.candidateStaleCount += 1
+    }
+    if (opportunity.status === "closed") {
+      statistics.closedOpportunityCount += 1
     }
   }
 
@@ -152,13 +164,18 @@ export function buildMaRelationshipStatistics(
       officeStatistics.sourcedOpportunityCount
     firmStatistics.openOpportunityCount += officeStatistics.openOpportunityCount
     firmStatistics.candidateStaleCount += officeStatistics.candidateStaleCount
+    firmStatistics.historicalAffiliationCount +=
+      officeStatistics.historicalAffiliationCount
+    firmStatistics.closedOpportunityCount +=
+      officeStatistics.closedOpportunityCount
     const latestKnownAt = laterDate(
       firmStatistics.latestKnownAt,
       officeStatistics.latestKnownAt,
     )
     if (latestKnownAt !== firmStatistics.latestKnownAt) {
       firmStatistics.latestKnownAt = latestKnownAt
-      firmStatistics.latestKnownAtPrecision = officeStatistics.latestKnownAtPrecision
+      firmStatistics.latestKnownAtPrecision =
+        officeStatistics.latestKnownAtPrecision
     }
     byFirmId.set(office.firmId, firmStatistics)
   }
@@ -169,3 +186,6 @@ export function buildMaRelationshipStatistics(
 
   return { byOfficeId, byFirmId }
 }
+
+/** @deprecated Use the Relationship Indicators interface above. */
+export const buildMaRelationshipStatistics = buildMaRelationshipIndicators

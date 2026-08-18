@@ -17,6 +17,7 @@ function source(relativePath: string) {
 describe("W-066 staff relationship workspace", () => {
   const migration = source("scripts/081_ma_relationship_workspace.sql")
   const actions = source("lib/actions/ma-relationships.ts")
+  const ledger = source("lib/data/ma-relationship-ledger.ts")
   const workspace = source(
     "components/opportunities/ma-relationship-workspace.tsx",
   )
@@ -233,8 +234,8 @@ describe("W-066 staff relationship workspace", () => {
   })
 
   it("keeps labels tied to the canonical ledger and does not treat manual email as sent", () => {
-    expect(actions).toContain("provider_idempotency_key")
-    expect(actions).toContain("activityProvenance")
+    expect(ledger).toContain("provider_idempotency_key")
+    expect(ledger).toContain("activityProvenance")
     expect(workspace).toContain("Add activity")
     expect(workspace).toContain("Manual")
     expect(workspace).toContain("System-recorded")

@@ -6,6 +6,7 @@ const source = (path: string) => readFileSync(`${root}/${path}`, "utf8")
 
 describe("W-086/W-087 relationship workspaces", () => {
   const actions = source("lib/actions/ma-relationship-workspaces.ts")
+  const ledger = source("lib/data/ma-relationship-ledger.ts")
   const freshnessPolicy = source("lib/opportunity-freshness-policy.ts")
   const provenance = source("lib/ma-relationship-activity-provenance.ts")
   const detail = source(
@@ -25,9 +26,9 @@ describe("W-086/W-087 relationship workspaces", () => {
     expect(actions).toContain("await requireStaffAccess()")
     expect(actions).toContain('from("ma_offices")')
     expect(actions).toContain('from("ma_firms")')
-    expect(actions).toContain('from("ma_contact_office_affiliations")')
-    expect(actions).toContain('from("ma_interactions")')
-    expect(actions).toContain('in("source_office_id", officeIds)')
+    expect(ledger).toContain('from("ma_contact_office_affiliations")')
+    expect(ledger).toContain('from("ma_interactions")')
+    expect(ledger).toContain('in("source_office_id", officeIds)')
     expect(actions).not.toContain('from("ma_sources")')
     expect(officePage).toContain("getMaOfficeWorkspace")
     expect(firmPage).toContain("getMaFirmWorkspace")
@@ -45,12 +46,12 @@ describe("W-086/W-087 relationship workspaces", () => {
 
   it("reuses the existing candidate-stale rule while displaying open as active or paused", () => {
     expect(actions).toContain("isCandidateStaleOpportunity")
-    expect(actions).toContain("isOpenRelationshipOpportunity")
+    expect(actions).toContain("buildMaRelationshipIndicators")
     expect(freshnessPolicy).toContain('"draft",')
     expect(freshnessPolicy).toContain('"active",')
     expect(freshnessPolicy).toContain('"paused",')
     expect(freshnessPolicy).toContain("STALE_OPPORTUNITY_DAYS = 90")
-    expect(actions).toContain('eq("status", "active_pursuit")')
+    expect(ledger).toContain('eq("status", "active_pursuit")')
     expect(actions).toContain("latestKnownOpportunityDate")
     expect(actions).toContain("updated_by")
     expect(detail).toContain("Actor ${updatedBy}")
@@ -69,14 +70,16 @@ describe("W-086/W-087 relationship workspaces", () => {
   })
 
   it("shows office contact emails read-only without inventing an edit workflow", () => {
-    expect(actions).toContain("contact:ma_contacts(id, display_name, email, status)")
-    expect(detail).toContain("Email: {contact.email || \"Email not recorded\"}")
+    expect(ledger).toContain(
+      "contact:ma_contacts(id, display_name, email, status",
+    )
+    expect(detail).toContain('Email: {contact.email || "Email not recorded"}')
     expect(detail).toContain("includeHistorical ?")
     expect(detail).not.toContain("Edit contact")
   })
 
   it("carries the W-085 evidence boundary into both workspace activity views", () => {
-    expect(actions).toContain("provider_idempotency_key")
+    expect(ledger).toContain("provider_idempotency_key")
     expect(actions).toContain("activityProvenance")
     expect(detail).toContain("hasConfirmedProviderDelivery")
     expect(detail).toContain("System-recorded")

@@ -130,6 +130,7 @@ describe("W-083 firm and office relationship statistics", () => {
 
   it("projects canonical statuses and keeps expansion separate from detail navigation", () => {
     const actions = source("lib/actions/ma-relationships.ts")
+    const ledger = source("lib/data/ma-relationship-ledger.ts")
     const workspace = source(
       "components/opportunities/ma-relationship-workspace.tsx",
     )
@@ -137,7 +138,8 @@ describe("W-083 firm and office relationship statistics", () => {
     expect(actions).toContain(
       'select("id, name, status, firm:ma_firms(id, name, status)")',
     )
-    expect(actions).toContain('eq("status", "active_pursuit")')
+    expect(actions).toContain("readMaRelationshipLedger")
+    expect(ledger).toContain('eq("status", "active_pursuit")')
     expect(workspace).toContain("Open firm")
     expect(workspace).toContain("Open office")
     expect(workspace).toContain("Show offices")

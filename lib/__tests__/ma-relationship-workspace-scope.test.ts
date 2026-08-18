@@ -58,13 +58,15 @@ function workspaceClient(opportunities: Array<Record<string, unknown>>) {
   const opportunitiesIn = vi.fn(() => ({ order: opportunitiesOrder }))
   const opportunitiesSelect = vi.fn(() => ({ in: opportunitiesIn }))
 
-  const interactionsSecondOrder = vi.fn().mockResolvedValue({
+  const interactionsIn = vi.fn().mockResolvedValue({
     data: [],
     error: null,
   })
-  const interactionsFirstOrder = vi.fn(() => ({ order: interactionsSecondOrder }))
-  const interactionsIn = vi.fn(() => ({ order: interactionsFirstOrder }))
-  const interactionsSelect = vi.fn(() => ({ in: interactionsIn }))
+  const interactionsSecondOrder = vi.fn(() => ({ in: interactionsIn }))
+  const interactionsFirstOrder = vi.fn(() => ({
+    order: interactionsSecondOrder,
+  }))
+  const interactionsSelect = vi.fn(() => ({ order: interactionsFirstOrder }))
 
   const officeMaybeSingle = vi.fn().mockResolvedValue({
     data: {

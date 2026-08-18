@@ -2,16 +2,13 @@
 
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
+import type { MaRelationshipActivityProvenance } from "@/lib/ma-relationship-activity-provenance"
 import {
-  activityProvenance,
-  type MaRelationshipActivityProvenance,
-} from "@/lib/ma-relationship-activity-provenance"
-import {
-  isCandidateStaleOpportunity,
-  isClosedOpportunity,
-  isCountedSourcedOpportunity,
-  isOpenRelationshipOpportunity,
-} from "@/lib/opportunity-freshness-policy"
+  compareMaRelationshipActivityDescending,
+  readMaRelationshipLedger,
+} from "@/lib/data/ma-relationship-ledger"
+import { isCandidateStaleOpportunity } from "@/lib/opportunity-freshness-policy"
+import { buildMaRelationshipIndicators } from "@/lib/ma-relationship-statistics"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { OpportunityStatus } from "@/lib/types/opportunity"
 
@@ -107,181 +104,116 @@ export interface MaFirmWorkspace {
   indicators: MaWorkspaceIndicators
 }
 
-function opportunityLabel(row: {
-  reference: string
-  public_title: string | null
-  activity: string | null
-}) {
-  return [row.reference, row.public_title ?? row.activity]
-    .filter(Boolean)
-    .join(" · ")
-}
-
-function buildIndicators(
-  contacts: MaWorkspaceContact[],
-  opportunities: MaWorkspaceOpportunity[],
-): MaWorkspaceIndicators {
-  const latestOpportunity = opportunities
-    .filter((opportunity) => Boolean(opportunity.dateAdded))
-    .sort((left, right) =>
-      (right.dateAdded ?? "").localeCompare(left.dateAdded ?? ""),
-    )[0]
+function projectIndicators(statistics: {
+  activeContactCount: number
+  historicalAffiliationCount: number
+  sourcedOpportunityCount: number
+  openOpportunityCount: number
+  candidateStaleCount: number
+  closedOpportunityCount: number
+  latestKnownAt: string | null
+  latestKnownAtPrecision: "day" | "month" | null
+}): MaWorkspaceIndicators {
   return {
-    activeContacts: contacts.filter((contact) => contact.isActive).length,
-    historicalAffiliations: contacts.filter((contact) => !contact.isActive)
-      .length,
-    opportunities: opportunities.filter((opportunity) =>
-      isCountedSourcedOpportunity(opportunity.status),
-    ).length,
-    openOpportunities: opportunities.filter((opportunity) =>
-      isOpenRelationshipOpportunity(opportunity.status),
-    ).length,
-    staleOpportunities: opportunities.filter(
-      (opportunity) => opportunity.isCandidateStale,
-    ).length,
-    closedOpportunities: opportunities.filter((opportunity) =>
-      isClosedOpportunity(opportunity.status),
-    ).length,
-    latestKnownOpportunityDate: latestOpportunity?.dateAdded ?? null,
-    latestKnownOpportunityDatePrecision:
-      latestOpportunity?.dateAddedPrecision ?? null,
+    activeContacts: statistics.activeContactCount,
+    historicalAffiliations: statistics.historicalAffiliationCount,
+    opportunities: statistics.sourcedOpportunityCount,
+    openOpportunities: statistics.openOpportunityCount,
+    staleOpportunities: statistics.candidateStaleCount,
+    closedOpportunities: statistics.closedOpportunityCount,
+    latestKnownOpportunityDate: statistics.latestKnownAt,
+    latestKnownOpportunityDatePrecision: statistics.latestKnownAtPrecision,
   }
 }
 
-async function getWorkspaceRows(officeIds: string[]) {
-  const supabase = createAdminClient()
-  const [
-    affiliationsResult,
-    opportunitiesResult,
-    interactionsResult,
-    pursuitsResult,
-  ] = await Promise.all([
-    supabase
-      .from("ma_contact_office_affiliations")
-      .select(
-        "id, office_id, job_title, is_active, ended_at, contact:ma_contacts(id, display_name, email, status)",
-      )
-      .in("office_id", officeIds)
-      .order("is_active", { ascending: false }),
-    supabase
-      .from("opportunities")
-      .select(
-        "id, reference, public_title, activity, status, date_added, date_added_precision, source_office_id",
-      )
-      .in("source_office_id", officeIds)
-      .order("date_added", { ascending: false, nullsFirst: false }),
-    supabase
-      .from("ma_interactions")
-      .select(
-        "id, office_id, opportunity_id, channel, title, occurred_at, delivery_status, provider_idempotency_key, provider_message_id, delivery_finalized_at, sent_at, opportunity:opportunities(reference, public_title, activity)",
-      )
-      .in("office_id", officeIds)
-      .order("occurred_at", { ascending: false })
-      .order("id", { ascending: false }),
-    officeIds.length
-      ? supabase
-          .from("opportunity_matches")
-          .select(
-            "opportunity_id, opportunity:opportunities!inner(source_office_id)",
-          )
-          .eq("status", "active_pursuit")
-          .in("opportunity.source_office_id", officeIds)
-      : Promise.resolve({ data: [], error: null }),
-  ])
-  for (const result of [
-    affiliationsResult,
-    opportunitiesResult,
-    interactionsResult,
-    pursuitsResult,
-  ]) {
-    if (result.error) throw new Error(result.error.message)
-  }
-  const activePursuitIds = new Set(
-    (pursuitsResult.data ?? [])
-      .map((row) => row.opportunity_id)
-      .filter((id): id is string => Boolean(id)),
-  )
+async function getWorkspaceRows(
+  offices: Array<{ id: string; firmId: string | null }>,
+) {
   const now = new Date()
+  const ledger = await readMaRelationshipLedger({
+    purpose: "detail",
+    officeIds: offices.map((office) => office.id),
+  })
+  const indicators = buildMaRelationshipIndicators(
+    offices,
+    [...ledger.affiliationsByOffice.values()].flat().map((affiliation) => ({
+      officeId: affiliation.officeId,
+      contactId: affiliation.contactId,
+      isActive: affiliation.isActive,
+      endedAt: affiliation.endedAt,
+      contactStatus: affiliation.contactStatus,
+    })),
+    [...ledger.opportunitiesByOffice.values()].flat().map((opportunity) => ({
+      id: opportunity.id,
+      officeId: opportunity.officeId,
+      status: opportunity.status,
+      dateAdded: opportunity.dateAdded,
+      dateAddedPrecision: opportunity.dateAddedPrecision,
+    })),
+    ledger.activePursuitOpportunityIds,
+  )
   const contactsByOffice = new Map<string, MaWorkspaceContact[]>()
-  for (const row of affiliationsResult.data ?? []) {
-    const contact = one(
-      row.contact as Relation<{
-        id: string
-        display_name: string | null
-        email: string | null
-        status: string
-      }>,
-    )
-    if (!contact) continue
-    const entries = contactsByOffice.get(row.office_id) ?? []
+  for (const row of [...ledger.affiliationsByOffice.values()].flat()) {
+    const entries = contactsByOffice.get(row.officeId) ?? []
     entries.push({
-      id: contact.id,
+      id: row.contactId,
       affiliationId: row.id,
-      name: contact.display_name || contact.email || "Unnamed contact",
-      email: contact.email,
-      jobTitle: row.job_title,
-      isActive: row.is_active && !row.ended_at && contact.status === "active",
-      endedAt: row.ended_at,
+      name: row.contactLabel,
+      email: row.contactEmail,
+      jobTitle: row.jobTitle,
+      isActive: row.isActive && !row.endedAt && row.contactStatus === "active",
+      endedAt: row.endedAt,
     })
-    contactsByOffice.set(row.office_id, entries)
+    contactsByOffice.set(row.officeId, entries)
   }
   const opportunitiesByOffice = new Map<string, MaWorkspaceOpportunity[]>()
-  for (const row of opportunitiesResult.data ?? []) {
-    if (!row.source_office_id) continue
-    const entries = opportunitiesByOffice.get(row.source_office_id) ?? []
+  for (const row of [...ledger.opportunitiesByOffice.values()].flat()) {
+    const entries = opportunitiesByOffice.get(row.officeId) ?? []
     entries.push({
       id: row.id,
       reference: row.reference,
-      label: opportunityLabel(row),
-      status: row.status as OpportunityStatus,
-      dateAdded: row.date_added,
-      dateAddedPrecision: row.date_added_precision,
+      label: row.label,
+      status: row.status,
+      dateAdded: row.dateAdded,
+      dateAddedPrecision: row.dateAddedPrecision,
       isCandidateStale: isCandidateStaleOpportunity(
         {
           id: row.id,
-          status: row.status as OpportunityStatus,
-          dateAdded: row.date_added,
-          dateAddedPrecision: row.date_added_precision,
+          status: row.status,
+          dateAdded: row.dateAdded,
+          dateAddedPrecision: row.dateAddedPrecision,
         },
-        activePursuitIds,
+        ledger.activePursuitOpportunityIds,
         now,
       ),
     })
-    opportunitiesByOffice.set(row.source_office_id, entries)
+    opportunitiesByOffice.set(row.officeId, entries)
   }
   const activityByOffice = new Map<string, MaWorkspaceActivity[]>()
-  for (const row of interactionsResult.data ?? []) {
-    const opportunity = one(
-      row.opportunity as Relation<{
-        reference: string
-        public_title: string | null
-        activity: string | null
-      }>,
-    )
-    const entries = activityByOffice.get(row.office_id) ?? []
+  for (const row of [...ledger.activitiesByOffice.values()].flat()) {
+    const entries = activityByOffice.get(row.officeId) ?? []
     entries.push({
       id: row.id,
       channel: row.channel,
       title: row.title,
-      occurredAt: row.occurred_at,
-      activityProvenance: activityProvenance({
-        deliveryStatus: row.delivery_status,
-        providerIdempotencyKey: row.provider_idempotency_key,
-        providerMessageId: row.provider_message_id,
-        deliveryFinalizedAt: row.delivery_finalized_at,
-        sentAt: row.sent_at,
-      }),
-      deliveryStatus: row.delivery_status,
-      providerIdempotencyKey: row.provider_idempotency_key,
-      providerMessageId: row.provider_message_id,
-      deliveryFinalizedAt: row.delivery_finalized_at,
-      sentAt: row.sent_at,
-      opportunityId: row.opportunity_id,
-      opportunityLabel: opportunity ? opportunityLabel(opportunity) : null,
+      occurredAt: row.occurredAt,
+      activityProvenance: row.activityProvenance,
+      deliveryStatus: row.deliveryStatus,
+      providerIdempotencyKey: row.providerIdempotencyKey,
+      providerMessageId: row.providerMessageId,
+      deliveryFinalizedAt: row.deliveryFinalizedAt,
+      sentAt: row.sentAt,
+      opportunityId: row.opportunityId,
+      opportunityLabel: row.opportunityLabel,
     })
-    activityByOffice.set(row.office_id, entries)
+    activityByOffice.set(row.officeId, entries)
   }
-  return { contactsByOffice, opportunitiesByOffice, activityByOffice }
+  return {
+    contactsByOffice,
+    opportunitiesByOffice,
+    activityByOffice,
+    indicators,
+  }
 }
 
 export async function getMaOfficeWorkspace(
@@ -300,8 +232,12 @@ export async function getMaOfficeWorkspace(
   if (!data) return null
   const firm = one(data.firm as Relation<{ id: string; name: string }>)
   if (!firm) return null
-  const { contactsByOffice, opportunitiesByOffice, activityByOffice } =
-    await getWorkspaceRows([data.id])
+  const {
+    contactsByOffice,
+    opportunitiesByOffice,
+    activityByOffice,
+    indicators,
+  } = await getWorkspaceRows([{ id: data.id, firmId: firm.id }])
   const contacts = contactsByOffice.get(data.id) ?? []
   const opportunities = opportunitiesByOffice.get(data.id) ?? []
   const activity = activityByOffice.get(data.id) ?? []
@@ -320,7 +256,18 @@ export async function getMaOfficeWorkspace(
     contacts,
     opportunities,
     activity,
-    indicators: buildIndicators(contacts, opportunities),
+    indicators: projectIndicators(
+      indicators.byOfficeId.get(data.id) ?? {
+        activeContactCount: 0,
+        historicalAffiliationCount: 0,
+        sourcedOpportunityCount: 0,
+        openOpportunityCount: 0,
+        candidateStaleCount: 0,
+        closedOpportunityCount: 0,
+        latestKnownAt: null,
+        latestKnownAtPrecision: null,
+      },
+    ),
   }
 }
 
@@ -346,22 +293,38 @@ export async function getMaFirmWorkspace(
     is_default: boolean
   }>
   const officeIds = officeRows.map((office) => office.id)
-  const { contactsByOffice, opportunitiesByOffice, activityByOffice } =
-    officeIds.length
-      ? await getWorkspaceRows(officeIds)
-      : {
-          contactsByOffice: new Map<string, MaWorkspaceContact[]>(),
-          opportunitiesByOffice: new Map<string, MaWorkspaceOpportunity[]>(),
-          activityByOffice: new Map<string, MaWorkspaceActivity[]>(),
-        }
+  const {
+    contactsByOffice,
+    opportunitiesByOffice,
+    activityByOffice,
+    indicators,
+  } = officeIds.length
+    ? await getWorkspaceRows(
+        officeRows.map((office) => ({ id: office.id, firmId: firm.id })),
+      )
+    : {
+        contactsByOffice: new Map<string, MaWorkspaceContact[]>(),
+        opportunitiesByOffice: new Map<string, MaWorkspaceOpportunity[]>(),
+        activityByOffice: new Map<string, MaWorkspaceActivity[]>(),
+        indicators: { byOfficeId: new Map(), byFirmId: new Map() },
+      }
   const offices = officeRows
     .map((office) => {
-      const contacts = contactsByOffice.get(office.id) ?? []
-      const opportunities = opportunitiesByOffice.get(office.id) ?? []
       return {
         ...office,
         isDefault: office.is_default,
-        indicators: buildIndicators(contacts, opportunities),
+        indicators: projectIndicators(
+          indicators.byOfficeId.get(office.id) ?? {
+            activeContactCount: 0,
+            historicalAffiliationCount: 0,
+            sourcedOpportunityCount: 0,
+            openOpportunityCount: 0,
+            candidateStaleCount: 0,
+            closedOpportunityCount: 0,
+            latestKnownAt: null,
+            latestKnownAtPrecision: null,
+          },
+        ),
       }
     })
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -373,7 +336,7 @@ export async function getMaFirmWorkspace(
   const opportunities = [...opportunitiesByOffice.values()].flat()
   const activity = [...activityByOffice.values()]
     .flat()
-    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+    .sort(compareMaRelationshipActivityDescending)
   const contacts = [...contactsById.values()].sort((left, right) =>
     left.name.localeCompare(right.name),
   )
@@ -389,7 +352,19 @@ export async function getMaFirmWorkspace(
     contacts,
     opportunities,
     activity,
-    indicators: buildIndicators(contacts, opportunities),
+    indicators: projectIndicators(
+      indicators.byFirmId.get(firm.id) ?? {
+        activeContactCount: 0,
+        historicalAffiliationCount: 0,
+        sourcedOpportunityCount: 0,
+        openOpportunityCount: 0,
+        candidateStaleCount: 0,
+        closedOpportunityCount: 0,
+        latestKnownAt: null,
+        latestKnownAtPrecision: null,
+        officeCount: officeRows.length,
+      },
+    ),
   }
 }
 
