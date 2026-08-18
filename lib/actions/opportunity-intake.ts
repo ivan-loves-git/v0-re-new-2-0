@@ -5,6 +5,7 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { appendConfirmedWaveAiOutcome } from "@/lib/ai/next-action-outcome"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import {
   isOpportunityStatus,
   type MaCanonicalContactOption,
@@ -539,39 +540,55 @@ export async function createOpportunityIntake(
   formData: FormData,
 ): Promise<OpportunityActionResult> {
   const { user } = await requireStaffAccess()
-  const parsed = parseOpportunityIntake(formData, {
-    requirePublicTitle: true,
-    requireReference: !isFranceGeographyMandatesEnabled(),
-    requireGeography: isFranceGeographyMandatesEnabled(),
-  })
-  if (isActionFailure(parsed)) return parsed
+  const trace = startCriticalOperation("opportunity.create")
+  const parsed = await trace.failOnThrow(async () =>
+    parseOpportunityIntake(formData, {
+      requirePublicTitle: true,
+      requireReference: !isFranceGeographyMandatesEnabled(),
+      requireGeography: isFranceGeographyMandatesEnabled(),
+    }),
+  )
+  if (isActionFailure(parsed)) {
+    trace.failure("validation_failed")
+    return parsed
+  }
 
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.rpc(
-    "create_opportunity_with_office_context",
-    {
-      p_reference: parsed.reference,
-      p_source_office_id: parsed.sourceOfficeId,
-      p_affiliation_ids: parsed.affiliationIds,
-      p_primary_affiliation_id: parsed.primaryAffiliationId,
-      p_description: parsed.description,
-      p_target_status: parsed.status,
-      p_actor: user.id,
-      p_opportunity_fields: parsed.optionalFields,
+  const { data, error } = await trace.failOnThrow(
+    async () => {
+      const supabase = createAdminClient()
+      return supabase.rpc("create_opportunity_with_office_context", {
+        p_reference: parsed.reference,
+        p_source_office_id: parsed.sourceOfficeId,
+        p_affiliation_ids: parsed.affiliationIds,
+        p_primary_affiliation_id: parsed.primaryAffiliationId,
+        p_description: parsed.description,
+        p_target_status: parsed.status,
+        p_actor: user.id,
+        p_opportunity_fields: parsed.optionalFields,
+      })
     },
+    "persistence_failed",
   )
 
   if (error) {
+    trace.failure("persistence_failed")
     return normalizeDbError(error)
   }
 
   const opportunity = data as Opportunity
   if (!opportunity?.id || !opportunity.reference) {
+    trace.failure("persistence_failed")
     return actionFailure(
       "Opportunity was saved but its confirmation could not be read. Refresh the opportunity list before retrying.",
     )
   }
-  revalidateOpportunityIntake(opportunity.id)
+  try {
+    revalidateOpportunityIntake(opportunity.id)
+  } catch (error) {
+    trace.failure("internal_error")
+    throw error
+  }
+  trace.success()
   return {
     success: true,
     message: `Opportunity ${opportunity.reference} created.`,
@@ -585,30 +602,50 @@ export async function updateOpportunityIntake(
   formData: FormData,
 ): Promise<OpportunityActionResult> {
   const { user } = await requireStaffAccess()
-  const parsed = parseOpportunityIntake(formData, { requireReference: true })
-  if (isActionFailure(parsed)) return parsed
+  const trace = startCriticalOperation("opportunity.update")
+  const parsed = await trace.failOnThrow(async () =>
+    parseOpportunityIntake(formData, { requireReference: true }),
+  )
+  if (isActionFailure(parsed)) {
+    trace.failure("validation_failed")
+    return parsed
+  }
 
-  const supabase = createAdminClient()
-  const { error } = await supabase.rpc("save_opportunity_office_context", {
-    p_opportunity_id: opportunityId,
-    p_source_office_id: parsed.sourceOfficeId,
-    p_affiliation_ids: parsed.affiliationIds,
-    p_primary_affiliation_id: parsed.primaryAffiliationId,
-    p_description: parsed.description,
-    p_target_status: parsed.status,
-    p_actor: user.id,
-    p_opportunity_fields: parsed.optionalFields,
-  })
+  const { error } = await trace.failOnThrow(
+    async () => {
+      const supabase = createAdminClient()
+      return supabase.rpc("save_opportunity_office_context", {
+        p_opportunity_id: opportunityId,
+        p_source_office_id: parsed.sourceOfficeId,
+        p_affiliation_ids: parsed.affiliationIds,
+        p_primary_affiliation_id: parsed.primaryAffiliationId,
+        p_description: parsed.description,
+        p_target_status: parsed.status,
+        p_actor: user.id,
+        p_opportunity_fields: parsed.optionalFields,
+      })
+    },
+    "persistence_failed",
+  )
 
-  if (error) return normalizeDbError(error)
+  if (error) {
+    trace.failure("persistence_failed")
+    return normalizeDbError(error)
+  }
 
-  revalidateOpportunityIntake(opportunityId)
-  await appendConfirmedWaveAiOutcome({
-    token: readOpportunityFormString(formData, "wave_ai_outcome"),
-    userId: user.id,
-    opportunityId,
-    action: "complete_opportunity_profile",
-  })
+  try {
+    revalidateOpportunityIntake(opportunityId)
+    await appendConfirmedWaveAiOutcome({
+      token: readOpportunityFormString(formData, "wave_ai_outcome"),
+      userId: user.id,
+      opportunityId,
+      action: "complete_opportunity_profile",
+    })
+  } catch (error) {
+    trace.failure("internal_error")
+    throw error
+  }
+  trace.success()
   return { success: true, message: "Opportunity saved." }
 }
 

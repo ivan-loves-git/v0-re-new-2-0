@@ -6,6 +6,10 @@ import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
 import { env } from "@/lib/env"
+import {
+  startCriticalOperation,
+  type CriticalOperationTrace,
+} from "@/lib/observability/critical-operation"
 
 export const maxDuration = 60
 
@@ -29,7 +33,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  console.log("[cron/abandoned-forms] firing")
+  const trace = startCriticalOperation("cron.abandoned_forms")
+  let activeSubjobTrace: CriticalOperationTrace | null = null
 
   try {
     const supabase = createAdminClient()
@@ -41,6 +46,8 @@ export async function GET(request: Request) {
     // - Last activity more than 24 hours ago
     // - Have marketing consent (GDPR compliant)
     // - Haven't received max reminders
+    const abandonedTrace = startCriticalOperation("cron.abandoned_reminders")
+    activeSubjobTrace = abandonedTrace
     const { data: abandonedForms, error } = await supabase
       .from("intake_abandonment_tracking")
       .select(`
@@ -62,12 +69,15 @@ export async function GET(request: Request) {
       .lt("reminder_count", MAX_REMINDERS_PER_REPRENEUR)
 
     if (error) {
-      console.error("Error fetching abandoned forms:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      abandonedTrace.failure("persistence_failed")
+      trace.failure("persistence_failed")
+      activeSubjobTrace = null
+      return NextResponse.json({ error: "Cron job failed" }, { status: 500 })
     }
 
     let sentCount = 0
     const errors: string[] = []
+    let abandonedDeliveryFailed = false
 
     // Empty abandoned-forms list is fine — still fall through to the
     // interview-reminder sub-job below (they share the same daily cron slot).
@@ -103,7 +113,7 @@ export async function GET(request: Request) {
         const daysAgo = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
 
         const abandonedSubject = await getTemplateSubject("abandoned_reminder", "Reprenez votre inscription Re-New")
-        await sendEmail({
+        const result = await sendEmail({
           to: repreneur.email,
           subject: abandonedSubject,
           repreneurId: repreneur.id,
@@ -123,6 +133,7 @@ export async function GET(request: Request) {
             },
           }),
         })
+        if (!result.success) abandonedDeliveryFailed = true
 
         // Update reminder count
         await supabase
@@ -134,12 +145,13 @@ export async function GET(request: Request) {
           .eq("id", form.id)
 
         sentCount++
-      } catch (err) {
-        const errorMsg = `Failed to send to ${repreneur.email}: ${err}`
-        console.error(errorMsg)
-        errors.push(errorMsg)
+      } catch {
+        errors.push("abandoned_reminder_failed")
       }
     }
+    if (errors.length > 0 || abandonedDeliveryFailed) abandonedTrace.failure("provider_unavailable")
+    else abandonedTrace.success()
+    activeSubjobTrace = null
 
     // === Second job on the same cron: pre-interview reminders ===
     // Hobby plan caps us at one cron/day, so we piggyback here. `activities.event_date`
@@ -147,6 +159,9 @@ export async function GET(request: Request) {
     // everyone whose interview is scheduled for tomorrow.
     let interviewSent = 0
     const interviewErrors: string[] = []
+    let interviewDeliveryFailed = false
+    const interviewTrace = startCriticalOperation("cron.interview_reminders")
+    activeSubjobTrace = interviewTrace
     try {
       const tomorrow = new Date(now)
       tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
@@ -202,14 +217,18 @@ export async function GET(request: Request) {
             }),
           })
           if (result.success) interviewSent++
-        } catch (err) {
-          interviewErrors.push(`Interview reminder to ${rep.email}: ${err}`)
+          else interviewDeliveryFailed = true
+        } catch {
+          interviewErrors.push("interview_reminder_failed")
         }
       }
-    } catch (err) {
-      console.error("Interview reminder sub-job failed:", err)
-      interviewErrors.push(String(err))
+    } catch {
+      interviewErrors.push("interview_reminder_subjob_failed")
     }
+    if (interviewErrors.length > 0) interviewTrace.failure("internal_error")
+    else if (interviewDeliveryFailed) interviewTrace.failure("provider_unavailable")
+    else interviewTrace.success()
+    activeSubjobTrace = null
 
     // === Third job on the same cron: Day-5 booking reminders ===
     // Fires once for repreneurs who applied >5 days ago AND have no interview
@@ -218,6 +237,9 @@ export async function GET(request: Request) {
     // rather than receiving a surprise old booking nudge.
     let bookingSent = 0
     const bookingErrors: string[] = []
+    let bookingDeliveryFailed = false
+    const bookingTrace = startCriticalOperation("cron.booking_reminders")
+    activeSubjobTrace = bookingTrace
     try {
       const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -269,20 +291,26 @@ export async function GET(request: Request) {
             }),
           })
           if (result.success) bookingSent++
-        } catch (err) {
-          bookingErrors.push(`Booking reminder to ${c.email}: ${err}`)
+          else bookingDeliveryFailed = true
+        } catch {
+          bookingErrors.push("booking_reminder_failed")
         }
       }
-    } catch (err) {
-      console.error("Booking reminder sub-job failed:", err)
-      bookingErrors.push(String(err))
+    } catch {
+      bookingErrors.push("booking_reminder_subjob_failed")
     }
+    if (bookingErrors.length > 0) bookingTrace.failure("internal_error")
+    else if (bookingDeliveryFailed) bookingTrace.failure("provider_unavailable")
+    else bookingTrace.success()
+    activeSubjobTrace = null
 
     // === Fourth job: auto-shift stale Leads to "to_reactivate" ===
     // Leads with no interview activity at all and created >30 days ago move
     // to a separate group so they stop polluting Bertrand's top funnel view.
     let staleShifted = 0
     const staleErrors: string[] = []
+    const staleTrace = startCriticalOperation("cron.stale_leads")
+    activeSubjobTrace = staleTrace
     try {
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -307,18 +335,27 @@ export async function GET(request: Request) {
             .update({ lifecycle_status: "to_reactivate" })
             .in("id", toShift)
           if (shiftError) {
-            staleErrors.push(`Stale-lead shift: ${shiftError.message}`)
+            staleErrors.push("stale_lead_persistence_failed")
           } else {
             staleShifted = toShift.length
           }
         }
       }
-    } catch (err) {
-      console.error("Stale-lead shift sub-job failed:", err)
-      staleErrors.push(String(err))
+    } catch {
+      staleErrors.push("stale_lead_subjob_failed")
     }
+    if (staleErrors.length > 0) staleTrace.failure("persistence_failed")
+    else staleTrace.success()
+    activeSubjobTrace = null
 
     const allErrors = [...errors, ...interviewErrors, ...bookingErrors, ...staleErrors]
+    if (
+      allErrors.length > 0 ||
+      abandonedDeliveryFailed ||
+      interviewDeliveryFailed ||
+      bookingDeliveryFailed
+    ) trace.failure("internal_error")
+    else trace.success()
     return NextResponse.json({
       message: `abandoned: ${sentCount}; interview reminders: ${interviewSent}; booking reminders: ${bookingSent}; stale leads shifted: ${staleShifted}`,
       sent: sentCount,
@@ -327,8 +364,9 @@ export async function GET(request: Request) {
       staleShifted,
       errors: allErrors.length > 0 ? allErrors : undefined,
     })
-  } catch (err) {
-    console.error("Cron job error:", err)
+  } catch {
+    activeSubjobTrace?.failure("internal_error")
+    trace.failure("internal_error")
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

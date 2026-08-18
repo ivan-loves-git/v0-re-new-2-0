@@ -110,6 +110,31 @@ describe("canonical opportunity contact persistence", () => {
     })
   })
 
+  it("preserves a rejected canonical RPC while closing its safe runtime trace", async () => {
+    const rawError = new Error(
+      "transport failed for opportunity-private-1 staff@example.test",
+    )
+    const rpc = vi.fn().mockRejectedValue(rawError)
+    mocks.createAdminClient.mockReturnValue({ rpc })
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    await expect(createOpportunityIntake(activeForm())).rejects.toBe(rawError)
+
+    const events = [...info.mock.calls, ...error.mock.calls].map(([entry]) =>
+      JSON.parse(String(entry)),
+    ) as Array<Record<string, unknown>>
+    expect(events.map((event) => event.stage)).toEqual(["start", "failure"])
+    expect(events[1]).toMatchObject({
+      operation: "opportunity.create",
+      error_category: "persistence_failed",
+    })
+    expect(JSON.stringify(events)).not.toContain("opportunity-private-1")
+    expect(JSON.stringify(events)).not.toContain("staff@example.test")
+    info.mockRestore()
+    error.mockRestore()
+  })
+
   it("requires staff to choose canonical geography before a new opportunity reaches the database", async () => {
     const formData = activeForm()
     formData.delete("geography_node_id")

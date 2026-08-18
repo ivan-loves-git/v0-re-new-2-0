@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
+import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import crypto from "crypto"
 
 // Resend webhook event types
@@ -44,12 +45,13 @@ function verifyWebhookSignature(
 }
 
 export async function POST(request: Request) {
+  const trace = startCriticalOperation("email.resend_webhook")
   try {
     const webhookSecret = env.RESEND_WEBHOOK_SECRET
 
     // Signature verification is mandatory
     if (!webhookSecret) {
-      console.error("RESEND_WEBHOOK_SECRET not configured - webhook disabled")
+      trace.failure("configuration_error")
       return NextResponse.json(
         { error: "Webhook not configured" },
         { status: 500 }
@@ -60,7 +62,7 @@ export async function POST(request: Request) {
     const signature = request.headers.get("resend-signature")
 
     if (!verifyWebhookSignature(payload, signature, webhookSecret)) {
-      console.error("Invalid webhook signature")
+      trace.failure("signature_invalid")
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }
 
@@ -79,6 +81,7 @@ export async function POST(request: Request) {
 
     const newStatus = statusMap[event.type]
     if (!newStatus) {
+      trace.failure("precondition_failed")
       return NextResponse.json({ message: "Event type not tracked" })
     }
 
@@ -91,7 +94,7 @@ export async function POST(request: Request) {
 
     if (fetchError || !emailLog) {
       // Email not found in our logs - might be from before we started tracking
-      console.log(`Email ${event.data.email_id} not found in logs`)
+      trace.failure("not_found")
       return NextResponse.json({ message: "Email not tracked" })
     }
 
@@ -120,20 +123,21 @@ export async function POST(request: Request) {
       .eq("id", emailLog.id)
 
     if (updateError) {
-      console.error("Failed to update email log:", updateError)
+      trace.failure("persistence_failed")
       return NextResponse.json(
         { error: "Failed to update" },
         { status: 500 }
       )
     }
 
+    trace.success()
     return NextResponse.json({
       message: "Webhook processed",
       event: event.type,
       email_id: event.data.email_id,
     })
-  } catch (err) {
-    console.error("Webhook processing error:", err)
+  } catch {
+    trace.failure("internal_error")
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

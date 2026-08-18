@@ -3,6 +3,7 @@ import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
 import { resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
+import { startCriticalOperation } from "@/lib/observability/critical-operation"
 
 /**
  * Database connection pool singleton
@@ -101,11 +102,10 @@ export const auth = betterAuth({
     disableSignUp: true,
     minPasswordLength: 8,
     sendResetPassword: async ({ user, url }) => {
+      const trace = startCriticalOperation("email.password_reset_send")
       try {
-        console.log("[auth] Sending password reset email")
-        console.log("[auth] RESEND_API_KEY set:", !!env.RESEND_API_KEY)
         const isPortalAccessSetup = isPortalAccessSetupUrl(url)
-        const { data, error } = await resend.emails.send({
+        const { error } = await resend.emails.send({
           from: "Re-New <notifications@news.re-new.team>",
           to: user.email,
           subject: isPortalAccessSetup
@@ -116,12 +116,12 @@ export const auth = betterAuth({
             : renderPasswordResetEmail(user.name, url),
         })
         if (error) {
-          console.error("[auth] Password reset delivery failed")
+          trace.failure("provider_rejected")
           throw new Error(`Failed to send reset email: ${error.message}`)
         }
-        console.log("[auth] Reset email sent successfully")
+        trace.success()
       } catch (err) {
-        console.error("[auth] sendResetPassword failed")
+        trace.failure("provider_unavailable")
         throw err
       }
     },

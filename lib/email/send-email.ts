@@ -3,6 +3,7 @@
 import { resend, FROM_EMAIL, FROM_NAME, DAILY_EMAIL_LIMIT } from "./resend-client"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isMaContactEmailAddressSuppressed } from "@/lib/email/ma-contact-email-authorization"
+import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import type { EmailTemplateKey, EmailSendResult, EmailLog_Insert } from "@/lib/types/email"
 import type { ReactElement } from "react"
 
@@ -122,7 +123,6 @@ async function logEmail(log: EmailLog_Insert): Promise<string | null> {
     .single()
 
   if (error) {
-    console.error("Failed to log email:", error)
     return null
   }
 
@@ -154,23 +154,27 @@ async function updateEmailLogStatus(
  */
 export async function sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
   const { to, subject, repreneurId, templateKey, react, metadata = {}, bcc } = params
+  const trace = startCriticalOperation("email.repreneur_send")
 
   try {
     // 1. Check if template is active
     const templateActive = await isTemplateActive(templateKey)
     if (!templateActive) {
+      trace.failure("precondition_failed")
       return { success: false, error: "Template is disabled" }
     }
 
     // 2. Check marketing consent if required
     const hasConsent = await checkMarketingConsent(repreneurId, templateKey)
     if (!hasConsent) {
+      trace.failure("precondition_failed")
       return { success: false, error: "Marketing consent not granted" }
     }
 
     // 3. Check daily rate limit
     const withinLimit = await checkDailyLimit()
     if (!withinLimit) {
+      trace.failure("precondition_failed")
       return { success: false, error: "Daily email limit reached" }
     }
 
@@ -184,10 +188,6 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       status: "pending",
       metadata,
     })
-
-    if (!emailLogId) {
-      console.warn(`[sendEmail] log insert failed for ${templateKey} → ${to}; sending anyway.`)
-    }
 
     // 5. Enforce the person-level M&A suppression boundary immediately before
     // delivery. Generic/manual paths have no operational-purpose exception.
@@ -206,6 +206,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
           error_message: "M&A contact campaign email suppressed",
         })
       }
+      trace.failure("precondition_failed")
       return {
         success: false,
         emailLogId: emailLogId ?? undefined,
@@ -230,6 +231,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
           error_message: error.message,
         })
       }
+      trace.failure("provider_rejected")
       return { success: false, emailLogId: emailLogId ?? undefined, error: error.message }
     }
 
@@ -245,13 +247,14 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
     // 8. Increment daily counter
     await incrementDailyCount()
 
+    trace.success()
     return {
       success: true,
       emailLogId: emailLogId ?? undefined,
       resendId: data?.id,
     }
   } catch (err) {
-    console.error("Error sending email:", err)
+    trace.failure("internal_error")
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -269,9 +272,11 @@ export async function sendEmailDirect(params: {
   idempotencyKey?: string
 }): Promise<{ success: boolean; resendId?: string; error?: string }> {
   const { to, subject, react, idempotencyKey } = params
+  const trace = startCriticalOperation("email.repreneur_send")
 
   try {
     if (await isMaContactEmailAddressSuppressed(to)) {
+      trace.failure("precondition_failed")
       return {
         success: false,
         error:
@@ -290,12 +295,14 @@ export async function sendEmailDirect(params: {
     )
 
     if (error) {
+      trace.failure("provider_rejected")
       return { success: false, error: error.message }
     }
 
+    trace.success()
     return { success: true, resendId: data?.id }
   } catch (err) {
-    console.error("Error sending test email:", err)
+    trace.failure("provider_unavailable")
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",

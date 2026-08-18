@@ -18,6 +18,7 @@ import {
 } from "@/lib/email/templates"
 import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
 import { maContactEmailPurposeForTemplate } from "@/lib/ma-contact-email-policy"
+import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
 import type { EmailTemplateKey } from "@/lib/types/email"
 import type {
@@ -430,8 +431,18 @@ async function sendIntermediaryEmail({
   request: ResendDeliveryRequest
   idempotencyKey: string
 }): Promise<ResendDeliveryOutcome> {
-  const response = await resend.emails.send(request, { idempotencyKey })
-  return classifyResendDeliveryOutcome(response)
+  const trace = startCriticalOperation("email.ma_source_send")
+  try {
+    const response = await resend.emails.send(request, { idempotencyKey })
+    const outcome = classifyResendDeliveryOutcome(response)
+    if (outcome.outcome === "sent") trace.success()
+    else if (outcome.outcome === "failed") trace.failure("provider_rejected")
+    else trace.failure("provider_pending")
+    return outcome
+  } catch (error) {
+    trace.failure("provider_unavailable")
+    throw error
+  }
 }
 
 async function loadOpportunityContext(opportunityId: string) {
