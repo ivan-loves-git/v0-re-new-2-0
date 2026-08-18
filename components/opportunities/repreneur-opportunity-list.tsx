@@ -141,7 +141,13 @@ function DealCard({
 
   return (
     <Card className="rounded-lg border bg-card py-0 shadow-none">
-      <CardContent className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <CardContent
+        className={`grid gap-4 p-4 lg:items-center ${
+          lockedForAnotherRepreneur
+            ? "lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]"
+            : "lg:grid-cols-[minmax(0,1fr)_auto]"
+        }`}
+      >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs tabular-nums text-muted-foreground" aria-label={`Position ${position}`}>
@@ -190,7 +196,7 @@ function DealCard({
             {opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}
           </p>
         </div>
-        <div className="flex flex-col gap-3 lg:items-end">
+        <div className="flex min-w-0 flex-col gap-3 lg:items-end">
           {lockedForAnotherRepreneur || !opportunity.match_id ? (
             <LockedOpportunityInterestAction
               opportunityId={opportunity.opportunity_id}

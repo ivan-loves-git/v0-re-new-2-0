@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 18, 2026",
+    version: "0.9.51",
+    title: "Repreneurs can understand protected opportunities more clearly",
+    isCompleted: true,
+    events: [
+      {
+        title: "Locked opportunity details remain readable",
+        type: "fix",
+        description: "When another repreneur is already positioned, the notice now keeps its own space while the title, location, date, sector, reference and metrics remain visible.",
+      },
+      {
+        title: "Read-only opportunity links use plain language",
+        type: "style",
+        description: "Repreneur pursuit cards now say ‘See opportunity’ while staff wording and every destination remain unchanged.",
+      },
+    ],
+  },
+  {
     period: "Aug 16, 2026",
     version: "0.9.50",
     title: "External acquisition work can now inform Re-New without becoming Re-New data",

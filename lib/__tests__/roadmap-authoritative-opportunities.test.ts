@@ -11,6 +11,13 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records clearer protected-opportunity cards without claiming a behavior change", () => {
+    expect(roadmap).toContain('version: "0.9.51"')
+    expect(roadmap).toContain("Locked opportunity details remain readable")
+    expect(roadmap).toContain("Read-only opportunity links use plain language")
+    expect(roadmap).toContain("staff wording and every destination remain unchanged")
+  })
+
   it("groups External Pursuit conversion, capacity, and M2.1 technical closure", () => {
     expect(roadmap).toContain('version: "0.9.50"')
     expect(roadmap).toContain("Staff can convert one qualified dossier into one controlled Re-New draft")
@@ -166,6 +173,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-16")')
+    expect(roadmapStatus).toContain('new Date("2026-08-18")')
   })
 })

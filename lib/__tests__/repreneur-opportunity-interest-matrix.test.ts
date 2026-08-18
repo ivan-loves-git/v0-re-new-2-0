@@ -29,6 +29,21 @@ describe("repreneur opportunity interest matrix", () => {
     expect(querySource).toContain("is_locked_for_other_repreneur: isLockedForOtherRepreneur(")
   })
 
+  it("bounds only the locked desktop action track so deal facts remain readable", () => {
+    expect(listSource).toContain('lockedForAnotherRepreneur')
+    expect(listSource).toContain('lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]')
+    expect(listSource).toContain('lg:grid-cols-[minmax(0,1fr)_auto]')
+    expect(listSource).toContain('className="flex min-w-0 flex-col gap-3 lg:items-end"')
+    expect(listSource).toContain("opportunityTitle(opportunity)")
+    expect(listSource).toContain("displayRepreneurOpportunityGeography(opportunity.location)")
+    expect(listSource).toContain("Added {opportunity.date_added_display ?? \"-\"}")
+    expect(listSource).toContain("formatNumber(opportunity.revenue_meur")
+    expect(listSource).toContain("formatNumber(opportunity.ebitda_keur")
+    expect(listSource).toContain("formatEbitdaMargin(opportunity)")
+    expect(listSource).toContain("opportunity.reference")
+    expect(listSource).toContain("opportunity.sector ?? opportunity.activity")
+  })
+
   it("keeps staff-proposed and declined responses on their existing match action, while interested and active-pursuit matches do not become new cards", () => {
     expect(detailSource).toContain('canRespond(opportunity.match_status)')
     expect(detailSource).toContain('opportunity.match_status === "interested" ? "Interest sent" : "I\'m interested"')

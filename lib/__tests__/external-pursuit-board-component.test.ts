@@ -73,6 +73,30 @@ describe("ExternalPursuitBoard component", () => {
     expect(html).toContain("Contacts not added")
     expect(html).toContain("aria-label=\"Move Independent target stage\"")
     expect(html).toContain("lg:overflow-x-auto")
+    expect(html).toContain('href="/opportunities/opportunity-1"')
+    expect(html).toContain("Open canonical journey")
+    expect(html).not.toContain("See opportunity")
+  })
+
+  it("uses plain opportunity copy for repreneurs without changing the canonical destination", () => {
+    const html = renderToStaticMarkup(createElement(ExternalPursuitBoard, {
+      external: [],
+      renew: [{
+        id: "match-1",
+        title: "Canonical target",
+        stage: "identified",
+        canonicalStage: null,
+        canonicalJourney: "proposed",
+        href: "/portal/deals/match-1",
+        ownerName: "Owner One",
+        updatedAt: "2026-08-18T09:00:00Z",
+      }],
+      isStaff: false,
+    }))
+
+    expect(html).toContain('href="/portal/deals/match-1"')
+    expect(html).toContain("See opportunity")
+    expect(html).not.toContain("Open canonical journey")
   })
 
   it("keeps a pending staff dossier and its contact context inspectable before purge", () => {

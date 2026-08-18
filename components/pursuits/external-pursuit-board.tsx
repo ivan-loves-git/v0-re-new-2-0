@@ -430,7 +430,7 @@ export function ExternalPursuitBoard({
               <CardContent className="space-y-3 p-3">
                 {cards.length > 0 ? cards.map((record) => (
                   "canonicalStage" in record
-                    ? <ReNewCard key={`renew-${record.id}`} record={record} />
+                    ? <ReNewCard key={`renew-${record.id}`} record={record} isStaff={isStaff} />
                     : (
                       <ExternalCard
                         key={record.id}
@@ -730,14 +730,14 @@ function AvailabilitySelect({
   )
 }
 
-function ReNewCard({ record }: { record: ReNewPursuitBoardRecord }) {
+function ReNewCard({ record, isStaff }: { record: ReNewPursuitBoardRecord; isStaff: boolean }) {
   return (
     <article className="space-y-2 rounded-md border bg-muted/25 p-3">
       <Badge variant="outline">Re-New · read-only</Badge>
       <h3 className="font-medium leading-snug">{record.title}</h3>
       <p className="text-xs text-muted-foreground">Canonical journey: {record.canonicalJourney.replaceAll("_", " ")}</p>
       <Button asChild variant="link" size="sm" className="h-auto p-0">
-        <Link href={record.href}>Open canonical journey <ExternalLink data-icon="inline-end" /></Link>
+        <Link href={record.href}>{isStaff ? "Open canonical journey" : "See opportunity"} <ExternalLink data-icon="inline-end" /></Link>
       </Button>
     </article>
   )

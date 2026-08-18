@@ -67,7 +67,9 @@ describe("W-106 pursuit board", () => {
     expect(board).toContain("never enter matching, source records, confidentiality gates, exports or Re-New KPIs")
     expect(board).toContain('Re-New · read-only')
     expect(board).toContain('External')
+    expect(board).toContain('isStaff ? "Open canonical journey" : "See opportunity"')
     expect(board).toContain("Open canonical journey")
+    expect(board).toContain("See opportunity")
   })
 
   it("keeps title-only intake, explicit staff ownership, labelled controls and responsive stage groups", () => {
