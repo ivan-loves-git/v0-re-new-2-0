@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
+import {
+  privateSignedDownloadContentType,
+  privateStorageDownloadError,
+  proxyPrivateSignedStorageDownload,
+} from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-function privateRedirect(location: string) {
-  const response = NextResponse.redirect(location)
-  response.headers.set("Cache-Control", "private, no-store")
-  return response
-}
-
-export async function GET(request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
+export async function GET(_request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
   await requireStaffAccess()
   const { id: opportunityId, artifactId } = await context.params
   const supabase = createAdminClient()
@@ -29,7 +28,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   const { data: document, error: documentError } = await supabase
     .from("opportunity_documents")
-    .select("storage_bucket, storage_path, file_name")
+    .select("storage_bucket, storage_path, file_name, mime_type")
     .eq("id", artifact.document_id)
     .eq("opportunity_id", opportunityId)
     .eq("document_type", "nda")
@@ -48,16 +47,15 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
 
   const storage = supabase.storage.from(document.storage_bucket || "opportunity-documents")
-  const shouldDownload = new URL(request.url).searchParams.has("download")
-  const { data: signedUrl, error: signedUrlError } = shouldDownload
-    ? await storage.createSignedUrl(document.storage_path, 60, {
-        download: document.file_name || true,
-      })
-    : await storage.createSignedUrl(document.storage_path, 60)
+  const { data: signedUrl, error: signedUrlError } = await storage.createSignedUrl(document.storage_path, 60)
 
   if (signedUrlError) {
     return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
   }
 
-  return privateRedirect(signedUrl.signedUrl)
+  const response = await proxyPrivateSignedStorageDownload(signedUrl?.signedUrl ?? "", {
+    filename: document.file_name,
+    contentType: privateSignedDownloadContentType(document.mime_type),
+  })
+  return response ?? privateStorageDownloadError("Unable to open document.")
 }

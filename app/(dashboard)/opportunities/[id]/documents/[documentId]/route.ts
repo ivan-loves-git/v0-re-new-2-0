@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
+import {
+  privateSignedDownloadContentType,
+  privateStorageDownloadError,
+  proxyPrivateSignedStorageDownload,
+} from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
-
-function privateRedirect(location: string) {
-  const response = NextResponse.redirect(location)
-  response.headers.set("Cache-Control", "private, no-store")
-  return response
-}
 
 /**
  * Staff-only document delivery. Browser clients never receive storage access;
@@ -23,7 +22,7 @@ export async function GET(
 
   const { data: document, error } = await supabase
     .from("opportunity_documents")
-    .select("storage_bucket, storage_path")
+    .select("storage_bucket, storage_path, file_name, mime_type")
     .eq("id", documentId)
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
@@ -46,5 +45,9 @@ export async function GET(
     return NextResponse.json({ error: "Unable to open document." }, { status: 500 })
   }
 
-  return privateRedirect(signedUrl.signedUrl)
+  const response = await proxyPrivateSignedStorageDownload(signedUrl?.signedUrl ?? "", {
+    filename: document.file_name,
+    contentType: privateSignedDownloadContentType(document.mime_type),
+  })
+  return response ?? privateStorageDownloadError("Unable to open document.")
 }

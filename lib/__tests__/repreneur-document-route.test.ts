@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   getCurrentUserAccess: vi.fn(),
+  proxyDownload: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({
@@ -12,6 +13,11 @@ vi.mock("@/lib/access-control", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
+}))
+vi.mock("@/lib/storage/private-signed-download", () => ({
+  proxyPrivateSignedStorageDownload: mocks.proxyDownload,
+  privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
 }))
 
 import { GET } from "@/app/api/repreneurs/[id]/documents/[documentType]/route"
@@ -65,6 +71,7 @@ function requestFor(id: string, documentType: string, query = "") {
 describe("repreneur document route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.proxyDownload.mockResolvedValue(new Response("document", { status: 200 }))
   })
 
   it("rejects unauthenticated sessions before loading metadata", async () => {
@@ -84,12 +91,8 @@ describe("repreneur document route", () => {
     const response = await requestFor("fixture", "ldc")
 
     expect(eq).toHaveBeenCalledWith("id", "fixture")
-    expect(createSignedUrl).toHaveBeenCalledWith(
-      "cvs/fixture-ldc.pdf",
-      60,
-      undefined,
-    )
-    expect(response.status).toBe(307)
+    expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-ldc.pdf", 60)
+    expect(response.status).toBe(200)
   })
 
   it("does not expose another repreneur's Lettre de cadrage", async () => {
@@ -138,16 +141,9 @@ describe("repreneur document route", () => {
     )
 
     expect(eq).toHaveBeenCalledWith("id", "fixture-b")
-    expect(createSignedUrl).toHaveBeenCalledWith(
-      "cvs/fixture-b-cv.pdf",
-      60,
-      undefined,
-    )
-    expect(response.status).toBe(307)
-    expect(response.headers.get("location")).toBe(
-      "https://storage.example.test/signed-document",
-    )
-    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-b-cv.pdf", 60)
+    expect(response.status).toBe(200)
+    expect(response.headers.get("location")).toBeNull()
   })
 
   it("creates a forced-download signed URL with a clean filename", async () => {
@@ -159,10 +155,8 @@ describe("repreneur document route", () => {
 
     const response = await requestFor("fixture", "ldc", "?download")
 
-    expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-ldc.docx", 60, {
-      download: "Lettre-de-cadrage.docx",
-    })
-    expect(response.status).toBe(307)
+    expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-ldc.docx", 60)
+    expect(response.status).toBe(200)
   })
 
   it("returns a clean not-found response for missing or invalid metadata", async () => {

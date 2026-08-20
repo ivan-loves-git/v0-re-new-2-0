@@ -1,9 +1,14 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import {
   getRepreneurDocumentDownloadName,
   resolveRepreneurDocumentStoragePath,
 } from "@/lib/repreneur-document-storage"
+import {
+  privateSignedDownloadContentType,
+  privateStorageDownloadError,
+  proxyPrivateSignedStorageDownload,
+} from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 const DOCUMENT_FIELDS = {
@@ -18,7 +23,7 @@ function isDocumentType(value: string): value is DocumentType {
 }
 
 export async function GET(
-  request: NextRequest,
+  _request: Request,
   context: { params: Promise<{ id: string; documentType: string }> },
 ) {
   const access = await getCurrentUserAccess()
@@ -67,18 +72,11 @@ export async function GET(
     )
   }
 
-  const shouldDownload = request.nextUrl.searchParams.has("download")
-  const downloadName = shouldDownload
-    ? getRepreneurDocumentDownloadName(documentType, storagePath)
-    : undefined
+  const downloadName = getRepreneurDocumentDownloadName(documentType, storagePath)
 
   const { data: signedUrl, error: signedUrlError } = await supabase.storage
     .from("cvs")
-    .createSignedUrl(
-      storagePath,
-      60,
-      downloadName ? { download: downloadName } : undefined,
-    )
+    .createSignedUrl(storagePath, 60)
 
   if (signedUrlError || !signedUrl?.signedUrl) {
     console.error("Repreneur document signing error:", signedUrlError)
@@ -88,8 +86,13 @@ export async function GET(
     )
   }
 
-  const response = NextResponse.redirect(signedUrl.signedUrl)
-  response.headers.set("Cache-Control", "private, no-store")
-  response.headers.set("Referrer-Policy", "no-referrer")
-  return response
+  const response = await proxyPrivateSignedStorageDownload(signedUrl.signedUrl, {
+    filename: downloadName,
+    contentType: privateSignedDownloadContentType(
+      downloadName.endsWith(".docx")
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : "application/pdf",
+    ),
+  })
+  return response ?? privateStorageDownloadError("Document file is unavailable")
 }

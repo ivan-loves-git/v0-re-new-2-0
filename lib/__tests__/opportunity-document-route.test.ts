@@ -3,19 +3,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   requireStaffAccess: vi.fn(),
+  proxyDownload: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({ requireStaffAccess: mocks.requireStaffAccess }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
+vi.mock("@/lib/storage/private-signed-download", () => ({
+  proxyPrivateSignedStorageDownload: mocks.proxyDownload,
+  privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
+}))
 
 import { GET } from "@/app/(dashboard)/opportunities/[id]/documents/[documentId]/route"
 
 function setupAdminClient(document: {
   storage_bucket: string
   storage_path: string | null
+  file_name?: string | null
+  mime_type?: string | null
 } | null = {
   storage_bucket: "opportunity-documents",
   storage_path: "opportunity-1/documents/memo.pdf",
+  file_name: "memo.pdf",
+  mime_type: "application/pdf",
 }) {
   const maybeSingle = vi.fn().mockResolvedValue({ data: document, error: null })
   const opportunityEq = vi.fn(() => ({ maybeSingle }))
@@ -42,6 +52,7 @@ describe("staff opportunity document route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.requireStaffAccess.mockResolvedValue({ role: "staff", user: { id: "staff-1" } })
+    mocks.proxyDownload.mockResolvedValue(new Response("document", { status: 200 }))
   })
 
   it("requires staff before loading private document metadata", async () => {
@@ -56,13 +67,16 @@ describe("staff opportunity document route", () => {
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it("returns a private, short-lived signed URL for the verified document", async () => {
+  it("streams the verified document without exposing a signed storage capability", async () => {
     const { createSignedUrl } = setupAdminClient()
     const response = await requestDocument()
-    expect(response.status).toBe(307)
-    expect(response.headers.get("location")).toBe("https://storage.example.test/signed-document")
-    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.status).toBe(200)
+    expect(response.headers.get("location")).toBeNull()
     expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/documents/memo.pdf", 60)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith("https://storage.example.test/signed-document", {
+      filename: "memo.pdf",
+      contentType: "application/pdf",
+    })
   })
 
   it("does not create a storage URL when the private file is unavailable", async () => {

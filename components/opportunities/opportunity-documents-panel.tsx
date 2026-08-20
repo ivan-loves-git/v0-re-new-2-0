@@ -1,9 +1,8 @@
 "use client"
 
 import { useRef, useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ExternalLink, FileText, Upload } from "lucide-react"
+import { FileText, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -273,14 +272,6 @@ export function OpportunityDocumentsPanel({
                     <TableRow key={document.id}>
                       <TableCell>
                         <div className="font-medium">{document.title}</div>
-                        {document.external_url && (
-                          <Button asChild variant="link" className="h-auto p-0 text-xs">
-                            <Link href={document.external_url} target="_blank" rel="noreferrer">
-                              <ExternalLink className="size-3" />
-                              External link
-                            </Link>
-                          </Button>
-                        )}
                       </TableCell>
                       <TableCell>{documentTypeLabel(document.document_type)}</TableCell>
                       <TableCell>

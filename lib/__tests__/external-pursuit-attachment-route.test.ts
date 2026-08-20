@@ -5,9 +5,15 @@ const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   rpc: vi.fn(),
   createSignedUrl: vi.fn(),
+  proxyDownload: vi.fn(),
 }))
 vi.mock("@/lib/access-control", () => ({ getCurrentUserAccessFromHeaders: mocks.getAccess }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
+vi.mock("@/lib/storage/private-signed-download", () => ({
+  proxyPrivateSignedStorageDownload: mocks.proxyDownload,
+  privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
+}))
 
 import { GET } from "@/app/api/external-pursuits/[pursuitId]/attachments/[attachmentId]/route"
 
@@ -21,9 +27,10 @@ describe("External Pursuit attachment download route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getAccess.mockResolvedValue({ role: "repreneur", repreneurId: "owner-1", user: { id: "owner-user" } })
-    mocks.rpc.mockResolvedValue({ data: [{ storage_path: "dossier-1/random.pdf", original_filename: "Memo.pdf" }], error: null })
+    mocks.rpc.mockResolvedValue({ data: [{ storage_path: "dossier-1/random.pdf", original_filename: "Memo.pdf", content_type: "application/pdf" }], error: null })
     mocks.createSignedUrl.mockResolvedValue({ data: { signedUrl: "https://storage.example.test/private" }, error: null })
     mocks.createAdminClient.mockReturnValue({ rpc: mocks.rpc, storage: { from: vi.fn(() => ({ createSignedUrl: mocks.createSignedUrl })) } })
+    mocks.proxyDownload.mockResolvedValue(new Response("attachment", { status: 200 }))
   })
 
   it("rejects an unassigned session before any service-role lookup", async () => {
@@ -38,13 +45,17 @@ describe("External Pursuit attachment download route", () => {
     expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it("returns a private 60-second download redirect after exact authorization", async () => {
+  it("streams an attachment after exact authorization without exposing its signed URL", async () => {
     const response = await request()
-    expect(response.status).toBe(307)
-    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.status).toBe(200)
+    expect(response.headers.get("location")).toBeNull()
     expect(mocks.rpc).toHaveBeenCalledWith("external_pursuit_attachment_for_actor", {
       p_dossier_id: "dossier-1", p_attachment_id: "file-1", p_actor_user_id: "owner-user",
     })
-    expect(mocks.createSignedUrl).toHaveBeenCalledWith("dossier-1/random.pdf", 60, { download: "Memo.pdf" })
+    expect(mocks.createSignedUrl).toHaveBeenCalledWith("dossier-1/random.pdf", 60)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith("https://storage.example.test/private", {
+      filename: "Memo.pdf",
+      contentType: "application/pdf",
+    })
   })
 })

@@ -418,7 +418,7 @@ W-065 is a staff-only application boundary over the live W-064 evidence model. O
 5. A `source_teaser` preserves the original file separately from `opportunities.teaser_summary` and any later repreneur-facing `teaser`. It is permanently `staff_only`, cannot transition to `approved_for_repreneur`, and is retained as source evidence rather than overwritten by an anonymized or edited derivative.
 6. A `source_teaser` and `deal_book` (labelled **Information memorandum (IM)** in WAVE) are PDF-only staff uploads. Both are constrained at database level to `staff_only`; the generic document control cannot approve either for repreneur access, and a later pursuit-specific grant is the only disclosure authority.
 7. Source teasers and IMs are retained records. A correction creates a new document row and never overwrites or deletes an earlier version. Canonical NDA artifact rows remain subject to their stricter immutable version rules below.
-8. Staff view or download a private document only through the server-side opportunity document route after a staff authorization check. The route creates a short-lived private storage URL; it does not grant browser storage access.
+8. Staff view or download a private document only through the server-side opportunity document route after a staff authorization check. The route may create a short-lived private storage capability internally, but it streams bytes through WAVE with private no-store attachment headers; it never grants a browser a reusable storage URL. Legacy or arbitrary external URLs are not browser-delivered.
 
 ### Canonical NDA artifact versions
 

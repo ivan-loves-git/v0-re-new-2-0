@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   requireStaffAccess: vi.fn(),
+  proxyDownload: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({
@@ -11,6 +12,11 @@ vi.mock("@/lib/access-control", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
+}))
+vi.mock("@/lib/storage/private-signed-download", () => ({
+  proxyPrivateSignedStorageDownload: mocks.proxyDownload,
+  privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
 }))
 
 import { GET } from "@/app/(dashboard)/opportunities/[id]/nda-artifacts/[artifactId]/route"
@@ -21,6 +27,7 @@ function setupAdminClient({
     storage_bucket: "opportunity-documents",
     storage_path: "opportunity-1/nda-artifacts/blank_template/blank.pdf",
     file_name: "blank.pdf",
+    mime_type: "application/pdf",
   },
 }: {
   artifact?: { document_id: string } | null
@@ -28,6 +35,7 @@ function setupAdminClient({
     storage_bucket: string
     storage_path: string | null
     file_name: string
+    mime_type?: string | null
   } | null
 } = {}) {
   const artifactMaybeSingle = vi.fn().mockResolvedValue({
@@ -92,6 +100,7 @@ describe("staff NDA artifact route", () => {
       role: "staff",
       user: { id: "staff-1", email: "staff@example.test" },
     })
+    mocks.proxyDownload.mockResolvedValue(new Response("document", { status: 200 }))
   })
 
   it("requires staff before reading canonical artifact metadata", async () => {
@@ -112,14 +121,13 @@ describe("staff NDA artifact route", () => {
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it("redirects a retained private PDF through a short signed URL", async () => {
+  it("streams a retained private PDF without exposing its signed URL", async () => {
     const { createSignedUrl } = setupAdminClient()
 
     const response = await requestArtifact()
 
-    expect(response.status).toBe(307)
-    expect(response.headers.get("location")).toBe("https://storage.example.test/signed-nda")
-    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.status).toBe(200)
+    expect(response.headers.get("location")).toBeNull()
     expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.pdf", 60)
   })
 
@@ -134,12 +142,9 @@ describe("staff NDA artifact route", () => {
 
     const response = await requestArtifact(true)
 
-    expect(response.status).toBe(307)
-    expect(createSignedUrl).toHaveBeenCalledWith(
-      "opportunity-1/nda-artifacts/blank_template/blank.docx",
-      60,
-      { download: "Blank NDA.docx" },
-    )
+    expect(response.status).toBe(200)
+    expect(response.headers.get("location")).toBeNull()
+    expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.docx", 60)
   })
 
   it("refuses a canonical artifact without retained private storage", async () => {
