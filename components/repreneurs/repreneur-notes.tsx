@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { Note, NoteType } from "@/lib/types/repreneur"
 import { NOTE_TYPE_OPTIONS } from "@/lib/types/repreneur"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 
 interface RepreneurNotesProps {
   repreneurId: string
@@ -34,8 +35,7 @@ interface RepreneurNotesProps {
 }
 
 function formatDate(dateString: string) {
-  const date = new Date(dateString)
-  return date.toLocaleDateString("en-US", {
+  return formatDisplayDate(dateString, "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

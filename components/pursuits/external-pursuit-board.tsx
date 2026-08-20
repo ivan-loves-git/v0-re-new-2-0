@@ -416,10 +416,10 @@ export function ExternalPursuitBoard({
 
       <section aria-label="Pursuit board" className="grid gap-4 lg:flex lg:overflow-x-auto lg:pb-2">
         {EXTERNAL_PURSUIT_STAGES.map((stage) => {
-          const needle = query.trim().toLocaleLowerCase()
+          const needle = query.trim().toLowerCase()
           const cards = [
-            ...external.filter((record) => record.stage === stage && (!needle || record.title.toLocaleLowerCase().includes(needle))),
-            ...renew.filter((record) => record.stage === stage && (!needle || record.title.toLocaleLowerCase().includes(needle))),
+            ...external.filter((record) => record.stage === stage && (!needle || record.title.toLowerCase().includes(needle))),
+            ...renew.filter((record) => record.stage === stage && (!needle || record.title.toLowerCase().includes(needle))),
           ]
           return (
             <Card key={stage} className="min-w-0 shadow-none lg:w-80 lg:flex-none">

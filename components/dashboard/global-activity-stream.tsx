@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Activity, Mail, Phone, Users, FileText, Calendar } from "lucide-react"
 import { CardInfoButton } from "./card-info-button"
 import { CardLinkButton } from "./card-link-button"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistance } from "date-fns"
 import Link from "next/link"
+import { initialDateLabel, useHydratedNow } from "@/hooks/use-hydrated-now"
 
 interface ActivityItem {
   id: string
@@ -42,6 +43,7 @@ const kpiInfo = {
 }
 
 export function GlobalActivityStream({ activities, maxHeight = "400px" }: GlobalActivityStreamProps) {
+  const now = useHydratedNow()
   return (
     <Card className="h-full gap-0 py-0">
       <CardHeader className="flex min-h-14 flex-row items-center justify-between border-b py-3">
@@ -86,7 +88,7 @@ export function GlobalActivityStream({ activities, maxHeight = "400px" }: Global
                       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{activity.description}</p>
                     )}
                     <p className="mt-1 text-[11px] text-muted-foreground/80">
-                      {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                      {now === null ? initialDateLabel(activity.created_at) : formatDistance(new Date(activity.created_at), new Date(now), { addSuffix: true })}
                       {activity.owner && <span> · by {activity.owner}</span>}
                     </p>
                   </div>

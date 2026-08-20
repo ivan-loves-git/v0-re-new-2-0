@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createMilestone, toggleMilestoneComplete, updateMilestone, deleteMilestone } from "@/lib/actions/offers"
+import { formatCivilDate } from "@/lib/utils/display-date-time"
 import type { OfferMilestone, MilestoneType } from "@/lib/types/offer"
 import {
   FieldError,
@@ -54,7 +55,7 @@ const MILESTONE_TYPES = [
 ] as const
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  return formatCivilDate(dateString, "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

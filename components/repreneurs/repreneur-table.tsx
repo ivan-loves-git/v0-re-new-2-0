@@ -40,8 +40,10 @@ import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
 import { NeedsCompletionBadge } from "./needs-completion-badge"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
+import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 const ITEMS_PER_PAGE = 8
 
@@ -244,6 +246,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   ref,
 ) {
   const router = useRouter()
+  const now = useHydratedNow()
   // Global sort for flat view
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -347,9 +350,9 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     const matchesOffer = !offerFilter || Boolean(r.offer_names?.includes(offerFilter))
 
     let matchesDate = true
-    if (dateRange !== "all") {
+    if (dateRange !== "all" && now !== null) {
       const days = parseInt(dateRange)
-      const cutoffDate = new Date()
+      const cutoffDate = new Date(now)
       cutoffDate.setDate(cutoffDate.getDate() - days)
       matchesDate = new Date(r.created_at) >= cutoffDate
     }
@@ -436,10 +439,10 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       let comparison = 0
       switch (field) {
         case "name":
-          comparison = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+          comparison = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "fr")
           break
         case "email":
-          comparison = a.email.localeCompare(b.email)
+          comparison = a.email.localeCompare(b.email, "fr")
           break
         case "created_at":
           comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -506,10 +509,10 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     let comparison = 0
     switch (sortField) {
       case "name":
-        comparison = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+        comparison = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "fr")
         break
       case "email":
-        comparison = a.email.localeCompare(b.email)
+        comparison = a.email.localeCompare(b.email, "fr")
         break
       case "created_at":
         comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -596,13 +599,13 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       case "declined":
         return (
           <span className="text-sm text-muted-foreground">
-            {repreneur.declined_at ? new Date(repreneur.declined_at).toLocaleDateString() : "Unknown"}
+            {repreneur.declined_at ? formatDisplayDate(repreneur.declined_at, "en-GB") : "Unknown"}
           </span>
         )
       case "rejected":
         return (
           <span className="text-sm text-muted-foreground">
-            {repreneur.rejected_at ? new Date(repreneur.rejected_at).toLocaleDateString() : "Unknown"}
+            {repreneur.rejected_at ? formatDisplayDate(repreneur.rejected_at, "en-GB") : "Unknown"}
           </span>
         )
       case "to_reactivate":
@@ -728,7 +731,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                       <JourneyDisplay repreneur={repreneur} />
                     </TableCell>
                     <TableCell className="w-[15%] text-muted-foreground">
-                      {new Date(repreneur.created_at).toLocaleDateString()}
+                      {formatDisplayDate(repreneur.created_at, "en-GB")}
                     </TableCell>
                   </TableRow>
                 ))
@@ -869,7 +872,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                             <JourneyDisplay repreneur={repreneur} />
                           </TableCell>
                           <TableCell className="w-[14%] text-right text-xs text-muted-foreground">
-                            {new Date(repreneur.created_at).toLocaleDateString()}
+                            {formatDisplayDate(repreneur.created_at, "en-GB")}
                           </TableCell>
                         </TableRow>
                       ))}

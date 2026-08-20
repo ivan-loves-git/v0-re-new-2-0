@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Textarea } from "@/components/ui/textarea"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { suppressionBlocksMaTemplate } from "@/lib/ma-contact-email-policy"
+import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 import {
   FieldError,
   type FieldErrors,
@@ -31,12 +32,12 @@ function formatDate(value: string | null | undefined) {
   if (!value) return "-"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "-"
-  return new Intl.DateTimeFormat("fr-FR", {
+  return formatDisplayDateTime(value, "fr-FR", {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date)
+  })
 }
 
 async function fingerprintClientSend(value: string) {

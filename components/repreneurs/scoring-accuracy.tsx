@@ -9,6 +9,7 @@ import { SCORING_ACCURACY_OPTIONS } from "@/lib/types/repreneur"
 import { saveAccuracyRating } from "@/lib/actions/repreneurs"
 import { toast } from "sonner"
 import { Check, Target } from "lucide-react"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 
 interface ScoringAccuracyProps {
   repreneurId: string
@@ -57,7 +58,7 @@ export function ScoringAccuracy({
         <span>Score Accuracy</span>
         {accuracyRatedAt && (
           <span className="ml-auto text-[10px] text-muted-foreground/60">
-            Rated {new Date(accuracyRatedAt).toLocaleDateString()}
+            Rated {formatDisplayDate(accuracyRatedAt, "en-GB")}
           </span>
         )}
       </div>

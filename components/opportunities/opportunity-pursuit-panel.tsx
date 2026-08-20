@@ -27,6 +27,7 @@ import {
 } from "@/lib/actions/opportunity-pursuit-journey"
 import type { StaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
+import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
 import type { OpportunityDocument, OpportunityMatch, OpportunityNdaArtifact } from "@/lib/types/opportunity"
 
 interface OpportunityPursuitPanelProps {
@@ -59,10 +60,6 @@ const EVENT_LABELS: Record<string, string> = {
 function repreneurName(match: OpportunityMatch | null) {
   if (!match?.repreneur) return "Unknown repreneur"
   return [match.repreneur.first_name, match.repreneur.last_name].filter(Boolean).join(" ") || match.repreneur.email
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value))
 }
 
 export function OpportunityPursuitPanel({ opportunityId, matches, documents, ndaArtifacts, projection, legacyEventCount }: OpportunityPursuitPanelProps) {
@@ -131,7 +128,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
       <Card>
         <CardHeader><CardTitle>Evidence checklist</CardTitle><CardDescription>Each completed step is immutable and tied to the active pursuit.</CardDescription></CardHeader>
         <CardContent className="divide-y rounded-md border">
-          {projection?.steps.map((step) => <div key={step.key} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">{step.label}</p>{step.status === "complete" && step.recordedAt ? <p className="text-xs text-muted-foreground">{step.actor} · {formatDateTime(step.recordedAt)}</p> : step.blocker ? <p className="text-xs text-muted-foreground">{step.blocker}</p> : null}</div><Badge variant={step.status === "complete" ? "secondary" : step.status === "current" ? "default" : "outline"}>{step.status === "complete" ? "Recorded" : step.status === "current" ? "Next action" : "Pending"}</Badge></div>) ?? <p className="p-3 text-sm text-muted-foreground">Start an active pursuit to see its canonical checklist.</p>}
+          {projection?.steps.map((step) => <div key={step.key} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">{step.label}</p>{step.status === "complete" && step.recordedAt ? <p className="text-xs text-muted-foreground">{step.actor} · {formatPursuitDateTime(step.recordedAt)}</p> : step.blocker ? <p className="text-xs text-muted-foreground">{step.blocker}</p> : null}</div><Badge variant={step.status === "complete" ? "secondary" : step.status === "current" ? "default" : "outline"}>{step.status === "complete" ? "Recorded" : step.status === "current" ? "Next action" : "Pending"}</Badge></div>) ?? <p className="p-3 text-sm text-muted-foreground">Start an active pursuit to see its canonical checklist.</p>}
         </CardContent>
       </Card>
 
@@ -161,7 +158,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><History data-icon="inline-start" />Evidence log</CardTitle><CardDescription>Append-only operational history for this pursuit. {legacyEventCount ? `${legacyEventCount} legacy stage record${legacyEventCount === 1 ? " is" : "s are"} retained as read-only history.` : ""}</CardDescription></CardHeader>
-        <CardContent>{projection?.entries.length ? <div className="divide-y rounded-md border">{projection.entries.map((entry) => <div key={entry.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">{EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>{entry.evidence_reference ? <p className="text-xs text-muted-foreground">{entry.evidence_reference}</p> : null}</div><p className="text-xs text-muted-foreground">{entry.actor} · {formatDateTime(entry.recorded_at)}</p></div>)}</div> : <p className="text-sm text-muted-foreground">No canonical evidence has been recorded yet.</p>}</CardContent>
+        <CardContent>{projection?.entries.length ? <div className="divide-y rounded-md border">{projection.entries.map((entry) => <div key={entry.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">{EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>{entry.evidence_reference ? <p className="text-xs text-muted-foreground">{entry.evidence_reference}</p> : null}</div><p className="text-xs text-muted-foreground">{entry.actor} · {formatPursuitDateTime(entry.recorded_at)}</p></div>)}</div> : <p className="text-sm text-muted-foreground">No canonical evidence has been recorded yet.</p>}</CardContent>
       </Card>
     </div>
   )

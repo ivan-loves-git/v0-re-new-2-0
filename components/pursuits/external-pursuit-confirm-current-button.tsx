@@ -23,15 +23,17 @@ export function ExternalPursuitConfirmCurrentButton({
   onConfirmed?: () => void
 }) {
   const stateRef = useRef(EMPTY_EXTERNAL_PURSUIT_CONFIRMATION_STATE)
-  const lockToken = useRef(`confirmation:${pursuitId}:${crypto.randomUUID()}`)
+  const lockToken = useRef<string | null>(null)
   const [pending, setPending] = useState(false)
   const [retryPending, setRetryPending] = useState(false)
 
   useEffect(() => {
     if (!retryPending) return
-    onOperationLockChange?.({ token: lockToken.current, delta: 1 })
-    return () => onOperationLockChange?.({ token: lockToken.current, delta: -1 })
-  }, [onOperationLockChange, retryPending])
+    const token = lockToken.current ?? `confirmation:${pursuitId}:${crypto.randomUUID()}`
+    lockToken.current = token
+    onOperationLockChange?.({ token, delta: 1 })
+    return () => onOperationLockChange?.({ token, delta: -1 })
+  }, [onOperationLockChange, pursuitId, retryPending])
 
   async function confirm() {
     const start = beginExternalPursuitConfirmation(

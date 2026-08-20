@@ -13,12 +13,11 @@ import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES, type ExternalPursuitAttachment }
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { toast } from "sonner"
 import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 
 function readableBytes(size: number) {
   return size < 1024 * 1024 ? `${Math.ceil(size / 1024)} KB` : `${(size / 1024 / 1024).toFixed(1)} MB`
 }
-
-const uploadDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" })
 
 export interface ExternalPursuitAttachmentsPanelProps {
   pursuitId: string
@@ -156,7 +155,7 @@ export function ExternalPursuitAttachmentsPanel({
     <ul className="mt-4 divide-y rounded-md border" aria-label="Attachments">
       {attachments.length ? attachments.map((attachment) => <li key={attachment.id} className="flex items-center gap-3 p-3">
         <Paperclip className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{attachment.original_filename}</p><p className="text-xs text-muted-foreground">{attachment.content_type} · {readableBytes(attachment.byte_size)} · Uploaded by {attachment.uploader_label.toLowerCase()} on {uploadDate.format(new Date(attachment.created_at))}</p></div>
+        <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{attachment.original_filename}</p><p className="text-xs text-muted-foreground">{attachment.content_type} · {readableBytes(attachment.byte_size)} · Uploaded by {attachment.uploader_label.toLowerCase()} on {formatDisplayDate(attachment.created_at, "en-GB")}</p></div>
         <Button asChild variant="ghost" size="icon" aria-label={`Download ${attachment.original_filename}`}><a href={`/api/external-pursuits/${pursuitId}/attachments/${attachment.id}`}><Download className="size-4" /></a></Button>
         {!readOnly ? <Button variant="ghost" size="icon" aria-label={`${recovery && recovery !== "upload" && recovery.attachmentId === attachment.id ? "Retry removal of" : "Remove"} ${attachment.original_filename}`} disabled={pending || Boolean(recovery && (recovery === "upload" || recovery.attachmentId !== attachment.id))} onClick={() => remove(attachment.id)}><Trash2 className="size-4" /></Button> : null}
       </li>) : <li className="p-3 text-sm text-muted-foreground">No private attachments yet.</li>}

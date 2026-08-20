@@ -52,6 +52,7 @@ import {
   dayLevelOpportunityDate,
   formatOpportunitySourceDate,
 } from "@/lib/utils/opportunity-source-date"
+import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 type WorkSurfaceMode = "find" | "groups"
 type FreshnessFilter = "all" | "fresh" | "stale" | "no_date"
@@ -127,10 +128,12 @@ function formatDealSize(opportunity: OpportunityWorkSurfaceRecord) {
 function getAgeDays(
   value: string | null | undefined,
   precision: OpportunityWorkSurfaceRecord["date_added_precision"],
+  now: number | null,
 ) {
+  if (now === null) return null
   const date = dayLevelOpportunityDate(value, precision)
   if (!date) return null
-  const diff = Date.now() - date.getTime()
+  const diff = now - date.getTime()
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
 }
 
@@ -179,6 +182,7 @@ function getGroupKey(journey: OpportunityJourney): OpportunityGroupKey {
 
 function prepareOpportunity(
   opportunity: OpportunityWorkSurfaceRecord,
+  now: number | null,
 ): PreparedOpportunity {
   const journey = deriveOpportunityJourney({
     status: opportunity.status,
@@ -199,7 +203,7 @@ function prepareOpportunity(
     proposedCount: opportunity.matches.filter(
       (match) => match.status === "proposed",
     ).length,
-    ageDays: getAgeDays(opportunity.date_added, opportunity.date_added_precision),
+    ageDays: getAgeDays(opportunity.date_added, opportunity.date_added_precision, now),
   }
 }
 
@@ -422,6 +426,7 @@ export function OpportunityWorkSurfaceTable({
   opportunities,
   mode,
 }: OpportunityWorkSurfaceTableProps) {
+  const now = useHydratedNow()
   const [currentPage, setCurrentPage] = useState(1)
   const [groupPages, setGroupPages] =
     useState<Record<OpportunityGroupKey, number>>(GROUP_PAGE_DEFAULTS)
@@ -430,8 +435,8 @@ export function OpportunityWorkSurfaceTable({
   >(() => new Set(["closed"]))
 
   const prepared = useMemo(
-    () => opportunities.map(prepareOpportunity),
-    [opportunities],
+    () => opportunities.map((opportunity) => prepareOpportunity(opportunity, now)),
+    [opportunities, now],
   )
 
   const locations = useMemo(

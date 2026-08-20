@@ -16,6 +16,8 @@ const LEGEND_DOTS: Record<string, string> = {
   commission: "bg-chart-4",
 }
 
+const REVENUE_NUMBER_FORMAT = new Intl.NumberFormat("en-GB")
+
 export function RevenueJourney({ persona }: RevenueJourneyProps) {
   const { revenue, projectedCommission, projectedDeal } = persona
   const total = revenue.subscription + revenue.consulting + revenue.certification + revenue.commission
@@ -60,11 +62,11 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
       <CardContent className="space-y-3">
         {/* Total */}
         <div>
-          <span className="text-2xl font-bold">{total.toLocaleString()}</span>
+          <span className="text-2xl font-bold">{REVENUE_NUMBER_FORMAT.format(total)}</span>
           <span className="text-sm text-muted-foreground ml-1">EUR</span>
           {projectedCommission > 0 && (
             <p className="mt-0.5 text-xs text-primary">
-              Projected if deal closes: +{projectedCommission.toLocaleString()} EUR commission ({projectedDeal}) = {projectedTotal.toLocaleString()} EUR total
+              Projected if deal closes: +{REVENUE_NUMBER_FORMAT.format(projectedCommission)} EUR commission ({projectedDeal}) = {REVENUE_NUMBER_FORMAT.format(projectedTotal)} EUR total
             </p>
           )}
         </div>
@@ -101,8 +103,8 @@ export function RevenueJourney({ persona }: RevenueJourneyProps) {
               <span>{REVENUE_LABELS[key]}</span>
               <span className="font-semibold text-foreground">
                 {key === "commission" && projectedCommission > 0
-                  ? `(projected: ${projectedCommission.toLocaleString()})`
-                  : revenue[key].toLocaleString()}
+                  ? `(projected: ${REVENUE_NUMBER_FORMAT.format(projectedCommission)})`
+                  : REVENUE_NUMBER_FORMAT.format(revenue[key])}
               </span>
             </div>
           ))}

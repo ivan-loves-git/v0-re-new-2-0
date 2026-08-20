@@ -22,6 +22,7 @@ import {
   isValidElement,
   use,
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -87,7 +88,7 @@ type ComposedChartContextValue = {
   config: ChartConfig; // colors + labels for every bar and line series
   curveType: CurveType; // default curve interpolation each <Line /> inherits
   animationType: ComposedAnimationType; // default intro each <Bar />/<Line /> inherits
-  introStartedAt: number; // timestamp the chart mounted — anchors the one-shot intro
+  introStartedAt: number | null; // set after hydration — anchors the one-shot intro
   dataLength: number; // number of rows currently rendered
   isLoading: boolean; // whether the chart shows its loading skeleton
   hoveredIndex: number | null; // data index currently hovered, or null when none
@@ -178,9 +179,16 @@ export function EvilComposedChart<
   onBrushChange,
 }: EvilComposedChartProps<TData, TConfig>) {
   const chartId = useId().replace(/:/g, ""); // colon-free id keeps CSS/SVG selectors valid
-  // Anchors the intro to a fixed moment so it plays exactly once — re-renders
-  // and Recharts remounts read elapsed time from here instead of replaying.
-  const [introStartedAt] = useState(() => Date.now());
+  // Both SSR and React's first browser render stay static. Once hydrated, each
+  // chart mount gets its own clock so the intro runs once without risking a
+  // timestamp-dependent SVG mismatch or reusing a stale global instant.
+  const [introStartedAt, setIntroStartedAt] = useState<number | null>(null);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setIntroStartedAt(Date.now());
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [selectedDataKey, setSelectedDataKey] = useState<string | null>(defaultSelectedDataKey);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const { loadingData, onShimmerExit } = useLoadingData(isLoading, loadingBars);
@@ -760,7 +768,7 @@ type CustomBarProps = {
   enableHoverHighlight?: boolean; // whether hovering a column dims the others
   animationType?: ComposedAnimationType; // grow-in order for this bar
   dataLength?: number; // total bars in the series — drives the stagger
-  introStartedAt?: number; // chart-mount timestamp anchoring the one-shot grow-in
+  introStartedAt?: number | null; // chart-mount timestamp anchoring the one-shot grow-in
   onClick?: () => void; // fired when a clickable bar is clicked
 } & BarShapeProps;
 
@@ -868,8 +876,9 @@ const getBarGrowAnimation = (
   animationType: ComposedAnimationType,
   index: number,
   dataLength: number,
-  introStartedAt: number,
+  introStartedAt: number | null,
 ) => {
+  if (introStartedAt === null) return null;
   if (animationType === "none" || index < 0 || dataLength <= 0) return null;
 
   const lastIndex = dataLength - 1;

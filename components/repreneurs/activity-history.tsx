@@ -33,7 +33,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatDistanceToNow, format } from "date-fns"
+import { formatDistance } from "date-fns"
+import { initialDateLabel, useHydratedNow } from "@/hooks/use-hydrated-now"
+import { formatCivilDate, formatDisplayDateTime } from "@/lib/utils/display-date-time"
 import type { Activity as ActivityType_DB, ActivityType } from "@/lib/types/repreneur"
 
 interface ActivityHistoryProps {
@@ -56,6 +58,7 @@ function getActivityConfig(type: ActivityType) {
 
 export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProps) {
   const router = useRouter()
+  const now = useHydratedNow()
   const [isOpen, setIsOpen] = useState(false)
   const [activityType, setActivityType] = useState<ActivityType>("welcome_email")
   const [notes, setNotes] = useState("")
@@ -232,11 +235,11 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
                     {activity.event_date && (
                       <p className="mt-1 flex items-center gap-1 text-xs font-medium text-primary">
                         <Calendar className="size-3" />
-                        {format(new Date(activity.event_date), "MMM d, yyyy")}
+                        {formatCivilDate(activity.event_date, "en-US")}
                       </p>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground/80">
-                      {format(new Date(activity.created_at), "MMM d 'at' HH:mm")} ({formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })})
+                      {formatDisplayDateTime(activity.created_at, "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} ({now === null ? initialDateLabel(activity.created_at) : formatDistance(new Date(activity.created_at), new Date(now), { addSuffix: true })})
                       {activity.created_by_email && <span> · by {activity.created_by_email}</span>}
                     </p>
                   </div>
@@ -287,10 +290,10 @@ export function ActivityHistory({ repreneurId, activities }: ActivityHistoryProp
             {viewingActivity && getActivityConfig(viewingActivity.activity_type).label}
           </DialogTitle>
           <DialogDescription>
-            {viewingActivity && format(new Date(viewingActivity.created_at), "MMM d 'at' HH:mm")} ({viewingActivity && formatDistanceToNow(new Date(viewingActivity.created_at), { addSuffix: true })})
+            {viewingActivity && formatDisplayDateTime(viewingActivity.created_at, "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} ({viewingActivity && (now === null ? initialDateLabel(viewingActivity.created_at) : formatDistance(new Date(viewingActivity.created_at), new Date(now), { addSuffix: true }))})
             {viewingActivity?.created_by_email && ` · by ${viewingActivity.created_by_email}`}
             {viewingActivity?.duration_minutes && ` · ${viewingActivity.duration_minutes} minutes`}
-            {viewingActivity?.event_date && ` · Event: ${format(new Date(viewingActivity.event_date), "MMM d, yyyy")}`}
+            {viewingActivity?.event_date && ` · Event: ${formatCivilDate(viewingActivity.event_date, "en-US")}`}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

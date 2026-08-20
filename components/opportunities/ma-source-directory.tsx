@@ -125,7 +125,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
             .filter((source) => source.network)
             .map((source) => [source.network!.id, source.network!]),
         ).values(),
-      ].sort((left, right) => left.name.localeCompare(right.name)),
+      ].sort((left, right) => left.name.localeCompare(right.name, "fr")),
     [sources],
   )
   const filterDefinitions = useMemo<CollectionFilterDefinition[]>(
@@ -221,7 +221,7 @@ export function MaSourceDirectory({ sources }: MaSourceDirectoryProps) {
 
     return [
       ...[...grouped.entries()]
-        .sort((left, right) => left[1].name.localeCompare(right[1].name))
+        .sort((left, right) => left[1].name.localeCompare(right[1].name, "fr"))
         .map(([id, group]) => ({ id, ...group, grouped: true })),
       ...(ungrouped.length
         ? [

@@ -26,6 +26,7 @@ describe("W-066 staff relationship workspace", () => {
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
   const rehearsal = source("scripts/rehearse-ma-relationship-workspace.sql")
   const verifier = source("scripts/verify-ma-data-model-schema.sql")
+  const displayDateTime = source("lib/utils/display-date-time.ts")
 
   it("keeps legacy relationship links as safe aliases for the staff workspace", () => {
     expect(page).toContain("redirect(")
@@ -163,7 +164,10 @@ describe("W-066 staff relationship workspace", () => {
   })
 
   it("renders timeline dates in one canonical timezone on the server and client", () => {
-    expect(workspace).toContain('timeZone: "Europe/Paris"')
+    expect(workspace).toContain('formatDisplayDateTime(value, "fr-FR"')
+    expect(displayDateTime).toContain('DISPLAY_TIME_ZONE = "Europe/Paris"')
+    expect(workspace).not.toContain("useState(dateTimeInputValue())")
+    expect(workspace).toContain("setOccurredAt(dateTimeInputValue(new Date()))")
   })
 
   it("keeps opportunity history on the same canonical interaction ledger", () => {

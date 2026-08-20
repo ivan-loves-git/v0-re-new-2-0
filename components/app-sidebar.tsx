@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
 import { BUILD_VERSION } from "@/lib/version"
+import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 import {
   Sidebar,
@@ -121,7 +122,8 @@ export function AppSidebar({
   const { isMobile, setOpenMobile } = useSidebar()
   const [pendingHref, setPendingHref] = React.useState<string | null>(null)
   const [hasMounted, setHasMounted] = React.useState(false)
-  const hasNewRoadmap = hasRecentRoadmapUpdates()
+  const now = useHydratedNow()
+  const hasNewRoadmap = now !== null && hasRecentRoadmapUpdates(new Date(now))
 
   React.useEffect(() => {
     setPendingHref(null)

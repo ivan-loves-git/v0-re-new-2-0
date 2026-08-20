@@ -42,6 +42,7 @@ import {
 import { useCollectionFilters } from "@/hooks/use-collection-filters";
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state";
 import { updateMaSourceContact } from "@/lib/actions/ma-sources";
+import { formatDisplayDate } from "@/lib/utils/display-date-time";
 import type {
   MaSourceContactDirectoryEntry,
   MaSourceDirectoryEntry,
@@ -57,11 +58,11 @@ function contactName(contact: MaSourceContactDirectoryEntry) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
+  return formatDisplayDate(value, "fr-FR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(value));
+  });
 }
 
 export function MaContactDirectory({
@@ -84,7 +85,7 @@ export function MaContactDirectory({
           .filter((source) => source.network)
           .map((source) => [source.network!.id, source.network!]),
       ).values(),
-    ].sort((left, right) => left.name.localeCompare(right.name));
+    ].sort((left, right) => left.name.localeCompare(right.name, "fr"));
 
     return [
       {

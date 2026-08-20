@@ -17,6 +17,7 @@ import { updateRepreneurStatusPipeline } from "@/lib/actions/pipeline"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
+import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 interface KanbanBoardProps {
   repreneurs: Repreneur[]
@@ -31,6 +32,7 @@ export function KanbanBoard({ repreneurs }: KanbanBoardProps) {
     source: "",
     dateRange: "all",
   })
+  const now = useHydratedNow()
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -68,9 +70,9 @@ export function KanbanBoard({ repreneurs }: KanbanBoardProps) {
       }
 
       // Date range filter
-      if (filters.dateRange !== "all") {
+      if (filters.dateRange !== "all" && now !== null) {
         const days = parseInt(filters.dateRange)
-        const cutoffDate = new Date()
+        const cutoffDate = new Date(now)
         cutoffDate.setDate(cutoffDate.getDate() - days)
         if (new Date(r.created_at) < cutoffDate) {
           return false
@@ -79,7 +81,7 @@ export function KanbanBoard({ repreneurs }: KanbanBoardProps) {
 
       return true
     })
-  }, [optimisticRepreneurs, filters])
+  }, [optimisticRepreneurs, filters, now])
 
   const columns = [
     { status: "lead" as LifecycleStatus, title: "Lead", color: "bg-blue-100" },

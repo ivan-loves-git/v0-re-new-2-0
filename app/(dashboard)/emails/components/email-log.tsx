@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { TEMPLATE_METADATA } from "@/lib/email/templates"
 import type { EmailLogEntry } from "@/lib/actions/emails"
 import type { EmailTemplateKey } from "@/lib/types/email"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 
 interface EmailLogProps {
   initialLogs: EmailLogEntry[]
@@ -130,7 +131,7 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(log.sent_at).toLocaleDateString("en-US", {
+                    {formatDisplayDate(log.sent_at, "en-US", {
                       day: "2-digit",
                       month: "2-digit",
                       hour: "2-digit",
@@ -139,7 +140,7 @@ export function EmailLog({ initialLogs, initialTotal }: EmailLogProps) {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {log.opened_at
-                      ? new Date(log.opened_at).toLocaleDateString("en-US", {
+                      ? formatDisplayDate(log.opened_at, "en-US", {
                           day: "2-digit",
                           month: "2-digit",
                           hour: "2-digit",

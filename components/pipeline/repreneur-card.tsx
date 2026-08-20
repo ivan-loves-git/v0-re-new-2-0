@@ -3,10 +3,11 @@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistance } from "date-fns"
 import { useRouter } from "next/navigation"
 import { Target } from "lucide-react"
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
+import { initialDateLabel, useHydratedNow } from "@/hooks/use-hydrated-now"
 import type { Repreneur } from "@/lib/types/repreneur"
 
 interface RepreneurCardProps {
@@ -16,6 +17,7 @@ interface RepreneurCardProps {
 
 export function RepreneurCard({ repreneur, isDragging = false }: RepreneurCardProps) {
   const router = useRouter()
+  const now = useHydratedNow()
 
   // Calculate combined score
   const whoScore = (repreneur as any).who_score ?? repreneur.tier1_score
@@ -64,7 +66,7 @@ export function RepreneurCard({ repreneur, isDragging = false }: RepreneurCardPr
         )}
         <p className="text-xs text-muted-foreground">{repreneur.email}</p>
         <p className="text-xs text-muted-foreground">
-          Added {formatDistanceToNow(new Date(repreneur.created_at), { addSuffix: true })}
+          Added {now === null ? initialDateLabel(repreneur.created_at) : formatDistance(new Date(repreneur.created_at), new Date(now), { addSuffix: true })}
         </p>
       </div>
     </Card>

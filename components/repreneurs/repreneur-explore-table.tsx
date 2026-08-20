@@ -3,7 +3,7 @@
 import { useState, useMemo, forwardRef, useImperativeHandle } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistance } from "date-fns"
 import { subDays } from "date-fns"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
@@ -26,6 +26,7 @@ import { DECLINE_REASON_OPTIONS } from "@/lib/types/repreneur"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
+import { initialDateLabel, useHydratedNow } from "@/hooks/use-hydrated-now"
 
 const ITEMS_PER_PAGE = 20
 
@@ -93,6 +94,7 @@ export interface RepreneurExploreTableRef {
 export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, RepreneurExploreTableProps>(
   function RepreneurExploreTable({ repreneurs }, ref) {
     const router = useRouter()
+    const now = useHydratedNow()
 
     // Sort state
     const [sortField, setSortField] = useState<SortField>("created_at")
@@ -157,9 +159,9 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
           if (who + when < parseInt(minScore)) return false
         }
 
-        if (dateRange !== "all") {
+        if (dateRange !== "all" && now !== null) {
           const days = parseInt(dateRange)
-          const cutoff = subDays(new Date(), days)
+          const cutoff = subDays(new Date(now), days)
           if (new Date(r.created_at) < cutoff) return false
         }
 
@@ -181,6 +183,7 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
       journeyFilter,
       personaFilter,
       recommendationFilter,
+      now,
     ])
 
     // Sorted data
@@ -189,13 +192,13 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
         let comparison = 0
         switch (sortField) {
           case "name":
-            comparison = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+            comparison = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "fr")
             break
           case "email":
-            comparison = a.email.localeCompare(b.email)
+            comparison = a.email.localeCompare(b.email, "fr")
             break
           case "status":
-            comparison = a.lifecycle_status.localeCompare(b.lifecycle_status)
+            comparison = a.lifecycle_status.localeCompare(b.lifecycle_status, "fr")
             break
           case "who":
             comparison = (a.who_score ?? a.tier1_score ?? 0) - (b.who_score ?? b.tier1_score ?? 0)
@@ -223,7 +226,7 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
             break
           }
           case "journey":
-            comparison = (a.journey_stage ?? "").localeCompare(b.journey_stage ?? "")
+            comparison = (a.journey_stage ?? "").localeCompare(b.journey_stage ?? "", "fr")
             break
           case "created_at":
             comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -415,9 +418,9 @@ export const RepreneurExploreTable = forwardRef<RepreneurExploreTableRef, Repren
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(r.created_at), {
-                          addSuffix: true,
-                        })}
+                        {now === null
+                          ? initialDateLabel(r.created_at)
+                          : formatDistance(new Date(r.created_at), new Date(now), { addSuffix: true })}
                       </TableCell>
                     </TableRow>
                   ))

@@ -30,6 +30,7 @@ import {
 import { OfferStatusBadge } from "./offer-status-badge"
 import { AssignOfferForm } from "./assign-offer-form"
 import { OfferMilestones } from "./offer-milestones"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import { updateRepreneurOfferStatus, deleteRepreneurOffer } from "@/lib/actions/offers"
 import { toast } from "sonner"
 import {
@@ -83,7 +84,7 @@ export function RepreneurOffersList({ repreneurId, repreneurOffers, allOffers }:
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return formatDisplayDate(dateString, "fr-FR", {
       day: "numeric",
       month: "short",
       year: "numeric",

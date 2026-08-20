@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 21, 2026",
+    version: "0.9.54",
+    title: "Production screens and email callbacks now behave deterministically",
+    isCompleted: true,
+    events: [
+      {
+        title: "Operational dates no longer change while a page hydrates",
+        type: "fix",
+        description: "Stored timestamps use the Paris operating timezone, civil dates keep their literal day, and moving relative labels wait until the browser has hydrated instead of disagreeing with the server.",
+      },
+      {
+        title: "Production email outcomes now reach the verified callback",
+        type: "fix",
+        description: "The single Resend production webhook is enabled for all six supported lifecycle events and its signing secret is stored only as an encrypted production setting.",
+      },
+    ],
+  },
+  {
     period: "Aug 20, 2026",
     version: "0.9.53",
     title: "Production safeguards are now consistent across the platform",
@@ -2532,7 +2550,7 @@ export function DevelopmentRoadmap() {
       <div className="text-center text-sm text-muted-foreground pt-4 border-t">
         <p className="flex items-center justify-center gap-2">
           <Rocket className="size-4 text-blue-500" />
-          {totalEvents} roadmap updates captured from first idea to current June V2 build
+          {totalEvents} roadmap updates captured from first idea to the current production build
         </p>
       </div>
     </div>

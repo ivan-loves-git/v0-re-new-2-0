@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import {
   canonicalTargetThesisValues,
   legacyTargetThesisValues,
@@ -359,7 +360,7 @@ export function RepreneurTargetThesisEditor({
 
 function dateLabel(value: string | null | undefined) {
   if (!value) return null
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value))
+  return formatDisplayDate(value, "en-GB")
 }
 
 export function RepreneurProfileContributions({ repreneur }: { repreneur: ProfileContributionsProfile }) {

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistance } from "date-fns"
 import { UserPlus, UserRound } from "lucide-react"
 
 import { JourneyStageBadge } from "@/components/journey/journey-stage-badge"
@@ -18,6 +18,7 @@ import {
 import type { JourneyStage, LifecycleStatus } from "@/lib/types/repreneur"
 import { CardInfoButton } from "./card-info-button"
 import { CardLinkButton } from "./card-link-button"
+import { initialDateLabel, useHydratedNow } from "@/hooks/use-hydrated-now"
 
 interface RecentRepreneur {
   id: string
@@ -56,6 +57,7 @@ export function RecentlyAddedRepreneurs({
   repreneurs,
   maxHeight = "420px",
 }: RecentlyAddedRepreneursProps) {
+  const now = useHydratedNow()
   return (
     <Card className="gap-0 py-0">
       <CardHeader className="flex min-h-14 flex-row items-center justify-between border-b py-3">
@@ -107,7 +109,7 @@ export function RecentlyAddedRepreneurs({
                       )}
                     </TableCell>
                     <TableCell className="pr-5 text-right text-muted-foreground">
-                      {formatDistanceToNow(new Date(repreneur.created_at), { addSuffix: true })}
+                      {now === null ? initialDateLabel(repreneur.created_at) : formatDistance(new Date(repreneur.created_at), new Date(now), { addSuffix: true })}
                     </TableCell>
                   </TableRow>
                 ))}

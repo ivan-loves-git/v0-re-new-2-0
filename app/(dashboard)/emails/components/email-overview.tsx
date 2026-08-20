@@ -5,6 +5,7 @@ import { Mail, MailOpen, MousePointerClick, AlertCircle } from "lucide-react"
 import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
 import type { EmailStats } from "@/lib/actions/emails"
 import { WaveBarChart } from "@/components/wave/charts"
+import { formatCivilDate } from "@/lib/utils/display-date-time"
 
 interface EmailOverviewProps {
   stats: EmailStats
@@ -36,7 +37,7 @@ const kpiInfo = {
 
 export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
   const chartData = dailyCounts.map((day) => ({
-    day: new Date(day.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+    day: formatCivilDate(day.date, "en-GB", { day: "2-digit", month: "short" }),
     count: day.count,
   }))
 

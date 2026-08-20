@@ -31,6 +31,9 @@ const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+// A loading skeleton is included in the server render, so its visible inline
+// dimensions must not depend on client-only entropy during hydration.
+const SIDEBAR_MENU_SKELETON_WIDTH = "70%"
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -602,11 +605,6 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean
 }) {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
-
   return (
     <div
       data-slot="sidebar-menu-skeleton"
@@ -625,7 +623,7 @@ function SidebarMenuSkeleton({
         data-sidebar="menu-skeleton-text"
         style={
           {
-            "--skeleton-width": width,
+            "--skeleton-width": SIDEBAR_MENU_SKELETON_WIDTH,
           } as React.CSSProperties
         }
       />

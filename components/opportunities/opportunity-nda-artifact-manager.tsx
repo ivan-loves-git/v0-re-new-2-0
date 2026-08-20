@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { registerOpportunityNdaArtifact } from "@/lib/actions/opportunity-nda-artifacts"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
+import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
 import {
   FieldError,
   type FieldErrors,
@@ -66,16 +67,6 @@ const ARTIFACT_ROLES: ArtifactRoleDefinition[] = [
     uploadHelp: "Upload one retained PDF file. Files are limited to 4 MB.",
   },
 ]
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value))
-}
 
 function currentArtifact(
   role: OpportunityNdaArtifactRole,
@@ -286,7 +277,7 @@ export function OpportunityNdaArtifactManager({
                           v{artifact.version_number} · {artifact.document?.title ?? "NDA artifact"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDateTime(artifact.recorded_at)}
+                          {formatPursuitDateTime(artifact.recorded_at)}
                           {artifact.match_id ? ` · pursuit ${artifact.match_id.slice(0, 8)}` : " · opportunity"}
                         </p>
                       </div>

@@ -20,6 +20,7 @@ import {
   createContext,
   use,
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -79,7 +80,7 @@ type BarChartContextValue = {
   isLoading: boolean; // whether the chart shows its loading skeleton
   barRadius: number; // default corner radius each <Bar /> inherits
   animationType: BarAnimationType; // default grow-in order each <Bar /> inherits
-  introStartedAt: number; // timestamp the chart mounted — anchors the one-shot grow-in
+  introStartedAt: number | null; // set after hydration — anchors the one-shot grow-in
   dataLength: number; // number of rows currently rendered
   selectedDataKey: string | null; // currently selected series, or null when none
   selectDataKey: (dataKey: string | null) => void; // sets the selected series
@@ -175,10 +176,16 @@ export function EvilBarChart<
   onBrushChange,
 }: EvilBarChartProps<TData, TConfig>) {
   const chartId = useId().replace(/:/g, ""); // colon-free id keeps CSS/SVG selectors valid
-  // Anchors the grow-in to a fixed moment so it plays exactly once — re-renders
-  // and Recharts' bar remounts read elapsed time from here instead of replaying.
-  // Lazy useState stamps the time once, on the initial render only.
-  const [introStartedAt] = useState(() => Date.now());
+  // Both SSR and React's first browser render stay static. Once hydrated, each
+  // chart mount gets its own clock so the grow-in runs once without risking a
+  // timestamp-dependent SVG mismatch or reusing a stale global instant.
+  const [introStartedAt, setIntroStartedAt] = useState<number | null>(null);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setIntroStartedAt(Date.now());
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [selectedDataKey, setSelectedDataKey] = useState<string | null>(defaultSelectedDataKey);
   const [isMouseInChart, setIsMouseInChart] = useState(false);
   const { loadingData, onShimmerExit } = useLoadingData(isLoading, loadingBars);
@@ -573,7 +580,7 @@ type CustomBarProps = {
   isMouseInChart?: boolean;
   isHorizontal?: boolean;
   animationType?: BarAnimationType;
-  introStartedAt?: number;
+  introStartedAt?: number | null;
   selectedDataKey?: string | null;
   isActive?: boolean;
   dataLength?: number;
@@ -702,8 +709,9 @@ const getBarGrowAnimation = (
   index: number,
   dataLength: number,
   isHorizontal: boolean,
-  introStartedAt: number,
+  introStartedAt: number | null,
 ) => {
+  if (introStartedAt === null) return null;
   if (animationType === "none" || index < 0 || dataLength <= 0) return null;
 
   const lastIndex = dataLength - 1;

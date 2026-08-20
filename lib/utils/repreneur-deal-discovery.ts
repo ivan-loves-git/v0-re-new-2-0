@@ -27,7 +27,7 @@ export const EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS: RepreneurDealDiscoveryFilte
 type RepreneurDealMetric = number | null | undefined;
 
 function normalizeText(value: string | null | undefined) {
-  return value?.trim().toLocaleLowerCase() ?? "";
+  return value?.trim().toLowerCase() ?? "";
 }
 
 function hasNumericValue(value: RepreneurDealMetric): value is number {

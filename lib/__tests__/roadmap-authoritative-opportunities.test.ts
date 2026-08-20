@@ -11,6 +11,16 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records deterministic production rendering and signed email callbacks", () => {
+    expect(roadmap).toContain('version: "0.9.54"')
+    expect(roadmap).toContain(
+      "Operational dates no longer change while a page hydrates",
+    )
+    expect(roadmap).toContain(
+      "Production email outcomes now reach the verified callback",
+    )
+  })
+
   it("records the zero-gap production hardening continuation", () => {
     expect(roadmap).toContain('version: "0.9.53"')
     expect(roadmap).toContain(
@@ -206,6 +216,8 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-20")')
+    expect(roadmapStatus).toContain('new Date("2026-08-21")')
+    expect(roadmap).toContain("current production build")
+    expect(roadmap).not.toContain("current June V2 build")
   })
 })

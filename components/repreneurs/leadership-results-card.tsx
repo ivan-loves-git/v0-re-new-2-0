@@ -12,6 +12,7 @@ import { getDecisionDisplay } from "@/lib/utils/leadership-scoring"
 import type { LeadershipAssessment } from "@/lib/types/leadership-assessment"
 import { LeadershipAnswersDialog } from "./leadership-answers-dialog"
 import { WaveRadarChart } from "@/components/wave/charts"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 
 interface LeadershipResultsCardProps {
   repreneurId: string
@@ -250,7 +251,7 @@ export function LeadershipResultsCard({
         {/* Completed date */}
         {assessment.completed_at && (
           <p className="border-t pt-3 text-xs text-muted-foreground">
-            Completed {new Date(assessment.completed_at).toLocaleDateString()}
+            Completed {formatDisplayDate(assessment.completed_at, "en-GB")}
           </p>
         )}
       </CardContent>

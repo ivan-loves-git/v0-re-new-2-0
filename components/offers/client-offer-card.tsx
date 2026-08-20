@@ -17,6 +17,7 @@ import {
   User
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -81,7 +82,7 @@ export function ClientOfferCard({
   const [isViewOpen, setIsViewOpen] = useState(false)
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return formatDisplayDate(dateString, "fr-FR", {
       day: "numeric",
       month: "short",
       year: "numeric",

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS, PERSONA_OPTIONS } from "@/lib/types/repreneur"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import {
   FieldError,
   FormFieldLabel,
@@ -225,7 +226,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
               </div>
               {repreneur?.consent_timestamp && (
                 <p className="text-xs text-muted-foreground">
-                  Consent recorded: {new Date(repreneur.consent_timestamp).toLocaleDateString()}
+                  Consent recorded: {formatDisplayDate(repreneur.consent_timestamp, "en-GB")}
                   {repreneur.consent_source && ` via ${repreneur.consent_source}`}
                 </p>
               )}

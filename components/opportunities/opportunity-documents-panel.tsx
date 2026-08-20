@@ -17,6 +17,7 @@ import {
 } from "@/lib/actions/opportunity-documents"
 import { DocumentRowActions, type DocumentInteractionState } from "@/components/opportunities/document-row-actions"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
+import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import {
   FieldError,
   type FieldErrors,
@@ -46,7 +47,7 @@ function formatBytes(bytes: number | null | undefined) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
+  return formatDisplayDate(value, "fr-FR", { day: "2-digit", month: "short", year: "numeric" })
 }
 
 function documentTypeLabel(type: OpportunityDocumentType) {

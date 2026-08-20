@@ -136,7 +136,7 @@ export function OpportunitySourceContext({
           name: office.firm_name,
         })
     return [...firms.values()].sort((left, right) =>
-      left.name.localeCompare(right.name),
+      left.name.localeCompare(right.name, "fr"),
     )
   }, [availableOfficeOptions])
   const affiliateableCanonicalContacts = useMemo(() => {

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover"
 import { format, subWeeks, addWeeks, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, parseISO } from "date-fns"
 import { WaveAreaChart } from "@/components/wave/charts"
+import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 interface ChartDataPoint {
   week: string
@@ -36,26 +37,32 @@ const kpiInfo = {
 }
 
 export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
-  // Default to last 8 weeks
-  const [endDate, setEndDate] = useState<Date>(endOfWeek(new Date(), { weekStartsOn: 1 }))
-  const [startDate, setStartDate] = useState<Date>(startOfWeek(subWeeks(new Date(), 7), { weekStartsOn: 1 }))
+  // The moving default is intentionally withheld until after hydration.
+  const now = useHydratedNow()
+  const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const today = now === null ? null : new Date(now)
+  const endDate = selectedRange?.end ?? (today ? endOfWeek(today, { weekStartsOn: 1 }) : null)
+  const startDate = selectedRange?.start ?? (today ? startOfWeek(subWeeks(today, 7), { weekStartsOn: 1 }) : null)
+  const startDateMs = startDate?.getTime() ?? null
+  const endDateMs = endDate?.getTime() ?? null
 
   // Navigate weeks
   const navigateWeeks = (direction: "left" | "right") => {
+    if (!startDate || !endDate) return
     if (direction === "left") {
-      setStartDate(subWeeks(startDate, 1))
-      setEndDate(subWeeks(endDate, 1))
+      setSelectedRange({ start: subWeeks(startDate, 1), end: subWeeks(endDate, 1) })
     } else {
-      setStartDate(addWeeks(startDate, 1))
-      setEndDate(addWeeks(endDate, 1))
+      setSelectedRange({ start: addWeeks(startDate, 1), end: addWeeks(endDate, 1) })
     }
   }
 
   // Process data into weekly aggregates
   const chartData = useMemo(() => {
+    if (startDateMs === null || endDateMs === null) return []
     const weeks: ChartDataPoint[] = []
-    let currentWeekStart = startOfWeek(startDate, { weekStartsOn: 1 })
+    let currentWeekStart = startOfWeek(new Date(startDateMs), { weekStartsOn: 1 })
+    const rangeEnd = new Date(endDateMs)
 
     // Calculate cumulative repreneurs before the start date
     let cumulativeCount = repreneursData.filter(r => {
@@ -67,7 +74,7 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
       return r.lifecycle_status === "client" && isBefore(created, currentWeekStart)
     }).length
 
-    while (currentWeekStart <= endDate) {
+    while (currentWeekStart <= rangeEnd) {
       const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
 
       // Count new repreneurs this week
@@ -97,10 +104,10 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
     }
 
     return weeks
-  }, [repreneursData, startDate, endDate])
+  }, [repreneursData, startDateMs, endDateMs])
 
   // Check if we can navigate further (prevent going into the future)
-  const canNavigateRight = !isAfter(addWeeks(endDate, 1), endOfWeek(new Date(), { weekStartsOn: 1 }))
+  const canNavigateRight = Boolean(endDate && today && !isAfter(addWeeks(endDate, 1), endOfWeek(today, { weekStartsOn: 1 })))
 
   return (
     <Card className="gap-0 py-0">
@@ -128,13 +135,13 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
             {/* Date picker */}
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1 sm:gap-2 px-2 sm:px-3" suppressHydrationWarning>
+                <Button variant="outline" size="sm" className="h-8 gap-1 sm:gap-2 px-2 sm:px-3">
                   <Calendar className="size-4" />
                   <span className="text-xs hidden sm:inline">
-                    {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
+                    {startDate && endDate ? `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")}` : "Loading range"}
                   </span>
                   <span className="text-xs sm:hidden">
-                    {format(startDate, "M/d")} - {format(endDate, "M/d")}
+                    {startDate && endDate ? `${format(startDate, "M/d")} - ${format(endDate, "M/d")}` : "Loading"}
                   </span>
                 </Button>
               </PopoverTrigger>
@@ -145,11 +152,11 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
                     <Input
                       id="pipeline-trend-start"
                       type="date"
-                      value={format(startDate, "yyyy-MM-dd")}
-                      max={format(new Date(), "yyyy-MM-dd")}
+                      value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+                      max={today ? format(today, "yyyy-MM-dd") : ""}
                       onChange={(e) => {
                         if (e.target.value) {
-                          setStartDate(startOfWeek(parseISO(e.target.value), { weekStartsOn: 1 }))
+                          setSelectedRange((current) => ({ start: startOfWeek(parseISO(e.target.value), { weekStartsOn: 1 }), end: current?.end ?? endDate ?? endOfWeek(parseISO(e.target.value), { weekStartsOn: 1 }) }))
                         }
                       }}
                       className="h-9"
@@ -160,11 +167,11 @@ export function EnhancedChart({ repreneursData }: EnhancedChartProps) {
                     <Input
                       id="pipeline-trend-end"
                       type="date"
-                      value={format(endDate, "yyyy-MM-dd")}
-                      max={format(new Date(), "yyyy-MM-dd")}
+                      value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+                      max={today ? format(today, "yyyy-MM-dd") : ""}
                       onChange={(e) => {
                         if (e.target.value) {
-                          setEndDate(endOfWeek(parseISO(e.target.value), { weekStartsOn: 1 }))
+                          setSelectedRange((current) => ({ start: current?.start ?? startDate ?? startOfWeek(parseISO(e.target.value), { weekStartsOn: 1 }), end: endOfWeek(parseISO(e.target.value), { weekStartsOn: 1 }) }))
                         }
                       }}
                       className="h-9"

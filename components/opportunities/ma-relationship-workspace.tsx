@@ -60,6 +60,7 @@ import { setMaContactCampaignEmailSuppression } from "@/lib/actions/ma-contact-e
 import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
 import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
+import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
 const CHANNELS: Array<{ value: MaInteractionChannel; label: string }> = [
   { value: "call", label: "Call" },
@@ -80,17 +81,16 @@ const channelIcons = {
 function formatDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "Unknown date"
-  return new Intl.DateTimeFormat("fr-FR", {
+  return formatDisplayDateTime(value, "fr-FR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Europe/Paris",
-  }).format(date)
+  })
 }
 
-function dateTimeInputValue(date = new Date()) {
+function dateTimeInputValue(date: Date) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
   return local.toISOString().slice(0, 16)
 }
@@ -128,7 +128,7 @@ export function MaRelationshipWorkspace({
   const [opportunityId, setOpportunityId] = useState("none")
   const [channel, setChannel] = useState<MaInteractionChannel>("call")
   const [direction, setDirection] = useState("outbound")
-  const [occurredAt, setOccurredAt] = useState(dateTimeInputValue())
+  const [occurredAt, setOccurredAt] = useState("")
   const [title, setTitle] = useState("")
   const [summary, setSummary] = useState("")
   const [outcome, setOutcome] = useState("")
@@ -161,7 +161,7 @@ export function MaRelationshipWorkspace({
     setOpportunityId("none")
     setChannel("call")
     setDirection("outbound")
-    setOccurredAt(dateTimeInputValue())
+    setOccurredAt("")
     setTitle("")
     setSummary("")
     setOutcome("")
@@ -326,7 +326,10 @@ export function MaRelationshipWorkspace({
           </p>
         </div>
         <Button
-          onClick={() => setDialogOpen(true)}
+          onClick={() => {
+            setOccurredAt(dateTimeInputValue(new Date()))
+            setDialogOpen(true)
+          }}
           disabled={!workspace.offices.length}
         >
           <Plus data-icon="inline-start" />
@@ -968,7 +971,7 @@ function RelationshipFirmsDirectory({
   offices,
 }: Pick<MaRelationshipWorkspace, "firms" | "offices">) {
   const [query, setQuery] = useState("")
-  const normalizedQuery = query.trim().toLocaleLowerCase()
+  const normalizedQuery = query.trim().toLowerCase()
   const byFirm = useMemo(() => {
     const grouped = new Map<string, MaRelationshipWorkspace["offices"]>()
     for (const office of offices) {
@@ -983,9 +986,9 @@ function RelationshipFirmsDirectory({
     return firms.filter(
       (firm) =>
         !normalizedQuery ||
-        firm.name.toLocaleLowerCase().includes(normalizedQuery) ||
+        firm.name.toLowerCase().includes(normalizedQuery) ||
         (byFirm.get(firm.id) ?? []).some((office) =>
-          office.officeName.toLocaleLowerCase().includes(normalizedQuery),
+          office.officeName.toLowerCase().includes(normalizedQuery),
         ),
     )
   }, [byFirm, firms, normalizedQuery])
@@ -1023,7 +1026,7 @@ function RelationshipFirmsDirectory({
               <RelationshipFirmRow
                 firm={firm}
                 offices={[...(byFirm.get(firm.id) ?? [])].sort((left, right) =>
-                  left.officeName.localeCompare(right.officeName),
+                  left.officeName.localeCompare(right.officeName, "fr"),
                 )}
                 key={firm.id}
               />
@@ -1055,7 +1058,7 @@ function RelationshipContactsDirectory({
     () => new Map(offices.map((office) => [office.id, office.label])),
     [offices],
   )
-  const normalizedQuery = query.trim().toLocaleLowerCase()
+  const normalizedQuery = query.trim().toLowerCase()
   const filteredContacts = useMemo(
     () =>
       contacts.filter((contact) => {
@@ -1066,7 +1069,7 @@ function RelationshipContactsDirectory({
         ]
           .filter(Boolean)
           .join(" ")
-          .toLocaleLowerCase()
+          .toLowerCase()
         return !normalizedQuery || searchText.includes(normalizedQuery)
       }),
     [contacts, normalizedQuery, officeLabels],

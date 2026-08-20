@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { WaveAiMetrics } from "@/lib/ai/metrics"
 
+const INTEGER_NUMBER_FORMAT = new Intl.NumberFormat("en-GB")
+
 function percent(value: number) {
   return new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 1 }).format(value)
 }
@@ -23,7 +25,7 @@ const featureLabels: Record<string, string> = {
 
 export function WaveAiUsageDashboard({ metrics, days }: { metrics: WaveAiMetrics; days: 7 | 30 }) {
   const summary = [
-    { label: "Attempts", value: metrics.attempts.toLocaleString(), icon: Sparkles },
+    { label: "Attempts", value: INTEGER_NUMBER_FORMAT.format(metrics.attempts), icon: Sparkles },
     { label: "Successful", value: percent(metrics.successRate), icon: CheckCircle2 },
     { label: "Useful outcomes", value: `${metrics.usefulOutcomes} · ${percent(metrics.usefulOutcomeRate)}`, icon: Copy },
     { label: "Estimated cost", value: money(metrics.totalCostUsd), icon: DollarSign },
@@ -98,11 +100,11 @@ export function WaveAiUsageDashboard({ metrics, days }: { metrics: WaveAiMetrics
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
               <span className="text-muted-foreground">Failures</span><span className="text-right font-medium tabular-nums">{metrics.failures}</span>
-              <span className="text-muted-foreground">Input tokens</span><span className="text-right font-medium tabular-nums">{metrics.inputTokens.toLocaleString()}</span>
-              <span className="text-muted-foreground">Cached input</span><span className="text-right font-medium tabular-nums">{metrics.cachedInputTokens.toLocaleString()}</span>
-              <span className="text-muted-foreground">Cache writes</span><span className="text-right font-medium tabular-nums">{metrics.cacheWriteTokens.toLocaleString()}</span>
-              <span className="text-muted-foreground">Output tokens</span><span className="text-right font-medium tabular-nums">{metrics.outputTokens.toLocaleString()}</span>
-              <span className="text-muted-foreground">Reasoning tokens</span><span className="text-right font-medium tabular-nums">{metrics.reasoningTokens.toLocaleString()}</span>
+              <span className="text-muted-foreground">Input tokens</span><span className="text-right font-medium tabular-nums">{INTEGER_NUMBER_FORMAT.format(metrics.inputTokens)}</span>
+              <span className="text-muted-foreground">Cached input</span><span className="text-right font-medium tabular-nums">{INTEGER_NUMBER_FORMAT.format(metrics.cachedInputTokens)}</span>
+              <span className="text-muted-foreground">Cache writes</span><span className="text-right font-medium tabular-nums">{INTEGER_NUMBER_FORMAT.format(metrics.cacheWriteTokens)}</span>
+              <span className="text-muted-foreground">Output tokens</span><span className="text-right font-medium tabular-nums">{INTEGER_NUMBER_FORMAT.format(metrics.outputTokens)}</span>
+              <span className="text-muted-foreground">Reasoning tokens</span><span className="text-right font-medium tabular-nums">{INTEGER_NUMBER_FORMAT.format(metrics.reasoningTokens)}</span>
             </div>
             {Object.keys(metrics.errorCounts).length > 0 && (
               <div className="border-t pt-4">

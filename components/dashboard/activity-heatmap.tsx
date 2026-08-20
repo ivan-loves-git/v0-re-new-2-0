@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { format, subMonths, eachDayOfInterval, startOfWeek, endOfWeek, isToday } from "date-fns"
+import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 interface DayActivity {
   date: string // YYYY-MM-DD
@@ -31,6 +32,18 @@ const kpiInfo = {
 }
 
 export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
+  const now = useHydratedNow()
+
+  if (now === null) {
+    return (
+      <Card className="h-full gap-0 py-0">
+        <CardHeader className="flex min-h-14 justify-center border-b py-3">
+          <CardTitle className="flex items-center gap-2 text-base"><CalendarDays className="size-4 text-muted-foreground" />Activity Heatmap</CardTitle>
+        </CardHeader>
+        <CardContent className="py-4 text-sm text-muted-foreground">Loading activity heatmap…</CardContent>
+      </Card>
+    )
+  }
   // Create a map for quick lookup
   const activityMap = new Map<string, DayActivity>()
   activityData.forEach((day) => {
@@ -38,7 +51,7 @@ export function ActivityHeatmap({ activityData }: ActivityHeatmapProps) {
   })
 
   // Generate 12 months of days to fill the space
-  const today = new Date()
+  const today = new Date(now)
   const twelveMonthsAgo = subMonths(today, 12)
 
   // Align to start of week (Monday)

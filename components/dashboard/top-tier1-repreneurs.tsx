@@ -10,6 +10,7 @@ import Link from "next/link"
 import { subDays } from "date-fns"
 import { CardInfoButton } from "./card-info-button"
 import { CardLinkButton } from "./card-link-button"
+import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 interface TopRepreneur {
   id: string
@@ -41,13 +42,15 @@ const kpiInfo = {
 export function TopTier1Repreneurs({ repreneurs, itemsPerPage = ITEMS_PER_PAGE }: TopTier1RepreneursProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const [timeRange, setTimeRange] = useState<string>("all")
+  const now = useHydratedNow()
 
   const filteredRepreneurs = useMemo(() => {
     if (timeRange === "all") return repreneurs
     const days = parseInt(timeRange)
-    const cutoff = subDays(new Date(), days)
+    if (now === null) return repreneurs
+    const cutoff = subDays(new Date(now), days)
     return repreneurs.filter((r) => new Date(r.created_at) >= cutoff)
-  }, [repreneurs, timeRange])
+  }, [repreneurs, timeRange, now])
 
   const totalPages = Math.ceil(filteredRepreneurs.length / itemsPerPage)
 

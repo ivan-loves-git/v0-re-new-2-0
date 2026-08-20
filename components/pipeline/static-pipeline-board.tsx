@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistance } from "date-fns"
 import { Package, ChevronDown, Info, ArrowUpDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import type { Repreneur, LifecycleStatus } from "@/lib/types/repreneur"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
+import { initialDateLabel, useHydratedNow } from "@/hooks/use-hydrated-now"
 
 interface RepreneurWithOffers extends Repreneur {
   offer_names?: string[]
@@ -71,6 +72,7 @@ function ScoreBadge({ repreneur }: { repreneur: RepreneurWithOffers }) {
 
 function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
   const router = useRouter()
+  const now = useHydratedNow()
 
   const renderStatusInfo = () => {
     switch (repreneur.lifecycle_status) {
@@ -99,7 +101,7 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
         if (repreneur.declined_at) {
           return (
             <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(repreneur.declined_at), { addSuffix: true })}
+              {now === null ? initialDateLabel(repreneur.declined_at) : formatDistance(new Date(repreneur.declined_at), new Date(now), { addSuffix: true })}
             </span>
           )
         }
@@ -108,7 +110,7 @@ function PipelineCard({ repreneur }: { repreneur: RepreneurWithOffers }) {
         if (repreneur.rejected_at) {
           return (
             <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(repreneur.rejected_at), { addSuffix: true })}
+              {now === null ? initialDateLabel(repreneur.rejected_at) : formatDistance(new Date(repreneur.rejected_at), new Date(now), { addSuffix: true })}
             </span>
           )
         }
@@ -206,6 +208,7 @@ type SortMode = "score" | "date"
 
 export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
   const [sortMode, setSortMode] = useState<SortMode>("score")
+  const now = useHydratedNow()
 
   // Extract unique sources from repreneurs
   const sources = useMemo(() => {
@@ -251,9 +254,9 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
       }
 
       // Date range filter
-      if (dateRange !== "all") {
+      if (dateRange !== "all" && now !== null) {
         const days = parseInt(dateRange)
-        const cutoffDate = new Date()
+        const cutoffDate = new Date(now)
         cutoffDate.setDate(cutoffDate.getDate() - days)
         if (new Date(r.created_at) < cutoffDate) {
           return false
@@ -262,7 +265,7 @@ export function StaticPipelineBoard({ repreneurs }: StaticPipelineBoardProps) {
 
       return true
     })
-  }, [repreneurs, filters.search, sourceFilter, dateRange])
+  }, [repreneurs, filters.search, sourceFilter, dateRange, now])
 
   // Group by status and sort by selected mode
   const groupedByStatus = useMemo(() => {

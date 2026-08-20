@@ -69,11 +69,11 @@ function filterOptions(
   const values = new Map<string, string>()
   for (const opportunity of opportunities) {
     const value = valueFor(opportunity)?.trim()
-    if (value) values.set(value.toLocaleLowerCase(), value)
+    if (value) values.set(value.toLowerCase(), value)
   }
 
   return Array.from(values, ([value, label]) => ({ value, label })).sort((first, second) =>
-    first.label.localeCompare(second.label),
+    first.label.localeCompare(second.label, "fr"),
   )
 }
 

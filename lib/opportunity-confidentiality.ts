@@ -115,7 +115,7 @@ export function safeRepreneurTeaserSummary(
   const normalize = (value: string) =>
     value
       .normalize("NFKC")
-      .toLocaleLowerCase()
+      .toLowerCase()
       .replace(/[\s\p{P}\p{S}_]+/gu, "")
 
   return normalize(teaserSummary) === normalize(internalDescription)
