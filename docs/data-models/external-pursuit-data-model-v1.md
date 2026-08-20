@@ -226,8 +226,9 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    attachment's dossier UUID. Browser storage policies and public
    URLs are never created.
 17. The owner or authorized staff may list, upload, download and remove an
-   active dossier's attachments. Downloads are 60-second signed redirects after
-   exact server-side dossier and attachment authorization. Unassigned users and
+   active dossier's attachments. Downloads are server-streamed only after exact
+   dossier and attachment authorization; the browser never receives a Storage
+   signed URL or external document URL. Unassigned users and
    other repreneurs are denied. Every register/remove writes immutable actor/time
    audit evidence. The role-safe list includes declared type, upload date and a
    safe uploader label (`You`, `Re-New staff` or `Dossier owner`); raw staff user

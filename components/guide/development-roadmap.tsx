@@ -26,6 +26,29 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 20, 2026",
+    version: "0.9.53",
+    title: "Production safeguards are now consistent across the platform",
+    isCompleted: true,
+    events: [
+      {
+        title: "The staff follow-up queue now scales as one protected database operation",
+        type: "fix",
+        description: "WAVE calculates the complete stale-contact queue, its ordering and its total in one staff-only database operation instead of loading each person’s evidence separately.",
+      },
+      {
+        title: "Private file failures stay private and non-cacheable",
+        type: "fix",
+        description: "Protected document routes now return the same no-store safety headers on success, denial, missing-file and service-failure responses, without exposing database or storage details.",
+      },
+      {
+        title: "Legacy test-data tools are unavailable in production",
+        type: "decision",
+        description: "Old seed, journey redistribution and unused Wavy suggestion endpoints now stop before authentication or database access in every deployed environment.",
+      },
+    ],
+  },
+  {
+    period: "Aug 20, 2026",
     version: "0.9.52",
     title: "Protected files and staff workflows are safer and more reliable",
     isCompleted: true,
@@ -43,7 +66,7 @@ const roadmapEvents: RoadmapPeriod[] = [
       {
         title: "Access and follow-up failures are clearer",
         type: "fix",
-        description: "An account without a workspace receives a safe explanation, while the staff follow-up panel loads its evidence in three bounded reads and fails without taking down the dashboard.",
+        description: "An account without a workspace receives a safe explanation, while the staff follow-up panel fails safely without taking down the dashboard.",
       },
       {
         title: "Email outcomes use the provider’s current signed callback",

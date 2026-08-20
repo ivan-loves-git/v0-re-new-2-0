@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("avatars")
       .upload(fileName, buffer, {
         contentType: file.type,
@@ -81,8 +81,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (error) {
-      console.error("Storage upload error:", error.message, error)
-      return NextResponse.json({ error: `Failed to upload file: ${error.message}` }, { status: 500 })
+      return NextResponse.json({ error: "Unable to upload avatar" }, { status: 500 })
     }
 
     // Get public URL
@@ -97,8 +96,7 @@ export async function POST(request: NextRequest) {
       .eq("id", repreneurId)
 
     if (updateError) {
-      console.error("Database update error:", updateError.message, updateError)
-      return NextResponse.json({ error: `Failed to update avatar URL: ${updateError.message}` }, { status: 500 })
+      return NextResponse.json({ error: "Unable to update avatar" }, { status: 500 })
     }
 
     // Revalidate all pages that display repreneur data
@@ -108,8 +106,7 @@ export async function POST(request: NextRequest) {
     revalidateRepreneurDashboardTags()
 
     return NextResponse.json({ url: publicUrl })
-  } catch (error) {
-    console.error("Upload error:", error)
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

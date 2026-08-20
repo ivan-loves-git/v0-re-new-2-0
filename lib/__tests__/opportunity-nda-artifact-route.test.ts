@@ -20,7 +20,17 @@ vi.mock("@/lib/storage/private-signed-download", () => ({
     value?.endsWith(".docx")
       ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       : "application/octet-stream",
-  privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
+  privateStorageDownloadError: (message: string, status = 502) => new Response(
+    JSON.stringify({ error: message }),
+    {
+      status,
+      headers: {
+        "cache-control": "private, no-store",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+      },
+    },
+  ),
 }))
 
 import { GET } from "@/app/(dashboard)/opportunities/[id]/nda-artifacts/[artifactId]/route"
@@ -33,6 +43,9 @@ function setupAdminClient({
     file_name: "blank.pdf",
     mime_type: "application/pdf",
   },
+  artifactError = null,
+  documentError = null,
+  signedUrlError = null,
 }: {
   artifact?: { document_id: string } | null
   document?: {
@@ -41,10 +54,13 @@ function setupAdminClient({
     file_name: string
     mime_type?: string | null
   } | null
+  artifactError?: { message: string } | null
+  documentError?: { message: string } | null
+  signedUrlError?: { message: string } | null
 } = {}) {
   const artifactMaybeSingle = vi.fn().mockResolvedValue({
-    data: artifact,
-    error: null,
+    data: artifactError ? null : artifact,
+    error: artifactError,
   })
   const artifactOpportunityEq = vi.fn(() => ({
     maybeSingle: artifactMaybeSingle,
@@ -53,8 +69,8 @@ function setupAdminClient({
   const artifactSelect = vi.fn(() => ({ eq: artifactIdEq }))
 
   const documentMaybeSingle = vi.fn().mockResolvedValue({
-    data: document,
-    error: null,
+    data: documentError ? null : document,
+    error: documentError,
   })
   const documentVisibilityEq = vi.fn(() => ({
     maybeSingle: documentMaybeSingle,
@@ -65,8 +81,8 @@ function setupAdminClient({
   const documentSelect = vi.fn(() => ({ eq: documentIdEq }))
 
   const createSignedUrl = vi.fn().mockResolvedValue({
-    data: { signedUrl: "https://storage.example.test/signed-nda" },
-    error: null,
+    data: signedUrlError ? null : { signedUrl: "https://storage.example.test/signed-nda" },
+    error: signedUrlError,
   })
 
   mocks.createAdminClient.mockReturnValue({
@@ -120,7 +136,11 @@ describe("staff NDA artifact route", () => {
       artifact: null,
     })
 
-    expect((await requestArtifact()).status).toBe(404)
+    const response = await requestArtifact()
+    expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
     expect(documentSelect).not.toHaveBeenCalled()
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
@@ -170,5 +190,24 @@ describe("staff NDA artifact route", () => {
 
     expect((await requestArtifact()).status).toBe(404)
     expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["artifact metadata", { artifactError: { message: "column internal_artifact_secret missing" } }],
+    ["document metadata", { documentError: { message: "permission denied for private_documents" } }],
+    ["storage signing", { signedUrlError: { message: "bucket internal-policy rejected request" } }],
+  ])("does not expose raw %s errors", async (_scope, errors) => {
+    setupAdminClient(errors)
+
+    const response = await requestArtifact()
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
+    const body = await response.text()
+    expect(body).toContain("Artifact file is unavailable.")
+    expect(body).not.toContain("internal_artifact_secret")
+    expect(body).not.toContain("private_documents")
+    expect(body).not.toContain("internal-policy")
   })
 })

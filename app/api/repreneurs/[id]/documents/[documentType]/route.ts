@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import {
   getRepreneurDocumentDownloadName,
@@ -27,11 +26,11 @@ export async function GET(
   context: { params: Promise<{ id: string; documentType: string }> },
 ) {
   const access = await getCurrentUserAccess()
-  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!access) return privateStorageDownloadError("Unauthorized", 401)
 
   const { id, documentType } = await context.params
   if (!isDocumentType(documentType)) {
-    return NextResponse.json({ error: "Unsupported document type" }, { status: 400 })
+    return privateStorageDownloadError("Unsupported document type", 400)
   }
 
   const canAccessDocument =
@@ -40,7 +39,7 @@ export async function GET(
       access.repreneurId === id &&
       documentType === "ldc")
   if (!canAccessDocument) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    return privateStorageDownloadError("Forbidden", 403)
   }
 
   const field = DOCUMENT_FIELDS[documentType]
@@ -53,23 +52,17 @@ export async function GET(
 
   if (error) {
     console.error("Repreneur document lookup error:", error)
-    return NextResponse.json(
-      { error: "Unable to load the document" },
-      { status: 500 },
-    )
+    return privateStorageDownloadError("Unable to load the document", 500)
   }
 
   const storedValue = repreneur?.[field as keyof typeof repreneur]
   if (!storedValue) {
-    return NextResponse.json({ error: "Document not found" }, { status: 404 })
+    return privateStorageDownloadError("Document not found", 404)
   }
 
   const storagePath = resolveRepreneurDocumentStoragePath(storedValue)
   if (!storagePath) {
-    return NextResponse.json(
-      { error: "Document metadata is unavailable" },
-      { status: 404 },
-    )
+    return privateStorageDownloadError("Document metadata is unavailable", 404)
   }
 
   const downloadName = getRepreneurDocumentDownloadName(documentType, storagePath)
@@ -81,10 +74,7 @@ export async function GET(
 
   if (signedUrlError || !signedUrl?.signedUrl) {
     console.error("Repreneur document signing error:", signedUrlError)
-    return NextResponse.json(
-      { error: "Document file is unavailable" },
-      { status: 404 },
-    )
+    return privateStorageDownloadError("Document file is unavailable", 404)
   }
 
   const response = await proxyPrivateSignedStorageDownload(signedUrl.signedUrl, {

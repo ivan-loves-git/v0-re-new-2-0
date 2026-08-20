@@ -22,37 +22,6 @@ vi.mock("@/lib/telemetry/server", () => ({
 import { getFollowUpSuggestions } from "@/lib/actions/wave-ai"
 import { postLoginDestinationForAccess } from "@/lib/access-control"
 
-function followUpClient() {
-  const repreneurs = [
-    { id: "r-old", first_name: "Old", last_name: "Contact", email: "old@example.com", journey_stage: "qualified", updated_at: "2026-07-01T00:00:00.000Z" },
-    { id: "r-recent", first_name: "Recent", last_name: "Contact", email: "recent@example.com", journey_stage: "lead", updated_at: "2026-07-01T00:00:00.000Z" },
-    { id: "r-updated", first_name: "Updated", last_name: "Record", email: "updated@example.com", journey_stage: "client", updated_at: "2026-08-19T00:00:00.000Z" },
-  ]
-  const notes = [
-    { repreneur_id: "r-old", created_at: "2026-07-15T00:00:00.000Z" },
-    { repreneur_id: "r-recent", created_at: "2026-08-19T00:00:00.000Z" },
-  ]
-  const activities = [
-    { repreneur_id: "r-old", created_at: "2026-07-20T00:00:00.000Z" },
-  ]
-  const from = vi.fn((table: string) => {
-    const rows = table === "repreneurs" ? repreneurs : table === "notes" ? notes : activities
-    const result = { data: rows, error: null }
-    const terminal = vi.fn().mockResolvedValue(result)
-    const ordered = { order: terminal }
-    const filtered = {
-      in: vi.fn(() => ordered),
-    }
-    return {
-      select: vi.fn(() => ({
-        is: vi.fn(() => ({ not: vi.fn(() => ({ order: terminal })) })),
-        in: filtered.in,
-      })),
-    }
-  })
-  return { from }
-}
-
 describe("dashboard follow-up and post-login access behavior", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -61,9 +30,15 @@ describe("dashboard follow-up and post-login access behavior", () => {
     mocks.requireStaffAccess.mockResolvedValue({ role: "staff", user: { id: "staff-001" } })
   })
 
-  it("loads deterministic stale-contact suggestions in three bounded reads, not two reads per repreneur", async () => {
-    const { from } = followUpClient()
-    mocks.createAdminClient.mockReturnValue({ from })
+  it("loads deterministic stale-contact suggestions through one set-based RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{
+        id: "r-old", first_name: "Old", last_name: "Contact", email: "old@example.com",
+        journey_stage: "qualified", days_since_contact: 31, total_count: 1,
+      }],
+      error: null,
+    })
+    mocks.createAdminClient.mockReturnValue({ rpc })
 
     await expect(getFollowUpSuggestions()).resolves.toEqual({
       suggestions: [{
@@ -76,10 +51,31 @@ describe("dashboard follow-up and post-login access behavior", () => {
       }],
       totalCount: 1,
     })
-    expect(from).toHaveBeenCalledTimes(3)
-    expect(from).toHaveBeenCalledWith("repreneurs")
-    expect(from).toHaveBeenCalledWith("notes")
-    expect(from).toHaveBeenCalledWith("activities")
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(rpc).toHaveBeenCalledWith("get_follow_up_suggestions", {
+      p_now: "2026-08-20T12:00:00.000Z",
+    })
+  })
+
+  it("preserves the database total while returning only its already ordered top ten rows", async () => {
+    const rows = Array.from({ length: 10 }, (_, index) => ({
+      id: `r-${index + 1}`,
+      first_name: `First ${index + 1}`,
+      last_name: "Contact",
+      email: `contact-${index + 1}@example.com`,
+      journey_stage: "qualified",
+      days_since_contact: 40 - index,
+      total_count: 12,
+    }))
+    mocks.createAdminClient.mockReturnValue({ rpc: vi.fn().mockResolvedValue({ data: rows, error: null }) })
+
+    await expect(getFollowUpSuggestions()).resolves.toEqual({
+      suggestions: rows.map((row) => ({
+        id: row.id, firstName: row.first_name, lastName: row.last_name, email: row.email,
+        journeyStage: row.journey_stage, daysSinceContact: row.days_since_contact,
+      })),
+      totalCount: 12,
+    })
   })
 
   it("keeps a valid but unassigned account denied while carrying a generic explanation through logout", () => {
@@ -96,20 +92,10 @@ describe("dashboard follow-up and post-login access behavior", () => {
   })
 
   it("records a failed follow-up read using only allowlisted staff metadata", async () => {
-    mocks.createAdminClient.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          is: vi.fn(() => ({
-            not: vi.fn(() => ({
-              order: vi.fn().mockResolvedValue({
-                data: null,
-                error: { message: "private database failure for person@example.test" },
-              }),
-            })),
-          })),
-        })),
-      })),
-    })
+    mocks.createAdminClient.mockReturnValue({ rpc: vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "private database failure for person@example.test" },
+    }) })
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined)
 
     await expect(getFollowUpSuggestions()).resolves.toEqual({

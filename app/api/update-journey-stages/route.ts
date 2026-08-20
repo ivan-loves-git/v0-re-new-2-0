@@ -18,6 +18,10 @@ const JOURNEY_STAGE_DISTRIBUTION: Record<string, string> = {
 }
 
 export async function POST() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
   const supabase = await createServerClient()
 
   const access = await getCurrentUserAccess()
@@ -38,7 +42,7 @@ export async function POST() {
       .order("created_at", { ascending: true })
 
     if (fetchError) {
-      return NextResponse.json({ error: `Fetch error: ${fetchError.message}` }, { status: 500 })
+      return NextResponse.json({ error: "Unable to load repreneurs" }, { status: 500 })
     }
 
     if (!repreneurs || repreneurs.length === 0) {
@@ -62,14 +66,12 @@ export async function POST() {
         .eq("id", repreneur.id)
 
       if (updateError) {
-        console.error(`Error updating ${repreneur.email}:`, updateError)
         updates.push({
           email: repreneur.email,
           name: `${repreneur.first_name} ${repreneur.last_name}`,
           old_stage: repreneur.journey_stage,
           new_stage: newStage,
           status: "failed",
-          error: updateError.message
         })
       } else {
         updates.push({
@@ -104,7 +106,7 @@ export async function POST() {
       },
       updates,
     })
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: "Unable to update journey stages" }, { status: 500 })
   }
 }

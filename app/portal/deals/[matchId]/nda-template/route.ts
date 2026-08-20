@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server"
 import { unstable_rethrow } from "next/navigation"
 import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -34,13 +33,16 @@ export async function GET(_request: Request, context: { params: Promise<{ matchI
     })
     if (template?.kind !== "nda-template") {
       trace.failure("authorization_denied")
-      return NextResponse.json({ error: "Gate 1 is required before the template can be downloaded." }, { status: 404 })
+      return privateStorageDownloadError(
+        "Gate 1 is required before the template can be downloaded.",
+        404,
+      )
     }
 
     const downloadOptions = templateDownloadOptions(template.storagePath)
     if (!downloadOptions) {
       trace.failure("not_found")
-      return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return privateStorageDownloadError("Not found", 404)
     }
 
     const supabase = createAdminClient()

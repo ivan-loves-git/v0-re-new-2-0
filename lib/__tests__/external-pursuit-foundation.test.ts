@@ -7,6 +7,7 @@ const contract = source("docs/data-models/external-pursuit-data-model-v1.md")
 const actions = source("lib/actions/external-pursuits.ts")
 const rehearsal = source("scripts/rehearse-external-pursuit-foundation.sql")
 const privilegeHardening = source("scripts/094_external_pursuit_service_role_privilege_hardening.sql")
+const attachmentRoute = source("app/api/external-pursuits/[pursuitId]/attachments/[attachmentId]/route.ts")
 
 describe("W-104/W-105 External Pursuit foundation", () => {
   it("keeps the fixed stage map, availability and due state outside canonical pursuits", () => {
@@ -66,6 +67,13 @@ describe("W-104/W-105 External Pursuit foundation", () => {
     expect(actions).toContain("W-108 must remove its private file objects")
     expect(contract).toContain("W-108 extends the")
     expect(contract).toContain("no completion message is allowed")
+  })
+
+  it("documents attachment delivery as authorized server streaming, never a signed redirect", () => {
+    expect(contract).toContain("server-streamed")
+    expect(contract).not.toContain("signed redirects")
+    expect(attachmentRoute).toContain("server-streamed private download")
+    expect(attachmentRoute).not.toContain("private redirect")
   })
 
   it("allows only an owner deletion request and replays mutation keys before writes", () => {

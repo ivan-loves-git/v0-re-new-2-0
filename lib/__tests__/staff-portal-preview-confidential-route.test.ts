@@ -38,7 +38,11 @@ describe("staff portal preview confidential route", () => {
   it("fails closed when the preview pursuit lacks an exact canonical IM grant", async () => {
     mocks.resolvePortalPursuitResource.mockResolvedValue(null)
 
-    expect((await requestPreview()).status).toBe(404)
+    const response = await requestPreview()
+    expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
@@ -148,5 +152,30 @@ describe("staff portal preview confidential route", () => {
     expect(response.headers.get("location")).toBeNull()
     expect(createSignedUrl).not.toHaveBeenCalled()
     expect(mocks.fetch).not.toHaveBeenCalled()
+  })
+
+  it("does not expose raw document metadata errors", async () => {
+    mocks.resolvePortalPursuitResource.mockResolvedValue({
+      kind: "information-memorandum",
+      documentId: "memo-1",
+    })
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "permission denied for private_opportunity_documents" },
+    })
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })),
+      })),
+    })
+
+    const response = await requestPreview()
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
+    const body = await response.text()
+    expect(body).toContain("Confidential document is unavailable.")
+    expect(body).not.toContain("private_opportunity_documents")
   })
 })

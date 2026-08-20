@@ -70,6 +70,9 @@ describe("canonical portal pursuit routes", () => {
     )
 
     expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
@@ -95,6 +98,9 @@ describe("canonical portal pursuit routes", () => {
     )
 
     expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 

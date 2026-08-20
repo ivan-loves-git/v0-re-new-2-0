@@ -406,6 +406,10 @@ const ACTIVITY_TEMPLATES: { type: "welcome_email" | "interview" | "offer_submitt
 ]
 
 export async function POST() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
   const supabase = await createServerClient()
 
   const access = await getCurrentUserAccess()
@@ -457,7 +461,7 @@ export async function POST() {
       .select()
 
     if (repreneurError) {
-      return NextResponse.json({ error: `Repreneur error: ${repreneurError.message}` }, { status: 500 })
+      return NextResponse.json({ error: "Unable to create test repreneurs" }, { status: 500 })
     }
 
     // Insert offers (skip if already exists)
@@ -465,14 +469,12 @@ export async function POST() {
     const existingNames = existingOffers?.map((o) => o.name) || []
     const newOffers = TEST_OFFERS.filter((o) => !existingNames.includes(o.name))
 
-    let offers = existingOffers || []
     if (newOffers.length > 0) {
-      const { data: insertedOffers, error: offerError } = await supabase.from("offers").insert(newOffers).select()
+      const { error: offerError } = await supabase.from("offers").insert(newOffers).select()
 
       if (offerError) {
-        return NextResponse.json({ error: `Offer error: ${offerError.message}` }, { status: 500 })
+        return NextResponse.json({ error: "Unable to create test offers" }, { status: 500 })
       }
-      offers = [...(existingOffers || []), ...(insertedOffers || [])]
     }
 
     // Get all offers for assignment
@@ -507,7 +509,7 @@ export async function POST() {
     if (notesToInsert.length > 0) {
       const { error: noteError } = await supabase.from("notes").insert(notesToInsert)
       if (noteError) {
-        console.error("Note error:", noteError)
+        console.error("Seed test notes insert failed")
       }
     }
 
@@ -560,7 +562,7 @@ export async function POST() {
     if (activitiesToInsert.length > 0) {
       const { error: activityError } = await supabase.from("activities").insert(activitiesToInsert)
       if (activityError) {
-        console.error("Activity error:", activityError)
+        console.error("Seed test activities insert failed")
       }
     }
 
@@ -607,7 +609,7 @@ export async function POST() {
     if (offersToAssign.length > 0) {
       const { error: assignError } = await supabase.from("repreneur_offers").insert(offersToAssign)
       if (assignError) {
-        console.error("Assign error:", assignError)
+        console.error("Seed test offer assignments insert failed")
       }
     }
 
@@ -621,7 +623,7 @@ export async function POST() {
         offerAssignments: offersToAssign.length,
       },
     })
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: "Unable to seed test data" }, { status: 500 })
   }
 }

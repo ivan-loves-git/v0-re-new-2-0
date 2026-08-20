@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
 import {
   privateSignedDownloadContentType,
@@ -11,7 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 /**
  * Staff-only document delivery. Browser clients never receive storage access;
  * this route authorizes the opportunity/document pair before creating a
- * short-lived URL for the stored object.
+ * server-side short-lived URL for the stored object.
  */
 export async function GET(
   request: Request,
@@ -28,22 +27,22 @@ export async function GET(
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
 
-  if (error) return NextResponse.json({ error: "Unable to open document." }, { status: 500 })
-  if (!document) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (error) return privateStorageDownloadError("Unable to open document.", 500)
+  if (!document) return privateStorageDownloadError("Not found", 404)
 
   const expectedPrefix = `${opportunityId}/`
   if (
     document.storage_bucket !== "opportunity-documents" ||
     !document.storage_path?.startsWith(expectedPrefix)
   ) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+    return privateStorageDownloadError("Not found", 404)
   }
 
   const { data: signedUrl, error: signedUrlError } = await supabase.storage
     .from("opportunity-documents")
     .createSignedUrl(document.storage_path, 60)
   if (signedUrlError) {
-    return NextResponse.json({ error: "Unable to open document." }, { status: 500 })
+    return privateStorageDownloadError("Unable to open document.", 500)
   }
 
   const shouldDownload = new URL(request.url).searchParams.has("download")

@@ -5,6 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin"
 const STALE_DAYS = 14 // Repreneurs with no activity in 14+ days
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
   await connection()
 
   const access = await getCurrentUserAccess()
@@ -43,9 +47,8 @@ export async function GET() {
       .order("updated_at", { ascending: true })
 
     if (error) {
-      console.error("Error fetching repreneurs:", error)
       return NextResponse.json(
-        { error: "Failed to fetch repreneurs" },
+        { error: "Unable to load suggestions" },
         { status: 500 }
       )
     }
@@ -121,10 +124,9 @@ export async function GET() {
       totalCount: suggestions.length,
       staleDays: STALE_DAYS,
     })
-  } catch (error) {
-    console.error("Error getting suggestions:", error)
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to get suggestions" },
+      { error: "Unable to load suggestions" },
       { status: 500 }
     )
   }

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
 import {
   privateSignedDownloadContentType,
@@ -21,10 +20,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     .maybeSingle()
 
   if (artifactError) {
-    return NextResponse.json({ error: artifactError.message }, { status: 500 })
+    return privateStorageDownloadError("Artifact file is unavailable.", 500)
   }
   if (!artifact) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+    return privateStorageDownloadError("Not found", 404)
   }
 
   const { data: document, error: documentError } = await supabase
@@ -37,21 +36,21 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     .maybeSingle()
 
   if (documentError) {
-    return NextResponse.json({ error: documentError.message }, { status: 500 })
+    return privateStorageDownloadError("Artifact file is unavailable.", 500)
   }
   if (!document) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+    return privateStorageDownloadError("Not found", 404)
   }
 
   if (!document.storage_path) {
-    return NextResponse.json({ error: "Artifact file is unavailable." }, { status: 404 })
+    return privateStorageDownloadError("Artifact file is unavailable.", 404)
   }
 
   const storage = supabase.storage.from(document.storage_bucket || "opportunity-documents")
   const { data: signedUrl, error: signedUrlError } = await storage.createSignedUrl(document.storage_path, 60)
 
   if (signedUrlError) {
-    return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
+    return privateStorageDownloadError("Artifact file is unavailable.", 500)
   }
 
   const shouldDownload = new URL(request.url).searchParams.has("download")

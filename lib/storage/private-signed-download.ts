@@ -67,11 +67,16 @@ export function privateSignedDownloadContentTypeFromFilename(
   return extension ? byExtension[extension] ?? "application/octet-stream" : "application/octet-stream"
 }
 
-export function privateStorageDownloadError(message: string) {
+type PrivateDownloadErrorStatus = 400 | 401 | 403 | 404 | 500 | 502
+
+export function privateStorageDownloadError(
+  message: string,
+  status: PrivateDownloadErrorStatus = 502,
+) {
   return NextResponse.json(
     { error: message },
     {
-      status: 502,
+      status,
       headers: {
         "Cache-Control": "private, no-store",
         "Referrer-Policy": "no-referrer",

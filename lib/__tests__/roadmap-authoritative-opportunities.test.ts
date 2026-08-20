@@ -11,6 +11,19 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the zero-gap production hardening continuation", () => {
+    expect(roadmap).toContain('version: "0.9.53"')
+    expect(roadmap).toContain(
+      "The staff follow-up queue now scales as one protected database operation",
+    )
+    expect(roadmap).toContain(
+      "Private file failures stay private and non-cacheable",
+    )
+    expect(roadmap).toContain(
+      "Legacy test-data tools are unavailable in production",
+    )
+  })
+
   it("records the production counter-validation corrections", () => {
     expect(roadmap).toContain('version: "0.9.52"')
     expect(roadmap).toContain(

@@ -29,8 +29,7 @@ export async function POST(request: NextRequest) {
       .eq("id", repreneurId)
 
     if (error) {
-      console.error("Database update error:", error.message, error)
-      return NextResponse.json({ error: `Failed to reset avatar: ${error.message}` }, { status: 500 })
+      return NextResponse.json({ error: "Unable to reset avatar" }, { status: 500 })
     }
 
     // Revalidate all pages that display repreneur data
@@ -40,8 +39,7 @@ export async function POST(request: NextRequest) {
     revalidateRepreneurDashboardTags()
 
     return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Reset avatar error:", error)
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

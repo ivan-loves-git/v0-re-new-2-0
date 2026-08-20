@@ -14,18 +14,9 @@ vi.mock("@/lib/access-control", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
 }))
-vi.mock("@/lib/storage/private-signed-download", () => ({
+vi.mock("@/lib/storage/private-signed-download", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/storage/private-signed-download")>(),
   proxyPrivateSignedStorageDownload: mocks.proxyDownload,
-  privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
-  privateSignedDownloadContentTypeFromFilename: (value: string | null | undefined) =>
-    value?.endsWith(".docx")
-      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      : value?.endsWith(".doc")
-        ? "application/msword"
-        : value?.endsWith(".pdf")
-          ? "application/pdf"
-          : "application/octet-stream",
-  privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
 }))
 
 import { GET } from "@/app/api/repreneurs/[id]/documents/[documentType]/route"
@@ -84,7 +75,11 @@ describe("repreneur document route", () => {
 
   it("rejects unauthenticated sessions before loading metadata", async () => {
     mocks.getCurrentUserAccess.mockResolvedValueOnce(null)
-    expect((await requestFor("fixture", "cv")).status).toBe(401)
+    const response = await requestFor("fixture", "cv")
+    expect(response.status).toBe(401)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
 
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })

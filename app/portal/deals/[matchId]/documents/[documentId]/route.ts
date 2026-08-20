@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { unstable_rethrow } from "next/navigation"
 import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -28,12 +28,9 @@ export async function GET(
       authorized.documentId !== documentId
     ) {
       trace.failure("authorization_denied")
-      return NextResponse.json(
-        {
-          error:
-            "Confidential access has not been granted for this pursuit.",
-        },
-        { status: 404 },
+      return privateStorageDownloadError(
+        "Confidential access has not been granted for this pursuit.",
+        404,
       )
     }
 
@@ -46,11 +43,11 @@ export async function GET(
 
     if (matchError) {
       trace.failure("persistence_failed")
-      return NextResponse.json({ error: matchError.message }, { status: 500 })
+      return privateStorageDownloadError("Confidential document is unavailable.", 500)
     }
     if (!match) {
       trace.failure("not_found")
-      return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return privateStorageDownloadError("Not found", 404)
     }
 
     const { data: document, error: documentError } = await supabase
@@ -62,31 +59,25 @@ export async function GET(
 
     if (documentError) {
       trace.failure("persistence_failed")
-      return NextResponse.json(
-        { error: documentError.message },
-        { status: 500 },
-      )
+      return privateStorageDownloadError("Confidential document is unavailable.", 500)
     }
     if (!document) {
       trace.failure("not_found")
-      return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return privateStorageDownloadError("Not found", 404)
     }
     if (document.document_type !== "deal_book") {
       trace.failure("not_found")
-      return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return privateStorageDownloadError("Not found", 404)
     }
 
     if (document.external_url) {
       trace.failure("not_found")
-      return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return privateStorageDownloadError("Not found", 404)
     }
 
     if (!document.storage_path) {
       trace.failure("not_found")
-      return NextResponse.json(
-        { error: "Document file is unavailable." },
-        { status: 404 },
-      )
+      return privateStorageDownloadError("Document file is unavailable.", 404)
     }
 
     const bucket = document.storage_bucket || "opportunity-documents"

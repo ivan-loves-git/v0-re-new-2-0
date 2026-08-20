@@ -19,14 +19,24 @@ import { GET } from "@/app/portal/deals/[matchId]/documents/[documentId]/route"
 
 function setupAdminClient({
   document,
+  matchError = null,
+  documentError = null,
 }: {
   document: Record<string, unknown> | null
+  matchError?: { message: string } | null
+  documentError?: { message: string } | null
 }) {
-  const matchMaybeSingle = vi.fn().mockResolvedValue({ data: activeMatch, error: null })
+  const matchMaybeSingle = vi.fn().mockResolvedValue({
+    data: matchError ? null : activeMatch,
+    error: matchError,
+  })
   const matchEqId = vi.fn(() => ({ maybeSingle: matchMaybeSingle }))
   const matchSelect = vi.fn(() => ({ eq: matchEqId }))
 
-  const documentMaybeSingle = vi.fn().mockResolvedValue({ data: document, error: null })
+  const documentMaybeSingle = vi.fn().mockResolvedValue({
+    data: documentError ? null : document,
+    error: documentError,
+  })
   const documentEqOpportunity = vi.fn(() => ({ maybeSingle: documentMaybeSingle }))
   const documentEqId = vi.fn(() => ({ eq: documentEqOpportunity }))
   const documentSelect = vi.fn(() => ({ eq: documentEqId }))
@@ -198,6 +208,23 @@ describe("repreneur info-memo download route", () => {
       "https://supabase.test.invalid/storage/v1/object/sign/opportunity-documents/info-memo?token=test",
       { cache: "no-store", redirect: "error" },
     )
+  })
+
+  it.each([
+    ["match", { matchError: { message: "relation opportunity_matches_internal does not exist" } }],
+    ["document", { documentError: { message: "permission denied for secret_storage_table" } }],
+  ])("does not expose raw %s metadata errors", async (_scope, errors) => {
+    setupAdminClient({ document: informationMemo, ...errors })
+
+    const response = await requestMemo()
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
+    const body = await response.text()
+    expect(body).toContain("Confidential document is unavailable.")
+    expect(body).not.toContain("opportunity_matches_internal")
+    expect(body).not.toContain("secret_storage_table")
   })
 
   it("rejects an active HTML response from signed storage", async () => {

@@ -12,7 +12,17 @@ vi.mock("@/lib/storage/private-signed-download", () => ({
   proxyPrivateSignedStorageDownload: mocks.proxyDownload,
   privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
   privateSignedDownloadContentTypeFromFilename: () => "application/octet-stream",
-  privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
+  privateStorageDownloadError: (message: string, status = 502) => new Response(
+    JSON.stringify({ error: message }),
+    {
+      status,
+      headers: {
+        "cache-control": "private, no-store",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+      },
+    },
+  ),
 }))
 
 import { GET } from "@/app/(dashboard)/opportunities/[id]/documents/[documentId]/route"
@@ -65,7 +75,11 @@ describe("staff opportunity document route", () => {
 
   it("does not sign a document outside the requested opportunity", async () => {
     const { createSignedUrl } = setupAdminClient(null)
-    expect((await requestDocument()).status).toBe(404)
+    const response = await requestDocument()
+    expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
