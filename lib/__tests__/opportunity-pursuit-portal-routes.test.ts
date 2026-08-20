@@ -5,12 +5,20 @@ const mocks = vi.hoisted(() => ({
   resolvePortalPursuitResource: vi.fn(),
   createAdminClient: vi.fn(),
   fetch: vi.fn(),
+  startCriticalOperation: vi.fn(),
+  traceFailure: vi.fn(),
+  traceSuccess: vi.fn(),
+  unstableRethrow: vi.fn(),
 }))
 
 vi.mock("@/lib/data/current-pursuit", () => ({
   resolvePortalPursuitResource: mocks.resolvePortalPursuitResource,
 }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
+vi.mock("@/lib/observability/critical-operation", () => ({
+  startCriticalOperation: mocks.startCriticalOperation,
+}))
+vi.mock("next/navigation", () => ({ unstable_rethrow: mocks.unstableRethrow }))
 
 import { GET as getInformationMemo } from "@/app/portal/deals/[matchId]/documents/[documentId]/route"
 import { GET as getTemplate } from "@/app/portal/deals/[matchId]/nda-template/route"
@@ -18,6 +26,13 @@ import { GET as getTemplate } from "@/app/portal/deals/[matchId]/nda-template/ro
 describe("canonical portal pursuit routes", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.startCriticalOperation.mockReturnValue({
+      failure: mocks.traceFailure,
+      success: mocks.traceSuccess,
+    })
+    mocks.unstableRethrow.mockImplementation((error: unknown) => {
+      throw error
+    })
     vi.stubGlobal("fetch", mocks.fetch)
     mocks.fetch.mockResolvedValue(
       new Response("template bytes", {
@@ -56,6 +71,19 @@ describe("canonical portal pursuit routes", () => {
 
     expect(response.status).toBe(404)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("rethrows portal redirect control flow without recording an internal failure", async () => {
+    const redirect = new Error("NEXT_REDIRECT")
+    mocks.resolvePortalPursuitResource.mockRejectedValue(redirect)
+
+    await expect(getInformationMemo(
+      new NextRequest("http://localhost/portal/deals/match-1/documents/memo-1"),
+      { params: Promise.resolve({ matchId: "match-1", documentId: "memo-1" }) },
+    )).rejects.toBe(redirect)
+
+    expect(mocks.unstableRethrow).toHaveBeenCalledWith(redirect)
+    expect(mocks.traceFailure).not.toHaveBeenCalled()
   })
 
   it("denies a different IM even where another exact grant exists", async () => {

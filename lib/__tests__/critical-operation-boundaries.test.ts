@@ -88,4 +88,19 @@ describe("W-113 critical operation boundaries", () => {
     expect(auth).not.toContain("console.log")
     expect(auth).not.toContain("console.error")
   })
+
+  it("keeps redirect control flow out of confidential-download failure telemetry", () => {
+    for (const path of [
+      "app/portal/deals/[matchId]/documents/[documentId]/route.ts",
+      "app/portal/deals/[matchId]/nda-template/route.ts",
+      "app/(dashboard)/portal-preview/deals/[matchId]/documents/[documentId]/route.ts",
+    ]) {
+      const route = source(path)
+      expect(route).toContain('import { unstable_rethrow } from "next/navigation"')
+      expect(route).toContain("unstable_rethrow(error)")
+      expect(route.indexOf("unstable_rethrow(error)")).toBeLessThan(
+        route.indexOf('trace.failure("internal_error")'),
+      )
+    }
+  })
 })

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { unstable_rethrow } from "next/navigation"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -109,6 +110,7 @@ export async function GET(
     trace.success()
     return response
   } catch (error) {
+    unstable_rethrow(error)
     trace.failure("internal_error")
     throw error
   }
