@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { signIn } from "@/lib/auth-client"
 import { submitWaitlistRequest } from "@/lib/actions/waitlist"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [requestSubmitted, setRequestSubmitted] = useState(false)
+  const [accessDenied, setAccessDenied] = useState(false)
+
+  useEffect(() => {
+    setAccessDenied(
+      new URLSearchParams(window.location.search).get("reason") === "access_denied",
+    )
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -214,6 +221,14 @@ export default function LoginPage() {
                 <h1 className="mb-2 text-[28px] font-semibold tracking-[-0.03em] text-foreground">Welcome back</h1>
                 <p className="text-sm text-muted-foreground">Sign in to continue to the Re-New workspace.</p>
               </div>
+
+              {accessDenied && (
+                <Alert className="mb-4">
+                  <AlertDescription>
+                    This account is signed in but does not have access to a Re-New workspace. Request access or use an approved account.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* Sign In Form */}
               <form onSubmit={handleLogin} className="flex flex-col gap-4">

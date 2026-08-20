@@ -32,6 +32,7 @@ import {
   resolveAcmeProvisionalSource,
   updateOpportunityIntake,
 } from "@/lib/actions/opportunity-intake"
+import { opportunityIntakeTraceCategory } from "@/lib/utils/opportunity-intake-trace"
 
 const OFFICE_ID = "00000000-0000-4000-8000-000000000001"
 const AFFILIATION_ID = "00000000-0000-4000-8000-000000000002"
@@ -80,6 +81,15 @@ describe("canonical opportunity contact persistence", () => {
     vi.clearAllMocks()
     process.env.WAVE_W039_GEOGRAPHY_MANDATES_ENABLED = "true"
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-001" } })
+  })
+
+  it("classifies an allowlisted intake business rule as validation while retaining unknown failures as persistence", () => {
+    expect(opportunityIntakeTraceCategory({
+      message: "opportunity_activation_requires_source_office",
+    }, ["opportunity_activation_requires_source_office"])).toBe("validation_failed")
+    expect(opportunityIntakeTraceCategory({
+      message: "database connection unexpectedly closed for private@example.test",
+    }, ["opportunity_activation_requires_source_office"])).toBe("persistence_failed")
   })
 
   it("creates through one canonical RPC with office affiliations, never legacy delete/reinsert", async () => {

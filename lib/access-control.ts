@@ -187,7 +187,13 @@ export async function getCurrentUserAccessFromHeaders(
 }
 
 export async function getPostLoginDestination() {
-  const access = await getCurrentUserAccess()
+  return postLoginDestinationForAccess(await getCurrentUserAccess())
+}
+
+/** Keeps access denial explicit without retaining an unauthorized session. */
+export function postLoginDestinationForAccess(
+  access: CurrentUserAccess | null,
+) {
   // `/routing` is only reached when the proxy sees a session cookie. If the
   // session behind that cookie has expired or been revoked, clear the stale
   // cookie before returning to login instead of bouncing forever between
@@ -195,7 +201,7 @@ export async function getPostLoginDestination() {
   if (!access) return "/auth/logout"
   if (access.role === "staff") return "/dashboard_re"
   if (hasPortalAccess(access)) return "/portal/deals"
-  return "/auth/logout"
+  return "/auth/logout?reason=access_denied"
 }
 
 export async function requireStaffAccess() {

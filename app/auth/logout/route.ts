@@ -17,7 +17,12 @@ export async function GET(request: NextRequest) {
   }
 
   // Redirect to login page after logout and defensively expire auth cookies.
-  const response = NextResponse.redirect(new URL("/auth/login", origin))
+  // The routing gate may carry only this generic, allowlisted explanation.
+  const loginUrl = new URL("/auth/login", origin)
+  if (request.nextUrl.searchParams.get("reason") === "access_denied") {
+    loginUrl.searchParams.set("reason", "access_denied")
+  }
+  const response = NextResponse.redirect(loginUrl)
   const cookieNames = [
     "better-auth.session_token",
     "__Secure-better-auth.session_token",

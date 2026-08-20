@@ -6,6 +6,7 @@ import { appendConfirmedWaveAiOutcome } from "@/lib/ai/next-action-outcome"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { opportunityIntakeTraceCategory as classifyOpportunityIntakeTrace } from "@/lib/utils/opportunity-intake-trace"
 import {
   isOpportunityStatus,
   type MaCanonicalContactOption,
@@ -231,11 +232,19 @@ function actionFailure(
   return { success: false, message, fieldErrors }
 }
 
-function normalizeDbError(error: { message?: string | null }) {
+function opportunityIntakeDbErrorCode(error: { message?: string | null }) {
   const rawMessage = error.message ?? ""
-  const code = Object.keys(DB_ERROR_MESSAGES).find((candidate) =>
+  return Object.keys(DB_ERROR_MESSAGES).find((candidate) =>
     rawMessage.includes(candidate),
   )
+}
+
+function opportunityIntakeTraceCategory(error: { message?: string | null }) {
+  return classifyOpportunityIntakeTrace(error, Object.keys(DB_ERROR_MESSAGES))
+}
+
+function normalizeDbError(error: { message?: string | null }) {
+  const code = opportunityIntakeDbErrorCode(error)
   if (!code) {
     return actionFailure(
       "Opportunity could not be saved. Check the intake fields and try again.",
@@ -571,7 +580,7 @@ export async function createOpportunityIntake(
   )
 
   if (error) {
-    trace.failure("persistence_failed")
+    trace.failure(opportunityIntakeTraceCategory(error))
     return normalizeDbError(error)
   }
 
@@ -629,7 +638,7 @@ export async function updateOpportunityIntake(
   )
 
   if (error) {
-    trace.failure("persistence_failed")
+    trace.failure(opportunityIntakeTraceCategory(error))
     return normalizeDbError(error)
   }
 

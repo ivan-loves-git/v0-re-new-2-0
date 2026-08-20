@@ -2,6 +2,7 @@
 
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { queueWaveServerEvent } from "@/lib/telemetry/server"
 
 export interface WaveAiCustomTemplate {
   id: string
@@ -35,7 +36,7 @@ export async function getFollowUpSuggestions(): Promise<{
   }>
   totalCount: number
 }> {
-  await requireStaffAccess()
+  const access = await requireStaffAccess()
   const supabase = createAdminClient()
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - 14)
@@ -47,33 +48,54 @@ export async function getFollowUpSuggestions(): Promise<{
     .not("journey_stage", "in", '("archived","rejected")')
     .order("updated_at", { ascending: true })
 
-  if (error) {
+  if (error || !repreneurs?.length) {
+    if (error) {
+      queueWaveServerEvent({
+        distinctId: access.user.id,
+        event: "wave_action_failed",
+        properties: {
+          surface: "staff", role: "staff", workflow: "repreneur_management",
+          action: "render", outcome: "failure", error_code: "unavailable",
+        },
+      })
+      console.error("Follow-up suggestions could not be loaded")
+    }
+    return { suggestions: [], totalCount: 0 }
+  }
+
+  const repreneurIds = repreneurs.map((repreneur) => repreneur.id)
+  const [notesResult, activitiesResult] = await Promise.all([
+    supabase.from("notes").select("repreneur_id, created_at")
+      .in("repreneur_id", repreneurIds).order("created_at", { ascending: false }),
+    supabase.from("activities").select("repreneur_id, created_at")
+      .in("repreneur_id", repreneurIds).order("created_at", { ascending: false }),
+  ])
+
+  if (notesResult.error || activitiesResult.error) {
+    queueWaveServerEvent({
+      distinctId: access.user.id,
+      event: "wave_action_failed",
+      properties: {
+        surface: "staff", role: "staff", workflow: "repreneur_management",
+        action: "render", outcome: "failure", error_code: "unavailable",
+      },
+    })
     console.error("Follow-up suggestions could not be loaded")
     return { suggestions: [], totalCount: 0 }
   }
 
-  const suggestions = []
-  for (const repreneur of repreneurs ?? []) {
-    const [notesResult, activitiesResult] = await Promise.all([
-      supabase
-        .from("notes")
-        .select("created_at")
-        .eq("repreneur_id", repreneur.id)
-        .order("created_at", { ascending: false })
-        .limit(1),
-      supabase
-        .from("activities")
-        .select("created_at")
-        .eq("repreneur_id", repreneur.id)
-        .order("created_at", { ascending: false })
-        .limit(1),
-    ])
+  const lastContactByRepreneur = new Map<string, string>()
+  for (const record of [...(notesResult.data ?? []), ...(activitiesResult.data ?? [])]) {
+    if (!record.repreneur_id || !record.created_at) continue
+    const previous = lastContactByRepreneur.get(record.repreneur_id)
+    if (!previous || new Date(record.created_at).getTime() > new Date(previous).getTime()) {
+      lastContactByRepreneur.set(record.repreneur_id, record.created_at)
+    }
+  }
 
-    const dates = [
-      notesResult.data?.[0]?.created_at,
-      activitiesResult.data?.[0]?.created_at,
-      repreneur.updated_at,
-    ]
+  const suggestions = []
+  for (const repreneur of repreneurs) {
+    const dates = [lastContactByRepreneur.get(repreneur.id), repreneur.updated_at]
       .filter((value): value is string => Boolean(value))
       .map((value) => new Date(value))
       .sort((a, b) => b.getTime() - a.getTime())
@@ -93,4 +115,3 @@ export async function getFollowUpSuggestions(): Promise<{
   suggestions.sort((a, b) => b.daysSinceContact - a.daysSinceContact)
   return { suggestions: suggestions.slice(0, 10), totalCount: suggestions.length }
 }
-
