@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
+  fetch: vi.fn(),
   resolvePortalPursuitResource: vi.fn(),
 }))
 
@@ -36,7 +37,10 @@ function setupAdminClient({
     throw new Error(`Unexpected table: ${table}`)
   })
   const createSignedUrl = vi.fn().mockResolvedValue({
-    data: { signedUrl: "https://storage.example.test/signed-info-memo" },
+    data: {
+      signedUrl:
+        "https://supabase.test.invalid/storage/v1/object/sign/opportunity-documents/info-memo?token=test",
+    },
     error: null,
   })
 
@@ -73,6 +77,16 @@ const informationMemo = {
 describe("repreneur info-memo download route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal("fetch", mocks.fetch)
+    mocks.fetch.mockResolvedValue(
+      new Response("confidential memo", {
+        headers: {
+          "content-type": "application/pdf",
+          "content-length": "999999",
+          "content-disposition": 'inline; filename="untrusted.html"',
+        },
+      }),
+    )
     mocks.resolvePortalPursuitResource.mockResolvedValue({
       kind: "information-memorandum",
       documentId: "memo-1",
@@ -116,23 +130,91 @@ describe("repreneur info-memo download route", () => {
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it("permits only the exact current granted IM after canonical portal projection succeeds", async () => {
+  it.each([
+    ["with a storage path", informationMemo.storage_path],
+    ["without a storage path", null],
+  ])("fails closed for a legacy external document %s", async (_label, storagePath) => {
+    const { createSignedUrl } = setupAdminClient({
+      document: {
+        ...informationMemo,
+        external_url: "https://storage.example.test/legacy-signed-memo",
+        storage_path: storagePath,
+      },
+    })
+
+    const response = await requestMemo()
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("location")).toBeNull()
+    expect(createSignedUrl).not.toHaveBeenCalled()
+    expect(mocks.fetch).not.toHaveBeenCalled()
+  })
+
+  it("proxies only the exact current granted IM after canonical portal projection succeeds", async () => {
     const { createSignedUrl } = setupAdminClient({
       document: informationMemo,
     })
 
     const response = await requestMemo()
 
-    expect(response.status).toBe(307)
-    expect(response.headers.get("location")).toBe("https://storage.example.test/signed-info-memo")
+    expect(response.status).toBe(200)
+    expect(response.headers.get("location")).toBeNull()
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("content-type")).toBe("application/pdf")
+    expect(response.headers.get("content-disposition")).toBe(
+      'attachment; filename="information-memorandum.pdf"',
+    )
+    expect(response.headers.get("content-length")).toBeNull()
+    await expect(response.text()).resolves.toBe("confidential memo")
     expect(createSignedUrl).toHaveBeenCalledWith(
       "opportunities/opportunity-1/info-memo.pdf",
       60,
+    )
+    expect(mocks.fetch).toHaveBeenCalledWith(
+      "https://supabase.test.invalid/storage/v1/object/sign/opportunity-documents/info-memo?token=test",
+      { cache: "no-store", redirect: "error" },
     )
     expect(mocks.resolvePortalPursuitResource).toHaveBeenCalledWith({
       matchId: "match-1",
       viewer: { kind: "portal" },
       resource: { kind: "information-memorandum", documentId: "memo-1" },
+    })
+  })
+
+  it("does not leak a signed URL when upstream storage rejects it", async () => {
+    setupAdminClient({ document: informationMemo })
+    mocks.fetch.mockResolvedValueOnce(new Response("expired", { status: 403 }))
+
+    const response = await requestMemo()
+
+    expect(response.status).toBe(502)
+    expect(response.headers.get("location")).toBeNull()
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
+    await expect(response.json()).resolves.toEqual({
+      error: "Document file is unavailable.",
+    })
+    expect(mocks.fetch).toHaveBeenCalledWith(
+      "https://supabase.test.invalid/storage/v1/object/sign/opportunity-documents/info-memo?token=test",
+      { cache: "no-store", redirect: "error" },
+    )
+  })
+
+  it("rejects an active HTML response from signed storage", async () => {
+    setupAdminClient({ document: informationMemo })
+    mocks.fetch.mockResolvedValueOnce(
+      new Response("<html>unexpected</html>", {
+        headers: { "content-type": "text/html" },
+      }),
+    )
+
+    const response = await requestMemo()
+
+    expect(response.status).toBe(502)
+    expect(response.headers.get("location")).toBeNull()
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    await expect(response.json()).resolves.toEqual({
+      error: "Document file is unavailable.",
     })
   })
 })

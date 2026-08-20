@@ -11,6 +11,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminCli
 vi.mock("@/lib/storage/private-signed-download", () => ({
   proxyPrivateSignedStorageDownload: mocks.proxyDownload,
   privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateSignedDownloadContentTypeFromFilename: () => "application/octet-stream",
   privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
 }))
 
@@ -42,8 +43,9 @@ function setupAdminClient(document: {
   return { createSignedUrl, select }
 }
 
-function requestDocument(id = "document-1") {
-  return GET(new Request(`http://localhost/opportunities/opportunity-1/documents/${id}`), {
+function requestDocument(id = "document-1", download = false) {
+  const query = download ? "?download" : ""
+  return GET(new Request(`http://localhost/opportunities/opportunity-1/documents/${id}${query}`), {
     params: Promise.resolve({ id: "opportunity-1", documentId: id }),
   })
 }
@@ -76,7 +78,22 @@ describe("staff opportunity document route", () => {
     expect(mocks.proxyDownload).toHaveBeenCalledWith("https://storage.example.test/signed-document", {
       filename: "memo.pdf",
       contentType: "application/pdf",
+      disposition: "inline",
     })
+  })
+
+  it("keeps the explicit download action as an attachment", async () => {
+    setupAdminClient()
+
+    expect((await requestDocument("document-1", true)).status).toBe(200)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith(
+      "https://storage.example.test/signed-document",
+      {
+        filename: "memo.pdf",
+        contentType: "application/pdf",
+        disposition: "attachment",
+      },
+    )
   })
 
   it("does not create a storage URL when the private file is unavailable", async () => {

@@ -16,6 +16,25 @@ const evidenceAction: Partial<Record<OpportunityPursuitJourneyAction, string>> =
   pass_gate_2: "gate_2_passed", record_dispatch: "manual_package_dispatched",
 }
 
+const PLAIN_OBJECT_PURSUIT_BUSINESS_MESSAGES = new Set([
+  "Validation requires the exact current signed copy uploaded after current Gate 1.",
+])
+
+function readableErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+    const message = error.message
+    if (
+      message.length <= 240 &&
+      !/[\r\n]/.test(message) &&
+      PLAIN_OBJECT_PURSUIT_BUSINESS_MESSAGES.has(message)
+    ) {
+      return message
+    }
+  }
+  return fallback
+}
+
 export async function runOpportunityPursuitJourneyAction(input: {
   matchId: string; action: OpportunityPursuitJourneyAction; artifactId?: string; documentId?: string; reason?: string; ndaExpiresAt?: string; idempotencyKey?: string
 }): Promise<OpportunityPursuitJourneyResult> {
@@ -101,7 +120,7 @@ export async function runOpportunityPursuitJourneyAction(input: {
   } catch (error) {
     trace.failure("persistence_failed")
     capture("failure", "persistence_failed")
-    return { success: false, message: error instanceof Error ? error.message : "Could not record pursuit evidence." }
+    return { success: false, message: readableErrorMessage(error, "Could not record pursuit evidence.") }
   }
 }
 

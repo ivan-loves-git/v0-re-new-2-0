@@ -18,12 +18,20 @@ export type PrivateSignedDownloadContentType = (typeof MIME_TYPES)[number]
 
 export interface ProxyPrivateSignedDownloadOptions {
   contentType: PrivateSignedDownloadContentType
-  filename: string
+  filename: string | null | undefined
   disposition?: "attachment" | "inline"
 }
 
-function safeAttachmentFilename(filename: string) {
-  const sanitized = filename
+const ACTIVE_CONTENT_TYPES = new Set([
+  "application/javascript",
+  "application/xhtml+xml",
+  "image/svg+xml",
+  "text/html",
+  "text/javascript",
+])
+
+function safeAttachmentFilename(filename: string | null | undefined) {
+  const sanitized = (filename ?? "")
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/^[._-]+|[._-]+$/g, "")
     .slice(0, 120)
@@ -38,6 +46,25 @@ export function privateSignedDownloadContentType(
   return MIME_TYPES.includes(normalized as PrivateSignedDownloadContentType)
     ? normalized as PrivateSignedDownloadContentType
     : "application/octet-stream"
+}
+
+export function privateSignedDownloadContentTypeFromFilename(
+  filename: string | null | undefined,
+): PrivateSignedDownloadContentType {
+  const extension = filename?.trim().toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]
+  const byExtension: Record<string, PrivateSignedDownloadContentType> = {
+    csv: "text/csv",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    gif: "image/gif",
+    jpeg: "image/jpeg",
+    jpg: "image/jpeg",
+    pdf: "application/pdf",
+    png: "image/png",
+    webp: "image/webp",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  }
+  return extension ? byExtension[extension] ?? "application/octet-stream" : "application/octet-stream"
 }
 
 export function privateStorageDownloadError(message: string) {
@@ -92,11 +119,17 @@ export async function proxyPrivateSignedStorageDownload(
     ?.split(";", 1)[0]
     .trim()
     .toLowerCase()
-  if (
-    upstreamContentType !== options.contentType &&
-    upstreamContentType !== "application/octet-stream"
-  ) {
-    return null
+  if (options.contentType === "application/octet-stream") {
+    if (upstreamContentType && ACTIVE_CONTENT_TYPES.has(upstreamContentType)) {
+      return null
+    }
+  } else {
+    if (
+      upstreamContentType !== options.contentType &&
+      upstreamContentType !== "application/octet-stream"
+    ) {
+      return null
+    }
   }
 
   return new NextResponse(upstream.body, {

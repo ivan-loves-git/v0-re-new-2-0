@@ -2,11 +2,23 @@ import { NextResponse } from "next/server"
 import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import {
+  privateStorageDownloadError,
+  proxyPrivateSignedStorageDownload,
+} from "@/lib/storage/private-signed-download"
 
-function privateRedirect(url: string) {
-  const response = NextResponse.redirect(url)
-  response.headers.set("cache-control", "private, no-store")
-  return response
+function templateDownloadOptions(storagePath: string) {
+  if (storagePath.toLowerCase().endsWith(".pdf")) {
+    return { contentType: "application/pdf" as const, filename: "nda-template.pdf" }
+  }
+  if (storagePath.toLowerCase().endsWith(".docx")) {
+    return {
+      contentType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" as const,
+      filename: "nda-template.docx",
+    }
+  }
+  return null
 }
 
 /** The portal may read the exact opportunity template only after canonical Gate 1. */
@@ -24,16 +36,27 @@ export async function GET(_request: Request, context: { params: Promise<{ matchI
       return NextResponse.json({ error: "Gate 1 is required before the template can be downloaded." }, { status: 404 })
     }
 
+    const downloadOptions = templateDownloadOptions(template.storagePath)
+    if (!downloadOptions) {
+      trace.failure("not_found")
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+
     const supabase = createAdminClient()
     const { data: signedUrl, error: signedUrlError } = await supabase.storage
       .from(template.storageBucket)
       .createSignedUrl(template.storagePath, 60, { download: true })
-    if (signedUrlError) {
+    if (signedUrlError || !signedUrl?.signedUrl) {
       trace.failure("storage_failed")
-      return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
+      return privateStorageDownloadError("Template file is unavailable.")
+    }
+    const response = await proxyPrivateSignedStorageDownload(signedUrl.signedUrl, downloadOptions)
+    if (!response) {
+      trace.failure("storage_failed")
+      return privateStorageDownloadError("Template file is unavailable.")
     }
     trace.success()
-    return privateRedirect(signedUrl.signedUrl)
+    return response
   } catch (error) {
     trace.failure("internal_error")
     throw error

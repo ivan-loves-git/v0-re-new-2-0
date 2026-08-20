@@ -17,6 +17,14 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("@/lib/storage/private-signed-download", () => ({
   proxyPrivateSignedStorageDownload: mocks.proxyDownload,
   privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateSignedDownloadContentTypeFromFilename: (value: string | null | undefined) =>
+    value?.endsWith(".docx")
+      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : value?.endsWith(".doc")
+        ? "application/msword"
+        : value?.endsWith(".pdf")
+          ? "application/pdf"
+          : "application/octet-stream",
   privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
 }))
 
@@ -93,6 +101,10 @@ describe("repreneur document route", () => {
     expect(eq).toHaveBeenCalledWith("id", "fixture")
     expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-ldc.pdf", 60)
     expect(response.status).toBe(200)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith(
+      "https://storage.example.test/signed-document",
+      expect.objectContaining({ disposition: "inline" }),
+    )
   })
 
   it("does not expose another repreneur's Lettre de cadrage", async () => {
@@ -157,6 +169,30 @@ describe("repreneur document route", () => {
 
     expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-ldc.docx", 60)
     expect(response.status).toBe(200)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith(
+      "https://storage.example.test/signed-document",
+      expect.objectContaining({ disposition: "attachment" }),
+    )
+  })
+
+  it("streams a legacy Word document with its actual safe content type", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValue(STAFF_ACCESS)
+    setupAdminClient({
+      cv_url: "cvs/fixture-cv.doc",
+      ldc_url: null,
+    })
+
+    const response = await requestFor("fixture", "cv")
+
+    expect(response.status).toBe(200)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith(
+      "https://storage.example.test/signed-document",
+      {
+        filename: "CV.doc",
+        contentType: "application/msword",
+        disposition: "inline",
+      },
+    )
   })
 
   it("returns a clean not-found response for missing or invalid metadata", async () => {

@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { proxyPrivateSignedStorageDownload } from "@/lib/storage/private-signed-download"
+import {
+  privateSignedDownloadContentTypeFromFilename,
+  proxyPrivateSignedStorageDownload,
+} from "@/lib/storage/private-signed-download"
 
 const SIGNED_URL = "https://supabase.test.invalid/storage/v1/object/sign/private-bucket/file.pdf?token=opaque"
 
@@ -49,6 +52,44 @@ describe("private signed download proxy", () => {
     })
 
     expect(response).toBeNull()
+  })
+
+  it("forces an unknown generic staff document to a safe attachment", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("plain bytes", {
+      headers: { "content-type": "text/plain" },
+    })))
+
+    const response = await proxyPrivateSignedStorageDownload(SIGNED_URL, {
+      filename: null,
+      contentType: "application/octet-stream",
+    })
+
+    expect(response?.status).toBe(200)
+    expect(response?.headers.get("content-type")).toBe("application/octet-stream")
+    expect(response?.headers.get("content-disposition")).toBe(
+      'attachment; filename="download"',
+    )
+  })
+
+  it("still rejects active HTML when generic metadata falls back to octet-stream", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>bad</html>", {
+      headers: { "content-type": "text/html" },
+    })))
+
+    const response = await proxyPrivateSignedStorageDownload(SIGNED_URL, {
+      filename: "legacy-file",
+      contentType: "application/octet-stream",
+    })
+
+    expect(response).toBeNull()
+  })
+
+  it("derives the three supported repreneur document types from the stored filename", () => {
+    expect(privateSignedDownloadContentTypeFromFilename("cv.pdf")).toBe("application/pdf")
+    expect(privateSignedDownloadContentTypeFromFilename("cv.doc")).toBe("application/msword")
+    expect(privateSignedDownloadContentTypeFromFilename("cv.docx")).toBe(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
   })
 
   it("preserves a permitted External Pursuit spreadsheet as an attachment", async () => {

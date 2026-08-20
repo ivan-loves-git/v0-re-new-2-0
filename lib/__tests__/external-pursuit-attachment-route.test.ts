@@ -12,6 +12,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminCli
 vi.mock("@/lib/storage/private-signed-download", () => ({
   proxyPrivateSignedStorageDownload: mocks.proxyDownload,
   privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateSignedDownloadContentTypeFromFilename: () => "application/octet-stream",
   privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
 }))
 

@@ -16,6 +16,10 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("@/lib/storage/private-signed-download", () => ({
   proxyPrivateSignedStorageDownload: mocks.proxyDownload,
   privateSignedDownloadContentType: (value: string | null | undefined) => value ?? "application/octet-stream",
+  privateSignedDownloadContentTypeFromFilename: (value: string | null | undefined) =>
+    value?.endsWith(".docx")
+      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : "application/octet-stream",
   privateStorageDownloadError: (message: string) => new Response(JSON.stringify({ error: message }), { status: 502 }),
 }))
 
@@ -129,6 +133,10 @@ describe("staff NDA artifact route", () => {
     expect(response.status).toBe(200)
     expect(response.headers.get("location")).toBeNull()
     expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.pdf", 60)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith(
+      "https://storage.example.test/signed-nda",
+      expect.objectContaining({ disposition: "inline" }),
+    )
   })
 
   it("downloads a retained DOCX with its original file name", async () => {
@@ -145,6 +153,10 @@ describe("staff NDA artifact route", () => {
     expect(response.status).toBe(200)
     expect(response.headers.get("location")).toBeNull()
     expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.docx", 60)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith(
+      "https://storage.example.test/signed-nda",
+      expect.objectContaining({ disposition: "attachment" }),
+    )
   })
 
   it("refuses a canonical artifact without retained private storage", async () => {

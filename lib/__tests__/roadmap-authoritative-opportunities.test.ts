@@ -11,6 +11,20 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the production counter-validation corrections", () => {
+    expect(roadmap).toContain('version: "0.9.52"')
+    expect(roadmap).toContain(
+      "Every private file request is authorised when it is opened",
+    )
+    expect(roadmap).toContain(
+      "Staff opportunity and leadership actions preserve the intended data",
+    )
+    expect(roadmap).toContain("Access and follow-up failures are clearer")
+    expect(roadmap).toContain(
+      "Email outcomes use the provider’s current signed callback",
+    )
+  })
+
   it("records clearer protected-opportunity cards without claiming a behavior change", () => {
     expect(roadmap).toContain('version: "0.9.51"')
     expect(roadmap).toContain("Locked opportunity details remain readable")
@@ -173,6 +187,6 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-08-18")')
+    expect(roadmapStatus).toContain('new Date("2026-08-20")')
   })
 })

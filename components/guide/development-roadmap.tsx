@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 20, 2026",
+    version: "0.9.52",
+    title: "Protected files and staff workflows are safer and more reliable",
+    isCompleted: true,
+    events: [
+      {
+        title: "Every private file request is authorised when it is opened",
+        type: "fix",
+        description: "WAVE now delivers confidential memoranda, NDA files, staff documents, repreneur documents and External Pursuit attachments without exposing a reusable storage link.",
+      },
+      {
+        title: "Staff opportunity and leadership actions preserve the intended data",
+        type: "fix",
+        description: "Leadership assessment links now record the staff sender correctly, and an untouched optional sector no longer becomes the first sector in the list.",
+      },
+      {
+        title: "Access and follow-up failures are clearer",
+        type: "fix",
+        description: "An account without a workspace receives a safe explanation, while the staff follow-up panel loads its evidence in three bounded reads and fails without taking down the dashboard.",
+      },
+      {
+        title: "Email outcomes use the provider’s current signed callback",
+        type: "fix",
+        description: "Delivery, opening, click, bounce and complaint updates now use Resend’s current signed webhook format and the persisted status contract accepts every supported outcome.",
+      },
+    ],
+  },
+  {
     period: "Aug 18, 2026",
     version: "0.9.51",
     title: "Repreneurs can understand protected opportunities more clearly",

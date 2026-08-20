@@ -7,6 +7,7 @@ export type EmailStatus =
   | "opened"
   | "clicked"
   | "bounced"
+  | "complained"
   | "failed"
 
 export type EmailTemplateKey =

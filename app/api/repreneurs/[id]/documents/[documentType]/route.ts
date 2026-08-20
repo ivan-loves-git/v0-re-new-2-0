@@ -5,7 +5,7 @@ import {
   resolveRepreneurDocumentStoragePath,
 } from "@/lib/repreneur-document-storage"
 import {
-  privateSignedDownloadContentType,
+  privateSignedDownloadContentTypeFromFilename,
   privateStorageDownloadError,
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
@@ -23,7 +23,7 @@ function isDocumentType(value: string): value is DocumentType {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string; documentType: string }> },
 ) {
   const access = await getCurrentUserAccess()
@@ -73,6 +73,7 @@ export async function GET(
   }
 
   const downloadName = getRepreneurDocumentDownloadName(documentType, storagePath)
+  const shouldDownload = new URL(request.url).searchParams.has("download")
 
   const { data: signedUrl, error: signedUrlError } = await supabase.storage
     .from("cvs")
@@ -88,11 +89,8 @@ export async function GET(
 
   const response = await proxyPrivateSignedStorageDownload(signedUrl.signedUrl, {
     filename: downloadName,
-    contentType: privateSignedDownloadContentType(
-      downloadName.endsWith(".docx")
-        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        : "application/pdf",
-    ),
+    contentType: privateSignedDownloadContentTypeFromFilename(downloadName),
+    disposition: shouldDownload ? "attachment" : "inline",
   })
   return response ?? privateStorageDownloadError("Document file is unavailable")
 }

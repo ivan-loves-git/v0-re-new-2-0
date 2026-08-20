@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import {
+  privateStorageDownloadError,
+  proxyPrivateSignedStorageDownload,
+} from "@/lib/storage/private-signed-download"
 
 export async function GET(
   _request: NextRequest,
@@ -72,8 +76,8 @@ export async function GET(
     }
 
     if (document.external_url) {
-      trace.success()
-      return NextResponse.redirect(document.external_url)
+      trace.failure("not_found")
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
 
     if (!document.storage_path) {
@@ -89,15 +93,20 @@ export async function GET(
       .from(bucket)
       .createSignedUrl(document.storage_path, 60)
 
-    if (signedUrlError) {
+    if (signedUrlError || !signedUrl?.signedUrl) {
       trace.failure("storage_failed")
-      return NextResponse.json(
-        { error: signedUrlError.message },
-        { status: 500 },
-      )
+      return privateStorageDownloadError("Document file is unavailable.")
+    }
+    const response = await proxyPrivateSignedStorageDownload(signedUrl.signedUrl, {
+      contentType: "application/pdf",
+      filename: "information-memorandum.pdf",
+    })
+    if (!response) {
+      trace.failure("storage_failed")
+      return privateStorageDownloadError("Document file is unavailable.")
     }
     trace.success()
-    return NextResponse.redirect(signedUrl.signedUrl)
+    return response
   } catch (error) {
     trace.failure("internal_error")
     throw error

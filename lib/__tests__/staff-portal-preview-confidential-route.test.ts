@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUserAccess: vi.fn(),
   resolvePortalPursuitResource: vi.fn(),
   createAdminClient: vi.fn(),
+  fetch: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({ getCurrentUserAccess: mocks.getCurrentUserAccess }))
@@ -25,6 +26,12 @@ function requestPreview() {
 describe("staff portal preview confidential route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal("fetch", mocks.fetch)
+    mocks.fetch.mockResolvedValue(
+      new Response("preview memo", {
+        headers: { "content-type": "application/pdf" },
+      }),
+    )
     mocks.getCurrentUserAccess.mockResolvedValue({ role: "staff", user: { id: "staff-1" } })
   })
 
@@ -59,5 +66,87 @@ describe("staff portal preview confidential route", () => {
       viewer: { kind: "staff-preview", repreneurId: "repreneur-1" },
       resource: { kind: "information-memorandum", documentId: "memo-1" },
     })
+  })
+
+  it("proxies an authorized preview memo without exposing its signed storage URL", async () => {
+    mocks.resolvePortalPursuitResource.mockResolvedValue({
+      kind: "information-memorandum",
+      documentId: "memo-1",
+    })
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "memo-1",
+        document_type: "deal_book",
+        external_url: null,
+        storage_bucket: "opportunity-documents",
+        storage_path: "opportunity-1/documents/memo.pdf",
+      },
+      error: null,
+    })
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })),
+      })),
+      storage: {
+        from: vi.fn(() => ({
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: {
+              signedUrl:
+                "https://supabase.test.invalid/storage/v1/object/sign/opportunity-documents/preview-memo?token=test",
+            },
+            error: null,
+          }),
+        })),
+      },
+    })
+
+    const response = await requestPreview()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("location")).toBeNull()
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("content-type")).toBe("application/pdf")
+    expect(response.headers.get("content-disposition")).toBe(
+      'attachment; filename="information-memorandum.pdf"',
+    )
+    await expect(response.text()).resolves.toBe("preview memo")
+    expect(mocks.fetch).toHaveBeenCalledWith(
+      "https://supabase.test.invalid/storage/v1/object/sign/opportunity-documents/preview-memo?token=test",
+      { cache: "no-store", redirect: "error" },
+    )
+  })
+
+  it.each([
+    ["with a storage path", "opportunity-1/documents/memo.pdf"],
+    ["without a storage path", null],
+  ])("fails closed for an external preview memo %s", async (_label, storagePath) => {
+    mocks.resolvePortalPursuitResource.mockResolvedValue({
+      kind: "information-memorandum",
+      documentId: "memo-1",
+    })
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "memo-1",
+        document_type: "deal_book",
+        external_url: "https://storage.example.test/legacy-signed-memo",
+        storage_bucket: "opportunity-documents",
+        storage_path: storagePath,
+      },
+      error: null,
+    })
+    const createSignedUrl = vi.fn()
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })),
+      })),
+      storage: { from: vi.fn(() => ({ createSignedUrl })) },
+    })
+
+    const response = await requestPreview()
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("location")).toBeNull()
+    expect(createSignedUrl).not.toHaveBeenCalled()
+    expect(mocks.fetch).not.toHaveBeenCalled()
   })
 })

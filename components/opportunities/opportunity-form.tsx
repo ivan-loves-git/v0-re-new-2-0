@@ -44,6 +44,7 @@ import {
   NEW_OPPORTUNITY_SECTORS,
   normalizeOpportunitySector,
   OTHER_SECTOR,
+  setOpportunitySectorChoiceForSubmission,
 } from "@/lib/utils/opportunity-sector"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
@@ -124,6 +125,7 @@ export function OpportunityForm({
     if (isHistorical) return
 
     const formData = new FormData(event.currentTarget)
+    setOpportunitySectorChoiceForSubmission(formData, sectorChoice)
     setFieldErrors({})
     setIsSubmitting(true)
 
@@ -280,7 +282,6 @@ export function OpportunityForm({
                 <div className="space-y-2">
                   <FormFieldLabel htmlFor="sector_choice" requirement="conditional" requirementText="Required before proposal">Secteur</FormFieldLabel>
                   <Select
-                    name="sector_choice"
                     value={sectorChoice}
                     onValueChange={(value) => { setSectorChoice(value); clearFieldError("sector_choice") }}
                     disabled={isHistorical}

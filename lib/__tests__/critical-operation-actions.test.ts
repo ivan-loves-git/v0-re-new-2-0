@@ -123,6 +123,67 @@ describe("critical server action traces", () => {
     expect(serialized).not.toContain("owner@example.test")
   })
 
+  it("returns the business validation message from a plain PostgREST error object", async () => {
+    mocks.createAdminClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: {
+          message:
+            "Validation requires the exact current signed copy uploaded after current Gate 1.",
+        },
+      }),
+    })
+
+    await expect(
+      runOpportunityPursuitJourneyAction({
+        matchId: "match-private-1",
+        action: "validate_renew_copy",
+        artifactId: "artifact-private-1",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      message:
+        "Validation requires the exact current signed copy uploaded after current Gate 1.",
+    })
+  })
+
+  it.each([
+    "connection refused by internal database host",
+    "Validation requires the exact current signed copy uploaded after current Gate 1.\ninternal detail",
+    "x".repeat(300),
+  ])("does not expose an untrusted plain-object error message: %s", async (message) => {
+    mocks.createAdminClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message } }),
+    })
+
+    await expect(
+      runOpportunityPursuitJourneyAction({
+        matchId: "match-private-1",
+        action: "validate_renew_copy",
+        artifactId: "artifact-private-1",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      message: "Could not record pursuit evidence.",
+    })
+  })
+
+  it("keeps the generic fallback for an error with no readable message", async () => {
+    mocks.createAdminClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { code: "XX000" } }),
+    })
+
+    await expect(
+      runOpportunityPursuitJourneyAction({
+        matchId: "match-private-1",
+        action: "qualify",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      message: "Could not record pursuit evidence.",
+    })
+  })
+
   it("closes a pursuit-start trace when the database call rejects", async () => {
     const rawError = new Error(
       "transport failed for match-private-1 staff@example.test",

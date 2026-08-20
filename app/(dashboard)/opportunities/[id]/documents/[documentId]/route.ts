@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
 import {
   privateSignedDownloadContentType,
+  privateSignedDownloadContentTypeFromFilename,
   privateStorageDownloadError,
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
@@ -13,7 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
  * short-lived URL for the stored object.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string; documentId: string }> },
 ) {
   await requireStaffAccess()
@@ -45,9 +46,15 @@ export async function GET(
     return NextResponse.json({ error: "Unable to open document." }, { status: 500 })
   }
 
+  const shouldDownload = new URL(request.url).searchParams.has("download")
   const response = await proxyPrivateSignedStorageDownload(signedUrl?.signedUrl ?? "", {
     filename: document.file_name,
-    contentType: privateSignedDownloadContentType(document.mime_type),
+    contentType: document.mime_type
+      ? privateSignedDownloadContentType(document.mime_type)
+      : privateSignedDownloadContentTypeFromFilename(
+          document.file_name ?? document.storage_path,
+        ),
+    disposition: shouldDownload ? "attachment" : "inline",
   })
   return response ?? privateStorageDownloadError("Unable to open document.")
 }

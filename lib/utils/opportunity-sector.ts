@@ -155,6 +155,14 @@ export function opportunityMatchesSectorFilter(
   return sectorCompatibilityValues(value).includes(selected)
 }
 
+/** Replaces any browser-generated select fallback with the controlled UI value. */
+export function setOpportunitySectorChoiceForSubmission(
+  formData: FormData,
+  sectorChoice: string,
+) {
+  formData.set("sector_choice", sectorChoice)
+}
+
 export function resolveNewOpportunitySector(
   choiceValue: FormDataEntryValue | null,
   otherValue: FormDataEntryValue | null,

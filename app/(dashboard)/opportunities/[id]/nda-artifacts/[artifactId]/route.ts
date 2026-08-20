@@ -2,12 +2,13 @@ import { NextResponse } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
 import {
   privateSignedDownloadContentType,
+  privateSignedDownloadContentTypeFromFilename,
   privateStorageDownloadError,
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
   await requireStaffAccess()
   const { id: opportunityId, artifactId } = await context.params
   const supabase = createAdminClient()
@@ -53,9 +54,15 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
   }
 
+  const shouldDownload = new URL(request.url).searchParams.has("download")
   const response = await proxyPrivateSignedStorageDownload(signedUrl?.signedUrl ?? "", {
     filename: document.file_name,
-    contentType: privateSignedDownloadContentType(document.mime_type),
+    contentType: document.mime_type
+      ? privateSignedDownloadContentType(document.mime_type)
+      : privateSignedDownloadContentTypeFromFilename(
+          document.file_name ?? document.storage_path,
+        ),
+    disposition: shouldDownload ? "attachment" : "inline",
   })
   return response ?? privateStorageDownloadError("Unable to open document.")
 }
