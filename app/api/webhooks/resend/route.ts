@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
-import crypto from "crypto"
+import { Webhook } from "svix"
 
 // Resend webhook event types
 type ResendEventType =
@@ -28,20 +28,25 @@ interface ResendWebhookPayload {
 // Verify webhook signature from Resend
 function verifyWebhookSignature(
   payload: string,
-  signature: string | null,
+  headers: {
+    id: string | null
+    timestamp: string | null
+    signature: string | null
+  },
   secret: string
 ): boolean {
-  if (!signature) return false
+  if (!headers.id || !headers.timestamp || !headers.signature) return false
 
-  const expectedSignature = crypto
-    .createHmac("sha256", secret)
-    .update(payload)
-    .digest("hex")
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  )
+  try {
+    new Webhook(secret).verify(payload, {
+      "svix-id": headers.id,
+      "svix-timestamp": headers.timestamp,
+      "svix-signature": headers.signature,
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function POST(request: Request) {
@@ -59,9 +64,17 @@ export async function POST(request: Request) {
     }
 
     const payload = await request.text()
-    const signature = request.headers.get("resend-signature")
-
-    if (!verifyWebhookSignature(payload, signature, webhookSecret)) {
+    if (
+      !verifyWebhookSignature(
+        payload,
+        {
+          id: request.headers.get("svix-id"),
+          timestamp: request.headers.get("svix-timestamp"),
+          signature: request.headers.get("svix-signature"),
+        },
+        webhookSecret,
+      )
+    ) {
       trace.failure("signature_invalid")
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }

@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto"
+import { Webhook } from "svix"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
@@ -23,7 +23,7 @@ vi.mock("@/lib/actions/emails", () => ({
 vi.mock("@/lib/env", () => ({
   env: {
     CRON_SECRET: "test-cron-secret",
-    RESEND_WEBHOOK_SECRET: "test-webhook-secret",
+    RESEND_WEBHOOK_SECRET: `whsec_${Buffer.from("test-webhook-secret").toString("base64")}`,
     CC_ON_INTERVIEW_REMINDER: "staff@test.invalid",
   },
 }))
@@ -58,12 +58,19 @@ function chain(result: { data: unknown; error: unknown }) {
 
 function webhookRequest(payload: Record<string, unknown>, valid = true) {
   const body = JSON.stringify(payload)
+  const timestamp = new Date()
   const signature = valid
-    ? createHmac("sha256", "test-webhook-secret").update(body).digest("hex")
-    : "0".repeat(64)
+    ? new Webhook(
+        `whsec_${Buffer.from("test-webhook-secret").toString("base64")}`,
+      ).sign("msg_test_webhook", timestamp, body)
+    : "v1,invalid"
   return new Request("http://localhost/api/webhooks/resend", {
     method: "POST",
-    headers: { "resend-signature": signature },
+    headers: {
+      "svix-id": "msg_test_webhook",
+      "svix-timestamp": Math.floor(timestamp.getTime() / 1000).toString(),
+      "svix-signature": signature,
+    },
     body,
   })
 }

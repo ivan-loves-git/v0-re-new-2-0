@@ -37,6 +37,7 @@ import { createDataValidator } from "./utils/supabase"
 import { createTestDataManager, seedStandardTestData } from "./utils/test-data"
 import { createReport, saveReport, printSummary } from "./utils/report"
 import { pass, fail, skip } from "./utils/assertions"
+import { assertLegacyE2ESafeToRun } from "./safety"
 
 /**
  * All test suites in execution order
@@ -188,6 +189,8 @@ export async function runTests(
   context: TestContext,
   config?: TestRunConfig
 ): Promise<TestReport> {
+  assertLegacyE2ESafeToRun()
+
   const startTime = Date.now()
   const screenshots: string[] = []
   const suiteResults: SuiteResult[] = []
