@@ -61,23 +61,40 @@ function opportunityTitle(match: RepreneurOpportunityMatch) {
 export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidates }: RepreneurOpportunityMatchesCardProps) {
   const [recommendationErrors, setRecommendationErrors] = useState<FieldErrors>({})
   const [recommendationError, setRecommendationError] = useState<string>()
+  const [recommendationSuccess, setRecommendationSuccess] = useState<string>()
+  const [isSaving, setIsSaving] = useState(false)
   const recommendationSummaryRef = useRef<HTMLDivElement>(null)
 
   async function recommendOpportunity(formData: FormData) {
     if (!String(formData.get("opportunity_id") ?? "").trim()) {
       setRecommendationErrors({ opportunity_id: "Select an opportunity to recommend." })
       setRecommendationError(undefined)
+      setRecommendationSuccess(undefined)
       focusValidationSummary(recommendationSummaryRef)
       return
     }
 
     setRecommendationErrors({})
     setRecommendationError(undefined)
+    setRecommendationSuccess(undefined)
+    setIsSaving(true)
     try {
-      await saveOpportunityMatch(formData)
+      const result = await saveOpportunityMatch(formData)
+      if (!result.ok) {
+        if (result.field === "opportunity_id") {
+          setRecommendationErrors({ opportunity_id: result.message })
+          focusValidationSummary(recommendationSummaryRef)
+        }
+        setRecommendationError(result.message)
+        return
+      }
+
+      setRecommendationSuccess("Recommendation saved.")
     } catch (error) {
       console.error("Opportunity recommendation failed")
       setRecommendationError(error instanceof Error ? error.message : "We could not save this recommendation. Please try again.")
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -105,7 +122,11 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                   required
                   className="h-9 rounded-md border bg-background px-3 text-sm"
                   {...fieldErrorProps("opportunity_id", recommendationErrors.opportunity_id)}
-                  onChange={() => setRecommendationErrors({})}
+                  onChange={() => {
+                    setRecommendationErrors({})
+                    setRecommendationError(undefined)
+                    setRecommendationSuccess(undefined)
+                  }}
                 >
                   <option value="">Select opportunity...</option>
                   {candidates.slice(0, 50).map((candidate) => (
@@ -115,7 +136,9 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                   ))}
                 </select>
               </label>
-              <Button type="submit">Push to portal</Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Push to portal"}
+              </Button>
             </div>
             <ValidationSummary
               ref={recommendationSummaryRef}
@@ -125,6 +148,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
             />
             <FieldError className="mt-2" id="opportunity_id" message={recommendationErrors.opportunity_id} />
             {recommendationError ? <p role="alert" className="mt-2 text-sm text-destructive">{recommendationError}</p> : null}
+            {recommendationSuccess ? <p role="status" className="mt-2 text-sm text-emerald-700">{recommendationSuccess}</p> : null}
             <p className="mt-2 text-xs text-muted-foreground">
               New recommendations are saved as Proposed, so they appear in the repreneur portal when the opportunity is repreneur-visible.
             </p>

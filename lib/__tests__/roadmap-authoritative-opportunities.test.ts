@@ -22,6 +22,12 @@ describe("authoritative opportunity roadmap entry", () => {
     expect(roadmap).toContain(
       "Legacy test-data tools are unavailable in production",
     )
+    expect(roadmap).toContain(
+      "Recommendation saves always return a clear outcome",
+    )
+    expect(roadmap).toContain(
+      "The displayed build number identifies the real release",
+    )
   })
 
   it("records the production counter-validation corrections", () => {

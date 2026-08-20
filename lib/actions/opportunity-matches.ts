@@ -66,10 +66,6 @@ function actionFailure(error: unknown): OpportunityMatchActionResult {
     return { ok: false, message: error.message, field: error.field }
   }
 
-  if (error instanceof Error) {
-    return { ok: false, message: error.message }
-  }
-
   return { ok: false, message: "Opportunity match update failed." }
 }
 
@@ -142,10 +138,13 @@ function repreneurName(repreneur: any): string | null {
 
 function lockedMatchError(error: { code?: string; message?: string }) {
   if (error.code === "23505") {
-    return new Error("This opportunity already has an active pursuit. Drop the current pursuit before validating another repreneur.")
+    return formError(
+      "This opportunity already has an active pursuit. Drop the current pursuit before validating another repreneur.",
+      "status",
+    )
   }
 
-  return new Error(error.message ?? "Opportunity match update failed")
+  return new Error("Opportunity match update failed.")
 }
 
 function ensureStaffMatchStatus(status: OpportunityMatchStatus) {

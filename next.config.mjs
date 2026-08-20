@@ -1,16 +1,12 @@
 import { execFileSync } from "child_process"
+import { RELEASE_BUILD_NUMBER } from "./lib/release-build.mjs"
 
-// Get git info at build time
-let gitCommitCount = "0"
+// The release number is committed so shallow Vercel checkouts cannot turn it
+// into their local history depth. The short hash remains build provenance.
 let gitCommitHash = "dev"
 
 try {
   const gitOptions = { timeout: 300, encoding: "utf8" }
-  gitCommitCount = execFileSync(
-    "git",
-    ["rev-list", "--count", "HEAD"],
-    gitOptions,
-  ).trim()
   gitCommitHash = execFileSync(
     "git",
     ["rev-parse", "--short=7", "HEAD"],
@@ -34,7 +30,7 @@ const nextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_BUILD_NUMBER: gitCommitCount,
+    NEXT_PUBLIC_BUILD_NUMBER: RELEASE_BUILD_NUMBER,
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
   },
   // W-108 accepts private External Pursuit attachments up to 20 MiB. Keep a

@@ -1,5 +1,6 @@
-// Build info injected at build time from next.config.mjs
-// BUILD_NUMBER = git commit count (progressive: 847, 848, 849...)
+// Build info injected at build time from next.config.mjs.
+// BUILD_NUMBER is the committed release sequence (progressive: 847, 848, 849...)
+// so a shallow deployment checkout cannot change the displayed build.
 // BUILD_HASH = git short hash (unique: 2c617f1)
 
 export const BUILD_NUMBER = process.env.NEXT_PUBLIC_BUILD_NUMBER || "0"

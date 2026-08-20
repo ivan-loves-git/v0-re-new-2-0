@@ -45,6 +45,16 @@ const roadmapEvents: RoadmapPeriod[] = [
         type: "decision",
         description: "Old seed, journey redistribution and unused Wavy suggestion endpoints now stop before authentication or database access in every deployed environment.",
       },
+      {
+        title: "Recommendation saves always return a clear outcome",
+        type: "fix",
+        description: "Staff now see an explicit success or safe, actionable error when pushing an opportunity recommendation, while database and infrastructure details remain private.",
+      },
+      {
+        title: "The displayed build number identifies the real release",
+        type: "fix",
+        description: "WAVE now uses a committed release sequence instead of a deployment checkout’s partial Git history, so the footer remains accurate in production.",
+      },
     ],
   },
   {
