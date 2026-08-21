@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
+import { isUuid } from "@/lib/uuid"
 import Link from "next/link"
 import type { ReactNode } from "react"
 import {
@@ -260,6 +261,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   await connection()
 
   const { id } = await params
+  if (!isUuid(id)) notFound()
   const supabase = await createServerClient()
 
   // First fetch repreneur (required to validate page exists)

@@ -43,6 +43,7 @@ INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,v
 
 \ir 082_opportunity_nda_artifact_foundation.sql
 \ir 088_canonical_pursuit_evidence_and_confidentiality.sql
+\ir 106_template_validation_null_artifact_guard.sql
 \ir 090_blank_nda_docx_template.sql
 DO $$ BEGIN
   IF has_function_privilege('anon','public.journey_grant_confidential_access(uuid,uuid,text,text,timestamp with time zone)','EXECUTE')
@@ -66,6 +67,9 @@ SELECT public.test_assert_raises($$SELECT public.journey_record_evidence('400000
 SELECT public.journey_start_pursuit('40000000-0000-4000-8000-000000000001','staff@test.invalid','test:start');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','qualification_requested','staff@test.invalid','test:request');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','intermediary_qualified','staff@test.invalid','test:qualified');
+-- A staff member can only validate a real current template.  In particular,
+-- NULL must never stand in for a missing template after an incomplete form.
+SELECT public.test_assert_raises($$SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:missing-template',NULL)$$,'exact current blank template');
 SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST DOCX blank template','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test.docx','test.docx',1,repeat('a',64),'staff@test.invalid');
 SELECT public.journey_record_evidence('40000000-0000-4000-8000-000000000001','template_validated','staff@test.invalid','test:template',(SELECT id FROM public.opportunity_nda_artifacts WHERE artifact_role='blank_template'));
 SELECT * FROM public.register_opportunity_nda_artifact('20000000-0000-4000-8000-000000000001',NULL,'blank_template','TEST DOCX blank template replacement','20000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/test-v2.docx','test-v2.docx',1,repeat('e',64),'staff@test.invalid');

@@ -165,7 +165,10 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
 
             <div className="space-y-2">
               <FormFieldLabel htmlFor="source" requirement="optional">Source</FormFieldLabel>
-              <Select name="source" defaultValue={repreneur?.source || ""}>
+              <Select
+                name="source"
+                defaultValue={repreneur ? (repreneur.source || "") : "staff_manual"}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select source..." />
                 </SelectTrigger>

@@ -94,6 +94,15 @@ function readStatus(formData: FormData): OpportunityMatchStatus {
   return status as OpportunityMatchStatus
 }
 
+function readExpectedUpdatedAt(formData: FormData): string | null {
+  const value = readString(formData, "expected_updated_at")
+  if (!value) return null
+  if (Number.isNaN(Date.parse(value))) {
+    throw formError("This recommendation version is invalid. Refresh and try again.")
+  }
+  return value
+}
+
 function normalizeMatch(row: any): OpportunityMatch {
   const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
   return {
@@ -192,7 +201,7 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("opportunity_matches")
-    .select("id, status")
+    .select("id, status, updated_at")
     .eq("opportunity_id", opportunityId)
     .eq("repreneur_id", repreneurId)
     .maybeSingle()
@@ -201,6 +210,8 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   if (data?.status === "active_pursuit") {
     throw formError("This repreneur is already the active pursuit. Drop the pursuit before changing this recommendation.", "repreneur_id")
   }
+
+  return data as { id: string; status: OpportunityMatchStatus; updated_at: string } | null
 }
 
 async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: string) {
@@ -481,7 +492,14 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
 
     const status = readStatus(formData)
     ensureStaffMatchStatus(status)
-    await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
+    const existingMatch = await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
+    const expectedUpdatedAt = readExpectedUpdatedAt(formData)
+    if (existingMatch && !expectedUpdatedAt) {
+      throw formError("This recommendation was already saved or changed by another staff member. Refresh before editing it again.")
+    }
+    if (existingMatch && existingMatch.updated_at !== expectedUpdatedAt) {
+      throw formError("This recommendation changed while you were editing it. Refresh to see the latest staff notes.")
+    }
     await ensureOpportunityReadyForExternalMatch(opportunityId, status)
     await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 
@@ -491,8 +509,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     const platformMatch = await calculateStoredPlatformMatch(opportunityId, repreneurId)
 
     const supabase = createAdminClient()
-    const { error } = await supabase.from("opportunity_matches").upsert(
-      {
+    const matchValues = {
         opportunity_id: opportunityId,
         repreneur_id: repreneurId,
         status,
@@ -504,11 +521,29 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
         created_by: access.user.id,
         reviewed_by: hasHumanReview ? access.user.id : null,
         reviewed_at: hasHumanReview ? new Date().toISOString() : null,
-      },
-      { onConflict: "opportunity_id,repreneur_id" },
-    )
+      }
 
+    const { data: updatedMatch, error } = existingMatch
+      ? await supabase
+          .from("opportunity_matches")
+          .update(matchValues)
+          .eq("id", existingMatch.id)
+          .eq("updated_at", expectedUpdatedAt)
+          .select("id")
+          .maybeSingle()
+      : await supabase
+          .from("opportunity_matches")
+          .insert(matchValues)
+          .select("id")
+          .maybeSingle()
+
+    if (error?.code === "23505") {
+      throw formError("This recommendation was just saved by another staff member. Refresh to see it.")
+    }
     if (error) throw lockedMatchError(error)
+    if (existingMatch && !updatedMatch) {
+      throw formError("This recommendation changed while you were editing it. Refresh to see the latest staff notes.")
+    }
     revalidatePath(`/opportunities/${opportunityId}`)
     revalidatePath(`/repreneurs/${repreneurId}`)
     return { ok: true }
@@ -561,13 +596,40 @@ export async function markOpportunityMatchReviewed(matchId: string, opportunityI
   revalidateMatchPaths(opportunityId, matchId)
 }
 
+async function pursuitTransitionAlreadyStored(
+  supabase: ReturnType<typeof createAdminClient>,
+  matchId: string,
+  opportunityId: string,
+  expected: { status: OpportunityMatchStatus; pursuitStage: string | null },
+) {
+  const { data, error } = await supabase
+    .from("opportunity_matches")
+    .select("id, status, pursuit_stage")
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .maybeSingle()
+
+  if (error) return false
+  return data?.status === expected.status && data.pursuit_stage === expected.pursuitStage
+}
+
 export async function validateOpportunityPursuit(matchId: string, opportunityId: string) {
   const access = await requireStaffAccess()
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc("journey_start_pursuit", {
     p_match_id: matchId, p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_evidence_reference: "staff validation",
   })
-  if (error || !data) throw new Error(error?.message ?? "Only an interested response can be validated into an active pursuit.")
+  if (error || !data) {
+    const alreadyStored = await pursuitTransitionAlreadyStored(
+      supabase,
+      matchId,
+      opportunityId,
+      { status: "active_pursuit", pursuitStage: "interest" },
+    )
+    if (!alreadyStored) {
+      throw new Error(error?.message ?? "Only an interested response can be validated into an active pursuit.")
+    }
+  }
 
   revalidateMatchPaths(opportunityId, matchId)
 }
@@ -576,7 +638,15 @@ export async function dropOpportunityPursuit(matchId: string, opportunityId: str
   const access = await requireStaffAccess()
   const supabase = createAdminClient()
   const { error } = await supabase.rpc("journey_transition_terminal", { p_match_id: matchId, p_transition: "drop", p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_closure_reason: "staff drop" })
-  if (error) throw new Error(error.message)
+  if (error) {
+    const alreadyStored = await pursuitTransitionAlreadyStored(
+      supabase,
+      matchId,
+      opportunityId,
+      { status: "dropped", pursuitStage: "dropped" },
+    )
+    if (!alreadyStored) throw new Error(error.message)
+  }
 
   revalidateMatchPaths(opportunityId, matchId)
 }
@@ -585,7 +655,15 @@ export async function reopenDroppedOpportunityMatch(matchId: string, opportunity
   const access = await requireStaffAccess()
   const supabase = createAdminClient()
   const { error } = await supabase.rpc("journey_transition_terminal", { p_match_id: matchId, p_transition: "reopen", p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_closure_reason: null })
-  if (error) throw new Error(error.message)
+  if (error) {
+    const alreadyStored = await pursuitTransitionAlreadyStored(
+      supabase,
+      matchId,
+      opportunityId,
+      { status: "interested", pursuitStage: null },
+    )
+    if (!alreadyStored) throw new Error(error.message)
+  }
 
   revalidateMatchPaths(opportunityId, matchId)
 }

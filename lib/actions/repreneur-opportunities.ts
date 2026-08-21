@@ -2,6 +2,7 @@ import "server-only"
 
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
@@ -493,6 +494,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
 export async function getMyRepreneurOpportunity(
   dealId: string,
 ): Promise<RepreneurOpportunityExposure | RepreneurDealFlowOpportunity | null> {
+  if (!isUuid(dealId)) return null
   const repreneur = await getCurrentRepreneurDealFlowProfile()
   if (!repreneur) return null
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Plus, CheckCircle, Circle, Package, Flag, MoreHorizontal, Trash2, Eye, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createMilestone, toggleMilestoneComplete, updateMilestone, deleteMilestone } from "@/lib/actions/offers"
+import { createMilestone, toggleMilestoneComplete, updateMilestone, deleteMilestone, retryMilestoneCompletionNotification } from "@/lib/actions/offers"
 import { formatCivilDate } from "@/lib/utils/display-date-time"
 import type { OfferMilestone, MilestoneType } from "@/lib/types/offer"
 import {
@@ -103,7 +104,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
   }
 
   async function handleCreate() {
-    if (!validateTitle()) return
+    if (isMutatingRef.current || isSubmitting || !validateTitle()) return
 
     const savedType = milestoneType
     const savedTitle = title.trim()
@@ -139,6 +140,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
   }
 
   async function handleToggleComplete(milestone: OfferMilestone) {
+    if (isMutatingRef.current) return
     const newCompleted = !milestone.is_completed
 
     isMutatingRef.current = true
@@ -151,7 +153,20 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
     )
 
     try {
-      await toggleMilestoneComplete(milestone.id, repreneurId, newCompleted)
+      const result = await toggleMilestoneComplete(milestone.id, repreneurId, newCompleted)
+      if (newCompleted && result.notificationSent === false) {
+        toast.warning("Milestone completed, but the notification was not accepted.", {
+          action: {
+            label: "Retry notification",
+            onClick: () => {
+              void retryMilestoneCompletionNotification(milestone.id, repreneurId).then((retry) => {
+                if (retry.success) toast.success("Milestone notification accepted")
+                else toast.error("Notification still not accepted. Review Email history before retrying.")
+              }).catch(() => toast.error("Notification retry could not be confirmed. Review Email history."))
+            },
+          },
+        })
+      }
       await new Promise(resolve => setTimeout(resolve, 100))
       router.refresh()
       setTimeout(() => { isMutatingRef.current = false }, 500)
@@ -167,7 +182,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
   }
 
   async function handleUpdate() {
-    if (!selectedMilestone || !validateTitle()) return
+    if (isMutatingRef.current || isSubmitting || !selectedMilestone || !validateTitle()) return
 
     const savedTitle = title.trim()
     const savedNotes = notes.trim()
@@ -209,6 +224,7 @@ export function OfferMilestones({ repreneurOfferId, repreneurId, milestones, isA
   }
 
   async function handleDelete(milestoneId: string) {
+    if (isMutatingRef.current) return
     const milestoneToDelete = localMilestones.find(m => m.id === milestoneId)
 
     isMutatingRef.current = true

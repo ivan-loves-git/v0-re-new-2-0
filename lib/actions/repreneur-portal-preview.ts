@@ -7,6 +7,7 @@ import {
   type PortalRepreneurProfile,
 } from "@/lib/data/portal-profile"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
@@ -349,6 +350,7 @@ export async function getStaffPortalPreviewOpportunity(
   matchId: string
 ): Promise<RepreneurOpportunityExposure | null> {
   await requireStaffAccess()
+  if (!isUuid(repreneurId) || !isUuid(matchId)) return null
 
   const supabase = createAdminClient()
   const opportunities = await listVisibleOpportunitiesForRepreneur(supabase, repreneurId, matchId)

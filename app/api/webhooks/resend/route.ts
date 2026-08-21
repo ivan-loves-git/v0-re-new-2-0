@@ -3,15 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { Webhook } from "svix"
+import { resolveResendWebhookUpdate, type ResendWebhookEventType } from "@/lib/email/resend-webhook-transition"
 
 // Resend webhook event types
-type ResendEventType =
-  | "email.sent"
-  | "email.delivered"
-  | "email.opened"
-  | "email.clicked"
-  | "email.bounced"
-  | "email.complained"
+type ResendEventType = ResendWebhookEventType
 
 interface ResendWebhookPayload {
   type: ResendEventType
@@ -82,22 +77,6 @@ export async function POST(request: Request) {
     const event: ResendWebhookPayload = JSON.parse(payload)
     const supabase = createAdminClient()
 
-    // Map Resend event to our status
-    const statusMap: Record<ResendEventType, string> = {
-      "email.sent": "sent",
-      "email.delivered": "delivered",
-      "email.opened": "opened",
-      "email.clicked": "clicked",
-      "email.bounced": "bounced",
-      "email.complained": "complained",
-    }
-
-    const newStatus = statusMap[event.type]
-    if (!newStatus) {
-      trace.failure("precondition_failed")
-      return NextResponse.json({ message: "Event type not tracked" })
-    }
-
     // Find the email log by resend_id
     const { data: emailLog, error: fetchError } = await supabase
       .from("email_logs")
@@ -111,22 +90,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Email not tracked" })
     }
 
-    // Prepare updates based on event type
-    const updates: Record<string, unknown> = { status: newStatus }
-
-    switch (event.type) {
-      case "email.opened":
-        updates.opened_at = event.created_at
-        break
-      case "email.clicked":
-        updates.clicked_at = event.created_at
-        break
-      case "email.bounced":
-        updates.bounced_at = event.created_at
-        break
-      case "email.delivered":
-        updates.delivered_at = event.created_at
-        break
+    const updates = resolveResendWebhookUpdate(emailLog.status, event.type, event.created_at)
+    if (!updates) {
+      trace.success()
+      return NextResponse.json({ message: "Webhook already finalized", event: event.type })
     }
 
     // Update the email log

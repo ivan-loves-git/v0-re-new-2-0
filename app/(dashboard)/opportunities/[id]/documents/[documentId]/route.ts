@@ -6,6 +6,7 @@ import {
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isUuid } from "@/lib/uuid"
 
 /**
  * Staff-only document delivery. Browser clients never receive storage access;
@@ -18,6 +19,9 @@ export async function GET(
 ) {
   await requireStaffAccess()
   const { id: opportunityId, documentId } = await context.params
+  if (!isUuid(opportunityId) || !isUuid(documentId)) {
+    return privateStorageDownloadError("Not found", 404)
+  }
   const supabase = createAdminClient()
 
   const { data: document, error } = await supabase

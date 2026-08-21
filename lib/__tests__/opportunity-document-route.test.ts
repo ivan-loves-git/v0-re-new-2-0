@@ -27,6 +27,9 @@ vi.mock("@/lib/storage/private-signed-download", () => ({
 
 import { GET } from "@/app/(dashboard)/opportunities/[id]/documents/[documentId]/route"
 
+const opportunityId = "018f62b4-6500-7f65-9afb-8f0ea8cd4ba9"
+const documentId = "018f62b4-6500-7f65-9afb-8f0ea8cd4baa"
+
 function setupAdminClient(document: {
   storage_bucket: string
   storage_path: string | null
@@ -34,7 +37,7 @@ function setupAdminClient(document: {
   mime_type?: string | null
 } | null = {
   storage_bucket: "opportunity-documents",
-  storage_path: "opportunity-1/documents/memo.pdf",
+  storage_path: `${opportunityId}/documents/memo.pdf`,
   file_name: "memo.pdf",
   mime_type: "application/pdf",
 }) {
@@ -53,10 +56,10 @@ function setupAdminClient(document: {
   return { createSignedUrl, select }
 }
 
-function requestDocument(id = "document-1", download = false) {
+function requestDocument(id = documentId, download = false) {
   const query = download ? "?download" : ""
-  return GET(new Request(`http://localhost/opportunities/opportunity-1/documents/${id}${query}`), {
-    params: Promise.resolve({ id: "opportunity-1", documentId: id }),
+  return GET(new Request(`http://localhost/opportunities/${opportunityId}/documents/${id}${query}`), {
+    params: Promise.resolve({ id: opportunityId, documentId: id }),
   })
 }
 
@@ -71,6 +74,17 @@ describe("staff opportunity document route", () => {
     setupAdminClient()
     await requestDocument()
     expect(mocks.requireStaffAccess).toHaveBeenCalledOnce()
+  })
+
+  it("treats a malformed opportunity or document link as not found without querying storage", async () => {
+    setupAdminClient()
+    const response = await GET(new Request("http://localhost/opportunities/not-a-uuid/documents/not-a-uuid"), {
+      params: Promise.resolve({ id: "not-a-uuid", documentId: "not-a-uuid" }),
+    })
+
+    expect(response.status).toBe(404)
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.proxyDownload).not.toHaveBeenCalled()
   })
 
   it("does not sign a document outside the requested opportunity", async () => {
@@ -88,7 +102,7 @@ describe("staff opportunity document route", () => {
     const response = await requestDocument()
     expect(response.status).toBe(200)
     expect(response.headers.get("location")).toBeNull()
-    expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/documents/memo.pdf", 60)
+    expect(createSignedUrl).toHaveBeenCalledWith(`${opportunityId}/documents/memo.pdf`, 60)
     expect(mocks.proxyDownload).toHaveBeenCalledWith("https://storage.example.test/signed-document", {
       filename: "memo.pdf",
       contentType: "application/pdf",
@@ -99,7 +113,7 @@ describe("staff opportunity document route", () => {
   it("keeps the explicit download action as an attachment", async () => {
     setupAdminClient()
 
-    expect((await requestDocument("document-1", true)).status).toBe(200)
+    expect((await requestDocument(documentId, true)).status).toBe(200)
     expect(mocks.proxyDownload).toHaveBeenCalledWith(
       "https://storage.example.test/signed-document",
       {
@@ -122,7 +136,7 @@ describe("staff opportunity document route", () => {
   it("rejects a document stored outside the private opportunity bucket", async () => {
     const { createSignedUrl } = setupAdminClient({
       storage_bucket: "other-bucket",
-      storage_path: "opportunity-1/documents/memo.pdf",
+      storage_path: `${opportunityId}/documents/memo.pdf`,
     })
     expect((await requestDocument()).status).toBe(404)
     expect(createSignedUrl).not.toHaveBeenCalled()
@@ -131,7 +145,7 @@ describe("staff opportunity document route", () => {
   it("rejects a document path outside the exact opportunity prefix", async () => {
     const { createSignedUrl } = setupAdminClient({
       storage_bucket: "opportunity-documents",
-      storage_path: "opportunity-10/documents/memo.pdf",
+      storage_path: "018f62b4-6500-7f65-9afb-8f0ea8cd4bab/documents/memo.pdf",
     })
     expect((await requestDocument()).status).toBe(404)
     expect(createSignedUrl).not.toHaveBeenCalled()

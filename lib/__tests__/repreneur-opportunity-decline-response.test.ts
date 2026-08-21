@@ -37,9 +37,12 @@ function declineFormData(reason?: string, rationale?: string) {
   return formData
 }
 
-function mockMatchResponse(status: "proposed" | "interested" | "declined" = "proposed") {
+function mockMatchResponse(
+  status: "proposed" | "interested" | "declined" = "proposed",
+  opportunityStatus: "active" | "paused" | "closed" | "archived" = "active",
+) {
   const maybeSingle = vi.fn().mockResolvedValue({
-    data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status },
+    data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: opportunityStatus } },
     error: null,
   })
   const selectForRepreneur = vi.fn(() => ({ maybeSingle }))
@@ -165,6 +168,22 @@ describe("repreneur opportunity decline response", () => {
     })
     expect(selectForMatch).toHaveBeenCalledWith("id", MATCH_ID)
     expect(selectForRepreneur).toHaveBeenCalledWith("repreneur_id", REPRENEUR_ID)
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it.each(["paused", "closed", "archived"] as const)("does not accept a late response after the opportunity is %s", async (opportunityStatus) => {
+    const { update } = mockMatchResponse("proposed", opportunityStatus)
+
+    const result = await declineMyOpportunity(
+      MATCH_ID,
+      EMPTY_ACTION_STATE,
+      declineFormData("sector", "The opportunity is no longer current."),
+    )
+
+    expect(result).toEqual({
+      status: "error",
+      message: "This opportunity is no longer available for your response.",
+    })
     expect(update).not.toHaveBeenCalled()
   })
 

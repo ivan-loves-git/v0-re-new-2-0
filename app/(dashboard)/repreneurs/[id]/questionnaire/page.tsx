@@ -24,6 +24,10 @@ import {
   INDUSTRY_SECTOR_OPTIONS,
 } from "@/lib/utils/tier1-scoring"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
+import {
+  questionnaireLoadStateForResponse,
+  type QuestionnaireLoadState,
+} from "@/lib/utils/questionnaire-load-state"
 
 // Extended options with skip/N/A where reasonable
 const EMPLOYMENT_STATUS_WITH_SKIP = [
@@ -109,6 +113,7 @@ export default function QuestionnairePage() {
 
   const [currentStep, setCurrentStep] = useState(1)
   const [repreneurName, setRepreneurName] = useState("")
+  const [loadState, setLoadState] = useState<QuestionnaireLoadState>("loading")
 
   const [formData, setFormData] = useState<QuestionnaireInput>({
     q1_employment_status: null,
@@ -132,10 +137,19 @@ export default function QuestionnairePage() {
 
   // Load existing data
   useEffect(() => {
+    let cancelled = false
+
     async function loadData() {
-      const res = await fetch(`/api/repreneurs/${repreneurId}`)
-      if (res.ok) {
+      try {
+        const res = await fetch(`/api/repreneurs/${encodeURIComponent(repreneurId)}`)
+        const nextLoadState = questionnaireLoadStateForResponse(res)
+        if (!res.ok) {
+          if (!cancelled) setLoadState(nextLoadState)
+          return
+        }
+
         const data = await res.json()
+        if (cancelled) return
         setRepreneurName(`${data.first_name} ${data.last_name}`)
         setFormData({
           q1_employment_status: data.q1_employment_status ?? null,
@@ -156,9 +170,15 @@ export default function QuestionnairePage() {
           q16_network_training: data.q16_network_training ?? [],
           q17_open_to_co_acquisition: data.q17_open_to_co_acquisition,
         })
+        setLoadState("ready")
+      } catch {
+        if (!cancelled) setLoadState("error")
       }
     }
     loadData()
+    return () => {
+      cancelled = true
+    }
   }, [repreneurId])
 
   const toggleMultiSelect = (field: keyof QuestionnaireInput, value: string) => {
@@ -210,6 +230,28 @@ export default function QuestionnairePage() {
       default:
         return 0
     }
+  }
+
+  if (loadState === "not_found" || loadState === "error") {
+    const missing = loadState === "not_found"
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-surface-subtle/60 p-4">
+        <Alert className="max-w-xl">
+          <Info className="size-4" />
+          <AlertTitle>{missing ? "Repreneur not found" : "Questionnaire unavailable"}</AlertTitle>
+          <AlertDescription className="space-y-4">
+            <p>
+              {missing
+                ? "This repreneur may have been removed or the link is no longer valid."
+                : "The questionnaire could not be loaded. Please return to the repreneur list and try again."}
+            </p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/repreneurs">Back to Repreneurs</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
   }
 
   return (

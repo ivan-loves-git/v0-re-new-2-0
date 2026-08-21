@@ -127,12 +127,14 @@ export const PERSONA_OPTIONS = [
 
 // Source options for the dropdown
 export const SOURCE_OPTIONS = [
+  { value: "staff_manual", label: "Staff manual" },
   { value: "website_form", label: "Website Form" },
   { value: "linkedin", label: "LinkedIn" },
   { value: "partner_intro", label: "Partner Intro" },
   { value: "event", label: "Event" },
   { value: "referral", label: "Referral" },
   { value: "inbound_email", label: "Inbound Email" },
+  { value: "access_request_staff_review", label: "Access Request (Staff Review)" },
   { value: "other", label: "Other" },
 ] as const
 

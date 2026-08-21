@@ -6,10 +6,14 @@ import {
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isUuid } from "@/lib/uuid"
 
 export async function GET(request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
   await requireStaffAccess()
   const { id: opportunityId, artifactId } = await context.params
+  if (!isUuid(opportunityId) || !isUuid(artifactId)) {
+    return privateStorageDownloadError("Not found", 404)
+  }
   const supabase = createAdminClient()
 
   const { data: artifact, error: artifactError } = await supabase

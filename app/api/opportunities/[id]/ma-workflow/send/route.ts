@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { sendMaSourceWorkflowEmailPayload } from "@/lib/actions/ma-workflows"
+import { isUuid } from "@/lib/uuid"
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  if (!isUuid(id)) {
+    return NextResponse.json({ success: false, error: "Opportunity not found." }, { status: 404 })
+  }
   const body = await request.json().catch(() => null)
 
   const result = await sendMaSourceWorkflowEmailPayload(id, {

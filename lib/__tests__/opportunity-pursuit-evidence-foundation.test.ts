@@ -3,6 +3,7 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 
 const source = fs.readFileSync(path.join(process.cwd(), "scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"), "utf8")
+const nullArtifactGuard = fs.readFileSync(path.join(process.cwd(), "scripts/106_template_validation_null_artifact_guard.sql"), "utf8")
 
 describe("W-090/W-091 evidence foundation", () => {
   it("is append-only, service-only and disabled by default", () => {
@@ -18,6 +19,11 @@ describe("W-090/W-091 evidence foundation", () => {
     expect(source).toContain("journey_current_artifact_is_valid")
     expect(source).toContain("Gate 2 requires both current signed copies to be validated")
     expect(source).toContain("opportunity_pursuit_confidential_grants")
+  })
+
+  it("rejects a staff template validation when the selected artifact or current template is missing", () => {
+    expect(nullArtifactGuard).toContain("p_artifact_id IS NULL OR v_template IS NULL")
+    expect(nullArtifactGuard).toContain("exact current blank template")
   })
 
   it("fails closed for portal access and revokes before terminal changes", () => {

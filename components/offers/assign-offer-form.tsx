@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { assignOfferToRepreneur } from "@/lib/actions/offers"
+import { assignOfferToRepreneur, retryOfferReceivedNotification } from "@/lib/actions/offers"
 import { toast } from "sonner"
 import type { Offer, RepreneurOffer } from "@/lib/types/offer"
 
@@ -82,8 +82,22 @@ export function AssignOfferForm({
     setIsSubmitting(true)
 
     try {
-      await assignOfferToRepreneur(repreneurId, selectedOffer)
-      toast.success("Offer assigned")
+      const result = await assignOfferToRepreneur(repreneurId, selectedOffer)
+      if (result.notificationSent) {
+        toast.success("Offer assigned and notification accepted")
+      } else {
+        toast.warning("Offer assigned, but the notification was not accepted.", {
+          action: {
+            label: "Retry notification",
+            onClick: () => {
+              void retryOfferReceivedNotification(result.assignmentId, repreneurId).then((retry) => {
+                if (retry.success) toast.success("Offer notification accepted")
+                else toast.error("Notification still not accepted. Review Email history before retrying.")
+              }).catch(() => toast.error("Notification retry could not be confirmed. Review Email history."))
+            },
+          },
+        })
+      }
       // Small delay to allow server to process before refresh
       await new Promise(resolve => setTimeout(resolve, 100))
       onAssignComplete?.()

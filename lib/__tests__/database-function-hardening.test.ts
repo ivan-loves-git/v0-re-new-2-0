@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest"
 
 const migrationPath =
   `${process.cwd()}/scripts/102_database_function_hardening.sql`
+const atomicOfferAssignmentPath =
+  `${process.cwd()}/scripts/107_atomic_offer_assignment.sql`
 
 describe("database function hardening migration", () => {
   it("pins every advisor-reported mutable function search path", () => {
@@ -43,5 +45,15 @@ describe("database function hardening migration", () => {
 
     expect(migration).not.toContain("REVOKE EXECUTE ON FUNCTION public.compute_journey_stage")
     expect(migration).not.toContain("FROM service_role")
+  })
+
+  it("keeps the atomic offer-assignment function restricted to the service role", () => {
+    const migration = readFileSync(atomicOfferAssignmentPath, "utf8")
+
+    expect(migration).toContain("SET search_path = public, pg_temp")
+    expect(migration).toContain("REVOKE ALL ON FUNCTION public.assign_repreneur_offer(UUID, UUID, TEXT) FROM PUBLIC;")
+    expect(migration).toContain("REVOKE ALL ON FUNCTION public.assign_repreneur_offer(UUID, UUID, TEXT) FROM anon;")
+    expect(migration).toContain("REVOKE ALL ON FUNCTION public.assign_repreneur_offer(UUID, UUID, TEXT) FROM authenticated;")
+    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.assign_repreneur_offer(UUID, UUID, TEXT) TO service_role;")
   })
 })

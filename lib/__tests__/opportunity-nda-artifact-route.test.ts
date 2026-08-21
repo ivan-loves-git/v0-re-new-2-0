@@ -35,11 +35,14 @@ vi.mock("@/lib/storage/private-signed-download", () => ({
 
 import { GET } from "@/app/(dashboard)/opportunities/[id]/nda-artifacts/[artifactId]/route"
 
+const opportunityId = "018f62b4-6500-7f65-9afb-8f0ea8cd4ba9"
+const artifactId = "018f62b4-6500-7f65-9afb-8f0ea8cd4baa"
+
 function setupAdminClient({
-  artifact = { document_id: "document-1" },
+  artifact = { document_id: "018f62b4-6500-7f65-9afb-8f0ea8cd4bab" },
   document = {
     storage_bucket: "opportunity-documents",
-    storage_path: "opportunity-1/nda-artifacts/blank_template/blank.pdf",
+    storage_path: `${opportunityId}/nda-artifacts/blank_template/blank.pdf`,
     file_name: "blank.pdf",
     mime_type: "application/pdf",
   },
@@ -105,10 +108,10 @@ function setupAdminClient({
 
 function requestArtifact(download = false) {
   const suffix = download ? "?download" : ""
-  return GET(new Request(`http://localhost/opportunities/opportunity-1/nda-artifacts/artifact-1${suffix}`), {
+  return GET(new Request(`http://localhost/opportunities/${opportunityId}/nda-artifacts/${artifactId}${suffix}`), {
     params: Promise.resolve({
-      id: "opportunity-1",
-      artifactId: "artifact-1",
+      id: opportunityId,
+      artifactId,
     }),
   })
 }
@@ -129,6 +132,18 @@ describe("staff NDA artifact route", () => {
     await requestArtifact()
 
     expect(mocks.requireStaffAccess).toHaveBeenCalledOnce()
+  })
+
+  it("treats a malformed opportunity or artifact link as not found without loading metadata", async () => {
+    setupAdminClient()
+
+    const response = await GET(new Request("http://localhost/opportunities/not-a-uuid/nda-artifacts/not-a-uuid"), {
+      params: Promise.resolve({ id: "not-a-uuid", artifactId: "not-a-uuid" }),
+    })
+
+    expect(response.status).toBe(404)
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.proxyDownload).not.toHaveBeenCalled()
   })
 
   it("returns not found when the artifact is outside the opportunity", async () => {
@@ -152,7 +167,7 @@ describe("staff NDA artifact route", () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get("location")).toBeNull()
-    expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.pdf", 60)
+    expect(createSignedUrl).toHaveBeenCalledWith(`${opportunityId}/nda-artifacts/blank_template/blank.pdf`, 60)
     expect(mocks.proxyDownload).toHaveBeenCalledWith(
       "https://storage.example.test/signed-nda",
       expect.objectContaining({ disposition: "inline" }),
@@ -163,7 +178,7 @@ describe("staff NDA artifact route", () => {
     const { createSignedUrl } = setupAdminClient({
       document: {
         storage_bucket: "opportunity-documents",
-        storage_path: "opportunity-1/nda-artifacts/blank_template/blank.docx",
+        storage_path: `${opportunityId}/nda-artifacts/blank_template/blank.docx`,
         file_name: "Blank NDA.docx",
       },
     })
@@ -172,7 +187,7 @@ describe("staff NDA artifact route", () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get("location")).toBeNull()
-    expect(createSignedUrl).toHaveBeenCalledWith("opportunity-1/nda-artifacts/blank_template/blank.docx", 60)
+    expect(createSignedUrl).toHaveBeenCalledWith(`${opportunityId}/nda-artifacts/blank_template/blank.docx`, 60)
     expect(mocks.proxyDownload).toHaveBeenCalledWith(
       "https://storage.example.test/signed-nda",
       expect.objectContaining({ disposition: "attachment" }),

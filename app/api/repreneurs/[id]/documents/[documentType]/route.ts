@@ -9,6 +9,7 @@ import {
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isUuid } from "@/lib/uuid"
 
 const DOCUMENT_FIELDS = {
   cv: "cv_url",
@@ -29,6 +30,9 @@ export async function GET(
   if (!access) return privateStorageDownloadError("Unauthorized", 401)
 
   const { id, documentType } = await context.params
+  if (!isUuid(id)) {
+    return privateStorageDownloadError("Document not found", 404)
+  }
   if (!isDocumentType(documentType)) {
     return privateStorageDownloadError("Unsupported document type", 400)
   }

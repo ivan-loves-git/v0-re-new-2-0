@@ -35,7 +35,7 @@ function mockSuccessfulInterestUpdates(
   const maybeSingle = vi.fn();
   for (const status of statuses) {
     maybeSingle.mockResolvedValueOnce({
-      data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status },
+      data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: "active" } },
       error: null,
     });
   }

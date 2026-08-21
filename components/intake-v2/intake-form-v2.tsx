@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,13 @@ import {
 } from './steps'
 import type { IntakeV2FormData, IntakeV2FormState } from '@/lib/types/intake-v2'
 import { submitIntakeV2 } from '@/lib/actions/intake-v2'
+import {
+  clearIntakeDraft,
+  createIntakeDraft,
+  INTAKE_DRAFT_STORAGE_KEY,
+  restoreIntakeDraft,
+  type RestoredIntakeDraft,
+} from '@/lib/utils/intake-draft'
 import { Zap } from 'lucide-react'
 
 // Step title translation keys
@@ -49,8 +56,40 @@ export function IntakeFormV2() {
     isSubmitting: false,
     submitResult: null
   })
+  const [draftHydrated, setDraftHydrated] = useState(false)
+  const [restoredUploadState, setRestoredUploadState] = useState<Pick<
+    RestoredIntakeDraft,
+    'requiresCvReattachment' | 'discardedThesisAttachment'
+  > | null>(null)
 
   const { currentStep, data, errors, isSubmitting } = state
+
+  useEffect(() => {
+    const draft = restoreIntakeDraft(window.sessionStorage.getItem(INTAKE_DRAFT_STORAGE_KEY))
+
+    if (draft) {
+      setState((previous) => ({
+        ...previous,
+        currentStep: draft.requiresCvReattachment ? 1 : draft.currentStep,
+        data: draft.data,
+      }))
+      setRestoredUploadState({
+        requiresCvReattachment: draft.requiresCvReattachment,
+        discardedThesisAttachment: draft.discardedThesisAttachment,
+      })
+    }
+
+    setDraftHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!draftHydrated || isSubmitting) return
+
+    window.sessionStorage.setItem(
+      INTAKE_DRAFT_STORAGE_KEY,
+      createIntakeDraft(currentStep, data)
+    )
+  }, [currentStep, data, draftHydrated, isSubmitting])
 
   // Update form data
   const handleChange = useCallback((updates: Partial<IntakeV2FormData>) => {
@@ -97,6 +136,7 @@ export function IntakeFormV2() {
       const result = await submitIntakeV2(data as IntakeV2FormData)
 
       if (result.success) {
+        clearIntakeDraft(window.sessionStorage)
         router.push('/intake-v2/success')
       } else {
         setState(prev => ({
@@ -210,9 +250,19 @@ export function IntakeFormV2() {
   const stepLabel = language === 'fr' ? 'Étape' : 'Step'
   const ofLabel = language === 'fr' ? 'sur' : 'of'
   const contactLabel = language === 'fr' ? 'Des questions ? Contactez-nous à' : 'Questions? Contact us at'
+  const uploadRestoreMessage = language === 'fr'
+    ? 'Vos réponses ont été restaurées. Pour votre confidentialité, les documents ne sont pas conservés dans ce brouillon : ajoutez à nouveau votre CV avant de continuer. Toute lettre de cadrage facultative doit aussi être ajoutée de nouveau si vous souhaitez la joindre.'
+    : 'Your answers have been restored. For your privacy, documents are not kept in this draft: upload your resume again before continuing. Reattach any optional investment thesis if you want to include it.'
+  const needsUploadReattachment = restoredUploadState &&
+    (restoredUploadState.requiresCvReattachment || restoredUploadState.discardedThesisAttachment)
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {needsUploadReattachment && !data.cv_url && (
+        <div role="status" className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          {uploadRestoreMessage}
+        </div>
+      )}
       {/* Quick Fill Step button for testing */}
       {SHOW_AUTOFILL && currentStep < 6 && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">

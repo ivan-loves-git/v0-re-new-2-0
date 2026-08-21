@@ -26,6 +26,7 @@ import {
 } from "@/lib/actions/opportunity-intake"
 import { isFranceGeographyMandatesEnabled } from "@/lib/opportunity-geography-release"
 import type { OpportunityClosureReason } from "@/lib/types/opportunity"
+import { isUuid } from "@/lib/uuid"
 
 export default function OpportunityDetailPage({
   params,
@@ -49,9 +50,14 @@ async function OpportunityDetailContent({
   searchParams: Promise<{ tab?: string; wave_ai_outcome?: string }>
 }) {
   const { id } = await params
+  if (!isUuid(id)) notFound()
   const { tab, wave_ai_outcome: waveAiOutcome } = await searchParams
+  const opportunity = await getOpportunity(id)
+  if (!opportunity) {
+    notFound()
+  }
+
   const [
-    opportunity,
     documents,
     matches,
     matchCandidates,
@@ -60,7 +66,6 @@ async function OpportunityDetailContent({
     closureHistory,
     ndaArtifacts,
   ] = await Promise.all([
-    getOpportunity(id),
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
     listOpportunityMatchCandidates(id),
@@ -69,10 +74,6 @@ async function OpportunityDetailContent({
     getOpportunityClosureHistory(id),
     listOpportunityNdaArtifacts(id),
   ])
-
-  if (!opportunity) {
-    notFound()
-  }
 
   const geographyMandatesEnabled = isFranceGeographyMandatesEnabled()
   const [officeOptions, geographyOptions] = await Promise.all([

@@ -5,6 +5,10 @@ import { getTemplateSubject, getTemplateBody } from "@/lib/actions/emails"
 import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
+import {
+  cronReminderIdempotencyKey,
+  deliverCronReminder,
+} from "@/lib/email/cron-reminder-delivery"
 import { env } from "@/lib/env"
 import {
   startCriticalOperation,
@@ -113,38 +117,59 @@ export async function GET(request: Request) {
         const daysAgo = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
 
         const abandonedSubject = await getTemplateSubject("abandoned_reminder", "Reprenez votre inscription Re-New")
-        const result = await sendEmail({
-          to: repreneur.email,
-          subject: abandonedSubject,
-          repreneurId: repreneur.id,
-          templateKey: "abandoned_reminder",
-          requiresConsent: true,
-          react: AbandonedReminderEmail({
-            repreneur: {
-              id: repreneur.id,
-              firstName: repreneur.first_name,
-              lastName: repreneur.last_name,
-              email: repreneur.email,
-            },
-            metadata: {
-              lastStep: form.last_step_completed || 1,
-              totalSteps: 6,
-              daysAgo: daysAgo,
-            },
+        const delivery = await deliverCronReminder({
+          idempotencyKey: cronReminderIdempotencyKey.abandoned(
+            form.id,
+            (form.reminder_count || 0) + 1,
+          ),
+          send: (idempotencyKey) => sendEmail({
+            to: repreneur.email,
+            subject: abandonedSubject,
+            repreneurId: repreneur.id,
+            templateKey: "abandoned_reminder",
+            requiresConsent: true,
+            idempotencyKey,
+            react: AbandonedReminderEmail({
+              repreneur: {
+                id: repreneur.id,
+                firstName: repreneur.first_name,
+                lastName: repreneur.last_name,
+                email: repreneur.email,
+              },
+              metadata: {
+                lastStep: form.last_step_completed || 1,
+                totalSteps: 6,
+                daysAgo: daysAgo,
+              },
+            }),
           }),
         })
-        if (!result.success) abandonedDeliveryFailed = true
+        // Only a confirmed provider acceptance consumes one of the two reminder
+        // attempts. A rejected or inconclusive response remains eligible for a
+        // later cron retry; claiming it here would silently exhaust the cap.
+        if (delivery.status === "failed") {
+          abandonedDeliveryFailed = true
+          continue
+        }
+        if (delivery.status === "busy") continue
 
-        // Update reminder count
-        await supabase
+        // Update the cap only after the provider has conclusively accepted the
+        // reminder, so a daily run can never count one delivery twice.
+        const { error: reminderUpdateError } = await supabase
           .from("intake_abandonment_tracking")
           .update({
             reminder_count: (form.reminder_count || 0) + 1,
             last_reminder_at: now.toISOString(),
           })
           .eq("id", form.id)
+          .eq("reminder_count", form.reminder_count || 0)
 
-        sentCount++
+        if (reminderUpdateError) {
+          errors.push("abandoned_reminder_persistence_failed")
+          continue
+        }
+
+        if (delivery.status === "sent") sentCount++
       } catch {
         errors.push("abandoned_reminder_failed")
       }
@@ -197,27 +222,34 @@ export async function GET(request: Request) {
 
         try {
           const interviewSubject = await getTemplateSubject("interview_reminder", "Rappel : votre entretien Re-New demain")
-          const result = await sendEmail({
-            to: rep.email,
-            subject: interviewSubject,
-            repreneurId: rep.id,
-            templateKey: "interview_reminder",
-            bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
-            react: InterviewReminderEmail({
-              repreneur: {
-                id: rep.id,
-                firstName: rep.first_name,
-                lastName: rep.last_name,
-                email: rep.email,
-              },
-              metadata: {
-                interviewAt: activity.event_date as string,
-                notes: (activity.notes as string | null) || undefined,
-              },
+          const delivery = await deliverCronReminder({
+            idempotencyKey: cronReminderIdempotencyKey.interview(
+              String(activity.id),
+              String(activity.event_date),
+            ),
+            send: (idempotencyKey) => sendEmail({
+              to: rep.email,
+              subject: interviewSubject,
+              repreneurId: rep.id,
+              templateKey: "interview_reminder",
+              bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
+              idempotencyKey,
+              react: InterviewReminderEmail({
+                repreneur: {
+                  id: rep.id,
+                  firstName: rep.first_name,
+                  lastName: rep.last_name,
+                  email: rep.email,
+                },
+                metadata: {
+                  interviewAt: activity.event_date as string,
+                  notes: (activity.notes as string | null) || undefined,
+                },
+              }),
             }),
           })
-          if (result.success) interviewSent++
-          else interviewDeliveryFailed = true
+          if (delivery.status === "sent") interviewSent++
+          else if (delivery.status === "failed") interviewDeliveryFailed = true
         } catch {
           interviewErrors.push("interview_reminder_failed")
         }
@@ -274,24 +306,28 @@ export async function GET(request: Request) {
         try {
           const bookingSubject = await getTemplateSubject("booking_reminder", "Planifions un premier échange Re-New")
           const bookingBody = await getTemplateBody("booking_reminder")
-          const result = await sendEmail({
-            to: c.email,
-            subject: bookingSubject,
-            repreneurId: c.id,
-            templateKey: "booking_reminder",
-            bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
-            react: BookingReminderEmail({
-              repreneur: {
-                id: c.id,
-                firstName: c.first_name,
-                lastName: c.last_name,
-                email: c.email,
-              },
-              bodyOverride: bookingBody,
+          const delivery = await deliverCronReminder({
+            idempotencyKey: cronReminderIdempotencyKey.booking(String(c.id)),
+            send: (idempotencyKey) => sendEmail({
+              to: c.email,
+              subject: bookingSubject,
+              repreneurId: c.id,
+              templateKey: "booking_reminder",
+              bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
+              idempotencyKey,
+              react: BookingReminderEmail({
+                repreneur: {
+                  id: c.id,
+                  firstName: c.first_name,
+                  lastName: c.last_name,
+                  email: c.email,
+                },
+                bodyOverride: bookingBody,
+              }),
             }),
           })
-          if (result.success) bookingSent++
-          else bookingDeliveryFailed = true
+          if (delivery.status === "sent") bookingSent++
+          else if (delivery.status === "failed") bookingDeliveryFailed = true
         } catch {
           bookingErrors.push("booking_reminder_failed")
         }
@@ -314,30 +350,67 @@ export async function GET(request: Request) {
     try {
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-      const { data: staleCandidates } = await supabase
+      const { data: staleCandidates, error: staleCandidateError } = await supabase
         .from("repreneurs")
         .select("id")
         .eq("lifecycle_status", "lead")
         .lte("created_at", thirtyDaysAgo)
 
+      if (staleCandidateError) {
+        staleErrors.push("stale_lead_persistence_failed")
+      }
       const candidateIds = (staleCandidates || []).map((r) => r.id)
-      if (candidateIds.length > 0) {
-        const { data: withInterview } = await supabase
-          .from("activities")
-          .select("repreneur_id")
-          .eq("activity_type", "interview")
-          .in("repreneur_id", candidateIds)
-        const skip = new Set((withInterview || []).map((a) => a.repreneur_id))
-        const toShift = candidateIds.filter((id) => !skip.has(id))
-        if (toShift.length > 0) {
-          const { error: shiftError } = await supabase
-            .from("repreneurs")
-            .update({ lifecycle_status: "to_reactivate" })
-            .in("id", toShift)
-          if (shiftError) {
-            staleErrors.push("stale_lead_persistence_failed")
-          } else {
-            staleShifted = toShift.length
+      if (candidateIds.length > 0 && staleErrors.length === 0) {
+        // A lead can be old and still have live work: a current offer, an active
+        // WAVE pursuit, or an active external dossier. None of these may be
+        // auto-hidden just because no interview has yet been logged.
+        const [interviewsResult, offersResult, pursuitsResult, externalResult] = await Promise.all([
+          supabase
+            .from("activities")
+            .select("repreneur_id")
+            .eq("activity_type", "interview")
+            .in("repreneur_id", candidateIds),
+          supabase
+            .from("repreneur_offers")
+            .select("repreneur_id")
+            .in("repreneur_id", candidateIds)
+            .in("status", ["offered", "accepted", "active"]),
+          supabase
+            .from("opportunity_matches")
+            .select("repreneur_id")
+            .in("repreneur_id", candidateIds)
+            .eq("status", "active_pursuit"),
+          supabase
+            .from("external_pursuits")
+            .select("owner_repreneur_id")
+            .in("owner_repreneur_id", candidateIds)
+            .eq("deletion_status", "active"),
+        ])
+        if (
+          interviewsResult.error ||
+          offersResult.error ||
+          pursuitsResult.error ||
+          externalResult.error
+        ) {
+          staleErrors.push("stale_lead_persistence_failed")
+        } else {
+          const skip = new Set([
+            ...(interviewsResult.data || []).map((row) => row.repreneur_id),
+            ...(offersResult.data || []).map((row) => row.repreneur_id),
+            ...(pursuitsResult.data || []).map((row) => row.repreneur_id),
+            ...(externalResult.data || []).map((row) => row.owner_repreneur_id),
+          ])
+          const toShift = candidateIds.filter((id) => !skip.has(id))
+          if (toShift.length > 0) {
+            const { error: shiftError } = await supabase
+              .from("repreneurs")
+              .update({ lifecycle_status: "to_reactivate" })
+              .in("id", toShift)
+            if (shiftError) {
+              staleErrors.push("stale_lead_persistence_failed")
+            } else {
+              staleShifted = toShift.length
+            }
           }
         }
       }

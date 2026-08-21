@@ -16,6 +16,7 @@ import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots
 import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
+import { repreneurWriteErrorMessage } from "@/lib/repreneur-write-error"
 
 function optionalWebUrl(value: FormDataEntryValue | null) {
   const normalized = String(value ?? "").trim()
@@ -98,7 +99,7 @@ export async function createRepreneur(formData: FormData) {
     target_acquisition_size: (formData.get("target_acquisition_size") as string) || undefined,
     lifecycle_status: (formData.get("lifecycle_status") as LifecycleStatus) || "lead",
     persona: (formData.get("persona") as PersonaType) || undefined,
-    source: (formData.get("source") as string) || undefined,
+    source: String(formData.get("source") ?? "").trim() || "staff_manual",
     // GDPR Consent
     marketing_consent: marketingConsent,
     consent_timestamp: marketingConsent ? new Date().toISOString() : undefined,
@@ -109,7 +110,7 @@ export async function createRepreneur(formData: FormData) {
   const { data, error } = await supabase.from("repreneurs").insert(repreneur).select().single()
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(repreneurWriteErrorMessage(error))
   }
 
   revalidatePath("/repreneurs")
@@ -208,7 +209,7 @@ export async function updateRepreneur(id: string, formData: FormData) {
   const { error } = await supabase.from("repreneurs").update(updates).eq("id", id)
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(repreneurWriteErrorMessage(error))
   }
 
   revalidatePath("/repreneurs")
@@ -278,7 +279,7 @@ export async function updateRepreneurField(id: string, field: string, value: str
 
   if (error) {
     console.error(`[updateRepreneurField] Database error:`, error)
-    throw new Error(error.message)
+    throw new Error(repreneurWriteErrorMessage(error))
   }
 
   console.log(`[updateRepreneurField] Database update successful, revalidating paths...`)

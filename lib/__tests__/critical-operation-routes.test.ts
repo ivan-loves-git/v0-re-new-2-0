@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   wasEmailSent: vi.fn(),
   getTemplateSubject: vi.fn(),
   getTemplateBody: vi.fn(),
+  deliverCronReminder: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -20,6 +21,13 @@ vi.mock("@/lib/actions/emails", () => ({
   getTemplateSubject: mocks.getTemplateSubject,
   getTemplateBody: mocks.getTemplateBody,
 }))
+vi.mock("@/lib/email/cron-reminder-delivery", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/email/cron-reminder-delivery")>()
+  return {
+    ...original,
+    deliverCronReminder: mocks.deliverCronReminder,
+  }
+})
 vi.mock("@/lib/env", () => ({
   env: {
     CRON_SECRET: "test-cron-secret",
@@ -92,6 +100,17 @@ describe("critical route traces", () => {
     vi.clearAllMocks()
     vi.spyOn(console, "info").mockImplementation(() => undefined)
     vi.spyOn(console, "error").mockImplementation(() => undefined)
+    mocks.deliverCronReminder.mockImplementation(
+      async ({ idempotencyKey, send }: {
+        idempotencyKey: string
+        send: (idempotencyKey: string) => Promise<{ success?: boolean; resendId?: string }>
+      }) => {
+        const result = await send(idempotencyKey)
+        return result?.success === true
+          ? { status: "sent", providerId: result.resendId }
+          : { status: "failed" }
+      },
+    )
   })
 
   it("traces an accepted Resend webhook without copying provider payload data", async () => {
@@ -257,8 +276,8 @@ describe("critical route traces", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       message:
-        "abandoned: 1; interview reminders: 0; booking reminders: 0; stale leads shifted: 0",
-      sent: 1,
+        "abandoned: 0; interview reminders: 0; booking reminders: 0; stale leads shifted: 0",
+      sent: 0,
       interviewSent: 0,
       bookingSent: 0,
       staleShifted: 0,
@@ -284,6 +303,263 @@ describe("critical route traces", () => {
       .join("\n")
     expect(serialized).not.toContain("recipient@example.test")
     expect(serialized).not.toContain("provider rejected")
+  })
+
+  it("does not consume an abandoned-form reminder attempt when delivery outcome is inconclusive", async () => {
+    const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
+    const abandonedForm = {
+      id: "abandonment-retry-1",
+      last_activity_at: "2026-08-16T12:00:00.000Z",
+      last_step_completed: 2,
+      reminder_count: 1,
+      repreneurs: {
+        id: "repreneur-retry-1",
+        first_name: "Retry",
+        last_name: "Person",
+        email: "retry@example.test",
+        marketing_consent: true,
+      },
+    }
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) =>
+        table === "intake_abandonment_tracking"
+          ? { select: vi.fn(() => chain({ data: [abandonedForm], error: null })), update }
+          : chain({ data: [], error: null }),
+      ),
+    })
+    mocks.wasEmailSent.mockResolvedValue(false)
+    mocks.getTemplateSubject.mockResolvedValue("Reminder subject")
+    mocks.sendEmail.mockResolvedValue({})
+
+    const response = await runDailyCron(
+      new Request("http://localhost/api/cron/abandoned-forms", {
+        headers: { authorization: "Bearer test-cron-secret" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).sent).toBe(0)
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it("records one reminder attempt after one conclusive abandoned-form delivery", async () => {
+    const compareCount = vi.fn().mockResolvedValue({ error: null })
+    const compareId = vi.fn(() => ({ eq: compareCount }))
+    const update = vi.fn(() => ({ eq: compareId }))
+    const abandonedForm = {
+      id: "abandonment-delivered-1",
+      last_activity_at: "2026-08-16T12:00:00.000Z",
+      last_step_completed: 2,
+      reminder_count: 0,
+      repreneurs: {
+        id: "repreneur-delivered-1",
+        first_name: "Delivered",
+        last_name: "Person",
+        email: "delivered@example.test",
+        marketing_consent: true,
+      },
+    }
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) =>
+        table === "intake_abandonment_tracking"
+          ? { select: vi.fn(() => chain({ data: [abandonedForm], error: null })), update }
+          : chain({ data: [], error: null }),
+      ),
+    })
+    mocks.wasEmailSent.mockResolvedValue(false)
+    mocks.getTemplateSubject.mockResolvedValue("Reminder subject")
+    mocks.sendEmail.mockResolvedValue({ success: true })
+
+    const response = await runDailyCron(
+      new Request("http://localhost/api/cron/abandoned-forms", {
+        headers: { authorization: "Bearer test-cron-secret" },
+      }),
+    )
+
+    expect((await response.json()).sent).toBe(1)
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(compareId).toHaveBeenCalledWith("id", "abandonment-delivered-1")
+    expect(compareCount).toHaveBeenCalledWith("reminder_count", 0)
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotencyKey: "cron-abandoned-abandonment-delivered-1-1",
+      }),
+    )
+  })
+
+  it("reconciles an abandoned reminder count after delivery completed before the prior run crashed", async () => {
+    const compareCount = vi.fn().mockResolvedValue({ error: null })
+    const compareId = vi.fn(() => ({ eq: compareCount }))
+    const update = vi.fn(() => ({ eq: compareId }))
+    const abandonedForm = {
+      id: "abandonment-crash-recovery-1",
+      last_activity_at: "2026-08-16T12:00:00.000Z",
+      last_step_completed: 2,
+      reminder_count: 0,
+      repreneurs: {
+        id: "repreneur-crash-recovery-1",
+        first_name: "Crash",
+        last_name: "Recovery",
+        email: "recovery@example.test",
+        marketing_consent: true,
+      },
+    }
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) =>
+        table === "intake_abandonment_tracking"
+          ? { select: vi.fn(() => chain({ data: [abandonedForm], error: null })), update }
+          : chain({ data: [], error: null }),
+      ),
+    })
+    mocks.wasEmailSent.mockResolvedValue(false)
+    mocks.getTemplateSubject.mockResolvedValue("Reminder subject")
+    mocks.deliverCronReminder.mockResolvedValue({ status: "already_sent" })
+
+    const response = await runDailyCron(
+      new Request("http://localhost/api/cron/abandoned-forms", {
+        headers: { authorization: "Bearer test-cron-secret" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).sent).toBe(0)
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ reminder_count: 1 }))
+    expect(compareId).toHaveBeenCalledWith("id", "abandonment-crash-recovery-1")
+    expect(compareCount).toHaveBeenCalledWith("reminder_count", 0)
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+  })
+
+  it("uses stable event keys for interview and booking reminder deliveries", async () => {
+    let activitiesRead = 0
+    let repreneursRead = 0
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "intake_abandonment_tracking") {
+          return chain({ data: [], error: null })
+        }
+        if (table === "activities") {
+          activitiesRead++
+          return chain({
+            data: activitiesRead === 1
+              ? [{
+                  id: "interview-activity-1",
+                  repreneur_id: "interview-repreneur-1",
+                  event_date: "2026-08-22",
+                  notes: null,
+                  repreneur: {
+                    id: "interview-repreneur-1",
+                    first_name: "Interview",
+                    last_name: "Person",
+                    email: "interview@example.test",
+                  },
+                }]
+              : [],
+            error: null,
+          })
+        }
+        if (table === "repreneurs") {
+          repreneursRead++
+          if (repreneursRead === 1) {
+            return chain({
+              data: [{
+                id: "booking-repreneur-1",
+                first_name: "Booking",
+                last_name: "Person",
+                email: "booking@example.test",
+                lifecycle_status: "lead",
+                created_at: "2026-08-15T12:00:00.000Z",
+                marketing_consent: true,
+              }],
+              error: null,
+            })
+          }
+          return {
+            select: vi.fn(() => chain({ data: [], error: null })),
+            update: vi.fn(),
+          }
+        }
+        return chain({ data: [], error: null })
+      }),
+    })
+    mocks.wasEmailSent.mockResolvedValue(false)
+    mocks.getTemplateSubject.mockResolvedValue("Reminder subject")
+    mocks.getTemplateBody.mockResolvedValue("Reminder body")
+    mocks.sendEmail.mockResolvedValue({ success: true })
+
+    const response = await runDailyCron(
+      new Request("http://localhost/api/cron/abandoned-forms", {
+        headers: { authorization: "Bearer test-cron-secret" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      interviewSent: 1,
+      bookingSent: 1,
+    })
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        templateKey: "interview_reminder",
+        idempotencyKey:
+          "cron-interview-interview-activity-1-2026-08-22",
+      }),
+    )
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        templateKey: "booking_reminder",
+        idempotencyKey: "cron-booking-booking-repreneur-1",
+      }),
+    )
+  })
+
+  it("shifts only stale leads with no live offer, pursuit, external dossier, or interview", async () => {
+    const updateIn = vi.fn().mockResolvedValue({ error: null })
+    const repreneurUpdate = vi.fn(() => ({ in: updateIn }))
+    const staleCandidates = [
+      { id: "stale-unengaged" },
+      { id: "stale-interview" },
+      { id: "stale-offered" },
+      { id: "stale-accepted" },
+      { id: "stale-active-legacy" },
+      { id: "stale-pursuit" },
+      { id: "stale-external" },
+      { id: "stale-completed-offer" },
+    ]
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "intake_abandonment_tracking") return chain({ data: [], error: null })
+        if (table === "repreneurs") {
+          return {
+            select: vi.fn(() => chain({ data: staleCandidates, error: null })),
+            update: repreneurUpdate,
+          }
+        }
+        if (table === "activities") return chain({ data: [{ repreneur_id: "stale-interview" }], error: null })
+        if (table === "repreneur_offers") {
+          return chain({
+            data: [
+              { repreneur_id: "stale-offered" },
+              { repreneur_id: "stale-accepted" },
+              { repreneur_id: "stale-active-legacy" },
+            ],
+            error: null,
+          })
+        }
+        if (table === "opportunity_matches") return chain({ data: [{ repreneur_id: "stale-pursuit" }], error: null })
+        if (table === "external_pursuits") return chain({ data: [{ owner_repreneur_id: "stale-external" }], error: null })
+        return chain({ data: [], error: null })
+      }),
+    })
+
+    const response = await runDailyCron(
+      new Request("http://localhost/api/cron/abandoned-forms", {
+        headers: { authorization: "Bearer test-cron-secret" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).staleShifted).toBe(2)
+    expect(updateIn).toHaveBeenCalledWith("id", ["stale-unengaged", "stale-completed-offer"])
   })
 
   it("closes the active cron subjob trace when a dependency rejects", async () => {

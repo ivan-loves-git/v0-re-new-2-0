@@ -16,7 +16,12 @@ import {
   listStaffPortalPreviewOptions,
 } from "@/lib/actions/repreneur-portal-preview"
 import { readPortalCurrentPursuit } from "@/lib/data/current-pursuit"
-import { createPortalPreviewDealHrefMap, createPortalPreviewHref } from "@/lib/portal-preview-routes"
+import {
+  createPortalPreviewDealHrefMap,
+  createPortalPreviewHref,
+  resolvePortalPreviewRepreneur,
+} from "@/lib/portal-preview-routes"
+import { isUuid } from "@/lib/uuid"
 
 
 interface StaffPortalPreviewPageProps {
@@ -30,14 +35,11 @@ interface StaffPortalPreviewPageProps {
 export default async function StaffPortalPreviewPage({ searchParams }: StaffPortalPreviewPageProps) {
   const params = await searchParams
   const options = await listStaffPortalPreviewOptions()
-  const requestedRepreneurId = params.repreneurId ?? null
-  const selectedOption =
-    options.find((option) => option.id === requestedRepreneurId) ??
-    options.find((option) => option.email === "myworkmail4@gmail.com") ??
-    options[0] ??
-    null
+  const requestedRepreneurId = params.repreneurId
+  const selectedOption = resolvePortalPreviewRepreneur(options, requestedRepreneurId)
   const selectedRepreneurId = selectedOption?.id ?? null
-  const selectedMatchId = params.matchId ?? null
+  const hasUnknownRepreneur = requestedRepreneurId !== undefined && !selectedOption
+  const selectedMatchId = params.matchId && isUuid(params.matchId) ? params.matchId : null
 
   const [profileData, opportunityData, selectedOpportunity] = selectedRepreneurId
     ? await Promise.all([
@@ -61,7 +63,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         })),
       )
     : {}
-  const previewJourney = selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
+  const previewJourney = selectedRepreneurId && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
     ? await readPortalCurrentPursuit({
         matchId: selectedOpportunity.match_id,
         viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId },
@@ -104,6 +106,14 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
           <Eye />
           <AlertTitle>No repreneurs found</AlertTitle>
           <AlertDescription>Add a repreneur before using the portal preview.</AlertDescription>
+        </Alert>
+      )}
+
+      {hasUnknownRepreneur && (
+        <Alert>
+          <Eye />
+          <AlertTitle>Repreneur not found</AlertTitle>
+          <AlertDescription>Select a repreneur to open their portal preview.</AlertDescription>
         </Alert>
       )}
 

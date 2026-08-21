@@ -25,6 +25,7 @@ import {
   Sparkles,
   Palette,
   ListTree,
+  Inbox,
   type LucideIcon,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
@@ -68,6 +69,7 @@ const repreneurNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard_re", icon: LayoutDashboard },
   { name: "Groups", href: "/repreneurs", icon: FolderKanban },
   { name: "Find", href: "/repreneurs/explore", icon: Search },
+  { name: "Access requests", href: "/access-requests", icon: Inbox },
   { name: "Pipeline", href: "/pipeline", icon: GitBranch },
   { name: "Offers", href: "/offers", icon: Package },
   { name: "Analytics", href: "/analytics_re", icon: BarChart3 },

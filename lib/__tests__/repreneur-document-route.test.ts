@@ -21,6 +21,9 @@ vi.mock("@/lib/storage/private-signed-download", async (importOriginal) => ({
 
 import { GET } from "@/app/api/repreneurs/[id]/documents/[documentType]/route"
 
+const REPRENEUR_ID = "11111111-1111-4111-8111-111111111111"
+const ANOTHER_REPRENEUR_ID = "22222222-2222-4222-8222-222222222222"
+
 const STAFF_ACCESS = {
   role: "staff",
   repreneurId: null,
@@ -30,7 +33,7 @@ const STAFF_ACCESS = {
 
 const REPRENEUR_ACCESS = {
   role: "repreneur",
-  repreneurId: "fixture",
+  repreneurId: REPRENEUR_ID,
   repreneurName: "Fixture Repreneur",
   user: { id: "qa-repreneur" },
 }
@@ -84,6 +87,15 @@ describe("repreneur document route", () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
+  it("treats a malformed repreneur URL as not found before querying document metadata", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValue(STAFF_ACCESS)
+
+    const response = await requestFor("not-a-uuid", "cv")
+
+    expect(response.status).toBe(404)
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
   it("lets a repreneur open their own Lettre de cadrage", async () => {
     mocks.getCurrentUserAccess.mockResolvedValue(REPRENEUR_ACCESS)
     const { createSignedUrl, eq } = setupAdminClient({
@@ -91,9 +103,9 @@ describe("repreneur document route", () => {
       ldc_url: "cvs/fixture-ldc.pdf",
     })
 
-    const response = await requestFor("fixture", "ldc")
+    const response = await requestFor(REPRENEUR_ID, "ldc")
 
-    expect(eq).toHaveBeenCalledWith("id", "fixture")
+    expect(eq).toHaveBeenCalledWith("id", REPRENEUR_ID)
     expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-ldc.pdf", 60)
     expect(response.status).toBe(200)
     expect(mocks.proxyDownload).toHaveBeenCalledWith(
@@ -105,14 +117,14 @@ describe("repreneur document route", () => {
   it("does not expose another repreneur's Lettre de cadrage", async () => {
     mocks.getCurrentUserAccess.mockResolvedValue(REPRENEUR_ACCESS)
 
-    expect((await requestFor("another-repreneur", "ldc")).status).toBe(403)
+    expect((await requestFor(ANOTHER_REPRENEUR_ID, "ldc")).status).toBe(403)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
   it("keeps CV documents staff-only even for the owning repreneur", async () => {
     mocks.getCurrentUserAccess.mockResolvedValue(REPRENEUR_ACCESS)
 
-    expect((await requestFor("fixture", "cv")).status).toBe(403)
+    expect((await requestFor(REPRENEUR_ID, "cv")).status).toBe(403)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
@@ -122,14 +134,14 @@ describe("repreneur document route", () => {
       role: "unassigned",
       repreneurId: null,
     })
-    expect((await requestFor("fixture", "ldc")).status).toBe(403)
+    expect((await requestFor(REPRENEUR_ID, "ldc")).status).toBe(403)
 
     mocks.getCurrentUserAccess.mockResolvedValueOnce({
       ...REPRENEUR_ACCESS,
       role: "repreneur",
       repreneurId: null,
     })
-    expect((await requestFor("fixture", "ldc")).status).toBe(403)
+    expect((await requestFor(REPRENEUR_ID, "ldc")).status).toBe(403)
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
@@ -142,12 +154,12 @@ describe("repreneur document route", () => {
     })
 
     const response = await requestFor(
-      "fixture-b",
+      ANOTHER_REPRENEUR_ID,
       "cv",
       "?path=cvs/fixture-a-cv.pdf",
     )
 
-    expect(eq).toHaveBeenCalledWith("id", "fixture-b")
+    expect(eq).toHaveBeenCalledWith("id", ANOTHER_REPRENEUR_ID)
     expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-b-cv.pdf", 60)
     expect(response.status).toBe(200)
     expect(response.headers.get("location")).toBeNull()
@@ -160,7 +172,7 @@ describe("repreneur document route", () => {
       ldc_url: "cvs/fixture-ldc.docx",
     })
 
-    const response = await requestFor("fixture", "ldc", "?download")
+    const response = await requestFor(REPRENEUR_ID, "ldc", "?download")
 
     expect(createSignedUrl).toHaveBeenCalledWith("cvs/fixture-ldc.docx", 60)
     expect(response.status).toBe(200)
@@ -177,7 +189,7 @@ describe("repreneur document route", () => {
       ldc_url: null,
     })
 
-    const response = await requestFor("fixture", "cv")
+    const response = await requestFor(REPRENEUR_ID, "cv")
 
     expect(response.status).toBe(200)
     expect(mocks.proxyDownload).toHaveBeenCalledWith(
@@ -193,14 +205,14 @@ describe("repreneur document route", () => {
   it("returns a clean not-found response for missing or invalid metadata", async () => {
     mocks.getCurrentUserAccess.mockResolvedValue(STAFF_ACCESS)
     const missing = setupAdminClient({ cv_url: null, ldc_url: null })
-    expect((await requestFor("fixture", "cv")).status).toBe(404)
+    expect((await requestFor(REPRENEUR_ID, "cv")).status).toBe(404)
     expect(missing.createSignedUrl).not.toHaveBeenCalled()
 
     const invalid = setupAdminClient({
       cv_url: "/api/repreneurs/fixture/documents/cv",
       ldc_url: null,
     })
-    expect((await requestFor("fixture", "cv")).status).toBe(404)
+    expect((await requestFor(REPRENEUR_ID, "cv")).status).toBe(404)
     expect(invalid.createSignedUrl).not.toHaveBeenCalled()
   })
 })

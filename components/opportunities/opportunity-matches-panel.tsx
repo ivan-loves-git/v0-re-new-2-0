@@ -141,10 +141,12 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
   const validationSummaryRef = useRef<HTMLDivElement>(null)
   const [selectedRepreneurId, setSelectedRepreneurId] = useState("")
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
-  const selectedCandidate = candidates.find((candidate) => candidate.id === selectedRepreneurId)
   const savedRepreneurIds = new Set(matches.map((match) => match.repreneur_id))
-  const topCandidateSuggestions = [...candidates]
-    .filter((candidate) => !savedRepreneurIds.has(candidate.id))
+  // This is an add-only form: existing recommendations have their own
+  // lifecycle controls below and must never be resubmitted without a version.
+  const unsavedCandidates = candidates.filter((candidate) => !savedRepreneurIds.has(candidate.id))
+  const selectedCandidate = unsavedCandidates.find((candidate) => candidate.id === selectedRepreneurId)
+  const topCandidateSuggestions = [...unsavedCandidates]
     .sort((left, right) => (right.platform_score ?? -1) - (left.platform_score ?? -1))
     .slice(0, 5)
 
@@ -382,11 +384,11 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 <StaffRepreneurCombobox
                   id="repreneur_id"
                   name="repreneur_id"
-                  options={candidates}
+                  options={unsavedCandidates}
                   value={selectedRepreneurId}
                   onValueChange={handleRepreneurChange}
-                  placeholder={candidates.length === 0 ? "No repreneurs available" : "Choose a repreneur, e.g. Ivan Demo Repreneur"}
-                  disabled={candidates.length === 0}
+                  placeholder={unsavedCandidates.length === 0 ? "No repreneurs available" : "Choose a repreneur, e.g. Ivan Demo Repreneur"}
+                  disabled={unsavedCandidates.length === 0}
                   {...fieldErrorProps("repreneur_id", fieldErrors.repreneur_id)}
                 />
                 <ValidationFieldError id="repreneur_id" message={fieldErrors.repreneur_id} />
@@ -503,7 +505,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 />
               </div>
             </div>
-            <Button type="submit" disabled={isSaving || candidates.length === 0} className="w-fit">
+            <Button type="submit" disabled={isSaving || unsavedCandidates.length === 0} className="w-fit">
               <Save data-icon="inline-start" />
               {isSaving ? "Saving..." : "Save recommendation"}
             </Button>

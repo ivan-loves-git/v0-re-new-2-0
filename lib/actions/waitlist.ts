@@ -1,6 +1,7 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { validateWaitlistRequest } from "@/lib/waitlist-input"
 
 type WaitlistResult =
   | { success: true }
@@ -11,9 +12,9 @@ export async function submitWaitlistRequest(
   email: string,
   role: "repreneur" | "seller"
 ): Promise<WaitlistResult> {
-  if (!name.trim() || !email.trim() || !role) {
-    return { success: false, error: "All fields are required." }
-  }
+  const validated = validateWaitlistRequest(name, email, role)
+  if (!validated.success) return validated
+  const input = validated.data
 
   const supabase = createAdminClient()
 
@@ -21,7 +22,7 @@ export async function submitWaitlistRequest(
   const { data: existing } = await supabase
     .from("waitlist")
     .select("id")
-    .eq("email", email.toLowerCase().trim())
+    .eq("email", input.email)
     .maybeSingle()
 
   if (existing) {
@@ -32,10 +33,15 @@ export async function submitWaitlistRequest(
   }
 
   const { error } = await supabase.from("waitlist").insert({
-    name: name.trim(),
-    email: email.toLowerCase().trim(),
-    role,
+    ...input,
   })
+
+  if (error?.code === "23505") {
+    return {
+      success: false,
+      error: "This email is already on our waitlist. We'll be in touch soon!",
+    }
+  }
 
   if (error) {
     console.error("[Waitlist] Insert error:", error)

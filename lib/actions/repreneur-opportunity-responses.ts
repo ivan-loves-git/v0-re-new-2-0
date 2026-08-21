@@ -50,13 +50,16 @@ async function updateMyOpportunityResponse(
   const supabase = createAdminClient()
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select("id, opportunity_id, status")
+    .select("id, opportunity_id, status, opportunity:opportunities!inner(status)")
     .eq("id", matchId)
     .eq("repreneur_id", access.repreneurId)
     .maybeSingle()
 
   if (matchError) throw new Error(matchError.message)
-  if (!match) throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
+  const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
+  if (!match || opportunity?.status !== "active") {
+    throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
+  }
   if (!REPRENEUR_RESPONSE_ALLOWED_STATUSES.includes(match.status as OpportunityMatchStatus)) {
     throw new RepreneurOpportunityResponseError("This opportunity response can no longer be changed.")
   }

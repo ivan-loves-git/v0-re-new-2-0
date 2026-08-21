@@ -504,7 +504,7 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='qualification_requested' AND recorded_at>=v_start) THEN RAISE EXCEPTION 'Intermediary qualification requires this cycle qualification request.'; END IF;
   ELSIF v_type='template_validated' THEN
     v_template:=public.journey_current_template_id(p_match_id);
-    IF p_artifact_id IS DISTINCT FROM v_template OR NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='intermediary_qualified' AND recorded_at>=v_start) THEN RAISE EXCEPTION 'Template validation requires current-cycle qualification and the exact current blank template.'; END IF;
+    IF p_artifact_id IS NULL OR v_template IS NULL OR p_artifact_id IS DISTINCT FROM v_template OR NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='intermediary_qualified' AND recorded_at>=v_start) THEN RAISE EXCEPTION 'Template validation requires current-cycle qualification and the exact current blank template.'; END IF;
   ELSIF v_type='gate_1_passed' THEN
     IF public.journey_current_gate_1_event(p_match_id) IS NOT NULL THEN RAISE EXCEPTION 'Current Gate 1 is already recorded.'; END IF;
     v_template:=public.journey_current_template_id(p_match_id);
