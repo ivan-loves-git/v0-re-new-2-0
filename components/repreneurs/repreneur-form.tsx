@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS, PERSONA_OPTIONS } from "@/lib/types/repreneur"
 import { formatDisplayDate } from "@/lib/utils/display-date-time"
+import { createSingleFlightSubmission } from "@/lib/utils/single-flight-submission"
 import {
   FieldError,
   FormFieldLabel,
@@ -41,6 +42,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submissionError, setSubmissionError] = useState<string>()
   const summaryRef = useRef<HTMLDivElement>(null)
+  const submitOnce = useRef(createSingleFlightSubmission())
 
   async function handleSubmit(formData: FormData) {
     const nextErrors: FieldErrors = {}
@@ -69,27 +71,30 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
       return
     }
 
-    setIsSubmitting(true)
-    try {
-      await action(formData)
-    } catch (error) {
-      console.error("Repreneur form submission failed")
-      const message = error instanceof Error ? error.message : "We could not save this profile. Please try again."
-      const normalizedMessage = message.toLowerCase()
-      const serverErrors: FieldErrors = {}
-      if (normalizedMessage.includes("first name")) serverErrors.first_name = message
-      if (normalizedMessage.includes("last name") || normalizedMessage.includes("surname")) serverErrors.last_name = message
-      if (normalizedMessage.includes("email")) serverErrors.email = message
-      if (normalizedMessage.includes("linkedin") || normalizedMessage.includes("web address")) serverErrors.linkedin_url = message
+    await submitOnce.current.run(async () => {
+      setIsSubmitting(true)
+      try {
+        await action(formData)
+      } catch (error) {
+        console.error("Repreneur form submission failed")
+        const message = error instanceof Error ? error.message : "We could not save this profile. Please try again."
+        const normalizedMessage = message.toLowerCase()
+        const serverErrors: FieldErrors = {}
+        if (normalizedMessage.includes("first name")) serverErrors.first_name = message
+        if (normalizedMessage.includes("last name") || normalizedMessage.includes("surname")) serverErrors.last_name = message
+        if (normalizedMessage.includes("email")) serverErrors.email = message
+        if (normalizedMessage.includes("linkedin") || normalizedMessage.includes("web address")) serverErrors.linkedin_url = message
 
-      if (Object.keys(serverErrors).length > 0) {
-        setErrors(serverErrors)
-        focusValidationSummary(summaryRef)
-      } else {
-        setSubmissionError(message)
+        if (Object.keys(serverErrors).length > 0) {
+          setErrors(serverErrors)
+          focusValidationSummary(summaryRef)
+        } else {
+          setSubmissionError(message)
+        }
+      } finally {
+        setIsSubmitting(false)
       }
-      setIsSubmitting(false)
-    }
+    })
   }
 
   return (

@@ -18,6 +18,14 @@ describe("staff people and offer form validation", () => {
     expect(actions).toContain('if (field === "email")')
   })
 
+  it("routes valid staff profile submits through the single-flight gate", () => {
+    const form = source("components/repreneurs/repreneur-form.tsx")
+
+    expect(form).toContain('import { createSingleFlightSubmission }')
+    expect(form).toContain('const submitOnce = useRef(createSingleFlightSubmission())')
+    expect(form).toContain('await submitOnce.current.run(async () =>')
+  })
+
   it("validates every constrained offer number without native-only bubbles", () => {
     const form = source("components/offers/offer-form.tsx")
     const actions = source("lib/actions/offers.ts")
