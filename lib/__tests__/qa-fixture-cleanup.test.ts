@@ -18,6 +18,7 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).toContain("manifest.databaseRows")
     expect(script).toContain("manifest.storageObjects")
     expect(script).toContain("DELETE FROM public.repreneurs WHERE id = $1")
+    expect(script).toContain("DELETE FROM public.app_user_roles WHERE id = $1")
     expect(script).toContain('DELETE FROM public."user" WHERE id = $1')
     expect(script).toContain(".remove([storageFixture.path])")
   })

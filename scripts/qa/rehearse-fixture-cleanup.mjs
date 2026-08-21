@@ -45,9 +45,11 @@ let client
 let storage
 let userId
 let repreneurId
+let roleId
 let storageFixture
 let createdUser = false
 let createdRepreneur = false
+let createdRole = false
 let createdStorage = false
 
 try {
@@ -59,8 +61,10 @@ try {
   const databaseCa = await readFile(process.env.QA_DATABASE_CA_CERT_FILE, "utf8")
   const userRow = manifestRow(manifest, "user")
   const repreneurRow = manifestRow(manifest, "repreneurs")
+  const roleRow = manifestRow(manifest, "app_user_roles")
   userId = userRow.id
   repreneurId = repreneurRow.id
+  roleId = roleRow.id
   storageFixture = storageLocation(manifest)
 
   const database = new URL(process.env.DATABASE_URL)
@@ -82,10 +86,15 @@ try {
   const before = await client.query(
     `SELECT
       (SELECT count(*)::int FROM public."user" WHERE id = $1) AS user_count,
-      (SELECT count(*)::int FROM public.repreneurs WHERE id = $2) AS repreneur_count`,
-    [userId, repreneurId],
+      (SELECT count(*)::int FROM public.repreneurs WHERE id = $2) AS repreneur_count,
+      (SELECT count(*)::int FROM public.app_user_roles WHERE id = $3) AS role_count`,
+    [userId, repreneurId, roleId],
   )
-  if (before.rows[0].user_count !== 0 || before.rows[0].repreneur_count !== 0) {
+  if (
+    before.rows[0].user_count !== 0 ||
+    before.rows[0].repreneur_count !== 0 ||
+    before.rows[0].role_count !== 0
+  ) {
     throw new Error("Fixture rehearsal failed: fixture-preexists")
   }
   if (await exactStorageObjectExists(storage.storage, storageFixture.bucket, storageFixture.path)) {
@@ -104,6 +113,12 @@ try {
     [repreneurId, manifest.fixturePrefix, userId],
   )
   createdRepreneur = true
+  await client.query(
+    `INSERT INTO public.app_user_roles (id, user_id, email, role)
+     VALUES ($1, $2, 'delivered@resend.dev', 'repreneur')`,
+    [roleId, userId],
+  )
+  createdRole = true
 
   const probePdf = Buffer.from("%PDF-1.4\n% TEST fixture cleanup probe\n%%EOF\n")
   const { error: uploadError } = await storage.storage
@@ -132,21 +147,27 @@ try {
       if (error) throw new Error("Fixture rehearsal failed: storage-cleanup")
     }
     if (client && createdRepreneur) {
+      if (createdRole) {
+        await client.query("DELETE FROM public.app_user_roles WHERE id = $1", [roleId])
+      }
       await client.query("DELETE FROM public.repreneurs WHERE id = $1", [repreneurId])
     }
     if (client && createdUser) {
       await client.query('DELETE FROM public."user" WHERE id = $1', [userId])
     }
 
-    if (client && userId && repreneurId && storage && storageFixture) {
+    if (client && userId && repreneurId && roleId && storage && storageFixture) {
       const after = await client.query(
         `SELECT
           (SELECT count(*)::int FROM public."user" WHERE id = $1) AS user_count,
-          (SELECT count(*)::int FROM public.repreneurs WHERE id = $2) AS repreneur_count`,
-        [userId, repreneurId],
+          (SELECT count(*)::int FROM public.repreneurs WHERE id = $2) AS repreneur_count,
+          (SELECT count(*)::int FROM public.app_user_roles WHERE id = $3) AS role_count`,
+        [userId, repreneurId, roleId],
       )
       const databaseResidue =
-        after.rows[0].user_count !== 0 || after.rows[0].repreneur_count !== 0
+        after.rows[0].user_count !== 0 ||
+        after.rows[0].repreneur_count !== 0 ||
+        after.rows[0].role_count !== 0
       const storageResidue = await exactStorageObjectExists(
         storage.storage,
         storageFixture.bucket,
