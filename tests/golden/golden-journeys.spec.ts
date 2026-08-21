@@ -126,7 +126,9 @@ test.describe.serial("Golden journeys", () => {
     await first.getByLabel("Last name").fill(manifest.fixturePrefix)
     await first.locator("#email").fill(manifest.actors.staffCreated.email.toUpperCase())
     await first.getByRole("button", { name: "Create Repreneur" }).click()
-    await expect(first.getByText("Enter a first name.", { exact: true })).toHaveCount(2)
+    await expect(first.getByText(/Check this field:/)).toBeVisible()
+    await expect(first.getByRole("link", { name: "First name" })).toBeVisible()
+    await expect(first.getByText("Enter a first name.", { exact: true })).toHaveCount(1)
 
     const second = await context.newPage()
     await second.goto("/repreneurs/new")
