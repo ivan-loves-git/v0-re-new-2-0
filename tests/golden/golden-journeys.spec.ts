@@ -52,7 +52,7 @@ test.describe.serial("Golden journeys", () => {
     const next = page.getByRole("button", { name: "Continue" })
     await expect(next).toBeDisabled()
     await page.getByLabel(/Resume/).setInputFiles({ name: `${manifest.fixturePrefix}.txt`, mimeType: "text/plain", buffer: Buffer.from(manifest.fixturePrefix) })
-    await expect(page.getByText(/file type|PDF or Word/i)).toBeVisible()
+    await expect(page.getByText(/Invalid format.*PDF, DOC or DOCX/i)).toBeVisible()
 
     const beforeStorage = await databaseClient()
     const invalidCount = await beforeStorage.query("SELECT count(*)::int AS count FROM storage.objects")
