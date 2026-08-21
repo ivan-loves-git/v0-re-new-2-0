@@ -38,6 +38,8 @@ describe("exact QA fixture cleanup rehearsal", () => {
   it("keeps TLS certificate verification enabled for direct database access", () => {
     const script = source()
     expect(script).toContain("rejectUnauthorized: true")
+    expect(script).toContain("QA_DATABASE_CA_CERT_FILE")
+    expect(script).toContain("ca: databaseCa")
     expect(script).not.toContain("rejectUnauthorized: false")
   })
 })
