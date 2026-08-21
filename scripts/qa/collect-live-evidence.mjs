@@ -90,7 +90,7 @@ try {
     database.query("SELECT count(*)::int AS count FROM auth.users"),
     database.query("SELECT count(*)::int AS count FROM storage.objects"),
     database.query("SELECT 1 AS healthy"),
-    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY } }),
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/repreneurs?select=id&limit=1`, { headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` } }),
     storage.storage.listBuckets(),
   ])
   const [protection, deployment] = await Promise.all([
