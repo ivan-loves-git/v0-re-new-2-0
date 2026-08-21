@@ -19,6 +19,8 @@ describe("Phase B QA contracts", () => {
     expect(first.databaseRows.length).toBeGreaterThanOrEqual(10)
     expect(first.databaseRows.every((row: { label: string }) => row.label === first.fixturePrefix)).toBe(true)
     expect(first.betterAuthIdentities).toHaveLength(2)
+    expect(first.actors.staff.email).toBe(first.actors.staff.email.toLowerCase())
+    expect(first.actors.portal.email).toBe(first.actors.portal.email.toLowerCase())
     expect(first.storageObjects).toEqual([`${first.fixturePrefix}/fixtures/pilot.pdf`])
   })
 
