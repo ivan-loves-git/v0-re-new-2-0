@@ -92,6 +92,8 @@ describe("Phase B QA contracts", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     expect(workflow).toContain("name: Golden journeys")
     expect(workflow).toContain("workflow_dispatch:")
+    expect(workflow).toContain("deployment_status:")
+    expect(workflow).toContain("Preview – renew-overnight-validation-20260820")
     expect(workflow).not.toContain("pull_request_target")
     expect(workflow).toContain("environment: qa-pilot")
     expect(workflow).toContain("contents: read")

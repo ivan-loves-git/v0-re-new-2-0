@@ -2,6 +2,7 @@ name: Golden journeys
 
 on:
   workflow_dispatch:
+  deployment_status:
 
 permissions:
   contents: read
@@ -14,6 +15,12 @@ concurrency:
 jobs:
   pilot:
     name: P1-P3 protected pilot
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'deployment_status' &&
+       github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' &&
+       github.event.deployment.creator.login == 'vercel[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: qa-pilot
@@ -30,7 +37,7 @@ jobs:
       QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
       QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-      QA_EXPECTED_SHA: ${{ github.sha }}
+      QA_EXPECTED_SHA: ${{ github.event_name == 'deployment_status' && github.event.deployment.sha || github.sha }}
       QA_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
       QA_FIXTURE_PREFIX: TEST-gh-${{ github.run_id }}-${{ github.run_attempt }}
       QA_RUN_DIR: .qa-run
@@ -45,7 +52,7 @@ jobs:
       - name: Check out exact candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.QA_EXPECTED_SHA }}
           fetch-depth: 2
 
       - name: Set up pnpm
