@@ -162,7 +162,11 @@ test.describe.serial("Golden journeys", () => {
     await page.goto("/opportunities/new")
     await choose(page, "Status", "Active")
     await choose(page, "Secteur", "Tech & Digital")
-    await choose(page, "Canonical geography", new RegExp(manifest.fixturePrefix))
+    if (await page.getByLabel("Canonical geography").count()) {
+      await choose(page, "Canonical geography", new RegExp(manifest.fixturePrefix))
+    } else {
+      await page.getByLabel("Ref. Mandat").fill(`${manifest.fixturePrefix}-REF`)
+    }
     await page.getByLabel("Localisation").fill("Paris")
     await page.getByLabel("Description").fill(`${manifest.fixturePrefix} internal description`)
     await page.getByLabel("Public title").fill(`${manifest.fixturePrefix} opportunity`)
