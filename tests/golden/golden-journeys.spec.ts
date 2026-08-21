@@ -119,6 +119,10 @@ test.describe.serial("Golden journeys", () => {
   })
 
   test("P2 staff validation and two-tab retry persist one normalized profile", async ({ browser }) => {
+    const retryDatabase = await databaseClient()
+    await retryDatabase.query("DELETE FROM public.repreneurs WHERE lower(email)=lower($1) AND source='staff_manual'", [manifest.actors.staffCreated.email])
+    await retryDatabase.end()
+    await recordRuntimeFixtures({ p2RepreneurId: null })
     const context = await staffContext(browser)
     const first = await context.newPage()
     await first.goto("/repreneurs/new")
@@ -133,14 +137,15 @@ test.describe.serial("Golden journeys", () => {
     const second = await context.newPage()
     await second.goto("/repreneurs/new")
     await fillStaffRepreneur(first, manifest.actors.staffCreated.email.toUpperCase())
-    await fillStaffRepreneur(second, manifest.actors.staffCreated.email)
+    const firstSubmit = first.getByRole("button", { name: "Create Repreneur" })
     await Promise.allSettled([
-      first.getByRole("button", { name: "Create Repreneur" }).click(),
-      second.getByRole("button", { name: "Create Repreneur" }).click(),
+      firstSubmit.click(),
+      firstSubmit.click({ force: true }),
     ])
-    await expect.poll(() => [first.url(), second.url()].some((url) => /\/repreneurs\/[0-9a-f-]+/.test(url))).toBe(true)
-    const loser = /\/repreneurs\/new/.test(first.url()) ? first : second
-    await expect(loser.getByText(/already belongs to another Repreneur/i)).toBeVisible()
+    await first.waitForURL(/\/repreneurs\/[0-9a-f-]+/)
+    await fillStaffRepreneur(second, manifest.actors.staffCreated.email)
+    await second.getByRole("button", { name: "Create Repreneur" }).click()
+    await expect(second.getByText(/already belongs to another Repreneur/i)).toBeVisible()
 
     const database = await databaseClient()
     const rows = await database.query("SELECT id, email, lifecycle_status, source, created_by FROM public.repreneurs WHERE lower(email)=lower($1)", [manifest.actors.staffCreated.email])
