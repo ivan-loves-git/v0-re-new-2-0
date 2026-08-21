@@ -39,7 +39,7 @@ async function clickChoice(page: Page, id: string) {
 async function fillStaffRepreneur(page: Page, email: string, firstName = "Pilot") {
   await page.getByLabel("First name").fill(firstName)
   await page.getByLabel("Last name").fill(manifest.fixturePrefix)
-  await page.getByLabel("Email", { exact: true }).fill(email)
+  await page.locator("#email").fill(email)
 }
 
 test.beforeAll(async () => {
@@ -124,7 +124,7 @@ test.describe.serial("Golden journeys", () => {
     await first.goto("/repreneurs/new")
     await expect(first).toHaveURL(/\/repreneurs\/new/)
     await first.getByLabel("Last name").fill(manifest.fixturePrefix)
-    await first.getByLabel("Email", { exact: true }).fill(manifest.actors.staffCreated.email.toUpperCase())
+    await first.locator("#email").fill(manifest.actors.staffCreated.email.toUpperCase())
     await first.getByRole("button", { name: "Create Repreneur" }).click()
     await expect(first.getByText("Enter a first name.", { exact: true })).toHaveCount(2)
 
