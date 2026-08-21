@@ -17,7 +17,7 @@ const querySource = fs.readFileSync(
   "utf8",
 )
 const migrationSource = fs.readFileSync(
-  path.join(root, "scripts/084_express_opportunity_interest.sql"),
+  path.join(root, "scripts/111_staff_only_exact_match_interest.sql"),
   "utf8",
 )
 
@@ -57,9 +57,11 @@ describe("repreneur opportunity interest matrix", () => {
     expect(querySource).toContain("is_staff_recommended: !opportunity.interest_expressed_at")
   })
 
-  it("enforces active and visible eligibility atomically without creating pursuit or queue state", () => {
+  it("allows only the exact portal-visible match to express interest on a staff-only opportunity", () => {
     expect(migrationSource).toContain("status = 'active'")
-    expect(migrationSource).toContain("repreneur_exposure <> 'staff_only'")
+    expect(migrationSource).toContain("v_opportunity.repreneur_exposure = 'staff_only'")
+    expect(migrationSource).toContain("v_match.status NOT IN ('proposed', 'interested', 'declined', 'active_pursuit')")
+    expect(migrationSource).toContain("NOT v_has_match")
     expect(migrationSource).toContain("FOR UPDATE")
     expect(migrationSource).toContain("status = 'active_pursuit'")
     expect(migrationSource).toContain("v_match.status = 'active_pursuit'")

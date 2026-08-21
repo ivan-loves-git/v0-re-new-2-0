@@ -26,6 +26,15 @@ describe("staff people and offer form validation", () => {
     expect(form).toContain('await submitOnce.current.run(async () =>')
   })
 
+  it("preserves successful Next navigation before mapping submission errors", () => {
+    const form = source("components/repreneurs/repreneur-form.tsx")
+
+    expect(form).toContain('import { rethrowNextNavigationControlFlow }')
+    expect(form.indexOf("rethrowNextNavigationControlFlow(error)")).toBeLessThan(
+      form.indexOf('console.error("Repreneur form submission failed")'),
+    )
+  })
+
   it("validates every constrained offer number without native-only bubbles", () => {
     const form = source("components/offers/offer-form.tsx")
     const actions = source("lib/actions/offers.ts")

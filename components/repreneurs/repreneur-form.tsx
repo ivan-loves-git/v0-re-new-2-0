@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS, PERSONA_OPTIONS } from "@/lib/types/repreneur"
 import { formatDisplayDate } from "@/lib/utils/display-date-time"
+import { rethrowNextNavigationControlFlow } from "@/lib/utils/next-navigation-control-flow"
 import { createSingleFlightSubmission } from "@/lib/utils/single-flight-submission"
 import {
   FieldError,
@@ -76,6 +77,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
       try {
         await action(formData)
       } catch (error) {
+        rethrowNextNavigationControlFlow(error)
         console.error("Repreneur form submission failed")
         const message = error instanceof Error ? error.message : "We could not save this profile. Please try again."
         const normalizedMessage = message.toLowerCase()

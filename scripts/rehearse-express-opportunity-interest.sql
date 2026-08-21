@@ -112,7 +112,12 @@ VALUES
   ('20000000-0000-4000-8000-000000000006', 'W067-HISTORY', 'active', 'anonymized'),
   ('20000000-0000-4000-8000-000000000007', 'W067-RECONSIDER', 'active', 'anonymized'),
   ('20000000-0000-4000-8000-000000000008', 'W067-INVALID-SIGNED-NDA', 'active', 'anonymized'),
-  ('20000000-0000-4000-8000-000000000009', 'W067-INVALID-WAIVED-NDA', 'active', 'anonymized');
+  ('20000000-0000-4000-8000-000000000009', 'W067-INVALID-WAIVED-NDA', 'active', 'anonymized'),
+  ('20000000-0000-4000-8000-000000000010', 'W111-STAFF-PROPOSED', 'active', 'staff_only'),
+  ('20000000-0000-4000-8000-000000000011', 'W111-STAFF-DECLINED', 'active', 'staff_only'),
+  ('20000000-0000-4000-8000-000000000012', 'W111-STAFF-DROPPED', 'active', 'staff_only'),
+  ('20000000-0000-4000-8000-000000000013', 'W111-STAFF-PURSUIT', 'active', 'staff_only'),
+  ('20000000-0000-4000-8000-000000000014', 'W111-STAFF-CONCURRENT', 'active', 'staff_only');
 
 INSERT INTO public.opportunity_matches (
   opportunity_id,
@@ -184,6 +189,76 @@ VALUES
     'staff-fixture',
     '2026-07-30 08:00:00+00',
     'staff-fixture'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000010',
+    '10000000-0000-4000-8000-000000000001',
+    'proposed',
+    '{}',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000011',
+    '10000000-0000-4000-8000-000000000001',
+    'declined',
+    ARRAY['sector'],
+    'previously declined',
+    'dropped',
+    NULL,
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000012',
+    '10000000-0000-4000-8000-000000000001',
+    'dropped',
+    '{}',
+    NULL,
+    'dropped',
+    NULL,
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000013',
+    '10000000-0000-4000-8000-000000000001',
+    'active_pursuit',
+    '{}',
+    NULL,
+    'interest',
+    NULL,
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000014',
+    '10000000-0000-4000-8000-000000000001',
+    'proposed',
+    '{}',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'staff-fixture',
+    '2026-07-30 08:00:00+00',
+    'staff-fixture'
   );
 
 -- Mirror a production legacy row that predates the evidence constraint. The
@@ -231,6 +306,8 @@ ALTER TABLE public.opportunity_matches
 
 \ir 084_express_opportunity_interest.sql
 \ir 084_express_opportunity_interest.sql
+\ir 111_staff_only_exact_match_interest.sql
+\ir 111_staff_only_exact_match_interest.sql
 
 CREATE OR REPLACE FUNCTION public.w067_assert_raises(
   p_statement TEXT,
@@ -320,11 +397,66 @@ FROM public.express_opportunity_interest(
   '2026-07-30 12:00:00+00'
 );
 
+-- Exact portal-visible staff_only matches may respond. Proposed becomes a
+-- fresh signal, the replay remains idempotent, and a declined match is
+-- reconsidered. These are the only actionable staff_only states.
+SELECT *
+FROM public.express_opportunity_interest(
+  '20000000-0000-4000-8000-000000000010',
+  '10000000-0000-4000-8000-000000000001',
+  'repreneur-user-1',
+  '2026-07-30 13:00:00+00'
+);
+SELECT *
+FROM public.express_opportunity_interest(
+  '20000000-0000-4000-8000-000000000010',
+  '10000000-0000-4000-8000-000000000001',
+  'repreneur-user-1',
+  '2026-07-30 14:00:00+00'
+);
+SELECT *
+FROM public.express_opportunity_interest(
+  '20000000-0000-4000-8000-000000000011',
+  '10000000-0000-4000-8000-000000000001',
+  'repreneur-user-1',
+  '2026-07-30 15:00:00+00'
+);
+
 RESET ROLE;
 
 SELECT public.w067_assert_raises(
   $$SELECT * FROM public.express_opportunity_interest(
     '20000000-0000-4000-8000-000000000003',
+    '10000000-0000-4000-8000-000000000001',
+    'repreneur-user-1',
+    NOW()
+  )$$,
+  'interest_not_available'
+);
+-- An unmatched staff_only record and exact non-visible/current-pursuit rows
+-- remain unavailable, so this action cannot become a discovery or revival
+-- path.
+SELECT public.w067_assert_raises(
+  $$SELECT * FROM public.express_opportunity_interest(
+    '20000000-0000-4000-8000-000000000003',
+    '10000000-0000-4000-8000-000000000001',
+    'repreneur-user-1',
+    NOW()
+  )$$,
+  'interest_not_available'
+);
+SELECT public.w067_assert_raises(
+  $$SELECT * FROM public.express_opportunity_interest(
+    '20000000-0000-4000-8000-000000000012',
+    '10000000-0000-4000-8000-000000000001',
+    'repreneur-user-1',
+    NOW()
+  )$$,
+  'interest_not_available'
+);
+SELECT public.w067_assert_raises(
+  $$SELECT * FROM public.express_opportunity_interest(
+    '20000000-0000-4000-8000-000000000013',
     '10000000-0000-4000-8000-000000000001',
     'repreneur-user-1',
     NOW()
@@ -383,6 +515,8 @@ DECLARE
   v_locked_interest public.opportunity_matches%ROWTYPE;
   v_existing_pursuit public.opportunity_matches%ROWTYPE;
   v_reconsidered public.opportunity_matches%ROWTYPE;
+  v_staff_proposed public.opportunity_matches%ROWTYPE;
+  v_staff_declined public.opportunity_matches%ROWTYPE;
 BEGIN
   SELECT * INTO STRICT v_unassigned
   FROM public.opportunity_matches
@@ -426,11 +560,30 @@ BEGIN
     RAISE EXCEPTION 'Reconsidered interest retained stale decision evidence';
   END IF;
 
+  SELECT * INTO STRICT v_staff_proposed
+  FROM public.opportunity_matches
+  WHERE opportunity_id = '20000000-0000-4000-8000-000000000010'
+    AND repreneur_id = '10000000-0000-4000-8000-000000000001';
+
+  SELECT * INTO STRICT v_staff_declined
+  FROM public.opportunity_matches
+  WHERE opportunity_id = '20000000-0000-4000-8000-000000000011'
+    AND repreneur_id = '10000000-0000-4000-8000-000000000001';
+
+  IF v_staff_proposed.status <> 'interested'
+    OR v_staff_proposed.interest_expressed_at <> '2026-07-30 13:00:00+00'
+    OR v_staff_declined.status <> 'interested'
+    OR v_staff_declined.interest_expressed_at <> '2026-07-30 15:00:00+00'
+    OR v_staff_declined.decline_reason_categories <> '{}'
+    OR v_staff_declined.decline_reason_text IS NOT NULL THEN
+    RAISE EXCEPTION 'Exact portal-visible staff_only interest was not applied idempotently';
+  END IF;
+
   IF (
     SELECT COUNT(*)
     FROM public.opportunity_matches
     WHERE status = 'active_pursuit'
-  ) <> 2 THEN
+  ) <> 3 THEN
     RAISE EXCEPTION 'Interest signaling created or removed an active pursuit';
   END IF;
 

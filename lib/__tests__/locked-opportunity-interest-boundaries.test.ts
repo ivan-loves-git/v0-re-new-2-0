@@ -8,7 +8,7 @@ const actionSource = fs.readFileSync(
   "utf8",
 )
 const migrationSource = fs.readFileSync(
-  path.join(root, "scripts/084_express_opportunity_interest.sql"),
+  path.join(root, "scripts/111_staff_only_exact_match_interest.sql"),
   "utf8",
 )
 
@@ -30,7 +30,9 @@ describe("locked opportunity interest boundaries", () => {
 
   it("keeps eligibility and idempotency inside one database transaction", () => {
     expect(migrationSource).toContain("status = 'active'")
-    expect(migrationSource).toContain("repreneur_exposure <> 'staff_only'")
+    expect(migrationSource).toContain("v_opportunity.repreneur_exposure = 'staff_only'")
+    expect(migrationSource).toContain("v_match.status NOT IN ('proposed', 'interested', 'declined', 'active_pursuit')")
+    expect(migrationSource).toContain("NOT v_has_match")
     expect(migrationSource).toContain("status = 'active_pursuit'")
     expect(migrationSource).toContain("v_match.status = 'active_pursuit'")
     expect(migrationSource).toContain("FOR UPDATE")
