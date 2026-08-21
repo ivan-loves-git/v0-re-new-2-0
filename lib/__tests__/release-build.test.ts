@@ -43,6 +43,23 @@ describe("release build identity", () => {
     })).toContain("bootstrap")
   })
 
+  it("rejects a non-bootstrap depth-1 checkout that cannot read its parent release source", () => {
+    expect(() => checkReleaseBuildNumber({
+      releaseBuildSource: 'export const RELEASE_BUILD_NUMBER = "770"\n',
+      runGit: (args: string[]) => {
+        if (args[0] === "rev-parse") return "true"
+        if (args[0] === "show") throw new Error("invalid object name HEAD^")
+        throw new Error(`Unexpected git command: ${args.join(" ")}`)
+      },
+    })).toThrow("Shallow checkout cannot read the parent release source")
+  })
+
+  it("keeps exactly the parent commit available to the GitHub release check", () => {
+    const workflow = readFileSync(new URL("../../.github/workflows/verify.yml", import.meta.url), "utf8")
+
+    expect(workflow).toMatch(/actions\/checkout@v4[\s\S]*fetch-depth:\s*2/)
+  })
+
   it("creates the exact bootstrap build only from the last pre-sequence full-history release", () => {
     expect(prepareReleaseBuildNumber({
       releaseBuildSource: undefined,
