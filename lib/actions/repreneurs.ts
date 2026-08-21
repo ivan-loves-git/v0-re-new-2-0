@@ -110,7 +110,7 @@ export async function createRepreneur(formData: FormData) {
   const { data, error } = await supabase.from("repreneurs").insert(repreneur).select().single()
 
   if (error) {
-    throw new Error(repreneurWriteErrorMessage(error))
+    return { success: false as const, message: repreneurWriteErrorMessage(error) }
   }
 
   revalidatePath("/repreneurs")
