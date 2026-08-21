@@ -23,8 +23,18 @@ import {
 
 interface RepreneurFormProps {
   repreneur?: Repreneur
-  action: (formData: FormData) => Promise<void>
+  action: (formData: FormData) => Promise<void | { success: false; message: string }>
   submitLabel?: string
+}
+
+function mapSubmissionError(message: string) {
+  const normalizedMessage = message.toLowerCase()
+  const fieldErrors: FieldErrors = {}
+  if (normalizedMessage.includes("first name")) fieldErrors.first_name = message
+  if (normalizedMessage.includes("last name") || normalizedMessage.includes("surname")) fieldErrors.last_name = message
+  if (normalizedMessage.includes("email")) fieldErrors.email = message
+  if (normalizedMessage.includes("linkedin") || normalizedMessage.includes("web address")) fieldErrors.linkedin_url = message
+  return { fieldErrors, submissionError: Object.keys(fieldErrors).length > 0 ? undefined : message }
 }
 
 /**
@@ -75,23 +85,23 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
     await submitOnce.current.run(async () => {
       setIsSubmitting(true)
       try {
-        await action(formData)
+        const result = await action(formData)
+        if (result?.success === false) {
+          const mapped = mapSubmissionError(result.message)
+          setErrors(mapped.fieldErrors)
+          setSubmissionError(mapped.submissionError)
+          if (Object.keys(mapped.fieldErrors).length > 0) focusValidationSummary(summaryRef)
+        }
       } catch (error) {
         rethrowNextNavigationControlFlow(error)
         console.error("Repreneur form submission failed")
         const message = error instanceof Error ? error.message : "We could not save this profile. Please try again."
-        const normalizedMessage = message.toLowerCase()
-        const serverErrors: FieldErrors = {}
-        if (normalizedMessage.includes("first name")) serverErrors.first_name = message
-        if (normalizedMessage.includes("last name") || normalizedMessage.includes("surname")) serverErrors.last_name = message
-        if (normalizedMessage.includes("email")) serverErrors.email = message
-        if (normalizedMessage.includes("linkedin") || normalizedMessage.includes("web address")) serverErrors.linkedin_url = message
-
-        if (Object.keys(serverErrors).length > 0) {
-          setErrors(serverErrors)
+        const mapped = mapSubmissionError(message)
+        if (Object.keys(mapped.fieldErrors).length > 0) {
+          setErrors(mapped.fieldErrors)
           focusValidationSummary(summaryRef)
         } else {
-          setSubmissionError(message)
+          setSubmissionError(mapped.submissionError)
         }
       } finally {
         setIsSubmitting(false)

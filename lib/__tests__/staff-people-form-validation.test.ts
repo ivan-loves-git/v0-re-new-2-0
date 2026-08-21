@@ -35,6 +35,15 @@ describe("staff people and offer form validation", () => {
     )
   })
 
+  it("returns duplicate-email feedback across the production server-action boundary", () => {
+    const form = source("components/repreneurs/repreneur-form.tsx")
+    const actions = source("lib/actions/repreneurs.ts")
+
+    expect(actions).toContain("return { success: false as const, message: repreneurWriteErrorMessage(error) }")
+    expect(form).toContain("result?.success === false")
+    expect(form).toContain("mapSubmissionError(result.message)")
+  })
+
   it("validates every constrained offer number without native-only bubbles", () => {
     const form = source("components/offers/offer-form.tsx")
     const actions = source("lib/actions/offers.ts")
