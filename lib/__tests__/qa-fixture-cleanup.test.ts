@@ -23,6 +23,17 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).toContain(".remove([storageFixture.path])")
   })
 
+  it("fails closed before connecting and deletes Phase B outputs only by recorded IDs", () => {
+    const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
+    const common = readFileSync(`${process.cwd()}/scripts/qa/phase-b-common.mjs`, "utf8")
+    expect(common.indexOf("assertSafeQaRuntime(process.env)")).toBeLessThan(common.indexOf("client.connect()"))
+    expect(script).toContain("recordRuntimeFixtures")
+    expect(script).toContain("DELETE FROM public.repreneurs WHERE id = ANY")
+    expect(script).toContain("DELETE FROM public.opportunities WHERE id = ANY")
+    expect(script).not.toContain("DELETE FROM public.repreneurs WHERE lower(email)")
+    expect(script).not.toContain("reference_code='QA'")
+  })
+
   it("verifies zero residue after cleanup", () => {
     const script = source()
     expect(script).toContain("databaseResidue")

@@ -4,6 +4,7 @@ import { RELEASE_BUILD_NUMBER } from "./lib/release-build.mjs"
 // The release number is committed so shallow Vercel checkouts cannot turn it
 // into their local history depth. The short hash remains build provenance.
 let gitCommitHash = "dev"
+let gitCommitSha = process.env.VERCEL_GIT_COMMIT_SHA || "dev"
 
 try {
   const gitOptions = { timeout: 300, encoding: "utf8" }
@@ -12,6 +13,9 @@ try {
     ["rev-parse", "--short=7", "HEAD"],
     gitOptions,
   ).trim()
+  if (gitCommitSha === "dev") {
+    gitCommitSha = execFileSync("git", ["rev-parse", "HEAD"], gitOptions).trim()
+  }
 } catch (e) {
   // Fallback for environments without git
   console.warn("Could not get git info:", e.message)
@@ -32,6 +36,14 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_NUMBER: RELEASE_BUILD_NUMBER,
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [{ key: "x-renew-deployment-sha", value: gitCommitSha }],
+      },
+    ]
   },
   // W-108 accepts private External Pursuit attachments up to 20 MiB. Keep a
   // small multipart/server-action envelope above the validated file limit.

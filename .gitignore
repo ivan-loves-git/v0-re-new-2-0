@@ -51,6 +51,7 @@ Thumbs.db
 
 # Generated QA and sharing artifacts
 outputs/playwright/
+.qa-run/
 sharing to founders/
 
 # CRM exports contain personal and commercially sensitive data.

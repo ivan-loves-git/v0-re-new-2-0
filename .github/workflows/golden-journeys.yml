@@ -1,0 +1,130 @@
+name: Golden journeys
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: read
+
+concurrency:
+  group: golden-journeys-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pilot:
+    name: P1-P3 protected pilot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: qa-pilot
+    env:
+      CI: "true"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+      QA_BROWSER_BASE_URL: ${{ secrets.QA_BROWSER_BASE_URL }}
+      QA_VALIDATION_ORIGIN: ${{ secrets.QA_VALIDATION_ORIGIN }}
+      QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
+      QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      QA_EXPECTED_SHA: ${{ github.sha }}
+      QA_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
+      QA_FIXTURE_PREFIX: TEST-gh-${{ github.run_id }}-${{ github.run_attempt }}
+      QA_RUN_DIR: .qa-run
+      QA_FIXTURE_MANIFEST_FILE: .qa-run/manifest.json
+      QA_PREFLIGHT_EVIDENCE_FILE: .qa-run/live-preflight.json
+      QA_DATABASE_CA_CERT_FILE: .qa-run/supabase-ca.crt
+      QA_CREDENTIALS_FILE: .qa-run/credentials.json
+      QA_CASE_RESULT_FILE: .qa-run/case-result.json
+      GITHUB_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium only
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Prepare private runner evidence
+        shell: bash
+        run: |
+          umask 077
+          mkdir -p .qa-run
+          curl --fail --silent --show-error https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt -o "$QA_DATABASE_CA_CERT_FILE"
+          pnpm qa:fixture:manifest
+          pnpm qa:fixture:manifest-rehearsal
+
+      - name: Wait for exact protected deployment and collect live evidence
+        shell: bash
+        run: |
+          for attempt in $(seq 1 30); do
+            if pnpm qa:evidence:collect; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              exit 1
+            fi
+            sleep 20
+          done
+
+      - name: Verify live isolation preflight
+        run: pnpm qa:preflight-isolation
+
+      - name: Rehearse exact fixture cleanup
+        run: pnpm qa:fixture:rehearse-cleanup
+        env:
+          QA_FIXTURE_MANIFEST_FILE: .qa-run/rehearsal-manifest.json
+
+      - name: Seed exact Playwright fixtures
+        run: pnpm qa:fixture:seed
+
+      - name: Run P1-P3 in protected Chromium
+        run: pnpm qa:browser
+
+      - name: Read back exact persisted acceptance state
+        run: pnpm qa:fixture:readback
+
+      - name: Cleanup exact fixtures
+        if: always()
+        shell: bash
+        run: |
+          if [ -f .qa-run/manifest.json ]; then
+            pnpm qa:fixture:cleanup
+          else
+            printf '%s\n' '{"ok":true,"reason":"no-fixtures-created","databaseResidue":0,"authResidue":0,"storageResidue":0}' > .qa-run/cleanup-readback.json
+          fi
+
+      - name: Sanitize runner artifacts
+        id: sanitize
+        if: always()
+        run: pnpm qa:artifacts:sanitize
+
+      - name: Upload sanitized evidence
+        if: ${{ always() && steps.sanitize.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-journeys-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .qa-run
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
