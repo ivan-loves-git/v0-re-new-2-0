@@ -9,10 +9,12 @@ This directory provides the deterministic, row-free starting point for an isolat
 - `771_public_schema.sql` is a `pg_dump 17.10 --schema-only --schema=public` export of the released build-771 production structure.
 - The export excluded rows, large objects, owners, comments, publications, subscriptions, security labels and tablespaces.
 - The temporary production connection file lived outside the repository with mode `0600`, was injected directly into `pg_dump`, and was deleted immediately after export.
-- The raw export contained five email literals and customer-name fragments embedded in provisional-source integrity functions and identifiers. They were replaced in place with deterministic `TEST-schema-redacted-*` / `schema_redacted_person` labels before the artifact was accepted. No raw copy remains.
+- The raw export contained five email literals and customer-name fragments embedded in provisional-source integrity functions and identifiers. They were replaced in place with deterministic `TEST-schema-redacted-*` / `qa_person` labels before the artifact was accepted. No raw copy remains; the identifier replacement is deliberately short enough to avoid PostgreSQL's 63-byte identifier truncation.
 - `771_public_schema.sha256` fingerprints the sanctioned, sanitized artifact.
 - `771_extensions.sql` records the released extension dependencies needed by the public schema.
+- `771_preview_cleanup.sql` removes only the known partial sequence left by the pre-baseline Git migration attempt, then rejects every other public-schema object inside the same reconstruction transaction.
 - `771_test_storage.sql` creates only two empty private buckets from fixed repository-owned setup; it copies no bucket or object data.
+- Supabase-managed `supabase_admin` default privileges are supplied by each branch and are intentionally not replayed by the application baseline; application-owned `postgres` defaults and all explicit object grants remain preserved.
 
 ## Why this is separate from `supabase/migrations`
 

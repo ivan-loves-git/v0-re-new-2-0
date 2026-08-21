@@ -2,7 +2,11 @@
 
 import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
-import { inspectSchemaArtifact, schemaObjectCounts } from "../../lib/qa/schema-artifact.mjs"
+import {
+  inspectSchemaArtifact,
+  schemaObjectCounts,
+  schemaObjectInventory,
+} from "../../lib/qa/schema-artifact.mjs"
 
 const BUILD_771_COUNTS = {
   tables: 79,
@@ -15,6 +19,8 @@ const BUILD_771_COUNTS = {
   rlsTables: 79,
   constraints: 251,
 }
+const BUILD_771_INVENTORY_SHA256 =
+  "091f2d7366fd6be452253d8f7e3463eda2c9b26d5886836637574ac5ea4b46a3"
 
 const path = process.argv[2]
 if (!path) {
@@ -25,6 +31,12 @@ if (!path) {
 try {
   const artifact = await readFile(path, "utf8")
   const result = inspectSchemaArtifact(artifact, BUILD_771_COUNTS)
+  const inventory = schemaObjectInventory(artifact)
+  const inventorySha256 = createHash("sha256").update(inventory.join("\n")).digest("hex")
+  if (inventorySha256 !== BUILD_771_INVENTORY_SHA256) {
+    result.ok = false
+    result.findings.push("inventory-fingerprint")
+  }
   if (!result.ok) {
     console.error(
       JSON.stringify({
@@ -40,6 +52,8 @@ try {
       bytes: Buffer.byteLength(artifact),
       sha256: createHash("sha256").update(artifact).digest("hex"),
       structure: schemaObjectCounts(artifact),
+      inventoryObjects: inventory.length,
+      inventorySha256,
     }),
   )
 } catch {

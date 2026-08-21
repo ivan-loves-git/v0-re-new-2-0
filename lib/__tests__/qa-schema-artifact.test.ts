@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { inspectSchemaArtifact } from "@/lib/qa/schema-artifact.mjs"
+import {
+  inspectSchemaArtifact,
+  schemaObjectInventory,
+} from "@/lib/qa/schema-artifact.mjs"
 
 const SAFE_DDL = `
 CREATE TABLE public.example (id uuid DEFAULT gen_random_uuid() NOT NULL);
@@ -15,6 +18,15 @@ GRANT SELECT ON TABLE public.example TO authenticated;
 `
 
 describe("row-free schema artifact inspection", () => {
+  it("builds an order-independent inventory of public structural objects", () => {
+    const headings = `-- Name: zed; Type: TABLE; Schema: public; Owner: -
+-- Name: alpha(); Type: FUNCTION; Schema: public; Owner: -`
+    expect(schemaObjectInventory(headings)).toEqual([
+      "FUNCTION:alpha()",
+      "TABLE:zed",
+    ])
+  })
+
   it("accepts structural DDL and runtime SQL inside function bodies", () => {
     expect(inspectSchemaArtifact(SAFE_DDL)).toEqual({ ok: true, findings: [] })
   })

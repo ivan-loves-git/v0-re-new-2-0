@@ -1401,10 +1401,10 @@ BEGIN
     RAISE EXCEPTION 'ma_provisional_acme_requires_exactly_one_office';
   END IF;
   IF contact_email_count <> 1 OR contact_name_count <> 1 THEN
-    RAISE EXCEPTION 'ma_provisional_acme_requires_one_schema_redacted_person_contact';
+    RAISE EXCEPTION 'ma_provisional_acme_requires_one_qa_person_contact';
   END IF;
   IF staff_identity_count <> 1 THEN
-    RAISE EXCEPTION 'ma_provisional_acme_requires_one_schema_redacted_person_staff_identity';
+    RAISE EXCEPTION 'ma_provisional_acme_requires_one_qa_person_staff_identity';
   END IF;
 
   IF NOT EXISTS (
@@ -5082,10 +5082,10 @@ $$;
 
 
 --
--- Name: guard_ma_provisional_schema_redacted_person_affiliation_identity(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: guard_ma_provisional_qa_person_affiliation_identity(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION "public"."guard_ma_provisional_schema_redacted_person_affiliation_identity"() RETURNS "trigger"
+CREATE FUNCTION "public"."guard_ma_provisional_qa_person_affiliation_identity"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
     AS $$
@@ -5101,7 +5101,7 @@ BEGIN
 
   IF TG_OP = 'DELETE' THEN
     IF OLD.id = fixed_affiliation_id THEN
-      RAISE EXCEPTION 'ma_provisional_schema_redacted_person_affiliation_is_immutable';
+      RAISE EXCEPTION 'ma_provisional_qa_person_affiliation_is_immutable';
     END IF;
     RETURN OLD;
   END IF;
@@ -5114,7 +5114,7 @@ BEGIN
       OR NEW.ended_at IS NOT NULL
       OR NEW.ended_by IS NOT NULL
     ) THEN
-    RAISE EXCEPTION 'ma_provisional_schema_redacted_person_affiliation_is_immutable';
+    RAISE EXCEPTION 'ma_provisional_qa_person_affiliation_is_immutable';
   END IF;
 
   RETURN NEW;
@@ -5123,10 +5123,10 @@ $$;
 
 
 --
--- Name: guard_ma_provisional_schema_redacted_person_contact_identity(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: guard_ma_provisional_qa_person_contact_identity(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION "public"."guard_ma_provisional_schema_redacted_person_contact_identity"() RETURNS "trigger"
+CREATE FUNCTION "public"."guard_ma_provisional_qa_person_contact_identity"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
     AS $$
@@ -5141,7 +5141,7 @@ BEGIN
 
   IF TG_OP = 'DELETE' THEN
     IF OLD.id = fixed_contact_id THEN
-      RAISE EXCEPTION 'ma_provisional_schema_redacted_person_contact_is_immutable';
+      RAISE EXCEPTION 'ma_provisional_qa_person_contact_is_immutable';
     END IF;
     RETURN OLD;
   END IF;
@@ -5161,7 +5161,7 @@ BEGIN
     OR LOWER(effective_display_name) = 'TEST-schema-redacted-person'
     OR LOWER(BTRIM(NEW.email)) = 'TEST-schema-redacted-004'
   ) AND NEW.id IS DISTINCT FROM fixed_contact_id THEN
-    RAISE EXCEPTION 'ma_provisional_schema_redacted_person_contact_identity_collision';
+    RAISE EXCEPTION 'ma_provisional_qa_person_contact_identity_collision';
   END IF;
 
   IF TG_OP = 'INSERT' THEN
@@ -5177,7 +5177,7 @@ BEGIN
       OR NEW.archived_at IS NOT NULL
       OR NEW.archived_by IS NOT NULL
     ) THEN
-    RAISE EXCEPTION 'ma_provisional_schema_redacted_person_contact_is_immutable';
+    RAISE EXCEPTION 'ma_provisional_qa_person_contact_is_immutable';
   END IF;
 
   RETURN NEW;
@@ -10088,7 +10088,7 @@ CREATE TABLE "public"."pdr_feedback" (
     "body" "text" NOT NULL,
     "requested_from" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "pdr_feedback_actor_check" CHECK (("actor" = ANY (ARRAY['Dev team'::"text", 'schema_redacted_person'::"text", 'Colin'::"text", 'System'::"text"]))),
+    CONSTRAINT "pdr_feedback_actor_check" CHECK (("actor" = ANY (ARRAY['Dev team'::"text", 'qa_person'::"text", 'Colin'::"text", 'System'::"text"]))),
     CONSTRAINT "pdr_feedback_body_check" CHECK ((("char_length"("body") >= 1) AND ("char_length"("body") <= 4000))),
     CONSTRAINT "pdr_feedback_kind_check" CHECK (("kind" = ANY (ARRAY['request_input'::"text", 'feedback'::"text", 'system'::"text"]))),
     CONSTRAINT "pdr_feedback_requested_from_check" CHECK (("jsonb_typeof"("requested_from") = 'array'::"text"))
@@ -10212,7 +10212,7 @@ CREATE TABLE "public"."pdr_proposals" (
     CONSTRAINT "pdr_proposals_problem_statement_check" CHECK (("char_length"("problem_statement") <= 1000)),
     CONSTRAINT "pdr_proposals_proposal_type_check" CHECK (("proposal_type" = ANY (ARRAY['bug'::"text", 'small_improvement'::"text", 'product_problem'::"text"]))),
     CONSTRAINT "pdr_proposals_question_count_check" CHECK ((("question_count" >= 0) AND ("question_count" <= 5))),
-    CONSTRAINT "pdr_proposals_requester_actor_check" CHECK (("requester_actor" = ANY (ARRAY['Dev team'::"text", 'schema_redacted_person'::"text", 'Colin'::"text"]))),
+    CONSTRAINT "pdr_proposals_requester_actor_check" CHECK (("requester_actor" = ANY (ARRAY['Dev team'::"text", 'qa_person'::"text", 'Colin'::"text"]))),
     CONSTRAINT "pdr_proposals_reviewer_note_check" CHECK (("char_length"("reviewer_note") <= 2000)),
     CONSTRAINT "pdr_proposals_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'conversing'::"text", 'ready_for_review'::"text", 'needs_answer'::"text", 'approved_problem'::"text", 'converted'::"text", 'parked'::"text", 'rejected'::"text", 'archived'::"text"]))),
     CONSTRAINT "pdr_proposals_strategic_placement_check" CHECK (("strategic_placement" = ANY (ARRAY['existing_bundle'::"text", 'new_bundle'::"text", 'orphan'::"text"]))),
@@ -12956,17 +12956,17 @@ CREATE TRIGGER "guard_ma_provisional_acme_office_identity" BEFORE INSERT OR DELE
 
 
 --
--- Name: ma_contact_office_affiliations guard_ma_provisional_schema_redacted_person_affiliation_identity; Type: TRIGGER; Schema: public; Owner: -
+-- Name: ma_contact_office_affiliations guard_ma_provisional_qa_person_affiliation_identity; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER "guard_ma_provisional_schema_redacted_person_affiliation_identity" BEFORE DELETE OR UPDATE ON "public"."ma_contact_office_affiliations" FOR EACH ROW EXECUTE FUNCTION "public"."guard_ma_provisional_schema_redacted_person_affiliation_identity"();
+CREATE TRIGGER "guard_ma_provisional_qa_person_affiliation_identity" BEFORE DELETE OR UPDATE ON "public"."ma_contact_office_affiliations" FOR EACH ROW EXECUTE FUNCTION "public"."guard_ma_provisional_qa_person_affiliation_identity"();
 
 
 --
--- Name: ma_contacts guard_ma_provisional_schema_redacted_person_contact_identity; Type: TRIGGER; Schema: public; Owner: -
+-- Name: ma_contacts guard_ma_provisional_qa_person_contact_identity; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER "guard_ma_provisional_schema_redacted_person_contact_identity" BEFORE INSERT OR DELETE OR UPDATE ON "public"."ma_contacts" FOR EACH ROW EXECUTE FUNCTION "public"."guard_ma_provisional_schema_redacted_person_contact_identity"();
+CREATE TRIGGER "guard_ma_provisional_qa_person_contact_identity" BEFORE INSERT OR DELETE OR UPDATE ON "public"."ma_contacts" FOR EACH ROW EXECUTE FUNCTION "public"."guard_ma_provisional_qa_person_contact_identity"();
 
 
 --
@@ -15605,19 +15605,19 @@ GRANT ALL ON FUNCTION "public"."guard_ma_provisional_acme_office_identity"() TO 
 
 
 --
--- Name: FUNCTION "guard_ma_provisional_schema_redacted_person_affiliation_identity"(); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION "guard_ma_provisional_qa_person_affiliation_identity"(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION "public"."guard_ma_provisional_schema_redacted_person_affiliation_identity"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guard_ma_provisional_schema_redacted_person_affiliation_identity"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."guard_ma_provisional_qa_person_affiliation_identity"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."guard_ma_provisional_qa_person_affiliation_identity"() TO "service_role";
 
 
 --
--- Name: FUNCTION "guard_ma_provisional_schema_redacted_person_contact_identity"(); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION "guard_ma_provisional_qa_person_contact_identity"(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION "public"."guard_ma_provisional_schema_redacted_person_contact_identity"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guard_ma_provisional_schema_redacted_person_contact_identity"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."guard_ma_provisional_qa_person_contact_identity"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."guard_ma_provisional_qa_person_contact_identity"() TO "service_role";
 
 
 --
@@ -16988,10 +16988,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQ
 -- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: -
 --
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
+
 
 
 --
@@ -17008,10 +17005,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUN
 -- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: public; Owner: -
 --
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
+
 
 
 --
@@ -17028,10 +17022,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: -
 --
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
 
 
 --

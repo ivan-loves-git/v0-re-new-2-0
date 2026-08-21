@@ -56,6 +56,7 @@ try {
     readJson(process.env.QA_FIXTURE_MANIFEST_FILE, "manifest-file"),
   ])
   const isolation = validateIsolationPreflight({ env: process.env, evidence, manifest })
+  const databaseCa = await readFile(process.env.QA_DATABASE_CA_CERT_FILE, "utf8")
   const userRow = manifestRow(manifest, "user")
   const repreneurRow = manifestRow(manifest, "repreneurs")
   userId = userRow.id
@@ -69,7 +70,7 @@ try {
     user: decodeURIComponent(database.username),
     password: decodeURIComponent(database.password),
     database: database.pathname.slice(1) || "postgres",
-    ssl: { rejectUnauthorized: true },
+    ssl: { ca: databaseCa, rejectUnauthorized: true },
   })
   await client.connect()
   storage = createClient(

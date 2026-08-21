@@ -9,6 +9,7 @@ const PRODUCTION_REF = "iiuqcdnmxhtyispnykgf"
 const projectRef = process.env.QA_SUPABASE_PROJECT_REF
 const databaseUrl = process.env.DATABASE_URL
 const branchEvidencePath = process.env.QA_BRANCH_EVIDENCE_FILE
+const databaseCaCertFile = process.env.QA_DATABASE_CA_CERT_FILE
 
 function fail(code) {
   throw new Error(`Schema reconstruction failed: ${code}`)
@@ -53,7 +54,7 @@ function psqlEnv(connection) {
     PGPASSWORD: decodeURIComponent(connection.password),
     PGDATABASE: connection.pathname.slice(1) || "postgres",
     PGSSLMODE: "verify-full",
-    PGSSLROOTCERT: "system",
+    PGSSLROOTCERT: databaseCaCertFile,
   }
 }
 
@@ -86,6 +87,12 @@ async function runPsql(connection, args) {
 
 try {
   if (!branchEvidencePath) fail("branch-evidence")
+  if (!databaseCaCertFile) fail("database-ca")
+  try {
+    await readFile(databaseCaCertFile)
+  } catch {
+    fail("database-ca")
+  }
   let branchEvidence
   try {
     branchEvidence = JSON.parse(await readFile(branchEvidencePath, "utf8"))
@@ -94,31 +101,8 @@ try {
     fail("branch-evidence")
   }
   const connection = parseDatabase()
-  const occupancy = await runPsql(connection, [
-    "--tuples-only",
-    "--no-align",
-    "--command",
-    `WITH public_ns AS (SELECT oid FROM pg_namespace WHERE nspname='public')
-     SELECT CASE WHEN
-       to_regclass('public.repreneurs') IS NULL
-       AND NOT EXISTS (SELECT 1 FROM pg_class WHERE relnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_type WHERE typnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_collation WHERE collnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_conversion WHERE connamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_operator WHERE oprnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_opclass WHERE opcnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_opfamily WHERE opfnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_ts_config WHERE cfgnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_ts_dict WHERE dictnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_ts_parser WHERE prsnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_ts_template WHERE tmplnamespace=(SELECT oid FROM public_ns))
-       AND NOT EXISTS (SELECT 1 FROM pg_statistic_ext WHERE stxnamespace=(SELECT oid FROM public_ns))
-     THEN 'empty' ELSE 'occupied' END;`,
-  ])
-  if (occupancy !== "empty") fail("schema-not-empty")
-
   const files = [
+    "supabase/schema/771_preview_cleanup.sql",
     "supabase/schema/771_extensions.sql",
     "supabase/schema/771_public_schema.sql",
     "supabase/schema/771_test_storage.sql",

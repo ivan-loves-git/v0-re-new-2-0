@@ -44,11 +44,17 @@ try {
     identityReplacements += 1
     return value.includes(" ")
       ? "TEST-schema-redacted-person"
-      : "schema_redacted_person"
+      : "qa_person"
   })
 
+  const providerNeutral = identitySafe
+    .replace(/^\\(?:restrict|unrestrict)\b.*\n?/gim, "")
+    .replace(/^CREATE SCHEMA "public";$/m, 'CREATE SCHEMA IF NOT EXISTS "public";')
+    .replace(/^ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin".*\n?/gim, "")
+    .replace(/\n+$/g, "\n")
+
   const temporaryPath = `${path}.sanitized-tmp`
-  await writeFile(temporaryPath, identitySafe, { mode: 0o600, flag: "wx" })
+  await writeFile(temporaryPath, providerNeutral, { mode: 0o600, flag: "wx" })
   await rename(temporaryPath, path)
   console.log(
     JSON.stringify({
