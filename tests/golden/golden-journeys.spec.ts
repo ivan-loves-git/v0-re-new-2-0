@@ -172,8 +172,8 @@ test.describe.serial("Golden journeys", () => {
     await page.getByLabel("Public title").fill(`${manifest.fixturePrefix} opportunity`)
     await page.getByLabel("Teaser summary").fill(`${manifest.fixturePrefix} safe teaser`)
     await choose(page, "Operating office", new RegExp(manifest.fixturePrefix))
-    await page.getByRole("checkbox", { name: new RegExp(manifest.fixturePrefix) }).check()
-    await page.getByRole("radio", { name: /Primary/i }).check()
+    await page.locator(`#office_affiliation_${manifest.ids.affiliation}`).click()
+    await page.locator(`input[name="primary_affiliation_id"][value="${manifest.ids.affiliation}"]`).check()
     await page.getByRole("button", { name: "Create opportunity" }).click()
     await page.waitForURL(/\/opportunities\/[0-9a-f-]+/)
     const opportunityId = page.url().split("/").pop()!
