@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test"
-import { RUN_DIR, databaseClient, readJson, recordRuntimeFixtures } from "../../scripts/qa/phase-b-common.mjs"
+import { RUNTIME_FIXTURES_FILE, RUN_DIR, databaseClient, readJson, recordRuntimeFixtures, storageClient } from "../../scripts/qa/phase-b-common.mjs"
 
 let manifest: any
 
@@ -32,6 +32,10 @@ async function choose(page: Page, label: string | RegExp, option: string | RegEx
   await page.getByRole("option", { name: option }).click()
 }
 
+async function clickChoice(page: Page, id: string) {
+  await page.locator(`[id="${id.replaceAll('"', '\\"')}"]`).locator("..").evaluate((element) => (element as HTMLElement).click())
+}
+
 async function fillStaffRepreneur(page: Page, email: string, firstName = "Pilot") {
   await page.getByLabel("First name").fill(firstName)
   await page.getByLabel("Last name").fill(manifest.fixturePrefix)
@@ -44,6 +48,14 @@ test.beforeAll(async () => {
 
 test.describe.serial("Golden journeys", () => {
   test("P1 public application persists one profile and one CV", async ({ browser }) => {
+    const priorRuntime = await readJson(RUNTIME_FIXTURES_FILE).catch(() => ({}))
+    if (priorRuntime.storageObjects?.length) await storageClient().storage.from("cvs").remove(priorRuntime.storageObjects)
+    if (priorRuntime.p1RepreneurId) {
+      const retryDatabase = await databaseClient()
+      await retryDatabase.query("DELETE FROM public.repreneurs WHERE id=$1", [priorRuntime.p1RepreneurId])
+      await retryDatabase.end()
+    }
+    await recordRuntimeFixtures({ storageObjects: [], p1RepreneurId: null })
     const context = await protectValidationOrigin(await browser.newContext(protectedContext))
     const page = await context.newPage()
     await page.goto("/intake-v2")
@@ -70,18 +82,18 @@ test.describe.serial("Golden journeys", () => {
     await expect(page.getByText(/uploaded/i)).toBeVisible()
     await next.click()
 
-    for (const id of ["q05-entrepreneur", "q06-more_than_20", "q07-general_management", "q08-multiple", "q09-both", "q10-financial"]) await page.locator(`label[for="${id}"]`).click()
+    for (const id of ["q05-entrepreneur", "q06-more_than_20", "q07-general_management", "q08-multiple", "q09-both", "q10-financial"]) await clickChoice(page, id)
     await page.getByRole("button", { name: "Continue" }).click()
 
-    await page.locator('label[for="q11-priority-preferred"]').click()
-    await page.locator('label[for="q11-framed"]').click()
+    await clickChoice(page, "q11-priority-preferred")
+    await clickChoice(page, "q11-framed")
     await page.getByRole("button", { name: "Continue" }).click()
 
-    for (const id of ["q12-all-france", "q13-Tech & Digital", "q14-1-3M", "q15-majority_without_fund", "q16-251-350"]) await page.locator(`label[for="${id}"]`).click()
+    for (const id of ["q12-all-france", "q13-Tech & Digital", "q14-1-3M", "q15-majority_without_fund", "q16-251-350"]) await clickChoice(page, id)
     await page.getByRole("button", { name: "Continue" }).click()
 
-    await page.locator('label[for="q17-deal_access"]').click()
-    await page.locator('label[for="marketing_consent"]').click()
+    await clickChoice(page, "q17-deal_access")
+    await clickChoice(page, "marketing_consent")
     await page.getByRole("button", { name: "Review" }).click()
     await page.getByRole("button", { name: "Submit my application" }).click()
     await page.waitForURL(/\/intake-v2\/success/)
