@@ -94,6 +94,7 @@ describe("Phase B QA contracts", () => {
     expect(workflow).toContain("workflow_dispatch:")
     expect(workflow).toContain("deployment_status:")
     expect(workflow).toContain("Preview – renew-overnight-validation-20260820")
+    expect(workflow).toContain("github.event.deployment.environment || github.ref")
     expect(workflow).not.toContain("pull_request_target")
     expect(workflow).toContain("environment: qa-pilot")
     expect(workflow).toContain("contents: read")

@@ -9,7 +9,7 @@ permissions:
   deployments: read
 
 concurrency:
-  group: golden-journeys-${{ github.ref }}
+  group: golden-journeys-${{ github.event.deployment.environment || github.ref }}-${{ github.event.deployment.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
