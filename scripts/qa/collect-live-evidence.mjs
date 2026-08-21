@@ -27,12 +27,20 @@ async function protectedProbe(origin, bypass) {
     if (setCookie) cookie = setCookie.split(";", 1)[0]
   }
   if (!authorized) throw new Error("Live QA evidence failed: protection-response")
+  const authHealth = await fetch(`${origin}/api/auth/get-session`, {
+    headers: {
+      "x-vercel-protection-bypass": bypass,
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    redirect: "manual",
+  })
   const finalOrigin = new URL(authorized.url).origin
   const finalHostname = new URL(finalOrigin).hostname
   return {
     unauthenticatedBlocked: unauthenticated.status >= 300 && unauthenticated.status < 400 && (unauthenticated.headers.get("location") || "").startsWith("https://vercel.com/"),
     authorizedStatus: authorized.status,
     deploymentSha: authorized.headers.get("x-renew-deployment-sha") || "",
+    authHealthy: authHealth.status === 200,
     finalOrigin,
     alias: finalHostname,
   }
@@ -76,14 +84,13 @@ try {
   const storage = storageClient()
 
   const customerUnion = CUSTOMER_TABLES.map((table) => `SELECT '${table}' AS table_name, count(*)::int AS row_count FROM public."${table}"`).join(" UNION ALL ")
-  const [customerResult, betterAuthResult, supabaseAuthResult, storageResult, databaseHealth, restResponse, authResponse, buckets] = await Promise.all([
+  const [customerResult, betterAuthResult, supabaseAuthResult, storageResult, databaseHealth, restResponse, buckets] = await Promise.all([
     database.query(customerUnion),
     database.query('SELECT count(*)::int AS count FROM public."user"'),
     database.query("SELECT count(*)::int AS count FROM auth.users"),
     database.query("SELECT count(*)::int AS count FROM storage.objects"),
     database.query("SELECT 1 AS healthy"),
     fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY } }),
-    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY } }),
     storage.storage.listBuckets(),
   ])
   const [protection, deployment] = await Promise.all([
@@ -98,7 +105,7 @@ try {
       storageRef: refFromSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
       databaseHealthy: databaseHealth.rows[0]?.healthy === 1,
       restHealthy: restResponse.ok,
-      authHealthy: authResponse.ok,
+      authHealthy: protection.authHealthy,
       storageHealthy: !buckets.error,
       customerRows: customerResult.rows.reduce((sum, row) => sum + row.row_count, 0),
       betterAuthUsers: betterAuthResult.rows[0].count,
