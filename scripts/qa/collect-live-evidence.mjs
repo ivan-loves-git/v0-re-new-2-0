@@ -127,6 +127,8 @@ try {
     },
     email: { allowedRecipients: [process.env.QA_EMAIL_RECIPIENT] },
   }
+  const failedHealth = ["database", "rest", "auth", "storage"].filter((name) => !evidence.supabase[`${name}Healthy`])
+  if (failedHealth.length > 0) throw new Error(`Live QA evidence failed: provider-health-${failedHealth.join("-")}`)
   validateLiveEvidence({ expectedRef, expectedOrigin: origin, expectedSha, evidence })
   await writePrivateJson(EVIDENCE_FILE, evidence)
   console.log(JSON.stringify({ ok: true, projectRef: expectedRef, origin, deploymentSha: expectedSha, customerRows: 0, authUsers: 0, storageObjects: 0, unauthenticatedBlocked: true, authorizedStatus: 200 }))

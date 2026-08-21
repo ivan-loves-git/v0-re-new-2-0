@@ -84,14 +84,14 @@ jobs:
       - name: Wait for exact protected deployment and collect live evidence
         shell: bash
         run: |
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 6); do
             if pnpm qa:evidence:collect; then
               exit 0
             fi
-            if [ "$attempt" -eq 30 ]; then
+            if [ "$attempt" -eq 6 ]; then
               exit 1
             fi
-            sleep 20
+            sleep 10
           done
 
       - name: Verify live isolation preflight
