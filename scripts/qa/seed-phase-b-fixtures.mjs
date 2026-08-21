@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+import { randomBytes } from "node:crypto"
+import { chmod, mkdir, writeFile } from "node:fs/promises"
+import { hashPassword } from "better-auth/crypto"
+import { validateIsolationPreflight } from "../../lib/qa/isolation-preflight.mjs"
+import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
+import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, storageClient, writePrivateJson } from "./phase-b-common.mjs"
+
+let database
+try {
+  const [manifest, evidence] = await Promise.all([readJson(MANIFEST_FILE), readJson(EVIDENCE_FILE)])
+  validateIsolationPreflight({ env: process.env, evidence, manifest })
+  validateLiveEvidence({ expectedRef: process.env.QA_SUPABASE_PROJECT_REF, expectedOrigin: new URL(process.env.QA_BROWSER_BASE_URL).origin, expectedSha: process.env.QA_EXPECTED_SHA, evidence })
+
+  database = await databaseClient()
+  const storage = storageClient()
+  const nonEmpty = await database.query(`SELECT
+    (SELECT count(*)::int FROM public.repreneurs) +
+    (SELECT count(*)::int FROM public.opportunities) +
+    (SELECT count(*)::int FROM public.opportunity_matches) +
+    (SELECT count(*)::int FROM public.ma_firms) +
+    (SELECT count(*)::int FROM public.ma_offices) +
+    (SELECT count(*)::int FROM public.ma_contacts) +
+    (SELECT count(*)::int FROM public."user") +
+    (SELECT count(*)::int FROM auth.users) +
+    (SELECT count(*)::int FROM storage.objects) AS count`)
+  if (nonEmpty.rows[0].count !== 0) throw new Error("Phase B fixture seed failed: non-empty-branch")
+
+  const password = randomBytes(24).toString("base64url")
+  const passwordHash = await hashPassword(password)
+  const { actors, ids, fixturePrefix } = manifest
+
+  await database.query("BEGIN")
+  await database.query(`INSERT INTO public.geography_nodes (id, stable_key, code, label, node_level)
+    VALUES ($1, $2, $3, $4, 'country')`, [ids.geography, `qa-${manifest.runId.toLowerCase()}`, manifest.referenceCode, fixturePrefix])
+  await database.query("INSERT INTO public.wave_journey_settings (singleton, enabled, updated_by) VALUES (true, true, $1)", [actors.staff.userId])
+  await database.query(`INSERT INTO public.ma_firms (id, name, status, category, created_by)
+    VALUES ($1, $2, 'active', 'M&A boutique', $3)`, [ids.firm, `${fixturePrefix} firm`, actors.staff.userId])
+  await database.query(`INSERT INTO public.ma_offices (id, firm_id, name, status, is_default, city, created_by)
+    VALUES ($1, $2, $3, 'active', false, 'Paris', $4)`, [ids.office, ids.firm, `${fixturePrefix} office`, actors.staff.userId])
+  await database.query(`INSERT INTO public.ma_contacts (id, first_name, last_name, display_name, status, email, created_by)
+    VALUES ($1, 'Test', 'Contact', $2, 'active', $3, $4)`, [ids.contact, `${fixturePrefix} contact`, process.env.QA_EMAIL_RECIPIENT, actors.staff.userId])
+  await database.query(`INSERT INTO public.ma_contact_office_affiliations (id, contact_id, office_id, job_title, is_active, created_by)
+    VALUES ($1, $2, $3, 'QA contact', true, $4)`, [ids.affiliation, ids.contact, ids.office, actors.staff.userId])
+  await database.query(`INSERT INTO public.repreneurs (
+      id, email, first_name, last_name, lifecycle_status, source, created_by,
+      who_score, when_score, scoring_flags, q12_geo_zones, q13_target_sectors_v2, q14_deal_size
+    ) VALUES ($1, $2, 'Portal', $3, 'lead', 'qa_playwright', $4, 80, 80, '[]'::jsonb, '["all-france"]'::jsonb, '["Tech & Digital"]'::jsonb, '["1-3M"]'::jsonb)`,
+    [ids.portalRepreneur, actors.portal.email, fixturePrefix, actors.staff.userId])
+
+  for (const actor of [actors.staff, actors.portal]) {
+    await database.query(`INSERT INTO public."user" (id, name, email, "emailVerified") VALUES ($1, $2, $3, true)`, [actor.userId, `${fixturePrefix} ${actor === actors.staff ? "staff" : "portal"}`, actor.email])
+  }
+  await database.query(`INSERT INTO public."account" (id, "userId", "accountId", "providerId", password)
+    VALUES ($1, $2, $3, 'credential', $4), ($5, $6, $7, 'credential', $4)`, [ids.staffAccount, actors.staff.userId, actors.staff.email, passwordHash, ids.portalAccount, actors.portal.userId, actors.portal.email])
+  await database.query(`INSERT INTO public.app_user_roles (id, user_id, email, role, repreneur_id, access_enabled_at)
+    VALUES ($1, $2, $3, 'staff', NULL, now()), ($4, $5, $6, 'repreneur', $7, now())`, [ids.staffRole, actors.staff.userId, actors.staff.email, ids.portalRole, actors.portal.userId, actors.portal.email, ids.portalRepreneur])
+  await database.query("COMMIT")
+
+  await mkdir(RUN_DIR, { recursive: true })
+  const pdf = Buffer.from(`%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 100]/Contents 4 0 R>>endobj\n4 0 obj<</Length ${fixturePrefix.length + 24}>>stream\nBT /F1 12 Tf 20 50 Td (${fixturePrefix}) Tj ET\nendstream endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n`)
+  const pdfPath = `${RUN_DIR}/pilot.pdf`
+  await writeFile(pdfPath, pdf, { mode: 0o600 })
+  await chmod(pdfPath, 0o600)
+  const { error: uploadError } = await storage.storage.from("cvs").upload(manifest.storageObjects[0], pdf, { contentType: "application/pdf", upsert: false })
+  if (uploadError) throw new Error("Phase B fixture seed failed: storage-upload")
+
+  await writePrivateJson(CREDENTIALS_FILE, { password, staffEmail: actors.staff.email, portalEmail: actors.portal.email })
+  console.log(JSON.stringify({ ok: true, runId: manifest.runId, fixturePrefix, databaseRows: manifest.databaseRows.length, identities: 2, storageObjects: 1 }))
+} catch (error) {
+  if (database) await database.query("ROLLBACK").catch(() => {})
+  console.error(error instanceof Error && (error.message.startsWith("Phase B fixture seed failed:") || error.message.startsWith("Isolation preflight failed:") || error.message.startsWith("Live QA evidence failed:")) ? error.message : "Phase B fixture seed failed: unknown")
+  process.exitCode = 1
+} finally {
+  await database?.end().catch(() => {})
+}
