@@ -230,7 +230,7 @@ test.describe.serial("Golden journeys", () => {
 
     await portalOne.goto(`/portal/deals/${matchId}`)
     await portalOne.reload()
-    await expect(portalOne.getByText("Active pursuit", { exact: true })).toBeVisible()
+    await expect(portalOne.getByText("Active pursuit", { exact: true }).first()).toBeVisible()
     await page.goto(`/opportunities/${opportunityId}?tab=recommendations`)
     await page.reload()
     await expect(page.getByText("Active pursuit", { exact: true }).first()).toBeVisible()
