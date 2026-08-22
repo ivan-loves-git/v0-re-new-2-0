@@ -1,11 +1,12 @@
 import { execFileSync, spawnSync } from "node:child_process"
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { copyFileSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { afterEach, describe, expect, it } from "vitest"
 
 const roots: string[] = []
 const sanitizer = join(process.cwd(), "scripts/qa/sanitize-phase-b-artifacts.mjs")
+const generatedTraceFixture = join(process.cwd(), "lib/__tests__/fixtures/playwright-generated-trace")
 
 function temporaryRunDirectory() {
   const root = mkdtempSync(join(tmpdir(), "renew-trace-sanitize-"))
@@ -24,6 +25,28 @@ function writeTraceArchive(root: string, runDirectory: string, lines: unknown[])
   )
   const archive = join(runDirectory, "trace.zip")
   execFileSync("zip", ["-q", archive, "trace.trace"], { cwd: sourceDirectory })
+  return archive
+}
+
+function writeMultiTraceArchive(
+  root: string,
+  runDirectory: string,
+  members: Array<{ path: string; lines: unknown[] }>,
+) {
+  const sourceDirectory = join(root, "multi-source")
+  mkdirSync(sourceDirectory)
+  for (const member of members) {
+    const memberPath = join(sourceDirectory, member.path)
+    mkdirSync(join(memberPath, ".."), { recursive: true })
+    writeFileSync(
+      memberPath,
+      `${member.lines.map((line) => typeof line === "string" ? line : JSON.stringify(line)).join("\n")}\n`,
+    )
+  }
+  const archive = join(runDirectory, "multi-trace.zip")
+  execFileSync("zip", ["-q", archive, ...members.map((member) => member.path)], {
+    cwd: sourceDirectory,
+  })
   return archive
 }
 
@@ -47,11 +70,98 @@ function runSanitizer(
   })
 }
 
+function findTraceArchive(directory: string): string | undefined {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) {
+      const nested = findTraceArchive(path)
+      if (nested) return nested
+    } else if (entry.name === "trace.zip") {
+      return path
+    }
+  }
+  return undefined
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
 })
 
 describe("sanitized Playwright trace evidence", () => {
+  it("retains deterministic segment and action order for a multi-member trace archive", () => {
+    const { root, runDirectory } = temporaryRunDirectory()
+    const archive = writeMultiTraceArchive(root, runDirectory, [
+      {
+        path: "context-b/trace.trace",
+        lines: [
+          { type: "before", callId: "b-1", startTime: 30, apiName: "page.fill", params: { value: "private" } },
+          { type: "after", callId: "b-1", endTime: 35 },
+        ],
+      },
+      {
+        path: "context-a/trace.trace",
+        lines: [
+          { type: "before", callId: "a-1", startTime: 10, apiName: "page.goto", params: { url: "https://secret.invalid/?token=private" } },
+          { type: "after", callId: "a-1", endTime: 15 },
+          { type: "before", callId: "a-2", startTime: 20, apiName: "locator.click" },
+          { type: "after", callId: "a-2", endTime: 25 },
+        ],
+      },
+    ])
+
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status, result.stderr).toBe(0)
+    expect(() => readFileSync(archive)).toThrow()
+    const actionsText = readFileSync(join(runDirectory, "sanitized-trace-actions.json"), "utf8")
+    expect(actionsText).not.toMatch(/private|secret\.invalid|params|url|token/i)
+    const evidence = JSON.parse(actionsText)
+    expect(evidence.schemaVersion).toBe(2)
+    expect(evidence.traces[0].traceId).toBe("trace-001")
+    expect(evidence.traces[0].segments.map((segment: { segmentId: string }) => segment.segmentId)).toEqual([
+      "trace-001-segment-001",
+      "trace-001-segment-002",
+    ])
+    expect(evidence.traces[0].segments.map((segment: { actions: Array<{ action: string }> }) => (
+      segment.actions.map((action) => action.action)
+    ))).toEqual([["page.fill"], ["page.goto", "locator.click"]])
+  })
+
+  it("sanitizes an actual Playwright 1.62 multi-context retry trace", () => {
+    const { root, runDirectory } = temporaryRunDirectory()
+    const generatedOutput = join(root, "playwright-output")
+    const playwrightResult = spawnSync(
+      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+      ["exec", "playwright", "test", "--config", join(generatedTraceFixture, "playwright.config.ts")],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: { ...process.env, PW_TRACE_FIXTURE_OUTPUT: generatedOutput },
+      },
+    )
+    expect(playwrightResult.status).toBe(1)
+    const generatedArchive = findTraceArchive(generatedOutput)
+    expect(generatedArchive).toBeDefined()
+    const members = execFileSync("unzip", ["-Z1", generatedArchive!], { encoding: "utf8" })
+      .split(/\r?\n/)
+      .filter((entry) => entry.endsWith("trace.trace"))
+    expect(members).toEqual(["1-trace.trace", "0-trace.trace"])
+
+    const archive = join(runDirectory, "playwright-1.62-trace.zip")
+    copyFileSync(generatedArchive!, archive)
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status, result.stderr).toBe(0)
+    expect(() => readFileSync(archive)).toThrow()
+    const actionsText = readFileSync(join(runDirectory, "sanitized-trace-actions.json"), "utf8")
+    expect(actionsText).not.toMatch(/https?:|cookie|header|network|storage.?state|params|payload|button/i)
+    const evidence = JSON.parse(actionsText)
+    expect(evidence.schemaVersion).toBe(2)
+    expect(evidence.traces).toHaveLength(1)
+    expect(evidence.traces[0].segments).toHaveLength(2)
+    expect(evidence.traces[0].segments.every((segment: { actions: unknown[] }) => segment.actions.length > 0)).toBe(true)
+  }, 30_000)
+
   it("retains safe action order while excluding secrets, cookies, URLs, params, and network data", () => {
     const { root, runDirectory } = temporaryRunDirectory()
     const secret = "runner-secret-value-123"
@@ -136,11 +246,13 @@ describe("sanitized Playwright trace evidence", () => {
 
     const evidence = JSON.parse(actionsText)
     expect(evidence).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       traces: [
         {
           traceId: "trace-001",
-          actions: [
+          segments: [{
+            segmentId: "trace-001-segment-001",
+            actions: [
             {
               order: 1,
               action: "Frame.goto",
@@ -170,7 +282,8 @@ describe("sanitized Playwright trace evidence", () => {
                 message: "Action failed",
               },
             },
-          ],
+            ],
+          }],
         },
       ],
     })
@@ -178,6 +291,7 @@ describe("sanitized Playwright trace evidence", () => {
     expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-traces.json"), "utf8"))).toMatchObject({
       rawTraceArchivesRemoved: 1,
       sanitizedActionTracesRetained: 1,
+      sanitizedActionSegmentsRetained: 1,
       sanitizedActionTraceFile: "sanitized-trace-actions.json",
       networkPayloadsRetained: false,
       sessionStateRetained: false,
@@ -188,6 +302,59 @@ describe("sanitized Playwright trace evidence", () => {
     const { runDirectory } = temporaryRunDirectory()
     const archive = join(runDirectory, "trace.zip")
     writeFileSync(archive, "not-a-zip")
+
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain("Artifact sanitization failed: trace-extraction")
+    expect(() => readFileSync(archive)).toThrow()
+    expect(() => readFileSync(join(runDirectory, "sanitized-trace-actions.json"))).toThrow()
+    expect(() => readFileSync(join(runDirectory, "sanitized-traces.json"))).toThrow()
+  })
+
+  it("fails closed without partial evidence when any trace member is malformed", () => {
+    const { root, runDirectory } = temporaryRunDirectory()
+    const archive = writeMultiTraceArchive(root, runDirectory, [
+      {
+        path: "valid/trace.trace",
+        lines: [
+          { type: "before", callId: "valid-1", startTime: 10, apiName: "page.goto" },
+          { type: "after", callId: "valid-1", endTime: 15 },
+        ],
+      },
+      {
+        path: "malformed/trace.trace",
+        lines: [{ type: "before", callId: "dangling-1", startTime: 20, apiName: "locator.click" }],
+      },
+    ])
+
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain("Artifact sanitization failed: trace-extraction")
+    expect(() => readFileSync(archive)).toThrow()
+    expect(() => readFileSync(join(runDirectory, "sanitized-trace-actions.json"))).toThrow()
+    expect(() => readFileSync(join(runDirectory, "sanitized-traces.json"))).toThrow()
+  })
+
+  it("fails closed rather than silently discarding an unsafe trace member name", () => {
+    const { root, runDirectory } = temporaryRunDirectory()
+    const archive = writeMultiTraceArchive(root, runDirectory, [
+      {
+        path: "trace.trace",
+        lines: [
+          { type: "before", callId: "valid-1", startTime: 10, apiName: "page.goto" },
+          { type: "after", callId: "valid-1", endTime: 15 },
+        ],
+      },
+      {
+        path: "unexpected-trace.trace",
+        lines: [
+          { type: "before", callId: "unsafe-1", startTime: 20, apiName: "locator.click" },
+          { type: "after", callId: "unsafe-1", endTime: 25 },
+        ],
+      },
+    ])
 
     const result = runSanitizer(runDirectory)
 
@@ -218,12 +385,13 @@ describe("sanitized Playwright trace evidence", () => {
 
     expect(result.status, result.stderr).toBe(0)
     expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-trace-actions.json"), "utf8"))).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       traces: [],
     })
     expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-traces.json"), "utf8"))).toMatchObject({
       rawTraceArchivesRemoved: 0,
       sanitizedActionTracesRetained: 0,
+      sanitizedActionSegmentsRetained: 0,
     })
   })
 })
