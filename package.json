@@ -14,6 +14,7 @@
     "dev": "next dev",
     "lint": "pnpm data-model:check && eslint .",
     "qa:browser": "playwright test",
+    "qa:browser:clean-run": "node scripts/qa/verify-playwright-clean-run.mjs",
     "qa:artifacts:sanitize": "node scripts/qa/sanitize-phase-b-artifacts.mjs",
     "qa:evidence:collect": "node scripts/qa/collect-live-evidence.mjs",
     "qa:fixture:cleanup": "node scripts/qa/cleanup-phase-b.mjs",
