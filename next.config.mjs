@@ -1,7 +1,7 @@
 import { execFileSync } from "child_process"
 import { RELEASE_BUILD_NUMBER } from "./lib/release-build.mjs"
 import qaContract from "./supabase/qa-contract.json" with { type: "json" }
-import { assertProtectedQaBuildEnv } from "./lib/qa/protected-build.mjs"
+import { assertQaBuildEnv } from "./lib/qa/protected-build.mjs"
 
 // The release number is committed so shallow Vercel checkouts cannot turn it
 // into their local history depth. The short hash remains build provenance.
@@ -18,9 +18,7 @@ const qaDatabaseRef = (() => {
       || "invalid"
   } catch { return "invalid" }
 })()
-const protectedQa = process.env.QA_CONTRACT_MODE === "protected"
-  ? assertProtectedQaBuildEnv(process.env)
-  : null
+const protectedQa = assertQaBuildEnv(process.env)
 
 try {
   const gitOptions = { timeout: 300, encoding: "utf8" }
