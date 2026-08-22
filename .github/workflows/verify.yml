@@ -46,5 +46,8 @@ jobs:
         continue-on-error: true
         run: pnpm audit --prod
 
+      - name: Install Chromium for generated trace verification
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Run repository verification
         run: pnpm verify

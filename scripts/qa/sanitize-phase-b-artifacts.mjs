@@ -93,6 +93,7 @@ function parseTraceActions(text) {
     actions.push(action)
     calls.delete(record.callId)
   }
+  if (calls.size > 0) throw new Error("unpaired-action")
   return actions
 }
 
@@ -101,15 +102,28 @@ async function extractTrace(archive, index) {
     encoding: "utf8",
     maxBuffer: 1024 * 1024,
   })
-  const entries = listing.split(/\r?\n/).filter((entry) => basename(entry) === "trace.trace")
-  if (entries.length !== 1) throw new Error("missing-trace-log")
-  const { stdout } = await execFile("unzip", ["-p", archive, entries[0]], {
-    encoding: "utf8",
-    maxBuffer: 16 * 1024 * 1024,
-  })
+  const listedEntries = listing.split(/\r?\n/).filter(Boolean)
+  const traceCandidates = listedEntries.filter((entry) => basename(entry).endsWith("trace.trace"))
+  if (traceCandidates.some((entry) => !/^(?:\d+-)?trace\.trace$/.test(basename(entry)))) {
+    throw new Error("unsafe-trace-log-name")
+  }
+  const entries = traceCandidates
+  if (entries.length === 0) throw new Error("missing-trace-log")
+  if (new Set(entries).size !== entries.length) throw new Error("duplicate-trace-log")
+  const traceId = `trace-${String(index + 1).padStart(3, "0")}`
+  const segments = await Promise.all(entries.map(async (entry, segmentIndex) => {
+    const { stdout } = await execFile("unzip", ["-p", archive, entry], {
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+    })
+    return {
+      segmentId: `${traceId}-segment-${String(segmentIndex + 1).padStart(3, "0")}`,
+      actions: parseTraceActions(stdout),
+    }
+  }))
   return {
-    traceId: `trace-${String(index + 1).padStart(3, "0")}`,
-    actions: parseTraceActions(stdout),
+    traceId,
+    segments,
   }
 }
 
@@ -130,7 +144,7 @@ try {
   throw new Error("Artifact sanitization failed: trace-extraction")
 }
 await Promise.all(traceArchives.map((archive) => rm(archive, { force: true })))
-const traceEvidence = { schemaVersion: 1, traces }
+const traceEvidence = { schemaVersion: 2, traces }
 const serializedTraceEvidence = JSON.stringify(traceEvidence)
 if (
   sensitiveValues.some((secret) => serializedTraceEvidence.includes(secret)) ||
@@ -143,6 +157,7 @@ await writePrivateJson(TRACE_ACTIONS_FILE, traceEvidence)
 await writePrivateJson(TRACE_SUMMARY_FILE, {
   rawTraceArchivesRemoved: traceArchives.length,
   sanitizedActionTracesRetained: traces.length,
+  sanitizedActionSegmentsRetained: traces.reduce((count, trace) => count + trace.segments.length, 0),
   sanitizedActionTraceFile: "sanitized-trace-actions.json",
   networkPayloadsRetained: false,
   sessionStateRetained: false,
