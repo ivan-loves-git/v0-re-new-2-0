@@ -18,6 +18,7 @@ try {
   validateLiveEvidence({ expectedRef: process.env.QA_SUPABASE_PROJECT_REF, expectedOrigin: new URL(process.env.QA_BROWSER_BASE_URL).origin, expectedSha: process.env.QA_EXPECTED_SHA, evidence })
 
   database = await databaseClient()
+  await database.query("NOTIFY pgrst, 'reload schema'")
   const storage = storageClient()
   const nonEmpty = await database.query(`SELECT
     (SELECT count(*)::int FROM public.repreneurs) +

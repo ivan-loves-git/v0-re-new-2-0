@@ -92,6 +92,7 @@ describe("Phase B QA contracts", () => {
 
   it("rehearses the exact active-opportunity RPC inside a rollback-only savepoint", () => {
     const seedScript = readFileSync(`${process.cwd()}/scripts/qa/seed-phase-b-fixtures.mjs`, "utf8")
+    expect(seedScript).toContain('NOTIFY pgrst, \'reload schema\'')
     expect(seedScript).toContain("SAVEPOINT phase_b_opportunity_probe")
     expect(seedScript).toContain("create_opportunity_with_office_context")
     expect(seedScript).toContain('      "",\n      ids.office,')
