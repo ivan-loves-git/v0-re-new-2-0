@@ -9,8 +9,10 @@ import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient
 function safeDatabaseToken(error) {
   const constraint = String(error?.constraint ?? "").replace(/[^a-z0-9_]/gi, "_")
   if (constraint) return `constraint_${constraint}`
+  const code = String(error?.code ?? "").replace(/[^a-z0-9_]/gi, "_")
+  if (code) return `postgres_${code}`
   const tokens = String(error?.message ?? "").match(/[a-z][a-z0-9_]{4,}/g) ?? []
-  return tokens.find((token) => token.startsWith("opportunity_") || token.startsWith("ma_")) ?? `postgres_${String(error?.code ?? "unknown").replace(/[^a-z0-9_]/gi, "_")}`
+  return tokens.find((token) => token.startsWith("opportunity_") || token.startsWith("ma_")) ?? "postgres_unknown"
 }
 
 let database
