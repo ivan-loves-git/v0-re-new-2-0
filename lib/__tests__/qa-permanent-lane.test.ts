@@ -32,6 +32,22 @@ function expectedGoldenConcurrencyGroup(event: GoldenWorkflowEvent) {
 }
 
 describe("permanent QA lane contract", () => {
+  it("pins the published v2 fingerprint and five immutable schema inputs", () => {
+    const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
+
+    expect(contract).toEqual({
+      version: "771-permanent-qa-v2",
+      structureFingerprint: "f985a15b194b23b4a06787c41907b15fadea4f4e845caa7d76dcb802831bcf10",
+      files: [
+        { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
+        { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
+        { path: "supabase/schema/permanent_qa_rebuild.sql", sha256: "20565af77093399b6b8ebc7e27ebc78e778faf9df802b702b7d86eea9f323291" },
+        { path: "supabase/schema/771_public_schema.sql", sha256: "593d9d2b813c9047568dd5d863e2d4644a18493cff0e63142518fcfeb554788b" },
+        { path: "supabase/schema/771_test_storage.sql", sha256: "55a91d3c3db75e6ea9d0d55f3d0165bb087e83451174147c58a7c951dc91e8b4" },
+      ],
+    })
+  })
+
   it("accepts only the stable protected qa alias and exact deployed identity", () => {
     const origin = stableQaOrigin()
     expect(origin).toBe("https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app")
