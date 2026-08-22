@@ -14,7 +14,16 @@ concurrency:
 
 jobs:
   pilot:
-    name: P1-P3 protected pilot
+    name: >-
+      ${{
+        (github.event_name == 'workflow_dispatch' ||
+         (github.event_name == 'deployment_status' &&
+          github.event.deployment_status.state == 'success' &&
+          github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' &&
+          github.event.deployment.creator.login == 'vercel[bot]')) &&
+        'P1-P3 protected pilot' ||
+        'Ignore unrelated deployment'
+      }}
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'deployment_status' &&
