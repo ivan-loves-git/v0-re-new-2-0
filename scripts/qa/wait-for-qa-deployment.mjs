@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 import { appendFile } from "node:fs/promises"
+import {
+  findPostLaneVercelSuccess,
+  findQaValidationDeployment,
+} from "../../lib/qa/deployment-status.mjs"
 
 const repository = process.env.GITHUB_REPOSITORY
 const sha = process.env.QA_EXPECTED_SHA
@@ -20,10 +24,10 @@ try {
   if (!Number.isFinite(laneMovedAt)) throw new Error("QA deployment wait failed: lane-timestamp")
   while (Date.now() < deadline) {
     const deployments = await github(`/deployments?sha=${sha}&per_page=20`)
-    const deployment = deployments.find((item) => item.sha === sha && item.environment === expectedEnvironment && item.creator?.login === "vercel[bot]" && item.production_environment === false && Date.parse(item.created_at) >= laneMovedAt)
+    const deployment = findQaValidationDeployment(deployments, sha, expectedEnvironment)
     if (deployment) {
       const statuses = await github(`/deployments/${deployment.id}/statuses?per_page=20`)
-      const ready = statuses.find((item) => item.state === "success" && item.creator?.login === "vercel[bot]")
+      const ready = findPostLaneVercelSuccess(statuses, laneMovedAt)
       if (ready) {
         const output = {
           deploymentId: deployment.id,
