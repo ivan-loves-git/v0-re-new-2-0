@@ -96,7 +96,9 @@ describe("Phase B QA contracts", () => {
   it("rehearses the exact active-opportunity RPC inside a rollback-only savepoint", () => {
     const seedScript = readFileSync(`${process.cwd()}/scripts/qa/seed-phase-b-fixtures.mjs`, "utf8")
     expect(seedScript).toContain("pg_get_functiondef")
-    expect(seedScript).toContain("ENABLE TRIGGER guard_ma_provisional_acme_firm_identity")
+    const commonScript = readFileSync(`${process.cwd()}/scripts/qa/phase-b-common.mjs`, "utf8")
+    expect(commonScript).toContain("guard_ma_provisional_acme_firm_identity")
+    expect(seedScript).toContain("setProvisionalIdentityTriggers(database, true)")
     expect(seedScript).toContain('NOTIFY pgrst, \'reload schema\'')
     expect(seedScript).toContain("SAVEPOINT phase_b_opportunity_probe")
     expect(seedScript).toContain("create_opportunity_with_office_context")
