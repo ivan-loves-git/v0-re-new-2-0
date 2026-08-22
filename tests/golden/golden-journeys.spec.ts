@@ -181,7 +181,6 @@ test.describe.serial("Golden journeys", () => {
       source_office_id: manifest.ids.office,
       affiliation_ids: manifest.ids.affiliation,
       primary_affiliation_id: manifest.ids.affiliation,
-      sector: "Tech & Digital",
       location: "Paris",
     })
     await page.getByRole("button", { name: "Create opportunity" }).click()
