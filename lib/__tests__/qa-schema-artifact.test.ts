@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   inspectSchemaArtifact,
@@ -88,5 +89,12 @@ describe("row-free schema artifact inspection", () => {
     expect(result.ok).toBe(false)
     expect(result.findings).toContain("missing-rls")
     expect(result.findings).toContain("missing-grants")
+  })
+
+  it("preserves LOWER comparison semantics when identity literals are sanitized", () => {
+    const schema = readFileSync(`${process.cwd()}/supabase/schema/771_public_schema.sql`, "utf8")
+    const sanitizer = readFileSync(`${process.cwd()}/scripts/qa/sanitize-schema-artifact.mjs`, "utf8")
+    expect(schema).not.toMatch(/LOWER\([^\n]+\)\s+(?:=|IS DISTINCT FROM)\s+'TEST-schema-redacted/)
+    expect(sanitizer).toContain("placeholder.toLowerCase()")
   })
 })

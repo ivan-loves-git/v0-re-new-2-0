@@ -22,6 +22,9 @@ describe("Phase B QA contracts", () => {
     expect(first.actors.staff.email).toBe(first.actors.staff.email.toLowerCase())
     expect(first.actors.portal.email).toBe(first.actors.portal.email.toLowerCase())
     expect(first.storageObjects).toEqual([`${first.fixturePrefix}/fixtures/pilot.pdf`])
+    expect(first.ids.provisionalFirm).toMatch(/^[0-9a-f-]{36}$/)
+    expect(first.ids.provisionalContextContact).toMatch(/^[0-9a-f-]{36}$/)
+    expect(first.databaseRows.some((row: { id: string }) => row.id === first.ids.provisionalContext)).toBe(true)
   })
 
   it("accepts only live zero-state evidence from the exact protected deployment SHA", () => {
@@ -92,6 +95,8 @@ describe("Phase B QA contracts", () => {
 
   it("rehearses the exact active-opportunity RPC inside a rollback-only savepoint", () => {
     const seedScript = readFileSync(`${process.cwd()}/scripts/qa/seed-phase-b-fixtures.mjs`, "utf8")
+    expect(seedScript).toContain("pg_get_functiondef")
+    expect(seedScript).toContain("ENABLE TRIGGER guard_ma_provisional_acme_firm_identity")
     expect(seedScript).toContain('NOTIFY pgrst, \'reload schema\'')
     expect(seedScript).toContain("SAVEPOINT phase_b_opportunity_probe")
     expect(seedScript).toContain("create_opportunity_with_office_context")

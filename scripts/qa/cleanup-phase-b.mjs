@@ -7,6 +7,7 @@ try {
   database = await databaseClient()
   const storage = storageClient()
   const runtime = await readJson(RUNTIME_FIXTURES_FILE).catch(() => ({}))
+  const authIdentityIds = [...manifest.betterAuthIdentities, manifest.ids.provisionalContextUser]
   const recordedRepreneurIds = [runtime.p1RepreneurId, runtime.p2RepreneurId, manifest.ids.portalRepreneur].filter(Boolean)
   let scopedRepreneurs = await database.query("SELECT id, email, source, cv_url FROM public.repreneurs WHERE id = ANY($1::uuid[])", [recordedRepreneurIds])
   if (!runtime.p1RepreneurId || !runtime.p2RepreneurId) {
@@ -55,6 +56,21 @@ try {
     await database.query("DELETE FROM public.opportunities WHERE id = ANY($1::uuid[])", [opportunityIds])
   }
   await database.query("DELETE FROM public.repreneurs WHERE id = ANY($1::uuid[])", [repreneurIds])
+  await database.query('ALTER TABLE public.ma_provisional_source_contexts DISABLE TRIGGER guard_ma_provisional_source_context_identity')
+  await database.query('ALTER TABLE public.ma_contact_office_affiliations DISABLE TRIGGER guard_ma_provisional_qa_person_affiliation_identity')
+  await database.query('ALTER TABLE public.ma_contacts DISABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
+  await database.query('ALTER TABLE public.ma_offices DISABLE TRIGGER guard_ma_provisional_acme_office_identity')
+  await database.query('ALTER TABLE public.ma_firms DISABLE TRIGGER guard_ma_provisional_acme_firm_identity')
+  await database.query("DELETE FROM public.ma_provisional_source_contexts WHERE context_key=$1", [manifest.ids.provisionalContext])
+  await database.query("DELETE FROM public.ma_contact_office_affiliations WHERE id=$1", [manifest.ids.provisionalAffiliation])
+  await database.query("DELETE FROM public.ma_contacts WHERE id = ANY($1::uuid[])", [[manifest.ids.provisionalCountContact, manifest.ids.provisionalContextContact]])
+  await database.query("DELETE FROM public.ma_offices WHERE id=$1", [manifest.ids.provisionalOffice])
+  await database.query("DELETE FROM public.ma_firms WHERE id=$1", [manifest.ids.provisionalFirm])
+  await database.query('ALTER TABLE public.ma_firms ENABLE TRIGGER guard_ma_provisional_acme_firm_identity')
+  await database.query('ALTER TABLE public.ma_offices ENABLE TRIGGER guard_ma_provisional_acme_office_identity')
+  await database.query('ALTER TABLE public.ma_contacts ENABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
+  await database.query('ALTER TABLE public.ma_contact_office_affiliations ENABLE TRIGGER guard_ma_provisional_qa_person_affiliation_identity')
+  await database.query('ALTER TABLE public.ma_provisional_source_contexts ENABLE TRIGGER guard_ma_provisional_source_context_identity')
   await database.query("DELETE FROM public.ma_contact_office_affiliations WHERE id=$1", [manifest.ids.affiliation])
   await database.query("DELETE FROM public.ma_contacts WHERE id=$1", [manifest.ids.contact])
   await database.query("DELETE FROM public.ma_offices WHERE id=$1", [manifest.ids.office])
@@ -62,19 +78,19 @@ try {
   await database.query("DELETE FROM public.opportunity_mandate_reference_counters WHERE reference_code=$1", [manifest.referenceCode])
   await database.query("DELETE FROM public.geography_nodes WHERE id=$1", [manifest.ids.geography])
   await database.query("DELETE FROM public.wave_journey_settings WHERE singleton=true AND updated_by=$1", [manifest.actors.staff.userId])
-  await database.query("DELETE FROM public.app_user_roles WHERE user_id = ANY($1::text[])", [manifest.betterAuthIdentities])
-  await database.query('DELETE FROM public."session" WHERE "userId" = ANY($1::text[])', [manifest.betterAuthIdentities])
-  await database.query('DELETE FROM public."account" WHERE "userId" = ANY($1::text[])', [manifest.betterAuthIdentities])
-  await database.query('DELETE FROM public."user" WHERE id = ANY($1::text[])', [manifest.betterAuthIdentities])
+  await database.query("DELETE FROM public.app_user_roles WHERE user_id = ANY($1::text[])", [authIdentityIds])
+  await database.query('DELETE FROM public."session" WHERE "userId" = ANY($1::text[])', [authIdentityIds])
+  await database.query('DELETE FROM public."account" WHERE "userId" = ANY($1::text[])', [authIdentityIds])
+  await database.query('DELETE FROM public."user" WHERE id = ANY($1::text[])', [authIdentityIds])
   await database.query("COMMIT")
 
   const residue = await database.query(`SELECT
     (SELECT count(*)::int FROM public.repreneurs WHERE id = ANY($1::uuid[])) AS repreneurs,
     (SELECT count(*)::int FROM public.opportunities WHERE id = ANY($2::uuid[])) AS opportunities,
     (SELECT count(*)::int FROM public.opportunity_matches WHERE id = ANY($3::uuid[])) + (SELECT count(*)::int FROM public.opportunity_pursuit_evidence WHERE id = ANY($4::uuid[])) AS journey_rows,
-    (SELECT count(*)::int FROM public.ma_firms WHERE id=$5) + (SELECT count(*)::int FROM public.ma_offices WHERE id=$6) + (SELECT count(*)::int FROM public.ma_contacts WHERE id=$7) + (SELECT count(*)::int FROM public.ma_contact_office_affiliations WHERE id=$8) + (SELECT count(*)::int FROM public.wave_journey_settings WHERE singleton=true AND updated_by=$9) AS ma_rows,
-    (SELECT count(*)::int FROM public."user" WHERE id = ANY($10::text[])) + (SELECT count(*)::int FROM public."account" WHERE "userId" = ANY($10::text[])) + (SELECT count(*)::int FROM public."session" WHERE "userId" = ANY($10::text[])) AS auth_rows,
-    (SELECT count(*)::int FROM storage.objects WHERE bucket_id='cvs' AND name = ANY($11::text[])) AS storage_objects`, [repreneurIds, opportunityIds, matchIds, evidenceIds, manifest.ids.firm, manifest.ids.office, manifest.ids.contact, manifest.ids.affiliation, manifest.actors.staff.userId, manifest.betterAuthIdentities, objectNames])
+    (SELECT count(*)::int FROM public.ma_firms WHERE id = ANY($5::uuid[])) + (SELECT count(*)::int FROM public.ma_offices WHERE id = ANY($6::uuid[])) + (SELECT count(*)::int FROM public.ma_contacts WHERE id = ANY($7::uuid[])) + (SELECT count(*)::int FROM public.ma_contact_office_affiliations WHERE id = ANY($8::uuid[])) + (SELECT count(*)::int FROM public.ma_provisional_source_contexts WHERE context_key=$9) + (SELECT count(*)::int FROM public.wave_journey_settings WHERE singleton=true AND updated_by=$10) AS ma_rows,
+    (SELECT count(*)::int FROM public."user" WHERE id = ANY($11::text[])) + (SELECT count(*)::int FROM public."account" WHERE "userId" = ANY($11::text[])) + (SELECT count(*)::int FROM public."session" WHERE "userId" = ANY($11::text[])) + (SELECT count(*)::int FROM public.app_user_roles WHERE user_id = ANY($11::text[])) AS auth_rows,
+    (SELECT count(*)::int FROM storage.objects WHERE bucket_id='cvs' AND name = ANY($12::text[])) AS storage_objects`, [repreneurIds, opportunityIds, matchIds, evidenceIds, [manifest.ids.firm, manifest.ids.provisionalFirm], [manifest.ids.office, manifest.ids.provisionalOffice], [manifest.ids.contact, manifest.ids.provisionalCountContact, manifest.ids.provisionalContextContact], [manifest.ids.affiliation, manifest.ids.provisionalAffiliation], manifest.ids.provisionalContext, manifest.actors.staff.userId, authIdentityIds, objectNames])
   const values = residue.rows[0]
   const total = Object.values(values).reduce((sum, value) => sum + Number(value), 0)
   if (total !== 0) throw new Error("Phase B cleanup failed: residue")
