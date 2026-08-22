@@ -126,6 +126,7 @@ describe("Phase B QA contracts", () => {
 
   it("keeps the advisory workflow private and cleans before artifacts", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const packageJson = JSON.parse(readFileSync(`${process.cwd()}/package.json`, "utf8"))
     expect(workflow).toContain("name: Golden journeys")
     expect(workflow).toContain("workflow_dispatch:")
     expect(workflow).toContain("deployment_status:")
@@ -135,6 +136,9 @@ describe("Phase B QA contracts", () => {
     expect(workflow).toContain("environment: qa-pilot")
     expect(workflow).toContain("contents: read")
     expect(workflow).not.toContain("id-token: write")
+    expect(packageJson.scripts["qa:browser:clean-run"]).toBe("node scripts/qa/verify-playwright-clean-run.mjs")
+    expect(workflow.indexOf("Run P1-P3 in protected Chromium")).toBeLessThan(workflow.indexOf("Enforce first-attempt P1-P3 evidence"))
+    expect(workflow.indexOf("Enforce first-attempt P1-P3 evidence")).toBeLessThan(workflow.indexOf("Read back exact persisted acceptance state"))
     expect(workflow.indexOf("Cleanup exact fixtures")).toBeLessThan(workflow.indexOf("Upload sanitized evidence"))
     expect(workflow).toContain("retention-days: 1")
   })

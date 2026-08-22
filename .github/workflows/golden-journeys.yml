@@ -108,6 +108,9 @@ jobs:
       - name: Run P1-P3 in protected Chromium
         run: pnpm qa:browser
 
+      - name: Enforce first-attempt P1-P3 evidence
+        run: pnpm qa:browser:clean-run
+
       - name: Read back exact persisted acceptance state
         run: pnpm qa:fixture:readback
 
