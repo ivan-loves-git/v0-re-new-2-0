@@ -1,10 +1,22 @@
 import { execFileSync } from "child_process"
 import { RELEASE_BUILD_NUMBER } from "./lib/release-build.mjs"
+import qaContract from "./supabase/qa-contract.json" with { type: "json" }
 
 // The release number is committed so shallow Vercel checkouts cannot turn it
 // into their local history depth. The short hash remains build provenance.
 let gitCommitHash = "dev"
 let gitCommitSha = process.env.VERCEL_GIT_COMMIT_SHA || "dev"
+const qaApiRef = (() => {
+  try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || "").hostname.match(/^([a-z0-9]{20})\.supabase\.co$/)?.[1] || "invalid" } catch { return "invalid" }
+})()
+const qaDatabaseRef = (() => {
+  try {
+    const database = new URL(process.env.DATABASE_URL || "")
+    return database.hostname.match(/^db\.([a-z0-9]{20})\.supabase\.co$/)?.[1]
+      || decodeURIComponent(database.username).match(/^postgres\.([a-z0-9]{20})$/)?.[1]
+      || "invalid"
+  } catch { return "invalid" }
+})()
 
 try {
   const gitOptions = { timeout: 300, encoding: "utf8" }
@@ -38,10 +50,22 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
   },
   async headers() {
+    const qaHeaders = process.env.QA_CONTRACT_MODE === "protected"
+      ? [
+          { key: "x-renew-qa-ref", value: process.env.QA_SUPABASE_PROJECT_REF || "invalid" },
+          { key: "x-renew-qa-api-ref", value: qaApiRef },
+          { key: "x-renew-qa-database-ref", value: qaDatabaseRef },
+          { key: "x-renew-qa-storage-ref", value: qaApiRef },
+          { key: "x-renew-qa-structure", value: qaContract.structureFingerprint },
+          { key: "x-renew-qa-project", value: "renew-overnight-validation-20260820" },
+          { key: "x-renew-qa-mail-policy", value: process.env.QA_MAIL_MODE || "invalid" },
+          { key: "x-renew-qa-mail-transport", value: process.env.QA_MAIL_MODE === "allowlist" ? "simulated" : "provider" },
+        ]
+      : []
     return [
       {
         source: "/:path*",
-        headers: [{ key: "x-renew-deployment-sha", value: gitCommitSha }],
+        headers: [{ key: "x-renew-deployment-sha", value: gitCommitSha }, ...qaHeaders],
       },
     ]
   },

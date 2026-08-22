@@ -12,6 +12,7 @@ export const EVIDENCE_FILE = resolve(process.env.QA_PREFLIGHT_EVIDENCE_FILE || `
 export const CREDENTIALS_FILE = resolve(process.env.QA_CREDENTIALS_FILE || `${RUN_DIR}/credentials.json`)
 export const RESULT_FILE = resolve(process.env.QA_CASE_RESULT_FILE || `${RUN_DIR}/case-result.json`)
 export const RUNTIME_FIXTURES_FILE = resolve(process.env.QA_RUNTIME_FIXTURES_FILE || `${RUN_DIR}/runtime-fixtures.json`)
+export const SINGLETON_BEFORE_FILE = resolve(process.env.QA_SINGLETON_BEFORE_FILE || `${RUN_DIR}/singleton-before.json`)
 
 export async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"))
@@ -30,7 +31,33 @@ export async function recordRuntimeFixtures(values) {
   } catch {}
   const merged = { ...current, ...values }
   await writePrivateJson(RUNTIME_FIXTURES_FILE, merged)
+  if (process.env.QA_LEASE_OWNER && process.env.QA_RECOVERY_MODE !== "true") {
+    const [fixtureManifest, singletonBefore] = await Promise.all([
+      readJson(MANIFEST_FILE),
+      readJson(SINGLETON_BEFORE_FILE).catch(() => ({})),
+    ])
+    const database = await databaseClient()
+    try {
+      await database.query("SELECT qa_control.persist_manifest($1,$2,$3::jsonb,$4::jsonb)", [
+        process.env.QA_RUN_ID,
+        process.env.QA_LEASE_OWNER,
+        JSON.stringify({ fixtureManifest, runtime: merged }),
+        JSON.stringify(singletonBefore),
+      ])
+    } finally {
+      await database.end()
+    }
+  }
   return merged
+}
+
+export async function assertLeaseAuthority(database) {
+  if (process.env.QA_RECOVERY_MODE === "true") {
+    await database.query("SELECT qa_control.heartbeat_recovery($1,$2)", [process.env.QA_RECOVERY_OWNER, 1800])
+    return (await database.query("SELECT manifest, singleton_before FROM qa_control.lease WHERE singleton=true AND status='recovering' AND recovery_owner_hash=qa_control.owner_digest($1)", [process.env.QA_RECOVERY_OWNER])).rows[0]
+  }
+  await database.query("SELECT qa_control.heartbeat($1,$2,$3)", [process.env.QA_RUN_ID, process.env.QA_LEASE_OWNER, 1800])
+  return (await database.query("SELECT manifest, singleton_before FROM qa_control.lease WHERE singleton=true AND status='active' AND run_id=$1 AND owner_hash=qa_control.owner_digest($2)", [process.env.QA_RUN_ID, process.env.QA_LEASE_OWNER])).rows[0]
 }
 
 export async function databaseClient() {
@@ -47,6 +74,19 @@ export async function databaseClient() {
   })
   await client.connect()
   return client
+}
+
+export async function countPublicRows(database) {
+  const tables = await database.query(`SELECT c.relname
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','p')
+    ORDER BY c.relname`)
+  let count = 0
+  for (const { relname } of tables.rows) {
+    const result = await database.query(`SELECT count(*)::int AS count FROM public.${database.escapeIdentifier(relname)}`)
+    count += result.rows[0].count
+  }
+  return count
 }
 
 export function storageClient() {
@@ -86,5 +126,26 @@ export async function setProvisionalIdentityTriggers(database, enabled) {
   ]
   for (const [table, trigger] of triggers) {
     await database.query(`ALTER TABLE public.${table} ${action} TRIGGER ${trigger}`)
+  }
+}
+
+export async function assertQaMutationTriggersEnabled(database) {
+  const triggers = [
+    ["ma_firms", "guard_ma_provisional_acme_firm_identity"],
+    ["ma_offices", "guard_ma_provisional_acme_office_identity"],
+    ["ma_contacts", "guard_ma_provisional_qa_person_contact_identity"],
+    ["ma_contact_office_affiliations", "guard_ma_provisional_qa_person_affiliation_identity"],
+    ["ma_provisional_source_contexts", "guard_ma_provisional_source_context_identity"],
+    ["opportunity_pursuit_evidence", "opportunity_pursuit_evidence_immutable"],
+  ]
+  for (const [table, trigger] of triggers) {
+    const result = await database.query(`SELECT t.tgenabled
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relname = $1 AND t.tgname = $2 AND NOT t.tgisinternal`, [table, trigger])
+    if (result.rows.length !== 1 || result.rows[0].tgenabled !== "O") {
+      throw new Error("QA mutation preflight failed: trigger-state")
+    }
   }
 }

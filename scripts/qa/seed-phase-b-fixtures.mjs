@@ -4,7 +4,7 @@ import { chmod, mkdir, writeFile } from "node:fs/promises"
 import { hashPassword } from "better-auth/crypto"
 import { validateIsolationPreflight } from "../../lib/qa/isolation-preflight.mjs"
 import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
-import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, recordRuntimeFixtures, setProvisionalIdentityTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
+import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, SINGLETON_BEFORE_FILE, assertLeaseAuthority, assertQaMutationTriggersEnabled, countPublicRows, databaseClient, readJson, recordRuntimeFixtures, setProvisionalIdentityTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
 function safeDatabaseToken(error) {
   const constraint = String(error?.constraint ?? "").replace(/[^a-z0-9_]/gi, "_")
@@ -22,27 +22,30 @@ try {
   validateLiveEvidence({ expectedRef: process.env.QA_SUPABASE_PROJECT_REF, expectedOrigin: new URL(process.env.QA_BROWSER_BASE_URL).origin, expectedSha: process.env.QA_EXPECTED_SHA, evidence })
 
   database = await databaseClient()
-  const integrityDefinition = (await database.query("SELECT pg_get_functiondef('public.assert_ma_provisional_source_context_integrity()'::regprocedure) AS definition")).rows[0]?.definition
-  if (!integrityDefinition) throw new Error("Phase B fixture seed failed: provisional-integrity-definition")
-  const repairedIntegrityDefinition = integrityDefinition
-    .replaceAll("'TEST-schema-redacted-001'", "'test-schema-redacted-001'")
-    .replaceAll("'TEST-schema-redacted-002'", "'test-schema-redacted-002'")
-    .replaceAll("'TEST-schema-redacted-003'", "'test-schema-redacted-003'")
-    .replace("WHERE LOWER(BTRIM(contact.display_name)) = 'TEST-schema-redacted-person'", "WHERE LOWER(BTRIM(contact.display_name)) = 'test-schema-redacted-person'")
-  if (repairedIntegrityDefinition !== integrityDefinition) await database.query(repairedIntegrityDefinition)
+  await assertLeaseAuthority(database)
+  await assertQaMutationTriggersEnabled(database)
   await database.query("NOTIFY pgrst, 'reload schema'")
   const storage = storageClient()
-  const nonEmpty = await database.query(`SELECT
-    (SELECT count(*)::int FROM public.repreneurs) +
-    (SELECT count(*)::int FROM public.opportunities) +
-    (SELECT count(*)::int FROM public.opportunity_matches) +
-    (SELECT count(*)::int FROM public.ma_firms) +
-    (SELECT count(*)::int FROM public.ma_offices) +
-    (SELECT count(*)::int FROM public.ma_contacts) +
-    (SELECT count(*)::int FROM public."user") +
-    (SELECT count(*)::int FROM auth.users) +
-    (SELECT count(*)::int FROM storage.objects) AS count`)
-  if (nonEmpty.rows[0].count !== 0) throw new Error("Phase B fixture seed failed: non-empty-branch")
+  const [applicationRows, nonPublicRows] = await Promise.all([
+    countPublicRows(database),
+    database.query("SELECT (SELECT count(*)::int FROM auth.users) + (SELECT count(*)::int FROM storage.objects) AS count"),
+  ])
+  if (applicationRows !== 0 || nonPublicRows.rows[0].count !== 0) throw new Error("Phase B fixture seed failed: non-empty-branch")
+
+  const singletonBefore = {
+    maProvisionalSourceContext: (await database.query("SELECT to_jsonb(context) AS value FROM public.ma_provisional_source_contexts context WHERE context_key='acme_co_paris'")).rows[0]?.value ?? null,
+    waveJourneySettings: (await database.query("SELECT to_jsonb(settings) AS value FROM public.wave_journey_settings settings WHERE singleton=true")).rows[0]?.value ?? null,
+    emailDailyCount: (await database.query("SELECT to_jsonb(counts) AS value FROM public.email_daily_counts counts WHERE date=CURRENT_DATE")).rows[0]?.value ?? null,
+    emailCountDate: (await database.query("SELECT CURRENT_DATE::text AS value")).rows[0].value,
+    rateLimitRows: (await database.query('SELECT coalesce(jsonb_agg(to_jsonb(limits) ORDER BY "key", id), \'[]\'::jsonb) AS value FROM public."rateLimit" limits')).rows[0].value,
+  }
+  await writePrivateJson(SINGLETON_BEFORE_FILE, singletonBefore)
+  await database.query("SELECT qa_control.persist_manifest($1,$2,$3::jsonb,$4::jsonb)", [
+    process.env.QA_RUN_ID,
+    process.env.QA_LEASE_OWNER,
+    JSON.stringify({ fixtureManifest: manifest, runtime: {} }),
+    JSON.stringify(singletonBefore),
+  ])
 
   const password = randomBytes(24).toString("base64url")
   const passwordHash = await hashPassword(password)

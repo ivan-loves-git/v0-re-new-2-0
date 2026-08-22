@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
-import { resend } from "@/lib/email/resend-client"
+import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 
@@ -106,7 +106,7 @@ export const auth = betterAuth({
       try {
         const isPortalAccessSetup = isPortalAccessSetupUrl(url)
         const { error } = await resend.emails.send({
-          from: "Re-New <notifications@news.re-new.team>",
+          from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: user.email,
           subject: isPortalAccessSetup
             ? "Bienvenue sur la plateforme Re-New"
