@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   pilot:
-    name: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' && github.event.deployment.creator.login == 'vercel[bot]')) && 'P1-P3 protected pilot' || 'Ignore unrelated deployment' }}
+    name: Run protected P1-P3 pilot
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'deployment_status' &&
@@ -135,3 +135,20 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+
+  gate:
+    name: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' && github.event.deployment.creator.login == 'vercel[bot]')) && 'P1-P3 protected pilot' || 'Ignore unrelated deployment' }}
+    needs: pilot
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    env:
+      PROTECTED_EVENT: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' && github.event.deployment.creator.login == 'vercel[bot]')) && 'true' || 'false' }}
+      PILOT_RESULT: ${{ needs.pilot.result }}
+    steps:
+      - name: Preserve the protected pilot result
+        shell: bash
+        run: |
+          if [ "$PROTECTED_EVENT" = "true" ] && [ "$PILOT_RESULT" != "success" ]; then
+            exit 1
+          fi

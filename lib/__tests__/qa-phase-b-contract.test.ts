@@ -141,8 +141,14 @@ describe("Phase B QA contracts", () => {
 
   it("reserves the protected check name for manual or exact validation deployments", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
-    const jobNameSource = workflow.match(/jobs:\n  pilot:\n    name: (\$\{\{.*\}\})\n    if: >-/)?.[1]
+    const gateBlock = workflow.match(/\n  gate:\n([\s\S]*)$/)?.[1]
+    const jobNameSource = workflow.match(/\n  gate:\n    name: (\$\{\{.*\}\})\n/)?.[1]
 
+    expect(workflow).toContain("pilot:\n    name: Run protected P1-P3 pilot\n    if: >-")
+    expect(gateBlock).toContain("needs: pilot")
+    expect(gateBlock).toContain("if: always()")
+    expect(gateBlock).toContain("PILOT_RESULT: ${{ needs.pilot.result }}")
+    expect(gateBlock).not.toContain("environment: qa-pilot")
     expect(jobNameSource).toBeDefined()
     const expression = jobNameSource!
       .replace(/^\s*\$\{\{/, "")
