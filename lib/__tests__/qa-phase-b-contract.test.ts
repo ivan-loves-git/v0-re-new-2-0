@@ -198,6 +198,6 @@ describe("Phase B QA contracts", () => {
     const config = readFileSync(`${process.cwd()}/next.config.mjs`, "utf8")
     expect(config).toContain('key: "x-renew-deployment-sha"')
     expect(config).toContain("gitCommitSha")
-    expect(config).toContain("assertProtectedQaBuildEnv(process.env)")
+    expect(config).toContain("assertQaBuildEnv(process.env)")
   })
 })
