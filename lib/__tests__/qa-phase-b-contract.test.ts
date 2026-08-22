@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs"
+import { runInNewContext } from "node:vm"
 import { describe, expect, it } from "vitest"
 import {
   assertSafeQaRuntime,
@@ -136,6 +137,57 @@ describe("Phase B QA contracts", () => {
     expect(workflow).not.toContain("id-token: write")
     expect(workflow.indexOf("Cleanup exact fixtures")).toBeLessThan(workflow.indexOf("Upload sanitized evidence"))
     expect(workflow).toContain("retention-days: 1")
+  })
+
+  it("reserves the protected check name for manual or exact validation deployments", () => {
+    const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const jobNameSource = workflow.match(/jobs:\n  pilot:\n    name: >-\n([\s\S]*?)\n    if: >-/)?.[1]
+
+    expect(jobNameSource).toBeDefined()
+    const expression = jobNameSource!
+      .replace(/^\s*\$\{\{/, "")
+      .replace(/\}\}\s*$/, "")
+    const checkName = (github: object) => runInNewContext(expression, { github })
+    const exactDeployment = {
+      event_name: "deployment_status",
+      event: {
+        deployment_status: { state: "success" },
+        deployment: {
+          environment: "Preview – renew-overnight-validation-20260820",
+          creator: { login: "vercel[bot]" },
+        },
+      },
+    }
+
+    expect(checkName({ event_name: "workflow_dispatch", event: {} })).toBe("P1-P3 protected pilot")
+    expect(checkName(exactDeployment)).toBe("P1-P3 protected pilot")
+    expect(checkName({
+      ...exactDeployment,
+      event: {
+        ...exactDeployment.event,
+        deployment: {
+          ...exactDeployment.event.deployment,
+          environment: "Production – v0-re-new-2-0",
+        },
+      },
+    })).toBe("Ignore unrelated deployment")
+    expect(checkName({
+      ...exactDeployment,
+      event: {
+        ...exactDeployment.event,
+        deployment_status: { state: "failure" },
+      },
+    })).toBe("Ignore unrelated deployment")
+    expect(checkName({
+      ...exactDeployment,
+      event: {
+        ...exactDeployment.event,
+        deployment: {
+          ...exactDeployment.event.deployment,
+          creator: { login: "untrusted-user" },
+        },
+      },
+    })).toBe("Ignore unrelated deployment")
   })
 
   it("configures Chromium only with one CI retry and private artifacts", () => {
