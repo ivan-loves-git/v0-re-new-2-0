@@ -3,7 +3,7 @@ import { readFile, realpath } from "node:fs/promises"
 import { resolve } from "node:path"
 import { EVIDENCE_FILE, countPublicRows, databaseClient, refFromDatabaseUrl, refFromSupabaseUrl, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
-import { computeLiveStructureFingerprint } from "../../lib/qa/structure-fingerprint.mjs"
+import { assertMatchingStructureFingerprint, computeLiveStructureFingerprint } from "../../lib/qa/structure-fingerprint.mjs"
 
 const CUSTOMER_TABLES = ["repreneurs", "opportunities", "opportunity_matches", "ma_firms", "ma_offices", "ma_contacts", "ma_contact_office_affiliations"]
 
@@ -153,7 +153,7 @@ try {
   }
   const failedHealth = ["database", "rest", "auth", "storage"].filter((name) => !evidence.supabase[`${name}Healthy`])
   if (failedHealth.length > 0) throw new Error(`Live QA evidence failed: provider-health-${failedHealth.join("-")}`)
-  if (liveStructureFingerprint !== contract.structureFingerprint) throw new Error("Live QA evidence failed: structure-fingerprint")
+  assertMatchingStructureFingerprint(contract.structureFingerprint, liveStructureFingerprint)
   const allowStaleResidue = process.env.QA_EVIDENCE_MODE === "identity"
   validateLiveEvidence({ expectedRef, expectedOrigin: origin, expectedSha, evidence, allowStaleResidue })
   await writePrivateJson(EVIDENCE_FILE, evidence)

@@ -37,6 +37,8 @@ Phase C2 must prove A running, B pending, C supersedes B, B remains blocked, C r
 
 `.github/workflows/qa-daily-health.yml` runs once daily without Playwright or an LLM and can also be started manually for initial acceptance. It verifies the protected site, exact deployed candidate, provider identities, live structure fingerprint, empty baseline, stale cleanup recovery and lease acquire/heartbeat/release. It never applies schema DDL. The release lane refuses to start unless the latest completed daily health run succeeded within the previous 26 hours.
 
+The structure fingerprint canonicalizes relation and function ACL members and policy roles with PostgreSQL `C` collation before hashing. Inventory rows use an explicit locale-independent comparator, including quoted and mixed-case identities. Definitions from `pg_get_constraintdef`, `pg_get_indexdef`, `pg_get_functiondef`, `pg_get_triggerdef` and `pg_get_viewdef` remain bound to the deployed PostgreSQL major version; cross-major equality is not promised. On mismatch, daily health fails closed and reports only the expected and actual SHA-256 fingerprints for the **P1–P3 protected release smoke** diagnostic record.
+
 ## Recovery and blocked state
 
 `qa_control.lease` stores one owner hash, run ID, candidate SHA, heartbeat/expiry, candidate structure fingerprint, exact server-side manifest and singleton snapshots. An active foreign lease cannot be recovered. An expired lease must first be claimed by a distinct recovery owner; cleanup is limited to its persisted IDs/objects and exact run labels. Unlabelled or ambiguous rows are release blockers and must not be deleted automatically.
