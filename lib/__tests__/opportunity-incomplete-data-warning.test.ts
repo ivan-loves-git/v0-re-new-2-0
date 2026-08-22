@@ -51,7 +51,6 @@ describe("opportunity intake draft rules", () => {
 
   it("returns committed identity for a valid staff-only draft", async () => {
     const formData = new FormData()
-    formData.set("reference", "OPP-DRAFT-001")
     formData.set("geography_node_id", "00000000-0000-4092-8000-000000000001")
     formData.set("public_title", "Anonymized industrial services business")
     formData.set("status", "draft")
@@ -69,7 +68,7 @@ describe("opportunity intake draft rules", () => {
     })
 
     expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
-      p_reference: "OPP-DRAFT-001",
+      p_reference: "",
       p_source_office_id: null,
       p_affiliation_ids: [],
       p_primary_affiliation_id: null,
