@@ -42,6 +42,20 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).toContain("scopedMatches.rows.some((row) => row.id === runtime.p3MatchId)")
   })
 
+  it("removes exact QA evidence without weakening append-only protection after cleanup", () => {
+    const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
+    const begin = script.indexOf('database.query("BEGIN")')
+    const disable = script.indexOf("DISABLE TRIGGER opportunity_pursuit_evidence_immutable")
+    const removeEvidence = script.indexOf("DELETE FROM public.opportunity_pursuit_evidence WHERE id = ANY")
+    const enable = script.indexOf("ENABLE TRIGGER opportunity_pursuit_evidence_immutable")
+    const commit = script.indexOf('database.query("COMMIT")')
+
+    expect(disable).toBeGreaterThan(begin)
+    expect(removeEvidence).toBeGreaterThan(disable)
+    expect(enable).toBeGreaterThan(removeEvidence)
+    expect(commit).toBeGreaterThan(enable)
+  })
+
   it("reports only a sanitized database error class when cleanup fails", () => {
     const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
     expect(script).toContain("safeDatabaseToken")

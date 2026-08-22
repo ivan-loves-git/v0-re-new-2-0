@@ -67,6 +67,7 @@ try {
   }
 
   await database.query("BEGIN")
+  await database.query("ALTER TABLE public.opportunity_pursuit_evidence DISABLE TRIGGER opportunity_pursuit_evidence_immutable")
   await setProvisionalIdentityTriggers(database, false)
   if (opportunityProbeIds.length > 0) {
     await database.query("DELETE FROM public.opportunity_ma_contacts WHERE opportunity_id = ANY($1::uuid[])", [opportunityProbeIds])
@@ -99,6 +100,7 @@ try {
   await database.query('DELETE FROM public."user" WHERE id = ANY($1::text[])', [authIdentityIds])
   await database.query("SET CONSTRAINTS ALL IMMEDIATE")
   await setProvisionalIdentityTriggers(database, true)
+  await database.query("ALTER TABLE public.opportunity_pursuit_evidence ENABLE TRIGGER opportunity_pursuit_evidence_immutable")
   await database.query("COMMIT")
 
   const residue = await database.query(`SELECT
@@ -117,6 +119,7 @@ try {
 } catch (error) {
   if (database) await database.query("ROLLBACK").catch(() => {})
   if (database) await setProvisionalIdentityTriggers(database, true).catch(() => {})
+  if (database) await database.query("ALTER TABLE public.opportunity_pursuit_evidence ENABLE TRIGGER opportunity_pursuit_evidence_immutable").catch(() => {})
   await removeRunnerSecrets().catch(() => {})
   console.error(error instanceof Error && error.message.startsWith("Phase B cleanup failed:") ? error.message : `Phase B cleanup failed: database-${safeDatabaseToken(error)}`)
   process.exitCode = 1
