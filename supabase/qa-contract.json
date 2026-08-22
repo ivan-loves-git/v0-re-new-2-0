@@ -1,6 +1,6 @@
 {
-  "version": "771-permanent-qa-v1",
-  "structureFingerprint": "58b9cc10c16a55536a60f5d93dd1fb7be811fbe7c6219b55c10b971e55c50f99",
+  "version": "771-permanent-qa-v2",
+  "structureFingerprint": "f985a15b194b23b4a06787c41907b15fadea4f4e845caa7d76dcb802831bcf10",
   "files": [
     {
       "path": "supabase/schema/771_extensions.sql",
