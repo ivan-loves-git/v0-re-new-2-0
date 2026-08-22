@@ -18,6 +18,14 @@ try {
   validateLiveEvidence({ expectedRef: process.env.QA_SUPABASE_PROJECT_REF, expectedOrigin: new URL(process.env.QA_BROWSER_BASE_URL).origin, expectedSha: process.env.QA_EXPECTED_SHA, evidence })
 
   database = await databaseClient()
+  const integrityDefinition = (await database.query("SELECT pg_get_functiondef('public.assert_ma_provisional_source_context_integrity()'::regprocedure) AS definition")).rows[0]?.definition
+  if (!integrityDefinition) throw new Error("Phase B fixture seed failed: provisional-integrity-definition")
+  const repairedIntegrityDefinition = integrityDefinition
+    .replaceAll("'TEST-schema-redacted-001'", "'test-schema-redacted-001'")
+    .replaceAll("'TEST-schema-redacted-002'", "'test-schema-redacted-002'")
+    .replaceAll("'TEST-schema-redacted-003'", "'test-schema-redacted-003'")
+    .replace("WHERE LOWER(BTRIM(contact.display_name)) = 'TEST-schema-redacted-person'", "WHERE LOWER(BTRIM(contact.display_name)) = 'test-schema-redacted-person'")
+  if (repairedIntegrityDefinition !== integrityDefinition) await database.query(repairedIntegrityDefinition)
   await database.query("NOTIFY pgrst, 'reload schema'")
   const storage = storageClient()
   const nonEmpty = await database.query(`SELECT
@@ -50,6 +58,9 @@ try {
   }
 
   await database.query("BEGIN")
+  await database.query('ALTER TABLE public.ma_firms DISABLE TRIGGER guard_ma_provisional_acme_firm_identity')
+  await database.query('ALTER TABLE public.ma_offices DISABLE TRIGGER guard_ma_provisional_acme_office_identity')
+  await database.query('ALTER TABLE public.ma_contacts DISABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
   await database.query(`INSERT INTO public.geography_nodes (id, stable_key, code, label, node_level)
     VALUES ($1, $2, $3, $4, 'country')`, [ids.geography, `qa-${manifest.runId.toLowerCase()}`, manifest.referenceCode, fixturePrefix])
   await database.query("INSERT INTO public.wave_journey_settings (singleton, enabled, updated_by) VALUES (true, true, $1)", [actors.staff.userId])
@@ -61,6 +72,16 @@ try {
     VALUES ($1, 'Test', 'Contact', $2, 'active', $3, $4)`, [ids.contact, `${fixturePrefix} contact`, process.env.QA_EMAIL_RECIPIENT, actors.staff.userId])
   await database.query(`INSERT INTO public.ma_contact_office_affiliations (id, contact_id, office_id, job_title, is_active, created_by)
     VALUES ($1, $2, $3, 'QA contact', true, $4)`, [ids.affiliation, ids.contact, ids.office, actors.staff.userId])
+  await database.query(`INSERT INTO public.ma_firms (id, name, status, category, created_by)
+    VALUES ($1, 'Acme Co.', 'active', 'M&A boutique', $2)`, [ids.provisionalFirm, actors.staff.userId])
+  await database.query(`INSERT INTO public.ma_offices (id, firm_id, name, status, is_default, city, created_by)
+    VALUES ($1, $2, 'Acme Paris', 'active', false, 'Paris', $3)`, [ids.provisionalOffice, ids.provisionalFirm, actors.staff.userId])
+  await database.query(`INSERT INTO public.ma_contacts (id, first_name, display_name, status, email, created_by)
+    VALUES ($1, 'QA', $2, 'active', 'test-schema-redacted-001', $3),
+           ($4, 'TEST-schema-redacted-person', 'TEST-schema-redacted-person', 'active', 'test-schema-redacted-003', $3)`,
+    [ids.provisionalCountContact, `${fixturePrefix} integrity count`, actors.staff.userId, ids.provisionalContextContact])
+  await database.query(`INSERT INTO public.ma_contact_office_affiliations (id, contact_id, office_id, job_title, is_active, created_by)
+    VALUES ($1, $2, $3, 'QA provisional context', true, $4)`, [ids.provisionalAffiliation, ids.provisionalContextContact, ids.provisionalOffice, actors.staff.userId])
   await database.query(`INSERT INTO public.repreneurs (
       id, email, first_name, last_name, lifecycle_status, source, created_by,
       who_score, when_score, scoring_flags, q12_geo_zones, q13_target_sectors_v2, q14_deal_size
@@ -70,10 +91,19 @@ try {
   for (const actor of [actors.staff, actors.portal]) {
     await database.query(`INSERT INTO public."user" (id, name, email, "emailVerified") VALUES ($1, $2, $3, true)`, [actor.userId, `${fixturePrefix} ${actor === actors.staff ? "staff" : "portal"}`, actor.email])
   }
+  await database.query(`INSERT INTO public."user" (id, name, email, "emailVerified")
+    VALUES ($1, $2, 'test-schema-redacted-002', true)`, [ids.provisionalContextUser, `${fixturePrefix} provisional context`])
   await database.query(`INSERT INTO public."account" (id, "userId", "accountId", "providerId", password)
     VALUES ($1, $2, $3, 'credential', $4), ($5, $6, $7, 'credential', $4)`, [ids.staffAccount, actors.staff.userId, actors.staff.email, passwordHash, ids.portalAccount, actors.portal.userId, actors.portal.email])
   await database.query(`INSERT INTO public.app_user_roles (id, user_id, email, role, repreneur_id, access_enabled_at)
     VALUES ($1, $2, $3, 'staff', NULL, now()), ($4, $5, $6, 'repreneur', $7, now())`, [ids.staffRole, actors.staff.userId, actors.staff.email, ids.portalRole, actors.portal.userId, actors.portal.email, ids.portalRepreneur])
+  await database.query(`INSERT INTO public.app_user_roles (id, user_id, email, role, access_enabled_at)
+    VALUES ($1, $2, 'test-schema-redacted-002', 'staff', now())`, [ids.provisionalContextRole, ids.provisionalContextUser])
+  await database.query(`INSERT INTO public.ma_provisional_source_contexts (context_key, firm_id, office_id, contact_id, affiliation_id)
+    VALUES ('acme_co_paris', $1, $2, $3, $4)`, [ids.provisionalFirm, ids.provisionalOffice, ids.provisionalContextContact, ids.provisionalAffiliation])
+  await database.query('ALTER TABLE public.ma_contacts ENABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
+  await database.query('ALTER TABLE public.ma_offices ENABLE TRIGGER guard_ma_provisional_acme_office_identity')
+  await database.query('ALTER TABLE public.ma_firms ENABLE TRIGGER guard_ma_provisional_acme_firm_identity')
   await database.query("SAVEPOINT phase_b_opportunity_probe")
   try {
     await database.query(`SELECT (public.create_opportunity_with_office_context(

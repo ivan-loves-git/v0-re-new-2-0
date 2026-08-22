@@ -1381,18 +1381,18 @@ BEGIN
   SELECT COUNT(*)
   INTO contact_email_count
   FROM public.ma_contacts contact
-  WHERE LOWER(BTRIM(contact.email)) = 'TEST-schema-redacted-001';
+  WHERE LOWER(BTRIM(contact.email)) = 'test-schema-redacted-001';
 
   SELECT COUNT(*)
   INTO contact_name_count
   FROM public.ma_contacts contact
-  WHERE LOWER(BTRIM(contact.display_name)) = 'TEST-schema-redacted-person';
+  WHERE LOWER(BTRIM(contact.display_name)) = 'test-schema-redacted-person';
 
   SELECT COUNT(*)
   INTO staff_identity_count
   FROM public.app_user_roles role
   WHERE role.role = 'staff'
-    AND LOWER(BTRIM(role.email)) = 'TEST-schema-redacted-002';
+    AND LOWER(BTRIM(role.email)) = 'test-schema-redacted-002';
 
   IF firm_count <> 1 THEN
     RAISE EXCEPTION 'ma_provisional_acme_requires_exactly_one_firm';
@@ -1425,7 +1425,7 @@ BEGIN
       AND office.archived_at IS NULL
       AND NOT office.is_default
       AND contact.display_name = 'TEST-schema-redacted-person'
-      AND LOWER(BTRIM(contact.email)) = 'TEST-schema-redacted-003'
+      AND LOWER(BTRIM(contact.email)) = 'test-schema-redacted-003'
       AND contact.status = 'active'
       AND contact.archived_at IS NULL
       AND affiliation.contact_id = contact.id
@@ -5157,9 +5157,9 @@ BEGIN
   ));
 
   IF (
-    LOWER(BTRIM(NEW.display_name)) = 'TEST-schema-redacted-person'
-    OR LOWER(effective_display_name) = 'TEST-schema-redacted-person'
-    OR LOWER(BTRIM(NEW.email)) = 'TEST-schema-redacted-004'
+    LOWER(BTRIM(NEW.display_name)) = 'test-schema-redacted-person'
+    OR LOWER(effective_display_name) = 'test-schema-redacted-person'
+    OR LOWER(BTRIM(NEW.email)) = 'test-schema-redacted-004'
   ) AND NEW.id IS DISTINCT FROM fixed_contact_id THEN
     RAISE EXCEPTION 'ma_provisional_qa_person_contact_identity_collision';
   END IF;
@@ -5172,7 +5172,7 @@ BEGIN
     AND (
       NEW.display_name IS DISTINCT FROM 'TEST-schema-redacted-person'
       OR effective_display_name IS DISTINCT FROM 'TEST-schema-redacted-person'
-      OR LOWER(BTRIM(NEW.email)) IS DISTINCT FROM 'TEST-schema-redacted-005'
+      OR LOWER(BTRIM(NEW.email)) IS DISTINCT FROM 'test-schema-redacted-005'
       OR NEW.status IS DISTINCT FROM 'active'
       OR NEW.archived_at IS NOT NULL
       OR NEW.archived_by IS NOT NULL

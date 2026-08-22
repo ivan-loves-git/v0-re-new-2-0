@@ -32,7 +32,7 @@ try {
         throw new Error("Schema sanitization failed: unexpected-email-location")
       }
       replacementIndex += 1
-      return `TEST-schema-redacted-${String(replacementIndex).padStart(3, "0")}`
+      return `test-schema-redacted-${String(replacementIndex).padStart(3, "0")}`
     })
   })
 
@@ -42,9 +42,10 @@ try {
 
   const identitySafe = sanitized.join("\n").replace(/Bertrand Galas|Bertrand|Galas/gi, (value) => {
     identityReplacements += 1
-    return value.includes(" ")
+    const placeholder = value.includes(" ")
       ? "TEST-schema-redacted-person"
       : "qa_person"
+    return value === value.toLowerCase() ? placeholder.toLowerCase() : placeholder
   })
 
   const providerNeutral = identitySafe
