@@ -34,6 +34,12 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).not.toContain("reference_code='QA'")
   })
 
+  it("reports only a sanitized database error class when cleanup fails", () => {
+    const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
+    expect(script).toContain("safeDatabaseToken")
+    expect(script).toContain("Phase B cleanup failed: database-${safeDatabaseToken(error)}")
+  })
+
   it("verifies zero residue after cleanup", () => {
     const script = source()
     expect(script).toContain("databaseResidue")
