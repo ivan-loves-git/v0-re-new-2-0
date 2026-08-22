@@ -4,7 +4,7 @@ import { chmod, mkdir, writeFile } from "node:fs/promises"
 import { hashPassword } from "better-auth/crypto"
 import { validateIsolationPreflight } from "../../lib/qa/isolation-preflight.mjs"
 import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
-import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, setProvisionalIdentityTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
+import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, recordRuntimeFixtures, setProvisionalIdentityTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
 function safeDatabaseToken(error) {
   const constraint = String(error?.constraint ?? "").replace(/[^a-z0-9_]/gi, "_")
@@ -148,10 +148,13 @@ try {
   const restProbeBody = await restProbe.json().catch(() => ({}))
   if (!restProbe.ok) throw new Error(`Phase B fixture seed failed: opportunity-rest-${safeDatabaseToken(restProbeBody)}`)
   if (!restProbeBody?.id) throw new Error("Phase B fixture seed failed: opportunity-rest-missing-id")
+  await recordRuntimeFixtures({ opportunityProbeId: restProbeBody.id })
   await database.query("BEGIN")
+  await database.query("DELETE FROM public.opportunity_ma_contacts WHERE opportunity_id = $1", [restProbeBody.id])
   await database.query("DELETE FROM public.opportunities WHERE id = $1", [restProbeBody.id])
   await database.query("DELETE FROM public.opportunity_mandate_reference_counters WHERE reference_code = $1", [manifest.referenceCode])
   await database.query("COMMIT")
+  await recordRuntimeFixtures({ opportunityProbeId: null })
 
   await mkdir(RUN_DIR, { recursive: true })
   const pdf = Buffer.from(`%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 100]/Contents 4 0 R>>endobj\n4 0 obj<</Length ${fixturePrefix.length + 24}>>stream\nBT /F1 12 Tf 20 50 Td (${fixturePrefix}) Tj ET\nendstream endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n`)

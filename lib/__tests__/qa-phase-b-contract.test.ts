@@ -108,6 +108,21 @@ describe("Phase B QA contracts", () => {
     expect(seedScript).toContain("DELETE FROM public.opportunity_mandate_reference_counters WHERE reference_code = $1")
   })
 
+  it("records and removes the REST opportunity probe before deleting its parent row", () => {
+    const seedScript = readFileSync(`${process.cwd()}/scripts/qa/seed-phase-b-fixtures.mjs`, "utf8")
+    const cleanupScript = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
+    const recordProbe = seedScript.indexOf("recordRuntimeFixtures({ opportunityProbeId: restProbeBody.id })")
+    const deleteProbeContacts = seedScript.indexOf("DELETE FROM public.opportunity_ma_contacts WHERE opportunity_id = $1")
+    const deleteProbe = seedScript.indexOf("DELETE FROM public.opportunities WHERE id = $1", deleteProbeContacts)
+
+    expect(recordProbe).toBeGreaterThanOrEqual(0)
+    expect(deleteProbeContacts).toBeGreaterThan(recordProbe)
+    expect(deleteProbe).toBeGreaterThan(deleteProbeContacts)
+    expect(cleanupScript).toContain("runtime.opportunityProbeId")
+    expect(cleanupScript).toContain("`${manifest.fixturePrefix} opportunity probe`")
+    expect(cleanupScript).toContain("DELETE FROM public.opportunity_ma_contacts WHERE opportunity_id = ANY($1::uuid[])")
+  })
+
   it("keeps the advisory workflow private and cleans before artifacts", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     expect(workflow).toContain("name: Golden journeys")
