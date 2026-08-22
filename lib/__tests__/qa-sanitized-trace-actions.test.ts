@@ -377,6 +377,43 @@ describe("sanitized Playwright trace evidence", () => {
     expect(() => readFileSync(unsafeFile)).toThrow()
   })
 
+  it("removes the complete Playwright HTML report before residue scanning", () => {
+    const { runDirectory } = temporaryRunDirectory()
+    const reportDirectory = join(runDirectory, "playwright-report")
+    mkdirSync(join(reportDirectory, "assets"), { recursive: true })
+    writeFileSync(
+      join(reportDirectory, "index.html"),
+      '<a href="https://preview.example.test/private?token=embedded">report</a>',
+    )
+    writeFileSync(
+      join(reportDirectory, "assets", "metadata.txt"),
+      "cookie=session-value; Authorization: Bearer embedded-value\n",
+    )
+    writeFileSync(join(runDirectory, "case-result.json"), '{"ok":true}\n')
+
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status, result.stderr).toBe(0)
+    expect(() => readdirSync(reportDirectory)).toThrow()
+    expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).toBe('{"ok":true}\n')
+    expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-traces.json"), "utf8"))).toMatchObject({
+      htmlReportRetained: false,
+      htmlReportRemovalReason: "privacy",
+    })
+  })
+
+  it.each(["json", "txt"])("still rejects unsafe residue in retained %s evidence", (extension) => {
+    const { runDirectory } = temporaryRunDirectory()
+    const unsafeFile = join(runDirectory, `retained-evidence.${extension}`)
+    writeFileSync(unsafeFile, "request failed at https://preview.example.test/private?token=embedded\n")
+
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain("Artifact sanitization failed: unsafe-text-residue")
+    expect(() => readFileSync(unsafeFile)).toThrow()
+  })
+
   it("keeps successful runs valid when no Playwright trace exists", () => {
     const { runDirectory } = temporaryRunDirectory()
     writeFileSync(join(runDirectory, "case-result.json"), '{"ok":true}\n')
