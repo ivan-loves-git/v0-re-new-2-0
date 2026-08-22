@@ -7,6 +7,8 @@ import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
 import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
 function safeDatabaseToken(error) {
+  const constraint = String(error?.constraint ?? "").replace(/[^a-z0-9_]/gi, "_")
+  if (constraint) return `constraint_${constraint}`
   const tokens = String(error?.message ?? "").match(/[a-z][a-z0-9_]{4,}/g) ?? []
   return tokens.find((token) => token.startsWith("opportunity_") || token.startsWith("ma_")) ?? `postgres_${String(error?.code ?? "unknown").replace(/[^a-z0-9_]/gi, "_")}`
 }
