@@ -17,14 +17,21 @@ Supabase management readback on 2026-08-22 quoted Micro branch compute at USD 0.
 
 ## Candidate operation
 
-1. A trusted workflow validates that the supplied branch and exact 40-character SHA are the current head of a same-repository branch.
-2. The workflow creates `P1-P3 protected pilot` on that exact SHA, holds global concurrency `renew-permanent-qa`, and moves only the remote `qa` pointer with an exact force-with-lease.
-3. It waits for Vercel's Preview deployment of that SHA, then verifies the stable alias, project, target, protection and deployed non-secret QA contract.
-4. The schema prerequisite verifies artifact checksums and the live catalog fingerprint. Matching candidates perform no DDL. Mismatches may synchronize only an empty, non-production branch with no active lease and must match the candidate fingerprint afterward.
-5. The browser job acquires the database lease, safely recovers only expired manifest-owned residue, runs P1–P3, performs exact-ID plus run-label cleanup, verifies zero residue, and releases the lease.
-6. The check is completed on the candidate SHA. A failed schema, journey, cleanup or release remains a failed required check.
+1. A trusted `main` workflow validates that the supplied branch and exact 40-character SHA are the current head of a same-repository PR, the actor has write access, and the exact GitHub Actions `Verify` run is green.
+2. Automatic `workflow_run` admission requires `supabase/qa-contract.json` and every contract-listed SQL file to be byte-identical to trusted `main`. A database-changing candidate is refused automatically. Its exceptional `repository_dispatch` admission must carry the exact candidate SHA and branch, the candidate contract SHA-256, `schema_reviewed=true`, and review version `qa-schema-review-v1`; the trusted controller verifies the contract digest and every listed SQL checksum before any check, pointer, secret or DDL action.
+3. The workflow creates `P1-P3 protected pilot` on that exact SHA, holds global concurrency `renew-permanent-qa`, and moves only the remote `qa` pointer with an exact force-with-lease.
+4. It waits for Vercel's Preview deployment of that SHA, then verifies the stable alias, project, target, protection and deployed non-secret QA contract.
+5. The schema prerequisite verifies artifact checksums and the live catalog fingerprint. Matching candidates perform no DDL. Mismatches may synchronize only an empty, non-production branch with no active lease and must match the candidate fingerprint afterward.
+6. The browser job acquires the database lease, safely recovers only expired manifest-owned residue, runs P1–P3, performs exact-ID plus run-label cleanup, verifies zero residue, and releases the lease.
+7. The check is completed on the candidate SHA. A failed schema, journey, cleanup or release remains a failed required check.
 
 Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects forks/foreign repositories.
+
+## Concurrency and supersession
+
+This lane deliberately uses GitHub's latest-pending supersession with `cancel-in-progress: false`. One mutation run remains protected from cancellation, and at most one latest candidate waits. If A is running, B is pending and C arrives, C supersedes B; the superseded B remains blocked because it receives no successful P1–P3 check. C runs after A. If B is still intended, a rebase or push gives it a new exact candidate SHA and automatically re-enters it. The single concurrency group prevents any two candidates from deploying or seeding simultaneously.
+
+Phase C2 must prove A running, B pending, C supersedes B, B remains blocked, C runs after A, and a refreshed B later runs. This is the accepted high-cadence behavior, not an unlimited queue.
 
 ## Daily health
 
@@ -35,6 +42,14 @@ Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime d
 `qa_control.lease` stores one owner hash, run ID, candidate SHA, heartbeat/expiry, candidate structure fingerprint, exact server-side manifest and singleton snapshots. An active foreign lease cannot be recovered. An expired lease must first be claimed by a distinct recovery owner; cleanup is limited to its persisted IDs/objects and exact run labels. Unlabelled or ambiguous rows are release blockers and must not be deleted automatically.
 
 A failed or mismatched schema synchronization writes `qa_control.schema_state.blocked_reason`. Browser fixtures are forbidden while this is set. Recovery requires an empty-branch readback, deterministic synchronization and exact fingerprint match; it is not a production rollback mechanism.
+
+## Provider evidence boundary
+
+`supabase/qa-branch.json` is checked-in configuration, not live provider authority. Destructive synchronization safety comes from the exact protected QA ref, explicit production refusal, matching live DB/API/Storage identities, whole-branch emptiness, no active lease, transactional application, checksums and the post-sync structure fingerprint. Persistence, parent, with-data and branch-count are independent provider readbacks required for initial acceptance and monthly review; they are not inferred from this file. Supabase management credentials must not be added to GitHub.
+
+## Validation-project credential transfer
+
+Connecting the parent Supabase project through the generic Vercel Marketplace integration is not approved for this lane because it proposes synchronizing production-project credentials into the validation project. The installation flow was cancelled before project connection, and no variables were synced. Phase C2 uses an app-approved 1Password-based one-time transfer in which values never enter model or tool output, followed by branch-scoped Vercel and GitHub metadata readback. Protected QA uses simulated mail and must have no real Resend key.
 
 ## Email boundary
 

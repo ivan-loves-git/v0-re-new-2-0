@@ -6,7 +6,6 @@ import { spawn } from "node:child_process"
 import pg from "pg"
 import { computeLiveStructureFingerprint } from "../../lib/qa/structure-fingerprint.mjs"
 import { QA_CONTRACT } from "../../lib/qa/permanent-contract.mjs"
-import { validateBranchReconstructionEvidence } from "../../lib/qa/isolation-preflight.mjs"
 import { assertNoTopLevelTransactionControl } from "../../lib/qa/sql-safety.mjs"
 import { countPublicRows } from "./phase-b-common.mjs"
 
@@ -59,17 +58,6 @@ async function readContract() {
     if (createHash("sha256").update(content).digest("hex") !== file.sha256) fail("artifact-checksum")
   }
   return contract
-}
-
-async function assertProvisionedBranchContract() {
-  const branch = JSON.parse(await readFile(resolve(ROOT, "supabase/qa-branch.json"), "utf8"))
-  try {
-    validateBranchReconstructionEvidence(branch, process.env.QA_SUPABASE_PROJECT_REF, {
-      allowInitialMigrationFailure: true,
-    })
-  } catch {
-    fail("branch-contract")
-  }
 }
 
 function psqlEnvironment(database) {
@@ -163,7 +151,6 @@ let database
 try {
   const contract = await readContract()
   const connection = parseDatabase()
-  await assertProvisionedBranchContract()
   if (!process.env.QA_DATABASE_CA_CERT_FILE) fail("database-ca")
   await readFile(process.env.QA_DATABASE_CA_CERT_FILE).catch(() => fail("database-ca"))
   database = await connect(connection)
