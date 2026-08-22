@@ -141,7 +141,7 @@ describe("Phase B QA contracts", () => {
 
   it("reserves the protected check name for manual or exact validation deployments", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
-    const jobNameSource = workflow.match(/jobs:\n  pilot:\n    name: >-\n([\s\S]*?)\n    if: >-/)?.[1]
+    const jobNameSource = workflow.match(/jobs:\n  pilot:\n    name: (\$\{\{.*\}\})\n    if: >-/)?.[1]
 
     expect(jobNameSource).toBeDefined()
     const expression = jobNameSource!
