@@ -35,6 +35,19 @@ try {
   const password = randomBytes(24).toString("base64url")
   const passwordHash = await hashPassword(password)
   const { actors, ids, fixturePrefix } = manifest
+  const opportunityProbeFields = {
+    geography_node_id: ids.geography,
+    sector: "Tech & Digital",
+    location: "Paris",
+    revenue_meur: null,
+    ebitda_keur: null,
+    headcount: null,
+    headcount_range: null,
+    date_added: null,
+    public_title: `${fixturePrefix} opportunity probe`,
+    teaser_summary: `${fixturePrefix} safe probe`,
+    internal_notes: null,
+  }
 
   await database.query("BEGIN")
   await database.query(`INSERT INTO public.geography_nodes (id, stable_key, code, label, node_level)
@@ -73,25 +86,40 @@ try {
       `${fixturePrefix} opportunity probe`,
       "active",
       actors.staff.userId,
-      JSON.stringify({
-        geography_node_id: ids.geography,
-        sector: "Tech & Digital",
-        location: "Paris",
-        revenue_meur: null,
-        ebitda_keur: null,
-        headcount: null,
-        headcount_range: null,
-        date_added: null,
-        public_title: `${fixturePrefix} opportunity probe`,
-        teaser_summary: `${fixturePrefix} safe probe`,
-        internal_notes: null,
-      }),
+      JSON.stringify(opportunityProbeFields),
     ])
   } catch (error) {
     throw new Error(`Phase B fixture seed failed: opportunity-rpc-${safeDatabaseToken(error)}`)
   } finally {
     await database.query("ROLLBACK TO SAVEPOINT phase_b_opportunity_probe")
   }
+  await database.query("COMMIT")
+
+  await new Promise((resolve) => setTimeout(resolve, 1500))
+  const restProbe = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/create_opportunity_with_office_context`, {
+    method: "POST",
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      p_reference: "",
+      p_source_office_id: ids.office,
+      p_affiliation_ids: [ids.affiliation],
+      p_primary_affiliation_id: ids.affiliation,
+      p_description: `${fixturePrefix} opportunity probe`,
+      p_target_status: "active",
+      p_actor: actors.staff.userId,
+      p_opportunity_fields: opportunityProbeFields,
+    }),
+  })
+  const restProbeBody = await restProbe.json().catch(() => ({}))
+  if (!restProbe.ok) throw new Error(`Phase B fixture seed failed: opportunity-rest-${safeDatabaseToken(restProbeBody)}`)
+  if (!restProbeBody?.id) throw new Error("Phase B fixture seed failed: opportunity-rest-missing-id")
+  await database.query("BEGIN")
+  await database.query("DELETE FROM public.opportunities WHERE id = $1", [restProbeBody.id])
+  await database.query("DELETE FROM public.opportunity_mandate_reference_counters WHERE reference_code = $1", [manifest.referenceCode])
   await database.query("COMMIT")
 
   await mkdir(RUN_DIR, { recursive: true })

@@ -97,6 +97,8 @@ describe("Phase B QA contracts", () => {
     expect(seedScript).toContain("create_opportunity_with_office_context")
     expect(seedScript).toContain('      "",\n      ids.office,')
     expect(seedScript).toContain("ROLLBACK TO SAVEPOINT phase_b_opportunity_probe")
+    expect(seedScript).toContain("/rest/v1/rpc/create_opportunity_with_office_context")
+    expect(seedScript).toContain("DELETE FROM public.opportunity_mandate_reference_counters WHERE reference_code = $1")
   })
 
   it("keeps the advisory workflow private and cleans before artifacts", () => {
