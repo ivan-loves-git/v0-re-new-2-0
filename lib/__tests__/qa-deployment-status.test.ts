@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
-  findPostLaneVercelSuccess,
   findQaValidationDeployment,
+  findVercelSuccess,
+  probeStableQaAlias,
+  waitForQaDeployment,
 } from "@/lib/qa/deployment-status.mjs"
 
 const SHA = "a".repeat(40)
@@ -31,15 +33,124 @@ function status(overrides: Record<string, unknown> = {}) {
 }
 
 describe("QA deployment status selection", () => {
-  it("accepts a reused deployment created before the pointer when success arrives after it", () => {
-    expect(findQaValidationDeployment([deployment()], SHA, ENVIRONMENT)).toEqual(deployment())
-    expect(findPostLaneVercelSuccess([status()], LANE_MOVED_AT)).toEqual(status())
+  it("probes the stable alias with the Vercel bypass and reads its deployed SHA", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, {
+      status: 200,
+      headers: { "x-renew-deployment-sha": SHA },
+    }))
+
+    await expect(probeStableQaAlias({
+      origin: "https://qa.example.test",
+      bypass: "test-bypass",
+      fetchImpl,
+    })).resolves.toBe(SHA)
+    expect(fetchImpl).toHaveBeenCalledWith("https://qa.example.test/auth/login", {
+      headers: {
+        "x-vercel-protection-bypass": "test-bypass",
+        "x-vercel-set-bypass-cookie": "true",
+      },
+      redirect: "manual",
+    })
   })
 
-  it("rejects a success status created before the pointer", () => {
-    expect(findPostLaneVercelSuccess([
-      status({ created_at: "2026-08-22T13:59:59Z" }),
-    ], LANE_MOVED_AT)).toBeUndefined()
+  it("follows only same-origin alias redirects and carries the bypass cookie", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(null, {
+        status: 302,
+        headers: {
+          location: "/auth/login?redirected=true",
+          "set-cookie": "_vercel_jwt=test-cookie; Path=/; Secure",
+        },
+      }))
+      .mockResolvedValueOnce(new Response(null, {
+        status: 200,
+        headers: { "x-renew-deployment-sha": SHA },
+      }))
+
+    await expect(probeStableQaAlias({
+      origin: "https://qa.example.test",
+      bypass: "test-bypass",
+      fetchImpl,
+    })).resolves.toBe(SHA)
+    expect(fetchImpl).toHaveBeenNthCalledWith(2, "https://qa.example.test/auth/login?redirected=true", {
+      headers: {
+        "x-vercel-protection-bypass": "test-bypass",
+        "x-vercel-set-bypass-cookie": "true",
+        Cookie: "_vercel_jwt=test-cookie",
+      },
+      redirect: "manual",
+    })
+  })
+
+  it("refuses a cross-origin alias redirect without forwarding the bypass", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, {
+      status: 302,
+      headers: { location: "https://attacker.example/collect" },
+    }))
+
+    await expect(probeStableQaAlias({
+      origin: "https://qa.example.test",
+      bypass: "test-bypass",
+      fetchImpl,
+    })).resolves.toBe("")
+    expect(fetchImpl).toHaveBeenCalledOnce()
+  })
+
+  it("accepts an old success only when the stable alias serves the exact SHA", async () => {
+    const oldSuccess = status({ created_at: "2026-08-22T13:59:59Z" })
+
+    await expect(waitForQaDeployment({
+      expectedSha: SHA,
+      expectedEnvironment: ENVIRONMENT,
+      laneMovedAt: LANE_MOVED_AT,
+      deadline: LANE_MOVED_AT + 1,
+      now: () => LANE_MOVED_AT,
+      sleep: async () => undefined,
+      listDeployments: async () => [deployment()],
+      listStatuses: async () => [oldSuccess],
+      probeAliasSha: async () => SHA,
+    })).resolves.toEqual({
+      deploymentId: deployment().id,
+      readyAt: "2026-08-22T14:00:00.000Z",
+      providerUrl: oldSuccess.environment_url,
+    })
+  })
+
+  it("accepts a reused deployment created before the pointer when success arrives after it", () => {
+    expect(findQaValidationDeployment([deployment()], SHA, ENVIRONMENT)).toEqual(deployment())
+    expect(findVercelSuccess([status()])).toEqual(status())
+  })
+
+  it("keeps waiting and times out while the stable alias serves another SHA", async () => {
+    const sleep = vi.fn(async () => undefined)
+    const times = [LANE_MOVED_AT, LANE_MOVED_AT + 2]
+
+    await expect(waitForQaDeployment({
+      expectedSha: SHA,
+      expectedEnvironment: ENVIRONMENT,
+      laneMovedAt: LANE_MOVED_AT,
+      deadline: LANE_MOVED_AT + 1,
+      now: () => times.shift() ?? LANE_MOVED_AT + 2,
+      sleep,
+      listDeployments: async () => [deployment()],
+      listStatuses: async () => [status({ created_at: "2026-08-22T13:59:59Z" })],
+      probeAliasSha: async () => "b".repeat(40),
+    })).rejects.toThrow("QA deployment wait failed: timeout")
+    expect(sleep).toHaveBeenCalledOnce()
+  })
+
+  it("uses a new success time when it is later than the pointer", async () => {
+    await expect(waitForQaDeployment({
+      expectedSha: SHA,
+      expectedEnvironment: ENVIRONMENT,
+      laneMovedAt: LANE_MOVED_AT,
+      deadline: LANE_MOVED_AT + 2,
+      now: () => LANE_MOVED_AT,
+      sleep: async () => undefined,
+      listDeployments: async () => [deployment()],
+      listStatuses: async () => [status()],
+      probeAliasSha: async () => SHA,
+    })).resolves.toMatchObject({ readyAt: "2026-08-22T14:00:01.000Z" })
   })
 
   it.each([
@@ -52,9 +163,9 @@ describe("QA deployment status selection", () => {
   })
 
   it("rejects a post-pointer failure without a success", () => {
-    expect(findPostLaneVercelSuccess([
+    expect(findVercelSuccess([
       status({ state: "failure", created_at: "2026-08-22T14:00:02Z" }),
-    ], LANE_MOVED_AT)).toBeUndefined()
+    ])).toBeUndefined()
   })
 
   it("keeps exact deployed identity and protection verification immediately after the wait", async () => {
