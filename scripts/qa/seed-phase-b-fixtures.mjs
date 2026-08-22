@@ -76,8 +76,14 @@ try {
         geography_node_id: ids.geography,
         sector: "Tech & Digital",
         location: "Paris",
+        revenue_meur: null,
+        ebitda_keur: null,
+        headcount: null,
+        headcount_range: null,
+        date_added: null,
         public_title: `${fixturePrefix} opportunity probe`,
         teaser_summary: `${fixturePrefix} safe probe`,
+        internal_notes: null,
       }),
     ])
   } catch (error) {
