@@ -164,7 +164,7 @@ try {
   console.log(JSON.stringify({ ok: true, runId: manifest.runId, fixturePrefix, databaseRows: manifest.databaseRows.length, identities: 2, storageObjects: 1 }))
 } catch (error) {
   if (database) await database.query("ROLLBACK").catch(() => {})
-  console.error(error instanceof Error && (error.message.startsWith("Phase B fixture seed failed:") || error.message.startsWith("Isolation preflight failed:") || error.message.startsWith("Live QA evidence failed:")) ? error.message : "Phase B fixture seed failed: unknown")
+  console.error(error instanceof Error && (error.message.startsWith("Phase B fixture seed failed:") || error.message.startsWith("Isolation preflight failed:") || error.message.startsWith("Live QA evidence failed:")) ? error.message : `Phase B fixture seed failed: database-${safeDatabaseToken(error)}`)
   process.exitCode = 1
 } finally {
   await database?.end().catch(() => {})
