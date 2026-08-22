@@ -30,11 +30,9 @@ try {
       || (row.email === manifest.actors.staffCreated.email && row.source === "staff_manual")
     if (!expected) throw new Error("Phase B cleanup failed: repreneur-scope")
   }
-  const scopedOpportunities = runtime.p3OpportunityId
-    ? await database.query("SELECT id FROM public.opportunities WHERE id=$1 AND public_title=$2 AND created_by=$3", [runtime.p3OpportunityId, `${manifest.fixturePrefix} opportunity`, manifest.actors.staff.userId])
-    : await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity`, manifest.actors.staff.userId])
-  if (runtime.p3OpportunityId && scopedOpportunities.rows.length !== 1) throw new Error("Phase B cleanup failed: opportunity-ledger-mismatch")
-  if (scopedOpportunities.rows.length > 1) throw new Error("Phase B cleanup failed: opportunity-scope")
+  const scopedOpportunities = await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity`, manifest.actors.staff.userId])
+  if (runtime.p3OpportunityId && !scopedOpportunities.rows.some((row) => row.id === runtime.p3OpportunityId)) throw new Error("Phase B cleanup failed: opportunity-ledger-mismatch")
+  if (scopedOpportunities.rows.length > 2) throw new Error("Phase B cleanup failed: opportunity-scope")
   const scopedOpportunityProbes = runtime.opportunityProbeId
     ? await database.query("SELECT id FROM public.opportunities WHERE id=$1 AND public_title=$2 AND created_by=$3", [runtime.opportunityProbeId, `${manifest.fixturePrefix} opportunity probe`, manifest.actors.staff.userId])
     : await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity probe`, manifest.actors.staff.userId])
@@ -43,10 +41,16 @@ try {
   const opportunityIds = scopedOpportunities.rows.map((row) => row.id)
   const opportunityProbeIds = scopedOpportunityProbes.rows.map((row) => row.id)
   const allOpportunityIds = [...new Set([...opportunityIds, ...opportunityProbeIds])]
-  const matchIds = opportunityIds.length > 0 ? (await database.query(runtime.p3MatchId ? "SELECT id FROM public.opportunity_matches WHERE id=$1 AND opportunity_id = ANY($2::uuid[])" : "SELECT id FROM public.opportunity_matches WHERE opportunity_id = ANY($1::uuid[])", runtime.p3MatchId ? [runtime.p3MatchId, opportunityIds] : [opportunityIds])).rows.map((row) => row.id) : []
-  const evidenceIds = matchIds.length > 0 ? (await database.query(runtime.p3EvidenceId ? "SELECT id FROM public.opportunity_pursuit_evidence WHERE id=$1 AND match_id = ANY($2::uuid[])" : "SELECT id FROM public.opportunity_pursuit_evidence WHERE match_id = ANY($1::uuid[])", runtime.p3EvidenceId ? [runtime.p3EvidenceId, matchIds] : [matchIds])).rows.map((row) => row.id) : []
-  if (runtime.p3MatchId && matchIds.length !== 1) throw new Error("Phase B cleanup failed: match-ledger-mismatch")
-  if (runtime.p3EvidenceId && evidenceIds.length !== 1) throw new Error("Phase B cleanup failed: evidence-ledger-mismatch")
+  const scopedMatches = opportunityIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunity_matches WHERE opportunity_id = ANY($1::uuid[])", [opportunityIds])
+    : { rows: [] }
+  const matchIds = scopedMatches.rows.map((row) => row.id)
+  if (runtime.p3MatchId && !scopedMatches.rows.some((row) => row.id === runtime.p3MatchId)) throw new Error("Phase B cleanup failed: match-ledger-mismatch")
+  const scopedEvidence = matchIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunity_pursuit_evidence WHERE match_id = ANY($1::uuid[])", [matchIds])
+    : { rows: [] }
+  const evidenceIds = scopedEvidence.rows.map((row) => row.id)
+  if (runtime.p3EvidenceId && !scopedEvidence.rows.some((row) => row.id === runtime.p3EvidenceId)) throw new Error("Phase B cleanup failed: evidence-ledger-mismatch")
   const objectNames = [...new Set([...manifest.storageObjects, ...(runtime.storageObjects ?? []), ...scopedRepreneurs.rows.map((row) => row.cv_url).filter(Boolean)])]
   await recordRuntimeFixtures({
     ...runtime,

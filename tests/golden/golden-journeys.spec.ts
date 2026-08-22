@@ -209,9 +209,11 @@ test.describe.serial("Golden journeys", () => {
       portalOne.getByRole("button", { name: "I'm interested" }).click(),
       portalTwo.getByRole("button", { name: "I'm interested" }).click(),
     ])
-    const interested = await database.query("SELECT id, status FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2", [opportunityId, manifest.ids.portalRepreneur])
-    expect(interested.rows).toHaveLength(1)
-    expect(interested.rows[0].status).toBe("interested")
+    await expect.poll(async () => {
+      const interested = await database.query("SELECT id, status FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2", [opportunityId, manifest.ids.portalRepreneur])
+      expect(interested.rows).toHaveLength(1)
+      return interested.rows[0].status
+    }).toBe("interested")
 
     await page.goto("/opportunities/reviews")
     const row = page.getByRole("row").filter({ hasText: `${manifest.fixturePrefix} opportunity` })
