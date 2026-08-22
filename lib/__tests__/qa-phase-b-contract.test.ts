@@ -90,6 +90,14 @@ describe("Phase B QA contracts", () => {
     expect(() => assertSafeQaRuntime({ ...safe, QA_BROWSER_BASE_URL: "https://app.re-new.team", QA_VALIDATION_ORIGIN: "https://app.re-new.team" })).toThrow("QA runtime isolation failed: origin")
   })
 
+  it("rehearses the exact active-opportunity RPC inside a rollback-only savepoint", () => {
+    const seedScript = readFileSync(`${process.cwd()}/scripts/qa/seed-phase-b-fixtures.mjs`, "utf8")
+    expect(seedScript).toContain("SAVEPOINT phase_b_opportunity_probe")
+    expect(seedScript).toContain("create_opportunity_with_office_context")
+    expect(seedScript).toContain('      "",\n      ids.office,')
+    expect(seedScript).toContain("ROLLBACK TO SAVEPOINT phase_b_opportunity_probe")
+  })
+
   it("keeps the advisory workflow private and cleans before artifacts", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     expect(workflow).toContain("name: Golden journeys")

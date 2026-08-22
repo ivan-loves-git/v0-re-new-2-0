@@ -6,6 +6,11 @@ import { validateIsolationPreflight } from "../../lib/qa/isolation-preflight.mjs
 import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
 import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
+function safeDatabaseToken(error) {
+  const tokens = String(error?.message ?? "").match(/[a-z][a-z0-9_]{4,}/g) ?? []
+  return tokens.find((token) => token.startsWith("opportunity_") || token.startsWith("ma_")) ?? `postgres_${String(error?.code ?? "unknown").replace(/[^a-z0-9_]/gi, "_")}`
+}
+
 let database
 try {
   const [manifest, evidence] = await Promise.all([readJson(MANIFEST_FILE), readJson(EVIDENCE_FILE)])
@@ -55,6 +60,31 @@ try {
     VALUES ($1, $2, $3, 'credential', $4), ($5, $6, $7, 'credential', $4)`, [ids.staffAccount, actors.staff.userId, actors.staff.email, passwordHash, ids.portalAccount, actors.portal.userId, actors.portal.email])
   await database.query(`INSERT INTO public.app_user_roles (id, user_id, email, role, repreneur_id, access_enabled_at)
     VALUES ($1, $2, $3, 'staff', NULL, now()), ($4, $5, $6, 'repreneur', $7, now())`, [ids.staffRole, actors.staff.userId, actors.staff.email, ids.portalRole, actors.portal.userId, actors.portal.email, ids.portalRepreneur])
+  await database.query("SAVEPOINT phase_b_opportunity_probe")
+  try {
+    await database.query(`SELECT (public.create_opportunity_with_office_context(
+      $1::text, $2::uuid, $3::uuid[], $4::uuid, $5::text, $6::public.opportunity_status, $7::text, $8::jsonb
+    )).id`, [
+      "",
+      ids.office,
+      [ids.affiliation],
+      ids.affiliation,
+      `${fixturePrefix} opportunity probe`,
+      "active",
+      actors.staff.userId,
+      JSON.stringify({
+        geography_node_id: ids.geography,
+        sector: "Tech & Digital",
+        location: "Paris",
+        public_title: `${fixturePrefix} opportunity probe`,
+        teaser_summary: `${fixturePrefix} safe probe`,
+      }),
+    ])
+  } catch (error) {
+    throw new Error(`Phase B fixture seed failed: opportunity-rpc-${safeDatabaseToken(error)}`)
+  } finally {
+    await database.query("ROLLBACK TO SAVEPOINT phase_b_opportunity_probe")
+  }
   await database.query("COMMIT")
 
   await mkdir(RUN_DIR, { recursive: true })

@@ -566,7 +566,7 @@ export async function createOpportunityIntake(
     async () => {
       const supabase = createAdminClient()
       return supabase.rpc("create_opportunity_with_office_context", {
-        p_reference: parsed.reference,
+        p_reference: parsed.reference ?? "",
         p_source_office_id: parsed.sourceOfficeId,
         p_affiliation_ids: parsed.affiliationIds,
         p_primary_affiliation_id: parsed.primaryAffiliationId,
