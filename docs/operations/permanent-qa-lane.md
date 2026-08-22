@@ -7,7 +7,7 @@ Business cost authority: Ivan
 ## Fixed resources
 
 - Supabase: exactly one persistent Micro branch under production project `iiuqcdnmxhtyispnykgf`; no production data clone and no PR ownership.
-- Vercel: existing protected project `renew-overnight-validation-20260820`, Preview target, stable protected `qa` branch alias, no production/custom domain.
+- Vercel: existing protected project `renew-overnight-validation-20260820`, Preview target, provider-managed stable `qa` branch alias `renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app`, no production/custom domain. The manually assigned `renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app` alias is pinned and must be rejected.
 - GitHub: environment `qa-pilot` (name retained), permanent pointer branch `qa`, required check `P1-P3 protected pilot`.
 - No premium runner, additional project, email plan or external service is part of this lane.
 
@@ -19,7 +19,7 @@ Supabase management readback on 2026-08-22 quoted Micro branch compute at USD 0.
 
 1. A trusted `main` workflow validates that the supplied branch and exact 40-character SHA are the current head of a same-repository PR, the actor has write access, and the exact GitHub Actions `Verify` run is green.
 2. Automatic `workflow_run` admission requires `supabase/qa-contract.json` and every contract-listed SQL file to be byte-identical to trusted `main`. A database-changing candidate is refused automatically. Its exceptional `repository_dispatch` admission must carry the exact candidate SHA and branch, the candidate contract SHA-256, `schema_reviewed=true`, and review version `qa-schema-review-v1`; the trusted controller verifies the contract digest and every listed SQL checksum before any check, pointer, secret or DDL action.
-3. The workflow creates `P1-P3 protected pilot` on that exact SHA, holds global concurrency `renew-permanent-qa`, and moves only the remote `qa` pointer with an exact force-with-lease.
+3. The workflow creates `P1-P3 protected pilot` on that exact SHA, holds global concurrency `renew-permanent-qa`, and moves only the remote `qa` pointer with an exact force-with-lease. Irrelevant push, failed and skipped workflow events receive unique run-ID concurrency groups so they cannot supersede daily health or a valid candidate; latest-pending supersession remains unchanged among valid PR and repository-dispatch candidates.
 4. It waits for Vercel's Preview deployment of that SHA, then verifies the stable alias, project, target, protection and deployed non-secret QA contract.
 5. The schema prerequisite verifies artifact checksums and the live catalog fingerprint. Matching candidates perform no DDL. Mismatches may synchronize only an empty, non-production branch with no active lease and must match the candidate fingerprint afterward.
 6. The browser job acquires the database lease, safely recovers only expired manifest-owned residue, runs P1–P3, performs exact-ID plus run-label cleanup, verifies zero residue, and releases the lease.

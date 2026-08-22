@@ -25,7 +25,7 @@ function status(overrides: Record<string, unknown> = {}) {
     state: "success",
     creator: { login: "vercel[bot]" },
     created_at: "2026-08-22T14:00:01Z",
-    environment_url: "https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app",
+    environment_url: "https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app",
     ...overrides,
   }
 }

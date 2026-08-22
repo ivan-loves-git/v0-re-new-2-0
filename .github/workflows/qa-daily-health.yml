@@ -25,10 +25,10 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      BETTER_AUTH_URL: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
-      NEXT_PUBLIC_APP_URL: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
-      QA_BROWSER_BASE_URL: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
-      QA_VALIDATION_ORIGIN: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
+      BETTER_AUTH_URL: https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app
+      NEXT_PUBLIC_APP_URL: https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app
+      QA_BROWSER_BASE_URL: https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app
+      QA_VALIDATION_ORIGIN: https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app
       QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
       QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
