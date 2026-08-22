@@ -9,7 +9,7 @@ import {
 } from "@/lib/qa/permanent-contract.mjs"
 import { assertQaMailEnvelope, qaMailPolicyFromEnv } from "@/lib/email/qa-mail-policy"
 import { buildFixtureManifest } from "@/lib/qa/phase-b.mjs"
-import { fingerprintStructureRows } from "@/lib/qa/structure-fingerprint.mjs"
+import { assertMatchingStructureFingerprint, fingerprintStructureRows } from "@/lib/qa/structure-fingerprint.mjs"
 import { assertNoTopLevelTransactionControl } from "@/lib/qa/sql-safety.mjs"
 
 const QA_REF = "ypzrsrykirpqerfpozdm"
@@ -224,6 +224,69 @@ describe("permanent QA lane contract", () => {
     ]
     expect(fingerprintStructureRows(rows)).toBe(fingerprintStructureRows([...rows].reverse()))
     expect(fingerprintStructureRows(rows)).not.toBe(fingerprintStructureRows([{ ...rows[0], definition: "text|true|" }, rows[1]]))
+  })
+
+  it("canonicalizes ACL and policy-role members in PostgreSQL C order", () => {
+    const source = readFileSync(`${process.cwd()}/lib/qa/structure-fingerprint.mjs`, "utf8")
+
+    expect(source).not.toContain("relacl::text")
+    expect(source).not.toContain("proacl::text")
+    expect(source).not.toContain("roles::text")
+    expect(source.match(/COLLATE "C"/g)).toHaveLength(3)
+    expect(source.match(/jsonb_agg/g)).toHaveLength(3)
+    expect(source).toContain("CASE WHEN c.relacl IS NULL THEN 'null'")
+    expect(source).toContain("CASE WHEN p.proacl IS NULL THEN 'null'")
+    expect(source).toContain("CASE WHEN roles IS NULL THEN 'null'")
+  })
+
+  it("uses a locale-independent comparator for quoted mixed-case identities", () => {
+    const rows = [
+      { kind: "policy", identity: 'public."Alpha":StaffOnly', definition: 'PERMISSIVE|["Staff","analyst"]|SELECT|true|' },
+      { kind: "relation", identity: 'public."alpha"', definition: 'r|true|false|["Staff=arwdDxt/owner"]' },
+      { kind: "function", identity: 'public."Äudit"()', definition: 'SELECT 1|["owner=X/owner"]' },
+    ]
+    const originalLocaleCompare = String.prototype.localeCompare
+    String.prototype.localeCompare = () => {
+      throw new Error("localeCompare must not be called")
+    }
+
+    try {
+      expect(fingerprintStructureRows(rows)).toBe(fingerprintStructureRows([...rows].reverse()))
+    } finally {
+      String.prototype.localeCompare = originalLocaleCompare
+    }
+
+    const source = readFileSync(`${process.cwd()}/lib/qa/structure-fingerprint.mjs`, "utf8")
+    expect(source).not.toContain("localeCompare")
+  })
+
+  it("remains sensitive to privilege and policy-definition changes", () => {
+    const baseline = [
+      { kind: "relation", identity: "public.deals", definition: 'r|true|false|["staff=arwdDxt/owner"]' },
+      { kind: "policy", identity: "public.deals:staff_read", definition: 'PERMISSIVE|["staff"]|SELECT|is_staff()|' },
+    ]
+
+    expect(fingerprintStructureRows(baseline)).not.toBe(fingerprintStructureRows([
+      { ...baseline[0], definition: 'r|true|false|["staff=r/owner"]' },
+      baseline[1],
+    ]))
+    expect(fingerprintStructureRows(baseline)).not.toBe(fingerprintStructureRows([
+      baseline[0],
+      { ...baseline[1], definition: 'PERMISSIVE|["staff"]|SELECT|is_admin()|' },
+    ]))
+  })
+
+  it("reports only expected and actual SHA-256 values on a live mismatch", () => {
+    const expected = "a".repeat(64)
+    const actual = "b".repeat(64)
+    const diagnostics: string[] = []
+
+    expect(() => assertMatchingStructureFingerprint(expected, actual, (message) => diagnostics.push(message))).toThrow("Live QA evidence failed: structure-fingerprint")
+    expect(diagnostics).toEqual([JSON.stringify({ expectedStructureFingerprint: expected, actualStructureFingerprint: actual })])
+    expect(Object.keys(JSON.parse(diagnostics[0]))).toEqual(["expectedStructureFingerprint", "actualStructureFingerprint"])
+    expect(readFileSync(`${process.cwd()}/scripts/qa/collect-live-evidence.mjs`, "utf8")).toContain(
+      "assertMatchingStructureFingerprint(contract.structureFingerprint, liveStructureFingerprint)",
+    )
   })
 
   it("defines a database-owned lease, persisted manifest, recovery and blocked schema state", () => {
