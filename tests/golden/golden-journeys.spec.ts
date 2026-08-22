@@ -174,6 +174,16 @@ test.describe.serial("Golden journeys", () => {
     await choose(page, "Operating office", new RegExp(manifest.fixturePrefix))
     await page.locator(`#office_affiliation_${manifest.ids.affiliation}`).click()
     await page.locator(`input[name="primary_affiliation_id"][value="${manifest.ids.affiliation}"]`).check()
+    const submitted = await page.locator("form").evaluate((form) => Object.fromEntries(new FormData(form as HTMLFormElement).entries()))
+    expect(submitted).toMatchObject({
+      status: "active",
+      geography_node_id: manifest.ids.geography,
+      source_office_id: manifest.ids.office,
+      affiliation_ids: manifest.ids.affiliation,
+      primary_affiliation_id: manifest.ids.affiliation,
+      sector: "Tech & Digital",
+      location: "Paris",
+    })
     await page.getByRole("button", { name: "Create opportunity" }).click()
     await page.waitForURL(/\/opportunities\/[0-9a-f-]+/)
     const opportunityId = page.url().split("/").pop()!
