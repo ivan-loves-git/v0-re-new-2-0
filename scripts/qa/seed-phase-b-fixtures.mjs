@@ -4,7 +4,7 @@ import { chmod, mkdir, writeFile } from "node:fs/promises"
 import { hashPassword } from "better-auth/crypto"
 import { validateIsolationPreflight } from "../../lib/qa/isolation-preflight.mjs"
 import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
-import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, storageClient, writePrivateJson } from "./phase-b-common.mjs"
+import { CREDENTIALS_FILE, EVIDENCE_FILE, MANIFEST_FILE, RUN_DIR, databaseClient, readJson, setProvisionalIdentityTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
 function safeDatabaseToken(error) {
   const constraint = String(error?.constraint ?? "").replace(/[^a-z0-9_]/gi, "_")
@@ -62,9 +62,7 @@ try {
   }
 
   await database.query("BEGIN")
-  await database.query('ALTER TABLE public.ma_firms DISABLE TRIGGER guard_ma_provisional_acme_firm_identity')
-  await database.query('ALTER TABLE public.ma_offices DISABLE TRIGGER guard_ma_provisional_acme_office_identity')
-  await database.query('ALTER TABLE public.ma_contacts DISABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
+  await setProvisionalIdentityTriggers(database, false)
   await database.query(`INSERT INTO public.geography_nodes (id, stable_key, code, label, node_level)
     VALUES ($1, $2, $3, $4, 'country')`, [ids.geography, `qa-${manifest.runId.toLowerCase()}`, manifest.referenceCode, fixturePrefix])
   await database.query("INSERT INTO public.wave_journey_settings (singleton, enabled, updated_by) VALUES (true, true, $1)", [actors.staff.userId])
@@ -105,9 +103,6 @@ try {
     VALUES ($1, $2, 'test-schema-redacted-002', 'staff', now())`, [ids.provisionalContextRole, ids.provisionalContextUser])
   await database.query(`INSERT INTO public.ma_provisional_source_contexts (context_key, firm_id, office_id, contact_id, affiliation_id)
     VALUES ('acme_co_paris', $1, $2, $3, $4)`, [ids.provisionalFirm, ids.provisionalOffice, ids.provisionalContextContact, ids.provisionalAffiliation])
-  await database.query('ALTER TABLE public.ma_contacts ENABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
-  await database.query('ALTER TABLE public.ma_offices ENABLE TRIGGER guard_ma_provisional_acme_office_identity')
-  await database.query('ALTER TABLE public.ma_firms ENABLE TRIGGER guard_ma_provisional_acme_firm_identity')
   await database.query("SAVEPOINT phase_b_opportunity_probe")
   try {
     await database.query(`SELECT (public.create_opportunity_with_office_context(
@@ -127,6 +122,8 @@ try {
   } finally {
     await database.query("ROLLBACK TO SAVEPOINT phase_b_opportunity_probe")
   }
+  await database.query("SET CONSTRAINTS ALL IMMEDIATE")
+  await setProvisionalIdentityTriggers(database, true)
   await database.query("COMMIT")
 
   await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -168,6 +165,7 @@ try {
   console.log(JSON.stringify({ ok: true, runId: manifest.runId, fixturePrefix, databaseRows: manifest.databaseRows.length, identities: 2, storageObjects: 1 }))
 } catch (error) {
   if (database) await database.query("ROLLBACK").catch(() => {})
+  if (database) await setProvisionalIdentityTriggers(database, true).catch(() => {})
   console.error(error instanceof Error && (error.message.startsWith("Phase B fixture seed failed:") || error.message.startsWith("Isolation preflight failed:") || error.message.startsWith("Live QA evidence failed:")) ? error.message : `Phase B fixture seed failed: database-${safeDatabaseToken(error)}`)
   process.exitCode = 1
 } finally {

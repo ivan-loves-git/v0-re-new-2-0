@@ -74,3 +74,17 @@ export async function removeRunnerSecrets() {
     rm(resolve(`${RUN_DIR}/pilot.pdf`), { force: true }),
   ])
 }
+
+export async function setProvisionalIdentityTriggers(database, enabled) {
+  const action = enabled ? "ENABLE" : "DISABLE"
+  const triggers = [
+    ["ma_firms", "guard_ma_provisional_acme_firm_identity"],
+    ["ma_offices", "guard_ma_provisional_acme_office_identity"],
+    ["ma_contacts", "guard_ma_provisional_qa_person_contact_identity"],
+    ["ma_contact_office_affiliations", "guard_ma_provisional_qa_person_affiliation_identity"],
+    ["ma_provisional_source_contexts", "guard_ma_provisional_source_context_identity"],
+  ]
+  for (const [table, trigger] of triggers) {
+    await database.query(`ALTER TABLE public.${table} ${action} TRIGGER ${trigger}`)
+  }
+}

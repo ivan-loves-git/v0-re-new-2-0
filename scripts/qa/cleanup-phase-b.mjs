@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { MANIFEST_FILE, RUNTIME_FIXTURES_FILE, RUN_DIR, databaseClient, readJson, recordRuntimeFixtures, removeRunnerSecrets, storageClient, writePrivateJson } from "./phase-b-common.mjs"
+import { MANIFEST_FILE, RUNTIME_FIXTURES_FILE, RUN_DIR, databaseClient, readJson, recordRuntimeFixtures, removeRunnerSecrets, setProvisionalIdentityTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
 let database
 try {
@@ -48,6 +48,7 @@ try {
   }
 
   await database.query("BEGIN")
+  await setProvisionalIdentityTriggers(database, false)
   if (opportunityIds.length > 0) {
     if (evidenceIds.length > 0) await database.query("DELETE FROM public.opportunity_pursuit_evidence WHERE id = ANY($1::uuid[])", [evidenceIds])
     await database.query("DELETE FROM public.opportunity_pursuit_events WHERE opportunity_id = ANY($1::uuid[])", [opportunityIds])
@@ -56,21 +57,12 @@ try {
     await database.query("DELETE FROM public.opportunities WHERE id = ANY($1::uuid[])", [opportunityIds])
   }
   await database.query("DELETE FROM public.repreneurs WHERE id = ANY($1::uuid[])", [repreneurIds])
-  await database.query('ALTER TABLE public.ma_provisional_source_contexts DISABLE TRIGGER guard_ma_provisional_source_context_identity')
-  await database.query('ALTER TABLE public.ma_contact_office_affiliations DISABLE TRIGGER guard_ma_provisional_qa_person_affiliation_identity')
-  await database.query('ALTER TABLE public.ma_contacts DISABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
-  await database.query('ALTER TABLE public.ma_offices DISABLE TRIGGER guard_ma_provisional_acme_office_identity')
-  await database.query('ALTER TABLE public.ma_firms DISABLE TRIGGER guard_ma_provisional_acme_firm_identity')
   await database.query("DELETE FROM public.ma_provisional_source_contexts WHERE context_key=$1", [manifest.ids.provisionalContext])
   await database.query("DELETE FROM public.ma_contact_office_affiliations WHERE id=$1", [manifest.ids.provisionalAffiliation])
   await database.query("DELETE FROM public.ma_contacts WHERE id = ANY($1::uuid[])", [[manifest.ids.provisionalCountContact, manifest.ids.provisionalContextContact]])
   await database.query("DELETE FROM public.ma_offices WHERE id=$1", [manifest.ids.provisionalOffice])
   await database.query("DELETE FROM public.ma_firms WHERE id=$1", [manifest.ids.provisionalFirm])
-  await database.query('ALTER TABLE public.ma_firms ENABLE TRIGGER guard_ma_provisional_acme_firm_identity')
-  await database.query('ALTER TABLE public.ma_offices ENABLE TRIGGER guard_ma_provisional_acme_office_identity')
-  await database.query('ALTER TABLE public.ma_contacts ENABLE TRIGGER guard_ma_provisional_qa_person_contact_identity')
-  await database.query('ALTER TABLE public.ma_contact_office_affiliations ENABLE TRIGGER guard_ma_provisional_qa_person_affiliation_identity')
-  await database.query('ALTER TABLE public.ma_provisional_source_contexts ENABLE TRIGGER guard_ma_provisional_source_context_identity')
+
   await database.query("DELETE FROM public.ma_contact_office_affiliations WHERE id=$1", [manifest.ids.affiliation])
   await database.query("DELETE FROM public.ma_contacts WHERE id=$1", [manifest.ids.contact])
   await database.query("DELETE FROM public.ma_offices WHERE id=$1", [manifest.ids.office])
@@ -82,6 +74,8 @@ try {
   await database.query('DELETE FROM public."session" WHERE "userId" = ANY($1::text[])', [authIdentityIds])
   await database.query('DELETE FROM public."account" WHERE "userId" = ANY($1::text[])', [authIdentityIds])
   await database.query('DELETE FROM public."user" WHERE id = ANY($1::text[])', [authIdentityIds])
+  await database.query("SET CONSTRAINTS ALL IMMEDIATE")
+  await setProvisionalIdentityTriggers(database, true)
   await database.query("COMMIT")
 
   const residue = await database.query(`SELECT
@@ -99,6 +93,7 @@ try {
   console.log(JSON.stringify({ ok: true, runId: manifest.runId, databaseResidue: 0, authResidue: 0, storageResidue: 0 }))
 } catch (error) {
   if (database) await database.query("ROLLBACK").catch(() => {})
+  if (database) await setProvisionalIdentityTriggers(database, true).catch(() => {})
   await removeRunnerSecrets().catch(() => {})
   console.error(error instanceof Error && error.message.startsWith("Phase B cleanup failed:") ? error.message : "Phase B cleanup failed: unknown")
   process.exitCode = 1
