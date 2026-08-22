@@ -1,58 +1,125 @@
 name: Golden journeys
 
 on:
-  workflow_dispatch:
-  deployment_status:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
+  repository_dispatch:
+    types: [qa_candidate]
 
 permissions:
   contents: read
   deployments: read
 
 concurrency:
-  group: golden-journeys-${{ github.event.deployment.environment || github.ref }}-${{ github.event.deployment.sha || github.sha }}
-  cancel-in-progress: true
+  group: renew-permanent-qa
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  QA_STABLE_ORIGIN: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
+  QA_VALIDATION_PROJECT: renew-overnight-validation-20260820
 
 jobs:
-  pilot:
-    name: Run protected P1-P3 pilot
+  lane:
+    name: Serialize exact candidate into qa lane
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'deployment_status' &&
-       github.event.deployment_status.state == 'success' &&
-       github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' &&
-       github.event.deployment.creator.login == 'vercel[bot]')
+      github.event_name == 'repository_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request')
+    permissions:
+      contents: write
+      deployments: read
+      checks: write
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: qa-pilot
+    timeout-minutes: 5
+    outputs:
+      candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
+      candidate_branch: ${{ steps.candidate.outputs.candidate_branch }}
+      check_run_id: ${{ steps.check.outputs.check_run_id }}
+      pointer_moved_at: ${{ steps.pointer.outputs.pointer_moved_at }}
     env:
-      CI: "true"
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
-      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
-      QA_BROWSER_BASE_URL: ${{ secrets.QA_BROWSER_BASE_URL }}
-      QA_VALIDATION_ORIGIN: ${{ secrets.QA_VALIDATION_ORIGIN }}
-      QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
-      QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-      QA_EXPECTED_SHA: ${{ github.event_name == 'deployment_status' && github.event.deployment.sha || github.sha }}
-      QA_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
-      QA_FIXTURE_PREFIX: TEST-gh-${{ github.run_id }}-${{ github.run_attempt }}
-      QA_RUN_DIR: .qa-run
-      QA_FIXTURE_MANIFEST_FILE: .qa-run/manifest.json
-      QA_PREFLIGHT_EVIDENCE_FILE: .qa-run/live-preflight.json
-      QA_DATABASE_CA_CERT_FILE: .qa-run/supabase-ca.crt
-      QA_CREDENTIALS_FILE: .qa-run/credentials.json
-      QA_CASE_RESULT_FILE: .qa-run/case-result.json
       GITHUB_TOKEN: ${{ github.token }}
-
+      QA_CANDIDATE_BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0].head.ref || github.event.client_payload.candidate_branch }}
+      QA_EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0].head.sha || github.event.client_payload.candidate_sha }}
+      QA_VERIFY_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || github.event.client_payload.verify_run_id }}
     steps:
-      - name: Check out exact candidate
+      - name: Check out trusted lane controller
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.QA_EXPECTED_SHA }}
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Validate same-repository exact branch head
+        id: candidate
+        run: node scripts/qa/validate-candidate.mjs
+
+      - name: Attach protected check to exact candidate
+        id: check
+        run: node scripts/qa/candidate-check.mjs create
+
+      - name: Refuse a failed daily health baseline
+        shell: bash
+        run: |
+          IFS=$'\t' read -r conclusion health_created_at health_branch health_sha health_event health_workflow <<< "$(gh run list --workflow qa-daily-health.yml --status completed --limit 1 --json conclusion,createdAt,headBranch,headSha,event,workflowName --jq '.[0] | [.conclusion,.createdAt,.headBranch,.headSha,.event,.workflowName] | @tsv')"
+          current_main="$(gh api repos/$GITHUB_REPOSITORY/branches/main --jq .commit.sha)"
+          if [ "$conclusion" != "success" ] || [ -z "$health_created_at" ] || [ "$health_branch" != "main" ] || [ "$health_sha" != "$current_main" ] || [ "$health_workflow" != "QA daily health" ]; then
+            printf 'A completed successful daily QA health run is required\n' >&2
+            exit 1
+          fi
+          case "$health_event" in schedule|workflow_dispatch) ;; *) printf 'Daily QA health provenance is invalid\n' >&2; exit 1 ;; esac
+          age_seconds="$(( $(date -u +%s) - $(date -u -d "$health_created_at" +%s) ))"
+          if [ "$age_seconds" -lt 0 ] || [ "$age_seconds" -gt 93600 ]; then
+            printf 'Latest daily QA health is stale: health-created-at=%s\n' "$health_created_at" >&2
+            exit 1
+          fi
+
+      - name: Move permanent qa pointer with lease-safe force
+        id: pointer
+        shell: bash
+        run: |
+          git fetch origin "$QA_EXPECTED_SHA" qa || git fetch origin "$QA_EXPECTED_SHA"
+          old="$(git ls-remote --heads origin refs/heads/qa | cut -f1)"
+          if [ -n "$old" ]; then
+            git push origin "$QA_EXPECTED_SHA:refs/heads/qa" --force-with-lease="refs/heads/qa:$old"
+          else
+            git push origin "$QA_EXPECTED_SHA:refs/heads/qa" --force-with-lease="refs/heads/qa:"
+          fi
+          test "$(git ls-remote --heads origin refs/heads/qa | cut -f1)" = "$QA_EXPECTED_SHA"
+          printf 'pointer_moved_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+  schema-sync:
+    name: Synchronize candidate database contract
+    permissions:
+      contents: read
+      deployments: read
+    needs: lane
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: qa-pilot
+    outputs:
+      ready_at: ${{ steps.deployment.outputs.ready_at }}
+      deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
+      QA_LANE_MOVED_AT: ${{ needs.lane.outputs.pointer_moved_at }}
+      QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      QA_DATABASE_CA_CERT_FILE: .qa-run/supabase-ca.crt
+      QA_CANDIDATE_ROOT: .qa-candidate
+    steps:
+      - name: Check out trusted QA controller
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Check out authorized candidate contract as data
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.lane.outputs.candidate_sha }}
+          path: .qa-candidate
           fetch-depth: 2
 
       - name: Set up pnpm
@@ -67,43 +134,126 @@ jobs:
           cache: pnpm
 
       - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Install Chromium only
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Prepare private runner evidence
+      - name: Prepare private database transport
         shell: bash
         run: |
           umask 077
           mkdir -p .qa-run
           curl --fail --silent --show-error https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt -o "$QA_DATABASE_CA_CERT_FILE"
-          pnpm qa:fixture:manifest
-          pnpm qa:fixture:manifest-rehearsal
 
-      - name: Wait for exact protected deployment and collect live evidence
+      - name: Wait for exact qa deployment Ready event
+        id: deployment
+        run: node scripts/qa/wait-for-qa-deployment.mjs
+
+      - name: Verify deployed application identities before database mutation
+        run: pnpm qa:deployed-contract:verify
+
+      - name: Verify candidate schema artifact
+        run: pnpm qa:schema:verify
+
+      - name: Synchronize only the empty approved QA branch
+        run: pnpm qa:schema:sync
+
+  golden:
+    name: Run protected P1-P3 on permanent QA
+    permissions:
+      contents: read
+      deployments: read
+    needs: [lane, schema-sync]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: qa-pilot
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BETTER_AUTH_URL: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
+      NEXT_PUBLIC_APP_URL: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
+      QA_BROWSER_BASE_URL: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
+      QA_VALIDATION_ORIGIN: https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app
+      QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
+      QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
+
+      QA_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
+      QA_FIXTURE_PREFIX: TEST-gh-${{ github.run_id }}-${{ github.run_attempt }}
+      QA_RUN_DIR: .qa-run
+      QA_FIXTURE_MANIFEST_FILE: .qa-run/manifest.json
+      QA_PREFLIGHT_EVIDENCE_FILE: .qa-run/live-preflight.json
+      QA_DATABASE_CA_CERT_FILE: .qa-run/supabase-ca.crt
+      QA_CREDENTIALS_FILE: .qa-run/credentials.json
+      QA_CASE_RESULT_FILE: .qa-run/case-result.json
+      GITHUB_TOKEN: ${{ github.token }}
+      QA_CANDIDATE_ROOT: .qa-candidate
+    steps:
+      - name: Check out trusted QA controller and journeys
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Check out authorized candidate contract as data
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.lane.outputs.candidate_sha }}
+          path: .qa-candidate
+          fetch-depth: 2
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Install Chromium only
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Prepare private runner evidence and lease owner
         shell: bash
         run: |
-          for attempt in $(seq 1 6); do
-            if pnpm qa:evidence:collect; then
-              exit 0
-            fi
-            if [ "$attempt" -eq 6 ]; then
-              exit 1
-            fi
-            sleep 10
-          done
+          umask 077
+          mkdir -p .qa-run
+          curl --fail --silent --show-error https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt -o "$QA_DATABASE_CA_CERT_FILE"
+          printf 'QA_LEASE_OWNER=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          pnpm qa:fixture:manifest
+
+      - name: Collect deployed and provider identity before recovery
+        run: pnpm qa:evidence:collect
+        env:
+          QA_EVIDENCE_MODE: identity
 
       - name: Verify live isolation preflight
         run: pnpm qa:preflight-isolation
 
-      - name: Rehearse exact fixture cleanup
-        run: pnpm qa:fixture:rehearse-cleanup
-        env:
-          QA_FIXTURE_MANIFEST_FILE: .qa-run/rehearsal-manifest.json
+      - name: Acquire or safely recover database lease
+        id: lease
+        run: pnpm qa:lease:acquire
+
+      - name: Require empty baseline after recovery
+        run: pnpm qa:evidence:collect
+
+      - name: Pause after lease for serialization proof
+        if: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.pause_after_lease == true }}
+        run: sleep 180
 
       - name: Seed exact Playwright fixtures
+        id: seed
         run: pnpm qa:fixture:seed
+
+      - name: Heartbeat before browser execution
+        run: pnpm qa:lease:heartbeat
 
       - name: Run P1-P3 in protected Chromium
         run: pnpm qa:browser
@@ -114,15 +264,24 @@ jobs:
       - name: Read back exact persisted acceptance state
         run: pnpm qa:fixture:readback
 
-      - name: Cleanup exact fixtures
-        if: always()
-        shell: bash
-        run: |
-          if [ -f .qa-run/manifest.json ]; then
-            pnpm qa:fixture:cleanup
-          else
-            printf '%s\n' '{"ok":true,"reason":"no-fixtures-created","databaseResidue":0,"authResidue":0,"storageResidue":0}' > .qa-run/cleanup-readback.json
-          fi
+      - name: Cleanup exact manifest and label-owned fixtures
+        id: cleanup
+        if: ${{ always() && steps.lease.outcome == 'success' && steps.seed.outcome != 'skipped' }}
+        run: pnpm qa:fixture:cleanup
+
+      - name: Verify entire QA baseline is empty after cleanup
+        id: empty
+        if: ${{ always() && steps.cleanup.outcome == 'success' }}
+        run: pnpm qa:evidence:collect
+
+      - name: Release unused lease before fixture mutation
+        if: ${{ always() && steps.lease.outcome == 'success' && steps.seed.outcome == 'skipped' }}
+        run: pnpm qa:lease:release
+
+      - name: Release lease only after zero residue
+        if: ${{ always() && steps.cleanup.outcome == 'success' && steps.empty.outcome == 'success' }}
+        run: pnpm qa:lease:release
+
 
       - name: Sanitize runner artifacts
         id: sanitize
@@ -139,19 +298,38 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  gate:
-    name: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' && github.event.deployment.creator.login == 'vercel[bot]')) && 'P1-P3 protected pilot' || 'Ignore unrelated deployment' }}
-    needs: pilot
+  finalize:
+    name: Finalize exact candidate check
+    permissions:
+      contents: read
+      checks: write
     if: always()
+    needs: [lane, schema-sync, golden]
     runs-on: ubuntu-latest
-    timeout-minutes: 1
+    timeout-minutes: 2
     env:
-      PROTECTED_EVENT: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview – renew-overnight-validation-20260820' && github.event.deployment.creator.login == 'vercel[bot]')) && 'true' || 'false' }}
-      PILOT_RESULT: ${{ needs.pilot.result }}
+      GITHUB_TOKEN: ${{ github.token }}
+      QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
+      QA_CHECK_RUN_ID: ${{ needs.lane.outputs.check_run_id }}
+      QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}
+      QA_DEPLOYMENT_READY_AT: ${{ needs.schema-sync.outputs.ready_at }}
+      QA_CHECK_SUMMARY: schema=${{ needs.schema-sync.result }}; golden=${{ needs.golden.result }}; deployment-ready=${{ needs.schema-sync.outputs.ready_at }}
     steps:
-      - name: Preserve the protected pilot result
-        shell: bash
-        run: |
-          if [ "$PROTECTED_EVENT" = "true" ] && [ "$PILOT_RESULT" != "success" ]; then
-            exit 1
-          fi
+      - name: Check out trusted check finalizer
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Preserve strict P1-P3 result on candidate SHA
+        if: ${{ needs.lane.outputs.check_run_id != '' }}
+        run: node scripts/qa/candidate-check.mjs update
+
+      - name: Upload exact lane timing
+        if: ${{ always() && needs.lane.outputs.check_run_id != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-lane-timing-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .qa-final/lane-timing.json
+          if-no-files-found: error
+          retention-days: 1

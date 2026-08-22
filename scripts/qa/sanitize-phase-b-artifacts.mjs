@@ -3,12 +3,12 @@ import { execFile as execFileCallback } from "node:child_process"
 import { readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { basename, join } from "node:path"
 import { promisify } from "node:util"
-import { RUN_DIR, removeRunnerSecrets, writePrivateJson } from "./phase-b-common.mjs"
+import { CREDENTIALS_FILE, RUN_DIR, removeRunnerSecrets, writePrivateJson } from "./phase-b-common.mjs"
 
 const execFile = promisify(execFileCallback)
 const TRACE_ACTIONS_FILE = `${RUN_DIR}/sanitized-trace-actions.json`
 const TRACE_SUMMARY_FILE = `${RUN_DIR}/sanitized-traces.json`
-const secretEnvironmentName = /(?:^|_)(?:SECRET|TOKEN|PASSWORD|KEY|COOKIE)$|DATABASE_URL$|CONNECTION_(?:STRING|URL)$|^(?:NEXT_PUBLIC_SUPABASE_URL|BETTER_AUTH_URL|NEXT_PUBLIC_APP_URL|QA_BROWSER_BASE_URL|QA_VALIDATION_ORIGIN|QA_SUPABASE_PROJECT_REF|QA_EMAIL_RECIPIENT)$/i
+const secretEnvironmentName = /(?:^|_)(?:SECRET|TOKEN|PASSWORD|KEY|COOKIE)$|DATABASE_URL$|CONNECTION_(?:STRING|URL)$|^(?:NEXT_PUBLIC_SUPABASE_URL|BETTER_AUTH_URL|NEXT_PUBLIC_APP_URL|QA_BROWSER_BASE_URL|QA_VALIDATION_ORIGIN|QA_EMAIL_RECIPIENT)$/i
 const sensitiveValues = Object.entries(process.env)
   .filter(([name, value]) => secretEnvironmentName.test(name) && typeof value === "string" && value.length > 0)
   .map(([, value]) => value)
@@ -113,6 +113,11 @@ async function extractTrace(archive, index) {
   }
 }
 
+const generatedCredentials = await readFile(CREDENTIALS_FILE, "utf8")
+  .then((text) => Object.values(JSON.parse(text)).filter((value) => typeof value === "string" && value.length > 0))
+  .catch(() => [])
+sensitiveValues.push(...generatedCredentials)
+sensitiveValues.sort((left, right) => right.length - left.length)
 await removeRunnerSecrets()
 const files = await walk(RUN_DIR)
 const traceArchives = files.filter((path) => path.endsWith(".zip")).sort()
@@ -147,6 +152,10 @@ await writePrivateJson(TRACE_SUMMARY_FILE, {
 for (const file of (await walk(RUN_DIR)).filter((path) => /\.(json|html|txt|trace)$/.test(path))) {
   let text = await readFile(file, "utf8")
   text = redactKnownSecrets(text)
+  if (forbiddenTraceResidue.test(text)) {
+    await rm(file, { force: true })
+    throw new Error("Artifact sanitization failed: unsafe-text-residue")
+  }
   await writeFile(file, text)
 }
 

@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs"
-import { runInNewContext } from "node:vm"
 import { describe, expect, it } from "vitest"
 import {
   assertSafeQaRuntime,
@@ -7,9 +6,27 @@ import {
   validateLiveEvidence,
 } from "@/lib/qa/phase-b.mjs"
 
-const REF = "ncsnoinizxwdcbarxzzl"
+const REF = "ypzrsrykirpqerfpozdm"
 const SHA = "a".repeat(40)
-const ORIGIN = "https://renew-overnight-validation-git-e43dfc-myworkmail4-pngs-projects.vercel.app"
+const ORIGIN = "https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app"
+const FINGERPRINT = "b".repeat(64)
+
+function contractEvidence() {
+  return {
+    candidateContract: { expectedStructureFingerprint: FINGERPRINT },
+    deployedContract: {
+      candidateSha: SHA,
+      projectRef: REF,
+      apiRef: REF,
+      databaseRef: REF,
+      storageRef: REF,
+      structureFingerprint: FINGERPRINT,
+      validationProject: "renew-overnight-validation-20260820",
+      mailPolicy: "allowlist",
+      mailTransport: "simulated",
+    },
+  }
+}
 
 describe("Phase B QA contracts", () => {
   it("builds deterministic exact-ID fixtures with a run-scoped TEST prefix", () => {
@@ -25,7 +42,8 @@ describe("Phase B QA contracts", () => {
     expect(first.storageObjects).toEqual([`${first.fixturePrefix}/fixtures/pilot.pdf`])
     expect(first.ids.provisionalFirm).toMatch(/^[0-9a-f-]{36}$/)
     expect(first.ids.provisionalContextContact).toMatch(/^[0-9a-f-]{36}$/)
-    expect(first.databaseRows.some((row: { id: string }) => row.id === first.ids.provisionalContext)).toBe(true)
+    expect(first.databaseRows.some((row: { id: string }) => row.id === first.ids.provisionalContext)).toBe(false)
+    expect(first.singletonSnapshots).toContainEqual({ table: "ma_provisional_source_contexts", key: first.ids.provisionalContext })
   })
 
   it("accepts only live zero-state evidence from the exact protected deployment SHA", () => {
@@ -34,6 +52,7 @@ describe("Phase B QA contracts", () => {
       expectedOrigin: ORIGIN,
       expectedSha: SHA,
       evidence: {
+        ...contractEvidence(),
         collectedAt: "2026-08-21T21:00:00.000Z",
         supabase: {
           databaseRef: REF,
@@ -43,7 +62,9 @@ describe("Phase B QA contracts", () => {
           restHealthy: true,
           authHealthy: true,
           storageHealthy: true,
+          storageBuckets: [{ id: "cvs", public: false }, { id: "opportunity-documents", public: false }],
           customerRows: 0,
+          applicationRows: 0,
           betterAuthUsers: 0,
           supabaseAuthUsers: 0,
           storageObjects: 0,
@@ -63,11 +84,13 @@ describe("Phase B QA contracts", () => {
 
   it("fails closed on non-zero state, wrong SHA, or missing protection proof", () => {
     const base = {
+      ...contractEvidence(),
       collectedAt: "2026-08-21T21:00:00.000Z",
       supabase: {
         databaseRef: REF, apiRef: REF, storageRef: REF,
         databaseHealthy: true, restHealthy: true, authHealthy: true, storageHealthy: true,
-        customerRows: 0, betterAuthUsers: 0, supabaseAuthUsers: 0, storageObjects: 0,
+        storageBuckets: [{ id: "cvs", public: false }, { id: "opportunity-documents", public: false }],
+        customerRows: 0, applicationRows: 0, betterAuthUsers: 0, supabaseAuthUsers: 0, storageObjects: 0,
       },
       vercel: {
         projectName: "renew-overnight-validation-20260820", target: "preview", origin: ORIGIN,
@@ -75,7 +98,9 @@ describe("Phase B QA contracts", () => {
         aliases: [new URL(ORIGIN).hostname], productionEnvironmentAttached: false,
       },
     }
-    expect(() => validateLiveEvidence({ expectedRef: REF, expectedOrigin: ORIGIN, expectedSha: SHA, evidence: { ...base, supabase: { ...base.supabase, customerRows: 1 } } })).toThrow("Live QA evidence failed: non-empty")
+    expect(() => validateLiveEvidence({ expectedRef: REF, expectedOrigin: ORIGIN, expectedSha: SHA, evidence: { ...base, supabase: { ...base.supabase, customerRows: 1, applicationRows: 1 } } })).toThrow("Live QA evidence failed: non-empty")
+    expect(() => validateLiveEvidence({ expectedRef: REF, expectedOrigin: ORIGIN, expectedSha: SHA, evidence: { ...base, supabase: { ...base.supabase, storageBuckets: [{ id: "cvs", public: true }] } } })).toThrow("Live QA evidence failed: storage-buckets")
+    expect(validateLiveEvidence({ expectedRef: REF, expectedOrigin: ORIGIN, expectedSha: SHA, evidence: { ...base, supabase: { ...base.supabase, customerRows: 1, applicationRows: 1 } }, allowStaleResidue: true })).toEqual({ projectRef: REF, origin: ORIGIN, deploymentSha: SHA })
     expect(() => validateLiveEvidence({ expectedRef: REF, expectedOrigin: ORIGIN, expectedSha: "b".repeat(40), evidence: base })).toThrow("Live QA evidence failed: deployment-sha")
     expect(() => validateLiveEvidence({ expectedRef: REF, expectedOrigin: ORIGIN, expectedSha: SHA, evidence: { ...base, vercel: { ...base.vercel, protection: { unauthenticatedBlocked: false, authorizedStatus: 200 } } } })).toThrow("Live QA evidence failed: deployment-protection")
   })
@@ -96,7 +121,7 @@ describe("Phase B QA contracts", () => {
 
   it("rehearses the exact active-opportunity RPC inside a rollback-only savepoint", () => {
     const seedScript = readFileSync(`${process.cwd()}/scripts/qa/seed-phase-b-fixtures.mjs`, "utf8")
-    expect(seedScript).toContain("pg_get_functiondef")
+    expect(seedScript).not.toContain("pg_get_functiondef")
     const commonScript = readFileSync(`${process.cwd()}/scripts/qa/phase-b-common.mjs`, "utf8")
     expect(commonScript).toContain("guard_ma_provisional_acme_firm_identity")
     expect(seedScript).toContain("setProvisionalIdentityTriggers(database, true)")
@@ -124,80 +149,39 @@ describe("Phase B QA contracts", () => {
     expect(cleanupScript).toContain("DELETE FROM public.opportunity_ma_contacts WHERE opportunity_id = ANY($1::uuid[])")
   })
 
-  it("keeps the advisory workflow private and cleans before artifacts", () => {
+  it("keeps the exact-candidate workflow private and cleans before artifacts", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const packageJson = JSON.parse(readFileSync(`${process.cwd()}/package.json`, "utf8"))
     expect(workflow).toContain("name: Golden journeys")
-    expect(workflow).toContain("workflow_dispatch:")
-    expect(workflow).toContain("deployment_status:")
-    expect(workflow).toContain("Preview – renew-overnight-validation-20260820")
-    expect(workflow).toContain("github.event.deployment.environment || github.ref")
+    expect(workflow).toContain("workflow_run:")
+    expect(workflow).toContain("repository_dispatch:")
+    expect(workflow).toContain("github.event.workflow_run.pull_requests[0].head.ref")
+    expect(workflow).toContain("github.event.workflow_run.pull_requests[0].head.sha")
+    expect(workflow).toContain("renew-permanent-qa")
     expect(workflow).not.toContain("pull_request_target")
     expect(workflow).toContain("environment: qa-pilot")
-    expect(workflow).toContain("contents: read")
+    expect(workflow).toContain("contents: write")
     expect(workflow).not.toContain("id-token: write")
     expect(packageJson.scripts["qa:browser:clean-run"]).toBe("node scripts/qa/verify-playwright-clean-run.mjs")
     expect(workflow.indexOf("Run P1-P3 in protected Chromium")).toBeLessThan(workflow.indexOf("Enforce first-attempt P1-P3 evidence"))
     expect(workflow.indexOf("Enforce first-attempt P1-P3 evidence")).toBeLessThan(workflow.indexOf("Read back exact persisted acceptance state"))
-    expect(workflow.indexOf("Cleanup exact fixtures")).toBeLessThan(workflow.indexOf("Upload sanitized evidence"))
+    const cleanup = workflow.indexOf("Cleanup exact manifest and label-owned fixtures")
+    const upload = workflow.indexOf("Upload sanitized evidence")
+    expect(cleanup).toBeGreaterThanOrEqual(0)
+    expect(upload).toBeGreaterThan(cleanup)
     expect(workflow).toContain("retention-days: 1")
   })
 
-  it("reserves the protected check name for manual or exact validation deployments", () => {
+  it("creates and finalizes the protected check on the exact candidate SHA", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
-    const gateBlock = workflow.match(/\n  gate:\n([\s\S]*)$/)?.[1]
-    const jobNameSource = workflow.match(/\n  gate:\n    name: (\$\{\{.*\}\})\n/)?.[1]
-
-    expect(workflow).toContain("pilot:\n    name: Run protected P1-P3 pilot\n    if: >-")
-    expect(gateBlock).toContain("needs: pilot")
-    expect(gateBlock).toContain("if: always()")
-    expect(gateBlock).toContain("PILOT_RESULT: ${{ needs.pilot.result }}")
-    expect(gateBlock).not.toContain("environment: qa-pilot")
-    expect(jobNameSource).toBeDefined()
-    const expression = jobNameSource!
-      .replace(/^\s*\$\{\{/, "")
-      .replace(/\}\}\s*$/, "")
-    const checkName = (github: object) => runInNewContext(expression, { github })
-    const exactDeployment = {
-      event_name: "deployment_status",
-      event: {
-        deployment_status: { state: "success" },
-        deployment: {
-          environment: "Preview – renew-overnight-validation-20260820",
-          creator: { login: "vercel[bot]" },
-        },
-      },
-    }
-
-    expect(checkName({ event_name: "workflow_dispatch", event: {} })).toBe("P1-P3 protected pilot")
-    expect(checkName(exactDeployment)).toBe("P1-P3 protected pilot")
-    expect(checkName({
-      ...exactDeployment,
-      event: {
-        ...exactDeployment.event,
-        deployment: {
-          ...exactDeployment.event.deployment,
-          environment: "Production – v0-re-new-2-0",
-        },
-      },
-    })).toBe("Ignore unrelated deployment")
-    expect(checkName({
-      ...exactDeployment,
-      event: {
-        ...exactDeployment.event,
-        deployment_status: { state: "failure" },
-      },
-    })).toBe("Ignore unrelated deployment")
-    expect(checkName({
-      ...exactDeployment,
-      event: {
-        ...exactDeployment.event,
-        deployment: {
-          ...exactDeployment.event.deployment,
-          creator: { login: "untrusted-user" },
-        },
-      },
-    })).toBe("Ignore unrelated deployment")
+    const checkScript = readFileSync(`${process.cwd()}/scripts/qa/candidate-check.mjs`, "utf8")
+    expect(workflow).toContain("node scripts/qa/candidate-check.mjs create")
+    expect(workflow).toContain("node scripts/qa/candidate-check.mjs update")
+    expect(checkScript).toContain('name: "P1-P3 protected pilot"')
+    expect(checkScript).toContain("head_sha: sha")
+    expect(readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")).toContain("verifyRunId")
+    expect(readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")).toContain('app?.slug === "github-actions"')
+    expect(workflow).not.toContain("Ignore unrelated deployment")
   })
 
   it("configures Chromium only with one CI retry and private artifacts", () => {

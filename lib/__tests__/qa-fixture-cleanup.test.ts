@@ -34,12 +34,13 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).not.toContain("reference_code='QA'")
   })
 
-  it("collects every exact run-scoped P3 retry before deleting shared fixtures", () => {
+  it("collects every exact run-scoped P3 retry and remains idempotent after deletion", () => {
     const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
     expect(script).toContain("public_title=$1 AND created_by=$2")
-    expect(script).toContain("scopedOpportunities.rows.some((row) => row.id === runtime.p3OpportunityId)")
     expect(script).toContain("scopedOpportunities.rows.length > 2")
-    expect(script).toContain("scopedMatches.rows.some((row) => row.id === runtime.p3MatchId)")
+    expect(script).toContain("WHERE opportunity_id = ANY($1::uuid[])")
+    expect(script).not.toContain("opportunity-ledger-mismatch")
+    expect(script).not.toContain("match-ledger-mismatch")
   })
 
   it("removes exact QA evidence without weakening append-only protection after cleanup", () => {

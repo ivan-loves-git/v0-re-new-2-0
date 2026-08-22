@@ -55,12 +55,14 @@ describe("sanitized Playwright trace evidence", () => {
   it("retains safe action order while excluding secrets, cookies, URLs, params, and network data", () => {
     const { root, runDirectory } = temporaryRunDirectory()
     const secret = "runner-secret-value-123"
+    const generatedPassword = "ephemeral-browser-password-456"
     const qaRecipient = "private-recipient@example.test"
     const shortToken = "tok"
     writeFileSync(
       join(runDirectory, "case-result.json"),
-      `${JSON.stringify({ ok: false, recipient: qaRecipient, credential: shortToken })}\n`,
+      `${JSON.stringify({ ok: false, recipient: qaRecipient, credential: shortToken, generatedPassword })}\n`,
     )
+    writeFileSync(join(runDirectory, "credentials.json"), `${JSON.stringify({ password: generatedPassword })}\n`)
     const archive = writeTraceArchive(root, runDirectory, [
       {
         type: "before",
@@ -129,6 +131,8 @@ describe("sanitized Playwright trace evidence", () => {
     expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).toContain("[REDACTED]")
     expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).not.toContain(qaRecipient)
     expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).not.toContain(shortToken)
+    expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).not.toContain(generatedPassword)
+    expect(() => readFileSync(join(runDirectory, "credentials.json"))).toThrow()
 
     const evidence = JSON.parse(actionsText)
     expect(evidence).toEqual({
@@ -192,6 +196,18 @@ describe("sanitized Playwright trace evidence", () => {
     expect(() => readFileSync(archive)).toThrow()
     expect(() => readFileSync(join(runDirectory, "sanitized-trace-actions.json"))).toThrow()
     expect(() => readFileSync(join(runDirectory, "sanitized-traces.json"))).toThrow()
+  })
+
+  it("fails closed and removes text containing unknown credential-shaped residue", () => {
+    const { runDirectory } = temporaryRunDirectory()
+    const unsafeFile = join(runDirectory, "future-failure.txt")
+    writeFileSync(unsafeFile, "request failed with Authorization: Bearer future-unknown-credential\n")
+
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain("Artifact sanitization failed: unsafe-text-residue")
+    expect(() => readFileSync(unsafeFile)).toThrow()
   })
 
   it("keeps successful runs valid when no Playwright trace exists", () => {

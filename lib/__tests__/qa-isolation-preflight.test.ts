@@ -36,6 +36,8 @@ function validInput() {
       },
       email: {
         allowedRecipients: ["delivered@resend.dev"],
+        applicationPolicy: "allowlist",
+        applicationTransport: "simulated",
       },
     },
     manifest: {
@@ -55,6 +57,7 @@ function validInput() {
       ],
       betterAuthIdentities: ["TEST-20260821-phase-a-user"],
       storageObjects: ["TEST-20260821-phase-a/cvs/probe.pdf"],
+      singletonSnapshots: [{ table: "wave_journey_settings", key: "true" }],
     },
   }
 }
@@ -66,24 +69,37 @@ function expectFailure(mutator: (input: ReturnType<typeof validInput>) => void, 
 }
 
 describe("QA isolation preflight", () => {
-  it("accepts only the authorised data-less ephemeral child branch for reconstruction", () => {
+  it("accepts only the authorised data-less persistent child branch for reconstruction", () => {
     const evidence = {
       projectRef: PREVIEW_REF,
       parentProjectRef: PRODUCTION_REF,
       isDefault: false,
-      persistent: false,
+      persistent: true,
       withData: false,
+      status: "FUNCTIONS_DEPLOYED",
       previewProjectStatus: "ACTIVE_HEALTHY",
     }
     expect(validateBranchReconstructionEvidence(evidence, PREVIEW_REF)).toEqual({
       projectRef: PREVIEW_REF,
     })
+
+    expect(validateBranchReconstructionEvidence(
+      { ...evidence, status: "MIGRATIONS_FAILED" },
+      PREVIEW_REF,
+      { allowInitialMigrationFailure: true },
+    )).toEqual({ projectRef: PREVIEW_REF })
+
+    expect(() => validateBranchReconstructionEvidence(
+      { ...evidence, status: "MIGRATIONS_FAILED" },
+      PREVIEW_REF,
+    )).toThrow("Isolation preflight failed: branch-evidence")
     for (const mutation of [
       { projectRef: "otherrefotherrefothe" },
       { parentProjectRef: "otherrefotherrefothe" },
       { isDefault: true },
-      { persistent: true },
+      { persistent: false },
       { withData: true },
+      { status: "MIGRATIONS_FAILED" },
       { previewProjectStatus: "INACTIVE" },
     ]) {
       expect(() =>
