@@ -8,7 +8,7 @@ import {
 
 const REF = "ypzrsrykirpqerfpozdm"
 const SHA = "a".repeat(40)
-const ORIGIN = "https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app"
+const ORIGIN = "https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app"
 const FINGERPRINT = "b".repeat(64)
 
 function contractEvidence() {

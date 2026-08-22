@@ -16,14 +16,30 @@ const QA_REF = "ypzrsrykirpqerfpozdm"
 const SHA = "a".repeat(40)
 const FINGERPRINT = "b".repeat(64)
 
+type GoldenWorkflowEvent =
+  | { name: "repository_dispatch"; runId: number }
+  | { name: "workflow_run"; runId: number; conclusion: string; provenance: string }
+  | { name: string; runId: number }
+
+function expectedGoldenConcurrencyGroup(event: GoldenWorkflowEvent) {
+  const isLaneCandidate = event.name === "repository_dispatch" || (
+    event.name === "workflow_run" &&
+    "conclusion" in event &&
+    event.conclusion === "success" &&
+    event.provenance === "pull_request"
+  )
+  return isLaneCandidate ? "renew-permanent-qa" : `renew-permanent-qa-ignored-${event.runId}`
+}
+
 describe("permanent QA lane contract", () => {
   it("accepts only the stable protected qa alias and exact deployed identity", () => {
     const origin = stableQaOrigin()
-    expect(origin).toBe("https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app")
+    expect(origin).toBe("https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app")
     const expected = buildQaContract({ projectRef: QA_REF, candidateSha: SHA, structureFingerprint: FINGERPRINT })
     const actual = { ...expected, origin, apiRef: QA_REF, databaseRef: QA_REF, storageRef: QA_REF, mailPolicy: "allowlist", mailTransport: "simulated" }
     expect(assertDeployedQaContract(expected, actual)).toEqual(actual)
     for (const mutation of [
+      { origin: "https://renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app" },
       { origin: "https://app.re-new.team" },
       { origin: "https://unrelated.vercel.app" },
       { projectRef: "iiuqcdnmxhtyispnykgf" },
@@ -68,13 +84,45 @@ describe("permanent QA lane contract", () => {
     expect(() => assertAuthorizedCandidate({ ...input, verifyCheck: { ...input.verifyCheck, conclusion: "failure" } })).toThrow("QA candidate failed: verify-check")
   })
 
-  it("has one non-cancelling concurrency group across lane and daily health", () => {
-    for (const path of [".github/workflows/golden-journeys.yml", ".github/workflows/qa-daily-health.yml"]) {
-      const workflow = readFileSync(`${process.cwd()}/${path}`, "utf8")
-      expect(workflow).toContain("group: renew-permanent-qa")
-      expect(workflow).toContain("cancel-in-progress: false")
-      expect(workflow).not.toContain("cancel-in-progress: true")
-    }
+  it("shares the non-cancelling lane only with valid candidates and daily health", () => {
+    const golden = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const health = readFileSync(`${process.cwd()}/.github/workflows/qa-daily-health.yml`, "utf8")
+    const concurrency = golden.split("\njobs:", 1)[0]
+
+    expect(concurrency).toContain("github.event_name == 'repository_dispatch'")
+    expect(concurrency).toContain("github.event_name == 'workflow_run'")
+    expect(concurrency).toContain("github.event.workflow_run.conclusion == 'success'")
+    expect(concurrency).toContain("github.event.workflow_run.event == 'pull_request'")
+    expect(concurrency).toContain("format('renew-permanent-qa-ignored-{0}', github.run_id)")
+    expect(concurrency).toContain("cancel-in-progress: false")
+    expect(concurrency).not.toContain("cancel-in-progress: true")
+    expect(health).toContain("group: renew-permanent-qa")
+    expect(health).toContain("cancel-in-progress: false")
+    expect(health).not.toContain("cancel-in-progress: true")
+
+    expect(expectedGoldenConcurrencyGroup({ name: "workflow_run", runId: 101, conclusion: "success", provenance: "pull_request" })).toBe("renew-permanent-qa")
+    expect(expectedGoldenConcurrencyGroup({ name: "repository_dispatch", runId: 102 })).toBe("renew-permanent-qa")
+  })
+
+  it("isolates every irrelevant workflow event by run identity", () => {
+    const validPendingGroup = expectedGoldenConcurrencyGroup({ name: "workflow_run", runId: 201, conclusion: "success", provenance: "pull_request" })
+    const irrelevantEvents: GoldenWorkflowEvent[] = [
+      { name: "workflow_run", runId: 202, conclusion: "success", provenance: "push" },
+      { name: "workflow_run", runId: 203, conclusion: "failure", provenance: "pull_request" },
+      { name: "workflow_run", runId: 204, conclusion: "skipped", provenance: "pull_request" },
+      { name: "ignored_event", runId: 205 },
+    ]
+    const irrelevantGroups = irrelevantEvents.map(expectedGoldenConcurrencyGroup)
+
+    expect(validPendingGroup).toBe("renew-permanent-qa")
+    expect(irrelevantGroups).toEqual([
+      "renew-permanent-qa-ignored-202",
+      "renew-permanent-qa-ignored-203",
+      "renew-permanent-qa-ignored-204",
+      "renew-permanent-qa-ignored-205",
+    ])
+    expect(new Set(irrelevantGroups).size).toBe(irrelevantGroups.length)
+    expect(irrelevantGroups).not.toContain(validPendingGroup)
   })
 
   it("keeps daily health manually runnable, read-only for schema, and identity-first", () => {
