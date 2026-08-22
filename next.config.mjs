@@ -1,6 +1,7 @@
 import { execFileSync } from "child_process"
 import { RELEASE_BUILD_NUMBER } from "./lib/release-build.mjs"
 import qaContract from "./supabase/qa-contract.json" with { type: "json" }
+import { assertProtectedQaBuildEnv } from "./lib/qa/protected-build.mjs"
 
 // The release number is committed so shallow Vercel checkouts cannot turn it
 // into their local history depth. The short hash remains build provenance.
@@ -17,6 +18,9 @@ const qaDatabaseRef = (() => {
       || "invalid"
   } catch { return "invalid" }
 })()
+const protectedQa = process.env.QA_CONTRACT_MODE === "protected"
+  ? assertProtectedQaBuildEnv(process.env)
+  : null
 
 try {
   const gitOptions = { timeout: 300, encoding: "utf8" }
@@ -50,16 +54,16 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
   },
   async headers() {
-    const qaHeaders = process.env.QA_CONTRACT_MODE === "protected"
+    const qaHeaders = protectedQa
       ? [
-          { key: "x-renew-qa-ref", value: process.env.QA_SUPABASE_PROJECT_REF || "invalid" },
+          { key: "x-renew-qa-ref", value: protectedQa.projectRef },
           { key: "x-renew-qa-api-ref", value: qaApiRef },
           { key: "x-renew-qa-database-ref", value: qaDatabaseRef },
           { key: "x-renew-qa-storage-ref", value: qaApiRef },
           { key: "x-renew-qa-structure", value: qaContract.structureFingerprint },
-          { key: "x-renew-qa-project", value: "renew-overnight-validation-20260820" },
-          { key: "x-renew-qa-mail-policy", value: process.env.QA_MAIL_MODE || "invalid" },
-          { key: "x-renew-qa-mail-transport", value: process.env.QA_MAIL_MODE === "allowlist" ? "simulated" : "provider" },
+          { key: "x-renew-qa-project", value: protectedQa.validationProject },
+          { key: "x-renew-qa-mail-policy", value: protectedQa.mailPolicy },
+          { key: "x-renew-qa-mail-transport", value: protectedQa.mailTransport },
         ]
       : []
     return [

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { appendFile } from "node:fs/promises"
 import { assertAuthorizedCandidate, assertCandidatePointer } from "../../lib/qa/permanent-contract.mjs"
+import { validateCandidateContractAdmission } from "../../lib/qa/candidate-admission.mjs"
 
 const repository = process.env.GITHUB_REPOSITORY
 const candidateBranch = process.env.QA_CANDIDATE_BRANCH
@@ -49,6 +50,16 @@ try {
     candidateSha,
   })
   const result = assertCandidatePointer({ repository, candidateBranch, candidateSha, branchHeadSha: branch.commit?.sha })
+  await validateCandidateContractAdmission({
+    eventName: process.env.GITHUB_EVENT_NAME,
+    trustedRoot: process.cwd(),
+    candidateRoot: process.env.QA_CANDIDATE_ROOT,
+    dispatch: {
+      contractSha256: process.env.QA_CONTRACT_SHA256,
+      schemaReviewed: process.env.QA_SCHEMA_REVIEWED === "true",
+      schemaReviewVersion: process.env.QA_SCHEMA_REVIEW_VERSION,
+    },
+  })
   if (process.env.GITHUB_OUTPUT) {
     await appendFile(process.env.GITHUB_OUTPUT, `candidate_sha=${result.candidateSha}\ncandidate_branch=${result.candidateBranch}\n`)
   }

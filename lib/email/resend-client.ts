@@ -2,12 +2,11 @@ import { Resend } from "resend"
 import { env } from "@/lib/env"
 import { assertQaMailEnvelope, qaMailPolicyFromEnv } from "@/lib/email/qa-mail-policy"
 
-// Initialize Resend client
-// API key must be set in environment variables
-const provider = new Resend(env.RESEND_API_KEY)
+type SendArguments = Parameters<Resend["emails"]["send"]>
+
 export const resend = {
   emails: {
-    send: async (...args: Parameters<typeof provider.emails.send>) => {
+    send: async (...args: SendArguments) => {
       const envelope = args[0]
       const policy = qaMailPolicyFromEnv()
       assertQaMailEnvelope({
@@ -17,7 +16,7 @@ export const resend = {
         bcc: envelope.bcc,
       }, policy)
       if (policy.mode === "allowlist") return { data: { id: "qa-allowlist-accepted" }, error: null }
-      return provider.emails.send(...args)
+      return new Resend(env.RESEND_API_KEY!).emails.send(...args)
     },
   },
 }

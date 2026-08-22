@@ -18,7 +18,7 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().url("BETTER_AUTH_URL must be a valid URL"),
 
   // Resend (email)
-  RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
+  RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required").optional(),
   RESEND_FROM_EMAIL: z.string().email("RESEND_FROM_EMAIL must be a valid email").default("noreply@re-new.com"),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   RENEW_STAFF_NOTIFICATION_EMAIL: z.string().email("RENEW_STAFF_NOTIFICATION_EMAIL must be a valid email").optional(),
@@ -36,9 +36,17 @@ const envSchema = z.object({
   NEXT_PUBLIC_INTAKE_V2: z.string().optional(),
   NEXT_PUBLIC_SHOW_SCORE_BREAKDOWN: z.string().optional(),
   NEXT_PUBLIC_SHOW_TEST_AUTOFILL: z.string().optional(),
+  QA_CONTRACT_MODE: z.enum(["protected"]).optional(),
 
   // Node environment
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+}).superRefine((value, context) => {
+  if (value.QA_CONTRACT_MODE === "protected" && value.RESEND_API_KEY) {
+    context.addIssue({ code: "custom", path: ["RESEND_API_KEY"], message: "RESEND_API_KEY must be absent in protected QA" })
+  }
+  if (value.QA_CONTRACT_MODE !== "protected" && !value.RESEND_API_KEY) {
+    context.addIssue({ code: "custom", path: ["RESEND_API_KEY"], message: "RESEND_API_KEY is required" })
+  }
 })
 
 export type Env = z.infer<typeof envSchema>
