@@ -1,0 +1,17 @@
+---
+description: WAVE coding agent operating rules
+alwaysApply: true
+---
+
+# WAVE coding work
+
+Read `AGENTS.md` before changing product, QA, email, or M&A code.
+
+- Cursor writes, tests, and improves the code. The live WAVE Strategic PDR owns scope.
+- Do not mark work done from code existing. Run the relevant tests. For UI, click the actual surface.
+- Do not invent matching, opportunities, or email behavior that is not already in the PDR or an existing contract.
+- Prefer a small production bug fix over a new demo or parallel app.
+- `docs/data-models/ma-advisory-data-model-v1.md` is the M&A contract. Update it in the same commit as schema meaning changes.
+- After a UI change run `pnpm design:check`. After any change run the focused tests, then `pnpm lint` and `pnpm typecheck` when the surface is wide.
+- Never put passwords, QA credentials, or production logins in tracked files, commits, screenshots, or chat.
+- Commit in the `docs/commit-style.md` format and push the branch. Do not bump `lib/release-build.mjs` unless this commit is intended for the production release sequence.
