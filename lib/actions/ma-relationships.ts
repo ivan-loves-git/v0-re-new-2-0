@@ -31,7 +31,19 @@ export interface MaRelationshipContactFilterOption {
   id: string
   label: string
   email: string | null
+  firstName: string | null
+  lastName: string | null
+  phone: string | null
+  linkedinUrl: string | null
+  internalNotes: string | null
   officeIds: string[]
+  affiliations: Array<{
+    id: string
+    officeId: string
+    officeLabel: string
+    jobTitle: string | null
+    isActive: boolean
+  }>
   campaignEmailSuppressed: boolean
   campaignEmailSuppressionReason: string | null
 }
@@ -245,9 +257,24 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       id: relation.contactId,
       label: relation.contactLabel,
       email: relation.contactEmail,
+      firstName: relation.contactFirstName,
+      lastName: relation.contactLastName,
+      phone: relation.contactPhone,
+      linkedinUrl: relation.contactLinkedinUrl,
+      internalNotes: relation.contactInternalNotes,
       officeIds: existing
         ? [...new Set([...existing.officeIds, relation.officeId])]
         : [relation.officeId],
+      affiliations: [
+        ...(existing?.affiliations ?? []),
+        {
+          id: relation.id,
+          officeId: relation.officeId,
+          officeLabel: "",
+          jobTitle: relation.jobTitle,
+          isActive: relation.isActive && !relation.endedAt,
+        },
+      ],
       campaignEmailSuppressed: relation.campaignEmailSuppressed,
       campaignEmailSuppressionReason: relation.campaignEmailSuppressionReason,
     })
@@ -324,9 +351,16 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       status: opportunity.status,
     }))
 
-  const contacts = [...contactsById.values()].sort((left, right) =>
-    left.label.localeCompare(right.label),
-  )
+  const officeLabels = new Map(offices.map((office) => [office.id, office.label]))
+  const contacts = [...contactsById.values()]
+    .map((contact) => ({
+      ...contact,
+      affiliations: contact.affiliations.map((affiliation) => ({
+        ...affiliation,
+        officeLabel: officeLabels.get(affiliation.officeId) ?? "Unknown office",
+      })),
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label))
 
   return {
     currentUserId: user.id,

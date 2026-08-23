@@ -18,7 +18,12 @@ export interface MaRelationshipLedgerAffiliation {
   officeId: string
   contactId: string
   contactLabel: string
+  contactFirstName: string | null
+  contactLastName: string | null
   contactEmail: string | null
+  contactPhone: string | null
+  contactLinkedinUrl: string | null
+  contactInternalNotes: string | null
   contactStatus: "active" | "archived"
   campaignEmailSuppressed: boolean
   campaignEmailSuppressionReason: string | null
@@ -88,7 +93,12 @@ interface OfficeRelationRow {
 interface ContactRelationRow {
   id: string
   display_name: string | null
+  first_name: string | null
+  last_name: string | null
   email: string | null
+  phone: string | null
+  linkedin_url: string | null
+  internal_notes: string | null
   status: "active" | "archived"
   campaign_email_suppressed?: boolean | null
   campaign_email_suppression_reason?: string | null
@@ -345,7 +355,7 @@ export async function readMaRelationshipLedger(
     supabase
       .from("ma_contact_office_affiliations")
       .select(
-        "id, office_id, job_title, is_active, ended_at, contact:ma_contacts(id, display_name, email, status, campaign_email_suppressed, campaign_email_suppression_reason)",
+        "id, office_id, job_title, is_active, ended_at, contact:ma_contacts(id, display_name, first_name, last_name, email, phone, linkedin_url, internal_notes, status, campaign_email_suppressed, campaign_email_suppression_reason)",
       )
       .in("office_id", officeIds)
       .order("is_active", { ascending: false }),
@@ -389,7 +399,12 @@ export async function readMaRelationshipLedger(
       officeId: row.office_id,
       contactId: contact.id,
       contactLabel: maRelationshipContactLabel(contact),
+      contactFirstName: contact.first_name,
+      contactLastName: contact.last_name,
       contactEmail: contact.email,
+      contactPhone: contact.phone,
+      contactLinkedinUrl: contact.linkedin_url,
+      contactInternalNotes: contact.internal_notes,
       contactStatus: contact.status,
       campaignEmailSuppressed: Boolean(contact.campaign_email_suppressed),
       campaignEmailSuppressionReason:

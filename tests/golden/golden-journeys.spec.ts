@@ -69,6 +69,20 @@ async function createManifestOwnedDeal(database: any, suffix: string) {
   return id
 }
 
+async function maFixtureCounts(database: any) {
+  const result = await database.query(`SELECT
+    (SELECT count(*)::int FROM public.ma_firms WHERE id = ANY($1::uuid[])) AS firms,
+    (SELECT count(*)::int FROM public.ma_offices WHERE id = ANY($2::uuid[])) AS offices,
+    (SELECT count(*)::int FROM public.ma_contacts WHERE id = ANY($3::uuid[])) AS contacts,
+    (SELECT count(*)::int FROM public.ma_contact_office_affiliations WHERE id = ANY($4::uuid[])) AS affiliations`, [
+    [manifest.ids.firm, manifest.ids.provisionalFirm],
+    [manifest.ids.office, manifest.ids.provisionalOffice],
+    [manifest.ids.contact, manifest.ids.provisionalCountContact, manifest.ids.provisionalContextContact],
+    [manifest.ids.affiliation, manifest.ids.provisionalAffiliation],
+  ])
+  return result.rows[0]
+}
+
 function captureClientErrors(page: Page, errors: string[]) {
   page.on("pageerror", (error) => errors.push(`pageerror:${error.message}`))
   page.on("console", (message) => {
@@ -207,7 +221,42 @@ test.describe.serial("Golden journeys", () => {
     await page.getByLabel("Description").fill(`${manifest.fixturePrefix} internal description`)
     await page.getByLabel("Public title").fill(`${manifest.fixturePrefix} opportunity`)
     await page.getByLabel("Teaser summary").fill(`${manifest.fixturePrefix} safe teaser`)
-    await choose(page, "Operating office", new RegExp(manifest.fixturePrefix))
+    const database = await databaseClient()
+    const beforeExistingOfficeSelection = await maFixtureCounts(database)
+    await page.getByRole("button", { name: "Add firm context" }).click()
+    await page.locator("#existing_firm_context").click()
+    await choose(page, "M&A advisory firm", new RegExp(`${manifest.fixturePrefix} firm`, "i"))
+    await page.getByLabel("Existing operating office").click()
+    await expect(page.getByRole("option", { name: new RegExp(`${manifest.fixturePrefix} office`, "i") })).toBeVisible()
+    await expect(page.getByRole("option", { name: /Acme Paris/i })).toHaveCount(0)
+    await page.keyboard.press("Escape")
+    await choose(page, "Existing operating office", new RegExp(`${manifest.fixturePrefix} office`, "i"))
+    // Changing either the firm or the path clears a stale office before it can
+    // be used; return to the seeded firm and select the real office again.
+    await choose(page, "M&A advisory firm", /Acme Co\./i)
+    await expect(page.getByLabel("Existing operating office")).toContainText("Choose this firm's operating office")
+    await choose(page, "M&A advisory firm", new RegExp(`${manifest.fixturePrefix} firm`, "i"))
+    await page.locator("#add_existing_firm_office").click()
+    await page.locator("#use_existing_firm_office").click()
+    await expect(page.getByLabel("Existing operating office")).toContainText("Choose this firm's operating office")
+    await choose(page, "Existing operating office", new RegExp(`${manifest.fixturePrefix} office`, "i"))
+    await page.getByRole("button", { name: "Use operating office" }).click()
+    expect(await maFixtureCounts(database)).toEqual(beforeExistingOfficeSelection)
+    await expect(page.getByText(`Firm: ${manifest.fixturePrefix} firm · Office: ${manifest.fixturePrefix} office`, { exact: true })).toBeVisible()
+
+    // W-127 keeps the same shared name requirement in both staff dialogs.
+    await page.getByRole("button", { name: "Add firm context" }).click()
+    await page.getByLabel("M&A advisory firm").fill(`${manifest.fixturePrefix} invalid blank-name firm`)
+    await page.getByRole("button", { name: "Create staff-only context" }).click()
+    await expect(page.getByText("First or last name required", { exact: true })).toHaveCount(2)
+    await expect(page.getByText("Add a first name or last name for the first contact.", { exact: true })).toHaveCount(2)
+    await page.getByRole("button", { name: "Cancel" }).click()
+    await page.getByRole("button", { name: "Add office contact" }).click()
+    await page.getByRole("button", { name: "Add office contact" }).last().click()
+    await expect(page.getByText("First or last name required", { exact: true })).toHaveCount(2)
+    await expect(page.getByText("Add a first name or last name for the contact.", { exact: true })).toHaveCount(2)
+    await page.getByRole("button", { name: "Cancel" }).last().click()
+
     await page.locator(`#office_affiliation_${manifest.ids.affiliation}`).click()
     await page.locator(`input[name="primary_affiliation_id"][value="${manifest.ids.affiliation}"]`).check()
     const submitted = await page.locator("form").evaluate((form) => Object.fromEntries(new FormData(form as HTMLFormElement).entries()))
@@ -230,7 +279,6 @@ test.describe.serial("Golden journeys", () => {
     await page.getByRole("button", { name: "Save recommendation" }).click()
     await expect(page.getByText("Recommendation saved")).toBeVisible()
 
-    const database = await databaseClient()
     const proposed = await database.query("SELECT id, status FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2", [opportunityId, manifest.ids.portalRepreneur])
     expect(proposed.rows).toHaveLength(1)
     expect(proposed.rows[0].status).toBe("proposed")
@@ -281,6 +329,79 @@ test.describe.serial("Golden journeys", () => {
     await page.goto(`/opportunities/${opportunityId}?tab=recommendations`)
     await page.reload()
     await expect(page.getByText("Active pursuit", { exact: true }).first()).toBeVisible()
+
+    // W-130: each correction stays within the seeded fixture boundary and the
+    // database verifies both persistence and the authenticated audit actor.
+    const correctionBefore = await database.query(`SELECT
+      (SELECT row_to_json(firm) FROM public.ma_firms firm WHERE id=$1) AS firm,
+      (SELECT row_to_json(office) FROM public.ma_offices office WHERE id=$2) AS office,
+      (SELECT row_to_json(contact) FROM public.ma_contacts contact WHERE id=$3) AS contact,
+      (SELECT row_to_json(affiliation) FROM public.ma_contact_office_affiliations affiliation WHERE id=$4) AS affiliation`, [manifest.ids.firm, manifest.ids.office, manifest.ids.contact, manifest.ids.affiliation])
+    await recordRuntimeFixtures({ w130FixtureIds: { firmId: manifest.ids.firm, officeId: manifest.ids.office, contactId: manifest.ids.contact, affiliationId: manifest.ids.affiliation } })
+
+    await page.goto(`/opportunities/ma/firms/${manifest.ids.firm}`)
+    await page.getByRole("button", { name: "Edit details" }).click()
+    await page.getByLabel("Category").fill("QA corrected category")
+    await page.getByRole("button", { name: "Save correction" }).click()
+    await expect(page.getByText("Firm details saved with staff audit.")).toBeVisible()
+    await page.reload()
+    await expect(page.getByText("QA corrected category", { exact: true })).toBeVisible()
+
+    await page.goto(`/opportunities/ma/offices/${manifest.ids.office}`)
+    await page.getByRole("button", { name: "Edit details" }).click()
+    await page.getByLabel("City").fill("Lyon")
+    await page.getByRole("button", { name: "Save correction" }).click()
+    await expect(page.getByText("Office details saved with staff audit.")).toBeVisible()
+    await page.reload()
+    await expect(page.getByText("Lyon", { exact: true })).toBeVisible()
+
+    await page.goto(`/opportunities/ma/contacts?contactId=${manifest.ids.contact}`)
+    await page.getByRole("button", { name: "Edit details" }).click()
+    await expect(page.getByLabel("Job title at selected office")).toHaveValue("QA contact")
+    await page.getByLabel("First name").fill("Corrected")
+    await page.getByLabel("Job title at selected office").fill("QA corrected office title")
+    await page.getByRole("button", { name: "Save correction" }).click()
+    await expect(page.getByText("Contact details saved with staff audit.")).toBeVisible()
+    await page.goto(`/opportunities/ma/offices/${manifest.ids.office}`)
+    await expect(page.getByText("QA corrected office title", { exact: true })).toBeVisible()
+
+    await page.getByRole("button", { name: "Edit details" }).click()
+    await page.getByLabel("Email").fill("")
+    await page.getByRole("button", { name: "Save correction" }).click()
+    await expect(page.getByText("This person is the usable primary contact for an Active or Paused opportunity. Keep a valid email or correct that opportunity first.", { exact: true })).toBeVisible()
+    await page.getByRole("button", { name: "Cancel" }).click()
+    const correctionAfter = await database.query(`SELECT
+      (SELECT row_to_json(firm) FROM public.ma_firms firm WHERE id=$1) AS firm,
+      (SELECT row_to_json(office) FROM public.ma_offices office WHERE id=$2) AS office,
+      (SELECT row_to_json(contact) FROM public.ma_contacts contact WHERE id=$3) AS contact,
+      (SELECT row_to_json(affiliation) FROM public.ma_contact_office_affiliations affiliation WHERE id=$4) AS affiliation`, [manifest.ids.firm, manifest.ids.office, manifest.ids.contact, manifest.ids.affiliation])
+    const before = correctionBefore.rows[0]
+    const after = correctionAfter.rows[0]
+    expect(after.firm).toMatchObject({ category: "QA corrected category", updated_by: manifest.actors.staff.userId })
+    expect(after.office).toMatchObject({ city: "Lyon", updated_by: manifest.actors.staff.userId })
+    expect(after.contact).toMatchObject({ first_name: "Corrected", email: before.contact.email, updated_by: manifest.actors.staff.userId })
+    expect(after.affiliation).toMatchObject({ job_title: "QA corrected office title", updated_by: manifest.actors.staff.userId })
+    for (const field of ["status", "created_by", "source", "campaign_email_suppressed", "disclosure_state"]) {
+      expect(after.firm[field]).toEqual(before.firm[field])
+      expect(after.office[field]).toEqual(before.office[field])
+      expect(after.contact[field]).toEqual(before.contact[field])
+      expect(after.affiliation[field]).toEqual(before.affiliation[field])
+    }
+    const staffMobile = await protectValidationOrigin(await browser.newContext({
+      ...protectedContext,
+      viewport: { width: 390, height: 844 },
+      storageState: `${RUN_DIR}/auth/staff.json`,
+    }))
+    const mobileCorrections = await staffMobile.newPage()
+    const mobileCorrectionErrors: string[] = []
+    captureClientErrors(mobileCorrections, mobileCorrectionErrors)
+    await mobileCorrections.goto(`/opportunities/ma/offices/${manifest.ids.office}`)
+    await expect(mobileCorrections.getByText("QA corrected office title", { exact: true })).toBeVisible()
+    await mobileCorrections.getByRole("button", { name: "Edit details" }).click()
+    await expect(mobileCorrections.getByLabel("City")).toHaveValue("Lyon")
+    await mobileCorrections.getByRole("button", { name: "Cancel" }).click()
+    expect(mobileCorrectionErrors).toEqual([])
+    await staffMobile.close()
 
     // The extra fixture is created through the same server contract and its ID
     // is persisted before every following lifecycle mutation. This makes the
