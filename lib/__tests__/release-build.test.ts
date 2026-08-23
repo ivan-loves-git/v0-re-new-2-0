@@ -6,7 +6,7 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("publishes Matching 2.0 as release build 822", () => {
+  it("publishes Matching 2.0 and historical pursuits as release build 822", () => {
     expect(RELEASE_BUILD_NUMBER).toBe("822")
   })
 
