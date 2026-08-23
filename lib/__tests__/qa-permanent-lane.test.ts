@@ -395,10 +395,10 @@ describe("permanent QA lane contract", () => {
     expect(operations).toContain("qa-explicit-deploy-gate2-packet.md")
     expect(operations).not.toContain("workflow_run admission")
     const gate2 = readFileSync(`${process.cwd()}/docs/operations/qa-explicit-deploy-gate2-packet.md`, "utf8")
-    expect(gate2).toContain("Do **not** request `PUBLISH_APPROVED`")
-    expect(gate2).toContain("Disconnect Git from the validation project only")
-    expect(gate2).toContain("Prove one QA validation deployment and no additional product deployment")
-    expect(gate2).toContain("Keep cumulative product PR #27 parked")
+    expect(gate2).toContain("Do **not** treat product cards as Done until canary + daily health pass")
+    expect(gate2).toContain("Validation Git disconnect")
+    expect(gate2).toContain("gitSource or source-upload")
+    expect(gate2).toContain("PR #27 remains parked")
   })
 
   it("deploys admitted candidates from a secret-isolated deploy-qa job before database work", () => {
