@@ -14,6 +14,14 @@ try {
     FROM public.opportunities opportunity
     JOIN public.opportunity_matches match ON match.opportunity_id=opportunity.id
     WHERE opportunity.public_title=$1 AND match.repreneur_id=$2`, [`${manifest.fixturePrefix} opportunity`, manifest.ids.portalRepreneur])
+  const p3Deals = runtimeFixtures.p3DealIds ?? {}
+  const p3Additional = p3Deals.droppedOpportunityId
+    ? await database.query(`SELECT opportunity.id, opportunity.is_demo, match.status, match.pursuit_stage,
+        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence evidence WHERE evidence.match_id=match.id) AS evidence_count
+      FROM public.opportunities opportunity
+      LEFT JOIN public.opportunity_matches match ON match.opportunity_id=opportunity.id AND match.repreneur_id=$2
+      WHERE opportunity.id=$1`, [p3Deals.droppedOpportunityId, manifest.ids.portalRepreneur])
+    : { rows: [] }
   const p1Storage = p1.rows[0]?.cv_url ? await database.query("SELECT count(*)::int AS count FROM storage.objects WHERE bucket_id='cvs' AND name=$1", [p1.rows[0].cv_url]) : { rows: [{ count: 0 }] }
   const result = {
     runId: manifest.runId,
@@ -28,13 +36,18 @@ try {
       p1: p1.rows[0] ? { ...p1.rows[0], storageObjects: p1Storage.rows[0].count } : null,
       p2: p2.rows[0] || null,
       p3: p3.rows[0] || null,
+      p3Additional: p3Additional.rows[0] || null,
+    },
+    portalDeals: {
+      executed: Number(p3Additional.rows.length === 1),
+      passed: Number(p3Additional.rows.length === 1 && p3Additional.rows[0].is_demo === true && p3Additional.rows[0].status === "interested" && p3Additional.rows[0].pursuit_stage === null && p3Additional.rows[0].evidence_count === 0),
     },
     fixtureIds: { seeded: manifest.databaseRows, runtime: runtimeFixtures },
   }
   result.cases.failed = result.cases.executed - result.cases.passed
-  if (result.cases.executed !== 3 || result.cases.passed !== 3) throw new Error("Phase B readback failed: acceptance-state")
+  if (result.cases.executed !== 3 || result.cases.passed !== 3 || result.portalDeals.executed !== 1 || result.portalDeals.passed !== 1) throw new Error("Phase B readback failed: acceptance-state")
   await writePrivateJson(RESULT_FILE, result)
-  console.log(JSON.stringify({ ok: true, runId: manifest.runId, planned: 3, executed: 3, passed: 3, failed: 0 }))
+  console.log(JSON.stringify({ ok: true, runId: manifest.runId, planned: 3, executed: 3, passed: 3, failed: 0, portalDeals: "passed" }))
 } catch (error) {
   console.error(error instanceof Error && error.message.startsWith("Phase B readback failed:") ? error.message : "Phase B readback failed: unknown")
   process.exitCode = 1

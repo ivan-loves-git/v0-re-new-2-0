@@ -56,4 +56,18 @@ describe("repreneur deal flow sorting", () => {
       "small",
     ])
   })
+
+  it("uses opportunity ID as the stable final tie-breaker for every sort", () => {
+    const tied = [
+      opportunity({ opportunity_id: "opportunity-b", revenue_meur: 4, relevance_score: 70, date_added: "2026-07-01" }),
+      opportunity({ opportunity_id: "opportunity-a", revenue_meur: 4, relevance_score: 70, date_added: "2026-07-01" }),
+    ]
+
+    for (const sort of ["relevance", "deal_size", "date_added"] as const) {
+      expect(sortRepreneurDealFlow(tied, sort).map((item) => item.opportunity_id)).toEqual([
+        "opportunity-a",
+        "opportunity-b",
+      ])
+    }
+  })
 })

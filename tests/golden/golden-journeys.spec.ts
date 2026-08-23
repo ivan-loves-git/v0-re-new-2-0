@@ -42,6 +42,40 @@ async function fillStaffRepreneur(page: Page, email: string, firstName = "Pilot"
   await page.locator("#email").fill(email)
 }
 
+function sectionFor(page: Page, title: string) {
+  return page.locator("section", { has: page.getByRole("heading", { name: title, exact: true }) })
+}
+
+async function createManifestOwnedDeal(database: any, suffix: string) {
+  const fields = {
+    geography_node_id: manifest.ids.geography,
+    sector: "Tech & Digital",
+    location: "Paris",
+    revenue_meur: 2.4,
+    ebitda_keur: 420,
+    headcount: 24,
+    headcount_range: "10-50",
+    date_added: "2026-08-01",
+    date_added_precision: "day",
+    public_title: `${manifest.fixturePrefix} ${suffix}`,
+    teaser_summary: `${manifest.fixturePrefix} safe ${suffix}`,
+    internal_notes: null,
+  }
+  const created = await database.query(`SELECT (public.create_opportunity_with_office_context(
+    $1::text, $2::uuid, $3::uuid[], $4::uuid, $5::text, $6::public.opportunity_status, $7::text, $8::jsonb
+  )).id AS id`, ["", manifest.ids.office, [manifest.ids.affiliation], manifest.ids.affiliation, `${manifest.fixturePrefix} ${suffix} internal`, "active", manifest.actors.staff.userId, JSON.stringify(fields)])
+  const id = created.rows[0]?.id
+  if (typeof id !== "string") throw new Error("Golden P3 failed: additional-opportunity-id")
+  return id
+}
+
+function captureClientErrors(page: Page, errors: string[]) {
+  page.on("pageerror", (error) => errors.push(`pageerror:${error.message}`))
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console:${message.text()}`)
+  })
+}
+
 test.beforeAll(async () => {
   manifest = await readJson(`${RUN_DIR}/manifest.json`)
 })
@@ -166,6 +200,8 @@ test.describe.serial("Golden journeys", () => {
   test("P3 proposal interest retry and staff validation agree after reload", async ({ browser }) => {
     const staff = await staffContext(browser)
     const page = await staff.newPage()
+    const clientErrors: string[] = []
+    captureClientErrors(page, clientErrors)
     await page.goto("/opportunities/new")
     await choose(page, "Status", "Active")
     await choose(page, "Secteur", "Tech & Digital")
@@ -211,6 +247,11 @@ test.describe.serial("Golden journeys", () => {
     const portal = await portalContext(browser)
     const portalOne = await portal.newPage()
     const portalTwo = await portal.newPage()
+    captureClientErrors(portalOne, clientErrors)
+    captureClientErrors(portalTwo, clientErrors)
+    await portalOne.goto("/portal/deals")
+    await expect(sectionFor(portalOne, "Recommended").getByText(`${manifest.fixturePrefix} opportunity`, { exact: true })).toBeVisible()
+    await expect(sectionFor(portalOne, "In Progress").getByText(`${manifest.fixturePrefix} opportunity`, { exact: true })).toHaveCount(0)
     await Promise.all([portalOne.goto(`/portal/deals/${matchId}`), portalTwo.goto(`/portal/deals/${matchId}`)])
     await Promise.allSettled([
       portalOne.getByRole("button", { name: "I'm interested" }).click(),
@@ -221,6 +262,12 @@ test.describe.serial("Golden journeys", () => {
       expect(interested.rows).toHaveLength(1)
       return interested.rows[0].status
     }).toBe("interested")
+    await portalOne.goto("/portal/deals")
+    await expect(sectionFor(portalOne, "Recommended").getByText(`${manifest.fixturePrefix} opportunity`, { exact: true })).toHaveCount(0)
+    await expect(sectionFor(portalOne, "In Progress").getByText(`${manifest.fixturePrefix} opportunity`, { exact: true })).toBeVisible()
+    await expect(sectionFor(portalOne, "In Progress").getByText("Interest sent, awaiting Re-New validation", { exact: true })).toBeVisible()
+    await portalOne.goto(`/portal/deals/${matchId}`)
+    await expect(portalOne.getByText("Documents", { exact: true })).toHaveCount(0)
 
     await page.goto("/opportunities/reviews")
     const row = page.getByRole("row").filter({ hasText: `${manifest.fixturePrefix} opportunity` })
@@ -243,6 +290,118 @@ test.describe.serial("Golden journeys", () => {
     await page.reload()
     await expect(page.getByText("Active pursuit", { exact: true }).first()).toBeVisible()
     await page.screenshot({ path: `${RUN_DIR}/test-results/p3-staff-active-pursuit.png` })
+
+    // The extra fixture is created through the same server contract and its ID
+    // is persisted before every following lifecycle mutation. This makes the
+    // failure cleanup path exact rather than title- or reference-derived.
+    const declinedOpportunityId = await createManifestOwnedDeal(database, "deals-declined")
+    await recordRuntimeFixtures({ p3DealIds: { ...(await readJson(RUNTIME_FIXTURES_FILE).catch(() => ({}))).p3DealIds, declinedOpportunityId } })
+    await portalOne.goto("/portal/deals")
+    const live = sectionFor(portalOne, "Live Opportunities")
+    await expect(live.getByText(`${manifest.fixturePrefix} deals-declined`, { exact: true })).toBeVisible()
+    await expect(live.getByText("Revenue", { exact: true })).toBeVisible()
+    await expect(live.getByText(`${manifest.referenceCode}`, { exact: false })).toBeVisible()
+
+    const locked = await database.query(`INSERT INTO public.opportunity_matches (opportunity_id, repreneur_id, status, pursuit_stage, created_by)
+      VALUES ($1, $2, 'active_pursuit', 'interest', $3) RETURNING id`, [declinedOpportunityId, manifest.ids.lockedRepreneur, manifest.actors.staff.userId])
+    const lockedMatchId = locked.rows[0]?.id
+    if (typeof lockedMatchId !== "string") throw new Error("Golden P3 failed: locked-match-id")
+    await recordRuntimeFixtures({ p3DealIds: { ...(await readJson(RUNTIME_FIXTURES_FILE)).p3DealIds, lockedMatchId } })
+    await portalOne.reload()
+    await expect(live.getByText("Someone is already positioned", { exact: true })).toBeVisible()
+    await expect(live.getByText("Express interest", { exact: true })).toBeVisible()
+    // The lock was a visibility-only live-discovery check. Retire it before
+    // exercising the current repreneur's retained declined/dropped history.
+    await database.query("UPDATE public.opportunity_matches SET status='dropped', pursuit_stage=NULL WHERE id=$1", [lockedMatchId])
+
+    const declined = await database.query(`INSERT INTO public.opportunity_matches (opportunity_id, repreneur_id, status, decline_reason_categories, decline_reason_text, created_by)
+      VALUES ($1, $2, 'declined', ARRAY['other']::text[], $3, $4) RETURNING id`, [declinedOpportunityId, manifest.ids.portalRepreneur, `${manifest.fixturePrefix} decline`, manifest.actors.staff.userId])
+    const declinedMatchId = declined.rows[0]?.id
+    if (typeof declinedMatchId !== "string") throw new Error("Golden P3 failed: declined-match-id")
+    await recordRuntimeFixtures({ p3DealIds: { ...(await readJson(RUNTIME_FIXTURES_FILE)).p3DealIds, declinedMatchId } })
+    await portalOne.goto("/portal/deals")
+    const declinedSection = sectionFor(portalOne, "Declined")
+    await expect(declinedSection.getByText(`${manifest.fixturePrefix} deals-declined`, { exact: true })).toBeVisible()
+    await expect(declinedSection.getByText("Revenue", { exact: true })).toHaveCount(0)
+    await expect(declinedSection.getByRole("link", { name: "Review and reconsider" })).toBeVisible()
+
+    const portalMobile = await protectValidationOrigin(await browser.newContext({
+      ...protectedContext,
+      viewport: { width: 390, height: 844 },
+      storageState: `${RUN_DIR}/auth/portal.json`,
+    }))
+    const mobileErrors: string[] = []
+    const mobile = await portalMobile.newPage()
+    captureClientErrors(mobile, mobileErrors)
+    await mobile.goto("/portal/deals")
+    await expect(sectionFor(mobile, "Declined").getByText(`${manifest.fixturePrefix} deals-declined`, { exact: true })).toBeVisible()
+    await expect(sectionFor(mobile, "Declined").getByText("Revenue", { exact: true })).toHaveCount(0)
+    await expect(sectionFor(mobile, "Live Opportunities").getByText("Revenue", { exact: true })).toBeVisible()
+    expect(mobileErrors).toEqual([])
+    await portalMobile.close()
+
+    await portalOne.goto(`/portal/deals/${declinedMatchId}`)
+    await expect(portalOne.getByText("Not a fit", { exact: true })).toBeVisible()
+    await expect(portalOne.getByText("Documents", { exact: true })).toHaveCount(0)
+    await portalOne.getByRole("button", { name: "Review and reconsider" }).click()
+    await portalOne.waitForURL(/\/portal\/deals$/)
+    await expect.poll(async () => (await database.query(`SELECT status, pursuit_stage, pursuit_stage_notes, pursuit_stage_updated_by, pursuit_stage_updated_at,
+      reviewed_by, reviewed_at, decline_reason_categories, decline_reason_text
+      FROM public.opportunity_matches WHERE id=$1`, [declinedMatchId])).rows[0]).toMatchObject({
+      status: "interested", pursuit_stage: null, pursuit_stage_notes: null, pursuit_stage_updated_by: null,
+      pursuit_stage_updated_at: null, reviewed_by: null, reviewed_at: null, decline_reason_categories: [], decline_reason_text: null,
+    })
+    await expect(sectionFor(portalOne, "In Progress").getByText(`${manifest.fixturePrefix} deals-declined`, { exact: true })).toBeVisible()
+
+    const droppedOpportunityId = await createManifestOwnedDeal(database, "deals-dropped")
+    await recordRuntimeFixtures({ p3DealIds: { ...(await readJson(RUNTIME_FIXTURES_FILE)).p3DealIds, droppedOpportunityId } })
+    const dropped = await database.query(`INSERT INTO public.opportunity_matches (
+        opportunity_id, repreneur_id, status, decline_reason_categories, decline_reason_text,
+        pursuit_stage, pursuit_stage_notes, pursuit_stage_updated_by, pursuit_stage_updated_at,
+        reviewed_by, reviewed_at, created_by
+      ) VALUES ($1, $2, 'dropped', ARRAY['other']::text[], $3, 'nda_sent', $4, $5, NOW(), $5, NOW(), $5)
+      RETURNING id`, [
+      droppedOpportunityId, manifest.ids.portalRepreneur, `${manifest.fixturePrefix} dropped decline`,
+      `${manifest.fixturePrefix} retained pursuit state`, manifest.actors.staff.userId,
+    ])
+    const droppedMatchId = dropped.rows[0]?.id
+    if (typeof droppedMatchId !== "string") throw new Error("Golden P3 failed: dropped-match-id")
+    await recordRuntimeFixtures({ p3DealIds: { ...(await readJson(RUNTIME_FIXTURES_FILE)).p3DealIds, droppedMatchId } })
+    await page.goto(`/portal-preview?repreneurId=${manifest.ids.portalRepreneur}`)
+    await expect(page.getByText("3 visible deal(s)", { exact: true })).toBeVisible()
+    await expect(sectionFor(page, "Declined").getByText(`${manifest.fixturePrefix} deals-dropped`, { exact: true })).toBeVisible()
+    await page.goto(`/portal-preview?repreneurId=${manifest.ids.portalRepreneur}&matchId=${droppedMatchId}`)
+    await expect(page.getByText("Pursuit dropped", { exact: true })).toBeVisible()
+    await expect(page.getByText("Documents", { exact: true })).toHaveCount(0)
+    await portalOne.goto(`/portal/deals/${droppedMatchId}`)
+    await expect(portalOne.getByText("Pursuit dropped", { exact: true })).toBeVisible()
+    await expect(portalOne.getByText("Documents", { exact: true })).toHaveCount(0)
+    await portalOne.getByRole("button", { name: "Review and reconsider" }).click()
+    await portalOne.waitForURL(/\/portal\/deals$/)
+    await expect.poll(async () => (await database.query(`SELECT status, pursuit_stage, pursuit_stage_notes, pursuit_stage_updated_by, pursuit_stage_updated_at,
+      reviewed_by, reviewed_at, decline_reason_categories, decline_reason_text,
+      (SELECT count(*)::int FROM public.opportunity_pursuit_evidence WHERE match_id=om.id) AS evidence_count,
+      (SELECT count(*)::int FROM public.opportunity_documents WHERE opportunity_id=om.opportunity_id) AS document_count
+      FROM public.opportunity_matches om WHERE id=$1`, [droppedMatchId])).rows[0]).toMatchObject({
+      status: "interested", pursuit_stage: null, pursuit_stage_notes: null, pursuit_stage_updated_by: null,
+      pursuit_stage_updated_at: null, reviewed_by: null, reviewed_at: null, decline_reason_categories: [], decline_reason_text: null,
+      evidence_count: 0, document_count: 0,
+    })
+    await expect(sectionFor(portalOne, "In Progress").getByText(`${manifest.fixturePrefix} deals-dropped`, { exact: true })).toBeVisible()
+
+    await database.query("UPDATE public.opportunities SET is_demo=true WHERE id=$1", [droppedOpportunityId])
+    await portalOne.goto("/portal/deals")
+    await expect(portalOne.getByText(`${manifest.fixturePrefix} deals-dropped`, { exact: true })).toHaveCount(0)
+    const demoDetailResponse = await portalOne.goto(`/portal/deals/${droppedMatchId}`)
+    expect(demoDetailResponse?.status()).toBe(404)
+    await expect(portalOne.getByText(`${manifest.fixturePrefix} deals-dropped`, { exact: true })).toHaveCount(0)
+    await page.goto(`/portal-preview?repreneurId=${manifest.ids.portalRepreneur}`)
+    await expect(page.getByText("2 visible deal(s)", { exact: true })).toBeVisible()
+    await expect(page.getByText(`${manifest.fixturePrefix} opportunity`, { exact: true })).toBeVisible()
+    await expect(page.getByText(`${manifest.fixturePrefix} deals-dropped`, { exact: true })).toHaveCount(0)
+    await page.goto(`/portal-preview?repreneurId=${manifest.ids.portalRepreneur}&matchId=${droppedMatchId}`)
+    await expect(page.getByText("Deal not visible in portal preview", { exact: true })).toBeVisible()
+    expect(clientErrors).toEqual([])
 
     await database.end()
     await portal.close()

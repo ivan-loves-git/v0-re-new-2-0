@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 23, 2026",
+    version: "0.9.55",
+    title: "Repreneurs can follow every deal in one clear place",
+    isCompleted: true,
+    events: [
+      {
+        title: "Deals now move through four clear sections",
+        type: "feature",
+        description: "Recommended, Declined, In Progress and Live Opportunities now use one shared rule, so an eligible opportunity appears once and moves section when its relationship state changes.",
+      },
+      {
+        title: "Known opportunities are quicker to scan",
+        type: "style",
+        description: "In Progress and Declined use compact cards with the safe deal facts, current state and next action, while Recommended and Live Opportunities keep the full opportunity view.",
+      },
+      {
+        title: "Dropped deals can return without reopening a pursuit",
+        type: "feature",
+        description: "A repreneur can ask Re-New to reconsider a dropped deal; it returns only as interest awaiting staff validation and restores no confidential access.",
+      },
+      {
+        title: "Confirmed demonstration opportunities stay internal",
+        type: "decision",
+        description: "Staff can explicitly mark demonstration data, and every repreneur-facing read and action then refuses it while retaining the operational history for staff.",
+      },
+    ],
+  },
+  {
     period: "Aug 21, 2026",
     version: "0.9.54",
     title: "Production screens and email callbacks now behave deterministically",

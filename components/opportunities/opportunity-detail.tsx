@@ -28,6 +28,10 @@ import { OpportunityPursuitPanel } from "@/components/opportunities/opportunity-
 import { OpportunitySourceReviewPanel } from "@/components/opportunities/opportunity-source-review-panel"
 import { OpportunityAiNextActions } from "@/components/opportunities/opportunity-ai-next-actions"
 import {
+  OpportunityDemoBadge,
+  OpportunityDemoControl,
+} from "@/components/opportunities/opportunity-demo-control"
+import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
@@ -80,6 +84,9 @@ interface OpportunityDetailProps {
   closureHistory: OpportunityClosureHistoryEntry[]
   closeAction: (
     reason: OpportunityClosureReason,
+  ) => Promise<OpportunityActionResult>
+  demoClassificationAction: (
+    isDemo: boolean,
   ) => Promise<OpportunityActionResult>
   officeOptions: MaOfficeIntakeOffice[]
   geographyOptions: OpportunityGeographyOption[]
@@ -143,6 +150,7 @@ export function OpportunityDetail({
   resolveSourceAction,
   closureHistory,
   closeAction,
+  demoClassificationAction,
   officeOptions,
   geographyOptions,
   geographyMandatesEnabled,
@@ -202,6 +210,7 @@ export function OpportunityDetail({
             <OpportunityVisibilityBadge
               visibility={opportunity.repreneur_exposure}
             />
+            {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
           </div>
           <div>
             <p className="font-mono text-xs text-muted-foreground">
@@ -230,12 +239,18 @@ export function OpportunityDetail({
             </span>
           </div>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/opportunities/${opportunity.id}?tab=edit`}>
-            <Pencil data-icon="inline-start" />
-            Edit opportunity
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <OpportunityDemoControl
+            isDemo={opportunity.is_demo}
+            action={demoClassificationAction}
+          />
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/opportunities/${opportunity.id}?tab=edit`}>
+              <Pencil data-icon="inline-start" />
+              Edit opportunity
+            </Link>
+          </Button>
+        </div>
       </header>
 
       {opportunity.source_review_required ? (

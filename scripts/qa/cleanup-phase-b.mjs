@@ -43,7 +43,7 @@ try {
   const rateLimitBefore = singletonBefore.rateLimitRows
   if (!Array.isArray(rateLimitBefore)) throw new Error("Phase B cleanup failed: rate-limit-snapshot")
   const authIdentityIds = [...manifest.betterAuthIdentities, manifest.ids.provisionalContextUser]
-  const recordedRepreneurIds = [runtime.p1RepreneurId, runtime.p2RepreneurId, manifest.ids.portalRepreneur].filter(Boolean)
+  const recordedRepreneurIds = [runtime.p1RepreneurId, runtime.p2RepreneurId, manifest.ids.portalRepreneur, manifest.ids.lockedRepreneur].filter(Boolean)
   let scopedRepreneurs = await database.query("SELECT id, email, source, cv_url FROM public.repreneurs WHERE id = ANY($1::uuid[])", [recordedRepreneurIds])
   if (!runtime.p1RepreneurId || !runtime.p2RepreneurId) {
     const recovered = await database.query("SELECT id, email, source, cv_url FROM public.repreneurs WHERE lower(email) IN (lower($1), lower($2))", [manifest.actors.applicant.email, manifest.actors.staffCreated.email])
@@ -51,17 +51,30 @@ try {
   }
   for (const row of scopedRepreneurs.rows) {
     const expected = row.id === manifest.ids.portalRepreneur
+      || row.id === manifest.ids.lockedRepreneur
       || (row.email === manifest.actors.applicant.email && row.source === "intake_v2")
       || (row.email === manifest.actors.staffCreated.email && row.source === "staff_manual")
     if (!expected) throw new Error("Phase B cleanup failed: repreneur-scope")
   }
-  const scopedOpportunities = await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity`, manifest.actors.staff.userId])
-  if (scopedOpportunities.rows.length > 2) throw new Error("Phase B cleanup failed: opportunity-scope")
+  const p3DealIds = runtime.p3DealIds ?? {}
+  const recordedOpportunityIds = [p3DealIds.declinedOpportunityId, p3DealIds.droppedOpportunityId].filter((value) => typeof value === "string")
+  const recordedMatchIds = [p3DealIds.lockedMatchId, p3DealIds.declinedMatchId, p3DealIds.droppedMatchId].filter((value) => typeof value === "string")
+  const primaryOpportunities = await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity`, manifest.actors.staff.userId])
+  const recordedDeals = recordedOpportunityIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunities WHERE id = ANY($1::uuid[]) AND created_by=$2 AND public_title IN ($3, $4)", [recordedOpportunityIds, manifest.actors.staff.userId, `${manifest.fixturePrefix} deals-declined`, `${manifest.fixturePrefix} deals-dropped`])
+    : { rows: [] }
+  if (recordedDeals.rows.length !== recordedOpportunityIds.length) throw new Error("Phase B cleanup failed: recorded-deal-ownership")
+  const recordedMatches = recordedMatchIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunity_matches WHERE id = ANY($1::uuid[]) AND opportunity_id = ANY($2::uuid[]) AND repreneur_id = ANY($3::uuid[])", [recordedMatchIds, recordedOpportunityIds, [manifest.ids.portalRepreneur, manifest.ids.lockedRepreneur]])
+    : { rows: [] }
+  if (recordedMatches.rows.length !== recordedMatchIds.length) throw new Error("Phase B cleanup failed: recorded-match-ownership")
+  const scopedOpportunities = { rows: [...primaryOpportunities.rows, ...recordedDeals.rows.filter((row) => !primaryOpportunities.rows.some((candidate) => candidate.id === row.id))] }
+  if (scopedOpportunities.rows.length > 3) throw new Error("Phase B cleanup failed: opportunity-scope")
   const scopedOpportunityProbes = runtime.opportunityProbeId
     ? await database.query("SELECT id FROM public.opportunities WHERE id=$1 AND public_title=$2 AND created_by=$3", [runtime.opportunityProbeId, `${manifest.fixturePrefix} opportunity probe`, manifest.actors.staff.userId])
     : await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity probe`, manifest.actors.staff.userId])
   if (scopedOpportunityProbes.rows.length > 1) throw new Error("Phase B cleanup failed: opportunity-probe-scope")
-  const repreneurIds = [...new Set([manifest.ids.portalRepreneur, ...scopedRepreneurs.rows.map((row) => row.id)])]
+  const repreneurIds = [...new Set([manifest.ids.portalRepreneur, manifest.ids.lockedRepreneur, ...scopedRepreneurs.rows.map((row) => row.id)])]
   const opportunityIds = scopedOpportunities.rows.map((row) => row.id)
   const opportunityProbeIds = scopedOpportunityProbes.rows.map((row) => row.id)
   const allOpportunityIds = [...new Set([...opportunityIds, ...opportunityProbeIds])]
