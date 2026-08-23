@@ -50,81 +50,49 @@ async function protectedProbe(origin, bypass) {
   }
 }
 
-async function vercelApi(path, { token, teamId }) {
-  const url = new URL(`https://api.vercel.com${path}`)
-  if (teamId) url.searchParams.set("teamId", teamId)
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+async function providerEvidenceFromArtifact(expectedSha) {
+  const evidencePath = process.env.QA_PROVIDER_EVIDENCE_FILE
+  if (!evidencePath) return null
+  if (process.env.QA_VERCEL_TOKEN) throw new Error("Live QA evidence failed: secret-coexistence")
+  const { assertSanitizedProviderDeployEvidence } = await import("../../lib/qa/explicit-deploy.mjs")
+  const evidence = JSON.parse(await readFile(resolve(process.cwd(), evidencePath), "utf8"))
+  const verified = assertSanitizedProviderDeployEvidence(evidence, {
+    deploymentId: process.env.QA_VERCEL_DEPLOYMENT_ID || evidence.deploymentId,
+    candidateSha: expectedSha,
+    candidateBranch: process.env.QA_CANDIDATE_BRANCH || evidence.gitRef,
   })
-  if (!response.ok) throw new Error("Live QA evidence failed: vercel-api")
-  return response.json()
+  return {
+    projectName: verified.projectName,
+    target: verified.target,
+    productionEnvironmentAttached: false,
+    vercelDeploymentId: verified.deploymentId,
+    metaGithubCommitSha: verified.candidateSha,
+    metaGithubCommitRef: verified.gitRef,
+    providerCreator: "explicit-qa-controller",
+    providerEnvironmentUrl: verified.providerUrl || "",
+  }
 }
 
-async function explicitVercelDeploymentEvidence(expectedSha) {
-  const token = process.env.QA_VERCEL_TOKEN
-  const teamId = process.env.QA_VERCEL_TEAM_ID || ""
-  const deploymentId = process.env.QA_VERCEL_DEPLOYMENT_ID
-  if (!token) throw new Error("Live QA evidence failed: vercel-token")
-  let deployment
-  if (deploymentId) {
-    deployment = await vercelApi(`/v13/deployments/${deploymentId}`, { token, teamId: teamId || undefined })
-  } else {
-    const listed = await vercelApi(`/v6/deployments?projectId=prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y&limit=20`, {
-      token,
-      teamId: teamId || undefined,
-    })
-    deployment = (listed.deployments || []).find((candidate) => (
-      candidate.meta?.githubCommitSha === expectedSha
-    ))
-    if (deployment?.uid && !deployment.id) deployment = await vercelApi(`/v13/deployments/${deployment.uid}`, { token, teamId: teamId || undefined })
-  }
-  if (!deployment) throw new Error("Live QA evidence failed: vercel-deployment")
-  const metaSha = deployment.meta?.githubCommitSha || deployment.gitSource?.sha
-  if (metaSha !== expectedSha) throw new Error("Live QA evidence failed: deployment-sha")
-  if (deployment.projectId !== "prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y") throw new Error("Live QA evidence failed: vercel-project")
-  if (deployment.target === "production") throw new Error("Live QA evidence failed: production-environment")
-  if (deployment.readyState !== "READY") throw new Error("Live QA evidence failed: ready-state")
+async function providerEvidenceFromProtectedHeaders(expectedSha, protection) {
+  if (protection.deploymentSha !== expectedSha) throw new Error("Live QA evidence failed: deployment-sha")
+  if (protection.qaProject !== "renew-overnight-validation-20260820") throw new Error("Live QA evidence failed: vercel-project")
   return {
     projectName: "renew-overnight-validation-20260820",
     target: "preview",
     productionEnvironmentAttached: false,
-    vercelDeploymentId: deployment.id || deployment.uid,
-    metaGithubCommitSha: metaSha,
-    metaGithubCommitRef: deployment.meta?.githubCommitRef || deployment.gitSource?.ref || "",
-    providerCreator: "explicit-qa-controller",
-    providerEnvironmentUrl: deployment.url ? `https://${deployment.url}` : "",
+    vercelDeploymentId: process.env.QA_VERCEL_DEPLOYMENT_ID || null,
+    metaGithubCommitSha: protection.deploymentSha,
+    metaGithubCommitRef: process.env.QA_CANDIDATE_BRANCH || "",
+    providerCreator: "stable-alias-headers",
+    providerEnvironmentUrl: protection.finalOrigin,
   }
 }
 
-async function githubDeploymentEvidence(expectedSha) {
-  // Reviewed rollback path only. Protected QA prefers explicit Vercel evidence.
-  if (process.env.QA_VERCEL_TOKEN) return explicitVercelDeploymentEvidence(expectedSha)
-  const repository = process.env.GITHUB_REPOSITORY
-  if (!/^ivan-loves-git\/v0-re-new-2-0$/.test(repository || "")) throw new Error("Live QA evidence failed: github-repository")
-  const headers = {
-    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-  }
-  const deploymentsResponse = await fetch(`https://api.github.com/repos/${repository}/deployments?sha=${expectedSha}&per_page=20`, { headers })
-  if (!deploymentsResponse.ok) throw new Error("Live QA evidence failed: github-deployments")
-  const deployments = await deploymentsResponse.json()
-  const expectedEnvironment = "Preview – renew-overnight-validation-20260820"
-  const deployment = deployments.find((candidate) => candidate.environment === expectedEnvironment && candidate.creator?.login === "vercel[bot]" && candidate.sha === expectedSha)
-  if (!deployment || deployment.production_environment !== false) throw new Error("Live QA evidence failed: vercel-deployment")
-  const statusesResponse = await fetch(deployment.statuses_url, { headers })
-  if (!statusesResponse.ok) throw new Error("Live QA evidence failed: github-deployment-status")
-  const statuses = await statusesResponse.json()
-  const status = statuses.find((candidate) => candidate.state === "success" && candidate.creator?.login === "vercel[bot]")
-  if (!status) throw new Error("Live QA evidence failed: vercel-deployment-status")
-  return {
-    projectName: expectedEnvironment.replace("Preview – ", ""),
-    target: "preview",
-    productionEnvironmentAttached: deployment.production_environment,
-    githubDeploymentId: deployment.id,
-    providerCreator: deployment.creator.login,
-    providerEnvironmentUrl: status.environment_url,
-  }
+async function deploymentEvidence(expectedSha, protection) {
+  if (process.env.QA_VERCEL_TOKEN) throw new Error("Live QA evidence failed: secret-coexistence")
+  const fromArtifact = await providerEvidenceFromArtifact(expectedSha)
+  if (fromArtifact) return fromArtifact
+  return providerEvidenceFromProtectedHeaders(expectedSha, protection)
 }
 
 let database
@@ -150,10 +118,8 @@ try {
     computeLiveStructureFingerprint(database),
     countPublicRows(database),
   ])
-  const [protection, deployment] = await Promise.all([
-    protectedProbe(origin, process.env.VERCEL_AUTOMATION_BYPASS_SECRET),
-    githubDeploymentEvidence(expectedSha),
-  ])
+  const protection = await protectedProbe(origin, process.env.VERCEL_AUTOMATION_BYPASS_SECRET)
+  const deployment = await deploymentEvidence(expectedSha, protection)
   const evidence = {
     collectedAt: new Date().toISOString(),
     supabase: {
@@ -210,7 +176,7 @@ try {
   await writePrivateJson(EVIDENCE_FILE, evidence)
   console.log(JSON.stringify({ ok: true, projectRef: expectedRef, origin, deploymentSha: expectedSha, evidenceMode: allowStaleResidue ? "identity" : "empty", customerRows: evidence.supabase.customerRows, authUsers: evidence.supabase.betterAuthUsers + evidence.supabase.supabaseAuthUsers, storageObjects: evidence.supabase.storageObjects, unauthenticatedBlocked: true, authorizedStatus: 200 }))
 } catch (error) {
-  console.error(error instanceof Error && (error.message.startsWith("Live QA evidence failed:") || error.message.startsWith("Isolation preflight failed:")) ? error.message : "Live QA evidence failed: collection")
+  console.error(error instanceof Error && (error.message.startsWith("Live QA evidence failed:") || error.message.startsWith("Isolation preflight failed:") || error.message.startsWith("QA explicit deploy failed:")) ? error.message : "Live QA evidence failed: collection")
   process.exitCode = 1
 } finally {
   await database?.end().catch(() => {})

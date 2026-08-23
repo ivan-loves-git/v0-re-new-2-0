@@ -1,26 +1,47 @@
 name: Golden journeys
 
 on:
-  workflow_run:
-    workflows: [Verify]
-    types: [completed]
   repository_dispatch:
     types: [qa_candidate]
+  workflow_dispatch:
+    inputs:
+      candidate_branch:
+        description: Exact same-repository candidate branch
+        required: true
+        type: string
+      candidate_sha:
+        description: Exact 40-character candidate SHA
+        required: true
+        type: string
+      verify_run_id:
+        description: Exact green Verify run id for that SHA
+        required: true
+        type: string
+      contract_sha256:
+        description: Required only for reviewed schema transitions
+        required: false
+        type: string
+      schema_reviewed:
+        description: Set true only for reviewed schema transitions
+        required: false
+        type: boolean
+        default: false
+      schema_review_version:
+        description: Must be qa-schema-review-v1 for schema transitions
+        required: false
+        type: string
+      pause_after_lease:
+        description: Serialization proof pause
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   deployments: read
 
 concurrency:
-  group: >-
-    ${{
-      (github.event_name == 'repository_dispatch' ||
-       (github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'pull_request')) &&
-      'renew-permanent-qa' ||
-      format('renew-permanent-qa-ignored-{0}', github.run_id)
-    }}
+  group: renew-permanent-qa
   cancel-in-progress: false
 
 env:
@@ -30,13 +51,12 @@ env:
 
 jobs:
   lane:
-    name: Serialize exact candidate into qa lane
+    name: Admit exact candidate
     if: >-
       github.event_name == 'repository_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request')
+      github.event_name == 'workflow_dispatch'
     permissions:
-      contents: write
-      deployments: read
+      contents: read
       checks: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -45,15 +65,14 @@ jobs:
       candidate_branch: ${{ steps.candidate.outputs.candidate_branch }}
       reviewed_schema_transition: ${{ steps.candidate.outputs.reviewed_schema_transition }}
       check_run_id: ${{ steps.check.outputs.check_run_id }}
-      pointer_moved_at: ${{ steps.pointer.outputs.pointer_moved_at }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      QA_CANDIDATE_BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0].head.ref || github.event.client_payload.candidate_branch }}
-      QA_EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0].head.sha || github.event.client_payload.candidate_sha }}
-      QA_VERIFY_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || github.event.client_payload.verify_run_id }}
-      QA_CONTRACT_SHA256: ${{ github.event.client_payload.contract_sha256 }}
-      QA_SCHEMA_REVIEWED: ${{ github.event.client_payload.schema_reviewed }}
-      QA_SCHEMA_REVIEW_VERSION: ${{ github.event.client_payload.schema_review_version }}
+      QA_CANDIDATE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_branch || github.event.client_payload.candidate_branch }}
+      QA_EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_sha || github.event.client_payload.candidate_sha }}
+      QA_VERIFY_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_run_id || github.event.client_payload.verify_run_id }}
+      QA_CONTRACT_SHA256: ${{ github.event_name == 'workflow_dispatch' && inputs.contract_sha256 || github.event.client_payload.contract_sha256 }}
+      QA_SCHEMA_REVIEWED: ${{ github.event_name == 'workflow_dispatch' && inputs.schema_reviewed || github.event.client_payload.schema_reviewed }}
+      QA_SCHEMA_REVIEW_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.schema_review_version || github.event.client_payload.schema_review_version }}
       QA_CANDIDATE_ROOT: .qa-candidate
     steps:
       - name: Check out trusted lane controller
@@ -116,25 +135,11 @@ jobs:
         shell: bash
         run: printf '%s\n' 'Reviewed schema transition recovery path used; this does not bypass product tests.' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Move permanent qa pointer with lease-safe force
-        id: pointer
-        shell: bash
-        run: |
-          git fetch origin "$QA_EXPECTED_SHA" qa || git fetch origin "$QA_EXPECTED_SHA"
-          old="$(git ls-remote --heads origin refs/heads/qa | cut -f1)"
-          if [ -n "$old" ]; then
-            git push origin "$QA_EXPECTED_SHA:refs/heads/qa" --force-with-lease="refs/heads/qa:$old"
-          else
-            git push origin "$QA_EXPECTED_SHA:refs/heads/qa" --force-with-lease="refs/heads/qa:"
-          fi
-          test "$(git ls-remote --heads origin refs/heads/qa | cut -f1)" = "$QA_EXPECTED_SHA"
-          printf 'pointer_moved_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-
-  schema-sync:
-    name: Synchronize candidate database contract
+  deploy-qa:
+    name: Deploy admitted candidate to validation project
     permissions:
       contents: read
-      deployments: read
+      actions: write
     needs: lane
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -142,15 +147,71 @@ jobs:
     outputs:
       ready_at: ${{ steps.deployment.outputs.ready_at }}
       deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+      candidate_sha: ${{ steps.deployment.outputs.candidate_sha }}
+      git_ref: ${{ steps.deployment.outputs.git_ref }}
+    env:
+      QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
+      QA_CANDIDATE_BRANCH: ${{ needs.lane.outputs.candidate_branch }}
+      QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
+      QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      QA_PROVIDER_EVIDENCE_FILE: .qa-deploy/provider-evidence.json
+    steps:
+      - name: Check out trusted deploy controller only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Explicitly deploy admitted candidate branch and SHA
+        id: deployment
+        run: node scripts/qa/deploy-admitted-candidate.mjs
+
+      - name: Upload sanitized provider deploy evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-provider-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .qa-deploy/provider-evidence.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  schema-sync:
+    name: Synchronize candidate database contract
+    permissions:
+      contents: read
+    needs: [lane, deploy-qa]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: qa-pilot
+    outputs:
+      ready_at: ${{ needs.deploy-qa.outputs.ready_at }}
+      deployment_id: ${{ steps.evidence.outputs.deployment_id }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
       QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
-      QA_LANE_MOVED_AT: ${{ needs.lane.outputs.pointer_moved_at }}
+      QA_CANDIDATE_BRANCH: ${{ needs.lane.outputs.candidate_branch }}
+      QA_VERCEL_DEPLOYMENT_ID: ${{ needs.deploy-qa.outputs.deployment_id }}
       QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       QA_DATABASE_CA_CERT_FILE: .qa-run/supabase-ca.crt
       QA_CANDIDATE_ROOT: .qa-candidate
+      QA_PROVIDER_EVIDENCE_FILE: .qa-deploy/provider-evidence.json
     steps:
       - name: Check out trusted QA controller
         uses: actions/checkout@v4
@@ -164,6 +225,16 @@ jobs:
           ref: ${{ needs.lane.outputs.candidate_sha }}
           path: .qa-candidate
           fetch-depth: 2
+
+      - name: Download sanitized provider deploy evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: qa-provider-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .qa-deploy
+
+      - name: Load provider evidence without Vercel token
+        id: evidence
+        run: node scripts/qa/load-provider-evidence.mjs
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -186,19 +257,8 @@ jobs:
           mkdir -p .qa-run
           curl --fail --silent --show-error https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt -o "$QA_DATABASE_CA_CERT_FILE"
 
-      - name: Explicitly deploy admitted candidate to validation project
-        id: deployment
-        env:
-          QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
-          QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
-        run: node scripts/qa/deploy-admitted-candidate.mjs
-
       - name: Verify deployed application identities before database mutation
         run: pnpm qa:deployed-contract:verify
-        env:
-          QA_VERCEL_DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
-          QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
-          QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
 
       - name: Verify candidate schema artifact
         run: pnpm qa:schema:verify
@@ -210,8 +270,8 @@ jobs:
     name: Run protected P1-P3 on permanent QA
     permissions:
       contents: read
-      deployments: read
-    needs: [lane, schema-sync]
+      actions: write
+    needs: [lane, deploy-qa, schema-sync]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: qa-pilot
@@ -228,9 +288,9 @@ jobs:
       QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
-      QA_VERCEL_DEPLOYMENT_ID: ${{ needs.schema-sync.outputs.deployment_id }}
-      QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
-      QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
+      QA_CANDIDATE_BRANCH: ${{ needs.lane.outputs.candidate_branch }}
+      QA_VERCEL_DEPLOYMENT_ID: ${{ needs.deploy-qa.outputs.deployment_id }}
+      QA_PROVIDER_EVIDENCE_FILE: .qa-deploy/provider-evidence.json
 
       QA_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
       QA_FIXTURE_PREFIX: TEST-gh-${{ github.run_id }}-${{ github.run_attempt }}
@@ -255,6 +315,15 @@ jobs:
           ref: ${{ needs.lane.outputs.candidate_sha }}
           path: .qa-candidate
           fetch-depth: 2
+
+      - name: Download sanitized provider deploy evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: qa-provider-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .qa-deploy
+
+      - name: Load provider evidence without Vercel token
+        run: node scripts/qa/load-provider-evidence.mjs
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -298,7 +367,9 @@ jobs:
         run: pnpm qa:evidence:collect
 
       - name: Pause after lease for serialization proof
-        if: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.pause_after_lease == true }}
+        if: >-
+          (github.event_name == 'repository_dispatch' && github.event.client_payload.pause_after_lease == true) ||
+          (github.event_name == 'workflow_dispatch' && inputs.pause_after_lease == true)
         run: sleep 180
 
       - name: Seed exact Playwright fixtures
@@ -335,7 +406,6 @@ jobs:
         if: ${{ always() && steps.cleanup.outcome == 'success' && steps.empty.outcome == 'success' }}
         run: pnpm qa:lease:release
 
-
       - name: Sanitize runner artifacts
         id: sanitize
         if: always()
@@ -355,18 +425,19 @@ jobs:
     name: Finalize exact candidate check
     permissions:
       contents: read
+      actions: write
       checks: write
     if: always()
-    needs: [lane, schema-sync, golden]
+    needs: [lane, deploy-qa, schema-sync, golden]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     env:
       GITHUB_TOKEN: ${{ github.token }}
       QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
       QA_CHECK_RUN_ID: ${{ needs.lane.outputs.check_run_id }}
-      QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}
-      QA_DEPLOYMENT_READY_AT: ${{ needs.schema-sync.outputs.ready_at }}
-      QA_CHECK_SUMMARY: schema=${{ needs.schema-sync.result }}; golden=${{ needs.golden.result }}; deployment-ready=${{ needs.schema-sync.outputs.ready_at }}
+      QA_CHECK_CONCLUSION: ${{ needs.deploy-qa.result == 'success' && needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}
+      QA_DEPLOYMENT_READY_AT: ${{ needs.deploy-qa.outputs.ready_at }}
+      QA_CHECK_SUMMARY: deploy=${{ needs.deploy-qa.result }}; schema=${{ needs.schema-sync.result }}; golden=${{ needs.golden.result }}; deployment-ready=${{ needs.deploy-qa.outputs.ready_at }}
     steps:
       - name: Check out trusted check finalizer
         uses: actions/checkout@v4

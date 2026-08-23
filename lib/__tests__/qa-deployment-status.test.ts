@@ -171,11 +171,15 @@ describe("QA deployment status selection", () => {
   it("keeps exact deployed identity and protection verification immediately after the explicit deploy", async () => {
     const workflow = await import("node:fs/promises").then(({ readFile }) => readFile(".github/workflows/golden-journeys.yml", "utf8"))
     expect(workflow).toMatch(
-      /- name: Explicitly deploy admitted candidate to validation project[\s\S]*?run: node scripts\/qa\/deploy-admitted-candidate\.mjs\n\n      - name: Verify deployed application identities before database mutation\n        run: pnpm qa:deployed-contract:verify/,
+      /- name: Explicitly deploy admitted candidate branch and SHA[\s\S]*?run: node scripts\/qa\/deploy-admitted-candidate\.mjs/,
     )
+    expect(workflow).toContain("Upload sanitized provider deploy evidence")
+    expect(workflow).toContain("load-provider-evidence.mjs")
+    expect(workflow).toContain("Verify deployed application identities before database mutation")
     expect(workflow).toContain("secrets.QA_VERCEL_TOKEN")
     expect(workflow).not.toContain("Wait for exact qa deployment Ready event")
     expect(workflow).not.toContain("createDeployments")
     expect(workflow).not.toContain("git.deploymentEnabled")
+    expect(workflow).not.toContain("workflow_run:")
   })
 })
