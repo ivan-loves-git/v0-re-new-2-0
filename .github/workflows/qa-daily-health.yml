@@ -32,6 +32,8 @@ jobs:
       QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
       QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
+      QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
       QA_RUN_ID: health-${{ github.run_id }}-${{ github.run_attempt }}
       QA_FIXTURE_PREFIX: TEST-health-${{ github.run_id }}-${{ github.run_attempt }}
       QA_RUN_DIR: .qa-run

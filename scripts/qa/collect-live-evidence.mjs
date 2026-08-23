@@ -50,7 +50,55 @@ async function protectedProbe(origin, bypass) {
   }
 }
 
+async function vercelApi(path, { token, teamId }) {
+  const url = new URL(`https://api.vercel.com${path}`)
+  if (teamId) url.searchParams.set("teamId", teamId)
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  })
+  if (!response.ok) throw new Error("Live QA evidence failed: vercel-api")
+  return response.json()
+}
+
+async function explicitVercelDeploymentEvidence(expectedSha) {
+  const token = process.env.QA_VERCEL_TOKEN
+  const teamId = process.env.QA_VERCEL_TEAM_ID || ""
+  const deploymentId = process.env.QA_VERCEL_DEPLOYMENT_ID
+  if (!token) throw new Error("Live QA evidence failed: vercel-token")
+  let deployment
+  if (deploymentId) {
+    deployment = await vercelApi(`/v13/deployments/${deploymentId}`, { token, teamId: teamId || undefined })
+  } else {
+    const listed = await vercelApi(`/v6/deployments?projectId=prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y&limit=20`, {
+      token,
+      teamId: teamId || undefined,
+    })
+    deployment = (listed.deployments || []).find((candidate) => (
+      candidate.meta?.githubCommitSha === expectedSha
+    ))
+    if (deployment?.uid && !deployment.id) deployment = await vercelApi(`/v13/deployments/${deployment.uid}`, { token, teamId: teamId || undefined })
+  }
+  if (!deployment) throw new Error("Live QA evidence failed: vercel-deployment")
+  const metaSha = deployment.meta?.githubCommitSha || deployment.gitSource?.sha
+  if (metaSha !== expectedSha) throw new Error("Live QA evidence failed: deployment-sha")
+  if (deployment.projectId !== "prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y") throw new Error("Live QA evidence failed: vercel-project")
+  if (deployment.target === "production") throw new Error("Live QA evidence failed: production-environment")
+  if (deployment.readyState !== "READY") throw new Error("Live QA evidence failed: ready-state")
+  return {
+    projectName: "renew-overnight-validation-20260820",
+    target: "preview",
+    productionEnvironmentAttached: false,
+    vercelDeploymentId: deployment.id || deployment.uid,
+    metaGithubCommitSha: metaSha,
+    metaGithubCommitRef: deployment.meta?.githubCommitRef || deployment.gitSource?.ref || "",
+    providerCreator: "explicit-qa-controller",
+    providerEnvironmentUrl: deployment.url ? `https://${deployment.url}` : "",
+  }
+}
+
 async function githubDeploymentEvidence(expectedSha) {
+  // Reviewed rollback path only. Protected QA prefers explicit Vercel evidence.
+  if (process.env.QA_VERCEL_TOKEN) return explicitVercelDeploymentEvidence(expectedSha)
   const repository = process.env.GITHUB_REPOSITORY
   if (!/^ivan-loves-git\/v0-re-new-2-0$/.test(repository || "")) throw new Error("Live QA evidence failed: github-repository")
   const headers = {
@@ -132,7 +180,10 @@ try {
       protection: { unauthenticatedBlocked: protection.unauthenticatedBlocked, authorizedStatus: protection.authorizedStatus },
       aliases: [protection.alias],
       productionEnvironmentAttached: deployment.productionEnvironmentAttached,
-      githubDeploymentId: deployment.githubDeploymentId,
+      githubDeploymentId: deployment.githubDeploymentId || null,
+      vercelDeploymentId: deployment.vercelDeploymentId || null,
+      metaGithubCommitSha: deployment.metaGithubCommitSha || protection.deploymentSha,
+      metaGithubCommitRef: deployment.metaGithubCommitRef || "",
       providerCreator: deployment.providerCreator,
       providerEnvironmentUrl: deployment.providerEnvironmentUrl,
     },
