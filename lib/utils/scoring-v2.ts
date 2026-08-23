@@ -413,6 +413,10 @@ export function getRecommendedAction(
   return 'starter_pack'
 }
 
+export function isHighScoreRecommendation(recommendation: RecommendedAction): boolean {
+  return recommendation === "deal_flow" || recommendation === "priority_interview"
+}
+
 /**
  * Calculate complete dual score from WHO and WHEN answers.
  * Main entry point for scoring.
