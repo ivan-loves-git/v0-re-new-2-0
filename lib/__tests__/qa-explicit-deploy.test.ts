@@ -27,7 +27,7 @@ function readyDeployment(overrides: Record<string, unknown> = {}) {
     id: DEPLOYMENT_ID,
     projectId: PROJECT_ID,
     readyState: "READY",
-    target: "preview",
+    target: null,
     url: "renew-overnight-validation-abc.vercel.app",
     gitSource: { type: "github", ref: BRANCH, sha: SHA },
     meta: {
@@ -102,7 +102,9 @@ describe("QA explicit validation deploy controller", () => {
     ["commit-sha", { meta: { githubCommitSha: "b".repeat(40), githubCommitRef: BRANCH, renewQaController: "explicit-v1" }, gitSource: { ref: BRANCH, sha: "b".repeat(40) } }],
     ["git-ref", { meta: { githubCommitSha: SHA, githubCommitRef: "main", renewQaController: "explicit-v1" }, gitSource: { ref: "main", sha: SHA } }],
     ["controller-meta", { meta: { githubCommitSha: SHA, githubCommitRef: BRANCH } }],
-    ["production-target", { target: "production" }],
+    ["target", { target: "preview" }],
+    ["target", { target: "staging" }],
+    ["production-target", { target: "production", productionEnvironment: true }],
   ])("rejects a deployment with the wrong %s before database work", (_label, mutation) => {
     expect(() => assertExplicitQaDeploymentReady({
       deployment: readyDeployment(mutation),
@@ -117,6 +119,7 @@ describe("QA explicit validation deploy controller", () => {
       candidateSha: SHA,
       candidateBranch: BRANCH,
       aliasServedSha: SHA,
+      target: null,
       readyAt: "2026-08-23T10:00:00.000Z",
       providerUrl: "https://example.vercel.app",
     })
@@ -129,11 +132,19 @@ describe("QA explicit validation deploy controller", () => {
       projectId: PROJECT_ID,
       gitRef: BRANCH,
       candidateSha: SHA,
-      target: "preview",
+      target: null,
       readyState: "READY",
       alias: qaStableAliasHostname(),
     })
     expect(JSON.stringify(evidence)).not.toMatch(/QA_VERCEL_TOKEN|Bearer /)
+    expect(() => buildSanitizedProviderDeployEvidence({
+      deploymentId: DEPLOYMENT_ID,
+      candidateSha: SHA,
+      candidateBranch: BRANCH,
+      aliasServedSha: SHA,
+      target: "preview",
+      readyAt: "2026-08-23T10:00:00.000Z",
+    })).toThrow("QA explicit deploy failed: target")
   })
 
   it("assigns only the preserved stable alias and builds an exact rollback", () => {

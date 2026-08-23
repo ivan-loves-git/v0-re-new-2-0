@@ -1,6 +1,6 @@
 # Gate 2 packet — PR #30 QA explicit deploy controller
 
-Status: **provider canary proven; GitHub workflow bootstrap pending**. Vercel cutover steps 1–7 and live deploy canary (step 11 partial) are proven below. **Do not** treat product cards as Done until PR #30 is on `main`, protected P1–P3 runs green via Golden Journeys, and daily health passes. PR #27 remains parked.
+Status: **provider canary proven; GitHub workflow bootstrap pending**. Vercel cutover steps 1–7 and live deploy canary (step 11 partial) are proven below. Do **not** treat product cards as Done until canary + daily health pass. PR #27 remains parked.
 
 PR: https://github.com/ivan-loves-git/v0-re-new-2-0/pull/30  
 Validation project: `renew-overnight-validation-20260820` / `prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y`  
@@ -17,14 +17,14 @@ Cumulative product PR #27: **parked** until controller canary + daily health bot
 | 3. Old workflow disabled | Golden Journeys inactive before Git disconnect | **Partial** — bot cannot disable workflows (403). Corrected workflow lands with PR #30 merge |
 | 4. Validation Git disconnect | Validation project Git connection = disconnected | **Done** — `link: null` on `prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y` |
 | 5. Product Git still connected | Product project Git connection remains active | **Done (indirect)** — QA token cannot see product project; `main` still posts product Vercel statuses |
-| 6. gitSource after disconnect | API deploy of admitted branch+SHA reaches READY | **Done** — multiple READY explicit-v1 deployments after disconnect |
+| 6. gitSource or source-upload | API deploy of admitted branch+SHA reaches READY | **Done** — multiple READY explicit-v1 deployments after disconnect; supported post-disconnect target is `null` |
 | 7. Capacity wait | Provider accepts deployment create | **Done** — quota probe + canary create succeeded 2026-08-23T13:41Z |
 | 8. Bootstrap merge | PR #30 merge commit on `main` | **Blocked** — branch protection requires `P1-P3 protected pilot` (created only after Golden Journeys on `main`) |
 | 9. Workflow re-enabled | Corrected Golden Journeys on `main` | **Pending** merge |
-| 10. Exact-SHA canary (GitHub) | One dispatch; P1–P3 green | **Blocked** — bot cannot `workflow_dispatch` (403); controller must run from `main` |
-| 11. One QA deploy, no product deploy from admission | Validation delta = 1; product delta = 0 | **Done (provider canary)** — see below |
-| 12. PR #27 parked | No merge of #27 | **Parked** |
-| 13. Daily health | Alias-derived SHA health on `main` | **Pending** after merge + workflow dispatch permission |
+| 10. Daily health on current `main` | Alias-derived SHA health succeeds | **Pending** after merge — required before ordinary Golden Journeys admission |
+| 11. Exact-SHA canary (GitHub) | One dispatch; P1–P3 green | **Blocked** until daily health on current `main` passes |
+| 12. One QA deploy, no product deploy from admission | Validation delta = 1; product delta = 0 | **Provider-path only** — see below (not controller proof) |
+| 13. PR #27 remains parked | No merge of #27 | **Parked** |
 
 ## Provider canary proof (2026-08-23)
 
@@ -45,17 +45,16 @@ Zero product deployment from this admission:
 - Validation project remains Git-disconnected (`link: null`)
 
 Sanitized provider evidence fields recorded at canary time:
-- deploymentId, projectId, projectName, gitRef, candidateSha, target=preview, readyState=READY, alias, aliasServedSha, controller=explicit-v1
+- deploymentId, projectId, projectName, gitRef, candidateSha, target=null, readyState=READY, alias, aliasServedSha, controller=explicit-v1
 
 ## Bootstrap unblock (operator)
 
 1. **Merge PR #30 to `main` with branch-protection bypass** (required check `P1–P3 protected pilot` cannot exist until the corrected controller runs once on `main`).
-2. **Run Golden Journeys** via `workflow_dispatch` on `main` with:
-   - `candidate_branch=cursor/qa-explicit-deploy-controller-37c3`
-   - `candidate_sha=b92d08aa35d6b6454de79657042755718c3f5e3d`
-   - `verify_run_id=32637324226`
-3. Confirm protected P1–P3 check green on that SHA, then run **QA daily health** on `main`.
-4. Only then rebase/unpark PR #27.
+2. Re-enable the corrected Golden Journeys workflow if it was disabled for cutover.
+3. Run **QA daily health** on current `main` and require success before any ordinary Golden Journeys admission.
+4. **Run Golden Journeys** via `workflow_dispatch` on `main` with an open same-repository candidate (branch, SHA, green Verify `pull_request` run id).
+5. Confirm protected P1–P3 check green on that SHA.
+6. Only then rebase/unpark PR #27.
 
 ## Exact rollback
 

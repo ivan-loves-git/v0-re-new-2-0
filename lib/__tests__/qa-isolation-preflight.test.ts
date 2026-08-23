@@ -30,7 +30,7 @@ function validInput() {
       },
       vercel: {
         projectName: "renew-overnight-validation-20260820",
-        target: "preview",
+        target: null,
         aliases: ["renew-qa-pilot.example.vercel.app"],
         productionEnvironmentAttached: false,
       },
@@ -174,6 +174,9 @@ describe("QA isolation preflight", () => {
     expectFailure((input) => {
       input.evidence.vercel.projectName = "v0-re-new-2-0"
     }, "vercel-project")
+    expectFailure((input) => {
+      input.evidence.vercel.target = "preview"
+    }, "vercel-target")
     expectFailure((input) => {
       input.evidence.vercel.target = "production"
     }, "vercel-target")

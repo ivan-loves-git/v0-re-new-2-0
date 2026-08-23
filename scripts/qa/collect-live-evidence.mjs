@@ -78,7 +78,7 @@ async function providerEvidenceFromProtectedHeaders(expectedSha, protection) {
   if (protection.qaProject !== "renew-overnight-validation-20260820") throw new Error("Live QA evidence failed: vercel-project")
   return {
     projectName: "renew-overnight-validation-20260820",
-    target: "preview",
+    target: null,
     productionEnvironmentAttached: false,
     vercelDeploymentId: process.env.QA_VERCEL_DEPLOYMENT_ID || null,
     metaGithubCommitSha: protection.deploymentSha,
