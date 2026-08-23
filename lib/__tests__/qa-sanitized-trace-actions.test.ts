@@ -70,6 +70,35 @@ function runSanitizer(
   })
 }
 
+function parseUnsafeTextResidueDiagnostic(stderr: string) {
+  const line = stderr
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith("{") && entry.includes('"unsafe-text-residue"'))
+  expect(line).toBeTruthy()
+  return JSON.parse(line!)
+}
+
+function expectSafeUnsafeTextResidueDiagnostic(
+  result: ReturnType<typeof runSanitizer>,
+  expected: { file: string, rule: string },
+  forbiddenSnippets: string[],
+) {
+  expect(result.status).not.toBe(0)
+  expect(result.stderr).toContain("Artifact sanitization failed: unsafe-text-residue")
+  const diagnostic = parseUnsafeTextResidueDiagnostic(result.stderr)
+  expect(diagnostic).toEqual({
+    ok: false,
+    code: "unsafe-text-residue",
+    file: expected.file,
+    rule: expected.rule,
+  })
+  for (const snippet of forbiddenSnippets) {
+    expect(result.stderr).not.toContain(snippet)
+    expect(result.stdout).not.toContain(snippet)
+  }
+}
+
 function findTraceArchive(directory: string): string | undefined {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)
@@ -368,12 +397,16 @@ describe("sanitized Playwright trace evidence", () => {
   it("fails closed and removes text containing unknown credential-shaped residue", () => {
     const { runDirectory } = temporaryRunDirectory()
     const unsafeFile = join(runDirectory, "future-failure.txt")
-    writeFileSync(unsafeFile, "request failed with Authorization: Bearer future-unknown-credential\n")
+    const unsafeContent = "request failed with Authorization: Bearer future-unknown-credential\n"
+    writeFileSync(unsafeFile, unsafeContent)
 
     const result = runSanitizer(runDirectory)
 
-    expect(result.status).not.toBe(0)
-    expect(result.stderr).toContain("Artifact sanitization failed: unsafe-text-residue")
+    expectSafeUnsafeTextResidueDiagnostic(
+      result,
+      { file: "future-failure.txt", rule: "authorization" },
+      ["future-unknown-credential", "Authorization: Bearer", unsafeContent.trim()],
+    )
     expect(() => readFileSync(unsafeFile)).toThrow()
   })
 
@@ -399,23 +432,19 @@ describe("sanitized Playwright trace evidence", () => {
     expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-traces.json"), "utf8"))).toMatchObject({
       htmlReportRetained: false,
       htmlReportRemovalReason: "privacy",
-      playwrightResultsRetained: false,
-      playwrightResultsRemovalReason: "uncurated-reporter-output",
+      playwrightJsonReportRetained: false,
+      playwrightJsonReportRemovalReason: "privacy",
     })
   })
 
-  it("removes uncurated playwright-results.json before residue scanning", () => {
+  it("deletes raw playwright-results.json containing github.token while keeping curated case-result", () => {
     const { runDirectory } = temporaryRunDirectory()
     const resultsFile = join(runDirectory, "playwright-results.json")
+    const caseResult = '{"ok":true,"cases":{"planned":3,"passed":3}}\n'
     writeFileSync(
       resultsFile,
       `${JSON.stringify({
-        config: {
-          use: {
-            storageState: ".qa-run/auth/staff.json",
-            extraHTTPHeaders: { "x-vercel-set-bypass-cookie": "true" },
-          },
-        },
+        config: { workers: 1 },
         suites: [{
           title: "Golden journeys",
           specs: [{
@@ -423,15 +452,14 @@ describe("sanitized Playwright trace evidence", () => {
             tests: [{
               results: [{
                 status: "passed",
-                error: null,
-                stdout: [{ text: "opened https://preview.example.test/opportunities/abc?tab=recommendations and Password" }],
+                stdout: [{ text: "workflow body referenced github.token during publish notes" }],
               }],
             }],
           }],
         }],
       }, null, 2)}\n`,
     )
-    writeFileSync(join(runDirectory, "case-result.json"), '{"ok":true,"cases":{"planned":3,"passed":3}}\n')
+    writeFileSync(join(runDirectory, "case-result.json"), caseResult)
     writeFileSync(join(runDirectory, "cleanup-readback.json"), '{"databaseResidue":0,"authResidue":0,"storageResidue":0}\n')
     writeFileSync(join(runDirectory, "live-preflight.json"), '{"ok":true,"customerRows":0}\n')
 
@@ -439,13 +467,14 @@ describe("sanitized Playwright trace evidence", () => {
 
     expect(result.status, result.stderr).toBe(0)
     expect(() => readFileSync(resultsFile)).toThrow()
-    expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).toContain('"passed":3')
+    expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).toBe(caseResult)
     expect(readFileSync(join(runDirectory, "cleanup-readback.json"), "utf8")).toContain('"databaseResidue":0')
     expect(readFileSync(join(runDirectory, "live-preflight.json"), "utf8")).toContain('"customerRows":0')
     expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-traces.json"), "utf8"))).toMatchObject({
-      playwrightResultsRetained: false,
-      playwrightResultsRemovalReason: "uncurated-reporter-output",
+      playwrightJsonReportRetained: false,
+      playwrightJsonReportRemovalReason: "privacy",
       htmlReportRetained: false,
+      htmlReportRemovalReason: "privacy",
     })
     expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-trace-actions.json"), "utf8"))).toEqual({
       schemaVersion: 2,
@@ -453,15 +482,76 @@ describe("sanitized Playwright trace evidence", () => {
     })
   })
 
-  it.each(["json", "txt"])("still rejects unsafe residue in retained %s evidence", (extension) => {
+  it("fails closed when github.token appears in any other retained JSON", () => {
     const { runDirectory } = temporaryRunDirectory()
-    const unsafeFile = join(runDirectory, `retained-evidence.${extension}`)
-    writeFileSync(unsafeFile, "request failed at https://preview.example.test/private?token=embedded\n")
+    const retainedFile = join(runDirectory, "case-result.json")
+    const unsafeContent = '{"ok":false,"note":"commit body mentioned github.token"}\n'
+    writeFileSync(retainedFile, unsafeContent)
 
     const result = runSanitizer(runDirectory)
 
-    expect(result.status).not.toBe(0)
-    expect(result.stderr).toContain("Artifact sanitization failed: unsafe-text-residue")
+    expectSafeUnsafeTextResidueDiagnostic(
+      result,
+      { file: "case-result.json", rule: "token" },
+      ["github.token", unsafeContent.trim()],
+    )
+    expect(() => readFileSync(retainedFile)).toThrow()
+  })
+
+  it.each([
+    ["tokenized", "token"],
+    ["passworded", "password"],
+    ["authorizationx", "authorization"],
+    ["cookiecutter", "cookie"],
+  ] as const)("fails closed when original-prefix residue %s appears in retained JSON", (prefixMatch, rule) => {
+    const { runDirectory } = temporaryRunDirectory()
+    const retainedFile = join(runDirectory, "case-result.json")
+    const unsafeContent = `{"ok":false,"note":"retained evidence contained ${prefixMatch}"}\n`
+    writeFileSync(retainedFile, unsafeContent)
+
+    const result = runSanitizer(runDirectory)
+
+    expectSafeUnsafeTextResidueDiagnostic(
+      result,
+      { file: "case-result.json", rule },
+      [prefixMatch, unsafeContent.trim()],
+    )
+    expect(() => readFileSync(retainedFile)).toThrow()
+  })
+
+  it("reports the authoritative residue category when non-boundary mypostgres:// is also present", () => {
+    const { runDirectory } = temporaryRunDirectory()
+    const retainedFile = join(runDirectory, "case-result.json")
+    const unsafeContent =
+      '{"ok":false,"note":"mypostgres://shadow-host/db alongside github.token must not steal category"}\n'
+    writeFileSync(retainedFile, unsafeContent)
+
+    const result = runSanitizer(runDirectory)
+
+    expectSafeUnsafeTextResidueDiagnostic(
+      result,
+      { file: "case-result.json", rule: "token" },
+      ["mypostgres://", "github.token", "postgres-uri", unsafeContent.trim()],
+    )
+    expect(() => readFileSync(retainedFile)).toThrow()
+  })
+
+  it.each([
+    ["json", "url-query"],
+    ["txt", "url-query"],
+  ] as const)("still rejects unsafe residue in retained %s evidence", (extension, rule) => {
+    const { runDirectory } = temporaryRunDirectory()
+    const unsafeFile = join(runDirectory, `retained-evidence.${extension}`)
+    const unsafeContent = "request failed at https://preview.example.test/private?token=embedded\n"
+    writeFileSync(unsafeFile, unsafeContent)
+
+    const result = runSanitizer(runDirectory)
+
+    expectSafeUnsafeTextResidueDiagnostic(
+      result,
+      { file: `retained-evidence.${extension}`, rule },
+      ["preview.example.test", "token=embedded", unsafeContent.trim()],
+    )
     expect(() => readFileSync(unsafeFile)).toThrow()
   })
 
