@@ -424,6 +424,12 @@ function correctionField(formData: FormData, name: string) {
   return typeof value === "string" ? value : ""
 }
 
+function revalidateMaRelationshipCorrectionPaths() {
+  revalidatePath("/opportunities/ma/contacts")
+  revalidatePath("/opportunities/ma/firms/[firmId]", "page")
+  revalidatePath("/opportunities/ma/offices/[officeId]", "page")
+}
+
 export async function updateMaFirmCorrection(firmId: string, formData: FormData): Promise<MaCorrectionResult> {
   if (!UUID_PATTERN.test(firmId)) return { success: false, message: "Choose a valid M&A firm." }
   const { user } = await requireStaffAccess()
@@ -435,6 +441,7 @@ export async function updateMaFirmCorrection(firmId: string, formData: FormData)
   })
   if (error) return correctionFailure(error)
   revalidatePath(`/opportunities/ma/firms/${firmId}`)
+  revalidateMaRelationshipCorrectionPaths()
   return { success: true, message: "Firm details saved with staff audit." }
 }
 
@@ -450,6 +457,7 @@ export async function updateMaOfficeCorrection(officeId: string, formData: FormD
   })
   if (error) return correctionFailure(error)
   revalidatePath(`/opportunities/ma/offices/${officeId}`)
+  revalidateMaRelationshipCorrectionPaths()
   return { success: true, message: "Office details saved with staff audit." }
 }
 
@@ -464,7 +472,7 @@ export async function updateMaContactCorrection(contactId: string, affiliationId
     p_job_title: correctionField(formData, "job_title"), p_actor: user.id,
   })
   if (error) return correctionFailure(error)
-  revalidatePath("/opportunities/ma/offices/[officeId]", "page")
+  revalidateMaRelationshipCorrectionPaths()
   return { success: true, message: "Contact details saved with staff audit." }
 }
 

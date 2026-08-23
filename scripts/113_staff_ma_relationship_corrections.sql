@@ -2,7 +2,8 @@
 -- This deliberately has no generic JSON patch endpoint: each function exposes
 -- the approved field matrix only and cannot change relationship ownership.
 
-BEGIN;
+ALTER TABLE public.ma_contact_office_affiliations
+  ADD COLUMN IF NOT EXISTS updated_by TEXT;
 
 CREATE OR REPLACE FUNCTION public.update_ma_firm_correction(
   p_firm_id UUID,
@@ -155,7 +156,9 @@ BEGIN
   WHERE contact.id = p_contact_id;
   IF p_affiliation_id IS NOT NULL THEN
     UPDATE public.ma_contact_office_affiliations affiliation
-    SET job_title = NULLIF(BTRIM(p_job_title), ''), updated_at = clock_timestamp()
+    SET job_title = NULLIF(BTRIM(p_job_title), ''),
+        updated_by = v_actor,
+        updated_at = clock_timestamp()
     WHERE affiliation.id = p_affiliation_id;
   END IF;
   RETURN QUERY SELECT contact.id, contact.updated_at, contact.updated_by FROM public.ma_contacts contact WHERE contact.id = p_contact_id;
@@ -164,5 +167,3 @@ $$;
 
 REVOKE ALL ON FUNCTION public.update_ma_firm_correction(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT), public.update_ma_office_correction(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT), public.update_ma_contact_correction(UUID,UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_ma_firm_correction(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT), public.update_ma_office_correction(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT), public.update_ma_contact_correction(UUID,UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO service_role;
-
-COMMIT;

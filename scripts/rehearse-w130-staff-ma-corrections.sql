@@ -12,8 +12,10 @@ CREATE TABLE public.ma_contacts (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), 
 CREATE TABLE public.ma_contact_office_affiliations (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), contact_id UUID NOT NULL REFERENCES public.ma_contacts(id), office_id UUID NOT NULL REFERENCES public.ma_offices(id), job_title TEXT, updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp());
 CREATE TABLE public.opportunities (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), status TEXT NOT NULL);
 CREATE TABLE public.opportunity_ma_contacts (opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), affiliation_id UUID NOT NULL REFERENCES public.ma_contact_office_affiliations(id), is_active BOOLEAN NOT NULL DEFAULT TRUE, is_primary BOOLEAN NOT NULL DEFAULT FALSE);
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 \ir 113_staff_ma_relationship_corrections.sql
 
+SET ROLE service_role;
 DO $$
 DECLARE firm UUID; office UUID; other_office UUID; contact UUID; affiliation UUID; active_opportunity UUID;
 BEGIN
@@ -28,7 +30,10 @@ BEGIN
   PERFORM * FROM public.update_ma_office_correction(office,'Paris corrected','Paris','1 Rue Test','France','https://paris.test','office@example.test','123','Private','qa');
   PERFORM * FROM public.update_ma_contact_correction(contact,affiliation,'Ada','Byron','ada@example.test','123','https://linkedin.com/in/ada','Private','Managing partner','qa');
   IF NOT EXISTS (SELECT 1 FROM public.ma_contacts WHERE id=contact AND display_name='Ada Byron' AND updated_by='qa') THEN RAISE EXCEPTION 'w130_contact_audit_or_update_failed'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.ma_contact_office_affiliations WHERE id=affiliation AND job_title='Managing partner') THEN RAISE EXCEPTION 'w130_affiliation_title_failed'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.ma_contact_office_affiliations WHERE id=affiliation AND job_title='Managing partner' AND updated_by='qa') THEN RAISE EXCEPTION 'w130_affiliation_title_audit_failed'; END IF;
   BEGIN PERFORM * FROM public.update_ma_office_correction(other_office,' paris corrected ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'qa'); RAISE EXCEPTION 'w130_office_duplicate_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%ma_office_name_already_exists%' THEN RAISE; END IF; END;
   BEGIN PERFORM * FROM public.update_ma_contact_correction(contact,affiliation,'Ada','Byron',NULL,NULL,NULL,NULL,NULL,'qa'); RAISE EXCEPTION 'w130_primary_email_removed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%ma_primary_contact_email_required%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.update_ma_firm_correction(firm,'W130 Atlas partial',NULL,NULL,'not-a-url',NULL,'qa'); RAISE EXCEPTION 'w130_invalid_url_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%ma_website_url_invalid%' THEN RAISE; END IF; END;
+  IF EXISTS (SELECT 1 FROM public.ma_firms WHERE id=firm AND name <> 'W130 Atlas corrected') OR EXISTS (SELECT 1 FROM public.ma_contacts WHERE id=contact AND email <> 'ada@example.test') OR EXISTS (SELECT 1 FROM public.ma_offices WHERE id=other_office AND name <> 'Lyon') THEN RAISE EXCEPTION 'w130_rejected_update_partially_wrote'; END IF;
 END $$;
+RESET ROLE;

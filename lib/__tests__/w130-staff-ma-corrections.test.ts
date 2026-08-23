@@ -7,6 +7,8 @@ describe("W-130 staff M&A corrections", () => {
   const migration = source("scripts/113_staff_ma_relationship_corrections.sql")
   const actions = source("lib/actions/ma-relationship-workspaces.ts")
   const ui = source("components/opportunities/ma-relationship-correction-action.tsx")
+  const contactsWorkspace = source("components/opportunities/ma-relationship-workspace.tsx")
+  const contactsProjection = source("lib/actions/ma-relationships.ts")
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
 
   it("uses three typed service-only boundaries, never a generic patch", () => {
@@ -16,6 +18,7 @@ describe("W-130 staff M&A corrections", () => {
     expect(migration).toContain("GRANT EXECUTE")
     expect(migration).toContain("TO service_role")
     expect(migration).not.toMatch(/jsonb.*patch/i)
+    expect(migration).not.toMatch(/^BEGIN;|^COMMIT;$/m)
     expect(migration).not.toContain("p_status")
     expect(migration).not.toContain("p_firm_id_new")
     expect(migration).not.toContain("p_is_default")
@@ -32,6 +35,8 @@ describe("W-130 staff M&A corrections", () => {
     expect(migration).toContain("ma_firm_name_already_exists")
     expect(migration).toContain("ma_office_name_already_exists")
     expect(migration).toContain("ma_primary_contact_email_required")
+    expect(migration).toContain("ADD COLUMN IF NOT EXISTS updated_by TEXT")
+    expect(migration).toContain("updated_by = v_actor")
     expect(migration).toContain("opportunity.status IN ('active', 'paused')")
   })
 
@@ -43,5 +48,14 @@ describe("W-130 staff M&A corrections", () => {
     expect(ui).toContain("This does not move, merge, archive, or disclose any record.")
     expect(ui).not.toContain("status")
     expect(contract).toContain("W-130 staff correction boundary")
+  })
+
+  it("lets the canonical contacts workspace choose an exact affiliation for its job title", () => {
+    expect(contactsProjection).toContain("affiliations: Array<")
+    expect(contactsProjection).toContain("officeLabel")
+    expect(contactsWorkspace).toContain("target=\"contact\"")
+    expect(ui).toContain("Office affiliation for job title")
+    expect(ui).toContain("selectedAffiliationId")
+    expect(actions).toContain('revalidatePath("/opportunities/ma/contacts")')
   })
 })
