@@ -45,6 +45,8 @@ describe("protected QA Deals fixture contract", () => {
     expect(source).toContain("2 visible deal(s)")
     expect(source).toContain("Pursuit dropped")
     expect(source).toContain("Deal not visible in portal preview")
+    expect(source).toContain('const mobileInProgress = sectionFor(mobile, "In Progress")')
+    expect(source).toContain('mobileInProgress.getByText("Revenue", { exact: true })).toHaveCount(0)')
     expect(source).toContain("directStatuses")
     expect(source).toContain("This NDA is not available for upload.")
     expect(source).toContain("artifact_role='repreneur_signed_copy'")
