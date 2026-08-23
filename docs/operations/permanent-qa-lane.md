@@ -20,13 +20,39 @@ Supabase management readback on 2026-08-22 quoted Micro branch compute at USD 0.
 1. A trusted `main` workflow validates that the supplied branch and exact 40-character SHA are the current head of a same-repository PR, the actor has write access, and the exact GitHub Actions `Verify` run is green.
 2. Automatic `workflow_run` admission requires `supabase/qa-contract.json` and every contract-listed SQL file to be byte-identical to trusted `main`. A database-changing candidate is refused automatically. Contract publication requires an explicit `qa-schema-review-v1` `repository_dispatch` carrying the exact candidate SHA and branch, the candidate contract SHA-256 and `schema_reviewed=true`; the trusted controller verifies the contract digest and every listed SQL checksum before any check, pointer, secret or DDL action.
 3. The workflow creates `P1-P3 protected pilot` on that exact SHA, holds global concurrency `renew-permanent-qa`, and moves only the remote `qa` pointer with an exact force-with-lease. Irrelevant push, failed and skipped workflow events receive unique run-ID concurrency groups so they cannot supersede daily health or a valid candidate; latest-pending supersession remains unchanged among valid PR and repository-dispatch candidates.
-4. It waits for Vercel's Preview deployment of that SHA, then verifies the stable alias, project, target, protection and deployed non-secret QA contract.
-5. The schema prerequisite verifies artifact checksums and the live catalog fingerprint. Matching candidates perform no DDL. Mismatches may synchronize only an empty, non-production branch with no active lease and must match the candidate fingerprint afterward.
+4. The trusted controller then creates exactly one Preview deployment in project `renew-overnight-validation-20260820` (`prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y`) through the Vercel Deployment API using the QA-only `QA_VERCEL_TOKEN`. It binds `gitSource.ref=qa`, `gitSource.sha`, `meta.githubCommitSha`, and `meta.renewQaController=explicit-v1` to the admitted SHA, waits for `readyState=READY`, assigns the preserved stable alias, and proves the alias serves `x-renew-deployment-sha` equal to that SHA. Ordinary feature-branch pushes must create zero validation-project deployments once the validation project is disconnected from automatic Git. The controller must not disable GitHub Deployment records, must not set repository-wide automatic Git off in `vercel.json`, must not rely on Ignored Build Step quota tricks, and must not disable the GitHub integration flag that also breaks Deploy Hooks.
+5. Only after that identity proof does it verify the deployed non-secret QA contract, then the schema prerequisite verifies artifact checksums and the live catalog fingerprint. Matching candidates perform no DDL. Mismatches may synchronize only an empty, non-production branch with no active lease and must match the candidate fingerprint afterward.
 6. The browser job acquires the database lease, safely recovers only expired manifest-owned residue, runs P1–P3, performs exact-ID plus run-label cleanup, verifies zero residue, and releases the lease.
 7. The check is completed on the candidate SHA. A failed schema, journey, cleanup or release remains a failed required check.
 
 Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects forks/foreign repositories.
 
+## Validation deploy architecture (Route A)
+
+Root cause of the Hobby quota burst: both the product project and the validation project were connected to the same high-churn GitHub repository, so many pushes created paired deployments.
+
+Approved architecture:
+
+1. Disconnect automatic Git from validation project `renew-overnight-validation-20260820` only. Keep the product project Git connection unchanged.
+2. Store a rotatable QA-only Vercel credential as GitHub environment secrets `QA_VERCEL_TOKEN` and optional `QA_VERCEL_TEAM_ID` on `qa-pilot`. Prefer the narrowest token Vercel can issue for that non-production project. If Vercel cannot provide project-scoped authority, stop for an explicit security decision before storing a broad team token.
+3. After candidate admission and the `qa` pointer move, `scripts/qa/deploy-admitted-candidate.mjs` creates one Preview deployment, assigns the stable alias, and fails closed before any database mutation when identity proof is incomplete.
+4. Live evidence prefers the explicit Vercel deployment id and `meta.githubCommitSha` over GitHub Deployment records from `vercel[bot]`.
+5. Do not cut over while automatic Git remains connected and the explicit token is also enabled: that window would create two validation deployments per candidate.
+
+Cutover proof required before declaring the repair done:
+
+- Count validation-project deployments before and after one admitted candidate: exactly one new READY deployment for that SHA.
+- Push an ordinary source-repository feature branch: zero new validation-project deployments.
+- Confirm the stable alias still serves the admitted SHA and the deployed QA contract headers.
+
+Exact rollback:
+
+1. Stop using `QA_VERCEL_TOKEN` in the protected lane.
+2. Reassign the preserved stable alias to the prior READY non-production deployment id recorded by the controller.
+3. Only after a reviewed rollback decision, restore the legacy GitHub Deployment waiter (`QA_DEPLOY_WAIT_MODE=legacy-github`) and reconnect automatic Git if that reviewed rollback explicitly requires it.
+4. Do not reconnect automatic Git as an unreviewed shortcut.
+
+The prepared Deploy Hook `qa-protected-candidate` is not the selected cutover path. Hooks still require Git connection and do not by themselves stop duplicate automatic builds.
 ## Concurrency and supersession
 
 This lane deliberately uses GitHub's latest-pending supersession with `cancel-in-progress: false`. One mutation run remains protected from cancellation, and at most one latest candidate waits. If A is running, B is pending and C arrives, C supersedes B; the superseded B remains blocked because it receives no successful P1–P3 check. C runs after A. If B is still intended, a rebase or push gives it a new exact candidate SHA and automatically re-enters it. The single concurrency group prevents any two candidates from deploying or seeding simultaneously.

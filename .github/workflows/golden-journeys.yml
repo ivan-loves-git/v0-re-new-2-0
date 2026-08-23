@@ -186,12 +186,19 @@ jobs:
           mkdir -p .qa-run
           curl --fail --silent --show-error https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt -o "$QA_DATABASE_CA_CERT_FILE"
 
-      - name: Wait for exact qa deployment Ready event
+      - name: Explicitly deploy admitted candidate to validation project
         id: deployment
-        run: node scripts/qa/wait-for-qa-deployment.mjs
+        env:
+          QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
+          QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
+        run: node scripts/qa/deploy-admitted-candidate.mjs
 
       - name: Verify deployed application identities before database mutation
         run: pnpm qa:deployed-contract:verify
+        env:
+          QA_VERCEL_DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
+          QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
 
       - name: Verify candidate schema artifact
         run: pnpm qa:schema:verify
@@ -221,6 +228,9 @@ jobs:
       QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
+      QA_VERCEL_DEPLOYMENT_ID: ${{ needs.schema-sync.outputs.deployment_id }}
+      QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
+      QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
 
       QA_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
       QA_FIXTURE_PREFIX: TEST-gh-${{ github.run_id }}-${{ github.run_attempt }}

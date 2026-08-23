@@ -17,6 +17,7 @@
     "qa:browser:clean-run": "node scripts/qa/verify-playwright-clean-run.mjs",
     "qa:artifacts:sanitize": "node scripts/qa/sanitize-phase-b-artifacts.mjs",
     "qa:evidence:collect": "node scripts/qa/collect-live-evidence.mjs",
+    "qa:deploy:admitted": "node scripts/qa/deploy-admitted-candidate.mjs",
     "qa:deployed-contract:verify": "node scripts/qa/verify-deployed-contract.mjs",
     "qa:fixture:cleanup": "node scripts/qa/cleanup-phase-b.mjs",
     "qa:fixture:manifest": "node scripts/qa/create-phase-b-manifest.mjs",
