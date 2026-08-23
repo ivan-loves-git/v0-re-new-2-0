@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("publishes Matching 2.0 and historical pursuits as release build 822", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("822")
+  it("publishes Matching 2.0 and historical pursuits as release build 834", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("834")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {
