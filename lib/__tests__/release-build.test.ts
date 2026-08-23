@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("publishes the operating-model reset as release build 836", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("836")
+  it("publishes this controller repair as release build 838", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("838")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {

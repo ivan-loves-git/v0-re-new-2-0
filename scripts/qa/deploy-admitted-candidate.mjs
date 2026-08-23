@@ -13,6 +13,7 @@ import {
 } from "../../lib/qa/explicit-deploy.mjs"
 import {
   probeStableQaAlias,
+  waitForStableQaAliasSha,
 } from "../../lib/qa/deployment-status.mjs"
 import { stableQaOrigin } from "../../lib/qa/permanent-contract.mjs"
 
@@ -133,7 +134,18 @@ try {
     deploymentId: ready.deploymentId,
   })
 
-  const servedSha = await probeStableQaAlias({ origin: stableQaOrigin(), bypass })
+  let servedSha
+  try {
+    servedSha = await waitForStableQaAliasSha({
+      expectedSha,
+      probeAliasSha: () => probeStableQaAlias({ origin: stableQaOrigin(), bypass }),
+      deadline: Date.now() + 2 * 60 * 1000,
+      sleep,
+      pollInterval: 5_000,
+    })
+  } catch {
+    fail("alias-sha")
+  }
   assertAliasServesAdmittedSha({
     aliasOrigin: stableQaOrigin(),
     servedSha,

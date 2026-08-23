@@ -142,7 +142,9 @@ jobs:
       actions: write
     needs: lane
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # Eight minutes for provider readiness plus two minutes for alias convergence;
+    # the remaining five minutes cover trusted checkout, dependency install and evidence upload.
+    timeout-minutes: 15
     environment: qa-pilot
     outputs:
       ready_at: ${{ steps.deployment.outputs.ready_at }}
