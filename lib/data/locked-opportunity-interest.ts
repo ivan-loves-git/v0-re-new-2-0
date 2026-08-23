@@ -5,6 +5,7 @@ import {
   type LockedOpportunityInterestRecord,
   type LockedOpportunityInterestStore,
 } from "@/lib/locked-opportunity-interest"
+import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 
 interface LockedInterestRpcRow {
   match_id: string
@@ -73,8 +74,9 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
           .maybeSingle(),
         supabase
           .from("opportunities")
-          .select("id, reference, public_title, sector")
+          .select("id, is_demo, reference, public_title, sector")
           .eq("id", input.opportunityId)
+          .eq("is_demo", false)
           .maybeSingle(),
         supabase
           .from("opportunity_matches")
@@ -88,12 +90,18 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
       if (repreneurResult.error) throw new Error(repreneurResult.error.message)
       if (opportunityResult.error) throw new Error(opportunityResult.error.message)
       if (activePursuitResult.error) throw new Error(activePursuitResult.error.message)
-      if (!repreneurResult.data || !opportunityResult.data) {
+      if (
+        !repreneurResult.data
+        || !isRepreneurEligibleOpportunity(opportunityResult.data)
+      ) {
         throw new Error("Interest notification context was not found")
       }
 
       const repreneur = repreneurResult.data
       const opportunity = opportunityResult.data
+      if (!opportunity) {
+        throw new Error("Interest notification context was not found")
+      }
 
       return {
         repreneurId: repreneur.id,

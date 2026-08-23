@@ -17,6 +17,7 @@ import {
   closeOpportunity,
   getOpportunity,
   getOpportunityClosureHistory,
+  setOpportunityDemoClassification,
 } from "@/lib/actions/opportunities"
 import {
   listMaOfficeIntakeOptions,
@@ -102,6 +103,11 @@ async function OpportunityDetailContent({
     return closeOpportunity(id, reason)
   }
 
+  async function demoClassificationAction(isDemo: boolean) {
+    "use server"
+    return setOpportunityDemoClassification(id, isDemo)
+  }
+
   async function resolveSourceAction(formData: FormData) {
     "use server"
     if (waveAiOutcome) formData.set("wave_ai_outcome", waveAiOutcome)
@@ -130,6 +136,7 @@ async function OpportunityDetailContent({
         resolveSourceAction={resolveSourceAction}
         closureHistory={closureHistory}
         closeAction={closeAction}
+        demoClassificationAction={demoClassificationAction}
         officeOptions={officeOptions}
         geographyOptions={geographyOptions}
         geographyMandatesEnabled={geographyMandatesEnabled}

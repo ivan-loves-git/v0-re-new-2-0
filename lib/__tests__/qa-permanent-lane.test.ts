@@ -26,20 +26,29 @@ function jobEnvKeys(workflow: string, jobName: string) {
 }
 
 describe("permanent QA lane contract", () => {
-  it("pins the provisional v3 fingerprint and five immutable schema inputs", () => {
+  it("pins the M2 portal candidate fingerprint and seven immutable schema inputs", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 
     expect(contract).toEqual({
-      version: "771-permanent-qa-v3",
-      structureFingerprint: "37d01bc56c45aa8fe754893427feacb9da300e62449d34f85e331710eca33f24",
+      version: "822-m2-portal-deals-v1",
+      structureFingerprint: "6410f2a03d463dbf3314cd30974238bb27f8828d3dcb871caaf0e29f24637d1a",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
         { path: "supabase/schema/permanent_qa_rebuild.sql", sha256: "20565af77093399b6b8ebc7e27ebc78e778faf9df802b702b7d86eea9f323291" },
         { path: "supabase/schema/771_public_schema.sql", sha256: "593d9d2b813c9047568dd5d863e2d4644a18493cff0e63142518fcfeb554788b" },
         { path: "supabase/schema/771_test_storage.sql", sha256: "55a91d3c3db75e6ea9d0d55f3d0165bb087e83451174147c58a7c951dc91e8b4" },
+        { path: "supabase/schema/822_demo_opportunity_quarantine.sql", sha256: "2d226a576136cca703b00ee7a4bf1e70cf58e5ad1bdab12dcf5d99628eaa9d35" },
+        { path: "supabase/schema/822_deals_reconsideration.sql", sha256: "62d693c89a8f2ed19045cbfa62cfd3db111d5a16e6b645a9e024069b4570ef93" },
       ],
     })
+  })
+
+  it("keeps the deploy and protected-QA copies of the M2 portal migrations identical", () => {
+    expect(readFileSync(`${process.cwd()}/supabase/schema/822_demo_opportunity_quarantine.sql`, "utf8"))
+      .toBe(readFileSync(`${process.cwd()}/scripts/112_demo_opportunity_quarantine.sql`, "utf8"))
+    expect(readFileSync(`${process.cwd()}/supabase/schema/822_deals_reconsideration.sql`, "utf8"))
+      .toBe(readFileSync(`${process.cwd()}/scripts/113_deals_reconsideration.sql`, "utf8"))
   })
 
   it("accepts only the stable protected qa alias and exact deployed identity", () => {
