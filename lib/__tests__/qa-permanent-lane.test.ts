@@ -374,6 +374,8 @@ describe("permanent QA lane contract", () => {
     expect(sync).toContain("psql-meta-command")
     expect(sync).not.toContain("...process.env")
     expect(readFileSync(`${process.cwd()}/scripts/qa/sanitize-phase-b-artifacts.mjs`, "utf8")).toContain("generatedCredentials")
+    expect(readFileSync(`${process.cwd()}/scripts/qa/sanitize-phase-b-artifacts.mjs`, "utf8")).toContain("playwright-results.json")
+    expect(readFileSync(`${process.cwd()}/scripts/qa/sanitize-phase-b-artifacts.mjs`, "utf8")).toContain("playwrightResultsRetained: false")
     expect(readFileSync(`${process.cwd()}/scripts/qa/seed-phase-b-fixtures.mjs`, "utf8")).not.toContain("repairedIntegrityDefinition")
     const deployedPreflight = readFileSync(`${process.cwd()}/scripts/qa/verify-deployed-contract.mjs`, "utf8")
     expect(deployedPreflight).toContain("${origin}/auth/login")

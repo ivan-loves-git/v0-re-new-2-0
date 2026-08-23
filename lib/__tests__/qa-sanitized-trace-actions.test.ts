@@ -399,6 +399,57 @@ describe("sanitized Playwright trace evidence", () => {
     expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-traces.json"), "utf8"))).toMatchObject({
       htmlReportRetained: false,
       htmlReportRemovalReason: "privacy",
+      playwrightResultsRetained: false,
+      playwrightResultsRemovalReason: "uncurated-reporter-output",
+    })
+  })
+
+  it("removes uncurated playwright-results.json before residue scanning", () => {
+    const { runDirectory } = temporaryRunDirectory()
+    const resultsFile = join(runDirectory, "playwright-results.json")
+    writeFileSync(
+      resultsFile,
+      `${JSON.stringify({
+        config: {
+          use: {
+            storageState: ".qa-run/auth/staff.json",
+            extraHTTPHeaders: { "x-vercel-set-bypass-cookie": "true" },
+          },
+        },
+        suites: [{
+          title: "Golden journeys",
+          specs: [{
+            title: "P3",
+            tests: [{
+              results: [{
+                status: "passed",
+                error: null,
+                stdout: [{ text: "opened https://preview.example.test/opportunities/abc?tab=recommendations and Password" }],
+              }],
+            }],
+          }],
+        }],
+      }, null, 2)}\n`,
+    )
+    writeFileSync(join(runDirectory, "case-result.json"), '{"ok":true,"cases":{"planned":3,"passed":3}}\n')
+    writeFileSync(join(runDirectory, "cleanup-readback.json"), '{"databaseResidue":0,"authResidue":0,"storageResidue":0}\n')
+    writeFileSync(join(runDirectory, "live-preflight.json"), '{"ok":true,"customerRows":0}\n')
+
+    const result = runSanitizer(runDirectory)
+
+    expect(result.status, result.stderr).toBe(0)
+    expect(() => readFileSync(resultsFile)).toThrow()
+    expect(readFileSync(join(runDirectory, "case-result.json"), "utf8")).toContain('"passed":3')
+    expect(readFileSync(join(runDirectory, "cleanup-readback.json"), "utf8")).toContain('"databaseResidue":0')
+    expect(readFileSync(join(runDirectory, "live-preflight.json"), "utf8")).toContain('"customerRows":0')
+    expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-traces.json"), "utf8"))).toMatchObject({
+      playwrightResultsRetained: false,
+      playwrightResultsRemovalReason: "uncurated-reporter-output",
+      htmlReportRetained: false,
+    })
+    expect(JSON.parse(readFileSync(join(runDirectory, "sanitized-trace-actions.json"), "utf8"))).toEqual({
+      schemaVersion: 2,
+      traces: [],
     })
   })
 
