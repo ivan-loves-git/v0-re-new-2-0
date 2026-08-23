@@ -3,10 +3,11 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
-import { calculateDualScore } from "@/lib/utils/scoring-v2"
+import { calculateDualScore, isHighScoreRecommendation } from "@/lib/utils/scoring-v2"
 import { sendEmail } from "@/lib/email"
 import { getTemplateSubject, getTemplateBody } from "@/lib/actions/emails"
 import { WelcomeEmail } from "@/lib/email/templates/welcome"
+import { HighScoreAlertEmail } from "@/lib/email/templates/high-score-alert"
 import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
@@ -170,7 +171,34 @@ export async function submitIntakeV2(
       console.error("Welcome email failed for", record.email, err)
     })
 
-    // TODO: Send high score alert if recommendation is deal_flow or priority_interview
+    if (isHighScoreRecommendation(dualScore.recommendation)) {
+      const highScoreSubject = await getTemplateSubject(
+        "high_score_alert",
+        "Votre profil Re-New se démarque !",
+      )
+      sendEmail({
+        to: record.email,
+        subject: highScoreSubject,
+        repreneurId: repreneur.id,
+        templateKey: "high_score_alert",
+        react: HighScoreAlertEmail({
+          repreneur: {
+            id: repreneur.id,
+            firstName: record.first_name,
+            lastName: record.last_name,
+            email: record.email,
+          },
+          metadata: {
+            whoScore: dualScore.who.score,
+            whenScore: dualScore.when.score,
+            recommendation: dualScore.recommendation,
+            flags: dualScore.flags.flags,
+          },
+        }),
+      }).catch((err) => {
+        console.error("High score alert failed for", record.email, err)
+      })
+    }
 
     return {
       success: true,
