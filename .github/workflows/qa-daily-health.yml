@@ -23,6 +23,7 @@ jobs:
       sha: ${{ steps.alias.outputs.sha }}
     env:
       CI: "true"
+      GH_TOKEN: ${{ github.token }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - name: Refuse an untrusted health controller ref

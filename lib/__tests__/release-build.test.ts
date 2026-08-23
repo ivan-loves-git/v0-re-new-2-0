@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("publishes the QA explicit-deploy controller as release build 832", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("832")
+  it("publishes the daily-health GH_TOKEN hotfix as release build 833", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("833")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {
