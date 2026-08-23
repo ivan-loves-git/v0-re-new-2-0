@@ -44,11 +44,17 @@ import {
   resolveOpportunityOfficeChoice,
   selectCreatedOfficeContext,
 } from "@/lib/utils/opportunity-created-office-selection"
+import {
+  existingFirmEligibleOfficeOptions,
+  isExistingFirmOfficeSelection,
+} from "@/lib/utils/existing-firm-office-selection"
 
 const NO_OFFICE_OPTION_VALUE = "__no_office__"
 const NO_CANONICAL_CONTACT_OPTION_VALUE = "__no_canonical_contact__"
+const CONTACT_NAME_REQUIREMENT_TEXT = "First or last name required"
 type OfficeContactMode = "existing" | "new"
 type OfficeContextMode = "new_firm" | "existing_firm"
+type ExistingFirmOfficePath = "existing_office" | "new_real_office"
 
 interface OpportunitySourceContextProps {
   opportunity?: OpportunityWithSource
@@ -92,6 +98,9 @@ export function OpportunitySourceContext({
   const [officeContextMode, setOfficeContextMode] =
     useState<OfficeContextMode>("new_firm")
   const [existingFirmId, setExistingFirmId] = useState("")
+  const [existingFirmOfficePath, setExistingFirmOfficePath] =
+    useState<ExistingFirmOfficePath>("existing_office")
+  const [existingFirmOfficeId, setExistingFirmOfficeId] = useState("")
   const [isCreatingOffice, setIsCreatingOffice] = useState(false)
   const [officeContextFieldErrors, setOfficeContextFieldErrors] = useState<
     Record<string, string>
@@ -139,6 +148,14 @@ export function OpportunitySourceContext({
       left.name.localeCompare(right.name, "fr"),
     )
   }, [availableOfficeOptions])
+  const existingFirmOfficeOptions = useMemo(
+    () =>
+      existingFirmEligibleOfficeOptions(
+        existingFirmId,
+        availableOfficeOptions,
+      ),
+    [availableOfficeOptions, existingFirmId],
+  )
   const affiliateableCanonicalContacts = useMemo(() => {
     const selectedOfficeContactIds = new Set(
       selectedOffice?.contacts.map((contact) => contact.contact_id) ?? [],
@@ -235,6 +252,45 @@ export function OpportunitySourceContext({
   async function handleCreateOfficeContext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setOfficeContextFieldErrors({})
+
+    if (
+      officeContextMode === "existing_firm" &&
+      existingFirmOfficePath === "existing_office"
+    ) {
+      if (
+        !isExistingFirmOfficeSelection(
+          existingFirmOfficeId,
+          existingFirmId,
+          availableOfficeOptions,
+        )
+      ) {
+        setOfficeContextFieldErrors({
+          existing_office_id:
+            "Choose an available operating office for this firm.",
+        })
+        return
+      }
+      const existingOffice = existingFirmOfficeOptions.find(
+        (office) => office.office_id === existingFirmOfficeId,
+      )
+      if (!existingOffice) {
+        setOfficeContextFieldErrors({
+          existing_office_id:
+            "Choose an available operating office for this firm.",
+        })
+        return
+      }
+      setSelectedOfficeId(existingOffice.office_id)
+      setSelectedAffiliationIds([])
+      setPrimaryAffiliationId(null)
+      clearFieldError("source_office_id")
+      setCreateOfficeDialogOpen(false)
+      setExistingFirmId("")
+      setExistingFirmOfficeId("")
+      toast.success("Operating office selected.")
+      return
+    }
+
     setIsCreatingOffice(true)
     try {
       const result =
@@ -261,6 +317,7 @@ export function OpportunitySourceContext({
       setPrimaryAffiliationId(selection.primaryAffiliationId)
       setCreateOfficeDialogOpen(false)
       setExistingFirmId("")
+      setExistingFirmOfficeId("")
       toast.success(result.message)
     } catch (error) {
       setOfficeContextFieldErrors({
@@ -542,6 +599,8 @@ export function OpportunitySourceContext({
               setOfficeContextFieldErrors({})
               setOfficeContextMode("new_firm")
               setExistingFirmId("")
+              setExistingFirmOfficePath("existing_office")
+              setExistingFirmOfficeId("")
             }
           }
         }}
@@ -566,6 +625,7 @@ export function OpportunitySourceContext({
               labels={{
                 form: "M&A source",
                 existing_firm_id: "M&A advisory firm",
+                existing_office_id: "Operating office",
                 firm_name: "M&A advisory firm",
                 office_name: "Operating office",
                 contact_first_name: "Contact first name",
@@ -585,9 +645,13 @@ export function OpportunitySourceContext({
               aria-labelledby="office_context_mode_label"
               value={officeContextMode}
               onValueChange={(value) =>
-                setOfficeContextMode(
-                  value === "existing_firm" ? "existing_firm" : "new_firm",
-                )
+                {
+                  setOfficeContextMode(
+                    value === "existing_firm" ? "existing_firm" : "new_firm",
+                  )
+                  setExistingFirmOfficePath("existing_office")
+                  setExistingFirmOfficeId("")
+                }
               }
               disabled={isCreatingOffice}
               className="gap-2"
@@ -624,8 +688,7 @@ export function OpportunitySourceContext({
                     Existing firm
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    Add one real operating office; add contacts separately if
-                    needed.
+                    Use a known office, or add one real operating office.
                   </span>
                 </span>
               </label>
@@ -644,7 +707,9 @@ export function OpportunitySourceContext({
                     setExistingFirmId(
                       value === "__no_existing_firm__" ? "" : value,
                     )
+                    setExistingFirmOfficeId("")
                     clearOfficeContextFieldError("existing_firm_id")
+                    clearOfficeContextFieldError("existing_office_id")
                   }}
                 >
                   <SelectTrigger
@@ -673,6 +738,125 @@ export function OpportunitySourceContext({
                   id="existing_firm_id"
                   message={officeContextFieldErrors.existing_firm_id}
                 />
+                {existingFirmId ? (
+                  <>
+                    <p
+                      id="existing_firm_office_path_label"
+                      className="pt-2 text-sm font-medium"
+                    >
+                      Operating office path
+                    </p>
+                    <RadioGroup
+                      aria-labelledby="existing_firm_office_path_label"
+                      value={existingFirmOfficePath}
+                      onValueChange={(value) => {
+                        setExistingFirmOfficePath(
+                          value === "new_real_office"
+                            ? "new_real_office"
+                            : "existing_office",
+                        )
+                        setExistingFirmOfficeId("")
+                        clearOfficeContextFieldError("existing_office_id")
+                        clearOfficeContextFieldError("office_name")
+                      }}
+                      disabled={isCreatingOffice}
+                      className="gap-2"
+                    >
+                      <label
+                        htmlFor="use_existing_firm_office"
+                        className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
+                      >
+                        <RadioGroupItem
+                          id="use_existing_firm_office"
+                          value="existing_office"
+                          className="mt-0.5"
+                        />
+                        <span>
+                          <span className="block text-sm font-medium">
+                            Use an existing operating office
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            Select one canonical office. This creates no firm,
+                            office or contact.
+                          </span>
+                        </span>
+                      </label>
+                      <label
+                        htmlFor="add_existing_firm_office"
+                        className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
+                      >
+                        <RadioGroupItem
+                          id="add_existing_firm_office"
+                          value="new_real_office"
+                          className="mt-0.5"
+                        />
+                        <span>
+                          <span className="block text-sm font-medium">
+                            Add a new real operating office
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            Uses the audited office-creation service and its
+                            duplicate guard.
+                          </span>
+                        </span>
+                      </label>
+                    </RadioGroup>
+                    {existingFirmOfficePath === "existing_office" ? (
+                      <div className="space-y-2">
+                        <FormFieldLabel
+                          htmlFor="existing_office_id"
+                          requirement="required"
+                        >
+                          Existing operating office
+                        </FormFieldLabel>
+                        <Select
+                          value={
+                            existingFirmOfficeId || "__no_existing_office__"
+                          }
+                          onValueChange={(value) => {
+                            setExistingFirmOfficeId(
+                              value === "__no_existing_office__" ? "" : value,
+                            )
+                            clearOfficeContextFieldError("existing_office_id")
+                          }}
+                          disabled={isCreatingOffice}
+                        >
+                          <SelectTrigger
+                            id="existing_office_id"
+                            {...fieldErrorProps(
+                              "existing_office_id",
+                              officeContextFieldErrors.existing_office_id,
+                            )}
+                          >
+                            <SelectValue placeholder="Choose this firm's operating office" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem
+                                value="__no_existing_office__"
+                                disabled
+                              >
+                                Choose this firm's operating office
+                              </SelectItem>
+                              {existingFirmOfficeOptions.map((office) => (
+                                <SelectItem
+                                  key={office.office_id}
+                                  value={office.office_id}
+                                >
+                                  {office.office_label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <FieldError
+                          id="existing_office_id"
+                          message={officeContextFieldErrors.existing_office_id}
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-2">
@@ -695,6 +879,8 @@ export function OpportunitySourceContext({
                 />
               </div>
             )}
+            {officeContextMode !== "existing_firm" ||
+            existingFirmOfficePath === "new_real_office" ? (
             <div className="space-y-2">
               <FormFieldLabel
                 htmlFor="office_name"
@@ -732,6 +918,7 @@ export function OpportunitySourceContext({
                 message={officeContextFieldErrors.office_name}
               />
             </div>
+            ) : null}
             {officeContextMode === "new_firm" ? (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -739,6 +926,8 @@ export function OpportunitySourceContext({
                     id="contact_first_name"
                     name="contact_first_name"
                     label="First name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errors={officeContextFieldErrors}
                     onChange={() => {
                       clearOfficeContextFieldError("contact_first_name")
@@ -749,6 +938,8 @@ export function OpportunitySourceContext({
                     id="contact_last_name"
                     name="contact_last_name"
                     label="Last name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errors={officeContextFieldErrors}
                     onChange={() => {
                       clearOfficeContextFieldError("contact_first_name")
@@ -792,7 +983,12 @@ export function OpportunitySourceContext({
                 Cancel
               </Button>
               <Button type="submit" disabled={isCreatingOffice}>
-                {isCreatingOffice ? "Creating..." : "Create staff-only context"}
+                {isCreatingOffice
+                  ? "Creating..."
+                  : officeContextMode === "existing_firm" &&
+                      existingFirmOfficePath === "existing_office"
+                    ? "Use operating office"
+                    : "Create staff-only context"}
               </Button>
             </DialogFooter>
           </form>
@@ -987,6 +1183,8 @@ export function OpportunitySourceContext({
                     id="office_contact_first_name"
                     name="contact_first_name"
                     label="First name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errorKey="office_contact_first_name"
                     errors={officeContactFieldErrors}
                     onChange={() => {
@@ -1000,6 +1198,8 @@ export function OpportunitySourceContext({
                     id="office_contact_last_name"
                     name="contact_last_name"
                     label="Last name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errorKey="office_contact_last_name"
                     errors={officeContactFieldErrors}
                     onChange={() => {

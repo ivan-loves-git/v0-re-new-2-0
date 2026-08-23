@@ -47,6 +47,20 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).not.toContain("match-ledger-mismatch")
   })
 
+  it("recovers only the exact leased W-127 fixture when persistence stops between browser action and manifest write", () => {
+    const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
+    expect(script).toContain("W127 first-only firm")
+    expect(script).toContain("w127-recovered-cardinality")
+    expect(script).toContain("w127-recovered-identity")
+    expect(script).toContain("w127-recovered-scope")
+    expect(script).toContain("w127-runtime-fixture-ownership")
+    expect(script).toContain("scopedW127FixtureIds")
+    expect(script).toContain("f.created_by=$2")
+    expect(script).toContain("o.created_by=$2")
+    expect(script).toContain("a.created_by=$2")
+    expect(script).toContain("c.created_by=$2")
+  })
+
   it("removes exact QA evidence without weakening append-only protection after cleanup", () => {
     const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
     const begin = script.indexOf('database.query("BEGIN")')

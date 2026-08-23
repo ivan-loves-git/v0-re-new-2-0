@@ -26,6 +26,29 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 23, 2026",
+    version: "0.9.56",
+    title: "Staff can correct M&A relationships without breaking history",
+    isCompleted: true,
+    events: [
+      {
+        title: "Draft contact names now explain the real rule",
+        type: "fix",
+        description: "New firm and office-contact forms show that either a first name or a last name is required; the other contact details remain optional for a Draft.",
+      },
+      {
+        title: "Existing offices can be selected explicitly",
+        type: "feature",
+        description: "When staff choose an existing firm, they can select one of that firm's real offices or deliberately create a separate new office, without carrying a stale office across firms.",
+      },
+      {
+        title: "Relationship corrections preserve their exact context",
+        type: "feature",
+        description: "Staff can correct only the approved firm, office, contact and selected-affiliation job-title fields through audited services; lifecycle, ownership, source, suppression and disclosure controls remain unchanged.",
+      },
+    ],
+  },
+  {
+    period: "Aug 23, 2026",
     version: "0.9.55",
     title: "Repreneurs can follow every deal in one clear place",
     isCompleted: true,

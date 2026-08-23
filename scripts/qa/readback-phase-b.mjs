@@ -22,6 +22,16 @@ try {
       LEFT JOIN public.opportunity_matches match ON match.opportunity_id=opportunity.id AND match.repreneur_id=$2
       WHERE opportunity.id=$1`, [p3Deals.droppedOpportunityId, manifest.ids.portalRepreneur])
     : { rows: [] }
+  const p3MaCorrections = await database.query(`SELECT
+    firm.category AS firm_category, firm.updated_by AS firm_updated_by,
+    office.city AS office_city, office.updated_by AS office_updated_by,
+    contact.first_name AS contact_first_name, contact.email AS contact_email, contact.updated_by AS contact_updated_by,
+    affiliation.job_title AS affiliation_job_title, affiliation.updated_by AS affiliation_updated_by
+    FROM public.ma_firms firm
+    JOIN public.ma_offices office ON office.firm_id=firm.id
+    JOIN public.ma_contact_office_affiliations affiliation ON affiliation.office_id=office.id
+    JOIN public.ma_contacts contact ON contact.id=affiliation.contact_id
+    WHERE firm.id=$1 AND office.id=$2 AND contact.id=$3 AND affiliation.id=$4`, [manifest.ids.firm, manifest.ids.office, manifest.ids.contact, manifest.ids.affiliation])
   const p1Storage = p1.rows[0]?.cv_url ? await database.query("SELECT count(*)::int AS count FROM storage.objects WHERE bucket_id='cvs' AND name=$1", [p1.rows[0].cv_url]) : { rows: [{ count: 0 }] }
   const result = {
     runId: manifest.runId,
@@ -29,7 +39,7 @@ try {
     cases: {
       planned: 3,
       executed: Number(p1.rows.length === 1) + Number(p2.rows.length === 1) + Number(p3.rows.length === 1),
-      passed: Number(p1.rows.length === 1 && p1.rows[0].source === "intake_v2" && p1Storage.rows[0].count === 1) + Number(p2.rows.length === 1 && p2.rows[0].lifecycle_status === "lead" && p2.rows[0].source === "staff_manual" && p2.rows[0].created_by === manifest.actors.staff.userId) + Number(p3.rows.length === 1 && p3.rows[0].status === "active_pursuit" && p3.rows[0].pursuit_stage === "interest" && p3.rows[0].active_pursuits === 1 && p3.rows[0].validation_events === 1),
+      passed: Number(p1.rows.length === 1 && p1.rows[0].source === "intake_v2" && p1Storage.rows[0].count === 1) + Number(p2.rows.length === 1 && p2.rows[0].lifecycle_status === "lead" && p2.rows[0].source === "staff_manual" && p2.rows[0].created_by === manifest.actors.staff.userId) + Number(p3.rows.length === 1 && p3.rows[0].status === "active_pursuit" && p3.rows[0].pursuit_stage === "interest" && p3.rows[0].active_pursuits === 1 && p3.rows[0].validation_events === 1 && p3MaCorrections.rows.length === 1 && p3MaCorrections.rows[0].firm_category === "QA corrected category" && p3MaCorrections.rows[0].office_city === "Lyon" && p3MaCorrections.rows[0].contact_first_name === "Corrected" && p3MaCorrections.rows[0].affiliation_job_title === "QA corrected office title" && p3MaCorrections.rows[0].contact_email === process.env.QA_EMAIL_RECIPIENT && [p3MaCorrections.rows[0].firm_updated_by, p3MaCorrections.rows[0].office_updated_by, p3MaCorrections.rows[0].contact_updated_by, p3MaCorrections.rows[0].affiliation_updated_by].every((actor) => actor === manifest.actors.staff.userId)),
       failed: 0,
     },
     persisted: {
@@ -37,6 +47,7 @@ try {
       p2: p2.rows[0] || null,
       p3: p3.rows[0] || null,
       p3Additional: p3Additional.rows[0] || null,
+      p3MaCorrections: p3MaCorrections.rows[0] || null,
     },
     portalDeals: {
       executed: Number(p3Additional.rows.length === 1),
