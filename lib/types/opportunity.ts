@@ -820,6 +820,8 @@ export interface RepreneurOpportunityExposure {
   interest_notification_sent_at?: string | null
   updated_at: string
   is_locked_for_other_repreneur?: boolean
+  /** Computed server-side after portal authorization; never accepted from the browser. */
+  deal_bucket?: RepreneurDealBucket
 }
 
 export interface RepreneurDealFlowOpportunity {
@@ -854,7 +856,11 @@ export interface RepreneurDealFlowOpportunity {
   is_outside_current_criteria: boolean
   relevance_grade?: OpportunityMatchRecommendation
   is_locked_for_other_repreneur?: boolean
+  /** Computed server-side after portal authorization; never accepted from the browser. */
+  deal_bucket?: RepreneurDealBucket
 }
+
+export type RepreneurDealBucket = "recommended" | "declined" | "in_progress" | "live"
 
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
   return (

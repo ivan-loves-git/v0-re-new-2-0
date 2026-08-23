@@ -8,7 +8,7 @@ import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 import type { OpportunityDeclineReasonCategory, OpportunityMatchStatus } from "@/lib/types/opportunity"
 
-const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined"]
+const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "dropped"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
@@ -83,6 +83,25 @@ async function updateMyOpportunityResponse(
 
   if (status === "declined" && !declineReasonText) {
     throw new RepreneurOpportunityResponseError("Add a written rationale before marking this opportunity as not a fit.")
+  }
+
+  // A dropped pursuit is retained history, not a response record that can be
+  // edited. Reconsideration deliberately crosses the existing atomic interest
+  // boundary: it creates an Interested signal only and never reopens a pursuit
+  // or restores confidential material.
+  if (status === "interested" && match.status === "dropped") {
+    const { data, error } = await supabase.rpc(
+      "express_opportunity_interest",
+      {
+        p_opportunity_id: match.opportunity_id,
+        p_repreneur_id: access.repreneurId,
+        p_actor_id: access.user?.id ?? "",
+      },
+    )
+    if (error || !data) {
+      throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
+    }
+    return { opportunityId: match.opportunity_id, userId: access.user?.id ?? "" }
   }
 
   const { data, error } = await supabase.rpc(

@@ -80,6 +80,14 @@ describe("repreneur opportunity not-a-fit response", () => {
     expect(action).not.toContain('.from("opportunity_matches")\n    .update(')
   })
 
+  it("reconsiders a dropped pursuit through the idempotent interest boundary only", () => {
+    const action = source("lib/actions/repreneur-opportunity-responses.ts")
+
+    expect(action).toContain('match.status === "dropped"')
+    expect(action).toContain('"express_opportunity_interest"')
+    expect(action).toContain("never reopens a pursuit")
+  })
+
   it("keeps client-invoked response actions in a dedicated async-only server module", () => {
     const action = source("lib/actions/repreneur-opportunity-responses.ts")
     const readModel = source("lib/actions/repreneur-opportunities.ts")

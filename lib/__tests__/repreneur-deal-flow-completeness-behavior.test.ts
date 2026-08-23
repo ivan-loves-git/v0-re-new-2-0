@@ -145,6 +145,37 @@ describe("incomplete-thesis portal behavior", () => {
     expect(mocks.from.mock.calls.map(([table]) => table)).toContain("opportunities")
   })
 
+  it("projects each visible deal once into the approved four Deals buckets", async () => {
+    const matches = [
+      staffMatch,
+      { ...staffMatch, id: "match-interested", status: "interested", opportunity: { ...opportunity, id: "opportunity-interested" } },
+      { ...staffMatch, id: "match-active", status: "active_pursuit", opportunity: { ...opportunity, id: "opportunity-active" } },
+      { ...staffMatch, id: "match-declined", status: "declined", opportunity: { ...opportunity, id: "opportunity-declined" } },
+      { ...staffMatch, id: "match-dropped", status: "dropped", opportunity: { ...opportunity, id: "opportunity-dropped" } },
+    ]
+    setResponses({
+      repreneurs: [{ data: completeProfile, error: null }],
+      opportunity_matches: [
+        { data: matches, error: null },
+        { data: [], error: null },
+      ],
+      opportunities: [{ data: [{ ...opportunity, id: "opportunity-live" }, ...matches.map((match) => match.opportunity)], error: null }],
+    })
+
+    const result = await listMyRepreneurDealFlow("relevance")
+
+    expect(result.deals.map((item) => [item.opportunity_id, item.deal_bucket])).toEqual([
+      ["opportunity-staff", "recommended"],
+      ["opportunity-interested", "in_progress"],
+      ["opportunity-active", "in_progress"],
+      ["opportunity-declined", "declined"],
+      ["opportunity-dropped", "declined"],
+      ["opportunity-live", "live"],
+    ])
+    expect(new Set(result.deals.map((item) => item.opportunity_id)).size).toBe(6)
+    expect(result.deals).toHaveLength(6)
+  })
+
   it("excludes DEMO-classified opportunities from staff recommendations and automatic deal flow", async () => {
     setResponses({
       repreneurs: [{ data: completeProfile, error: null }],

@@ -9,6 +9,7 @@ import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
 import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
+import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
   sortRepreneurDealFlow,
@@ -23,7 +24,7 @@ import type {
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
 
-const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit", "dropped"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
@@ -206,6 +207,31 @@ function withStaffRecommendation(
   }
 }
 
+function withDealBucket(
+  opportunity: RepreneurOpportunityExposure,
+  isBroadDiscoveryEligible: boolean,
+): RepreneurOpportunityExposure | null
+function withDealBucket(
+  opportunity: RepreneurDealFlowOpportunity,
+  isBroadDiscoveryEligible: boolean,
+): RepreneurDealFlowOpportunity | null
+function withDealBucket(
+  opportunity: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity,
+  isBroadDiscoveryEligible: boolean,
+): (RepreneurOpportunityExposure | RepreneurDealFlowOpportunity) | null {
+  const dealBucket = classifyRepreneurDeal({
+    opportunityId: opportunity.opportunity_id,
+    matchId: opportunity.match_id,
+    matchStatus: opportunity.match_status,
+    isBroadDiscoveryEligible,
+  })
+  return dealBucket ? { ...opportunity, deal_bucket: dealBucket } : null
+}
+
+function isDefined<T>(value: T | null): value is T {
+  return value !== null
+}
+
 function toDealFlowOpportunity(
   opportunity: RepreneurDealFlowOpportunityRow,
   repreneur: RepreneurDealFlowProfile,
@@ -355,7 +381,9 @@ export async function listMyRepreneurOpportunities(): Promise<{
         // portal detail page; legacy approval metadata never projects an IM.
         visible_documents: [],
         memo_availability: undefined,
-      })),
+      }))
+      .map((opportunity) => withDealBucket(opportunity, false))
+      .filter(isDefined),
   }
 }
 
@@ -363,10 +391,11 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   repreneur: RepreneurOpportunityProfile | null
   staffRecommended: RepreneurDealFlowOpportunity[]
   dealFlow: RepreneurDealFlowOpportunity[]
+  deals: RepreneurDealFlowOpportunity[]
   automaticMatching: { complete: boolean; missing: string[] }
 }> {
   const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], automaticMatching: { complete: false, missing: [] } }
+  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] } }
 
   const supabase = createAdminClient()
   const automaticMatching = automaticMatchingThesisCompleteness(repreneur)
@@ -457,7 +486,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     matchedOpportunities.map((opportunity) => opportunity.match_id),
   )
 
-  const staffRecommended = matchedOpportunities
+  const statefulDeals = matchedOpportunities
     .map((exposure) => ({
       ...exposure,
       ...interestStateByMatch.get(exposure.match_id),
@@ -470,10 +499,12 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       memo_availability: undefined,
     }))
     .map(withStaffRecommendation)
-  const recommendedOpportunityIds = new Set(staffRecommended.map((opportunity) => opportunity.opportunity_id))
-  const dealFlow = automaticMatching.complete ? sortRepreneurDealFlow(
+    .map((opportunity) => withDealBucket(opportunity, false))
+    .filter(isDefined)
+  const statefulOpportunityIds = new Set(statefulDeals.map((opportunity) => opportunity.opportunity_id))
+  const liveDeals = automaticMatching.complete ? sortRepreneurDealFlow(
     allOpportunities
-      .filter((opportunity) => !recommendedOpportunityIds.has(opportunity.id))
+      .filter((opportunity) => !statefulOpportunityIds.has(opportunity.id))
       .map((opportunity) => ({
         ...toDealFlowOpportunity(opportunity, repreneur),
         is_locked_for_other_repreneur: isLockedForOtherRepreneur(
@@ -483,12 +514,18 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         ),
       })),
     sort,
-  ).map(withoutRelevanceScore) : []
+  ).map(withoutRelevanceScore)
+    .map((opportunity) => withDealBucket(opportunity, true))
+    .filter(isDefined) : []
+  const deals = [...statefulDeals, ...liveDeals]
+  const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")
+  const dealFlow = deals.filter((opportunity) => opportunity.deal_bucket !== "recommended")
 
   const result = {
     repreneur,
     staffRecommended,
     dealFlow,
+    deals,
     automaticMatching,
   }
   const access = await requirePortalAccess()
