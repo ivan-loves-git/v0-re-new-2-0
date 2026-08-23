@@ -36,7 +36,7 @@ describe("permanent QA lane contract", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 
     expect(contract).toEqual({
-      version: "771-permanent-qa-v3",
+      version: "771-permanent-qa-v3-cleanroom-a",
       structureFingerprint: "37d01bc56c45aa8fe754893427feacb9da300e62449d34f85e331710eca33f24",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
