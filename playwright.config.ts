@@ -24,7 +24,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-    screenshot: "only-on-failure",
+    screenshot: "off",
     trace: "on-first-retry",
     video: "off",
   },

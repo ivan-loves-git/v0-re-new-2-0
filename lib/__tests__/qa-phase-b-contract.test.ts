@@ -184,14 +184,31 @@ describe("Phase B QA contracts", () => {
     expect(workflow).not.toContain("Ignore unrelated deployment")
   })
 
-  it("configures Chromium only with one CI retry and private artifacts", () => {
+  it("configures Chromium with automatic screenshots and video off while preserving retry traces", () => {
     const config = readFileSync(`${process.cwd()}/playwright.config.ts`, "utf8")
     expect(config).toContain("retries: process.env.CI ? 1 : 0")
     expect(config).toContain('name: "chromium"')
     expect(config).not.toContain("webkit")
     expect(config).not.toContain("firefox")
     expect(config).toContain('trace: "on-first-retry"')
-    expect(config).toContain('screenshot: "only-on-failure"')
+    expect(config).toContain('screenshot: "off"')
+    expect(config).not.toContain('screenshot: "only-on-failure"')
+    expect(config).toContain('video: "off"')
+  })
+
+  it("captures exactly six fixed post-success PNG evidence files", () => {
+    const journeys = readFileSync(`${process.cwd()}/tests/golden/golden-journeys.spec.ts`, "utf8")
+    const screenshotPaths = [...journeys.matchAll(/screenshot\(\{ path: `\$\{RUN_DIR\}\/test-results\/([^`]+)` \}\)/g)]
+      .map((match) => match[1])
+
+    expect(screenshotPaths).toEqual([
+      "p1-public-success.png",
+      "p1-staff-readback.png",
+      "p2-successful-profile.png",
+      "p2-duplicate-rejection.png",
+      "p3-portal-active-pursuit.png",
+      "p3-staff-active-pursuit.png",
+    ])
   })
 
   it("exposes non-secret immutable deployment provenance for pre-browser verification", () => {

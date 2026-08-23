@@ -99,6 +99,8 @@ test.describe.serial("Golden journeys", () => {
     await page.waitForURL(/\/intake-v2\/success/)
     await page.reload()
     await expect(page).toHaveURL(/\/intake-v2\/success/)
+    await expect(page.getByRole("heading", { name: "Thank you for your application!" })).toBeVisible()
+    await page.screenshot({ path: `${RUN_DIR}/test-results/p1-public-success.png` })
 
     const database = await databaseClient()
     const result = await database.query("SELECT id, source, cv_url FROM public.repreneurs WHERE lower(email)=lower($1)", [manifest.actors.applicant.email])
@@ -114,6 +116,7 @@ test.describe.serial("Golden journeys", () => {
     const staffPage = await staff.newPage()
     await staffPage.goto(`/repreneurs/${result.rows[0].id}`)
     await expect(staffPage.getByText(manifest.actors.applicant.email)).toBeVisible()
+    await staffPage.screenshot({ path: `${RUN_DIR}/test-results/p1-staff-readback.png` })
     await staff.close()
     await context.close()
   })
@@ -143,9 +146,13 @@ test.describe.serial("Golden journeys", () => {
       firstSubmit.click({ force: true }),
     ])
     await first.waitForURL(/\/repreneurs\/[0-9a-f-]+/)
+    await first.reload()
+    await expect(first.getByText(manifest.actors.staffCreated.email)).toBeVisible()
+    await first.screenshot({ path: `${RUN_DIR}/test-results/p2-successful-profile.png` })
     await fillStaffRepreneur(second, manifest.actors.staffCreated.email)
     await second.getByRole("button", { name: "Create Repreneur" }).click()
     await expect(second.getByText(/already belongs to another Repreneur/i)).toBeVisible()
+    await second.screenshot({ path: `${RUN_DIR}/test-results/p2-duplicate-rejection.png` })
 
     const database = await databaseClient()
     const rows = await database.query("SELECT id, email, lifecycle_status, source, created_by FROM public.repreneurs WHERE lower(email)=lower($1)", [manifest.actors.staffCreated.email])
@@ -231,9 +238,11 @@ test.describe.serial("Golden journeys", () => {
     await portalOne.goto(`/portal/deals/${matchId}`)
     await portalOne.reload()
     await expect(portalOne.getByText("Active pursuit", { exact: true }).first()).toBeVisible()
+    await portalOne.screenshot({ path: `${RUN_DIR}/test-results/p3-portal-active-pursuit.png` })
     await page.goto(`/opportunities/${opportunityId}?tab=recommendations`)
     await page.reload()
     await expect(page.getByText("Active pursuit", { exact: true }).first()).toBeVisible()
+    await page.screenshot({ path: `${RUN_DIR}/test-results/p3-staff-active-pursuit.png` })
 
     await database.end()
     await portal.close()

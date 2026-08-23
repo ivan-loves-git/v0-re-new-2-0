@@ -32,12 +32,12 @@ function expectedGoldenConcurrencyGroup(event: GoldenWorkflowEvent) {
 }
 
 describe("permanent QA lane contract", () => {
-  it("pins the published v2 fingerprint and five immutable schema inputs", () => {
+  it("pins the provisional v3 fingerprint and five immutable schema inputs", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 
     expect(contract).toEqual({
-      version: "771-permanent-qa-v2",
-      structureFingerprint: "f985a15b194b23b4a06787c41907b15fadea4f4e845caa7d76dcb802831bcf10",
+      version: "771-permanent-qa-v3",
+      structureFingerprint: "37d01bc56c45aa8fe754893427feacb9da300e62449d34f85e331710eca33f24",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
@@ -181,6 +181,38 @@ describe("permanent QA lane contract", () => {
     expect(workflow).toContain("QA_CANDIDATE_ROOT: .qa-candidate")
     expect(workflow).toContain("Check out trusted QA controller and journeys")
     expect(sanitizer.match(/secretEnvironmentName = \/(.*)\//)?.[1]).not.toContain("QA_SUPABASE_PROJECT_REF")
+  })
+
+  it("keeps failed health blocking except after exact reviewed-transition admission", () => {
+    const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
+    const healthStart = workflow.indexOf("Require current-main health or reviewed transition recovery")
+    const pointerStart = workflow.indexOf("Move permanent qa pointer with lease-safe force")
+    const healthStep = workflow.slice(healthStart, pointerStart)
+
+    expect(validator).toContain("const admission = await validateCandidateContractAdmission")
+    expect(validator).toContain('reviewed_schema_transition=${admission.admission === "reviewed-schema-change"}')
+    expect(workflow).toContain("reviewed_schema_transition: ${{ steps.candidate.outputs.reviewed_schema_transition }}")
+    expect(healthStart).toBeGreaterThan(workflow.indexOf("Validate candidate database contract admission"))
+    expect(pointerStart).toBeGreaterThan(healthStart)
+    expect(healthStep).toContain("health_sha")
+    expect(healthStep).toContain('if [ "$health_ok" = "true" ]; then')
+    expect(healthStep).toContain('if [ "$QA_REVIEWED_SCHEMA_TRANSITION" != "true" ]; then')
+    expect(healthStep).toContain("Reviewed schema transition recovery path used; this does not bypass product tests.")
+    expect(workflow.indexOf("schema-sync:")).toBeGreaterThan(pointerStart)
+    for (const requiredStep of [
+      "Verify deployed application identities before database mutation",
+      "Synchronize only the empty approved QA branch",
+      "Acquire or safely recover database lease",
+      "Require empty baseline after recovery",
+      "Run P1-P3 in protected Chromium",
+      "Read back exact persisted acceptance state",
+      "Cleanup exact manifest and label-owned fixtures",
+      "Sanitize runner artifacts",
+    ]) {
+      expect(workflow.indexOf(requiredStep)).toBeGreaterThan(pointerStart)
+    }
+    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
   })
 
   it("keeps live cleanup rehearsal out of ordinary candidate runs", () => {
@@ -371,6 +403,10 @@ describe("permanent QA lane contract", () => {
 
   it("documents latest-pending supersession and independent provider evidence boundaries", () => {
     const operations = readFileSync(`${process.cwd()}/docs/operations/permanent-qa-lane.md`, "utf8")
+    expect(operations).toContain("The v3 structure fingerprint")
+    expect(operations).toContain("two independent clean-room reconstructions using the trusted Node algorithm")
+    expect(operations).toContain("Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock")
+    expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, post-sync fingerprint equality, P1–P3, sanitization, cleanup or final check evaluation")
     expect(operations).toContain("latest-pending supersession")
     expect(operations).toContain("A running, B pending, C supersedes B")
     expect(operations).toContain("superseded B remains blocked")

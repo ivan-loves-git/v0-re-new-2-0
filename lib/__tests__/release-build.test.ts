@@ -6,6 +6,10 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
+  it("publishes QA contract v3 as release build 820", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("820")
+  })
+
   it("keeps the next production build number above the last published build when Git history is shallow", () => {
     // Production previously displayed Vercel's shallow-clone depth (10) instead
     // of the last published full-history build (765). This literal is the
