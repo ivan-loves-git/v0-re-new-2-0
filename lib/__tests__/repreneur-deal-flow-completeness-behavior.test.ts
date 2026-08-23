@@ -66,6 +66,7 @@ const opportunity = {
   id: "opportunity-auto",
   reference: "Re-New - IDF - QA",
   status: "active",
+  is_demo: false,
   repreneur_exposure: "all_repreneurs",
   public_title: "Anonymous opportunity",
   teaser_summary: "Safe summary",
@@ -144,11 +145,51 @@ describe("incomplete-thesis portal behavior", () => {
     expect(mocks.from.mock.calls.map(([table]) => table)).toContain("opportunities")
   })
 
+  it("excludes DEMO-classified opportunities from staff recommendations and automatic deal flow", async () => {
+    setResponses({
+      repreneurs: [{ data: completeProfile, error: null }],
+      opportunity_matches: [{
+        data: [{
+          ...staffMatch,
+          opportunity: {
+            ...staffMatch.opportunity,
+            is_demo: true,
+          },
+        }],
+        error: null,
+      }],
+      opportunities: [{
+        data: [{
+          ...opportunity,
+          id: "opportunity-demo-auto",
+          is_demo: true,
+        }],
+        error: null,
+      }],
+    })
+
+    const result = await listMyRepreneurDealFlow("relevance")
+
+    expect(result.staffRecommended).toEqual([])
+    expect(result.dealFlow).toEqual([])
+  })
+
   it("blocks a direct unassigned deal lookup", async () => {
     setResponses({
       repreneurs: [{ data: incompleteProfile, error: null }],
       opportunity_matches: [{ data: null, error: null }],
       opportunities: [{ data: opportunity, error: null }],
+    })
+
+    await expect(getMyRepreneurOpportunity("opportunity-auto")).resolves.toBeNull()
+    expect(mocks.queueEvent).not.toHaveBeenCalled()
+  })
+
+  it("blocks a direct DEMO deal lookup even when a query mock returns it", async () => {
+    setResponses({
+      repreneurs: [{ data: completeProfile, error: null }],
+      opportunity_matches: [{ data: null, error: null }],
+      opportunities: [{ data: { ...opportunity, is_demo: true }, error: null }],
     })
 
     await expect(getMyRepreneurOpportunity("opportunity-auto")).resolves.toBeNull()

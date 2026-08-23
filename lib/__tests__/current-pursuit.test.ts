@@ -192,7 +192,7 @@ function setupCurrentPursuit(options: {
         opportunity_id: "opportunity-1",
         repreneur_id: "repreneur-1",
         status: "active_pursuit",
-        opportunity: { status: "active" },
+        opportunity: { status: "active", is_demo: false },
       },
       error: null,
     })
@@ -322,6 +322,43 @@ describe("current pursuit reads", () => {
     expect(serialized).not.toContain("entries")
   })
 
+  it("denies DEMO pursuits to portal and staff preview while retaining the staff workspace", async () => {
+    const demoMatch = {
+      data: {
+        id: "match-1",
+        opportunity_id: "opportunity-1",
+        repreneur_id: "repreneur-1",
+        status: "active_pursuit",
+        opportunity: { status: "active", is_demo: true },
+      },
+      error: null,
+    }
+    const portal = setupCurrentPursuit({ match: demoMatch })
+
+    await expect(readPortalCurrentPursuit({
+      matchId: "match-1",
+      viewer: { kind: "portal" },
+    })).resolves.toBeNull()
+    expect(portal.from.mock.calls.map(([table]) => table)).toEqual([
+      "opportunity_matches",
+      "wave_journey_settings",
+    ])
+    expect(portal.rpc).not.toHaveBeenCalled()
+
+    setupCurrentPursuit({ match: demoMatch })
+    await expect(readPortalCurrentPursuit({
+      matchId: "match-1",
+      viewer: { kind: "staff-preview", repreneurId: "repreneur-1" },
+    })).resolves.toBeNull()
+
+    setupCurrentPursuit({ match: demoMatch })
+    await expect(readStaffCurrentPursuit("match-1")).resolves.toMatchObject({
+      matchId: "match-1",
+      opportunityId: "opportunity-1",
+      entries: evidence,
+    })
+  })
+
   it("denies source disclosure when the canonical confidential predicate errors", async () => {
     setupCurrentPursuit({
       canonicalAccess: { data: null, error: { message: "unavailable" } },
@@ -347,7 +384,7 @@ describe("current pursuit reads", () => {
             opportunity_id: "opportunity-1",
             repreneur_id: "repreneur-1",
             status: "dropped",
-            opportunity: { status: "active" },
+            opportunity: { status: "active", is_demo: false },
           },
           error: null,
         },
@@ -362,7 +399,7 @@ describe("current pursuit reads", () => {
             opportunity_id: "opportunity-1",
             repreneur_id: "repreneur-1",
             status: "active_pursuit",
-            opportunity: { status: "paused" },
+            opportunity: { status: "paused", is_demo: false },
           },
           error: null,
         },

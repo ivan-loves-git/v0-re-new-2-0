@@ -378,6 +378,8 @@ export interface MaInteraction {
 export interface Opportunity {
   id: string
   reference: string
+  /** Staff-only quarantine flag. DEMO opportunities are never eligible for repreneur access. */
+  is_demo: boolean
   /** Canonical staff-only W-039 geography identity; literal location remains reader-facing. */
   geography_node_id?: string | null
   status: OpportunityStatus
@@ -581,6 +583,8 @@ export interface Opportunity_Update {
   teaser_summary?: string | null
   internal_notes?: string | null
   archived_at?: string | null
+  /** Staff-only W-126 control; excluded from the normal Opportunity Intake payload. */
+  is_demo?: boolean
 }
 
 export interface OpportunityDocument {

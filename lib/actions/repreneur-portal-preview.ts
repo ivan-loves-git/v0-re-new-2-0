@@ -11,6 +11,7 @@ import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
+import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -43,6 +44,7 @@ interface PreviewRepreneurRow {
 
 interface PreviewOpportunityRow {
   id: string
+  is_demo: boolean
   reference: string
   status: string | null
   repreneur_exposure: string | null
@@ -78,6 +80,13 @@ interface PreviewOpportunityMatchRow {
   opportunity: PreviewOpportunityRow | PreviewOpportunityRow[] | null
 }
 
+interface PreviewOpportunityCountRow {
+  repreneur_id: string
+  opportunity: Pick<PreviewOpportunityRow, "is_demo">
+    | Array<Pick<PreviewOpportunityRow, "is_demo">>
+    | null
+}
+
 export interface StaffPortalPreviewOption {
   id: string
   name: string
@@ -107,6 +116,7 @@ function normalizeProfile(row: PreviewRepreneurRow): RepreneurOpportunityProfile
 function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
+  if (!isRepreneurEligibleOpportunity(opportunity)) return null
   if (opportunity.status !== "active") return null
   if (opportunity.repreneur_exposure === "staff_only") return null
 
@@ -210,6 +220,7 @@ async function listVisibleOpportunitiesForRepreneur(
       updated_at,
       opportunity:opportunities(
         id,
+        is_demo,
         reference,
         status,
         repreneur_exposure,
@@ -228,6 +239,7 @@ async function listVisibleOpportunitiesForRepreneur(
       )
     `)
     .eq("repreneur_id", repreneurId)
+    .eq("opportunity.is_demo", false)
     .in("status", VISIBLE_MATCH_STATUSES)
     .order("updated_at", { ascending: false })
 
@@ -282,7 +294,8 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
       .eq("role", "repreneur"),
     supabase
       .from("opportunity_matches")
-      .select("repreneur_id, status")
+      .select("repreneur_id, status, opportunity:opportunities!inner(is_demo)")
+      .eq("opportunity.is_demo", false)
       .in("status", VISIBLE_MATCH_STATUSES),
   ])
 
@@ -295,7 +308,11 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
   const roleEmails = new Set(roles.map((role) => normalizeEmail(role.email)).filter(Boolean))
   const visibleCountByRepreneur = new Map<string, number>()
 
-  for (const match of matchesResult.data ?? []) {
+  for (const match of (matchesResult.data ?? []) as PreviewOpportunityCountRow[]) {
+    const opportunity = Array.isArray(match.opportunity)
+      ? match.opportunity[0]
+      : match.opportunity
+    if (!isRepreneurEligibleOpportunity(opportunity)) continue
     visibleCountByRepreneur.set(match.repreneur_id, (visibleCountByRepreneur.get(match.repreneur_id) ?? 0) + 1)
   }
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
+import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 import type { OpportunityDeclineReasonCategory, OpportunityMatchStatus } from "@/lib/types/opportunity"
 
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined"]
@@ -21,6 +22,10 @@ type RepreneurOpportunityDeclineActionState =
   | { status: "error"; message: string }
 
 class RepreneurOpportunityResponseError extends Error {}
+
+function isResponseRpcError(error: { code?: string; message?: string }, token: string) {
+  return error.code === "P0001" && error.message?.includes(token)
+}
 
 function readDeclineReasonCategories(formData?: FormData): OpportunityDeclineReasonCategory[] {
   if (!formData) return []
@@ -50,14 +55,19 @@ async function updateMyOpportunityResponse(
   const supabase = createAdminClient()
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select("id, opportunity_id, status, opportunity:opportunities!inner(status)")
+    .select("id, opportunity_id, status, opportunity:opportunities!inner(status, is_demo)")
     .eq("id", matchId)
     .eq("repreneur_id", access.repreneurId)
+    .eq("opportunity.is_demo", false)
     .maybeSingle()
 
   if (matchError) throw new Error(matchError.message)
   const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
-  if (!match || opportunity?.status !== "active") {
+  if (
+    !match
+    || opportunity?.status !== "active"
+    || !isRepreneurEligibleOpportunity(opportunity)
+  ) {
     throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
   }
   if (!REPRENEUR_RESPONSE_ALLOWED_STATUSES.includes(match.status as OpportunityMatchStatus)) {
@@ -75,21 +85,33 @@ async function updateMyOpportunityResponse(
     throw new RepreneurOpportunityResponseError("Add a written rationale before marking this opportunity as not a fit.")
   }
 
-  const { error } = await supabase
-    .from("opportunity_matches")
-    .update({
-      status,
-      decline_reason_categories: status === "declined" ? declineReasonCategories : [],
-      decline_reason_text: status === "declined" ? declineReasonText : null,
-      reviewed_by: null,
-      reviewed_at: null,
-    })
-    .eq("id", matchId)
-    .eq("repreneur_id", access.repreneurId)
+  const { data, error } = await supabase.rpc(
+    "update_repreneur_opportunity_response",
+    {
+      p_match_id: matchId,
+      p_repreneur_id: access.repreneurId,
+      p_status: status,
+      p_decline_reason_categories: status === "declined" ? declineReasonCategories : [],
+      p_decline_reason_text: status === "declined" ? declineReasonText : null,
+    },
+  )
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    if (isResponseRpcError(error, "response_locked")) {
+      throw new RepreneurOpportunityResponseError("This opportunity response can no longer be changed.")
+    }
+    if (isResponseRpcError(error, "response_not_available")) {
+      throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
+    }
+    throw new Error(error.message)
+  }
 
-  return { opportunityId: match.opportunity_id, userId: access.user?.id ?? "" }
+  const updated = (Array.isArray(data) ? data[0] : data) as { opportunity_id?: unknown } | null
+  if (!updated || typeof updated.opportunity_id !== "string") {
+    throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
+  }
+
+  return { opportunityId: updated.opportunity_id, userId: access.user?.id ?? "" }
 }
 
 function refreshMyOpportunityResponse(matchId: string, opportunityId: string) {

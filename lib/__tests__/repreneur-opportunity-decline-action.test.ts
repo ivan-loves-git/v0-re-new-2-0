@@ -65,11 +65,19 @@ describe("repreneur opportunity not-a-fit response", () => {
     const action = source("lib/actions/repreneur-opportunity-responses.ts")
 
     expect(action).toContain(
-      'decline_reason_categories: status === "declined" ? declineReasonCategories : [],',
+      'p_decline_reason_categories: status === "declined" ? declineReasonCategories : [],',
     )
     expect(action).not.toContain(
-      'decline_reason_categories: status === "declined" ? declineReasonCategories : null,',
+      'p_decline_reason_categories: status === "declined" ? declineReasonCategories : null,',
     )
+  })
+
+  it("uses the atomic server-side response gate", () => {
+    const action = source("lib/actions/repreneur-opportunity-responses.ts")
+
+    expect(action).toContain('"update_repreneur_opportunity_response"')
+    expect(action).toContain('.eq("opportunity.is_demo", false)')
+    expect(action).not.toContain('.from("opportunity_matches")\n    .update(')
   })
 
   it("keeps client-invoked response actions in a dedicated async-only server module", () => {

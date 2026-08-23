@@ -8,6 +8,7 @@ import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
+import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
   sortRepreneurDealFlow,
@@ -46,6 +47,7 @@ type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
 
 type RepreneurDealFlowOpportunityRow = {
   id: string
+  is_demo: boolean
   reference: string
   public_title: string | null
   teaser_summary: string | null
@@ -74,6 +76,7 @@ function normalizeProfile(row: any): RepreneurOpportunityProfile {
 function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
+  if (!isRepreneurEligibleOpportunity(opportunity)) return null
   if (opportunity.status !== "active") return null
 
   // This projection is reached only through the current repreneur's exact
@@ -299,6 +302,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       updated_at,
       opportunity:opportunities(
         id,
+        is_demo,
         reference,
         status,
         repreneur_exposure,
@@ -317,6 +321,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       )
     `)
     .eq("repreneur_id", repreneur.id)
+    .eq("opportunity.is_demo", false)
     .in("status", VISIBLE_MATCH_STATUSES)
     .order("updated_at", { ascending: false })
 
@@ -383,6 +388,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         updated_at,
         opportunity:opportunities(
           id,
+          is_demo,
           reference,
           status,
           repreneur_exposure,
@@ -401,12 +407,14 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         )
       `)
       .eq("repreneur_id", repreneur.id)
+      .eq("opportunity.is_demo", false)
       .in("status", VISIBLE_MATCH_STATUSES)
       .order("updated_at", { ascending: false }),
     automaticMatching.complete && supabase
       .from("opportunities")
       .select(`
         id,
+        is_demo,
         reference,
         status,
         repreneur_exposure,
@@ -425,6 +433,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         updated_at
       `)
       .eq("status", "active")
+      .eq("is_demo", false)
       .neq("repreneur_exposure", "staff_only"),
   ])
 
@@ -434,7 +443,9 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   const matchedOpportunities = (matchesResult.data ?? [])
     .map(normalizeExposure)
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
-  const allOpportunities = opportunitiesResult ? opportunitiesResult.data ?? [] : []
+  const allOpportunities = opportunitiesResult
+    ? (opportunitiesResult.data ?? []).filter(isRepreneurEligibleOpportunity)
+    : []
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
     automaticMatching.complete
@@ -517,6 +528,7 @@ export async function getMyRepreneurOpportunity(
         updated_at,
         opportunity:opportunities(
           id,
+          is_demo,
           reference,
           status,
           repreneur_exposure,
@@ -536,12 +548,14 @@ export async function getMyRepreneurOpportunity(
       `)
       .eq("id", dealId)
       .eq("repreneur_id", repreneur.id)
+      .eq("opportunity.is_demo", false)
       .in("status", VISIBLE_MATCH_STATUSES)
       .maybeSingle(),
     supabase
       .from("opportunities")
       .select(`
         id,
+        is_demo,
         reference,
         status,
         repreneur_exposure,
@@ -561,6 +575,7 @@ export async function getMyRepreneurOpportunity(
       `)
       .eq("id", dealId)
       .eq("status", "active")
+      .eq("is_demo", false)
       .neq("repreneur_exposure", "staff_only")
       .maybeSingle(),
   ])
@@ -571,7 +586,7 @@ export async function getMyRepreneurOpportunity(
   if (!exposure) {
     if (!automaticMatchingThesisCompleteness(repreneur).complete) return null
     const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
-    if (!opportunity) return null
+    if (!opportunity || !isRepreneurEligibleOpportunity(opportunity)) return null
 
     const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [opportunity.id])
     const result = withoutRelevanceScore({
