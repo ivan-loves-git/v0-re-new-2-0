@@ -12,6 +12,7 @@ describe("W-112 historical pursuit import candidate", () => {
     expect(migration).toContain("FORCE ROW LEVEL SECURITY")
     expect(migration).toContain("historical_pursuit_import_rows_are_immutable")
     expect(migration).toContain("source_cells JSONB NOT NULL")
+    expect(migration).toContain("jsonb_typeof(cell.value) NOT IN ('string', 'null')")
     expect(migration).toContain("manifest_digest TEXT NOT NULL")
     expect(migration).toContain("historical_pursuit_source_row_payload_mismatch")
     expect(migration).toContain("pg_advisory_xact_lock")

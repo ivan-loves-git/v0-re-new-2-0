@@ -218,7 +218,12 @@ BEGIN
     RAISE EXCEPTION 'historical_pursuit_required_input_missing';
   END IF;
   IF NOT (p_source_cells ?& ARRAY['interest_confirmed','nda_received','nda_signed','info_memo_received','qa_with_ma_firm','seller_meeting','valuation','loi_issued','audits','financing','closing'])
-    OR EXISTS (SELECT 1 FROM jsonb_each(p_source_cells) AS cell(key, value) WHERE cell.key <> ALL(v_allowed) OR jsonb_typeof(cell.value) <> 'string')
+    OR EXISTS (
+      SELECT 1
+      FROM jsonb_each(p_source_cells) AS cell(key, value)
+      WHERE cell.key <> ALL(v_allowed)
+        OR jsonb_typeof(cell.value) NOT IN ('string', 'null')
+    )
   THEN RAISE EXCEPTION 'historical_pursuit_source_cells_invalid'; END IF;
   IF EXISTS (SELECT 1 FROM unnest(COALESCE(p_completed_source_stages, '{}')) AS stage WHERE stage <> ALL(v_allowed))
     OR EXISTS (SELECT 1 FROM unnest(COALESCE(p_not_applicable_source_stages, '{}')) AS stage WHERE stage <> ALL(v_allowed))

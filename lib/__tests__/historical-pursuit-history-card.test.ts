@@ -25,6 +25,7 @@ describe("staff historical pursuit history", () => {
   it("makes the historical boundary explicit", () => {
     expect(component).toContain("Dates are unknown")
     expect(component).toContain("do not create current NDA, document, or portal access")
-    expect(component).toContain("Historical history is not available")
+    expect(component).toContain("Historical deal history is not available")
+    expect(component).toContain("row.sourceTerminal")
   })
 })

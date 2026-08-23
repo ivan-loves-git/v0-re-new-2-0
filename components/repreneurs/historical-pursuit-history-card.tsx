@@ -27,13 +27,13 @@ function stageLabel(stage: string) {
 
 function statusLabel(row: StaffHistoricalPursuitImportRow) {
   if (row.appliedOutcome === "external_or_missing") return "Review needed"
-  if (row.notApplicableStages.length > 0) return "Historical drop"
+  if (row.sourceTerminal) return "Historical drop"
   return "Historical record"
 }
 
 function statusVariant(row: StaffHistoricalPursuitImportRow): "outline" | "secondary" | "destructive" {
   if (row.appliedOutcome === "external_or_missing") return "secondary"
-  if (row.notApplicableStages.length > 0) return "destructive"
+  if (row.sourceTerminal) return "destructive"
   return "outline"
 }
 
@@ -91,7 +91,7 @@ export async function HistoricalPursuitHistoryCard({ repreneurId }: { repreneurI
         <CardContent>
           <Alert variant="destructive">
             <History />
-            <AlertTitle>Historical history is not available</AlertTitle>
+            <AlertTitle>Historical deal history is not available</AlertTitle>
             <AlertDescription>
               The staff-only historical record could not be loaded. Existing opportunity matches are unaffected.
             </AlertDescription>
