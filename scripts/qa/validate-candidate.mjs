@@ -50,7 +50,7 @@ try {
     candidateSha,
   })
   const result = assertCandidatePointer({ repository, candidateBranch, candidateSha, branchHeadSha: branch.commit?.sha })
-  await validateCandidateContractAdmission({
+  const admission = await validateCandidateContractAdmission({
     eventName: process.env.GITHUB_EVENT_NAME,
     trustedRoot: process.cwd(),
     candidateRoot: process.env.QA_CANDIDATE_ROOT,
@@ -61,7 +61,10 @@ try {
     },
   })
   if (process.env.GITHUB_OUTPUT) {
-    await appendFile(process.env.GITHUB_OUTPUT, `candidate_sha=${result.candidateSha}\ncandidate_branch=${result.candidateBranch}\n`)
+    await appendFile(
+      process.env.GITHUB_OUTPUT,
+      `candidate_sha=${result.candidateSha}\ncandidate_branch=${result.candidateBranch}\nreviewed_schema_transition=${admission.admission === "reviewed-schema-change"}\n`,
+    )
   }
   console.log(JSON.stringify({ ok: true, ...result }))
 } catch (error) {

@@ -11,11 +11,16 @@ function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex")
 }
 
-async function writeContractRoot(root: string, sql: string) {
+async function writeContractRoot(
+  root: string,
+  sql: string,
+  version = "test-contract-v1",
+  structureFingerprint = "b".repeat(64),
+) {
   const sqlPath = "supabase/schema/example.sql"
   const contract = `${JSON.stringify({
-    version: "test-contract-v1",
-    structureFingerprint: "b".repeat(64),
+    version,
+    structureFingerprint,
     files: [{ path: sqlPath, sha256: sha256(sql) }],
   }, null, 2)}\n`
   await mkdir(join(root, "supabase/schema"), { recursive: true })
@@ -24,18 +29,26 @@ async function writeContractRoot(root: string, sql: string) {
   return { contract, contractSha256: sha256(contract) }
 }
 
-async function roots(candidateSql = "select 1;\n") {
+async function roots({
+  candidateSql = "select 1;\n",
+  candidateVersion = "test-contract-v1",
+  candidateFingerprint = "b".repeat(64),
+}: {
+  candidateSql?: string
+  candidateVersion?: string
+  candidateFingerprint?: string
+} = {}) {
   const root = await mkdtemp(join(tmpdir(), "renew-qa-admission-"))
   const trustedRoot = join(root, "trusted")
   const candidateRoot = join(root, "candidate")
   const trusted = await writeContractRoot(trustedRoot, "select 1;\n")
-  const candidate = await writeContractRoot(candidateRoot, candidateSql)
+  const candidate = await writeContractRoot(candidateRoot, candidateSql, candidateVersion, candidateFingerprint)
   return { trustedRoot, candidateRoot, trusted, candidate }
 }
 
 describe("QA candidate database contract admission", () => {
   it("refuses changed candidate SQL during automatic workflow admission", async () => {
-    const input = await roots("select 2;\n")
+    const input = await roots({ candidateSql: "select 2;\n" })
     await expect(validateCandidateContractAdmission({
       eventName: "workflow_run",
       trustedRoot: input.trustedRoot,
@@ -44,7 +57,7 @@ describe("QA candidate database contract admission", () => {
   })
 
   it("refuses missing or incorrect reviewed-dispatch contract hashes", async () => {
-    const input = await roots("select 2;\n")
+    const input = await roots({ candidateSql: "select 2;\n" })
     const base = {
       eventName: "repository_dispatch",
       trustedRoot: input.trustedRoot,
@@ -58,8 +71,39 @@ describe("QA candidate database contract admission", () => {
     })).rejects.toThrow("QA candidate contract failed: dispatch-contract-sha256")
   })
 
-  it("accepts an exact explicitly reviewed dispatch and verifies listed SQL", async () => {
-    const input = await roots("select 2;\n")
+  it("refuses an unreviewed dispatch even when its contract digest is exact", async () => {
+    const input = await roots({ candidateSql: "select 2;\n" })
+    await expect(validateCandidateContractAdmission({
+      eventName: "repository_dispatch",
+      trustedRoot: input.trustedRoot,
+      candidateRoot: input.candidateRoot,
+      dispatch: {
+        schemaReviewed: false,
+        schemaReviewVersion: REVIEW_VERSION,
+        contractSha256: input.candidate.contractSha256,
+      },
+    })).rejects.toThrow("QA candidate contract failed: dispatch-schema-review")
+  })
+
+  it("rejects an explicitly reviewed dispatch identical to trusted main", async () => {
+    const input = await roots()
+    await expect(validateCandidateContractAdmission({
+      eventName: "repository_dispatch",
+      trustedRoot: input.trustedRoot,
+      candidateRoot: input.candidateRoot,
+      dispatch: {
+        schemaReviewed: true,
+        schemaReviewVersion: REVIEW_VERSION,
+        contractSha256: input.candidate.contractSha256,
+      },
+    })).rejects.toThrow("QA candidate contract failed: dispatch-no-schema-change")
+  })
+
+  it("accepts an exact explicitly reviewed v3 contract delta with identical listed SQL", async () => {
+    const input = await roots({
+      candidateVersion: "771-permanent-qa-v3",
+      candidateFingerprint: "c".repeat(64),
+    })
     await expect(validateCandidateContractAdmission({
       eventName: "repository_dispatch",
       trustedRoot: input.trustedRoot,
