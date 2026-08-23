@@ -31,7 +31,7 @@ describe("permanent QA lane contract", () => {
 
     expect(contract).toEqual({
       version: "822-m2-portal-deals-v1",
-      structureFingerprint: "6410f2a03d463dbf3314cd30974238bb27f8828d3dcb871caaf0e29f24637d1a",
+      structureFingerprint: "bd868fb2462e5036bfecacad88f407de98c9db0968704f712c3c16d653f4525d",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
@@ -274,6 +274,13 @@ describe("permanent QA lane contract", () => {
     expect(source).toContain("CASE WHEN roles IS NULL THEN 'null'")
   })
 
+  it("normalizes the catalog search path inside the fingerprint statement", () => {
+    const source = readFileSync(`${process.cwd()}/lib/qa/structure-fingerprint.mjs`, "utf8")
+
+    expect(source).toContain("set_config('search_path', 'pg_catalog, public, qa_control, extensions', true)")
+    expect(source.match(/FROM fingerprint_settings/g)).toHaveLength(10)
+  })
+
   it("uses a locale-independent comparator for quoted mixed-case identities", () => {
     const rows = [
       { kind: "policy", identity: 'public."Alpha":StaffOnly', definition: 'PERMISSIVE|["Staff","analyst"]|SELECT|true|' },
@@ -373,6 +380,8 @@ describe("permanent QA lane contract", () => {
     expect(sync).toContain("ON_ERROR_STOP")
     expect(sync).toContain("blocked_reason")
     expect(sync).toContain("structure fingerprint")
+    expect(sync).toContain("expectedStructureFingerprint")
+    expect(sync).toContain("actualStructureFingerprint")
     expect(sync).not.toContain("qa-branch.json")
     expect(sync).not.toContain("validateBranchReconstructionEvidence")
     expect(sync).toContain("contract.files.map")

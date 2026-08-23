@@ -178,6 +178,7 @@ try {
     await assertAppliedLedger(database, contract)
     if (liveAfter !== contract.structureFingerprint) {
       await database.query("UPDATE qa_control.schema_state SET structure_fingerprint=$1, blocked_reason=$2, updated_at=now() WHERE singleton=true", [liveAfter, "structure fingerprint mismatch"])
+      console.error(JSON.stringify({ expectedStructureFingerprint: contract.structureFingerprint, actualStructureFingerprint: liveAfter }))
       fail("structure fingerprint")
     }
     await database.query("UPDATE qa_control.schema_state SET contract_version=$1, structure_fingerprint=$2, blocked_reason=NULL, updated_at=now() WHERE singleton=true", [contract.version, liveAfter])

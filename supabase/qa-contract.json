@@ -1,6 +1,6 @@
 {
   "version": "822-m2-portal-deals-v1",
-  "structureFingerprint": "6410f2a03d463dbf3314cd30974238bb27f8828d3dcb871caaf0e29f24637d1a",
+  "structureFingerprint": "bd868fb2462e5036bfecacad88f407de98c9db0968704f712c3c16d653f4525d",
   "files": [
     {
       "path": "supabase/schema/771_extensions.sql",
