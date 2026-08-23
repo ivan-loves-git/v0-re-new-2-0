@@ -52,8 +52,9 @@ describe("W-112 historical pursuit import candidate", () => {
 
   it("preseeds exactly the reviewed bindings and recomputes their approval digest", () => {
     expect(migration).toContain("historical_pursuit_import_approval_digest")
-    expect(migration).toContain("regexp_split_to_table($historical_pursuit_bindings$")
-    expect((migration.match(/^[0-9]+\|[0-9a-f]{64}\|[0-9a-f]{64}$/gm) ?? [])).toHaveLength(60)
+    expect(migration).toContain("regexp_split_to_table($historical_pursuit_source_bindings$")
+    expect(migration).not.toContain("historical_pursuit_import_allowlist")
+    expect((migration.match(/^[0-9]+\|[0-9a-f]{64}\|[0-9a-f]{64}\|[0-9a-f]{64}$/gm) ?? [])).toHaveLength(60)
     expect(migration).not.toContain("stage_historical_pursuit_import_allowlist")
     expect(runner).not.toContain("stage_historical_pursuit_import_allowlist")
     expect(runner).toContain("sourcePayloadDigest")
