@@ -30,39 +30,34 @@ const OPPORTUNITY_ID = "opportunity-001";
 const REPRENEUR_ID = "repreneur-001";
 
 function mockSuccessfulInterestUpdates(
-  statuses: Array<"proposed" | "interested">,
+  statuses: Array<"proposed" | "interested" | "declined" | "dropped">,
 ) {
   const maybeSingle = vi.fn();
   for (const status of statuses) {
     maybeSingle.mockResolvedValueOnce({
-      data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: "active" } },
+      data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: "active", is_demo: false } },
       error: null,
     });
   }
 
-  const selectForRepreneur = vi.fn(() => ({ maybeSingle }));
+  const selectForDemo = vi.fn(() => ({ maybeSingle }));
+  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemo }));
   const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }));
   const select = vi.fn(() => ({ eq: selectForMatch }));
 
-  const updateForRepreneur = vi.fn().mockResolvedValue({ error: null });
-  const updateForMatch = vi.fn(() => ({ eq: updateForRepreneur }));
-  const update = vi.fn(() => ({ eq: updateForMatch }));
-
-  let fromCall = 0;
-  const from = vi.fn(() => {
-    fromCall += 1;
-    return fromCall % 2 === 1 ? { select } : { update };
+  const from = vi.fn(() => ({ select }));
+  const rpc = vi.fn().mockResolvedValue({
+    data: [{ match_id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status: "interested" }],
+    error: null,
   });
 
-  mocks.createAdminClient.mockReturnValue({ from });
+  mocks.createAdminClient.mockReturnValue({ from, rpc });
 
   return {
     from,
     selectForMatch,
     selectForRepreneur,
-    update,
-    updateForMatch,
-    updateForRepreneur,
+    rpc,
   };
 }
 
@@ -77,42 +72,26 @@ describe("repreneur opportunity interest response", () => {
       from,
       selectForMatch,
       selectForRepreneur,
-      update,
-      updateForMatch,
-      updateForRepreneur,
+      rpc,
     } = mockSuccessfulInterestUpdates(["proposed", "interested"]);
 
     await markMyOpportunityInterested(MATCH_ID);
     await markMyOpportunityInterested(MATCH_ID);
 
-    const expectedUpdate = {
-      status: "interested",
-      decline_reason_categories: [],
-      decline_reason_text: null,
-      reviewed_by: null,
-      reviewed_at: null,
+    const expectedRpc = {
+      p_match_id: MATCH_ID,
+      p_repreneur_id: REPRENEUR_ID,
+      p_status: "interested",
+      p_decline_reason_categories: [],
+      p_decline_reason_text: null,
     };
 
-    expect(from).toHaveBeenCalledTimes(4);
+    expect(from).toHaveBeenCalledTimes(2);
     expect(from).toHaveBeenNthCalledWith(1, "opportunity_matches");
     expect(from).toHaveBeenNthCalledWith(2, "opportunity_matches");
-    expect(from).toHaveBeenNthCalledWith(3, "opportunity_matches");
-    expect(from).toHaveBeenNthCalledWith(4, "opportunity_matches");
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(update).toHaveBeenNthCalledWith(1, expectedUpdate);
-    expect(update).toHaveBeenNthCalledWith(2, expectedUpdate);
-    expect(updateForMatch).toHaveBeenNthCalledWith(1, "id", MATCH_ID);
-    expect(updateForMatch).toHaveBeenNthCalledWith(2, "id", MATCH_ID);
-    expect(updateForRepreneur).toHaveBeenNthCalledWith(
-      1,
-      "repreneur_id",
-      REPRENEUR_ID,
-    );
-    expect(updateForRepreneur).toHaveBeenNthCalledWith(
-      2,
-      "repreneur_id",
-      REPRENEUR_ID,
-    );
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenNthCalledWith(1, "update_repreneur_opportunity_response", expectedRpc);
+    expect(rpc).toHaveBeenNthCalledWith(2, "update_repreneur_opportunity_response", expectedRpc);
     expect(selectForMatch).toHaveBeenNthCalledWith(1, "id", MATCH_ID);
     expect(selectForMatch).toHaveBeenNthCalledWith(2, "id", MATCH_ID);
     expect(selectForRepreneur).toHaveBeenNthCalledWith(
@@ -133,6 +112,43 @@ describe("repreneur opportunity interest response", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       `/opportunities/${OPPORTUNITY_ID}`,
     );
+  });
+
+  it.each(["declined", "dropped"] as const)("reconsiders an owned %s match through the atomic interest boundary", async (status) => {
+    const { rpc } = mockSuccessfulInterestUpdates([status]);
+
+    await markMyOpportunityInterested(MATCH_ID);
+
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("express_opportunity_interest", {
+      p_opportunity_id: OPPORTUNITY_ID,
+      p_repreneur_id: REPRENEUR_ID,
+      p_actor_id: "",
+    });
+    expect(mocks.redirect).toHaveBeenCalledWith("/portal/deals");
+  });
+
+  it("blocks a DEMO-classified opportunity before the response RPC", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: MATCH_ID,
+        opportunity_id: OPPORTUNITY_ID,
+        status: "proposed",
+        opportunity: { status: "active", is_demo: true },
+      },
+      error: null,
+    });
+    const eqForDemo = vi.fn(() => ({ maybeSingle }));
+    const eqForRepreneur = vi.fn(() => ({ eq: eqForDemo }));
+    const eqForMatch = vi.fn(() => ({ eq: eqForRepreneur }));
+    const select = vi.fn(() => ({ eq: eqForMatch }));
+    const rpc = vi.fn();
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => ({ select })), rpc });
+
+    await expect(markMyOpportunityInterested(MATCH_ID)).rejects.toThrow(
+      "This opportunity is no longer available for your response.",
+    );
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("does not create a database client when the session lacks a linked repreneur", async () => {

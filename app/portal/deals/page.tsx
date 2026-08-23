@@ -17,8 +17,7 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
   await connection()
   const params = await searchParams
   const sort = parseRepreneurDealSort(params.sort)
-  const { repreneur, staffRecommended, dealFlow, automaticMatching } = await listMyRepreneurDealFlow(sort)
-  const opportunities = [...staffRecommended, ...dealFlow]
+  const { repreneur, deals, automaticMatching } = await listMyRepreneurDealFlow(sort)
 
   return (
     <div className="flex flex-col gap-6">
@@ -46,7 +45,7 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
         ) : null}
         <RepreneurOpportunityList
           repreneur={repreneur}
-          opportunities={opportunities}
+          opportunities={deals}
         />
       </section>
     </div>

@@ -34,10 +34,14 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).not.toContain("reference_code='QA'")
   })
 
-  it("collects every exact run-scoped P3 retry and remains idempotent after deletion", () => {
+  it("collects every exact run-scoped P3 retry and manifest-persisted Deals fixture before deletion", () => {
     const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
     expect(script).toContain("public_title=$1 AND created_by=$2")
-    expect(script).toContain("scopedOpportunities.rows.length > 2")
+    expect(script).toContain("runtime.p3DealIds")
+    expect(script).toContain("recorded-deal-ownership")
+    expect(script).toContain("recorded-match-ownership")
+    expect(script).toContain("row.id === manifest.ids.lockedRepreneur")
+    expect(script).toContain("scopedOpportunities.rows.length > 3")
     expect(script).toContain("WHERE opportunity_id = ANY($1::uuid[])")
     expect(script).not.toContain("opportunity-ledger-mismatch")
     expect(script).not.toContain("match-ledger-mismatch")
