@@ -48,9 +48,10 @@ Approved architecture:
 7. Wait for provider capacity (do not guess a quota-reset minute; read the live provider response).
 8. Merge the corrected controller through an explicitly documented bootstrap.
 9. Re-enable the corrected Golden Journeys workflow.
-10. Run one exact-SHA canary and protected P1–P3.
-11. Prove one QA validation deployment and no additional product deployment caused by that admission.
-12. Keep cumulative product PR #27 parked until the controller canary and daily health both pass.
+10. Run QA daily health on current `main` and require success before ordinary Golden Journeys admission.
+11. Run one exact-SHA Golden Journeys canary and protected P1–P3.
+12. Prove one QA validation deployment and no additional product deployment caused by that admission.
+13. Keep cumulative product PR #27 parked until the controller canary and daily health both pass.
 
 Cutover proof required before declaring the repair done:
 

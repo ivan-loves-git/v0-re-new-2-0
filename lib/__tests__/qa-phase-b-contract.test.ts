@@ -71,7 +71,7 @@ describe("Phase B QA contracts", () => {
         },
         vercel: {
           projectName: "renew-overnight-validation-20260820",
-          target: "preview",
+          target: null,
           origin: ORIGIN,
           deploymentSha: SHA,
           protection: { unauthenticatedBlocked: true, authorizedStatus: 200 },
@@ -93,7 +93,7 @@ describe("Phase B QA contracts", () => {
         customerRows: 0, applicationRows: 0, betterAuthUsers: 0, supabaseAuthUsers: 0, storageObjects: 0,
       },
       vercel: {
-        projectName: "renew-overnight-validation-20260820", target: "preview", origin: ORIGIN,
+        projectName: "renew-overnight-validation-20260820", target: null, origin: ORIGIN,
         deploymentSha: SHA, protection: { unauthenticatedBlocked: true, authorizedStatus: 200 },
         aliases: [new URL(ORIGIN).hostname], productionEnvironmentAttached: false,
       },

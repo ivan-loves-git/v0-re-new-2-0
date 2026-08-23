@@ -146,7 +146,7 @@ try {
     candidateSha: expectedSha,
     candidateBranch,
     readyState: "READY",
-    target: "preview",
+    target: ready.target,
     projectId: ready.projectId,
     alias: alias.alias,
     aliasServedSha: servedSha,
