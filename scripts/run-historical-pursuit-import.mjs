@@ -57,10 +57,23 @@ if (manifestDigest !== "b25008e1dfcc7c9e8f21f0f2aad5d757e54ed508243a89595fd5e231
   throw new Error("Historical pursuit parser manifest digest mismatch.");
 }
 function rowFingerprint(row) { return crypto.createHash("sha256").update(JSON.stringify(row)).digest("hex"); }
-function approvalDigest(record, fingerprint) {
-  return crypto.createHash("sha256").update(
-    `fingerprint=${fingerprint}\nrepreneur=${record.buyer?.id ?? "null"}\nopportunity=${record.opportunity?.id ?? "null"}\nblockers=${JSON.stringify(record.blockers)}\nflags=${JSON.stringify(record.reviewFlags)}`,
-  ).digest("hex");
+function lengthPrefixed(value) { return value == null ? "-1:" : `${Buffer.byteLength(value, "utf8")}:${value}`; }
+function canonicalFields(fields) { return fields.map(([key, value]) => `${lengthPrefixed(key)}${lengthPrefixed(value)}`).join(""); }
+function sourcePayloadDigest(row) {
+  const cells = row.sourceCells;
+  return crypto.createHash("sha256").update(canonicalFields([
+    ["repreneur_name", row.repreneurName], ["offer_label", row.offerLabel], ["opportunity_reference", row.opportunityReference],
+    ["completed_source_stages", JSON.stringify(row.completedSourceStages)], ["not_applicable_source_stages", JSON.stringify(row.notApplicableSourceStages)], ["raw_drop_reason", row.dropReason],
+    ["source_cells.interest_confirmed", cells.interest_confirmed], ["source_cells.nda_received", cells.nda_received], ["source_cells.nda_signed", cells.nda_signed],
+    ["source_cells.info_memo_received", cells.info_memo_received], ["source_cells.qa_with_ma_firm", cells.qa_with_ma_firm], ["source_cells.seller_meeting", cells.seller_meeting],
+    ["source_cells.valuation", cells.valuation], ["source_cells.loi_issued", cells.loi_issued], ["source_cells.audits", cells.audits], ["source_cells.financing", cells.financing], ["source_cells.closing", cells.closing],
+  ])).digest("hex");
+}
+function approvalDigest(record, fingerprint, payloadDigest) {
+  return crypto.createHash("sha256").update(canonicalFields([
+    ["fingerprint", fingerprint], ["source_payload_digest", payloadDigest], ["repreneur", record.buyer?.id ?? null],
+    ["opportunity", record.opportunity?.id ?? null], ["blockers", JSON.stringify(record.blockers)], ["flags", JSON.stringify(record.reviewFlags)],
+  ])).digest("hex");
 }
 try {
   await client.connect();
@@ -93,7 +106,7 @@ try {
       [parsed.source.sha256, parsed.source.sheet, record.sourceRow, record.buyer?.id ?? null, record.opportunity?.id ?? null,
         record.historicalProposal.completedSourceStages, record.historicalProposal.notApplicableSourceStages,
         record.historicalProposal.dropReason, true, ACTOR, sourceRow.repreneurName, sourceRow.offerLabel,
-        sourceRow.opportunityReference, rowFingerprint(sourceRow), manifestDigest, record.blockers, record.reviewFlags, sourceRow.sourceCells, approvalDigest(record, rowFingerprint(sourceRow))],
+        sourceRow.opportunityReference, rowFingerprint(sourceRow), manifestDigest, record.blockers, record.reviewFlags, sourceRow.sourceCells, approvalDigest(record, rowFingerprint(sourceRow), sourcePayloadDigest(sourceRow))],
     );
     return result.rows[0].result;
   }

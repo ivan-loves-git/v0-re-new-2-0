@@ -56,7 +56,8 @@ describe("W-112 historical pursuit import candidate", () => {
     expect((migration.match(/^[0-9]+\|[0-9a-f]{64}\|[0-9a-f]{64}$/gm) ?? [])).toHaveLength(60)
     expect(migration).not.toContain("stage_historical_pursuit_import_allowlist")
     expect(runner).not.toContain("stage_historical_pursuit_import_allowlist")
-    expect(runner).toContain("fingerprint=${fingerprint}\\nrepreneur=")
+    expect(runner).toContain("sourcePayloadDigest")
+    expect(runner).toContain("lengthPrefixed")
   })
 
   it("exposes retained history through a server-only staff projection only", () => {
