@@ -2,38 +2,10 @@ import { revalidatePath } from "next/cache"
 import { revalidateOpportunityDashboardTags, revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { calculateDualScore } from "@/lib/utils/scoring-v2"
-import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
+import { refreshStoredRepreneurMatchesWithClient } from "@/lib/repreneur-match-refresh-core"
+import type { StoredRepreneurMatchRefreshResult } from "@/lib/repreneur-match-refresh-core"
+export type { StoredRepreneurMatchRefreshResult } from "@/lib/repreneur-match-refresh-core"
 import type { WhenAnswers, WhoAnswers } from "@/lib/types/scoring-v2"
-
-type RepreneurMatchRecord = {
-  id: string
-  who_score?: number | null
-  when_score?: number | null
-  scoring_flags?: string[] | null
-  q12_geo_zones?: string[] | null
-  q13_target_sectors_v2?: string[] | null
-  q14_deal_size?: string[] | null
-  q16_equity?: string | null
-  sector_preferences?: string[] | null
-  target_location?: string[] | null
-  target_acquisition_size?: string | null
-  investment_capacity?: string | null
-  target_revenue_min_meur?: number | string | null
-  target_revenue_max_meur?: number | string | null
-  target_ebitda_margin_min_pct?: number | string | null
-  target_ebitda_margin_max_pct?: number | string | null
-  target_staff_size_min?: number | string | null
-  target_staff_size_max?: number | string | null
-}
-
-type OpportunityRecord = {
-  sector?: string | null
-  activity?: string | null
-  location?: string | null
-  revenue_meur?: number | string | null
-  ebitda_keur?: number | string | null
-  headcount?: number | string | null
-}
 
 const SCORING_FIELDS = `
   id,
@@ -53,26 +25,6 @@ const SCORING_FIELDS = `
   ldc_url
 `
 
-const MATCHING_FIELDS = `
-  id,
-  who_score,
-  when_score,
-  scoring_flags,
-  q12_geo_zones,
-  q13_target_sectors_v2,
-  q14_deal_size,
-  q16_equity,
-  sector_preferences,
-  target_location,
-  target_acquisition_size,
-  investment_capacity,
-  target_revenue_min_meur,
-  target_revenue_max_meur,
-  target_ebitda_margin_min_pct,
-  target_ebitda_margin_max_pct,
-  target_staff_size_min,
-  target_staff_size_max
-`
 
 function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
@@ -100,62 +52,18 @@ function revalidateRepreneurProfilePaths(repreneurId: string, matchRows: Array<{
  * Recomputes stored platform match data without changing the match workflow,
  * human recommendation, or staff-owned status fields.
  */
-export async function refreshStoredRepreneurMatches(repreneurId: string) {
+export async function refreshStoredRepreneurMatches(
+  repreneurId: string,
+  options: { revalidate?: boolean } = {},
+): Promise<StoredRepreneurMatchRefreshResult> {
   const supabase = createAdminClient()
-  const { data: repreneur, error: repreneurError } = await supabase
-    .from("repreneurs")
-    .select(MATCHING_FIELDS)
-    .eq("id", repreneurId)
-    .maybeSingle()
-
-  if (repreneurError) throw new Error(repreneurError.message)
-  if (!repreneur) return
-
-  const { data: matches, error: matchesError } = await supabase
-    .from("opportunity_matches")
-    .select(`
-      id,
-      opportunity_id,
-      opportunity:opportunities(
-        sector,
-        activity,
-        location,
-        revenue_meur,
-        ebitda_keur,
-        headcount
-      )
-    `)
-    .eq("repreneur_id", repreneurId)
-
-  if (matchesError) throw new Error(matchesError.message)
-
-  const matchRows = (matches ?? []) as Array<{
-    id: string
-    opportunity_id: string
-    opportunity: OpportunityRecord | OpportunityRecord[] | null
-  }>
-
-  await Promise.all(
-    matchRows.map(async (match) => {
-      const opportunity = Array.isArray(match.opportunity) ? match.opportunity[0] : match.opportunity
-      if (!opportunity) return
-
-      const score = calculateOpportunityMatchScore(repreneur as RepreneurMatchRecord, opportunity)
-      const { error } = await supabase
-        .from("opportunity_matches")
-        .update({
-          platform_recommendation: score.recommendation,
-          platform_score: score.score,
-          platform_reasons: score.reasons,
-        })
-        .eq("id", match.id)
-        .eq("repreneur_id", repreneurId)
-
-      if (error) throw new Error(error.message)
-    }),
-  )
-
-  revalidateRepreneurProfilePaths(repreneurId, matchRows)
+  const result = await refreshStoredRepreneurMatchesWithClient(supabase, repreneurId)
+  if (options.revalidate !== false) {
+    const { data: matches, error } = await supabase.from("opportunity_matches").select("id, opportunity_id").eq("repreneur_id", repreneurId)
+    if (error) throw new Error(error.message)
+    revalidateRepreneurProfilePaths(repreneurId, matches ?? [])
+  }
+  return result
 }
 
 /**

@@ -58,8 +58,15 @@ const incompleteProfile = {
 
 const completeProfile = {
   ...incompleteProfile,
+  lifecycle_status: "client",
+  repreneur_offers: [{
+    status: "accepted",
+    offer: { name: "Deal Flow", price: 5000 },
+  }],
   who_score: 72,
   scoring_flags: ["service"],
+  target_revenue_min_meur: 1,
+  target_revenue_max_meur: 3,
 }
 
 const opportunity = {
@@ -76,6 +83,7 @@ const opportunity = {
   revenue_meur: 2,
   ebitda_keur: null,
   headcount: 20,
+  geography_node_id: null,
   headcount_range: "10-49",
   date_added: "2026-08-01",
   date_added_precision: "day",
@@ -134,6 +142,8 @@ describe("incomplete-thesis portal behavior", () => {
         { data: [], error: null },
       ],
       opportunities: [{ data: [opportunity], error: null }],
+      geography_nodes: [{ data: [], error: null }],
+      repreneur_geography_targets: [{ data: [], error: null }],
     })
 
     const result = await listMyRepreneurDealFlow("relevance")

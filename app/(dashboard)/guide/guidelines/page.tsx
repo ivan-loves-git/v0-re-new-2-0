@@ -74,12 +74,11 @@ const opportunityJourney = [
 ]
 
 const platformMatchScoring = [
-  { label: "Repreneur readiness", weight: "25", meaning: "Existing WHEN score: is this person ready to move on deals?" },
-  { label: "Repreneur quality", weight: "20", meaning: "Existing WHO score: is this a strong enough operator profile?" },
-  { label: "Sector fit", weight: "20", meaning: "Opportunity sector or activity versus repreneur target sectors." },
-  { label: "Geography fit", weight: "15", meaning: "Opportunity location versus repreneur geographic preferences." },
-  { label: "Deal size fit", weight: "15", meaning: "Opportunity size versus repreneur target deal size." },
-  { label: "Risk flags", weight: "cap", meaning: "Unclear readiness, missing data, financial mismatch, or scoring flags limit confidence." },
+  { label: "Sector fit", weight: "30", meaning: "Opportunity sector or activity versus the client's target sectors." },
+  { label: "France geography", weight: "25", meaning: "Canonical country, broad area, or region versus the client's target geography." },
+  { label: "Revenue range", weight: "25", meaning: "Opportunity revenue versus the client's minimum and maximum." },
+  { label: "EBITDA margin", weight: "12", meaning: "Calculated opportunity margin versus the client's minimum margin." },
+  { label: "Headcount range", weight: "8", meaning: "Opportunity employees versus the client's minimum and maximum." },
 ]
 
 function Flow({ items }: { items: { label: string; note?: string }[] }) {
@@ -201,9 +200,10 @@ export default function GuidelinesPage() {
             <div className="rounded-md border bg-muted/40 p-4">
               <p className="font-medium">The platform score is rule-based, not manually typed.</p>
               <p className="mt-1 text-muted-foreground">
-                When staff saves a match between one repreneur and one opportunity, Wave calculates the platform
-                recommendation, numeric score, and short reasons from the structured data already stored in the system.
-                Staff judgment stays separate in the human recommendation and notes fields.
+                When staff saves a match between one client and one opportunity, Wave calculates the platform
+                recommendation, numeric score, and five short reasons from the structured data already stored in the
+                system. WHO and WHEN qualify people before they become clients; they do not change a signed client's
+                deal-fit score. Staff judgment stays separate in the human recommendation and notes fields.
               </p>
             </div>
 
@@ -230,11 +230,13 @@ export default function GuidelinesPage() {
                 </div>
               </div>
               <div className="rounded-md border p-4">
-                <p className="font-medium">Confidence caps</p>
+                <p className="font-medium">Placement and review rules</p>
                 <div className="mt-3 space-y-2 text-muted-foreground">
-                  <p>WHEN score below 40 caps the match until readiness improves.</p>
-                  <p>Missing sector, geography, score, or deal-size data limits confidence.</p>
-                  <p>Clear financial mismatch or scoring flags prevent an inflated score.</p>
+                  <p>A known sector mismatch is not a normal recommendation.</p>
+                  <p>A disjoint France geography is kept visible but cannot rank above Weak fit.</p>
+                  <p>Missing or unmapped inputs are marked for staff review rather than guessed.</p>
+                  <p>If a client has no minimum EBITDA margin yet, the provisional score uses 0% and says so; it does not fill in the client's profile.</p>
+                  <p>A staff-pushed opportunity stays visible regardless of the automatic score.</p>
                 </div>
               </div>
             </div>

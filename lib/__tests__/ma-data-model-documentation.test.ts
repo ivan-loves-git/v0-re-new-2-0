@@ -143,9 +143,14 @@ describe("canonical M&A data model documentation", () => {
   })
 
   it("links the authority and disclosure cards from the canonical scope", () => {
-    expect(contract).toContain(
-      "PDR scope | W-001, repreneur action and staff-verified transition authority; W-021, conditional source-identity disclosure",
-    )
+    for (const scopedCard of [
+      "W-001, repreneur action and staff-verified transition authority",
+      "W-008, signed-client Matching v2 financial calibration",
+      "W-021, conditional source-identity disclosure",
+      "W-039, canonical France geography and Matching v2 placement",
+    ]) {
+      expect(contract).toContain(scopedCard)
+    }
   })
 
   it("distinguishes opportunity and pursuit closure authority", () => {

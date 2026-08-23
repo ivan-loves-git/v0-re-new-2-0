@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 23, 2026",
+    version: "0.9.55",
+    title: "Matching 2.0 makes opportunity fit explainable",
+    isCompleted: true,
+    events: [
+      {
+        title: "Client fit now uses the acquisition thesis",
+        type: "feature",
+        description: "For current paid clients, WAVE compares sector, French geography, revenue, EBITDA margin and team size instead of reusing the earlier qualification scores.",
+      },
+      {
+        title: "Incomplete information stays visible",
+        type: "decision",
+        description: "A missing opportunity fact is shown for staff confirmation and cannot become a Strong fit; human recommendations and active pursuits remain authoritative.",
+      },
+      {
+        title: "The first calibration is intentionally provisional",
+        type: "learning",
+        description: "Weights and tolerances live in one named configuration so Bertrand's final parameters and later evidence can refine the numbers without redesigning the matcher.",
+      },
+    ],
+  },
+  {
     period: "Aug 21, 2026",
     version: "0.9.54",
     title: "Production screens and email callbacks now behave deterministically",
