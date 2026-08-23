@@ -57,7 +57,11 @@ if (manifestDigest !== "b25008e1dfcc7c9e8f21f0f2aad5d757e54ed508243a89595fd5e231
   throw new Error("Historical pursuit parser manifest digest mismatch.");
 }
 function rowFingerprint(row) { return crypto.createHash("sha256").update(JSON.stringify(row)).digest("hex"); }
-function approvalDigest(record, fingerprint) { return crypto.createHash("sha256").update(JSON.stringify({ fingerprint, buyerId: record.buyer?.id ?? null, opportunityId: record.opportunity?.id ?? null, blockers: record.blockers, flags: record.reviewFlags })).digest("hex"); }
+function approvalDigest(record, fingerprint) {
+  return crypto.createHash("sha256").update(
+    `fingerprint=${fingerprint}\nrepreneur=${record.buyer?.id ?? "null"}\nopportunity=${record.opportunity?.id ?? "null"}\nblockers=${JSON.stringify(record.blockers)}\nflags=${JSON.stringify(record.reviewFlags)}`,
+  ).digest("hex");
+}
 try {
   await client.connect();
   const manifest = reconcileHistoricalPursuits(parsed, await snapshot(client));
@@ -72,15 +76,13 @@ try {
     if (approved.source?.sha256 !== parsed.source.sha256 || approved.manifestDigest !== manifestDigest || JSON.stringify(approved.records) !== JSON.stringify(manifest.records)) throw new Error("Approved manifest does not bind this exact workbook and live resolution.");
   }
   await client.query("BEGIN");
+  await client.query("SET LOCAL lock_timeout = '3s'");
+  await client.query("SET LOCAL statement_timeout = '30s'");
   if (config.mode === "rehearse") {
     await client.query(fs.readFileSync(path.join(directory, "112_historical_pursuit_ledger.sql"), "utf8"));
   } else {
     const exists = await client.query("SELECT to_regprocedure('public.apply_historical_pursuit_import_row(text,text,integer,uuid,uuid,text[],text[],text,boolean,text,text,text,text,text,text,text[],text[],jsonb,text)') AS fn");
     if (!exists.rows[0]?.fn) throw new Error("Reviewed migration 112 must be applied before --apply.");
-  }
-  for (const record of manifest.records) {
-    const row = parsed.rows.find((item) => item.sourceRow === record.sourceRow);
-    await client.query("SELECT public.stage_historical_pursuit_import_allowlist($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [parsed.source.sha256, parsed.source.sheet, record.sourceRow, manifestDigest, approvalDigest(record, rowFingerprint(row)), rowFingerprint(row), record.buyer?.id ?? null, record.opportunity?.id ?? null, record.blockers, record.reviewFlags]);
   }
   async function invoke(record) {
     if (!record.buyer && record.opportunity) throw new Error(`Source row ${record.sourceRow} has no exact repreneur.`);
