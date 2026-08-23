@@ -1,168 +1,173 @@
-# Re-New Testing and Release Protocol
+# Re-New Development and Release Operating Model
 
-**Status:** Approved direction for Phase 1.1
-**Decision:** Same Supabase project selected - controlled additive testing.
-**Owner:** Ivan approves product risk. Codex/Claude execute technical setup and testing.
-**Purpose:** Prevent Re-New from mixing product development, database changes, and release decisions in the same informal step.
+**Status:** Canonical technical operating contract
 
-## Simple Mental Model
+**Owner:** Codex owns delivery; Ivan owns product intent and the decisions reserved below.
 
-The product has three different things:
+**Purpose:** Make development feel like “built, tested, released” or “blocked for one clear reason” while keeping scope, code, evidence, environments, and authority distinct.
 
-1. **Code**: screens, logic, routes, and components. GitHub can roll this back.
-2. **Database**: real records and table structure. Supabase backup/restore or rollback SQL protects this.
-3. **Release**: the moment a tested branch becomes part of the app people use.
+## One accountable owner
 
-Worktrees are for code isolation. They do not automatically isolate the database.
+Ivan speaks primarily with Codex. Codex owns the path from a rough request to a verified release:
 
-## Locked Environment Policy
+1. Understand the non-developer request and inspect current facts.
+2. Clarify only ambiguity that materially changes behaviour, risk, cost, authority, or an irreversible action.
+3. Translate the intent into a developer-grade specification. Before changing product behaviour, record the approved scope and acceptance criteria in the current PDR Work Card; the specification remains subordinate to that card.
+4. Keep the implementation aligned with the PDR and the relevant canonical contract.
+5. Implement once on an isolated development branch.
+6. Classify risk and run proportional checks and QA.
+7. Review the evidence, publish when authorised, and verify production.
+8. Report one integrated result in plain language.
 
-### Selected Path: Same Supabase Project, Controlled Migration
+Codex remains accountable when it uses temporary reviewers, subagents, humans, or external coding tools. These are bounded tools, not parallel project managers. They return a completion packet and terminate; their live conversations are not project state.
 
-Use the current Re-New Supabase project for Phase 1.1 because creating another Supabase project would add cost.
+Do not create a second tracker, duplicate backlog, permanent supervisor agent, AI-to-AI messaging loop, or competing status vocabulary.
 
-**Rules**
-- Phase 1.1 is treated as a controlled production-style migration, not a disposable sandbox.
-- Only the reviewed additive Phase 1 migrations may be applied: `scripts/044_create_opportunities_foundation.sql` plus the opportunity document storage bucket setup from `scripts/045_setup_opportunity_documents_storage.sql`.
-- No destructive SQL is allowed in Phase 1.1: no dropping existing tables, dropping existing columns, or deleting existing non-UAT data.
-- Before migration, the target Supabase project URL/ref must be confirmed and recorded without secrets.
-- Before migration, the available backup route must be confirmed. If no dashboard backup is available, create a manual logical dump with Supabase CLI/connection string where possible, or record the accepted risk before proceeding.
-- UAT data must be clearly marked with `UAT-` references and/or `imported_from = 'phase-1.1-uat'`.
-- UAT cleanup must be planned before fake records are created.
-- The worktree `.env.local` may point to the current Supabase project only because Ivan explicitly approved this on 2026-05-17.
-- Real secrets stay local and are never committed.
-- Phase 2 remains blocked until Phase 1.1 migration, UAT, and cleanup/release notes are complete.
+## Sources of truth
 
-**Why this path**
-- It avoids paying for another Supabase project.
-- It keeps the process simple enough to execute now.
-- The Phase 1 migrations are additive, so the risk is lower than a destructive schema change.
-- It still creates a professional release habit before Phase 2 adds repreneur-facing workflow.
+Keep each concern in its proper system:
 
-**Known tradeoff**
-- This is not a true isolated test environment.
-- GitHub cannot undo database changes.
-- Backup/rollback and UAT cleanup matter more because the current/shared database is involved.
+| Concern | Source of truth | What it proves |
+| --- | --- | --- |
+| Approved product scope and status | Live WAVE Strategic PDR | Acceptance criteria, dependencies, owners, decisions, and product status |
+| Durable business, data, permission, and lifecycle rules | Relevant canonical contract, including `docs/data-models/ma-advisory-data-model-v1.md` | The meaning the implementation must preserve |
+| Implementation candidate | Exact GitHub branch, commit, and pull-request diff | The code proposed for release |
+| Automated verification | CI results for the exact commit | The checks that ran and their result |
+| Candidate behaviour | Exact-candidate QA deployment plus browser, persistence, read-back, and cleanup evidence | What the candidate did in the isolated environment |
+| Deployed environment | Vercel and Supabase state | Which code and data environment are actually present |
+| Released user behaviour | Production deployment identity plus live browser proof | What users can use now |
 
-## Rejected Paths For Phase 1.1
+One layer never substitutes for another. A PDR approval is not implementation proof; green tests are not browser proof; a Ready deployment is not behaviour proof; an agent message is not merge proof; and a QA failure must be attributed to the product, test, data, controller, or provider layer before drawing a product conclusion.
 
-### Separate Supabase Test Project
+The PDR remains the only current backlog and product-status surface. GitHub and QA retain technical evidence; do not copy their internal run-by-run state into a parallel tracker.
 
-This is the cleanest professional setup, but it currently adds Supabase cost. We are not using it for Phase 1.1.
+## Development and release ladder
 
-### Local Docker Supabase
+All production code is written once:
 
-This avoids touching the shared database, but it adds technical setup complexity. Ivan rejected this as overcomplicated for now.
+1. Start from current `origin/main` in a clean isolated branch or worktree. Preserve dirty or unrelated worktrees.
+2. Implement the approved behaviour once.
+3. Run focused local checks, then CI for the exact candidate.
+4. When its risk tier requires it, deliberately admit that exact candidate to the isolated QA environment. Random branch pushes must not enter QA automatically.
+5. Use QA-only synthetic fixtures, verify persisted results where applicable, and prove cleanup and zero residue.
+6. Review the exact diff and evidence. Do not rebuild a different QA or production version.
+7. Merge the same approved code into `main` when release authority exists.
+8. Allow the normal production deployment and verify its exact main SHA.
+9. Prove the changed live journey in a production browser, within safe production-data boundaries.
 
-### Local UI Only
+QA holds the latest candidate deliberately admitted for testing, not every branch. Production must not receive a significant feature before required QA, except for a documented emergency incident decision with explicit authority and a rollback path.
 
-This is useful for quick visual checks, but it is not enough because Phase 1 depends on database migrations, import, and document storage.
+Branch protection remains enabled. Any temporary exception must be explicitly authorised, limited to the named requirement and exact commit, restored immediately after the operation, and read back before proceeding.
 
-## Roles
+## Proportional QA
 
-**Ivan**
-- Chooses the environment risk level.
-- Tests whether the workflow makes product sense.
-- Approves push/PR/merge/release.
+Classify the highest consequence introduced by the change. Use the permanent core regression journeys for code releases, then add only the feature-specific evidence required by that tier.
 
-**Codex/Claude**
-- Prepare the worktree.
-- Apply migrations only to the approved environment.
-- Create fake test data.
-- Run checks and document results.
-- Fix issues in the worktree branch.
+### Tier 0 — no runtime code
 
-**Team / Bertrand**
-- Validates whether the fields, import behavior, and scope boundaries match operational reality.
+Examples: strategy, communication, PDR wording, and internal documentation.
 
-## Phase 1 UAT Checklist
+Required: review the changed document and its authority links. No software QA or production deployment proof is required solely for the document change.
 
-### Opportunity Management
+### Tier 1 — low-risk presentation
 
-- Create an opportunity manually.
-- Edit all locked June fields: reference, source, location, sector, description, revenue, EBITDA, headcount, date added.
-- Archive an opportunity.
-- Confirm opportunity status and visibility badges are understandable.
+Examples: copy, labels, colour, spacing, or an isolated harmless layout.
 
-### Staff-Only vs Repreneur-Visible
+Required: a focused test or contract check where relevant; typecheck, lint, design check, and build as appropriate; and an automated preview or lightweight visual check. Do not create an elaborate synthetic-data programme unless behaviour is affected.
 
-- Confirm M&A source/contact appears only in the staff-only area.
-- Confirm repreneur-visible section uses public title/anonymized description.
-- Confirm no source details leak into repreneur-visible content.
+### Tier 2 — behavioural product change
 
-### Import Review
+Examples: bug fixes, forms, navigation, new user actions, and state transitions.
 
-- Export a small sample from Bertrand's workbook as CSV or TSV.
-- Preview import rows.
-- Confirm valid rows, warnings, and blockers are visible.
-- Commit only approved valid rows.
+Required: focused automated tests; exact-candidate QA deployment; the relevant browser journey; persistence/read-back proof for writes; and cleanup proof.
 
-### Documents
+### Tier 3 — high-consequence change
 
-- Attach one teaser/PDF to an opportunity.
-- Confirm the default visibility is staff-only.
-- Change visibility to approved for repreneur.
-- Remove a document.
+Examples: authentication, authorization, confidentiality, visibility, data models, migrations, destructive actions, lifecycle rules, and production data operations.
 
-### Scope Boundaries
+Required: the full QA environment; synthetic fixtures; direct-URL and role-boundary tests; persistence and cleanup invariants; independent review; a rollback plan; and separate explicit authority for any production migration, backfill, or other production-data mutation.
 
-- Confirm no automatic PDF parsing exists.
-- Confirm no full M&A CRM exists.
-- Confirm no AI matching exists in Phase 1.
-- Confirm no repreneur portal exposure exists yet.
+Do not inflate a low-risk UI edit into a high-risk release programme. Do not reduce a high-consequence change to unit tests.
 
-## Release Decision Gates
+## Release authority and hard boundaries
 
-### Gate 1: Test Environment Ready
+A request to build authorises scoped branch implementation, normal verification, and a reviewed candidate. Publication to `main` and production requires explicit publication authority, unless Ivan has already granted a clearly scoped release window. During such a window, do not repeatedly ask for the same approval; apply it only to candidates that are independently ready and within the stated scope.
 
-Pass when:
-- Ivan's same-project approval is recorded.
-- Target Supabase URL/ref is confirmed as the intended current Re-New project.
-- Backup/rollback route is recorded before migration.
-- `scripts/044_create_opportunities_foundation.sql` is applied to the approved Supabase project.
-- The private `opportunity-documents` storage bucket exists in the approved Supabase project.
-- Any `storage.objects` policy limitation is documented; Phase 1 server-side document actions must still work.
-- Worktree app can run on `http://localhost:3011` against the approved project.
-- `git status --short` confirms no secrets were committed.
+Publication authority never silently includes:
 
-### Gate 2: UAT Passed
+- production migrations, backfills, destructive changes, or other production-data mutations;
+- credential, access, billing, provider, or security-posture changes;
+- external stakeholder messages; or
+- scope beyond the approved cards or specification.
 
-Pass when:
-- UAT checklist is completed.
-- Issues are classified as blocker, fix-before-merge, or acceptable follow-up.
-- Any blocker is fixed and retested.
-- Fake UAT records are either cleaned up or intentionally kept with `UAT-` labels.
+These require their own explicit authority. A Tier 3 data operation must name the exact manifest or migration, preflight, rollback, and post-operation checks before execution.
 
-### Gate 3: Merge Ready
+## External coding specialists
 
-Pass when:
-- Branch is pushed.
-- PR describes scope and deferred items.
-- Ivan approves merge.
+Codex is the default implementation environment. Cursor, another AI, or a human developer may be recommended only when a package is code-heavy, self-contained, independently testable, and likely to save meaningful capacity without excessive handoff cost.
 
-### Gate 4: Release Ready
+Appropriate packages include one bounded implementation, one reproducible bug, a focused test suite, a mechanical refactor or dependency upgrade, a measurable performance investigation, or an independent read-only review of an exact PR, module, or architecture decision.
 
-Pass when:
-- Production migration order is known and reviewed.
-- Rollback notes exist.
-- Team knows what changed and what did not change.
+Do not delegate overall product ownership, vague strategy, PDR management, product decisions, production publishing, production data, stakeholder communication, agent coordination, or open-ended “improve everything” work. Security delegation is bounded and normally read-only; generic work packets never receive production credentials or live-scanning authority. Architecture review and architecture implementation are separate by default.
 
-## Default Rule
+When Ivan accepts the recommendation, Codex provides one vendor-neutral Markdown work packet with these exact sections:
 
-Do not start Phase 2 product features until Phase 1 has passed the test environment and UAT gate.
+```markdown
+# TASK
+One sentence describing the required outcome.
 
-## What Codex Can Do Without More Product Decisions
+## SOURCE OF TRUTH
+Exact PDR card, specification, contract, baseline SHA, or PR.
 
-- Create/update the GSD plan.
-- Prepare local test configuration templates.
-- Confirm the reviewed migrations are additive.
-- Apply migrations to the approved same Supabase project once the connection path is available.
-- Start the worktree app against the approved project.
-- Run technical checks and record UAT findings.
+## ALLOWED SCOPE
+The precise modules, files, or workflow that may change.
 
-## What Requires Ivan Approval
+## ACCEPTANCE CRITERIA
+Observable conditions proving completion.
 
-- Supplying or approving current Supabase credentials/connection path.
-- Deciding whether UAT findings block merge or become follow-up tasks.
-- Approving push/PR/merge.
-- Approving any later production database migration.
+## FORBIDDEN
+No unrelated refactoring, main merge, production deployment, production data,
+PDR mutation, access changes, or external communication.
+
+## VERIFICATION
+Exact focused tests, typecheck, lint, design check, build, and browser checks.
+
+## RETURN
+Branch, full commit SHA, PR, exact changed files, test evidence, residual risk,
+and unresolved questions.
+
+## STOP
+Stop when the reviewed candidate is ready. Do not publish unless this packet
+explicitly grants publication authority.
+```
+
+The specialist works in one isolated environment and returns one completion packet. GitHub commits, tests, and the final diff are the supervision mechanism. No permanent Codex conversation watches it type. If the provider disappears, the same packet must remain executable without changing the project architecture.
+
+## Temporary reviewers and subagents
+
+Use temporary agents only for concrete, bounded work such as an independent risk review, an exact evidence audit, or a parallel test lane. Codex gives each one a narrow input and receives a finite completion packet. When the packet is integrated or rejected, the agent terminates. No agent owns a second backlog, publishes independently, or becomes a permanent control room.
+
+## QA data, credentials, and infrastructure
+
+- QA uses the isolated validation Vercel project and the isolated QA Supabase environment. Synthetic fixtures must be identifiable, least-privileged, and removed or intentionally retained under an approved invariant.
+- Production personas and real customer or team records are not the primary test harness. Production verification is scoped to safe proof of the released behaviour; any write requires explicit production-data authority.
+- Secret values live only in the approved local secret source, GitHub environment `qa-pilot`, or the appropriate Vercel/Supabase project settings. Never put values in code, tracked documents, PR text, logs, screenshots, agent packets, or chat.
+- Ivan is the access authority. An authorised repository or provider administrator performs storage and rotation; Codex may coordinate and verify names, scopes, expiry, and successful use without revealing values.
+- QA deployment tokens must be least-privileged, scoped to the validation project where the provider supports it, and rotated after exposure, suspected compromise, ownership change, or the agreed expiry. Production credentials are never shared with a generic specialist packet.
+- Provider configuration, branch protection, aliases, and cleanup invariants are verified without exposing values. A successful controller run does not prove the product feature; it proves only the lane used to test it.
+
+Once the core QA lane has one clean end-to-end run and its protection/configuration is restored, it becomes background machinery. Freeze further QA-infrastructure development unless a defect directly blocks a real release or creates a security or data risk.
+
+## Completion and reporting
+
+Before calling a release complete, reconcile the PDR status, exact merged code, required CI/QA evidence, deployed environment identity, and live production proof. Preserve technical details in GitHub and CI.
+
+Default report to Ivan:
+
+- **PRODUCT:** what users can now do.
+- **STATUS:** built, tested, released, or blocked.
+- **EVIDENCE:** one or two plain-language facts.
+- **NEXT:** the next already-authorised PDR or release action, or none.
+- **DECISION NEEDED:** none, or one precise material decision.
+
+PR numbers, SHAs, workflow runs, controller internals, and sanitizer details belong in a compact technical-evidence section only when needed or requested.

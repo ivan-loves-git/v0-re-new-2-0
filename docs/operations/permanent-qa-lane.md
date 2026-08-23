@@ -4,6 +4,8 @@ Owner: Re-New engineering
 Acceptance owner: quality_tester
 Business cost authority: Ivan
 
+Status: **controller installed; end-to-end commissioning blocked at the provider boundary**. Main protection and daily health are green. The 2026-08-23 exact-candidate canary failed before schema or browser work because Vercel rejected the explicit validation deployment with `payment_required`; it created no validation deployment and no QA data. Freeze further controller development. Resume the same lane only when the provider accepts the deployment or Ivan separately approves a plan/cost change. The permanent delivery and QA policy is `docs/TESTING_RELEASE_PROTOCOL.md`; this file is the technical runbook, not a second product tracker.
+
 ## Fixed resources
 
 - Supabase: exactly one persistent Micro branch under production project `iiuqcdnmxhtyispnykgf`; no production data clone and no PR ownership.
@@ -37,7 +39,9 @@ Approved architecture:
 4. Keep database/browser jobs on sanitized provider evidence only.
 5. Resolve daily-health expected SHA from the stable alias, not `origin/qa`.
 
-### Corrected cutover order
+### Corrected cutover order — historical and completed
+
+Steps already evidenced must not be replayed as a new infrastructure programme. Use the Gate 2 packet for the latest checkpoint and resume only the first still-blocked external-provider step.
 
 1. Create and prove an expiring token scoped only to the QA validation project.
 2. Migrate any `qa`-branch Preview environment values on the validation project to ordinary Preview scope.

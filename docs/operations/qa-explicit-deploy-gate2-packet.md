@@ -1,6 +1,14 @@
 # Gate 2 packet — PR #30 QA explicit deploy controller
 
-Status: **provider canary proven; GitHub workflow bootstrap pending**. Vercel cutover steps 1–7 and live deploy canary (step 11 partial) are proven below. Do **not** treat product cards as Done until canary + daily health pass. PR #27 remains parked.
+Status: **controller merged and daily health green; end-to-end canary blocked by the provider**. The earlier cutover evidence below is preserved as history. Do **not** treat product cards as Done until canary + daily health pass. Daily health now passes, but a fresh exact-candidate canary still must complete before the cards are QA-proven.
+
+## 2026-08-23 commissioning checkpoint
+
+- The controller and sanitizer are on protected `main` at `6b751a390d47bb6a434459de9c2832ad83ee1682`; Verify run `32652179891` passed and required checks `Verify` plus `P1-P3 protected pilot` were restored.
+- Exact-main daily health run `32652454345` passed with the QA database, Auth and Storage empty and the lease released.
+- Disposable canary PR #36 at `852867e5df1dcbec3220c6cd5230102657ad24e9` passed both Verify runs. Golden run `32653326797` then failed in the explicit-deploy job with provider category `payment_required` before schema sync, fixtures or browser tests. Validation deployments increased by zero, no attributable product deployment was created, and the finalizer correctly failed the protected check.
+- PR #36 closes unmerged. Product candidates #27 and #31 remain separate and parked pending one complete exact-candidate deployment, P1–P3 browser run, read-back and cleanup proof.
+- This is an external-provider blocker, not product-test evidence and not authority to build another QA controller. Resume the same lane after the provider accepts deployments or after Ivan separately approves any plan or recurring-cost change.
 
 PR: https://github.com/ivan-loves-git/v0-re-new-2-0/pull/30  
 Validation project: `renew-overnight-validation-20260820` / `prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y`  
@@ -8,7 +16,9 @@ Stable alias: `https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-pr
 Product project (must stay Git-connected): `v0-re-new-2-0`  
 Cumulative product PR #27: **parked** until controller canary + daily health both pass.
 
-## Live cutover evidence
+## Historical pre-commissioning cutover evidence
+
+The table below records the earlier bootstrap snapshot. Its `Blocked` and `Pending` cells are superseded by the commissioning checkpoint above and must not be replayed as current instructions.
 
 | Step | Expected proof | Evidence |
 | --- | --- | --- |
@@ -47,7 +57,9 @@ Zero product deployment from this admission:
 Sanitized provider evidence fields recorded at canary time:
 - deploymentId, projectId, projectName, gitRef, candidateSha, target=null, readyState=READY, alias, aliasServedSha, controller=explicit-v1
 
-## Bootstrap unblock (operator)
+## Historical bootstrap instructions — completed, do not execute
+
+This sequence is retained only to explain the original bootstrap. The controller is already on `main`; use the commissioning checkpoint above for current state.
 
 1. **Merge PR #30 to `main` with branch-protection bypass** (required check `P1–P3 protected pilot` cannot exist until the corrected controller runs once on `main`).
 2. Re-enable the corrected Golden Journeys workflow if it was disabled for cutover.

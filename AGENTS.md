@@ -2,52 +2,21 @@
 
 # Re-New Platform Project
 
-## ⚠️ CRITICAL: Codex's Role
+## Codex owns delivery
 
-**Codex is the lead architect and technical guide for this project.**
+Codex is the single accountable development owner. Ivan is the product owner and is not expected to translate requests into developer language, supervise pull requests, follow deployment internals, or coordinate AI tools.
 
-Ivan is a business/product person, NOT a developer. Codex must:
+Codex must understand the request, clarify only material ambiguity, align scope with the PDR and canonical contracts, implement once, apply proportional QA, publish when authorised, verify production, and report the result simply. Do not mark work complete because code exists, tests are green, or a deployment says Ready; prove the layer required by the change.
 
-- **Be proactive**: Don't wait for Ivan to ask - anticipate what's needed
-- **Guide the process**: Tell Ivan what to do next, don't assume he knows
-- **Validate before advancing**: NEVER mark tasks "done" without testing the actual app
-- **Be critical**: Point out problems, risks, and missing pieces early
-- **Explain simply**: No jargon, clear steps, assume zero dev knowledge
-- **Test everything**: Before moving to new features, verify existing ones work
+Temporary reviewers and subagents may perform bounded independent work and return a completion packet. They do not own a second backlog or remain as permanent supervisors. Cursor or any replacement coding provider is optional and may be used only through the bounded specialist contract in `docs/TESTING_RELEASE_PROTOCOL.md`; Codex remains accountable for the final diff, evidence, release, and report.
 
-**Anti-patterns to avoid:**
+## Testing and credentials
 
-- Marking tasks done based on code existing (must test in browser)
-- Assuming Ivan knows dev workflows (npm, env vars, deployment)
-- Moving forward without validating the foundation works
-- **Stopping at the login wall and saying "I don't have credentials"** — see Testing Credentials below.
+The binding QA-to-production ladder, evidence boundaries, risk tiers, release authority, specialist work-packet format, and credential ownership rules are in `docs/TESTING_RELEASE_PROTOCOL.md`. Follow it for every change.
 
-## ⚠️ Testing Credentials (READ BEFORE stopping at any login screen)
+Candidate behaviour is tested in the isolated QA environment with synthetic data when the risk tier requires it. Production is verified only after the exact approved code reaches `main`; real team or customer records are not the primary test harness, and production writes require separate authority.
 
-**Credentials are local secrets.** They live in `.env.local` and the approved
-CI secret store. Never add a password or production login to a tracked file,
-commit message, terminal output, screenshot, or report.
-
-**Production QA personas (owned test accounts):**
-| Coverage | Email variable | Password variable | Expected behavior |
-| --- | --- | --- | --- |
-| Staff/admin access | `QA_STAFF_EMAIL` | `QA_STAFF_PASSWORD` | Routes to `/dashboard_re`; redirects away from `/portal/*`. |
-| Repreneur portal with demo deals | `QA_REPRENEUR_EMAIL` | `QA_REPRENEUR_PASSWORD` | Routes to `/portal/deals`; shows populated proposed and active pursuit cards. |
-| Repreneur portal empty state | `QA_REPRENEUR_EMPTY_EMAIL` | `QA_REPRENEUR_EMPTY_PASSWORD` | Routes to `/portal/deals`; shows the no-opportunities state. |
-| Authenticated but no app role | `QA_UNASSIGNED_EMAIL` | `QA_UNASSIGNED_PASSWORD` | Is rejected by `/routing` and returns to `/auth/login`. |
-
-**Rule:** When verifying any change to this platform, load the relevant local
-environment variables without printing them and click through the actual UI.
-Never stop at the login wall before checking the approved secret source.
-
-**Role QA rule:** Routine regression testing must use the owned QA personas above before touching real team/client accounts. Real accounts such as Bertrand's are for final user confirmation only, not the primary test harness.
-
-**Where to test:**
-
-- Default: production app at `app.re-new.team` via Codex's browser tooling when available. Real data, the live deploy.
-- Fallback: local dev via `preview_*` MCP at `localhost:3000` (run `preview_start renew-dev`). Use only when testing changes that aren't yet deployed.
-
-After Vercel auto-deploys a push to `main` (typically 1–3 min), test on production. The app footer shows the build number — confirm it matches your push (`git rev-list --count HEAD`).
+Credentials are secrets. Load them only from the approved local source, GitHub environment, or provider project settings without printing them. Never put a secret value or bearer URL in a tracked file, commit, pull request, log, screenshot, agent packet, or chat. Do not stop at a login wall before checking the approved secret source, but do not improvise access or ask Ivan to expose credentials in conversation.
 
 ## Project Context
 
@@ -89,12 +58,9 @@ emba--renew-platform/
 
 - **GitHub Repo:** `ivan-loves-git/v0-re-new-2-0`
 - **Production URL:** `app.re-new.team`
-- **Deploy Hook (manual trigger):**
-  ```bash
-  curl -X POST "https://api.vercel.com/v1/integrations/deploy/prj_oCfBq06JCw4KKkPeMGrHX9M7Jt4c/bOKHVh8XZL"
-  ```
+- **Production path:** the reviewed exact candidate merges to `main`, then the Git-connected production project deploys that exact main SHA.
+- **QA path:** only the trusted explicit controller may admit an exact candidate to the isolated validation project. Ordinary branch pushes must not deploy there.
 - **Cron Jobs:** Daily at 9 AM (Hobby plan limits to once/day)
-- **Backup Branch:** `backup/pre-restructure-20260104`
 
 ## Environment Variables (Quick Reference)
 
@@ -110,8 +76,9 @@ Use this order. If two sources disagree, stop and reconcile the higher-authority
 
 1. The live WAVE Strategic PDR at `https://codex-sites-test-flight-20260715.ivanpaudice.chatgpt.site/` is the canonical source for current Goals, Milestones, accepted scope, Work Cards, owners, dependencies, status and stakeholder decisions.
 2. `docs/data-models/ma-advisory-data-model-v1.md` is the canonical released business and data contract for M&A records, confidentiality, visibility and cutover mapping.
-3. This file owns technical, security, QA and release guardrails.
-4. `.planning/`, `TASKS.md`, old PDR drafts, dated backlogs, proposals, launch plans and action plans are historical evidence only. Do not execute or update their old queues unless a current PDR Work Card explicitly cites them as implementation evidence.
+3. `docs/TESTING_RELEASE_PROTOCOL.md` owns the development and release operating model, source-of-truth boundaries, proportional QA tiers, specialist handoff, and release/data authority boundaries.
+4. This file owns repository-specific technical, security and quality guardrails.
+5. `.planning/`, `TASKS.md`, old PDR drafts, dated backlogs, proposals, launch plans and action plans are historical evidence only. Do not execute or update their old queues unless a current PDR Work Card explicitly cites them as implementation evidence.
 
 Notion and Linear are inactive for Re-New product planning. Do not consult, update, mirror to, or link them unless Ivan explicitly reactivates one of them.
 
@@ -165,13 +132,7 @@ Current founder and operator decisions live only in PDR Work Cards or decision i
 
 ## Verification
 
-After code changes:
-
-```bash
-npm run build && npm run lint
-```
-
-Fix root causes, don't suppress errors.
+Classify the change using `docs/TESTING_RELEASE_PROTOCOL.md` and run the evidence required by that risk tier. Tier 0 documentation changes need document and authority-link review, not software QA. Runtime code normally needs focused tests plus `pnpm typecheck`, `pnpm lint`, `pnpm design:check` for UI, and `pnpm build` as appropriate, followed by the exact-candidate QA and production proof required by its tier. Fix root causes; do not suppress failures.
 
 ## Git workflow
 
