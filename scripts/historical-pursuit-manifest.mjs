@@ -135,6 +135,7 @@ export function reconcileHistoricalPursuits(source, snapshot) {
   return {
     manifestVersion: HISTORICAL_PURSUIT_MANIFEST_VERSION,
     source: source.source,
+    manifestDigest: crypto.createHash("sha256").update(JSON.stringify(source.rows)).digest("hex"),
     snapshotDigest: crypto.createHash("sha256").update(JSON.stringify(snapshot)).digest("hex"),
     generatedAt: new Date().toISOString(),
     summary,

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,15 +12,17 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 const ACTOR = "W-112 historical pursuit import";
 
 function options(argv) {
-  const result = { mode: null, envFile: ".env.local", workbook: null };
+  const result = { mode: null, envFile: ".env.local", workbook: null, manifest: null };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--rehearse" || value === "--apply") result.mode = value.slice(2);
     else if (value === "--env-file") { result.envFile = argv[++index]; }
+    else if (value === "--manifest") { result.manifest = argv[++index]; }
     else if (!value.startsWith("--") && !result.workbook) result.workbook = value;
     else throw new Error(`Unknown or repeated option: ${value}`);
   }
   if (!result.workbook || !result.mode) throw new Error("Usage: node scripts/run-historical-pursuit-import.mjs <workbook.xlsx> --rehearse|--apply [--env-file .env.local]");
+  if (result.mode === "apply" && !result.manifest) throw new Error("--apply requires an approved --manifest file.");
   return result;
 }
 
@@ -47,20 +50,49 @@ const env = environment(config.envFile);
 if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required for this staff-only runner.");
 const client = new pg.Client({ connectionString: env.DATABASE_URL });
 const parsed = source(config.workbook);
+const manifestDigest = crypto.createHash("sha256").update(JSON.stringify(parsed.rows)).digest("hex");
+if (manifestDigest !== "b25008e1dfcc7c9e8f21f0f2aad5d757e54ed508243a89595fd5e231feb907b7") {
+  throw new Error("Historical pursuit parser manifest digest mismatch.");
+}
+function rowFingerprint(row) { return crypto.createHash("sha256").update(JSON.stringify(row)).digest("hex"); }
 try {
   await client.connect();
   const manifest = reconcileHistoricalPursuits(parsed, await snapshot(client));
+  if (config.manifest) {
+    const approved = JSON.parse(fs.readFileSync(config.manifest, "utf8"));
+    if (approved.source?.sha256 !== parsed.source.sha256 || approved.manifestDigest !== manifestDigest || JSON.stringify(approved.records) !== JSON.stringify(manifest.records)) throw new Error("Approved manifest does not bind this exact workbook and live resolution.");
+  }
   await client.query("BEGIN");
-  const results = [];
-  for (const record of manifest.records) {
-    if (!record.buyer) throw new Error(`Source row ${record.sourceRow} has no exact repreneur.`);
+  if (config.mode === "rehearse") {
+    await client.query(fs.readFileSync(path.join(directory, "112_historical_pursuit_ledger.sql"), "utf8"));
+  } else {
+    const exists = await client.query("SELECT to_regprocedure('public.apply_historical_pursuit_import_row(text,text,integer,uuid,uuid,text[],text[],text,boolean,text,text,text,text,text,text,text[],text[],jsonb)') AS fn");
+    if (!exists.rows[0]?.fn) throw new Error("Reviewed migration 112 must be applied before --apply.");
+  }
+  async function invoke(record) {
+    if (!record.buyer && record.opportunity) throw new Error(`Source row ${record.sourceRow} has no exact repreneur.`);
+    const sourceRow = parsed.rows.find((row) => row.sourceRow === record.sourceRow);
+    if (!sourceRow) throw new Error(`Parser row ${record.sourceRow} was not found.`);
     const result = await client.query(
-      "SELECT public.apply_historical_pursuit_import_row($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS result",
-      [parsed.source.sha256, parsed.source.sheet, record.sourceRow, record.buyer.id, record.opportunity?.id ?? null,
+      "SELECT public.apply_historical_pursuit_import_row($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) AS result",
+      [parsed.source.sha256, parsed.source.sheet, record.sourceRow, record.buyer?.id ?? null, record.opportunity?.id ?? null,
         record.historicalProposal.completedSourceStages, record.historicalProposal.notApplicableSourceStages,
-        record.historicalProposal.dropReason, true, ACTOR],
+        record.historicalProposal.dropReason, true, ACTOR, sourceRow.repreneurName, sourceRow.offerLabel,
+        sourceRow.opportunityReference, rowFingerprint(sourceRow), manifestDigest, record.blockers, record.reviewFlags, sourceRow.sourceCells],
     );
-    results.push(result.rows[0].result);
+    return result.rows[0].result;
+  }
+  const results = [];
+  for (const record of manifest.records) results.push(await invoke(record));
+  if (config.mode === "rehearse") {
+    const audit = await client.query(`SELECT count(*)::int AS rows, count(*) FILTER (WHERE match_id IS NOT NULL)::int AS linked, count(*) FILTER (WHERE match_id IS NULL)::int AS unlinked, count(*) FILTER (WHERE apply_outcome='created')::int AS created, count(*) FILTER (WHERE apply_outcome='merged')::int AS merged, count(*) FILTER (WHERE source_terminal)::int AS terminal, count(*) FILTER (WHERE apply_outcome='created' AND mapped_match_status NOT IN ('draft','dropped'))::int AS unsafe_created FROM public.historical_pursuit_import_rows`);
+    const proof = audit.rows[0];
+    if (proof.rows !== 60 || proof.linked !== 46 || proof.unlinked !== 14 || proof.created !== 33 || proof.merged !== 13 || proof.terminal !== 27 || proof.unsafe_created !== 0) throw new Error(`Historical pursuit rehearsal assertion failed: ${JSON.stringify(proof)}`);
+    const replay = [];
+    for (const record of manifest.records) replay.push(await invoke(record));
+    if (replay.some((item) => item.outcome !== "replay")) throw new Error("Historical pursuit replay changed a source row.");
+    const postReplay = await client.query("SELECT count(*)::int AS rows FROM public.historical_pursuit_import_rows");
+    if (postReplay.rows[0].rows !== 60) throw new Error("Historical pursuit replay changed ledger row count.");
   }
   if (config.mode === "rehearse") await client.query("ROLLBACK");
   else await client.query("COMMIT");
