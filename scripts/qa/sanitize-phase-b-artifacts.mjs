@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFile as execFileCallback } from "node:child_process"
 import { readdir, readFile, rm, writeFile } from "node:fs/promises"
-import { basename, join } from "node:path"
+import { basename, join, relative, sep } from "node:path"
 import { promisify } from "node:util"
 import { CREDENTIALS_FILE, RUN_DIR, removeRunnerSecrets, writePrivateJson } from "./phase-b-common.mjs"
 
@@ -16,6 +16,53 @@ const sensitiveValues = Object.entries(process.env)
   .map(([, value]) => value)
   .sort((left, right) => right.length - left.length)
 const forbiddenTraceResidue = /(?:https?:\/\/[^\s"']*\?|\b(?:cookie|set-cookie|authorization|password|passwd|token|storage.?state|connection(?:string|uri)|bearer\s+|postgres(?:ql)?:\/\/))/i
+// Diagnostic-only classifiers. Pass/fail always uses forbiddenTraceResidue above; these must not
+// introduce trailing word boundaries or otherwise narrow detection.
+const RESIDUE_RULE_CATEGORIES = Object.freeze([
+  Object.freeze({ category: "url-query", pattern: /https?:\/\/[^\s"']*\?/i }),
+  Object.freeze({ category: "cookie", pattern: /\b(?:cookie|set-cookie)/i }),
+  Object.freeze({ category: "authorization", pattern: /\bauthorization/i }),
+  Object.freeze({ category: "password", pattern: /\b(?:password|passwd)/i }),
+  Object.freeze({ category: "token", pattern: /\btoken/i }),
+  Object.freeze({ category: "storage-state", pattern: /\bstorage.?state/i }),
+  Object.freeze({ category: "connection-string", pattern: /\bconnection(?:string|uri)/i }),
+  Object.freeze({ category: "bearer", pattern: /\bbearer\s+/i }),
+  Object.freeze({ category: "postgres-uri", pattern: /\bpostgres(?:ql)?:\/\//i }),
+])
+const RESIDUE_CATEGORIES = new Set(RESIDUE_RULE_CATEGORIES.map((rule) => rule.category))
+
+function classifyForbiddenResidueCategory(text) {
+  if (!forbiddenTraceResidue.test(text)) return "unknown"
+  for (const rule of RESIDUE_RULE_CATEGORIES) {
+    if (rule.pattern.test(text)) return rule.category
+  }
+  return "unknown"
+}
+
+function safeRelativeRunPath(file) {
+  const relativePath = relative(RUN_DIR, file)
+  if (
+    !relativePath ||
+    relativePath.startsWith(`..${sep}`) ||
+    relativePath === ".." ||
+    relativePath.includes(`..${sep}`) ||
+    relativePath.includes("\0") ||
+    !/^[A-Za-z0-9._/-]+$/.test(relativePath)
+  ) {
+    return "untrusted-path"
+  }
+  return relativePath
+}
+
+function reportUnsafeTextResidue({ file, category }) {
+  const rule = RESIDUE_CATEGORIES.has(category) ? category : "unknown"
+  console.error(JSON.stringify({
+    ok: false,
+    code: "unsafe-text-residue",
+    file: safeRelativeRunPath(file),
+    rule,
+  }))
+}
 
 async function walk(path) {
   const entries = await readdir(path, { withFileTypes: true }).catch(() => [])
@@ -167,8 +214,8 @@ await writePrivateJson(TRACE_SUMMARY_FILE, {
   sessionStateRetained: false,
   htmlReportRetained: false,
   htmlReportRemovalReason: "privacy",
-  playwrightResultsRetained: false,
-  playwrightResultsRemovalReason: "uncurated-reporter-output",
+  playwrightJsonReportRetained: false,
+  playwrightJsonReportRemovalReason: "privacy",
   note: "Raw retry traces, the Playwright HTML report, and uncurated playwright-results.json are deleted; curated clean-run/case/cleanup/empty evidence and the sanitized action timeline are retained.",
 })
 
@@ -176,6 +223,7 @@ for (const file of (await walk(RUN_DIR)).filter((path) => /\.(json|html|txt|trac
   let text = await readFile(file, "utf8")
   text = redactKnownSecrets(text)
   if (forbiddenTraceResidue.test(text)) {
+    reportUnsafeTextResidue({ file, category: classifyForbiddenResidueCategory(text) })
     await rm(file, { force: true })
     throw new Error("Artifact sanitization failed: unsafe-text-residue")
   }
