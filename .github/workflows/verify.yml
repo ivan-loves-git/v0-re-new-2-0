@@ -51,3 +51,6 @@ jobs:
 
       - name: Run repository verification
         run: pnpm verify
+
+      - name: Rehearse W-128 Draft activation and rollback
+        run: PG_BIN="$(pg_config --bindir)" bash scripts/rehearse-w128-draft-opportunity-activation.sh

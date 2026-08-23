@@ -26,12 +26,12 @@ function jobEnvKeys(workflow: string, jobName: string) {
 }
 
 describe("permanent QA lane contract", () => {
-  it("pins the M2 staff M&A candidate fingerprint and eight immutable schema inputs", () => {
+  it("pins the M2 Draft activation candidate fingerprint and nine immutable schema inputs", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 
     expect(contract).toEqual({
-      version: "823-m2-staff-ma-v1",
-      structureFingerprint: "9f766b7ebe59c9a3a5e20b0abaa593b432e3efb59f15b36d89b1d3da6b3e16d6",
+      version: "824-m2-draft-activation-v1",
+      structureFingerprint: "a7b92af6d27593b73003d079ae7fc470a4e23e92ab8c8c9b1ed6e2aaa73ddf2b",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
@@ -41,6 +41,7 @@ describe("permanent QA lane contract", () => {
         { path: "supabase/schema/822_demo_opportunity_quarantine.sql", sha256: "2d226a576136cca703b00ee7a4bf1e70cf58e5ad1bdab12dcf5d99628eaa9d35" },
         { path: "supabase/schema/822_deals_reconsideration.sql", sha256: "62d693c89a8f2ed19045cbfa62cfd3db111d5a16e6b645a9e024069b4570ef93" },
         { path: "supabase/schema/823_staff_ma_relationship_corrections.sql", sha256: "bfcbd622f471b55c5d5f1352788e3070abf33f1ccf9da246da8d3cb37f9ffedf" },
+        { path: "supabase/schema/824_w128_draft_opportunity_activation.sql", sha256: "8a6b751bec0fc5854783b5eada5932c75b00ce3544733894fb72d63339508bed" },
       ],
     })
   })
@@ -52,6 +53,8 @@ describe("permanent QA lane contract", () => {
       .toBe(readFileSync(`${process.cwd()}/scripts/113_deals_reconsideration.sql`, "utf8"))
     expect(readFileSync(`${process.cwd()}/supabase/schema/823_staff_ma_relationship_corrections.sql`, "utf8"))
       .toBe(readFileSync(`${process.cwd()}/scripts/114_staff_ma_relationship_corrections.sql`, "utf8"))
+    expect(readFileSync(`${process.cwd()}/supabase/schema/824_w128_draft_opportunity_activation.sql`, "utf8"))
+      .toBe(readFileSync(`${process.cwd()}/scripts/115_w128_draft_opportunity_activation.sql`, "utf8"))
   })
 
   it("accepts only the stable protected qa alias and exact deployed identity", () => {

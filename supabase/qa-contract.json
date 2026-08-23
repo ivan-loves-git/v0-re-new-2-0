@@ -1,6 +1,6 @@
 {
-  "version": "823-m2-staff-ma-v1",
-  "structureFingerprint": "9f766b7ebe59c9a3a5e20b0abaa593b432e3efb59f15b36d89b1d3da6b3e16d6",
+  "version": "824-m2-draft-activation-v1",
+  "structureFingerprint": "a7b92af6d27593b73003d079ae7fc470a4e23e92ab8c8c9b1ed6e2aaa73ddf2b",
   "files": [
     {
       "path": "supabase/schema/771_extensions.sql",
@@ -33,6 +33,10 @@
     {
       "path": "supabase/schema/823_staff_ma_relationship_corrections.sql",
       "sha256": "bfcbd622f471b55c5d5f1352788e3070abf33f1ccf9da246da8d3cb37f9ffedf"
+    },
+    {
+      "path": "supabase/schema/824_w128_draft_opportunity_activation.sql",
+      "sha256": "8a6b751bec0fc5854783b5eada5932c75b00ce3544733894fb72d63339508bed"
     }
   ]
 }
