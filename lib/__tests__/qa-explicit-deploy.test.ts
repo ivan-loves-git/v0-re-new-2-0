@@ -40,11 +40,10 @@ function readyDeployment(overrides: Record<string, unknown> = {}) {
 }
 
 describe("QA explicit validation deploy controller", () => {
-  it("builds a preview-only admitted-candidate deploy request for the candidate branch and SHA", () => {
+  it("builds a non-production admitted-candidate deploy request for the candidate branch and SHA", () => {
     expect(buildExplicitQaDeployRequest({ candidateSha: SHA, candidateBranch: BRANCH })).toEqual({
       name: "renew-overnight-validation-20260820",
       project: PROJECT_ID,
-      target: "preview",
       gitSource: {
         type: "github",
         org: "ivan-loves-git",
@@ -66,6 +65,7 @@ describe("QA explicit validation deploy controller", () => {
         renewQaController: "explicit-v1",
       },
     })
+    expect(buildExplicitQaDeployRequest({ candidateSha: SHA, candidateBranch: BRANCH })).not.toHaveProperty("target")
   })
 
   it("rejects unsafe deploy request inputs before any provider call", () => {
@@ -140,6 +140,8 @@ describe("QA explicit validation deploy controller", () => {
     expect(qaStableAliasHostname()).toBe("renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app")
     expect(qaValidationProjectId()).toBe(PROJECT_ID)
     expect(buildStableAliasAssignment({ deploymentId: DEPLOYMENT_ID })).toEqual({
+      path: `/v2/deployments/${DEPLOYMENT_ID}/aliases`,
+      body: { alias: qaStableAliasHostname() },
       alias: qaStableAliasHostname(),
       deploymentId: DEPLOYMENT_ID,
       redirect: null,
