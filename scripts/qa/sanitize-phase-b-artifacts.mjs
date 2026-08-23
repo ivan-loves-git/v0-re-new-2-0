@@ -7,6 +7,7 @@ import { CREDENTIALS_FILE, RUN_DIR, removeRunnerSecrets, writePrivateJson } from
 
 const execFile = promisify(execFileCallback)
 const HTML_REPORT_DIR = join(RUN_DIR, "playwright-report")
+const PLAYWRIGHT_RESULTS_FILE = join(RUN_DIR, "playwright-results.json")
 const TRACE_ACTIONS_FILE = `${RUN_DIR}/sanitized-trace-actions.json`
 const TRACE_SUMMARY_FILE = `${RUN_DIR}/sanitized-traces.json`
 const secretEnvironmentName = /(?:^|_)(?:SECRET|TOKEN|PASSWORD|KEY|COOKIE)$|DATABASE_URL$|CONNECTION_(?:STRING|URL)$|^(?:NEXT_PUBLIC_SUPABASE_URL|BETTER_AUTH_URL|NEXT_PUBLIC_APP_URL|QA_BROWSER_BASE_URL|QA_VALIDATION_ORIGIN|QA_EMAIL_RECIPIENT)$/i
@@ -135,6 +136,7 @@ sensitiveValues.push(...generatedCredentials)
 sensitiveValues.sort((left, right) => right.length - left.length)
 await removeRunnerSecrets()
 await rm(HTML_REPORT_DIR, { recursive: true, force: true })
+await rm(PLAYWRIGHT_RESULTS_FILE, { force: true })
 const files = await walk(RUN_DIR)
 const traceArchives = files.filter((path) => path.endsWith(".zip")).sort()
 let traces
@@ -165,7 +167,9 @@ await writePrivateJson(TRACE_SUMMARY_FILE, {
   sessionStateRetained: false,
   htmlReportRetained: false,
   htmlReportRemovalReason: "privacy",
-  note: "Raw retry traces and the Playwright HTML report are deleted; only the sanitized action timeline is uploaded.",
+  playwrightResultsRetained: false,
+  playwrightResultsRemovalReason: "uncurated-reporter-output",
+  note: "Raw retry traces, the Playwright HTML report, and uncurated playwright-results.json are deleted; curated clean-run/case/cleanup/empty evidence and the sanitized action timeline are retained.",
 })
 
 for (const file of (await walk(RUN_DIR)).filter((path) => /\.(json|html|txt|trace)$/.test(path))) {
