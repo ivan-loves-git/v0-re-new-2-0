@@ -95,8 +95,8 @@ export function reconcileHistoricalPursuits(source, snapshot) {
       resolution: resolved ? "resolved_for_staff_review" : "unresolved_fail_closed",
       blockers,
       reviewFlags,
-      buyer: resolved ? { id: buyerCandidates[0].id, name: row.repreneurName } : null,
-      opportunity: resolved ? { id: opportunityCandidates[0].id, reference: opportunityCandidates[0].reference } : null,
+      buyer: buyerCandidates.length === 1 ? { id: buyerCandidates[0].id, name: row.repreneurName } : null,
+      opportunity: opportunityCandidates.length === 1 ? { id: opportunityCandidates[0].id, reference: opportunityCandidates[0].reference } : null,
       historicalProposal: {
         opportunityReference: row.opportunityReference ?? null,
         offerLabel: row.offerLabel ?? null,
