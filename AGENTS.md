@@ -183,6 +183,6 @@ In-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team. When
 
 ## WAVE AI — staff assistance
 
-WAVE AI is staff-only and uses OpenAI `gpt-5.6-luna` with maximum reasoning. It may create editable drafts and recommendations after an explicit staff request, but it must not send messages, should not mutate business data, or replace deterministic rules. A human reviews and performs the separate operational action.
+WAVE AI is staff-only and uses OpenAI `gpt-5.6-luna` with maximum reasoning. It may create editable drafts and recommendations after an explicit staff request, but it must not send messages, mutate business data, or replace deterministic rules. A human reviews and performs the separate operational action.
 
 The binding runtime, data, privacy, observability, and acceptance contract is `docs/architecture/wave-ai-and-observability-v1.md`. Historical Wavy communication files and archives may retain their original names, but they do not define the active product runtime.
