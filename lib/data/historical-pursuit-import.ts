@@ -19,11 +19,10 @@ export interface StaffHistoricalPursuitImportRow {
 /** Staff-only profile-history projection. It is deliberately never called by portal readers. */
 export async function listStaffHistoricalPursuitImportRows(repreneurId: string): Promise<StaffHistoricalPursuitImportRow[]> {
   await requireStaffAccess()
-  const { data, error } = await (createAdminClient() as any)
-    .from("historical_pursuit_import_rows")
-    .select("source_row, source_offer_label, source_opportunity_reference, completed_source_stages, not_applicable_source_stages, last_reported_source_stage, raw_drop_reason, review_flags, match_id, apply_outcome")
-    .eq("repreneur_id", repreneurId)
-    .order("source_row", { ascending: true })
+  type CandidateRow = { source_row: number; source_offer_label: string | null; source_opportunity_reference: string | null; completed_source_stages: string[] | null; not_applicable_source_stages: string[] | null; last_reported_source_stage: string; raw_drop_reason: string | null; review_flags: string[] | null; match_id: string | null; apply_outcome: string }
+  type CandidateRpc = { rpc: (name: "historical_pursuit_import_rows_for_staff", args: { p_repreneur_id: string }) => Promise<{ data: CandidateRow[] | null; error: { message: string } | null }> }
+  const { data, error } = await (createAdminClient() as unknown as CandidateRpc)
+    .rpc("historical_pursuit_import_rows_for_staff", { p_repreneur_id: repreneurId })
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => ({
     sourceRow: row.source_row, offerLabel: row.source_offer_label, opportunityReference: row.source_opportunity_reference,

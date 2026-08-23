@@ -55,6 +55,7 @@ if (manifestDigest !== "b25008e1dfcc7c9e8f21f0f2aad5d757e54ed508243a89595fd5e231
   throw new Error("Historical pursuit parser manifest digest mismatch.");
 }
 function rowFingerprint(row) { return crypto.createHash("sha256").update(JSON.stringify(row)).digest("hex"); }
+function approvalDigest(record, fingerprint) { return crypto.createHash("sha256").update(JSON.stringify({ fingerprint, buyerId: record.buyer?.id ?? null, opportunityId: record.opportunity?.id ?? null, blockers: record.blockers, flags: record.reviewFlags })).digest("hex"); }
 try {
   await client.connect();
   const manifest = reconcileHistoricalPursuits(parsed, await snapshot(client));
@@ -66,19 +67,23 @@ try {
   if (config.mode === "rehearse") {
     await client.query(fs.readFileSync(path.join(directory, "112_historical_pursuit_ledger.sql"), "utf8"));
   } else {
-    const exists = await client.query("SELECT to_regprocedure('public.apply_historical_pursuit_import_row(text,text,integer,uuid,uuid,text[],text[],text,boolean,text,text,text,text,text,text,text[],text[],jsonb)') AS fn");
+    const exists = await client.query("SELECT to_regprocedure('public.apply_historical_pursuit_import_row(text,text,integer,uuid,uuid,text[],text[],text,boolean,text,text,text,text,text,text,text[],text[],jsonb,text)') AS fn");
     if (!exists.rows[0]?.fn) throw new Error("Reviewed migration 112 must be applied before --apply.");
+  }
+  for (const record of manifest.records) {
+    const row = parsed.rows.find((item) => item.sourceRow === record.sourceRow);
+    await client.query("SELECT public.stage_historical_pursuit_import_allowlist($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [parsed.source.sha256, parsed.source.sheet, record.sourceRow, manifestDigest, approvalDigest(record, rowFingerprint(row)), rowFingerprint(row), record.buyer?.id ?? null, record.opportunity?.id ?? null, record.blockers, record.reviewFlags]);
   }
   async function invoke(record) {
     if (!record.buyer && record.opportunity) throw new Error(`Source row ${record.sourceRow} has no exact repreneur.`);
     const sourceRow = parsed.rows.find((row) => row.sourceRow === record.sourceRow);
     if (!sourceRow) throw new Error(`Parser row ${record.sourceRow} was not found.`);
     const result = await client.query(
-      "SELECT public.apply_historical_pursuit_import_row($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) AS result",
+      "SELECT public.apply_historical_pursuit_import_row($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) AS result",
       [parsed.source.sha256, parsed.source.sheet, record.sourceRow, record.buyer?.id ?? null, record.opportunity?.id ?? null,
         record.historicalProposal.completedSourceStages, record.historicalProposal.notApplicableSourceStages,
         record.historicalProposal.dropReason, true, ACTOR, sourceRow.repreneurName, sourceRow.offerLabel,
-        sourceRow.opportunityReference, rowFingerprint(sourceRow), manifestDigest, record.blockers, record.reviewFlags, sourceRow.sourceCells],
+        sourceRow.opportunityReference, rowFingerprint(sourceRow), manifestDigest, record.blockers, record.reviewFlags, sourceRow.sourceCells, approvalDigest(record, rowFingerprint(sourceRow))],
     );
     return result.rows[0].result;
   }

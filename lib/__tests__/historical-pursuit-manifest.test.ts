@@ -56,7 +56,7 @@ describe("historical pursuit preflight manifest", () => {
     const record = manifest.records[0]
 
     expect(manifest.summary).toEqual({ resolved_for_staff_review: 46, unresolved_fail_closed: 14 })
-    expect(manifest.safeApplySummary).toEqual({ merge_historical_staff_note: 13, create_draft_match_with_historical_staff_note: 33, none: 14 })
+    expect(manifest.safeApplySummary).toEqual({ merge_historical_match: 13, create_historical_match: 33, none: 14 })
     expect(record.resolution).toBe("resolved_for_staff_review")
     expect(record.historicalProposal).toMatchObject({
       disposition: "historical_dropped_or_closed",
@@ -64,7 +64,7 @@ describe("historical pursuit preflight manifest", () => {
     })
     expect(record).not.toHaveProperty("pursuit_stage")
     expect(record).not.toHaveProperty("nda_status")
-    expect(record.laterApply).toEqual({ allowed: true, action: "merge_historical_staff_note", currentMatchExists: true })
+    expect(record.laterApply).toEqual({ allowed: true, action: "merge_historical_match", desiredStatus: "dropped", currentMatchExists: true })
   })
 
   it("fails closed when a live canonical pair cannot be resolved", () => {

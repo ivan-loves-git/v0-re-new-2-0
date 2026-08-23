@@ -84,11 +84,12 @@ export function reconcileHistoricalPursuits(source, snapshot) {
 
     const resolved = blockers.length === 0;
     const pairKey = resolved ? `${opportunityCandidates[0].id}:${buyerCandidates[0].id}` : null;
+    const desiredStatus = disposition === "historical_dropped_or_closed" || disposition === "review_reason_without_terminal_marker" ? "dropped" : "draft";
     const proposedApply = !resolved
       ? { allowed: false, action: "none" }
       : currentMatches.has(pairKey)
-        ? { allowed: true, action: "merge_historical_staff_note", currentMatchExists: true }
-        : { allowed: true, action: "create_draft_match_with_historical_staff_note", currentMatchExists: false, status: "draft" };
+        ? { allowed: true, action: "merge_historical_match", desiredStatus, currentMatchExists: true }
+        : { allowed: true, action: "create_historical_match", desiredStatus, currentMatchExists: false };
     const record = {
       sourceRow: row.sourceRow,
       sourceFingerprint: crypto.createHash("sha256").update(JSON.stringify(row)).digest("hex"),
@@ -125,8 +126,8 @@ export function reconcileHistoricalPursuits(source, snapshot) {
   if (
     summary.resolved_for_staff_review !== 46 ||
     summary.unresolved_fail_closed !== 14 ||
-    safeApplySummary.create_draft_match_with_historical_staff_note !== 33 ||
-    safeApplySummary.merge_historical_staff_note !== 13
+    safeApplySummary.create_historical_match !== 33 ||
+    safeApplySummary.merge_historical_match !== 13
   ) {
     throw new Error(
       `Live mapping drift: expected 46 resolved (33 create, 13 merge) and 14 unresolved; got ${JSON.stringify({ summary, safeApplySummary })}`,

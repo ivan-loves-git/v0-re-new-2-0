@@ -43,6 +43,25 @@ CREATE OR REPLACE FUNCTION public.historical_pursuit_import_rows_immutable() RET
 BEGIN RAISE EXCEPTION 'historical_pursuit_import_rows_are_immutable'; END $$;
 CREATE TRIGGER historical_pursuit_import_rows_no_update_delete BEFORE UPDATE OR DELETE ON public.historical_pursuit_import_rows FOR EACH ROW EXECUTE FUNCTION public.historical_pursuit_import_rows_immutable();
 
+CREATE TABLE public.historical_pursuit_import_allowlist (
+  source_sha256 TEXT NOT NULL, source_sheet TEXT NOT NULL, source_row INTEGER NOT NULL,
+  manifest_digest TEXT NOT NULL CHECK (manifest_digest ~ '^[0-9a-f]{64}$'), approval_digest TEXT NOT NULL CHECK (approval_digest ~ '^[0-9a-f]{64}$'),
+  source_row_fingerprint TEXT NOT NULL CHECK (source_row_fingerprint ~ '^[0-9a-f]{64}$'), repreneur_id UUID, opportunity_id UUID,
+  resolution_blockers TEXT[] NOT NULL DEFAULT '{}', review_flags TEXT[] NOT NULL DEFAULT '{}',
+  PRIMARY KEY (source_sha256, source_sheet, source_row), UNIQUE (approval_digest)
+);
+ALTER TABLE public.historical_pursuit_import_allowlist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.historical_pursuit_import_allowlist FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.historical_pursuit_import_allowlist FROM PUBLIC, anon, authenticated, service_role;
+CREATE TRIGGER historical_pursuit_import_allowlist_no_update_delete BEFORE UPDATE OR DELETE ON public.historical_pursuit_import_allowlist FOR EACH ROW EXECUTE FUNCTION public.historical_pursuit_import_rows_immutable();
+CREATE OR REPLACE FUNCTION public.stage_historical_pursuit_import_allowlist(p_source_sha256 TEXT,p_source_sheet TEXT,p_source_row INTEGER,p_manifest_digest TEXT,p_approval_digest TEXT,p_source_row_fingerprint TEXT,p_repreneur_id UUID,p_opportunity_id UUID,p_resolution_blockers TEXT[],p_review_flags TEXT[]) RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+BEGIN
+ IF p_source_sha256 <> '6fa8b640dfcd385c2bd6dabf571ee01a4f51d09a53122f65c422c047ddb3f60f' OR p_manifest_digest <> 'b25008e1dfcc7c9e8f21f0f2aad5d757e54ed508243a89595fd5e231feb907b7' THEN RAISE EXCEPTION 'historical_pursuit_allowlist_not_approved'; END IF;
+ INSERT INTO public.historical_pursuit_import_allowlist VALUES(p_source_sha256,p_source_sheet,p_source_row,p_manifest_digest,p_approval_digest,p_source_row_fingerprint,p_repreneur_id,p_opportunity_id,COALESCE(p_resolution_blockers,'{}'),COALESCE(p_review_flags,'{}'));
+END $$;
+REVOKE ALL ON FUNCTION public.stage_historical_pursuit_import_allowlist(TEXT,TEXT,INTEGER,TEXT,TEXT,TEXT,UUID,UUID,TEXT[],TEXT[]) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.stage_historical_pursuit_import_allowlist(TEXT,TEXT,INTEGER,TEXT,TEXT,TEXT,UUID,UUID,TEXT[],TEXT[]) TO service_role;
+
 CREATE OR REPLACE FUNCTION public.apply_historical_pursuit_import_row(
   p_source_sha256 TEXT,
   p_source_sheet TEXT,
@@ -61,7 +80,8 @@ CREATE OR REPLACE FUNCTION public.apply_historical_pursuit_import_row(
   p_manifest_digest TEXT,
   p_resolution_blockers TEXT[],
   p_review_flags TEXT[],
-  p_source_cells JSONB
+  p_source_cells JSONB,
+  p_approval_digest TEXT
 ) RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
@@ -76,6 +96,7 @@ DECLARE
   v_last_stage TEXT := 'none';
   v_flags TEXT[] := '{}';
   v_categories TEXT[] := '{}';
+  v_note TEXT;
   v_allowed TEXT[] := ARRAY['interest_confirmed','nda_received','nda_signed','info_memo_received','qa_with_ma_firm','seller_meeting','valuation','loi_issued','audits','financing','closing'];
 BEGIN
   IF p_source_sha256 <> '6fa8b640dfcd385c2bd6dabf571ee01a4f51d09a53122f65c422c047ddb3f60f'
@@ -110,9 +131,10 @@ BEGIN
     IF lower(p_raw_drop_reason) ~ 'locali|geograph' THEN v_categories := ARRAY['geography'];
     ELSIF lower(p_raw_drop_reason) ~ 'sector' THEN v_categories := ARRAY['sector'];
     ELSIF lower(p_raw_drop_reason) ~ 'size|profit|financ|price|valor' THEN v_categories := ARRAY['size_metrics'];
-    ELSIF lower(p_raw_drop_reason) ~ 'business model' THEN v_categories := ARRAY['business_model'];
+    ELSIF lower(p_raw_drop_reason) ~ 'business model|technical skill|operational risk' THEN v_categories := ARRAY['business_model'];
     ELSE v_categories := ARRAY['other']; END IF;
   END IF;
+  v_note := '[W-112 historical pursuit row ' || p_source_row::text || '] Event dates unknown. Completed: ' || COALESCE(array_to_string(p_completed_source_stages, ', '), 'none') || '. ' || CASE WHEN v_terminal THEN 'Terminal historical outcome.' ELSE 'Open or unknown historical outcome.' END || CASE WHEN NULLIF(BTRIM(p_raw_drop_reason),'') IS NULL THEN '' ELSE ' Raw reason: ' || BTRIM(p_raw_drop_reason) END;
   v_payload := jsonb_build_object(
     'repreneur_id', p_repreneur_id, 'opportunity_id', p_opportunity_id,
     'completed_source_stages', COALESCE(p_completed_source_stages, '{}'),
@@ -130,6 +152,7 @@ BEGIN
     IF v_existing.payload_sha256 <> v_digest THEN RAISE EXCEPTION 'historical_pursuit_source_row_payload_mismatch'; END IF;
     RETURN jsonb_build_object('outcome', 'replay', 'ledger_id', v_existing.id, 'match_id', v_existing.match_id);
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.historical_pursuit_import_allowlist allowlist WHERE allowlist.source_sha256=p_source_sha256 AND allowlist.source_sheet=p_source_sheet AND allowlist.source_row=p_source_row AND allowlist.manifest_digest=p_manifest_digest AND allowlist.approval_digest=p_approval_digest AND allowlist.source_row_fingerprint=p_source_row_fingerprint AND allowlist.repreneur_id IS NOT DISTINCT FROM p_repreneur_id AND allowlist.opportunity_id IS NOT DISTINCT FROM p_opportunity_id AND allowlist.resolution_blockers=COALESCE(p_resolution_blockers,'{}') AND allowlist.review_flags=COALESCE(p_review_flags,'{}')) THEN RAISE EXCEPTION 'historical_pursuit_allowlist_mismatch'; END IF;
 
   IF p_opportunity_id IS NULL THEN
     INSERT INTO public.historical_pursuit_import_rows(source_sha256,source_sheet,source_row,source_repreneur_name,source_offer_label,source_opportunity_reference,source_cells,source_row_fingerprint,manifest_digest,payload_sha256,repreneur_id,completed_source_stages,not_applicable_source_stages,last_reported_source_stage,raw_drop_reason,event_dates_unknown,source_terminal,resolution_blockers,review_flags,apply_outcome,applied_by)
@@ -145,7 +168,8 @@ BEGIN
     IF v_match.status = 'draft' AND v_terminal THEN
       UPDATE public.opportunity_matches SET status = 'dropped',
         decline_reason_categories = CASE WHEN cardinality(decline_reason_categories) = 0 THEN v_categories ELSE decline_reason_categories END,
-        decline_reason_text = COALESCE(NULLIF(BTRIM(decline_reason_text), ''), NULLIF(BTRIM(p_raw_drop_reason), ''))
+        decline_reason_text = COALESCE(NULLIF(BTRIM(decline_reason_text), ''), NULLIF(BTRIM(p_raw_drop_reason), '')),
+        human_notes = CASE WHEN COALESCE(human_notes,'') LIKE '%' || v_note || '%' THEN human_notes WHEN NULLIF(BTRIM(human_notes),'') IS NULL THEN v_note ELSE human_notes || E'\n\n' || v_note END
       WHERE id = v_match.id
         AND pursuit_stage IS NULL AND nda_status = 'not_required' AND nda_document_id IS NULL
         AND nda_received_at IS NULL AND nda_signed_at IS NULL AND nda_waived_at IS NULL;
@@ -154,13 +178,14 @@ BEGIN
     ELSIF v_match.status <> 'draft' THEN
       v_flags := array_append(v_flags, 'current_status_preserved');
     END IF;
+    UPDATE public.opportunity_matches SET human_notes = CASE WHEN COALESCE(human_notes,'') LIKE '%' || v_note || '%' THEN human_notes WHEN NULLIF(BTRIM(human_notes),'') IS NULL THEN v_note ELSE human_notes || E'\n\n' || v_note END WHERE id = v_match.id;
     v_match_id := v_match.id; v_outcome := 'merged';
   ELSE
     v_status := CASE WHEN v_terminal THEN 'dropped'::public.opportunity_match_status ELSE 'draft'::public.opportunity_match_status END;
-    INSERT INTO public.opportunity_matches(opportunity_id,repreneur_id,status,decline_reason_categories,decline_reason_text,created_by)
+    INSERT INTO public.opportunity_matches(opportunity_id,repreneur_id,status,decline_reason_categories,decline_reason_text,human_notes,created_by)
     VALUES(p_opportunity_id,p_repreneur_id,v_status,
       CASE WHEN v_terminal THEN v_categories ELSE '{}' END,
-      CASE WHEN v_terminal THEN NULLIF(BTRIM(p_raw_drop_reason), '') ELSE NULL END,
+      CASE WHEN v_terminal THEN NULLIF(BTRIM(p_raw_drop_reason), '') ELSE NULL END, v_note,
       BTRIM(p_actor)) RETURNING id INTO v_match_id;
     v_outcome := 'created';
   END IF;
@@ -169,5 +194,8 @@ BEGIN
   RETURN jsonb_build_object('outcome', v_outcome, 'match_id', v_match_id, 'mapped_match_status', v_status);
 END $$;
 
-REVOKE ALL ON FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB) TO service_role;
+CREATE OR REPLACE FUNCTION public.historical_pursuit_import_rows_for_staff(p_repreneur_id UUID) RETURNS SETOF public.historical_pursuit_import_rows LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ SELECT * FROM public.historical_pursuit_import_rows WHERE repreneur_id=p_repreneur_id ORDER BY source_row $$;
+REVOKE ALL ON FUNCTION public.historical_pursuit_import_rows_for_staff(UUID) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.historical_pursuit_import_rows_for_staff(UUID) TO service_role;
+REVOKE ALL ON FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB,TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB,TEXT) TO service_role;
