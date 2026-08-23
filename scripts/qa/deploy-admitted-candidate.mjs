@@ -68,14 +68,11 @@ async function waitUntilReady({ token, teamId, deploymentId, expectedSha, expect
 
 async function assignAlias({ token, teamId, deploymentId }) {
   const assignment = buildStableAliasAssignment({ deploymentId })
-  await vercelApi("/v2/aliases", {
+  await vercelApi(assignment.path, {
     token,
     teamId,
     method: "POST",
-    body: {
-      alias: assignment.alias,
-      deploymentId: assignment.deploymentId,
-    },
+    body: assignment.body,
   })
   return assignment
 }
