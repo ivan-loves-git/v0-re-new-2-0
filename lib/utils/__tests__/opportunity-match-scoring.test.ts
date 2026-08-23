@@ -45,6 +45,27 @@ describe("calculateOpportunityMatchScore", () => {
     expect(result.reasons).toContain("WHEN score is below 40, so this match is capped until readiness improves.")
   })
 
+  it("treats sub-1M revenue as a deal-size mismatch against 1-3M+ targets", () => {
+    const result = calculateOpportunityMatchScore(
+      {
+        who_score: 90,
+        when_score: 92,
+        q13_target_sectors_v2: ["industry"],
+        q12_geo_zones: ["ile-de-france"],
+        q14_deal_size: ["1-3M"],
+      },
+      {
+        sector: "industry",
+        location: "ile-de-france",
+        revenue_meur: 0.6,
+      },
+    )
+
+    expect(result.score).toBe(60)
+    expect(result.recommendation).toBe("weak_fit")
+    expect(result.reasons).toContain("Opportunity size does not clearly match the repreneur target range.")
+  })
+
   it("caps the score when deal size is a clear mismatch", () => {
     const result = calculateOpportunityMatchScore(
       {

@@ -2,11 +2,11 @@
 
 # Re-New Platform Project
 
-## ⚠️ CRITICAL: Codex's Role
+## ⚠️ CRITICAL: Cursor's Role
 
-**Codex is the lead architect and technical guide for this project.**
+**Cursor is the coding agent for this repository.** Codex may still appear in historical notes, QA lanes, and the PDR host. It does not own implementation.
 
-Ivan is a business/product person, NOT a developer. Codex must:
+Ivan is a business/product person, NOT a developer. Cursor must:
 
 - **Be proactive**: Don't wait for Ivan to ask - anticipate what's needed
 - **Guide the process**: Tell Ivan what to do next, don't assume he knows
@@ -44,8 +44,8 @@ Never stop at the login wall before checking the approved secret source.
 
 **Where to test:**
 
-- Default: production app at `app.re-new.team` via Codex's browser tooling when available. Real data, the live deploy.
-- Fallback: local dev via `preview_*` MCP at `localhost:3000` (run `preview_start renew-dev`). Use only when testing changes that aren't yet deployed.
+- Default: production app at `app.re-new.team` after deploy. Real data, the live deploy.
+- Fallback: local `pnpm dev` at `localhost:3000` for changes that are not yet deployed. Use Cursor browser tooling when a login wall is involved, with QA personas from the local secret store.
 
 After Vercel auto-deploys a push to `main` (typically 1–3 min), test on production. The app footer shows the build number — confirm it matches your push (`git rev-list --count HEAD`).
 
@@ -183,6 +183,6 @@ In-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team. When
 
 ## WAVE AI — staff assistance
 
-WAVE AI is staff-only and uses OpenAI `gpt-5.6-luna` with maximum reasoning. It may create editable drafts and recommendations after an explicit staff request, but it must not send messages, mutate business data, or replace deterministic rules. A human reviews and performs the separate operational action.
+WAVE AI is staff-only and uses OpenAI `gpt-5.6-luna` with maximum reasoning. It may create editable drafts and recommendations after an explicit staff request, but it must not send messages, should not mutate business data, or replace deterministic rules. A human reviews and performs the separate operational action.
 
 The binding runtime, data, privacy, observability, and acceptance contract is `docs/architecture/wave-ai-and-observability-v1.md`. Historical Wavy communication files and archives may retain their original names, but they do not define the active product runtime.
