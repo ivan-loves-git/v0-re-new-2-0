@@ -64,6 +64,23 @@ function firmContextForm() {
   return formData
 }
 
+function namedFirmContextForm(field: "contact_first_name" | "contact_last_name") {
+  const formData = new FormData()
+  formData.set("firm_name", "Acme Conseil")
+  formData.set("office_name", "Paris")
+  formData.set(field, "Camille")
+  return formData
+}
+
+function namedOfficeContactForm(
+  field: "contact_first_name" | "contact_last_name",
+) {
+  const formData = new FormData()
+  formData.set("contact_mode", "new")
+  formData.set(field, "Camille")
+  return formData
+}
+
 function sourceCorrectionForm() {
   const formData = new FormData()
   formData.set("source_office_id", OFFICE_ID)
@@ -430,6 +447,44 @@ describe("canonical opportunity contact persistence", () => {
     })
   })
 
+  it("accepts either contact name and rejects a blank new office contact before persistence", async () => {
+    for (const field of ["contact_first_name", "contact_last_name"] as const) {
+      const rpc = vi.fn().mockResolvedValue({
+        data: [
+          {
+            contact_id: EXISTING_CONTACT_ID,
+            affiliation_id: AFFILIATION_ID,
+          },
+        ],
+        error: null,
+      })
+      mocks.createAdminClient.mockReturnValue({ rpc })
+
+      await expect(
+        createMaOfficeContact(OFFICE_ID, namedOfficeContactForm(field)),
+      ).resolves.toMatchObject({ success: true })
+      expect(rpc).toHaveBeenCalledWith(
+        "create_or_affiliate_ma_contact",
+        expect.objectContaining({ [`p_${field}`]: "Camille" }),
+      )
+    }
+
+    const rpc = vi.fn()
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(
+      createMaOfficeContact(OFFICE_ID, new FormData()),
+    ).resolves.toEqual({
+      success: false,
+      message: "Add a first name or last name for the contact.",
+      fieldErrors: {
+        contact_first_name: "Add a first name or last name for the contact.",
+        contact_last_name: "Add a first name or last name for the contact.",
+      },
+    })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
   it("affiliates an existing canonical contact without forwarding identity fields", async () => {
     const formData = new FormData()
     formData.set("contact_mode", "existing")
@@ -669,6 +724,48 @@ describe("canonical opportunity contact persistence", () => {
 
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
     expect(mocks.revalidateOpportunityDashboardTags).not.toHaveBeenCalled()
+  })
+
+  it("accepts either first-contact name and rejects a blank new-firm contact before persistence", async () => {
+    for (const field of ["contact_first_name", "contact_last_name"] as const) {
+      const rpc = vi.fn().mockResolvedValue({
+        data: [
+          {
+            firm_id: "00000000-0000-4000-8000-000000000010",
+            office_id: OFFICE_ID,
+            affiliation_id: AFFILIATION_ID,
+            contact_id: EXISTING_CONTACT_ID,
+          },
+        ],
+        error: null,
+      })
+      mocks.createAdminClient.mockReturnValue({ rpc })
+
+      await expect(
+        createMaFirmOfficeContext(namedFirmContextForm(field)),
+      ).resolves.toMatchObject({ success: true })
+      expect(rpc).toHaveBeenCalledWith(
+        "create_ma_firm_with_default_office",
+        expect.objectContaining({ [`p_${field}`]: "Camille" }),
+      )
+    }
+
+    const rpc = vi.fn()
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    const formData = new FormData()
+    formData.set("firm_name", "Acme Conseil")
+    await expect(createMaFirmOfficeContext(formData)).resolves.toEqual({
+      success: false,
+      message: "Add a first name or last name for the first contact.",
+      fieldErrors: {
+        contact_first_name:
+          "Add a first name or last name for the first contact.",
+        contact_last_name:
+          "Add a first name or last name for the first contact.",
+      },
+    })
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   it("adds a real office to an existing active firm through the dedicated atomic service", async () => {
