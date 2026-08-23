@@ -50,15 +50,18 @@ try {
     candidateSha,
   })
   const result = assertCandidatePointer({ repository, candidateBranch, candidateSha, branchHeadSha: branch.commit?.sha })
+  const dispatch = process.env.QA_SCHEMA_REVIEWED === "true"
+    ? {
+      contractSha256: process.env.QA_CONTRACT_SHA256,
+      schemaReviewed: true,
+      schemaReviewVersion: process.env.QA_SCHEMA_REVIEW_VERSION,
+    }
+    : {}
   const admission = await validateCandidateContractAdmission({
     eventName: process.env.GITHUB_EVENT_NAME,
     trustedRoot: process.cwd(),
     candidateRoot: process.env.QA_CANDIDATE_ROOT,
-    dispatch: {
-      contractSha256: process.env.QA_CONTRACT_SHA256,
-      schemaReviewed: process.env.QA_SCHEMA_REVIEWED === "true",
-      schemaReviewVersion: process.env.QA_SCHEMA_REVIEW_VERSION,
-    },
+    dispatch,
   })
   if (process.env.GITHUB_OUTPUT) {
     await appendFile(

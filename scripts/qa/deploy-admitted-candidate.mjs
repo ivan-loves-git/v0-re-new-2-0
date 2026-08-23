@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import { appendFile } from "node:fs/promises"
+import { appendFile, mkdir, writeFile } from "node:fs/promises"
+import { resolve } from "node:path"
 import {
   assertAliasServesAdmittedSha,
   assertExplicitDeployCredential,
   assertExplicitQaDeploymentReady,
   buildExplicitQaDeployRequest,
+  buildSanitizedProviderDeployEvidence,
   buildStableAliasAssignment,
   extractDeploymentIdentity,
   qaValidationProjectId,
@@ -46,14 +48,18 @@ async function vercelApi(path, { token, teamId, method = "GET", body } = {}) {
   return payload
 }
 
-async function waitUntilReady({ token, teamId, deploymentId, expectedSha, deadline, sleep }) {
+async function waitUntilReady({ token, teamId, deploymentId, expectedSha, expectedBranch, deadline, sleep }) {
   while (Date.now() < deadline) {
     const deployment = await vercelApi(`/v13/deployments/${deploymentId}`, { token, teamId })
     if (deployment.readyState === "ERROR" || deployment.readyState === "CANCELED") {
       fail(`ready-state-${deployment.readyState}`)
     }
     if (deployment.readyState === "READY") {
-      return assertExplicitQaDeploymentReady({ deployment, expectedSha })
+      return assertExplicitQaDeploymentReady({
+        deployment,
+        expectedSha,
+        expectedBranch,
+      })
     }
     await sleep(10_000)
   }
@@ -78,15 +84,22 @@ try {
   const token = process.env.QA_VERCEL_TOKEN
   const teamId = process.env.QA_VERCEL_TEAM_ID || ""
   const expectedSha = process.env.QA_EXPECTED_SHA
+  const candidateBranch = process.env.QA_CANDIDATE_BRANCH
   const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+  const evidencePath = process.env.QA_PROVIDER_EVIDENCE_FILE || ".qa-deploy/provider-evidence.json"
   const previousDeploymentId = process.env.QA_PREVIOUS_DEPLOYMENT_ID || ""
   const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
 
   if (!SHA_PATTERN.test(expectedSha || "")) fail("candidate-sha")
+  if (!candidateBranch) fail("git-ref")
   if (!bypass) fail("bypass")
   assertExplicitDeployCredential({ token, projectId: qaValidationProjectId() })
 
-  // Capture the currently aliased deployment for reviewed rollback evidence.
+  // Refuse database secret coexistence in this process.
+  for (const forbidden of ["DATABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_URL"]) {
+    if (process.env[forbidden]) fail("secret-coexistence")
+  }
+
   let priorAliasSha = ""
   try {
     priorAliasSha = await probeStableQaAlias({ origin: stableQaOrigin(), bypass })
@@ -94,7 +107,10 @@ try {
     priorAliasSha = ""
   }
 
-  const request = buildExplicitQaDeployRequest({ candidateSha: expectedSha })
+  const request = buildExplicitQaDeployRequest({
+    candidateSha: expectedSha,
+    candidateBranch,
+  })
   const created = await vercelApi("/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1", {
     token,
     teamId: teamId || undefined,
@@ -109,6 +125,7 @@ try {
     teamId: teamId || undefined,
     deploymentId: createdIdentity.deploymentId,
     expectedSha,
+    expectedBranch: candidateBranch,
     deadline: Date.now() + 8 * 60 * 1000,
     sleep,
   })
@@ -126,15 +143,36 @@ try {
     expectedSha,
   })
 
+  const readyAt = new Date().toISOString()
+  const evidence = buildSanitizedProviderDeployEvidence({
+    deploymentId: ready.deploymentId,
+    candidateSha: expectedSha,
+    candidateBranch,
+    readyState: "READY",
+    target: "preview",
+    projectId: ready.projectId,
+    alias: alias.alias,
+    aliasServedSha: servedSha,
+    priorAliasSha,
+    readyAt,
+    providerUrl: ready.url || stableQaOrigin(),
+  })
+
+  await mkdir(resolve(evidencePath, ".."), { recursive: true })
+  await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 })
+
   if (process.env.GITHUB_OUTPUT) {
     await appendFile(
       process.env.GITHUB_OUTPUT,
       [
-        `deployment_id=${ready.deploymentId}`,
-        `ready_at=${new Date().toISOString()}`,
-        `provider_url=${ready.url || stableQaOrigin()}`,
-        `alias=${alias.alias}`,
-        `prior_alias_sha=${priorAliasSha}`,
+        `deployment_id=${evidence.deploymentId}`,
+        `ready_at=${evidence.readyAt}`,
+        `provider_url=${evidence.providerUrl}`,
+        `alias=${evidence.alias}`,
+        `candidate_sha=${evidence.candidateSha}`,
+        `git_ref=${evidence.gitRef}`,
+        `evidence_file=${evidencePath}`,
+        `prior_alias_sha=${evidence.priorAliasSha}`,
         `rollback_deployment_id=${previousDeploymentId || ""}`,
       ].join("\n") + "\n",
     )
@@ -142,13 +180,7 @@ try {
 
   console.log(JSON.stringify({
     ok: true,
-    deploymentId: ready.deploymentId,
-    candidateSha: expectedSha,
-    projectId: ready.projectId,
-    gitRef: ready.metaGithubCommitRef || ready.gitSourceRef,
-    metaGithubCommitSha: ready.metaGithubCommitSha || ready.gitSourceSha,
-    alias: alias.alias,
-    priorAliasSha,
+    evidence,
     rollback: previousDeploymentId
       ? { action: "reassign-stable-alias", deploymentId: previousDeploymentId, alias: alias.alias }
       : null,

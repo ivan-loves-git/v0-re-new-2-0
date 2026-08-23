@@ -14,8 +14,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve-sha:
+    name: Resolve deployed SHA from stable alias
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: qa-pilot
+    outputs:
+      sha: ${{ steps.alias.outputs.sha }}
+    env:
+      CI: "true"
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Refuse an untrusted health controller ref
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_SHA" = "$(gh api repos/$GITHUB_REPOSITORY/branches/main --jq .commit.sha)"
+
+      - name: Check out trusted QA controller
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Resolve expected SHA from stable alias
+        id: alias
+        run: node scripts/qa/resolve-alias-sha.mjs
+
   health:
     name: Permanent QA health
+    needs: resolve-sha
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: qa-pilot
@@ -32,8 +60,7 @@ jobs:
       QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
       QA_EMAIL_RECIPIENT: ${{ secrets.QA_EMAIL_RECIPIENT }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-      QA_VERCEL_TOKEN: ${{ secrets.QA_VERCEL_TOKEN }}
-      QA_VERCEL_TEAM_ID: ${{ secrets.QA_VERCEL_TEAM_ID }}
+      QA_EXPECTED_SHA: ${{ needs.resolve-sha.outputs.sha }}
       QA_RUN_ID: health-${{ github.run_id }}-${{ github.run_attempt }}
       QA_FIXTURE_PREFIX: TEST-health-${{ github.run_id }}-${{ github.run_attempt }}
       QA_RUN_DIR: .qa-run
@@ -47,15 +74,7 @@ jobs:
         run: |
           test "$GITHUB_REF" = "refs/heads/main"
           test "$GITHUB_SHA" = "$(gh api repos/$GITHUB_REPOSITORY/branches/main --jq .commit.sha)"
-
-      - name: Resolve permanent qa pointer
-        id: pointer
-        shell: bash
-        run: |
-          sha="$(gh api repos/$GITHUB_REPOSITORY/git/ref/heads/qa --jq .object.sha)"
-          test "${#sha}" -eq 40
-          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
-          printf 'QA_EXPECTED_SHA=%s\n' "$sha" >> "$GITHUB_ENV"
+          test "${#QA_EXPECTED_SHA}" -eq 40
 
       - name: Check out trusted QA controller
         uses: actions/checkout@v4
@@ -66,7 +85,7 @@ jobs:
       - name: Check out deployed candidate contract as data
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.pointer.outputs.sha }}
+          ref: ${{ needs.resolve-sha.outputs.sha }}
           path: .qa-candidate
           fetch-depth: 2
 

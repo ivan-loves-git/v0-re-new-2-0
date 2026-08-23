@@ -8,7 +8,7 @@ Business cost authority: Ivan
 
 - Supabase: exactly one persistent Micro branch under production project `iiuqcdnmxhtyispnykgf`; no production data clone and no PR ownership.
 - Vercel: existing protected project `renew-overnight-validation-20260820`, Preview target, provider-managed stable `qa` branch alias `renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app`, no production/custom domain. The manually assigned `renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app` alias is pinned and must be rejected.
-- GitHub: environment `qa-pilot` (name retained), permanent pointer branch `qa`, required check `P1-P3 protected pilot`.
+- GitHub: environment `qa-pilot` (name retained), required check `P1-P3 protected pilot`. The historical `qa` git pointer is retired and must not be moved by the controller.
 - No premium runner, additional project, email plan or external service is part of this lane.
 
 ## Cost
@@ -17,42 +17,59 @@ Supabase management readback on 2026-08-22 quoted Micro branch compute at USD 0.
 
 ## Candidate operation
 
-1. A trusted `main` workflow validates that the supplied branch and exact 40-character SHA are the current head of a same-repository PR, the actor has write access, and the exact GitHub Actions `Verify` run is green.
-2. Automatic `workflow_run` admission requires `supabase/qa-contract.json` and every contract-listed SQL file to be byte-identical to trusted `main`. A database-changing candidate is refused automatically. Contract publication requires an explicit `qa-schema-review-v1` `repository_dispatch` carrying the exact candidate SHA and branch, the candidate contract SHA-256 and `schema_reviewed=true`; the trusted controller verifies the contract digest and every listed SQL checksum before any check, pointer, secret or DDL action.
-3. The workflow creates `P1-P3 protected pilot` on that exact SHA, holds global concurrency `renew-permanent-qa`, and moves only the remote `qa` pointer with an exact force-with-lease. Irrelevant push, failed and skipped workflow events receive unique run-ID concurrency groups so they cannot supersede daily health or a valid candidate; latest-pending supersession remains unchanged among valid PR and repository-dispatch candidates.
-4. The trusted controller then creates exactly one Preview deployment in project `renew-overnight-validation-20260820` (`prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y`) through the Vercel Deployment API using the QA-only `QA_VERCEL_TOKEN`. It binds `gitSource.ref=qa`, `gitSource.sha`, `meta.githubCommitSha`, and `meta.renewQaController=explicit-v1` to the admitted SHA, waits for `readyState=READY`, assigns the preserved stable alias, and proves the alias serves `x-renew-deployment-sha` equal to that SHA. Ordinary feature-branch pushes must create zero validation-project deployments once the validation project is disconnected from automatic Git. The controller must not disable GitHub Deployment records, must not set repository-wide automatic Git off in `vercel.json`, must not rely on Ignored Build Step quota tricks, and must not disable the GitHub integration flag that also breaks Deploy Hooks.
-5. Only after that identity proof does it verify the deployed non-secret QA contract, then the schema prerequisite verifies artifact checksums and the live catalog fingerprint. Matching candidates perform no DDL. Mismatches may synchronize only an empty, non-production branch with no active lease and must match the candidate fingerprint afterward.
-6. The browser job acquires the database lease, safely recovers only expired manifest-owned residue, runs P1–P3, performs exact-ID plus run-label cleanup, verifies zero residue, and releases the lease.
-7. The check is completed on the candidate SHA. A failed schema, journey, cleanup or release remains a failed required check.
+1. A trusted `main` workflow admits a candidate only through explicit `repository_dispatch` (`qa_candidate`) or trusted `workflow_dispatch`. There is no `workflow_run` admission and ordinary push/PR events cannot start the lane.
+2. Admission validates that the supplied branch and exact 40-character SHA are the current head of a same-repository open PR, the actor has write access, and the exact GitHub Actions `Verify` run is green. Identical-contract candidates are accepted on explicit admission. A database-changing candidate requires reviewed schema fields (`schema_reviewed=true`, `qa-schema-review-v1`, exact contract SHA-256).
+3. The workflow creates `P1-P3 protected pilot` on that exact SHA and holds global concurrency `renew-permanent-qa`. It does not move any `qa` git pointer and does not request `contents: write`.
+4. A dedicated `deploy-qa` job receives only `QA_VERCEL_TOKEN`, optional `QA_VERCEL_TEAM_ID`, and `VERCEL_AUTOMATION_BYPASS_SECRET`. It checks out the trusted controller only, never executes candidate application code, and never receives `DATABASE_URL` or Supabase service-role credentials. It creates exactly one Preview deployment in project `renew-overnight-validation-20260820` (`prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y`) for the admitted candidate branch and SHA, binds `meta.githubCommitSha` and the candidate ref, waits for `readyState=READY`, assigns the preserved stable alias, and uploads sanitized provider evidence containing deployment id, project, ref, SHA, target, READY state and alias readback.
+5. Database and browser jobs consume that sanitized evidence artifact. They never receive `QA_VERCEL_TOKEN`. Only after identity proof do they verify the deployed non-secret QA contract, synchronize schema when required, acquire the lease, run P1–P3, clean up, and finalize the check.
 
 Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects forks/foreign repositories.
 
 ## Validation deploy architecture (Route A)
 
-Root cause of the Hobby quota burst: both the product project and the validation project were connected to the same high-churn GitHub repository, so many pushes created paired deployments.
+Root cause of the Hobby quota burst: both the product project and the validation project were connected to the same high-churn GitHub repository, so many pushes created paired deployments. Moving a shared `qa` pointer compounded the problem.
 
 Approved architecture:
 
-1. Disconnect automatic Git from validation project `renew-overnight-validation-20260820` only. Keep the product project Git connection unchanged.
-2. Store a rotatable QA-only Vercel credential as GitHub environment secrets `QA_VERCEL_TOKEN` and optional `QA_VERCEL_TEAM_ID` on `qa-pilot`. Prefer the narrowest token Vercel can issue for that non-production project. If Vercel cannot provide project-scoped authority, stop for an explicit security decision before storing a broad team token.
-3. After candidate admission and the `qa` pointer move, `scripts/qa/deploy-admitted-candidate.mjs` creates one Preview deployment, assigns the stable alias, and fails closed before any database mutation when identity proof is incomplete.
-4. Live evidence prefers the explicit Vercel deployment id and `meta.githubCommitSha` over GitHub Deployment records from `vercel[bot]`.
-5. Do not cut over while automatic Git remains connected and the explicit token is also enabled: that window would create two validation deployments per candidate.
+1. Admit candidates only through explicit dispatch.
+2. Deploy the admitted candidate branch and exact SHA directly through the Vercel Deployment API. Do not retain a branch-pointer deployment trigger.
+3. Isolate the deploy credential in `deploy-qa`.
+4. Keep database/browser jobs on sanitized provider evidence only.
+5. Resolve daily-health expected SHA from the stable alias, not `origin/qa`.
+
+### Corrected cutover order
+
+1. Create and prove an expiring token scoped only to the QA validation project.
+2. Migrate any `qa`-branch Preview environment values on the validation project to ordinary Preview scope.
+3. Disable the old Golden Journeys workflow so no automatic or pointer-based lane can run during cutover.
+4. Disconnect Git from the validation project only.
+5. Verify the product project `v0-re-new-2-0` remains Git-connected.
+6. Prove that the proposed `gitSource` API call still works after disconnection, or replace it with a supported source-upload deployment before enabling the lane.
+7. Wait for provider capacity (do not guess a quota-reset minute; read the live provider response).
+8. Merge the corrected controller through an explicitly documented bootstrap.
+9. Re-enable the corrected Golden Journeys workflow.
+10. Run one exact-SHA canary and protected P1–P3.
+11. Prove one QA validation deployment and no additional product deployment caused by that admission.
+12. Keep cumulative product PR #27 parked until the controller canary and daily health both pass.
 
 Cutover proof required before declaring the repair done:
 
 - Count validation-project deployments before and after one admitted candidate: exactly one new READY deployment for that SHA.
 - Push an ordinary source-repository feature branch: zero new validation-project deployments.
 - Confirm the stable alias still serves the admitted SHA and the deployed QA contract headers.
+- Confirm product-project deploy count did not increase because of the QA admission.
 
 Exact rollback:
 
-1. Stop using `QA_VERCEL_TOKEN` in the protected lane.
-2. Reassign the preserved stable alias to the prior READY non-production deployment id recorded by the controller.
-3. Only after a reviewed rollback decision, restore the legacy GitHub Deployment waiter (`QA_DEPLOY_WAIT_MODE=legacy-github`) and reconnect automatic Git if that reviewed rollback explicitly requires it.
-4. Do not reconnect automatic Git as an unreviewed shortcut.
+1. Disable the corrected Golden Journeys workflow.
+2. Stop using `QA_VERCEL_TOKEN` in the protected lane.
+3. Reassign the preserved stable alias to the prior READY non-production deployment id recorded in sanitized provider evidence.
+4. Only after a reviewed rollback decision, restore any prior temporary Git connection if explicitly required. Do not reconnect automatic Git as an unreviewed shortcut.
 
 The prepared Deploy Hook `qa-protected-candidate` is not the selected cutover path. Hooks still require Git connection and do not by themselves stop duplicate automatic builds.
+
+Live cutover and rollback evidence for Gate 2 is recorded in `docs/operations/qa-explicit-deploy-gate2-packet.md`. Do not request `PUBLISH_APPROVED` until that packet’s evidence table is filled after independent review and green required checks.
+
 ## Concurrency and supersession
 
 This lane deliberately uses GitHub's latest-pending supersession with `cancel-in-progress: false`. One mutation run remains protected from cancellation, and at most one latest candidate waits. If A is running, B is pending and C arrives, C supersedes B; the superseded B remains blocked because it receives no successful P1–P3 check. C runs after A. If B is still intended, a rebase or push gives it a new exact candidate SHA and automatically re-enters it. The single concurrency group prevents any two candidates from deploying or seeding simultaneously.
@@ -61,7 +78,7 @@ Phase C2 must prove A running, B pending, C supersedes B, B remains blocked, C r
 
 ## Daily health
 
-`.github/workflows/qa-daily-health.yml` runs once daily without Playwright or an LLM and can also be started manually for initial acceptance. It verifies the protected site, exact deployed candidate, provider identities, live structure fingerprint, empty baseline, stale cleanup recovery and lease acquire/heartbeat/release. It never applies schema DDL. Ordinary candidates require the latest completed daily health run to have succeeded on exact current `main` within the previous 26 hours. Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock, after trusted candidate admission has verified the same-repository PR, candidate SHA, green Verify run, contract digest, `schema_reviewed=true` and `qa-schema-review-v1`. This recovery only permits the candidate to continue; it does not bypass provider identity, empty-branch and lease checks, schema synchronization, post-sync fingerprint equality, P1–P3, sanitization, cleanup or final check evaluation.
+`.github/workflows/qa-daily-health.yml` runs once daily without Playwright or an LLM and can also be started manually for initial acceptance. A first `resolve-sha` job uses only the protection-bypass secret to read the expected SHA from the stable alias. The later health job uses database secrets and that alias-derived SHA; it never reads `origin/qa` and never receives `QA_VERCEL_TOKEN`. It verifies the protected site, exact deployed candidate, provider identities, live structure fingerprint, empty baseline, stale cleanup recovery and lease acquire/heartbeat/release. It never applies schema DDL. Ordinary candidates require the latest completed daily health run to have succeeded on exact current `main` within the previous 26 hours. Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock, after trusted candidate admission has verified the same-repository PR, candidate SHA, green Verify run, contract digest, `schema_reviewed=true` and `qa-schema-review-v1`. This recovery only permits the candidate to continue; it does not bypass provider identity, empty-branch and lease checks, schema synchronization, post-sync fingerprint equality, P1–P3, sanitization, cleanup or final check evaluation.
 
 The v3 structure fingerprint uses canonical PostgreSQL `C` ordering for relation and function ACL members and policy roles, plus deterministic ordering of every inventory row, including quoted and mixed-case identities. Definitions from `pg_get_constraintdef`, `pg_get_indexdef`, `pg_get_functiondef`, `pg_get_triggerdef` and `pg_get_viewdef` remain bound to the deployed PostgreSQL major version; cross-major equality is not promised. Final publication requires equality across two independent clean-room reconstructions using the trusted Node algorithm. On mismatch, daily health fails closed and reports only the expected and actual SHA-256 fingerprints for the **P1–P3 protected release smoke** diagnostic record.
 

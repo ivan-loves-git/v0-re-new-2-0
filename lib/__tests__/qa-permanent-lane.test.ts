@@ -11,24 +11,18 @@ import { assertQaMailEnvelope, qaMailPolicyFromEnv } from "@/lib/email/qa-mail-p
 import { buildFixtureManifest } from "@/lib/qa/phase-b.mjs"
 import { assertMatchingStructureFingerprint, fingerprintStructureRows } from "@/lib/qa/structure-fingerprint.mjs"
 import { assertNoTopLevelTransactionControl } from "@/lib/qa/sql-safety.mjs"
+import { assertJobSecretIsolation } from "@/lib/qa/explicit-deploy.mjs"
 
 const QA_REF = "ypzrsrykirpqerfpozdm"
 const SHA = "a".repeat(40)
 const FINGERPRINT = "b".repeat(64)
 
-type GoldenWorkflowEvent =
-  | { name: "repository_dispatch"; runId: number }
-  | { name: "workflow_run"; runId: number; conclusion: string; provenance: string }
-  | { name: string; runId: number }
-
-function expectedGoldenConcurrencyGroup(event: GoldenWorkflowEvent) {
-  const isLaneCandidate = event.name === "repository_dispatch" || (
-    event.name === "workflow_run" &&
-    "conclusion" in event &&
-    event.conclusion === "success" &&
-    event.provenance === "pull_request"
-  )
-  return isLaneCandidate ? "renew-permanent-qa" : `renew-permanent-qa-ignored-${event.runId}`
+function jobEnvKeys(workflow: string, jobName: string) {
+  const jobStart = workflow.indexOf(`  ${jobName}:`)
+  expect(jobStart).toBeGreaterThanOrEqual(0)
+  const nextJob = workflow.slice(jobStart + 1).search(/\n  [a-z0-9-]+:/)
+  const block = nextJob === -1 ? workflow.slice(jobStart) : workflow.slice(jobStart, jobStart + 1 + nextJob)
+  return [...block.matchAll(/^\s+[A-Z0-9_]+:/gm)].map((match) => match[0].trim().replace(":", ""))
 }
 
 describe("permanent QA lane contract", () => {
@@ -100,59 +94,43 @@ describe("permanent QA lane contract", () => {
     expect(() => assertAuthorizedCandidate({ ...input, verifyCheck: { ...input.verifyCheck, conclusion: "failure" } })).toThrow("QA candidate failed: verify-check")
   })
 
-  it("shares the non-cancelling lane only with valid candidates and daily health", () => {
+  it("admits candidates only through explicit repository_dispatch or workflow_dispatch", () => {
     const golden = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
-    const health = readFileSync(`${process.cwd()}/.github/workflows/qa-daily-health.yml`, "utf8")
     const concurrency = golden.split("\njobs:", 1)[0]
-
-    expect(concurrency).toContain("github.event_name == 'repository_dispatch'")
-    expect(concurrency).toContain("github.event_name == 'workflow_run'")
-    expect(concurrency).toContain("github.event.workflow_run.conclusion == 'success'")
-    expect(concurrency).toContain("github.event.workflow_run.event == 'pull_request'")
-    expect(concurrency).toContain("format('renew-permanent-qa-ignored-{0}', github.run_id)")
+    expect(golden).toContain("repository_dispatch:")
+    expect(golden).toContain("workflow_dispatch:")
+    expect(golden).not.toContain("workflow_run:")
+    expect(concurrency).toContain("group: renew-permanent-qa")
     expect(concurrency).toContain("cancel-in-progress: false")
     expect(concurrency).not.toContain("cancel-in-progress: true")
-    expect(health).toContain("group: renew-permanent-qa")
-    expect(health).toContain("cancel-in-progress: false")
-    expect(health).not.toContain("cancel-in-progress: true")
-
-    expect(expectedGoldenConcurrencyGroup({ name: "workflow_run", runId: 101, conclusion: "success", provenance: "pull_request" })).toBe("renew-permanent-qa")
-    expect(expectedGoldenConcurrencyGroup({ name: "repository_dispatch", runId: 102 })).toBe("renew-permanent-qa")
   })
 
-  it("isolates every irrelevant workflow event by run identity", () => {
-    const validPendingGroup = expectedGoldenConcurrencyGroup({ name: "workflow_run", runId: 201, conclusion: "success", provenance: "pull_request" })
-    const irrelevantEvents: GoldenWorkflowEvent[] = [
-      { name: "workflow_run", runId: 202, conclusion: "success", provenance: "push" },
-      { name: "workflow_run", runId: 203, conclusion: "failure", provenance: "pull_request" },
-      { name: "workflow_run", runId: 204, conclusion: "skipped", provenance: "pull_request" },
-      { name: "ignored_event", runId: 205 },
-    ]
-    const irrelevantGroups = irrelevantEvents.map(expectedGoldenConcurrencyGroup)
-
-    expect(validPendingGroup).toBe("renew-permanent-qa")
-    expect(irrelevantGroups).toEqual([
-      "renew-permanent-qa-ignored-202",
-      "renew-permanent-qa-ignored-203",
-      "renew-permanent-qa-ignored-204",
-      "renew-permanent-qa-ignored-205",
-    ])
-    expect(new Set(irrelevantGroups).size).toBe(irrelevantGroups.length)
-    expect(irrelevantGroups).not.toContain(validPendingGroup)
+  it("never grants contents write and never moves a qa pointer", () => {
+    const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    expect(workflow).not.toContain("contents: write")
+    expect(workflow).toContain("contents: read")
+    expect(workflow).not.toContain("Move permanent qa pointer")
+    expect(workflow).not.toContain("refs/heads/qa")
+    expect(workflow).not.toContain("force-with-lease")
+    expect(workflow).not.toContain(":refs/heads/qa")
   })
 
-  it("keeps daily health manually runnable, read-only for schema, and identity-first", () => {
+  it("keeps daily health manually runnable, read-only for schema, and alias-SHA first", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/qa-daily-health.yml`, "utf8")
     expect(workflow).toContain("workflow_dispatch:")
     expect(workflow).not.toContain("qa:schema:sync")
-    const deployedIdentity = workflow.indexOf("qa:deployed-contract:verify")
-    const liveEvidence = workflow.indexOf("qa:evidence:collect")
-    const lease = workflow.indexOf("qa:lease:acquire")
-    expect(deployedIdentity).toBeGreaterThanOrEqual(0)
-    expect(liveEvidence).toBeGreaterThan(deployedIdentity)
-    expect(lease).toBeGreaterThan(liveEvidence)
-    expect(workflow).toContain("steps.empty.outcome == 'success'")
-    expect(workflow).toContain("steps.heartbeat.outcome == 'success'")
+    expect(workflow).not.toContain("git/ref/heads/qa")
+    expect(workflow).toContain("resolve-alias-sha.mjs")
+    expect(workflow).toContain("Resolve expected SHA from stable alias")
+    expect(workflow).not.toContain("QA_VERCEL_TOKEN")
+    const resolveStart = workflow.indexOf("resolve-sha:")
+    const healthStart = workflow.indexOf("  health:")
+    expect(resolveStart).toBeGreaterThanOrEqual(0)
+    expect(healthStart).toBeGreaterThan(resolveStart)
+    expect(jobEnvKeys(workflow, "resolve-sha")).toContain("VERCEL_AUTOMATION_BYPASS_SECRET")
+    expect(jobEnvKeys(workflow, "resolve-sha")).not.toContain("DATABASE_URL")
+    expect(jobEnvKeys(workflow, "health")).toContain("DATABASE_URL")
+    expect(jobEnvKeys(workflow, "health")).not.toContain("QA_VERCEL_TOKEN")
   })
 
   it("keeps candidate and run data out of long-lived secrets", () => {
@@ -160,19 +138,15 @@ describe("permanent QA lane contract", () => {
     const sanitizer = readFileSync(`${process.cwd()}/scripts/qa/sanitize-phase-b-artifacts.mjs`, "utf8")
     expect(workflow).toContain("github.event.client_payload.candidate_sha")
     expect(workflow).toContain("github.event.client_payload.candidate_branch")
-    expect(workflow).toContain("workflow_run:")
-    expect(workflow).toContain("repository_dispatch:")
+    expect(workflow).toContain("inputs.candidate_sha")
+    expect(workflow).toContain("inputs.candidate_branch")
     expect(workflow).not.toContain("secrets.QA_BROWSER_BASE_URL")
     expect(workflow).not.toContain("secrets.QA_VALIDATION_ORIGIN")
     expect(workflow).not.toContain("secrets.QA_RUN_ID")
     expect(workflow).not.toContain("secrets.QA_FIXTURE_PREFIX")
     expect(workflow).toContain("checks: write")
-    expect(workflow).toContain("contents: write")
     expect(workflow).toContain("QA_VERIFY_RUN_ID")
-    expect(workflow).not.toContain('latest != "none"')
     expect(workflow).toContain("health-created-at")
-    expect(workflow).toContain("health_branch")
-    expect(workflow).toContain("health_sha")
     expect(workflow).toContain("Check out authorized candidate contract as data")
     expect(workflow).toContain("Validate candidate database contract admission")
     expect(workflow).toContain("QA_CONTRACT_SHA256")
@@ -187,19 +161,18 @@ describe("permanent QA lane contract", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
     const healthStart = workflow.indexOf("Require current-main health or reviewed transition recovery")
-    const pointerStart = workflow.indexOf("Move permanent qa pointer with lease-safe force")
-    const healthStep = workflow.slice(healthStart, pointerStart)
+    const deployStart = workflow.indexOf("deploy-qa:")
+    const healthStep = workflow.slice(healthStart, deployStart)
 
     expect(validator).toContain("const admission = await validateCandidateContractAdmission")
     expect(validator).toContain('reviewed_schema_transition=${admission.admission === "reviewed-schema-change"}')
     expect(workflow).toContain("reviewed_schema_transition: ${{ steps.candidate.outputs.reviewed_schema_transition }}")
     expect(healthStart).toBeGreaterThan(workflow.indexOf("Validate candidate database contract admission"))
-    expect(pointerStart).toBeGreaterThan(healthStart)
+    expect(deployStart).toBeGreaterThan(healthStart)
     expect(healthStep).toContain("health_sha")
     expect(healthStep).toContain('if [ "$health_ok" = "true" ]; then')
     expect(healthStep).toContain('if [ "$QA_REVIEWED_SCHEMA_TRANSITION" != "true" ]; then')
     expect(healthStep).toContain("Reviewed schema transition recovery path used; this does not bypass product tests.")
-    expect(workflow.indexOf("schema-sync:")).toBeGreaterThan(pointerStart)
     for (const requiredStep of [
       "Verify deployed application identities before database mutation",
       "Synchronize only the empty approved QA branch",
@@ -210,9 +183,9 @@ describe("permanent QA lane contract", () => {
       "Cleanup exact manifest and label-owned fixtures",
       "Sanitize runner artifacts",
     ]) {
-      expect(workflow.indexOf(requiredStep)).toBeGreaterThan(pointerStart)
+      expect(workflow.indexOf(requiredStep)).toBeGreaterThan(deployStart)
     }
-    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
+    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.deploy-qa.result == 'success' && needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
   })
 
   it("keeps live cleanup rehearsal out of ordinary candidate runs", () => {
@@ -377,8 +350,9 @@ describe("permanent QA lane contract", () => {
   it("keeps schema synchronization separate and transactional before browser fixtures", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const sync = readFileSync(`${process.cwd()}/scripts/qa/sync-permanent-schema.mjs`, "utf8")
+    expect(workflow.indexOf("deploy-qa:")).toBeLessThan(workflow.indexOf("schema-sync:"))
     expect(workflow.indexOf("schema-sync:")).toBeLessThan(workflow.indexOf("golden:"))
-    expect(workflow).toContain("needs: [lane, schema-sync]")
+    expect(workflow).toContain("needs: [lane, deploy-qa, schema-sync]")
     expect(workflow.indexOf("Verify deployed application identities before database mutation")).toBeLessThan(workflow.indexOf("Synchronize only the empty approved QA branch"))
     expect(sync).toContain("--single-transaction")
     expect(readFileSync(`${process.cwd()}/supabase/schema/permanent_qa_rebuild.sql`, "utf8")).toContain("DROP SCHEMA public CASCADE")
@@ -408,9 +382,6 @@ describe("permanent QA lane contract", () => {
     expect(operations).toContain("Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock")
     expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, post-sync fingerprint equality, P1–P3, sanitization, cleanup or final check evaluation")
     expect(operations).toContain("latest-pending supersession")
-    expect(operations).toContain("A running, B pending, C supersedes B")
-    expect(operations).toContain("superseded B remains blocked")
-    expect(operations).not.toContain("unlimited non-cancelling queue")
     expect(operations).toContain("checked-in configuration, not live provider authority")
     expect(operations).toContain("Persistence, parent, with-data and branch-count")
     expect(operations).toContain("generic Vercel Marketplace integration is not approved")
@@ -420,28 +391,60 @@ describe("permanent QA lane contract", () => {
     expect(operations).toContain("QA_VERCEL_TOKEN")
     expect(operations).toContain("meta.githubCommitSha")
     expect(operations).toContain("ordinary source-repository feature branch: zero new validation-project deployments")
-    expect(operations).not.toContain("gitProviderOptions.createDeployments=disabled")
+    expect(operations).toContain("Corrected cutover order")
+    expect(operations).toContain("qa-explicit-deploy-gate2-packet.md")
+    expect(operations).not.toContain("workflow_run admission")
+    const gate2 = readFileSync(`${process.cwd()}/docs/operations/qa-explicit-deploy-gate2-packet.md`, "utf8")
+    expect(gate2).toContain("Do **not** request `PUBLISH_APPROVED`")
+    expect(gate2).toContain("Disconnect Git from the validation project only")
+    expect(gate2).toContain("Prove one QA validation deployment and no additional product deployment")
+    expect(gate2).toContain("Keep cumulative product PR #27 parked")
   })
 
-  it("deploys admitted candidates explicitly before any database mutation", () => {
+  it("deploys admitted candidates from a secret-isolated deploy-qa job before database work", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const deployScript = readFileSync(`${process.cwd()}/scripts/qa/deploy-admitted-candidate.mjs`, "utf8")
     const evidence = readFileSync(`${process.cwd()}/scripts/qa/collect-live-evidence.mjs`, "utf8")
-    const explicitStart = workflow.indexOf("Explicitly deploy admitted candidate to validation project")
-    const identityStart = workflow.indexOf("Verify deployed application identities before database mutation")
-    const syncStart = workflow.indexOf("Synchronize only the empty approved QA branch")
-    expect(explicitStart).toBeGreaterThan(workflow.indexOf("schema-sync:"))
-    expect(identityStart).toBeGreaterThan(explicitStart)
-    expect(syncStart).toBeGreaterThan(identityStart)
+    const deployStart = workflow.indexOf("deploy-qa:")
+    const schemaStart = workflow.indexOf("schema-sync:")
+    const goldenStart = workflow.indexOf("golden:")
+    expect(deployStart).toBeGreaterThan(workflow.indexOf("lane:"))
+    expect(schemaStart).toBeGreaterThan(deployStart)
+    expect(goldenStart).toBeGreaterThan(schemaStart)
     expect(workflow).toContain("node scripts/qa/deploy-admitted-candidate.mjs")
-    expect(workflow).toContain("secrets.QA_VERCEL_TOKEN")
-    expect(workflow).toContain("QA_VERCEL_DEPLOYMENT_ID: ${{ needs.schema-sync.outputs.deployment_id }}")
-    expect(workflow).not.toContain("Wait for exact qa deployment Ready event")
+    expect(workflow).toContain("Upload sanitized provider deploy evidence")
+    expect(workflow).toContain("load-provider-evidence.mjs")
+    expect(workflow).toContain("Check out trusted deploy controller only")
     expect(deployScript).toContain("buildExplicitQaDeployRequest")
-    expect(deployScript).toContain("assertAliasServesAdmittedSha")
-    expect(deployScript).toContain("/v13/deployments")
-    expect(evidence).toContain("explicitVercelDeploymentEvidence")
-    expect(evidence).toContain("QA_VERCEL_TOKEN")
+    expect(deployScript).toContain("buildSanitizedProviderDeployEvidence")
+    expect(deployScript).toContain("secret-coexistence")
+    expect(evidence).toContain("providerEvidenceFromArtifact")
+    expect(evidence).toContain("secret-coexistence")
+    expect(workflow).not.toMatch(/golden:[\s\S]*QA_VERCEL_TOKEN/)
+    expect(workflow).not.toMatch(/schema-sync:[\s\S]*QA_VERCEL_TOKEN/)
+
+    expect(assertJobSecretIsolation({
+      jobName: "deploy-qa",
+      envKeys: jobEnvKeys(workflow, "deploy-qa"),
+    })).toEqual({ jobName: "deploy-qa", vercelToken: true, databaseSecrets: false })
+    expect(assertJobSecretIsolation({
+      jobName: "schema-sync",
+      envKeys: jobEnvKeys(workflow, "schema-sync"),
+    })).toEqual({ jobName: "schema-sync", vercelToken: false, databaseSecrets: true })
+    expect(assertJobSecretIsolation({
+      jobName: "golden",
+      envKeys: jobEnvKeys(workflow, "golden"),
+    })).toEqual({ jobName: "golden", vercelToken: false, databaseSecrets: true })
+  })
+
+  it("proves ordinary feature pushes cannot invoke validation deployment", () => {
+    const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const onBlock = workflow.split("\njobs:", 1)[0]
+    expect(onBlock).not.toContain("push:")
+    expect(onBlock).not.toContain("pull_request:")
+    expect(onBlock).not.toContain("workflow_run:")
+    expect(onBlock).toContain("repository_dispatch:")
+    expect(onBlock).toContain("workflow_dispatch:")
   })
 
   it("rejects candidate transaction control without confusing function bodies or comments", () => {
