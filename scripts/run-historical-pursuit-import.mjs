@@ -12,17 +12,19 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 const ACTOR = "W-112 historical pursuit import";
 
 function options(argv) {
-  const result = { mode: null, envFile: ".env.local", workbook: null, manifest: null };
+  const result = { mode: null, envFile: ".env.local", workbook: null, manifest: null, prepareManifest: null };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--rehearse" || value === "--apply") result.mode = value.slice(2);
     else if (value === "--env-file") { result.envFile = argv[++index]; }
     else if (value === "--manifest") { result.manifest = argv[++index]; }
+    else if (value === "--prepare-manifest") { result.mode = "prepare"; result.prepareManifest = argv[++index]; }
     else if (!value.startsWith("--") && !result.workbook) result.workbook = value;
     else throw new Error(`Unknown or repeated option: ${value}`);
   }
   if (!result.workbook || !result.mode) throw new Error("Usage: node scripts/run-historical-pursuit-import.mjs <workbook.xlsx> --rehearse|--apply [--env-file .env.local]");
   if (result.mode === "apply" && !result.manifest) throw new Error("--apply requires an approved --manifest file.");
+  if (result.mode === "prepare" && !result.prepareManifest) throw new Error("--prepare-manifest requires a new output path.");
   return result;
 }
 
@@ -59,6 +61,12 @@ function approvalDigest(record, fingerprint) { return crypto.createHash("sha256"
 try {
   await client.connect();
   const manifest = reconcileHistoricalPursuits(parsed, await snapshot(client));
+  if (config.mode === "prepare") {
+    fs.writeFileSync(config.prepareManifest, `${JSON.stringify(manifest, null, 2)}\n`, { flag: "wx" });
+    process.stdout.write(`${JSON.stringify({ mode: "prepare", source: parsed.source, manifest: manifest.summary, proposed: manifest.safeApplySummary })}\n`);
+    await client.end();
+    process.exit(0);
+  }
   if (config.manifest) {
     const approved = JSON.parse(fs.readFileSync(config.manifest, "utf8"));
     if (approved.source?.sha256 !== parsed.source.sha256 || approved.manifestDigest !== manifestDigest || JSON.stringify(approved.records) !== JSON.stringify(manifest.records)) throw new Error("Approved manifest does not bind this exact workbook and live resolution.");
@@ -90,9 +98,11 @@ try {
   const results = [];
   for (const record of manifest.records) results.push(await invoke(record));
   if (config.mode === "rehearse") {
-    const audit = await client.query(`SELECT count(*)::int AS rows, count(*) FILTER (WHERE match_id IS NOT NULL)::int AS linked, count(*) FILTER (WHERE match_id IS NULL)::int AS unlinked, count(*) FILTER (WHERE apply_outcome='created')::int AS created, count(*) FILTER (WHERE apply_outcome='merged')::int AS merged, count(*) FILTER (WHERE source_terminal)::int AS terminal, count(*) FILTER (WHERE apply_outcome='created' AND mapped_match_status NOT IN ('draft','dropped'))::int AS unsafe_created FROM public.historical_pursuit_import_rows`);
+    const audit = await client.query(`SELECT count(*)::int AS rows, count(*) FILTER (WHERE match_id IS NOT NULL)::int AS linked, count(*) FILTER (WHERE match_id IS NULL)::int AS unlinked, count(*) FILTER (WHERE source_terminal)::int AS terminal, count(*) FILTER (WHERE source_terminal AND match_id IS NOT NULL)::int AS linked_terminal, count(*) FILTER (WHERE source_terminal AND match_id IS NULL)::int AS unlinked_terminal, count(*) FILTER (WHERE apply_outcome='created' AND mapped_match_status='dropped')::int AS created_dropped, count(*) FILTER (WHERE apply_outcome='created' AND mapped_match_status='draft')::int AS created_draft, count(*) FILTER (WHERE apply_outcome='merged' AND mapped_match_status='dropped')::int AS merged_dropped, count(*) FILTER (WHERE apply_outcome='merged' AND mapped_match_status='draft')::int AS merged_draft, count(*) FILTER (WHERE apply_outcome='merged' AND mapped_match_status='interested')::int AS merged_interested FROM public.historical_pursuit_import_rows`);
     const proof = audit.rows[0];
-    if (proof.rows !== 60 || proof.linked !== 46 || proof.unlinked !== 14 || proof.created !== 33 || proof.merged !== 13 || proof.terminal !== 27 || proof.unsafe_created !== 0) throw new Error(`Historical pursuit rehearsal assertion failed: ${JSON.stringify(proof)}`);
+    if (proof.rows !== 60 || proof.linked !== 46 || proof.unlinked !== 14 || proof.terminal !== 35 || proof.linked_terminal !== 27 || proof.unlinked_terminal !== 8 || proof.created_dropped !== 23 || proof.created_draft !== 10 || proof.merged_dropped !== 4 || proof.merged_draft !== 8 || proof.merged_interested !== 1) throw new Error(`Historical pursuit rehearsal assertion failed: ${JSON.stringify(proof)}`);
+    const staffRead = await client.query("SELECT count(*)::int AS rows FROM public.historical_pursuit_import_rows_for_staff(NULL)");
+    if (staffRead.rows[0].rows !== 60) throw new Error("Staff historical pursuit projection mismatch.");
     const replay = [];
     for (const record of manifest.records) replay.push(await invoke(record));
     if (replay.some((item) => item.outcome !== "replay")) throw new Error("Historical pursuit replay changed a source row.");

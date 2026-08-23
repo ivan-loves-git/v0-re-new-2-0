@@ -57,7 +57,8 @@ CREATE TRIGGER historical_pursuit_import_allowlist_no_update_delete BEFORE UPDAT
 CREATE OR REPLACE FUNCTION public.stage_historical_pursuit_import_allowlist(p_source_sha256 TEXT,p_source_sheet TEXT,p_source_row INTEGER,p_manifest_digest TEXT,p_approval_digest TEXT,p_source_row_fingerprint TEXT,p_repreneur_id UUID,p_opportunity_id UUID,p_resolution_blockers TEXT[],p_review_flags TEXT[]) RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  IF p_source_sha256 <> '6fa8b640dfcd385c2bd6dabf571ee01a4f51d09a53122f65c422c047ddb3f60f' OR p_manifest_digest <> 'b25008e1dfcc7c9e8f21f0f2aad5d757e54ed508243a89595fd5e231feb907b7' THEN RAISE EXCEPTION 'historical_pursuit_allowlist_not_approved'; END IF;
- INSERT INTO public.historical_pursuit_import_allowlist VALUES(p_source_sha256,p_source_sheet,p_source_row,p_manifest_digest,p_approval_digest,p_source_row_fingerprint,p_repreneur_id,p_opportunity_id,COALESCE(p_resolution_blockers,'{}'),COALESCE(p_review_flags,'{}'));
+ INSERT INTO public.historical_pursuit_import_allowlist VALUES(p_source_sha256,p_source_sheet,p_source_row,p_manifest_digest,p_approval_digest,p_source_row_fingerprint,p_repreneur_id,p_opportunity_id,COALESCE(p_resolution_blockers,'{}'),COALESCE(p_review_flags,'{}')) ON CONFLICT (source_sha256,source_sheet,source_row) DO NOTHING;
+ IF NOT EXISTS (SELECT 1 FROM public.historical_pursuit_import_allowlist row WHERE row.source_sha256=p_source_sha256 AND row.source_sheet=p_source_sheet AND row.source_row=p_source_row AND row.manifest_digest=p_manifest_digest AND row.approval_digest=p_approval_digest AND row.source_row_fingerprint=p_source_row_fingerprint AND row.repreneur_id IS NOT DISTINCT FROM p_repreneur_id AND row.opportunity_id IS NOT DISTINCT FROM p_opportunity_id AND row.resolution_blockers=COALESCE(p_resolution_blockers,'{}') AND row.review_flags=COALESCE(p_review_flags,'{}')) THEN RAISE EXCEPTION 'historical_pursuit_allowlist_replay_mismatch'; END IF;
 END $$;
 REVOKE ALL ON FUNCTION public.stage_historical_pursuit_import_allowlist(TEXT,TEXT,INTEGER,TEXT,TEXT,TEXT,UUID,UUID,TEXT[],TEXT[]) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.stage_historical_pursuit_import_allowlist(TEXT,TEXT,INTEGER,TEXT,TEXT,TEXT,UUID,UUID,TEXT[],TEXT[]) TO service_role;
@@ -194,7 +195,7 @@ BEGIN
   RETURN jsonb_build_object('outcome', v_outcome, 'match_id', v_match_id, 'mapped_match_status', v_status);
 END $$;
 
-CREATE OR REPLACE FUNCTION public.historical_pursuit_import_rows_for_staff(p_repreneur_id UUID) RETURNS SETOF public.historical_pursuit_import_rows LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ SELECT * FROM public.historical_pursuit_import_rows WHERE repreneur_id=p_repreneur_id ORDER BY source_row $$;
+CREATE OR REPLACE FUNCTION public.historical_pursuit_import_rows_for_staff(p_repreneur_id UUID) RETURNS SETOF public.historical_pursuit_import_rows LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ SELECT * FROM public.historical_pursuit_import_rows WHERE p_repreneur_id IS NULL OR repreneur_id=p_repreneur_id ORDER BY source_row $$;
 REVOKE ALL ON FUNCTION public.historical_pursuit_import_rows_for_staff(UUID) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.historical_pursuit_import_rows_for_staff(UUID) TO service_role;
 REVOKE ALL ON FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB,TEXT) FROM PUBLIC, anon, authenticated;
