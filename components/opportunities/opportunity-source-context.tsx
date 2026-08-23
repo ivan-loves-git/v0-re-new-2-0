@@ -47,6 +47,7 @@ import {
 
 const NO_OFFICE_OPTION_VALUE = "__no_office__"
 const NO_CANONICAL_CONTACT_OPTION_VALUE = "__no_canonical_contact__"
+const CONTACT_NAME_REQUIREMENT_TEXT = "First or last name required"
 type OfficeContactMode = "existing" | "new"
 type OfficeContextMode = "new_firm" | "existing_firm"
 
@@ -739,6 +740,8 @@ export function OpportunitySourceContext({
                     id="contact_first_name"
                     name="contact_first_name"
                     label="First name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errors={officeContextFieldErrors}
                     onChange={() => {
                       clearOfficeContextFieldError("contact_first_name")
@@ -749,6 +752,8 @@ export function OpportunitySourceContext({
                     id="contact_last_name"
                     name="contact_last_name"
                     label="Last name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errors={officeContextFieldErrors}
                     onChange={() => {
                       clearOfficeContextFieldError("contact_first_name")
@@ -987,6 +992,8 @@ export function OpportunitySourceContext({
                     id="office_contact_first_name"
                     name="contact_first_name"
                     label="First name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errorKey="office_contact_first_name"
                     errors={officeContactFieldErrors}
                     onChange={() => {
@@ -1000,6 +1007,8 @@ export function OpportunitySourceContext({
                     id="office_contact_last_name"
                     name="contact_last_name"
                     label="Last name"
+                    requirement="conditional"
+                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
                     errorKey="office_contact_last_name"
                     errors={officeContactFieldErrors}
                     onChange={() => {
