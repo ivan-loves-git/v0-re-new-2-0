@@ -1,9 +1,7 @@
-/**
- * The six inputs the current automatic scorer actually consumes. Optional
- * revenue, margin and staff-size preferences remain matching context only and
- * must never hide a staff recommendation or block discovery by themselves.
- */
+/** Matching v2 discovery inputs. Staff recommendations always bypass this gate. */
 export type AutomaticMatchingThesis = {
+  // Qualification and legacy bucket fields are accepted from existing profile
+  // queries but do not gate signed-client Matching v2 discovery.
   who_score?: number | null
   when_score?: number | null
   scoring_flags?: string[] | null
@@ -22,9 +20,7 @@ export type AutomaticMatchingThesis = {
 
 export type TargetThesisCompleteness = {
   complete: boolean
-  missing: Array<
-    "WHO score" | "WHEN score" | "matching flags" | "geography" | "sectors" | "deal size"
-  >
+  missing: Array<"geography" | "sectors" | "financial or size target">
 }
 
 function hasFiniteNumber(value: unknown) {
@@ -47,12 +43,17 @@ export function automaticMatchingThesisCompleteness(
   repreneur: AutomaticMatchingThesis,
 ): TargetThesisCompleteness {
   const missing: TargetThesisCompleteness["missing"] = []
-  if (!hasFiniteNumber(repreneur.who_score)) missing.push("WHO score")
-  if (!hasFiniteNumber(repreneur.when_score)) missing.push("WHEN score")
-  if (!Array.isArray(repreneur.scoring_flags)) missing.push("matching flags")
   if (!hasCanonicalOrLegacySelection(repreneur.q12_geo_zones, repreneur.target_location)) missing.push("geography")
   if (!hasCanonicalOrLegacySelection(repreneur.q13_target_sectors_v2, repreneur.sector_preferences)) missing.push("sectors")
-  if (!hasCanonicalOrLegacySelection(repreneur.q14_deal_size, repreneur.target_acquisition_size)) missing.push("deal size")
+  if (![
+    repreneur.target_revenue_min_meur,
+    repreneur.target_revenue_max_meur,
+    repreneur.target_ebitda_margin_min_pct,
+    repreneur.target_staff_size_min,
+    repreneur.target_staff_size_max,
+  ].some(hasFiniteNumber)) {
+    missing.push("financial or size target")
+  }
 
   return { complete: missing.length === 0, missing }
 }

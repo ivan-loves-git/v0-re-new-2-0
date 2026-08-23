@@ -5,6 +5,12 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
+import {
+  loadMatchingGeographyContext,
+  withMatchingGeography,
+  withMatchingGeographyTargets,
+} from "@/lib/repreneur-opportunity-geography"
+import { isAcceptedPaidMatchingClient } from "@/lib/repreneur-matching-eligibility"
 import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
@@ -214,13 +220,26 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   return data as { id: string; status: OpportunityMatchStatus; updated_at: string } | null
 }
 
+async function ensureNewMatchEligible(repreneurId: string) {
+  const { data, error } = await createAdminClient()
+    .from("repreneurs")
+    .select("first_name, last_name, lifecycle_status, repreneur_offers(status, offer:offers(name, price))")
+    .eq("id", repreneurId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data || data.lifecycle_status !== "client" || !isAcceptedPaidMatchingClient(data, data.repreneur_offers)) {
+    throw formError("New matches can only be created for accepted paid Deal Flow or End-to-End clients.", "repreneur_id")
+  }
+}
+
 async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: string) {
   const supabase = createAdminClient()
 
   const [{ data: opportunity, error: opportunityError }, { data: repreneur, error: repreneurError }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount")
+      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
       .eq("id", opportunityId)
       .maybeSingle(),
     supabase
@@ -235,7 +254,11 @@ async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: 
   if (!opportunity) throw formError("Opportunity was not found.", "opportunity_id")
   if (!repreneur) throw formError("Repreneur was not found.", "repreneur_id")
 
-  return calculateOpportunityMatchScore(repreneur, opportunity)
+  const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
+  return calculateOpportunityMatchScore(
+    withMatchingGeographyTargets(repreneur, geography),
+    withMatchingGeography(opportunity, geography),
+  )
 }
 
 function revalidateMatchPaths(opportunityId: string, matchId?: string) {
@@ -387,7 +410,7 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
   const [{ data: opportunity, error: opportunityError }, { data, error }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount")
+      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
       .eq("id", opportunityId)
       .maybeSingle(),
     supabase
@@ -400,9 +423,10 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
         lifecycle_status,
         journey_stage,
         recommendation,
+        repreneur_offers!inner(status, offer:offers(name, price)),
         ${REPRENEUR_MATCHING_INPUT_FIELDS}
       `)
-      .not("lifecycle_status", "in", "(rejected,declined)")
+      .eq("lifecycle_status", "client")
       .order("updated_at", { ascending: false })
       .limit(250),
   ])
@@ -410,9 +434,16 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
   if (opportunityError) throw new Error(opportunityError.message)
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((candidate) => {
+  const geography = await loadMatchingGeographyContext(
+    supabase,
+    (data ?? []).map((candidate) => candidate.id),
+  )
+  return (data ?? []).filter((candidate) => isAcceptedPaidMatchingClient(candidate, candidate.repreneur_offers)).map((candidate) => {
     if (!opportunity) return candidate as OpportunityMatchCandidate
-    const platformMatch = calculateOpportunityMatchScore(candidate, opportunity)
+    const platformMatch = calculateOpportunityMatchScore(
+      withMatchingGeographyTargets(candidate, geography),
+      withMatchingGeography(opportunity, geography),
+    )
     return {
       id: candidate.id,
       first_name: candidate.first_name,
@@ -438,12 +469,12 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
     await Promise.all([
       supabase
         .from("repreneurs")
-        .select(`id, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+        .select(`id, first_name, last_name, lifecycle_status, repreneur_offers!inner(status, offer:offers(name, price)), ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
         .eq("id", repreneurId)
         .maybeSingle(),
       supabase
         .from("opportunities")
-        .select("id, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, status, repreneur_exposure")
+        .select("id, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id, status, repreneur_exposure")
         .eq("status", "active")
         .neq("repreneur_exposure", "staff_only")
         .order("updated_at", { ascending: false })
@@ -457,14 +488,19 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
   if (repreneurError) throw new Error(repreneurError.message)
   if (opportunitiesError) throw new Error(opportunitiesError.message)
   if (matchesError) throw new Error(matchesError.message)
-  if (!repreneur) return []
+  if (!repreneur || repreneur.lifecycle_status !== "client" || !isAcceptedPaidMatchingClient(repreneur, repreneur.repreneur_offers)) return []
 
   const existingOpportunityIds = new Set((existingMatches ?? []).map((match) => match.opportunity_id))
+  const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
+  const geographyAwareRepreneur = withMatchingGeographyTargets(repreneur, geography)
 
   return (opportunities ?? [])
     .filter((opportunity) => !existingOpportunityIds.has(opportunity.id))
     .map((opportunity) => {
-      const platformMatch = calculateOpportunityMatchScore(repreneur, opportunity)
+      const platformMatch = calculateOpportunityMatchScore(
+        geographyAwareRepreneur,
+        withMatchingGeography(opportunity, geography),
+      )
       return {
         id: opportunity.id,
         reference: opportunity.reference,
@@ -493,6 +529,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     const status = readStatus(formData)
     ensureStaffMatchStatus(status)
     const existingMatch = await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
+    if (!existingMatch) await ensureNewMatchEligible(repreneurId)
     const expectedUpdatedAt = readExpectedUpdatedAt(formData)
     if (existingMatch && !expectedUpdatedAt) {
       throw formError("This recommendation was already saved or changed by another staff member. Refresh before editing it again.")
