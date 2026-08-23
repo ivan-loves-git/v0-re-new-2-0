@@ -34,13 +34,31 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(script).not.toContain("reference_code='QA'")
   })
 
-  it("collects every exact run-scoped P3 retry and remains idempotent after deletion", () => {
+  it("collects every exact run-scoped P3 retry and manifest-persisted Deals fixture before deletion", () => {
     const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
     expect(script).toContain("public_title=$1 AND created_by=$2")
-    expect(script).toContain("scopedOpportunities.rows.length > 2")
+    expect(script).toContain("runtime.p3DealIds")
+    expect(script).toContain("recorded-deal-ownership")
+    expect(script).toContain("recorded-match-ownership")
+    expect(script).toContain("row.id === manifest.ids.lockedRepreneur")
+    expect(script).toContain("scopedOpportunities.rows.length > 3")
     expect(script).toContain("WHERE opportunity_id = ANY($1::uuid[])")
     expect(script).not.toContain("opportunity-ledger-mismatch")
     expect(script).not.toContain("match-ledger-mismatch")
+  })
+
+  it("recovers only the exact leased W-127 fixture when persistence stops between browser action and manifest write", () => {
+    const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
+    expect(script).toContain("W127 first-only firm")
+    expect(script).toContain("w127-recovered-cardinality")
+    expect(script).toContain("w127-recovered-identity")
+    expect(script).toContain("w127-recovered-scope")
+    expect(script).toContain("w127-runtime-fixture-ownership")
+    expect(script).toContain("scopedW127FixtureIds")
+    expect(script).toContain("f.created_by=$2")
+    expect(script).toContain("o.created_by=$2")
+    expect(script).toContain("a.created_by=$2")
+    expect(script).toContain("c.created_by=$2")
   })
 
   it("removes exact QA evidence without weakening append-only protection after cleanup", () => {

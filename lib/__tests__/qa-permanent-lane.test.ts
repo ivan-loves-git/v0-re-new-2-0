@@ -1,5 +1,7 @@
-import { readFileSync } from "node:fs"
-import { describe, expect, it } from "vitest"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { describe, expect, it, vi } from "vitest"
 import {
   assertAuthorizedCandidate,
   assertCandidatePointer,
@@ -9,6 +11,7 @@ import {
 } from "@/lib/qa/permanent-contract.mjs"
 import { assertQaMailEnvelope, qaMailPolicyFromEnv } from "@/lib/email/qa-mail-policy"
 import { buildFixtureManifest } from "@/lib/qa/phase-b.mjs"
+import { acquireQaLease, loadAdmittedQaContract } from "@/lib/qa/lease-contract.mjs"
 import { assertMatchingStructureFingerprint, fingerprintStructureRows } from "@/lib/qa/structure-fingerprint.mjs"
 import { assertNoTopLevelTransactionControl } from "@/lib/qa/sql-safety.mjs"
 
@@ -181,6 +184,50 @@ describe("permanent QA lane contract", () => {
     expect(workflow).toContain("QA_CANDIDATE_ROOT: .qa-candidate")
     expect(workflow).toContain("Check out trusted QA controller and journeys")
     expect(sanitizer.match(/secretEnvironmentName = \/(.*)\//)?.[1]).not.toContain("QA_SUPABASE_PROJECT_REF")
+  })
+
+  it("binds the live lease to the admitted candidate contract after a reviewed schema transition", () => {
+    const lease = readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")
+    expect(lease).toContain("loadAdmittedQaContract()")
+    expect(lease).toContain("acquireQaLease(database")
+    expect(lease).not.toContain('resolve(process.cwd(), "supabase/qa-contract.json")')
+  })
+
+  it("passes the admitted candidate fingerprint to the lease acquisition query", async () => {
+    const root = mkdtempSync(join(tmpdir(), "renew-qa-lease-contract-"))
+    const admittedRoot = join(root, ".qa-candidate", "supabase")
+    const trustedFingerprint = "c".repeat(64)
+    const admittedFingerprint = "d".repeat(64)
+    try {
+      mkdirSync(join(root, "supabase"), { recursive: true })
+      mkdirSync(admittedRoot, { recursive: true })
+      writeFileSync(join(root, "supabase", "qa-contract.json"), JSON.stringify({ structureFingerprint: trustedFingerprint }))
+      writeFileSync(join(admittedRoot, "qa-contract.json"), JSON.stringify({ structureFingerprint: admittedFingerprint }))
+
+      const contract = await loadAdmittedQaContract({
+        workingDirectory: root,
+        candidateRoot: ".qa-candidate",
+      })
+      const database = {
+        query: vi.fn().mockResolvedValue({ rows: [{ result: { status: "acquired" } }] }),
+      }
+      const runId = "32625688380-1"
+      const owner = "qa-owner-000000000000000000000000"
+
+      await expect(acquireQaLease(database, {
+        runId,
+        owner,
+        candidateSha: SHA,
+        structureFingerprint: contract.structureFingerprint,
+      })).resolves.toEqual({ status: "acquired" })
+      expect(database.query).toHaveBeenCalledWith(
+        expect.stringContaining("qa_control.acquire_lease"),
+        [runId, owner, SHA, admittedFingerprint, 900],
+      )
+      expect(database.query).not.toHaveBeenCalledWith(expect.anything(), expect.arrayContaining([trustedFingerprint]))
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it("keeps failed health blocking except after exact reviewed-transition admission", () => {

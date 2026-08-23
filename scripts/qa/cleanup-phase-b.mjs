@@ -17,6 +17,7 @@ try {
   const leaseState = await assertLeaseAuthority(database)
   const storage = storageClient()
   const runtime = await readJson(RUNTIME_FIXTURES_FILE).catch(() => ({}))
+  const w127FixtureIds = runtime.w127FixtureIds ?? null
   const singletonBefore = await readJson(SINGLETON_BEFORE_FILE)
   if (!leaseState || !isDeepStrictEqual(leaseState.manifest?.fixtureManifest, manifest) || !isDeepStrictEqual(leaseState.manifest?.runtime ?? {}, runtime) || !isDeepStrictEqual(leaseState.singleton_before, singletonBefore)) {
     throw new Error("Phase B cleanup failed: server-manifest-mismatch")
@@ -42,8 +43,17 @@ try {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(emailCountDate || "")) throw new Error("Phase B cleanup failed: email-count-date")
   const rateLimitBefore = singletonBefore.rateLimitRows
   if (!Array.isArray(rateLimitBefore)) throw new Error("Phase B cleanup failed: rate-limit-snapshot")
+  if (w127FixtureIds && (
+    typeof w127FixtureIds.firmId !== "string" ||
+    typeof w127FixtureIds.officeId !== "string" ||
+    !Array.isArray(w127FixtureIds.contactIds) ||
+    !Array.isArray(w127FixtureIds.affiliationIds) ||
+    w127FixtureIds.contactIds.length !== w127FixtureIds.affiliationIds.length ||
+    w127FixtureIds.contactIds.some((id) => typeof id !== "string") ||
+    w127FixtureIds.affiliationIds.some((id) => typeof id !== "string")
+  )) throw new Error("Phase B cleanup failed: w127-runtime-fixture-shape")
   const authIdentityIds = [...manifest.betterAuthIdentities, manifest.ids.provisionalContextUser]
-  const recordedRepreneurIds = [runtime.p1RepreneurId, runtime.p2RepreneurId, manifest.ids.portalRepreneur].filter(Boolean)
+  const recordedRepreneurIds = [runtime.p1RepreneurId, runtime.p2RepreneurId, manifest.ids.portalRepreneur, manifest.ids.lockedRepreneur].filter(Boolean)
   let scopedRepreneurs = await database.query("SELECT id, email, source, cv_url FROM public.repreneurs WHERE id = ANY($1::uuid[])", [recordedRepreneurIds])
   if (!runtime.p1RepreneurId || !runtime.p2RepreneurId) {
     const recovered = await database.query("SELECT id, email, source, cv_url FROM public.repreneurs WHERE lower(email) IN (lower($1), lower($2))", [manifest.actors.applicant.email, manifest.actors.staffCreated.email])
@@ -51,17 +61,30 @@ try {
   }
   for (const row of scopedRepreneurs.rows) {
     const expected = row.id === manifest.ids.portalRepreneur
+      || row.id === manifest.ids.lockedRepreneur
       || (row.email === manifest.actors.applicant.email && row.source === "intake_v2")
       || (row.email === manifest.actors.staffCreated.email && row.source === "staff_manual")
     if (!expected) throw new Error("Phase B cleanup failed: repreneur-scope")
   }
-  const scopedOpportunities = await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity`, manifest.actors.staff.userId])
-  if (scopedOpportunities.rows.length > 2) throw new Error("Phase B cleanup failed: opportunity-scope")
+  const p3DealIds = runtime.p3DealIds ?? {}
+  const recordedOpportunityIds = [p3DealIds.declinedOpportunityId, p3DealIds.droppedOpportunityId].filter((value) => typeof value === "string")
+  const recordedMatchIds = [p3DealIds.lockedMatchId, p3DealIds.declinedMatchId, p3DealIds.droppedMatchId].filter((value) => typeof value === "string")
+  const primaryOpportunities = await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity`, manifest.actors.staff.userId])
+  const recordedDeals = recordedOpportunityIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunities WHERE id = ANY($1::uuid[]) AND created_by=$2 AND public_title IN ($3, $4)", [recordedOpportunityIds, manifest.actors.staff.userId, `${manifest.fixturePrefix} deals-declined`, `${manifest.fixturePrefix} deals-dropped`])
+    : { rows: [] }
+  if (recordedDeals.rows.length !== recordedOpportunityIds.length) throw new Error("Phase B cleanup failed: recorded-deal-ownership")
+  const recordedMatches = recordedMatchIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunity_matches WHERE id = ANY($1::uuid[]) AND opportunity_id = ANY($2::uuid[]) AND repreneur_id = ANY($3::uuid[])", [recordedMatchIds, recordedOpportunityIds, [manifest.ids.portalRepreneur, manifest.ids.lockedRepreneur]])
+    : { rows: [] }
+  if (recordedMatches.rows.length !== recordedMatchIds.length) throw new Error("Phase B cleanup failed: recorded-match-ownership")
+  const scopedOpportunities = { rows: [...primaryOpportunities.rows, ...recordedDeals.rows.filter((row) => !primaryOpportunities.rows.some((candidate) => candidate.id === row.id))] }
+  if (scopedOpportunities.rows.length > 3) throw new Error("Phase B cleanup failed: opportunity-scope")
   const scopedOpportunityProbes = runtime.opportunityProbeId
     ? await database.query("SELECT id FROM public.opportunities WHERE id=$1 AND public_title=$2 AND created_by=$3", [runtime.opportunityProbeId, `${manifest.fixturePrefix} opportunity probe`, manifest.actors.staff.userId])
     : await database.query("SELECT id FROM public.opportunities WHERE public_title=$1 AND created_by=$2", [`${manifest.fixturePrefix} opportunity probe`, manifest.actors.staff.userId])
   if (scopedOpportunityProbes.rows.length > 1) throw new Error("Phase B cleanup failed: opportunity-probe-scope")
-  const repreneurIds = [...new Set([manifest.ids.portalRepreneur, ...scopedRepreneurs.rows.map((row) => row.id)])]
+  const repreneurIds = [...new Set([manifest.ids.portalRepreneur, manifest.ids.lockedRepreneur, ...scopedRepreneurs.rows.map((row) => row.id)])]
   const opportunityIds = scopedOpportunities.rows.map((row) => row.id)
   const opportunityProbeIds = scopedOpportunityProbes.rows.map((row) => row.id)
   const allOpportunityIds = [...new Set([...opportunityIds, ...opportunityProbeIds])]
@@ -74,10 +97,53 @@ try {
     ? await database.query("SELECT id FROM public.opportunity_pursuit_evidence WHERE match_id = ANY($1::uuid[])", [matchIds])
     : { rows: [] }
   const evidenceIds = scopedEvidence.rows.map((row) => row.id)
+  // A browser failure can occur after either W-127 action commits but before
+  // the returned IDs reach the runner manifest. Recover only the exact,
+  // run-labelled firm owned by this leased staff actor, then require every
+  // child to belong to the same actor and one of the two expected name shapes.
+  // This closes the persistence window without broad name-derived deletion.
+  const recoveredW127 = await database.query(`SELECT
+      f.id AS firm_id, o.id AS office_id, c.id AS contact_id, a.id AS affiliation_id,
+      c.first_name, c.last_name
+    FROM public.ma_firms f
+    JOIN public.ma_offices o ON o.firm_id=f.id AND o.created_by=$2
+    JOIN public.ma_contact_office_affiliations a ON a.office_id=o.id AND a.created_by=$2
+    JOIN public.ma_contacts c ON c.id=a.contact_id AND c.created_by=$2
+    WHERE f.name=$1 AND f.created_by=$2
+    ORDER BY c.id`, [`${manifest.fixturePrefix} W127 first-only firm`, manifest.actors.staff.userId])
+  if (recoveredW127.rows.length > 2) throw new Error("Phase B cleanup failed: w127-recovered-cardinality")
+  for (const row of recoveredW127.rows) {
+    const firstOnly = row.first_name === `${manifest.fixturePrefix} W127 First` && row.last_name === null
+    const lastOnly = row.first_name === null && row.last_name === `${manifest.fixturePrefix} W127 Last`
+    if (!firstOnly && !lastOnly) throw new Error("Phase B cleanup failed: w127-recovered-identity")
+  }
+  const recoveredFirmIds = [...new Set(recoveredW127.rows.map((row) => row.firm_id))]
+  const recoveredOfficeIds = [...new Set(recoveredW127.rows.map((row) => row.office_id))]
+  if (recoveredFirmIds.length > 1 || recoveredOfficeIds.length > 1) throw new Error("Phase B cleanup failed: w127-recovered-scope")
+  const scopedW127FixtureIds = recoveredW127.rows.length > 0
+    ? {
+        firmId: recoveredFirmIds[0],
+        officeId: recoveredOfficeIds[0],
+        contactIds: recoveredW127.rows.map((row) => row.contact_id),
+        affiliationIds: recoveredW127.rows.map((row) => row.affiliation_id),
+      }
+    : null
+  if (w127FixtureIds && (!scopedW127FixtureIds ||
+    scopedW127FixtureIds.firmId !== w127FixtureIds.firmId ||
+    scopedW127FixtureIds.officeId !== w127FixtureIds.officeId ||
+    w127FixtureIds.contactIds.some((id) => !scopedW127FixtureIds.contactIds.includes(id)) ||
+    w127FixtureIds.affiliationIds.some((id) => !scopedW127FixtureIds.affiliationIds.includes(id)))) {
+    throw new Error("Phase B cleanup failed: w127-runtime-fixture-ownership")
+  }
+  const maFirmIds = [...new Set([manifest.ids.firm, manifest.ids.provisionalFirm, ...(scopedW127FixtureIds ? [scopedW127FixtureIds.firmId] : [])])]
+  const maOfficeIds = [...new Set([manifest.ids.office, manifest.ids.provisionalOffice, ...(scopedW127FixtureIds ? [scopedW127FixtureIds.officeId] : [])])]
+  const maContactIds = [...new Set([manifest.ids.contact, manifest.ids.provisionalCountContact, manifest.ids.provisionalContextContact, ...(scopedW127FixtureIds?.contactIds ?? [])])]
+  const maAffiliationIds = [...new Set([manifest.ids.affiliation, manifest.ids.provisionalAffiliation, ...(scopedW127FixtureIds?.affiliationIds ?? [])])]
 
   const objectNames = [...new Set([...manifest.storageObjects, ...(runtime.storageObjects ?? []), ...scopedRepreneurs.rows.map((row) => row.cv_url).filter(Boolean)])]
   await recordRuntimeFixtures({
     ...runtime,
+    w127FixtureIds: scopedW127FixtureIds,
     repreneurIds,
     opportunityIds,
     opportunityProbeIds,
@@ -106,6 +172,12 @@ try {
   }
   await database.query("DELETE FROM public.email_logs WHERE repreneur_id = ANY($1::uuid[])", [repreneurIds])
   await database.query("DELETE FROM public.repreneurs WHERE id = ANY($1::uuid[])", [repreneurIds])
+  if (scopedW127FixtureIds) {
+    await database.query("DELETE FROM public.ma_contact_office_affiliations WHERE id = ANY($1::uuid[])", [scopedW127FixtureIds.affiliationIds])
+    await database.query("DELETE FROM public.ma_contacts WHERE id = ANY($1::uuid[])", [scopedW127FixtureIds.contactIds])
+    await database.query("DELETE FROM public.ma_offices WHERE id=$1", [scopedW127FixtureIds.officeId])
+    await database.query("DELETE FROM public.ma_firms WHERE id=$1", [scopedW127FixtureIds.firmId])
+  }
   await database.query("DELETE FROM public.ma_provisional_source_contexts WHERE context_key=$1", [manifest.ids.provisionalContext])
   await database.query("DELETE FROM public.ma_contact_office_affiliations WHERE id=$1", [manifest.ids.provisionalAffiliation])
   await database.query("DELETE FROM public.ma_contacts WHERE id = ANY($1::uuid[])", [[manifest.ids.provisionalCountContact, manifest.ids.provisionalContextContact]])
@@ -156,7 +228,7 @@ try {
     (SELECT count(*)::int FROM public.opportunity_matches WHERE id = ANY($3::uuid[])) + (SELECT count(*)::int FROM public.opportunity_pursuit_evidence WHERE id = ANY($4::uuid[])) AS journey_rows,
     (SELECT count(*)::int FROM public.ma_firms WHERE id = ANY($5::uuid[])) + (SELECT count(*)::int FROM public.ma_offices WHERE id = ANY($6::uuid[])) + (SELECT count(*)::int FROM public.ma_contacts WHERE id = ANY($7::uuid[])) + (SELECT count(*)::int FROM public.ma_contact_office_affiliations WHERE id = ANY($8::uuid[])) + (SELECT count(*)::int FROM public.ma_provisional_source_contexts WHERE context_key=$9) + (SELECT count(*)::int FROM public.wave_journey_settings WHERE singleton=true AND updated_by=$10) AS ma_rows,
     (SELECT count(*)::int FROM public."user" WHERE id = ANY($11::text[])) + (SELECT count(*)::int FROM public."account" WHERE "userId" = ANY($11::text[])) + (SELECT count(*)::int FROM public."session" WHERE "userId" = ANY($11::text[])) + (SELECT count(*)::int FROM public.app_user_roles WHERE user_id = ANY($11::text[])) AS auth_rows,
-    (SELECT count(*)::int FROM storage.objects WHERE bucket_id='cvs' AND name = ANY($12::text[])) AS storage_objects`, [repreneurIds, allOpportunityIds, matchIds, evidenceIds, [manifest.ids.firm, manifest.ids.provisionalFirm], [manifest.ids.office, manifest.ids.provisionalOffice], [manifest.ids.contact, manifest.ids.provisionalCountContact, manifest.ids.provisionalContextContact], [manifest.ids.affiliation, manifest.ids.provisionalAffiliation], manifest.ids.provisionalContext, manifest.actors.staff.userId, authIdentityIds, objectNames])
+    (SELECT count(*)::int FROM storage.objects WHERE bucket_id='cvs' AND name = ANY($12::text[])) AS storage_objects`, [repreneurIds, allOpportunityIds, matchIds, evidenceIds, maFirmIds, maOfficeIds, maContactIds, maAffiliationIds, manifest.ids.provisionalContext, manifest.actors.staff.userId, authIdentityIds, objectNames])
   const values = residue.rows[0]
   const total = Object.values(values).reduce((sum, value) => sum + Number(value), 0)
   if (total !== 0) throw new Error("Phase B cleanup failed: residue")
@@ -164,7 +236,7 @@ try {
   if (JSON.stringify(restoredEmailCount) !== JSON.stringify(emailCountBefore)) throw new Error("Phase B cleanup failed: email-count-restore")
   const restoredRateLimits = (await database.query('SELECT coalesce(jsonb_agg(to_jsonb(limits) ORDER BY "key", id), \'[]\'::jsonb) AS value FROM public."rateLimit" limits')).rows[0].value
   if (JSON.stringify(restoredRateLimits) !== JSON.stringify(rateLimitBefore)) throw new Error("Phase B cleanup failed: rate-limit-restore")
-  await writePrivateJson(`${RUN_DIR}/cleanup-readback.json`, { runId: manifest.runId, databaseResidue: 0, authResidue: 0, storageResidue: 0, exactIdsChecked: manifest.databaseRows.length + repreneurIds.length + allOpportunityIds.length + matchIds.length + evidenceIds.length, dynamicObjectsChecked: objectNames.length, runtimeFixtureIds: { repreneurIds, opportunityIds, opportunityProbeIds, matchIds, evidenceIds } })
+  await writePrivateJson(`${RUN_DIR}/cleanup-readback.json`, { runId: manifest.runId, databaseResidue: 0, authResidue: 0, storageResidue: 0, exactIdsChecked: manifest.databaseRows.length + repreneurIds.length + allOpportunityIds.length + matchIds.length + evidenceIds.length + maFirmIds.length + maOfficeIds.length + maContactIds.length + maAffiliationIds.length, dynamicObjectsChecked: objectNames.length, runtimeFixtureIds: { repreneurIds, opportunityIds, opportunityProbeIds, matchIds, evidenceIds, w127FixtureIds: scopedW127FixtureIds } })
   await removeRunnerSecrets()
   console.log(JSON.stringify({ ok: true, runId: manifest.runId, databaseResidue: 0, authResidue: 0, storageResidue: 0 }))
 } catch (error) {

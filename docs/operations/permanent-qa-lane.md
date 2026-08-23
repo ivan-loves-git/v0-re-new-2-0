@@ -22,10 +22,12 @@ Supabase management readback on 2026-08-22 quoted Micro branch compute at USD 0.
 3. The workflow creates `P1-P3 protected pilot` on that exact SHA, holds global concurrency `renew-permanent-qa`, and moves only the remote `qa` pointer with an exact force-with-lease. Irrelevant push, failed and skipped workflow events receive unique run-ID concurrency groups so they cannot supersede daily health or a valid candidate; latest-pending supersession remains unchanged among valid PR and repository-dispatch candidates.
 4. It waits for Vercel's Preview deployment of that SHA, then verifies the stable alias, project, target, protection and deployed non-secret QA contract.
 5. The schema prerequisite verifies artifact checksums and the live catalog fingerprint. Matching candidates perform no DDL. Mismatches may synchronize only an empty, non-production branch with no active lease and must match the candidate fingerprint afterward.
-6. The browser job acquires the database lease, safely recovers only expired manifest-owned residue, runs P1–P3, performs exact-ID plus run-label cleanup, verifies zero residue, and releases the lease.
+6. The browser job binds lease acquisition to the admitted candidate contract checked out as data, not the controller's older `main` contract. It safely recovers only expired manifest-owned residue, runs P1–P3, performs exact-ID plus run-label cleanup, verifies zero residue, and releases the lease.
 7. The check is completed on the candidate SHA. A failed schema, journey, cleanup or release remains a failed required check.
 
 Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects forks/foreign repositories.
+
+Browser journeys, fixture manifests, seed logic, readback and cleanup always resolve from the exact trusted `main` controller checkout. The candidate checkout is limited to the admitted contract and its checksum-pinned SQL inputs under `.qa-candidate`; candidate tests, scripts, workflows, dependencies and package commands are never executed. A newly trusted acceptance pack may therefore test a later product candidate only after that pack is published to `main`, current-main daily health is green, and the product candidate passes exact reviewed-schema admission.
 
 ## Concurrency and supersession
 
@@ -42,6 +44,8 @@ The v3 structure fingerprint uses canonical PostgreSQL `C` ordering for relation
 ## Recovery and blocked state
 
 `qa_control.lease` stores one owner hash, run ID, candidate SHA, heartbeat/expiry, candidate structure fingerprint, exact server-side manifest and singleton snapshots. An active foreign lease cannot be recovered. An expired lease must first be claimed by a distinct recovery owner; cleanup is limited to its persisted IDs/objects and exact run labels. Unlabelled or ambiguous rows are release blockers and must not be deleted automatically.
+
+If a trusted controller release changes the exact fixture-manifest shape while an older expired lease remains, recovery rejects the mismatched manifest rather than guessing how to delete it. The old lease must be resolved through the explicit recovery procedure before daily health or a candidate run can proceed.
 
 A failed or mismatched schema synchronization writes `qa_control.schema_state.blocked_reason`. Browser fixtures are forbidden while this is set. Recovery requires an empty-branch readback, deterministic synchronization and exact fingerprint match; it is not a production rollback mechanism.
 
