@@ -69,13 +69,13 @@ describe("W-086/W-087 relationship workspaces", () => {
     expect(contactAction).not.toContain('.from("ma_contacts")')
   })
 
-  it("shows office contact emails read-only without inventing an edit workflow", () => {
+  it("keeps office contact detail on the canonical affiliation chain", () => {
     expect(ledger).toContain(
-      "contact:ma_contacts(id, display_name, email, status",
+      "contact:ma_contacts(id, display_name, first_name, last_name, email",
     )
     expect(detail).toContain('Email: {contact.email || "Email not recorded"}')
     expect(detail).toContain("includeHistorical ?")
-    expect(detail).not.toContain("Edit contact")
+    expect(detail).toContain("MaRelationshipCorrectionAction")
   })
 
   it("carries the W-085 evidence boundary into both workspace activity views", () => {

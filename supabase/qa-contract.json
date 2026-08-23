@@ -1,6 +1,6 @@
 {
-  "version": "822-m2-portal-deals-v1",
-  "structureFingerprint": "bd868fb2462e5036bfecacad88f407de98c9db0968704f712c3c16d653f4525d",
+  "version": "823-m2-staff-ma-v1",
+  "structureFingerprint": "9f766b7ebe59c9a3a5e20b0abaa593b432e3efb59f15b36d89b1d3da6b3e16d6",
   "files": [
     {
       "path": "supabase/schema/771_extensions.sql",
@@ -29,6 +29,10 @@
     {
       "path": "supabase/schema/822_deals_reconsideration.sql",
       "sha256": "62d693c89a8f2ed19045cbfa62cfd3db111d5a16e6b645a9e024069b4570ef93"
+    },
+    {
+      "path": "supabase/schema/823_staff_ma_relationship_corrections.sql",
+      "sha256": "bfcbd622f471b55c5d5f1352788e3070abf33f1ccf9da246da8d3cb37f9ffedf"
     }
   ]
 }
