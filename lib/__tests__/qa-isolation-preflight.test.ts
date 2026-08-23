@@ -175,10 +175,10 @@ describe("QA isolation preflight", () => {
       input.evidence.vercel.projectName = "v0-re-new-2-0"
     }, "vercel-project")
     expectFailure((input) => {
-      input.evidence.vercel.target = "preview"
+      ;(input.evidence.vercel as { target: string | null }).target = "preview"
     }, "vercel-target")
     expectFailure((input) => {
-      input.evidence.vercel.target = "production"
+      ;(input.evidence.vercel as { target: string | null }).target = "production"
     }, "vercel-target")
     expectFailure((input) => {
       input.evidence.vercel.productionEnvironmentAttached = true
