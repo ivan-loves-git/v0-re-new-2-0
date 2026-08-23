@@ -32,12 +32,12 @@ function expectedGoldenConcurrencyGroup(event: GoldenWorkflowEvent) {
 }
 
 describe("permanent QA lane contract", () => {
-  it("pins the provisional v3 fingerprint and five immutable schema inputs", () => {
+  it("pins the prepared v4 fingerprint and five immutable schema inputs", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 
     expect(contract).toEqual({
-      version: "771-permanent-qa-v3",
-      structureFingerprint: "37d01bc56c45aa8fe754893427feacb9da300e62449d34f85e331710eca33f24",
+      version: "771-permanent-qa-v4",
+      structureFingerprint: "f520f79bcb17aab9218f768d58da224a4b7ecbd071484f335720d72377d403ae",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
@@ -403,8 +403,8 @@ describe("permanent QA lane contract", () => {
 
   it("documents latest-pending supersession and independent provider evidence boundaries", () => {
     const operations = readFileSync(`${process.cwd()}/docs/operations/permanent-qa-lane.md`, "utf8")
-    expect(operations).toContain("The v3 structure fingerprint")
-    expect(operations).toContain("two independent clean-room reconstructions using the trusted Node algorithm")
+    expect(operations).toContain("The v4 structure fingerprint")
+    expect(operations).toContain("QA recorded two-cycle equality: both independent trusted clean-room reconstructions produced exact fingerprint `f520f79bcb17aab9218f768d58da224a4b7ecbd071484f335720d72377d403ae` with 79 public tables, 0 public rows, 0 auth users, 0 storage objects and 0 leases")
     expect(operations).toContain("Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock")
     expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, post-sync fingerprint equality, P1–P3, sanitization, cleanup or final check evaluation")
     expect(operations).toContain("latest-pending supersession")
