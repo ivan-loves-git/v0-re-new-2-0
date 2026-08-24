@@ -256,8 +256,8 @@ export const NEEDS_QUESTIONS = {
     field: 'q18_investment_thesis_url',
     label: 'Partagez votre lettre de cadrage (si disponible)',
     labelEn: 'Share your investment thesis document (if available)',
-    helpText: 'Formats acceptés: PDF, DOC, DOCX (max 10MB)',
-    helpTextEn: 'Accepted formats: PDF, DOC, DOCX (max 10MB)',
+    helpText: 'Formats acceptés: PDF, DOC, DOCX (max 4 MB)',
+    helpTextEn: 'Accepted formats: PDF, DOC, DOCX (max 4 MB)',
     required: false,
     type: 'file' as const
   }
@@ -305,8 +305,8 @@ export const CONTACT_FIELDS = {
     field: 'cv_url',
     label: 'CV',
     labelEn: 'Resume/CV',
-    helpText: 'Formats acceptés: PDF, DOC, DOCX (max 10MB)',
-    helpTextEn: 'Accepted formats: PDF, DOC, DOCX (max 10MB)',
+    helpText: 'Formats acceptés: PDF, DOC, DOCX (max 4 MB)',
+    helpTextEn: 'Accepted formats: PDF, DOC, DOCX (max 4 MB)',
     required: true,
     type: 'file' as const
   },

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/lib/i18n/language-context"
 import type { IntakeV2StepProps, FileUploadState } from "@/lib/types/intake-v2"
+import { CV_LDC_MAX_FILE_BYTES } from "@/lib/upload-limits"
 import { Upload, FileText, X, Loader2 } from "lucide-react"
 
 /**
@@ -49,8 +50,7 @@ export function StepContact({
       return
     }
 
-    // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > CV_LDC_MAX_FILE_BYTES) {
       setCvUpload((prev) => ({ ...prev, error: t("errorFileSize") }))
       return
     }

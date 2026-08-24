@@ -4,6 +4,8 @@
  * Types for the multi-step intake form based on questionnaire-spec-v2.md
  */
 
+import { CV_LDC_MAX_FILE_BYTES } from "@/lib/upload-limits"
+
 // ========================================
 // Form Data Interface
 // ========================================
@@ -194,12 +196,12 @@ export const ACCEPTED_FILE_TYPES = {
   cv: {
     accept: '.pdf,.doc,.docx',
     mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-    maxSize: 10 * 1024 * 1024 // 10MB
+    maxSize: CV_LDC_MAX_FILE_BYTES
   },
   thesis: {
     accept: '.pdf,.doc,.docx',
     mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-    maxSize: 10 * 1024 * 1024 // 10MB
+    maxSize: CV_LDC_MAX_FILE_BYTES
   }
 } as const
 

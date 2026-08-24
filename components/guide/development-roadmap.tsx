@@ -1992,7 +1992,7 @@ const roadmapEvents: RoadmapPeriod[] = [
       {
         title: "CV upload in intake form",
         type: "feature",
-        description: "Repreneurs can now upload their CV (PDF only) during the intake questionnaire. Stored in Supabase Storage with 10MB limit.",
+        description: "Repreneurs can now upload their CV (PDF only) during the intake questionnaire. Stored in Supabase Storage with a 4 MB limit.",
       },
       {
         title: "Documents card on profile",

@@ -135,7 +135,9 @@ describe("remaining security boundaries", () => {
     expect(
       uploadSource.indexOf("verifyAndConsumeIntakeUploadToken"),
     ).toBeLessThan(uploadSource.indexOf("request.formData"))
-    expect(uploadSource).toContain("MAX_REQUEST_BYTES")
+    expect(uploadSource).toContain("VERCEL_FUNCTION_MAX_REQUEST_BYTES")
+    expect(uploadSource).toContain("CV_LDC_MAX_FILE_BYTES")
+    expect(uploadSource).not.toContain("boundedMultipartFormData")
   })
 
   it("removes browser execution from the clipboard SECURITY DEFINER RPC", () => {
