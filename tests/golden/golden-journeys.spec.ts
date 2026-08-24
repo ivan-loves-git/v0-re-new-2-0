@@ -390,8 +390,12 @@ test.describe.serial("Golden journeys", () => {
     const opportunityId = page.url().split("/").pop()!
     await recordRuntimeFixtures({ p3OpportunityId: opportunityId })
 
-    await page.getByRole("tab", { name: "Recommendations" }).click()
-    await page.getByRole("combobox", { name: "Repreneur" }).click()
+    await page.goto(`/opportunities/${opportunityId}?tab=recommendations`)
+    await expect(page.getByRole("tab", { name: "Recommendations" })).toHaveAttribute("data-state", "active")
+    const repreneurCombobox = page.getByRole("combobox", { name: "Repreneur" })
+    await expect(repreneurCombobox).toBeVisible()
+    await expect(repreneurCombobox).toBeEnabled()
+    await repreneurCombobox.click()
     await page.getByRole("option").filter({ hasText: manifest.actors.portal.email }).click()
     await page.getByRole("button", { name: "Save recommendation" }).click()
     await expect(page.getByText("Recommendation saved")).toBeVisible()
