@@ -33,18 +33,19 @@ function jobBlock(workflow: string, jobName: string) {
 }
 
 describe("permanent QA lane contract", () => {
-  it("pins the provisional v3 fingerprint and five immutable schema inputs", () => {
+  it("pins the integrated W-147/W-148 fingerprint and six schema inputs", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 
     expect(contract).toEqual({
-      version: "771-permanent-qa-v3",
-      structureFingerprint: "37d01bc56c45aa8fe754893427feacb9da300e62449d34f85e331710eca33f24",
+      version: "772-p0-security-v1",
+      structureFingerprint: "9337cb02089112c90af6785863ccfcb603e84de911fcb590c705d4b80de73d62",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
         { path: "supabase/schema/permanent_qa_rebuild.sql", sha256: "20565af77093399b6b8ebc7e27ebc78e778faf9df802b702b7d86eea9f323291" },
         { path: "supabase/schema/771_public_schema.sql", sha256: "593d9d2b813c9047568dd5d863e2d4644a18493cff0e63142518fcfeb554788b" },
-        { path: "supabase/schema/771_test_storage.sql", sha256: "55a91d3c3db75e6ea9d0d55f3d0165bb087e83451174147c58a7c951dc91e8b4" },
+        { path: "supabase/schema/772_w147_auth_data_api.sql", sha256: "538fdb23f2a5a8d2be5881a56fa89d3a0eeb32996bb4e7a328c8349574f49029" },
+        { path: "supabase/schema/771_test_storage.sql", sha256: "ecd41fd86c5566f77fadc53998ff7fdca12a4e81d9142ca07cfc1db620bf545f" },
       ],
     })
   })

@@ -22,8 +22,6 @@ export async function POST() {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  const supabase = await createServerClient()
-
   const access = await getCurrentUserAccess()
 
   if (!access) {
@@ -33,6 +31,8 @@ export async function POST() {
   if (access.role !== "staff") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+
+  const supabase = await createServerClient()
 
   try {
     // Fetch all repreneurs

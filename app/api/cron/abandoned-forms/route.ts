@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail, wasEmailSent } from "@/lib/email"
-import { getTemplateSubject, getTemplateBody } from "@/lib/actions/emails"
+import { getTemplateSubject, getTemplateBody } from "@/lib/email/template-content"
 import { AbandonedReminderEmail } from "@/lib/email/templates/abandoned-reminder"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"

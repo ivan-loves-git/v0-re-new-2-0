@@ -420,6 +420,14 @@ W-065 is a staff-only application boundary over the live W-064 evidence model. O
 7. Source teasers and IMs are retained records. A correction creates a new document row and never overwrites or deletes an earlier version. Canonical NDA artifact rows remain subject to their stricter immutable version rules below.
 8. Staff view or download a private document only through the server-side opportunity document route after a staff authorization check. The route may create a short-lived private storage capability internally, but it streams bytes through WAVE with private no-store and app-controlled inline-or-download headers; it never grants a browser a reusable storage URL. Legacy or arbitrary external URLs are not browser-delivered.
 
+### CV and Lettre de cadrage storage boundary
+
+CVs and Lettres de cadrage (LDCs) are retained in the private `cvs` bucket. `public = false` is necessary but not sufficient: `anon` and `authenticated` browser roles have no direct Storage `SELECT`, `INSERT`, `UPDATE` or `DELETE` capability for this bucket, including list/prefix enumeration, direct object GET, upload, overwrite/upsert and delete. This applies even if another permissive storage policy is later introduced for a different browser use case.
+
+The public intake may accept a CV only through its one-time, server-validated intake token and server-side file validation/upload path. A staff member may retrieve a CV only through the staff-authorized repreneur-document route. A repreneur may retrieve only their exact retained LDC through that same server-authorized route; CVs remain staff-only. The route may obtain a short-lived internal storage capability, but it must stream controlled private no-store bytes to the browser and must never redirect to or disclose a reusable Storage URL. The service role is a storage transport capability only after these application checks; it is not a browser credential.
+
+If historical-access review is authorised, it is a value-free, read-only evidence exercise: record the reviewed time window, log-source availability/retention, `cvs` bucket scope, operation category and aggregate result only. Do not enumerate object names or prefixes, retrieve document bytes, record signed URLs, identities, addresses, headers or request payloads, or make any storage/data/policy change. A lack of retained logs is recorded as unavailable evidence, not as proof that no prior access occurred.
+
 ### Canonical NDA artifact versions
 
 **Purpose:** distinguishes and retains the documents used by the NDA lifecycle without treating upload as staff validation or access authority.

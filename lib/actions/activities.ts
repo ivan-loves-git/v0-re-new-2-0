@@ -1,7 +1,7 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
-import { requireUser } from "@/lib/auth-server"
+import { requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import type { ActivityType, Activity_Insert } from "@/lib/types/repreneur"
@@ -14,10 +14,8 @@ export async function createActivity(
   durationMinutes?: number,
   eventDate?: string
 ) {
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  // Get current user from Better Auth
-  const user = await requireUser()
 
   const activity: Activity_Insert = {
     repreneur_id: repreneurId,
@@ -71,6 +69,7 @@ export async function createActivity(
 }
 
 export async function getActivities(repreneurId: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data: activities, error } = await supabase
@@ -94,6 +93,7 @@ export async function getActivities(repreneurId: string) {
 }
 
 export async function deleteActivity(activityId: string, repreneurId: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase.from("activities").delete().eq("id", activityId)
