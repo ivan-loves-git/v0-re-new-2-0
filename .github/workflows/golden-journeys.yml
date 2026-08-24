@@ -167,7 +167,7 @@ jobs:
 
   schema-sync:
     name: Synchronize candidate database contract
-    if: ${{ github.run_attempt == '1' && needs.lane.result == 'success' }}
+    if: ${{ github.run_attempt == '1' && needs.lane.result == 'success' && needs.recover.result == 'success' }}
     permissions:
       contents: read
     needs: [lane, recover]
