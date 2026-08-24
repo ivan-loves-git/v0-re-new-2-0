@@ -114,6 +114,7 @@ jobs:
       QA_RUN_ID: recovery-${{ github.run_id }}-${{ github.run_attempt }}
       QA_FIXTURE_PREFIX: TEST-recovery-${{ github.run_id }}-${{ github.run_attempt }}
       QA_CANDIDATE_ROOT: .
+      QA_PRE_SCHEMA_RECOVERY: "true"
       QA_RUN_DIR: ${{ github.workspace }}/.qa-recovery
       QA_DATABASE_CA_CERT_FILE: ${{ github.workspace }}/.qa-run/supabase-ca.crt
     steps:
