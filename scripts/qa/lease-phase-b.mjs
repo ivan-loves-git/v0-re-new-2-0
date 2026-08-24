@@ -17,7 +17,7 @@ const action = process.argv[2]
 const owner = process.env.QA_LEASE_OWNER
 const runId = process.env.QA_RUN_ID
 const candidateSha = process.env.QA_EXPECTED_SHA
-const allowPreSchemaRecovery = action === "acquire" && process.env.QA_PRE_SCHEMA_RECOVERY === "true"
+const allowPreSchemaRecovery = process.env.QA_PRE_SCHEMA_RECOVERY === "true" && (action === "acquire" || action === "release")
 const SAFE_CONTRACT_FAILURES = new Set([
   "QA lease contract failed: candidate-root",
   "QA lease contract failed: contract",
