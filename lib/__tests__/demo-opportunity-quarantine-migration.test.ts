@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 const migration = fs.readFileSync(path.join(process.cwd(), "scripts/112_demo_opportunity_quarantine.sql"), "utf8")
 const rehearsal = fs.readFileSync(path.join(process.cwd(), "scripts/rehearse-w126-demo-opportunity-quarantine.sh"), "utf8")
 const rollbackArtifact = fs.readFileSync(path.join(process.cwd(), "scripts/rollback-w126-demo-opportunity-quarantine.sql"), "utf8")
+const verifyWorkflow = fs.readFileSync(path.join(process.cwd(), ".github/workflows/verify.yml"), "utf8")
 
 describe("W-126 DEMO quarantine migration", () => {
   it("uses an explicit default-false flag and a 24-record drift-checked manifest", () => {
@@ -60,5 +61,7 @@ describe("W-126 DEMO quarantine migration", () => {
     expect(rehearsal).toContain("w126_full_schema_rpc_mismatch")
     expect(rehearsal).toContain("rehearsal_opportunity_updated_at")
     expect(rehearsal).toContain("w126_migration_transaction_control_forbidden")
+    expect(verifyWorkflow).toContain("Rehearse W-126 DEMO quarantine and portal response")
+    expect(verifyWorkflow).toContain("bash scripts/rehearse-w126-demo-opportunity-quarantine.sh")
   })
 })
