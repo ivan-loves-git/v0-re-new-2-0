@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto"
+import { readFile } from "node:fs/promises"
 import pg from "pg"
 import { loadFingerprintRehearsalContract, assertPinnedFingerprint } from "../../lib/qa/contract-fingerprint-rehearsal.mjs"
 import { STRUCTURE_FINGERPRINT_SQL, fingerprintStructureRows } from "../../lib/qa/structure-fingerprint.mjs"
@@ -13,6 +15,9 @@ function fail(code) {
 if (!databaseUrl) fail("database-url")
 
 const { contract, files } = await loadFingerprintRehearsalContract()
+const contractBytes = await readFile(new URL("../../supabase/qa-contract.json", import.meta.url))
+const qaContractSha256 = createHash("sha256").update(contractBytes).digest("hex")
+const candidateSha = process.env.GITHUB_SHA ?? "local"
 const client = new pg.Client({ connectionString: databaseUrl })
 try {
   await client.connect()
@@ -27,6 +32,7 @@ try {
     CREATE SCHEMA extensions;
     CREATE SCHEMA auth;
     CREATE SCHEMA storage;
+    CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $ SELECT NULL::uuid $;
     CREATE TABLE auth.users (id uuid PRIMARY KEY);
     CREATE TABLE storage.buckets (id text PRIMARY KEY, name text NOT NULL, public boolean NOT NULL DEFAULT false);
     CREATE TABLE storage.objects (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, bucket_id text NOT NULL, name text NOT NULL);
@@ -42,6 +48,8 @@ try {
   console.log(JSON.stringify({
     qaContractFingerprintEvidence: {
       version: contract.version,
+      candidateSha,
+      qaContractSha256,
       expectedStructureFingerprint: contract.structureFingerprint,
       actualStructureFingerprint: actual,
       postgresVersion: version.rows[0].server_version,
