@@ -267,6 +267,14 @@ describe("Phase B QA contracts", () => {
     expect(config).toContain('video: "off"')
   })
 
+  it("keeps Golden opportunity intake aligned with the active geography release mode", () => {
+    const journeys = readFileSync(`${process.cwd()}/tests/golden/golden-journeys.spec.ts`, "utf8")
+
+    expect(journeys).toContain('const geographyMandatesEnabled = (await page.getByLabel("Canonical geography").count()) > 0')
+    expect(journeys).toContain('expect(submitted).toMatchObject({ geography_node_id: manifest.ids.geography })')
+    expect(journeys).toContain('expect(submitted).not.toHaveProperty("geography_node_id")')
+  })
+
   it("captures exactly six fixed post-success PNG evidence files", () => {
     const journeys = readFileSync(`${process.cwd()}/tests/golden/golden-journeys.spec.ts`, "utf8")
     const screenshotPaths = [...journeys.matchAll(/screenshot\(\{ path: `\$\{RUN_DIR\}\/test-results\/([^`]+)` \}\)/g)]
