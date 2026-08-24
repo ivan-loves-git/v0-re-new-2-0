@@ -19,7 +19,15 @@ try {
   const runtime = await readJson(RUNTIME_FIXTURES_FILE).catch(() => ({}))
   const w127FixtureIds = runtime.w127FixtureIds ?? null
   const singletonBefore = await readJson(SINGLETON_BEFORE_FILE)
-  if (!leaseState || !isDeepStrictEqual(leaseState.manifest?.fixtureManifest, manifest) || !isDeepStrictEqual(leaseState.manifest?.runtime ?? {}, runtime) || !isDeepStrictEqual(leaseState.singleton_before, singletonBefore)) {
+  try {
+    assertRecoveryArtifacts({
+      serverManifest: leaseState?.manifest,
+      serverSingletonBefore: leaseState?.singleton_before,
+      fixtureManifest: manifest,
+      runtimeFixtures: runtime,
+      singletonBefore,
+    })
+  } catch {
     throw new Error("Phase B cleanup failed: server-manifest-mismatch")
   }
   await assertQaMutationTriggersEnabled(database)

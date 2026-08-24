@@ -429,7 +429,7 @@ describe("permanent QA lane contract", () => {
     ]) {
       expect(workflow.indexOf(requiredStep)).toBeGreaterThanOrEqual(0)
     }
-    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
+    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.recover.result == 'success' && needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
   })
 
   it("keeps live cleanup rehearsal out of ordinary candidate runs", () => {
@@ -593,7 +593,9 @@ describe("permanent QA lane contract", () => {
     expect(ddl.trimStart()).not.toMatch(/^BEGIN;/)
     expect(ddl.trimEnd()).not.toMatch(/COMMIT;$/)
     expect(readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")).toContain("server-manifest-mismatch")
-    expect(readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")).toContain("buildFixtureManifest(stale.runId)")
+    const lease = readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")
+    expect(lease).toContain("assertRecoveryFixtureManifest(fixtureManifest, stale.runId)")
+    expect(lease).toContain('fail("recovery-manifest")')
   })
 
   it("keeps expired-manifest recovery idempotent after cleanup has already committed", () => {
@@ -606,6 +608,28 @@ describe("permanent QA lane contract", () => {
     expect(cleanup).toContain("server-manifest-mismatch")
     expect(cleanup).toContain("repreneur-scope")
     expect(cleanup).toContain("opportunity-scope")
+  })
+
+  it("recovers only an expired manifest-bound QA lease before schema synchronization", () => {
+    const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const recover = jobBlock(workflow, "recover")
+    const schemaSync = jobBlock(workflow, "schema-sync")
+    const finalize = jobBlock(workflow, "finalize")
+
+    expect(workflow.indexOf("recover:")).toBeGreaterThan(workflow.indexOf("lane:"))
+    expect(workflow.indexOf("recover:")).toBeLessThan(workflow.indexOf("schema-sync:"))
+    expect(recover).toContain("needs: lane")
+    expect(recover).toContain("ref: ${{ needs.lane.outputs.candidate_sha }}")
+    expect(recover).toContain("persist-credentials: false")
+    expect(recover).toContain("working-directory: .qa-candidate")
+    expect(recover).toContain("pnpm qa:schema:verify")
+    expect(recover).toContain("pnpm qa:lease:acquire")
+    expect(recover).toContain("pnpm qa:lease:release")
+    expect(recover).not.toContain("QA_VERCEL_TOKEN")
+    expect(schemaSync).toContain("needs: [lane, recover]")
+    expect(schemaSync).toContain("needs.recover.result == 'success'")
+    expect(finalize).toContain("needs: [lane, recover, schema-sync, golden]")
+    expect(finalize).toContain("recovery=${{ needs.recover.result }}")
   })
 
   it("keeps schema synchronization separate and transactional before runner-hosted browser fixtures", () => {

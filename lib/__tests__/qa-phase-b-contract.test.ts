@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
+  assertRecoveryArtifacts,
+  assertRecoveryFixtureManifest,
   assertSafeQaRuntime,
+  buildLegacyFixtureManifest,
   buildFixtureManifest,
   validateLiveEvidence,
 } from "@/lib/qa/phase-b.mjs"
@@ -75,6 +78,58 @@ describe("Phase B QA contracts", () => {
     expect(first.ids.provisionalContextContact).toMatch(/^[0-9a-f-]{36}$/)
     expect(first.databaseRows.some((row: { id: string }) => row.id === first.ids.provisionalContext)).toBe(false)
     expect(first.singletonSnapshots).toContainEqual({ table: "ma_provisional_source_contexts", key: first.ids.provisionalContext })
+  })
+
+  it("recovers only the exact current or frozen bbfa442 fixture manifest", () => {
+    const runId = "32720805410-1"
+    const current = buildFixtureManifest(runId)
+    const bbfa442 = buildLegacyFixtureManifest(runId)
+
+    expect(bbfa442.ids.lockedRepreneur).toMatch(/^[0-9a-f-]{36}$/)
+    expect(bbfa442.databaseRows).toContainEqual({ table: "repreneurs", id: bbfa442.ids.lockedRepreneur, label: `TEST-${runId}` })
+    expect(assertRecoveryFixtureManifest(current, runId)).toBe(current)
+    expect(assertRecoveryFixtureManifest(bbfa442, runId)).toBe(bbfa442)
+    expect(() => buildLegacyFixtureManifest("32720805410-2")).toThrow("Fixture manifest failed: legacy-run-id")
+
+
+    const tamperedId = structuredClone(bbfa442)
+    tamperedId.ids.lockedRepreneur = current.ids.portalRepreneur
+    expect(() => assertRecoveryFixtureManifest(tamperedId, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+    const tamperedPrefix = structuredClone(current)
+    tamperedPrefix.fixturePrefix = "TEST-other-run"
+    expect(() => assertRecoveryFixtureManifest(tamperedPrefix, runId)).toThrow("Fixture manifest failed: recovery-shape")
+    const tamperedEmail = structuredClone(current)
+    tamperedEmail.actors.staff.email = "staff@example.test"
+    expect(() => assertRecoveryFixtureManifest(tamperedEmail, runId)).toThrow("Fixture manifest failed: recovery-shape")
+    const tamperedStorage = structuredClone(current)
+    tamperedStorage.storageObjects[0] = "other/fixture.pdf"
+    expect(() => assertRecoveryFixtureManifest(tamperedStorage, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+    const tamperedSingleton = structuredClone(current)
+    tamperedSingleton.singletonSnapshots[0].key = "other_context"
+    expect(() => assertRecoveryFixtureManifest(tamperedSingleton, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+    const unknownHistoricalShape = structuredClone(bbfa442)
+    Object.assign(unknownHistoricalShape.ids, { unreviewed: "not-an-allowed-fixture-id" })
+    const reorderedLegacy = Object.fromEntries(Object.entries(bbfa442).reverse())
+    expect(assertRecoveryFixtureManifest(reorderedLegacy, runId)).toBe(reorderedLegacy)
+    const reorderedLegacyRows = structuredClone(bbfa442)
+    reorderedLegacyRows.databaseRows.reverse()
+    expect(() => assertRecoveryFixtureManifest(reorderedLegacyRows, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+
+    const { storageObjects: _removedStorageObjects, ...removedLegacyField } = bbfa442
+    expect(() => assertRecoveryFixtureManifest(removedLegacyField, runId)).toThrow("Fixture manifest failed: recovery-shape")
+
+    expect(() => assertRecoveryFixtureManifest(unknownHistoricalShape, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+  })
+
+  it("preserves exact server ownership for recovery runtime and singleton artifacts", () => {
+    const fixtureManifest = buildLegacyFixtureManifest("32720805410-1")
+    const runtimeFixtures = { p1RepreneurId: fixtureManifest.ids.portalRepreneur, storageObjects: fixtureManifest.storageObjects }
+    const singletonBefore = { emailCountDate: "2026-08-24", rateLimitRows: [] }
+    const serverManifest = { fixtureManifest, runtime: runtimeFixtures }
+
+    expect(assertRecoveryArtifacts({ serverManifest, serverSingletonBefore: singletonBefore, fixtureManifest, runtimeFixtures, singletonBefore })).toBe(true)
+    expect(() => assertRecoveryArtifacts({ serverManifest, serverSingletonBefore: singletonBefore, fixtureManifest, runtimeFixtures: { ...runtimeFixtures, p1RepreneurId: "tampered" }, singletonBefore })).toThrow("Fixture manifest failed: recovery-artifacts")
+    expect(() => assertRecoveryArtifacts({ serverManifest, serverSingletonBefore: singletonBefore, fixtureManifest, runtimeFixtures, singletonBefore: { ...singletonBefore, emailCountDate: "2026-08-25" } })).toThrow("Fixture manifest failed: recovery-artifacts")
   })
 
   it("accepts only live zero-state evidence from the exact protected deployment SHA", () => {
