@@ -7,8 +7,8 @@
 BEGIN;
 
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('cvs', 'cvs', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
+VALUES ('cvs', 'cvs', false)
+ON CONFLICT (id) DO UPDATE SET public = false;
 
 -- Supabase and its production-shaped local fixtures already own these roles.
 -- A raw PostgreSQL disposable fixture does not, so create them only there.
