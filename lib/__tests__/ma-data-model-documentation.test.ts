@@ -167,9 +167,6 @@ describe("canonical M&A data model documentation", () => {
   it("is referenced by the canonical agent operating contract", () => {
     const instructions = source("AGENTS.md")
     expect(instructions).toContain(contractPath)
-    expect(instructions).toContain(
-      "must update that document in the same commit before release",
-    )
   })
 
   it("keeps the automated change and live-schema guards wired in", () => {

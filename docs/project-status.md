@@ -7,7 +7,7 @@
 
 1. The live WAVE Strategic PDR owns current Goals, Milestones, accepted scope, Work Cards, owners, dependencies, status and stakeholder decisions.
 2. `docs/data-models/ma-advisory-data-model-v1.md` owns the released business meaning for M&A firms, offices, contacts, opportunities, interactions, confidentiality, visibility and cutover mapping.
-3. `AGENTS.md` is the repository instruction entry point. `docs/TESTING_RELEASE_PROTOCOL.md` owns the development and release operating model, evidence boundaries, risk tiers, specialist handoff, and release/data authority rules. `CLAUDE.md` is only a compatibility pointer to `AGENTS.md`.
+3. `AGENTS.md` is the repository instruction entry point. `docs/TESTING_RELEASE_PROTOCOL.md` describes how work is built and released. `CLAUDE.md` is only a compatibility pointer to `AGENTS.md`.
 
 Notion and Linear are inactive for Re-New product planning. Do not consult, update, mirror to, or link them unless Ivan explicitly reactivates one of them.
 
