@@ -10,7 +10,7 @@ const token = process.env.GITHUB_TOKEN
 const actor = process.env.GITHUB_ACTOR
 const verifyRunId = process.env.QA_VERIFY_RUN_ID
 
-async function github(path) {
+async function github(path, label) {
   const response = await fetch(`https://api.github.com/repos/${repository}${path}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -18,7 +18,7 @@ async function github(path) {
       "X-GitHub-Api-Version": "2022-11-28",
     },
   })
-  if (!response.ok) throw new Error("QA candidate failed: lookup")
+  if (!response.ok) throw new Error(`QA candidate failed: lookup-${label}`)
   return response.json()
 }
 
@@ -27,12 +27,12 @@ try {
   if (!/^\d+$/.test(verifyRunId || "")) throw new Error("QA candidate failed: verify-run")
   if (process.env.GITHUB_REF !== "refs/heads/main") throw new Error("QA candidate failed: controller-ref")
   const [main, branch, permission, pulls, checks, verifyRun] = await Promise.all([
-    github("/branches/main"),
-    github(`/branches/${encodeURIComponent(candidateBranch)}`),
-    github(`/collaborators/${encodeURIComponent(actor)}/permission`),
-    github(`/pulls?state=open&base=main&head=${encodeURIComponent(`ivan-loves-git:${candidateBranch}`)}&per_page=20`),
-    github(`/commits/${candidateSha}/check-runs?per_page=100`),
-    github(`/actions/runs/${verifyRunId}`),
+    github("/branches/main", "main"),
+    github(`/branches/${encodeURIComponent(candidateBranch)}`, "candidate-branch"),
+    github(`/collaborators/${encodeURIComponent(actor)}/permission`, "actor-permission"),
+    github(`/pulls?state=open&base=main&head=${encodeURIComponent(`ivan-loves-git:${candidateBranch}`)}&per_page=20`, "pull-request"),
+    github(`/commits/${candidateSha}/check-runs?per_page=100`, "verify-check"),
+    github(`/actions/runs/${verifyRunId}`, "verify-run"),
   ])
   const pull = pulls.find((item) => item.base?.ref === "main" && item.head?.ref === candidateBranch && item.head?.sha === candidateSha && item.head?.repo?.full_name === repository && item.draft === false)
   if (verifyRun.name !== "Verify" || verifyRun.path !== ".github/workflows/verify.yml" || verifyRun.event !== "pull_request" || verifyRun.conclusion !== "success" || verifyRun.head_sha !== candidateSha || verifyRun.head_branch !== candidateBranch || verifyRun.repository?.full_name !== repository) {
