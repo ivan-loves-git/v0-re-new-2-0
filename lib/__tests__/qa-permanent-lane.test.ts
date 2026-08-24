@@ -1,5 +1,8 @@
-import { readFileSync } from "node:fs"
-import { describe, expect, it } from "vitest"
+import { spawnSync } from "node:child_process"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { describe, expect, it, vi } from "vitest"
 import {
   assertAuthorizedCandidate,
   assertCandidatePointer,
@@ -9,6 +12,7 @@ import {
 } from "@/lib/qa/permanent-contract.mjs"
 import { assertQaMailEnvelope, qaMailPolicyFromEnv } from "@/lib/email/qa-mail-policy"
 import { buildFixtureManifest } from "@/lib/qa/phase-b.mjs"
+import { acquireQaLease, loadAdmittedQaContract } from "@/lib/qa/lease-contract.mjs"
 import { assertMatchingStructureFingerprint, fingerprintStructureRows } from "@/lib/qa/structure-fingerprint.mjs"
 import { assertNoTopLevelTransactionControl } from "@/lib/qa/sql-safety.mjs"
 import { assertJobSecretIsolation } from "@/lib/qa/explicit-deploy.mjs"
@@ -177,6 +181,190 @@ describe("permanent QA lane contract", () => {
     expect(sanitizer.match(/secretEnvironmentName = \/(.*)\//)?.[1]).not.toContain("QA_SUPABASE_PROJECT_REF")
   })
 
+  it("binds the live lease to the admitted candidate contract after a reviewed schema transition", () => {
+    const lease = readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")
+    expect(lease).toContain("loadAdmittedQaContract()")
+    expect(lease).toContain("acquireQaLease(database")
+    expect(lease).not.toContain('resolve(process.cwd(), "supabase/qa-contract.json")')
+    expect(lease).not.toContain('message.startsWith("QA lease contract failed:")')
+  })
+
+  it("passes the admitted candidate fingerprint to the lease acquisition query", async () => {
+    const root = mkdtempSync(join(tmpdir(), "renew-qa-lease-contract-"))
+    const admittedRoot = join(root, ".qa-candidate", "supabase")
+    const trustedFingerprint = "c".repeat(64)
+    const admittedFingerprint = "d".repeat(64)
+    try {
+      mkdirSync(join(root, "supabase"), { recursive: true })
+      mkdirSync(admittedRoot, { recursive: true })
+      writeFileSync(join(root, "supabase", "qa-contract.json"), JSON.stringify({ structureFingerprint: trustedFingerprint }))
+      writeFileSync(join(admittedRoot, "qa-contract.json"), JSON.stringify({ structureFingerprint: admittedFingerprint }))
+
+      const contract = await loadAdmittedQaContract({
+        workingDirectory: root,
+        candidateRoot: ".qa-candidate",
+      })
+      const database = {
+        query: vi.fn().mockResolvedValue({ rows: [{ result: { status: "acquired" } }] }),
+      }
+      const runId = "32625688380-1"
+      const owner = "qa-owner-000000000000000000000000"
+
+      await expect(acquireQaLease(database, {
+        runId,
+        owner,
+        candidateSha: SHA,
+        structureFingerprint: contract.structureFingerprint,
+      })).resolves.toEqual({ status: "acquired" })
+      expect(database.query).toHaveBeenCalledWith(
+        expect.stringContaining("qa_control.acquire_lease"),
+        [runId, owner, SHA, admittedFingerprint, 900],
+      )
+      expect(database.query).not.toHaveBeenCalledWith(expect.anything(), expect.arrayContaining([trustedFingerprint]))
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("rejects a canonical candidate root outside the workspace before any database query", async () => {
+    const workspace = mkdtempSync(join(tmpdir(), "renew-qa-lease-workspace-"))
+    const outside = mkdtempSync(join(tmpdir(), "renew-qa-lease-outside-"))
+    try {
+      mkdirSync(join(outside, "supabase"), { recursive: true })
+      writeFileSync(join(outside, "supabase", "qa-contract.json"), JSON.stringify({ structureFingerprint: FINGERPRINT }))
+      symlinkSync(outside, join(workspace, ".qa-candidate"))
+
+      await expect(loadAdmittedQaContract({
+        workingDirectory: workspace,
+        candidateRoot: ".qa-candidate",
+      })).rejects.toThrow("QA lease contract failed: candidate-root")
+
+      const result = spawnSync(process.execPath, [join(process.cwd(), "scripts/qa/lease-phase-b.mjs"), "acquire"], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          NODE_ENV: "test",
+          QA_CANDIDATE_ROOT: ".qa-candidate",
+          QA_EXPECTED_SHA: SHA,
+          QA_LEASE_OWNER: "qa-owner-000000000000000000000000",
+          QA_RUN_ID: "32625688380-1",
+        },
+      })
+      expect(result.status).toBe(1)
+      expect(result.stdout).toBe("")
+      expect(result.stderr.trim()).toBe("QA lease contract failed: candidate-root")
+    } finally {
+      rmSync(workspace, { recursive: true, force: true })
+      rmSync(outside, { recursive: true, force: true })
+    }
+  })
+
+  it("rejects a contract path that escapes the admitted candidate through a nested symlink", async () => {
+    const workspace = mkdtempSync(join(tmpdir(), "renew-qa-lease-nested-workspace-"))
+    const outside = mkdtempSync(join(tmpdir(), "renew-qa-lease-nested-outside-"))
+    const candidate = join(workspace, ".qa-candidate")
+    try {
+      mkdirSync(candidate, { recursive: true })
+      mkdirSync(join(outside, "supabase"), { recursive: true })
+      writeFileSync(join(outside, "supabase", "qa-contract.json"), JSON.stringify({ structureFingerprint: FINGERPRINT }))
+      symlinkSync(join(outside, "supabase"), join(candidate, "supabase"))
+
+      await expect(loadAdmittedQaContract({
+        workingDirectory: workspace,
+        candidateRoot: ".qa-candidate",
+      })).rejects.toThrow("QA lease contract failed: contract")
+    } finally {
+      rmSync(workspace, { recursive: true, force: true })
+      rmSync(outside, { recursive: true, force: true })
+    }
+  })
+
+  it.each([
+    "0".repeat(64),
+    "A".repeat(64),
+    "b".repeat(63),
+    "not-a-sha-256",
+    [FINGERPRINT],
+  ])("rejects invalid admitted fingerprint %s before any database query", async (structureFingerprint) => {
+    const workspace = mkdtempSync(join(tmpdir(), "renew-qa-lease-invalid-contract-"))
+    const candidate = join(workspace, ".qa-candidate", "supabase")
+    try {
+      mkdirSync(candidate, { recursive: true })
+      writeFileSync(join(candidate, "qa-contract.json"), JSON.stringify({ structureFingerprint }))
+
+      await expect(loadAdmittedQaContract({
+        workingDirectory: workspace,
+        candidateRoot: ".qa-candidate",
+      })).rejects.toThrow("QA lease contract failed: contract")
+    } finally {
+      rmSync(workspace, { recursive: true, force: true })
+    }
+  })
+
+  it("validates lease identity before loading the admitted contract", () => {
+    const result = spawnSync(process.execPath, [join(process.cwd(), "scripts/qa/lease-phase-b.mjs"), "acquire"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        NODE_ENV: "test",
+        QA_CANDIDATE_ROOT: "missing-candidate-root",
+        QA_EXPECTED_SHA: SHA,
+        QA_LEASE_OWNER: "invalid",
+        QA_RUN_ID: "32625688380-1",
+      },
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stdout).toBe("")
+    expect(result.stderr.trim()).toBe("QA lease failed: owner")
+  })
+
+  it.each([undefined, ""])("fails closed when the candidate root is %s", (candidateRoot) => {
+    const env: NodeJS.ProcessEnv = {
+      NODE_ENV: "test",
+      QA_EXPECTED_SHA: SHA,
+      QA_LEASE_OWNER: "qa-owner-000000000000000000000000",
+      QA_RUN_ID: "32625688380-1",
+    }
+    if (candidateRoot !== undefined) Object.assign(env, { QA_CANDIDATE_ROOT: candidateRoot })
+
+    const result = spawnSync(process.execPath, [join(process.cwd(), "scripts/qa/lease-phase-b.mjs"), "acquire"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env,
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stdout).toBe("")
+    expect(result.stderr.trim()).toBe("QA lease contract failed: candidate-root")
+  })
+
+  it("reports an invalid admitted contract inside the safe boundary before database access", () => {
+    const workspace = mkdtempSync(join(tmpdir(), "renew-qa-lease-cli-contract-"))
+    const candidate = join(workspace, ".qa-candidate", "supabase")
+    try {
+      mkdirSync(candidate, { recursive: true })
+      writeFileSync(join(candidate, "qa-contract.json"), JSON.stringify({ structureFingerprint: "0".repeat(64) }))
+      const result = spawnSync(process.execPath, [join(process.cwd(), "scripts/qa/lease-phase-b.mjs"), "acquire"], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          NODE_ENV: "test",
+          QA_CANDIDATE_ROOT: ".qa-candidate",
+          QA_EXPECTED_SHA: SHA,
+          QA_LEASE_OWNER: "qa-owner-000000000000000000000000",
+          QA_RUN_ID: "32625688380-1",
+        },
+      })
+
+      expect(result.status).toBe(1)
+      expect(result.stdout).toBe("")
+      expect(result.stderr.trim()).toBe("QA lease contract failed: contract")
+    } finally {
+      rmSync(workspace, { recursive: true, force: true })
+    }
+  })
+
   it("keeps failed health blocking except after exact reviewed-transition admission", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
@@ -332,9 +520,19 @@ describe("permanent QA lane contract", () => {
     expect(() => assertMatchingStructureFingerprint(expected, actual, (message) => diagnostics.push(message))).toThrow("Live QA evidence failed: structure-fingerprint")
     expect(diagnostics).toEqual([JSON.stringify({ expectedStructureFingerprint: expected, actualStructureFingerprint: actual })])
     expect(Object.keys(JSON.parse(diagnostics[0]))).toEqual(["expectedStructureFingerprint", "actualStructureFingerprint"])
-    expect(readFileSync(`${process.cwd()}/scripts/qa/collect-live-evidence.mjs`, "utf8")).toContain(
-      "assertMatchingStructureFingerprint(contract.structureFingerprint, liveStructureFingerprint)",
-    )
+  })
+
+  it("keeps runtime QA on exact artifacts and user journeys instead of a provider-rendered checksum", () => {
+    const evidence = readFileSync(`${process.cwd()}/scripts/qa/collect-live-evidence.mjs`, "utf8")
+    const sync = readFileSync(`${process.cwd()}/scripts/qa/sync-permanent-schema.mjs`, "utf8")
+
+    expect(evidence).toContain("liveStructureFingerprint: null")
+    expect(evidence).not.toContain("computeLiveStructureFingerprint")
+    expect(evidence).not.toContain("assertMatchingStructureFingerprint")
+    expect(sync).not.toContain("computeLiveStructureFingerprint")
+    expect(sync).toContain('verifiedBy: "artifact-ledger"')
+    expect(sync).toContain("await assertAppliedLedger(database, contract)")
+    expect(sync).toContain("await assertContractState(database, contract)")
   })
 
   it("defines a database-owned lease, persisted manifest, recovery and blocked schema state", () => {
@@ -385,15 +583,13 @@ describe("permanent QA lane contract", () => {
     expect(readFileSync(`${process.cwd()}/supabase/schema/permanent_qa_rebuild.sql`, "utf8")).toContain("DROP SCHEMA public CASCADE")
     expect(sync).toContain("ON_ERROR_STOP")
     expect(sync).toContain("blocked_reason")
-    expect(sync).toContain("structure fingerprint")
-    expect(sync).toContain("expectedStructureFingerprint")
-    expect(sync).toContain("actualStructureFingerprint")
+    expect(sync).toContain("contractStateMatches")
     expect(sync).not.toContain("qa-branch.json")
     expect(sync).not.toContain("validateBranchReconstructionEvidence")
     expect(sync).toContain("contract.files.map")
     expect(sync).not.toContain("const REBUILD_FILES")
     expect(sync).toContain("assertAppliedLedger")
-    expect(sync).toContain("replaceMatchingStructureLedger")
+    expect(sync).toContain("verifiedBy: \"artifact-ledger\"")
     expect(sync).toContain("DELETE FROM qa_control.applied_files")
     expect(sync).toContain("psql-meta-command")
     expect(sync).not.toContain("...process.env")
@@ -426,9 +622,11 @@ describe("permanent QA lane contract", () => {
   it("documents latest-pending supersession and independent provider evidence boundaries", () => {
     const operations = readFileSync(`${process.cwd()}/docs/operations/permanent-qa-lane.md`, "utf8")
     expect(operations).toContain("The v3 structure fingerprint")
-    expect(operations).toContain("two independent clean-room reconstructions using the trusted Node algorithm")
+    expect(operations).toContain("retained as a contract identifier")
+    expect(operations).toContain("is not recomputed from provider-rendered catalog text")
+    expect(operations).toContain("exact versioned SQL-file checksums and the applied-file ledger")
     expect(operations).toContain("Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock")
-    expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, post-sync fingerprint equality, P1–P3, sanitization, cleanup or final check evaluation")
+    expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, the applied-file ledger, P1-P3, sanitization, cleanup or final check evaluation")
     expect(operations).toContain("latest-pending supersession")
     expect(operations).toContain("checked-in configuration, not live provider authority")
     expect(operations).toContain("Persistence, parent, with-data and branch-count")
@@ -436,6 +634,7 @@ describe("permanent QA lane contract", () => {
     expect(operations).toContain("cancelled before project connection")
     expect(operations).toContain("1Password-based one-time transfer")
     expect(operations).toContain("Validation deploy architecture (Route A)")
+    expect(operations).toContain("required evidence for an admitted Tier 3 candidate")
     expect(operations).toContain("QA_VERCEL_TOKEN")
     expect(operations).toContain("meta.githubCommitSha")
     expect(operations).toContain("ordinary source-repository feature branch: zero new validation-project deployments")
@@ -447,6 +646,19 @@ describe("permanent QA lane contract", () => {
     expect(gate2).toContain("Validation Git disconnect")
     expect(gate2).toContain("gitSource or source-upload")
     expect(gate2).toContain("PR #27 remains parked")
+  })
+
+  it("documents proportional QA without making the protected lane a universal merge check", () => {
+    const protocol = readFileSync(`${process.cwd()}/docs/TESTING_RELEASE_PROTOCOL.md`, "utf8")
+    const agents = readFileSync(`${process.cwd()}/AGENTS.md`, "utf8")
+
+    expect(protocol).toContain("`Verify` is the universal automated check for runtime code")
+    expect(protocol).toContain("use it only for Tier 3")
+    expect(protocol).toContain("Tier 2 uses its relevant exact-candidate journey")
+    expect(protocol).toContain("A Tier 3 candidate must not merge until its exact-candidate protected P1-P3 check succeeds")
+    expect(protocol).toContain("A second same-SHA failure in an eligible transient category stops the release")
+    expect(agents).toContain("branch protection requires `Verify` universally")
+    expect(agents).toContain("records the QA tier and a one-sentence reason")
   })
 
   it("deploys admitted candidates from a secret-isolated deploy-qa job before database work", () => {

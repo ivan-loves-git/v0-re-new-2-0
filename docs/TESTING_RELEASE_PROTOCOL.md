@@ -57,11 +57,11 @@ All production code is written once:
 
 QA holds the latest candidate deliberately admitted for testing, not every branch. Production must not receive a significant feature before required QA, except for a documented emergency incident decision with explicit authority and a rollback path.
 
-Branch protection remains enabled. Any temporary exception must be explicitly authorised, limited to the named requirement and exact commit, restored immediately after the operation, and read back before proceeding.
+Branch protection remains enabled with `Verify` as the required status during the pre-beta phase. `P1-P3 protected pilot` is selective Tier 3 release evidence, not a branch-protection requirement. This separation lets controller repairs merge after green code verification without weakening high-consequence product-release proof. Any temporary exception to the remaining protection must be explicitly authorised, limited to the named requirement and exact commit, restored immediately after the operation, and read back before proceeding.
 
 ## Proportional QA
 
-Classify the highest consequence introduced by the change. Use the permanent core regression journeys for code releases, then add only the feature-specific evidence required by that tier.
+Classify the highest consequence introduced by the change. `Verify` is the universal automated check for runtime code. The permanent protected P1-P3 lane is selective: use it only for Tier 3. Tier 2 uses its relevant exact-candidate journey, while Tier 0 and Tier 1 do not dispatch Golden Journeys.
 
 ### Tier 0 — no runtime code
 
@@ -79,15 +79,23 @@ Required: a focused test or contract check where relevant; typecheck, lint, desi
 
 Examples: bug fixes, forms, navigation, new user actions, and state transitions.
 
-Required: focused automated tests; exact-candidate QA deployment; the relevant browser journey; persistence/read-back proof for writes; and cleanup proof.
+Required: focused automated tests; an exact-candidate preview or other bounded test surface; the relevant browser journey; persistence/read-back proof for writes; and cleanup proof. Do not invoke the full permanent P1-P3 lane solely because runtime code changed.
 
 ### Tier 3 — high-consequence change
 
 Examples: authentication, authorization, confidentiality, visibility, data models, migrations, destructive actions, lifecycle rules, and production data operations.
 
-Required: the full QA environment; synthetic fixtures; direct-URL and role-boundary tests; persistence and cleanup invariants; independent review; a rollback plan; and separate explicit authority for any production migration, backfill, or other production-data mutation.
+Required: the full QA environment and protected P1-P3 lane on the exact candidate; synthetic fixtures; direct-URL and role-boundary tests; persistence and cleanup invariants; independent review; a rollback plan; and separate explicit authority for any production migration, backfill, or other production-data mutation.
 
 Do not inflate a low-risk UI edit into a high-risk release programme. Do not reduce a high-consequence change to unit tests.
+
+### GitHub enforcement
+
+- `Verify` is the only universal required status check on `main`.
+- `P1-P3 protected pilot` is selective Tier 3 release evidence, not a universal branch-protection requirement.
+- Codex records `QA tier: <0-3> — <reason>` in the pull request before merge and remains accountable for applying the required evidence. A direct-main emergency or documentation-only exception retains the same classification in an explicitly linked release record.
+- A Tier 3 candidate must not merge until its exact-candidate protected P1-P3 check succeeds. Tier 2 requires its named relevant journey; Tier 0 and Tier 1 do not require P1-P3.
+- Do not add a second classifier bot, label workflow, or approval system while Codex remains the single merge owner. Revisit conditional automation only if independent merge authority materially expands.
 
 ## Release authority and hard boundaries
 
@@ -156,7 +164,9 @@ Use temporary agents only for concrete, bounded work such as an independent risk
 - QA deployment tokens must be least-privileged, scoped to the validation project where the provider supports it, and rotated after exposure, suspected compromise, ownership change, or the agreed expiry. Production credentials are never shared with a generic specialist packet.
 - Provider configuration, branch protection, aliases, and cleanup invariants are verified without exposing values. A successful controller run does not prove the product feature; it proves only the lane used to test it.
 
-Once the core QA lane has one clean end-to-end run and its protection/configuration is restored, it becomes background machinery. Freeze further QA-infrastructure development unless a defect directly blocks a real release or creates a security or data risk.
+Once the core QA lane has one clean end-to-end run and its protection/configuration is restored, it becomes background machinery. Freeze further QA-infrastructure development unless a defect directly blocks a real Tier 3 release or creates a security or data risk.
+
+One automatic retry may be used only for the same candidate SHA and a documented transient provider or controller category, such as rate limiting, temporary provider unavailability, or a bounded readiness or alias-propagation timeout. Contract, schema, isolation, authentication, authorization, cleanup, or residue mismatches are not retryable and require diagnosis. A second same-SHA failure in an eligible transient category stops the release; it does not authorize continued controller development or bypass required Tier 3 evidence. A bounded manual isolated proof or another controller repair or simplification requires an explicit decision.
 
 ## Completion and reporting
 
