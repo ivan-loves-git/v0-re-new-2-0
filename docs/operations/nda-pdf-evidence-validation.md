@@ -17,8 +17,10 @@ upload paths, not a claim of antivirus coverage.
 2. The browser MIME and extension must match the approved role.
 3. The server reads the already-bounded file and rejects a missing PDF header,
    non-whitespace polyglot trailer, active-action names or embedded payload.
-4. PDF.js must parse a non-empty document with no more than 500 pages within
-   the shared three-second validation deadline.
+4. PDF.js must parse a non-empty document with no more than 500 pages in a
+   dedicated Node worker. The parent enforces the shared three-second wall-clock
+   deadline by terminating that worker; V8 heap, young-generation and stack
+   limits bound the parser process independently of the request.
 5. Document/page JavaScript, attachments and open actions are rejected.
 6. Only then may Storage upload and canonical evidence registration run.
 
@@ -32,6 +34,7 @@ Run with synthetic documents only:
 ```sh
 pnpm exec vitest run \
   lib/__tests__/pdf-evidence.test.ts \
+  lib/__tests__/pdf-evidence-isolation.test.ts \
   lib/__tests__/pdf-evidence-actions.test.ts \
   lib/__tests__/critical-operation-actions.test.ts
 ```
