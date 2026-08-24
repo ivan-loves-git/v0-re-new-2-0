@@ -117,7 +117,7 @@ describe("permanent QA lane contract", () => {
     expect(readFileSync(`${process.cwd()}/lib/qa/permanent-contract.mjs`, "utf8")).toContain('TIER_3_AUTHORIZER = "ivan-loves-git"')
     const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
     expect(validator).toContain("actor,\n    runAttempt: process.env.GITHUB_RUN_ATTEMPT,")
-    for (const job of ["recover", "schema-sync", "golden", "finalize"]) {
+    for (const job of ["schema-sync", "golden", "finalize"]) {
       expect(jobBlock(golden, job)).toContain("github.run_attempt == '1'")
     }
     expect(concurrency).toContain("group: renew-permanent-qa")
@@ -550,7 +550,9 @@ describe("permanent QA lane contract", () => {
     expect(ddl.trimStart()).not.toMatch(/^BEGIN;/)
     expect(ddl.trimEnd()).not.toMatch(/COMMIT;$/)
     expect(readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")).toContain("server-manifest-mismatch")
-    expect(readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")).toContain("buildFixtureManifest(stale.runId)")
+    const lease = readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")
+    expect(lease).toContain("assertRecoveryFixtureManifest(fixtureManifest, stale.runId)")
+    expect(lease).toContain('fail("recovery-manifest")')
   })
 
   it("keeps expired-manifest recovery idempotent after cleanup has already committed", () => {
