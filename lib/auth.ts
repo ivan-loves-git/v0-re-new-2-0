@@ -169,24 +169,12 @@ export const auth = betterAuth({
     },
   },
 
-  // Trusted origins for CORS
-  // Better Auth 1.4.14: function receives Request (can be undefined), must return string[]
+  // Only Re-New controlled origins may receive account-recovery callbacks.
+  // Host, Forwarded and Origin headers are attacker-controlled and are never
+  // used to extend this list.
   trustedOrigins: async (request: Request | undefined) => {
-    const origins = [env.BETTER_AUTH_URL, "https://app.re-new.team"]
-    // Dynamically allow Vercel preview deployments and V0 app builder
-    const origin = request?.headers?.get("origin")
-    if (origin) {
-      if (
-        origin.endsWith(".vercel.app") ||
-        origin.endsWith(".v0.dev") ||
-        origin === "https://v0.dev" ||
-        origin.endsWith(".v0.app") ||
-        origin === "https://v0.app"
-      ) {
-        origins.push(origin)
-      }
-    }
-    return origins
+    void request
+    return [env.BETTER_AUTH_URL, "https://app.re-new.team"]
   },
 })
 
