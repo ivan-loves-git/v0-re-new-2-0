@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
-  requireUser: vi.fn(),
+  requireStaffAccess: vi.fn(),
   revalidatePath: vi.fn(),
   revalidateRepreneurDashboardTags: vi.fn(),
   redirect: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
-vi.mock("@/lib/auth-server", () => ({ requireUser: mocks.requireUser }))
+vi.mock("@/lib/access-control", () => ({ requireStaffAccess: mocks.requireStaffAccess }))
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }))
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }))
 vi.mock("@/lib/data/dashboard-snapshots", () => ({
@@ -31,7 +31,7 @@ function validCreateForm(source?: string) {
 describe("staff-manual repreneur source", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.requireUser.mockResolvedValue({ id: "staff-user" })
+    mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-user" } })
   })
 
   it("offers Staff manual as an explicit staff-form source", () => {
