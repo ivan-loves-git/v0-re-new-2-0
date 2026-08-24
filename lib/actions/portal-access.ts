@@ -15,6 +15,7 @@ import {
 } from "@/lib/portal-access-reconciliation"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
+import { databaseTls } from "@/lib/database-tls"
 
 export interface RepreneurPortalAccessStatus {
   repreneurId: string
@@ -65,7 +66,7 @@ function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: databaseTls(env.DATABASE_URL, env),
       max: 3,
     })
   }

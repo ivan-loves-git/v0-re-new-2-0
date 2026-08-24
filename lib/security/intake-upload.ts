@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
 import { Pool } from "pg"
 import { env } from "@/lib/env"
+import { databaseTls } from "@/lib/database-tls"
 
 const TOKEN_TTL_SECONDS = 15 * 60
 const TOKEN_ISSUE_LIMIT = 6
@@ -19,7 +20,7 @@ function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: databaseTls(env.DATABASE_URL, env),
       max: 3,
     })
   }

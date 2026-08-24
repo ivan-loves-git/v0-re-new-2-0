@@ -14,6 +14,7 @@ const envSchema = z.object({
 
   // Better Auth
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  DATABASE_CA_CERT: z.string().optional(),
   BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
   BETTER_AUTH_URL: z.string().url("BETTER_AUTH_URL must be a valid URL"),
 

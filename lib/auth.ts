@@ -3,6 +3,7 @@ import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
+import { databaseTls } from "@/lib/database-tls"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import {
   trustedAuthOrigins,
@@ -19,9 +20,7 @@ function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, // Required for Supabase
-      },
+      ssl: databaseTls(env.DATABASE_URL, env),
       max: 5, // Limit connections for serverless
     })
   }
