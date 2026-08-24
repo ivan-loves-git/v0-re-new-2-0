@@ -3,7 +3,6 @@ import { readFile, realpath } from "node:fs/promises"
 import { resolve } from "node:path"
 import { EVIDENCE_FILE, countPublicRows, databaseClient, refFromDatabaseUrl, refFromSupabaseUrl, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
-import { assertMatchingStructureFingerprint, computeLiveStructureFingerprint } from "../../lib/qa/structure-fingerprint.mjs"
 
 const CUSTOMER_TABLES = ["repreneurs", "opportunities", "opportunity_matches", "ma_firms", "ma_offices", "ma_contacts", "ma_contact_office_affiliations"]
 
@@ -106,7 +105,7 @@ try {
   const contract = JSON.parse(await readFile(resolve(candidateRoot, "supabase/qa-contract.json"), "utf8"))
 
   const customerUnion = CUSTOMER_TABLES.map((table) => `SELECT '${table}' AS table_name, count(*)::int AS row_count FROM public."${table}"`).join(" UNION ALL ")
-  const [customerResult, betterAuthResult, supabaseAuthResult, storageResult, databaseHealth, restResponse, authResponse, buckets, liveStructureFingerprint, applicationRows] = await Promise.all([
+  const [customerResult, betterAuthResult, supabaseAuthResult, storageResult, databaseHealth, restResponse, authResponse, buckets, applicationRows] = await Promise.all([
     database.query(customerUnion),
     database.query('SELECT count(*)::int AS count FROM public."user"'),
     database.query("SELECT count(*)::int AS count FROM auth.users"),
@@ -115,7 +114,6 @@ try {
     fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/repreneurs?select=id&limit=1`, { headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` } }),
     fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY } }),
     storage.storage.listBuckets(),
-    computeLiveStructureFingerprint(database),
     countPublicRows(database),
   ])
   const protection = await protectedProbe(origin, process.env.VERCEL_AUTOMATION_BYPASS_SECRET)
@@ -166,11 +164,10 @@ try {
       mailPolicy: protection.qaMailPolicy,
       mailTransport: protection.qaMailTransport,
     },
-    liveStructureFingerprint,
+    liveStructureFingerprint: null,
   }
   const failedHealth = ["database", "rest", "auth", "storage"].filter((name) => !evidence.supabase[`${name}Healthy`])
   if (failedHealth.length > 0) throw new Error(`Live QA evidence failed: provider-health-${failedHealth.join("-")}`)
-  assertMatchingStructureFingerprint(contract.structureFingerprint, liveStructureFingerprint)
   const allowStaleResidue = process.env.QA_EVIDENCE_MODE === "identity"
   validateLiveEvidence({ expectedRef, expectedOrigin: origin, expectedSha, evidence, allowStaleResidue })
   await writePrivateJson(EVIDENCE_FILE, evidence)

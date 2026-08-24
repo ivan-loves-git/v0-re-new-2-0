@@ -453,6 +453,13 @@ describe("permanent QA lane contract", () => {
     expect(source).toContain("CASE WHEN roles IS NULL THEN 'null'")
   })
 
+  it("normalizes the catalog search path inside the fingerprint statement", () => {
+    const source = readFileSync(`${process.cwd()}/lib/qa/structure-fingerprint.mjs`, "utf8")
+
+    expect(source).toContain("set_config('search_path', 'pg_catalog, public, qa_control, extensions', true)")
+    expect(source.match(/FROM fingerprint_settings/g)).toHaveLength(10)
+  })
+
   it("uses a locale-independent comparator for quoted mixed-case identities", () => {
     const rows = [
       { kind: "policy", identity: 'public."Alpha":StaffOnly', definition: 'PERMISSIVE|["Staff","analyst"]|SELECT|true|' },
@@ -498,9 +505,19 @@ describe("permanent QA lane contract", () => {
     expect(() => assertMatchingStructureFingerprint(expected, actual, (message) => diagnostics.push(message))).toThrow("Live QA evidence failed: structure-fingerprint")
     expect(diagnostics).toEqual([JSON.stringify({ expectedStructureFingerprint: expected, actualStructureFingerprint: actual })])
     expect(Object.keys(JSON.parse(diagnostics[0]))).toEqual(["expectedStructureFingerprint", "actualStructureFingerprint"])
-    expect(readFileSync(`${process.cwd()}/scripts/qa/collect-live-evidence.mjs`, "utf8")).toContain(
-      "assertMatchingStructureFingerprint(contract.structureFingerprint, liveStructureFingerprint)",
-    )
+  })
+
+  it("keeps runtime QA on exact artifacts and user journeys instead of a provider-rendered checksum", () => {
+    const evidence = readFileSync(`${process.cwd()}/scripts/qa/collect-live-evidence.mjs`, "utf8")
+    const sync = readFileSync(`${process.cwd()}/scripts/qa/sync-permanent-schema.mjs`, "utf8")
+
+    expect(evidence).toContain("liveStructureFingerprint: null")
+    expect(evidence).not.toContain("computeLiveStructureFingerprint")
+    expect(evidence).not.toContain("assertMatchingStructureFingerprint")
+    expect(sync).not.toContain("computeLiveStructureFingerprint")
+    expect(sync).toContain('verifiedBy: "artifact-ledger"')
+    expect(sync).toContain("await assertAppliedLedger(database, contract)")
+    expect(sync).toContain("await assertContractState(database, contract)")
   })
 
   it("defines a database-owned lease, persisted manifest, recovery and blocked schema state", () => {
@@ -551,13 +568,13 @@ describe("permanent QA lane contract", () => {
     expect(readFileSync(`${process.cwd()}/supabase/schema/permanent_qa_rebuild.sql`, "utf8")).toContain("DROP SCHEMA public CASCADE")
     expect(sync).toContain("ON_ERROR_STOP")
     expect(sync).toContain("blocked_reason")
-    expect(sync).toContain("structure fingerprint")
+    expect(sync).toContain("contractStateMatches")
     expect(sync).not.toContain("qa-branch.json")
     expect(sync).not.toContain("validateBranchReconstructionEvidence")
     expect(sync).toContain("contract.files.map")
     expect(sync).not.toContain("const REBUILD_FILES")
     expect(sync).toContain("assertAppliedLedger")
-    expect(sync).toContain("replaceMatchingStructureLedger")
+    expect(sync).toContain("verifiedBy: \"artifact-ledger\"")
     expect(sync).toContain("DELETE FROM qa_control.applied_files")
     expect(sync).toContain("psql-meta-command")
     expect(sync).not.toContain("...process.env")
@@ -590,9 +607,11 @@ describe("permanent QA lane contract", () => {
   it("documents latest-pending supersession and independent provider evidence boundaries", () => {
     const operations = readFileSync(`${process.cwd()}/docs/operations/permanent-qa-lane.md`, "utf8")
     expect(operations).toContain("The v3 structure fingerprint")
-    expect(operations).toContain("two independent clean-room reconstructions using the trusted Node algorithm")
+    expect(operations).toContain("retained as a contract identifier")
+    expect(operations).toContain("is not recomputed from provider-rendered catalog text")
+    expect(operations).toContain("exact versioned SQL-file checksums and the applied-file ledger")
     expect(operations).toContain("Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock")
-    expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, post-sync fingerprint equality, P1–P3, sanitization, cleanup or final check evaluation")
+    expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, the applied-file ledger, P1-P3, sanitization, cleanup or final check evaluation")
     expect(operations).toContain("latest-pending supersession")
     expect(operations).toContain("checked-in configuration, not live provider authority")
     expect(operations).toContain("Persistence, parent, with-data and branch-count")

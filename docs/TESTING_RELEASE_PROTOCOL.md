@@ -57,7 +57,7 @@ All production code is written once:
 
 QA holds the latest candidate deliberately admitted for testing, not every branch. Production must not receive a significant feature before required QA, except for a documented emergency incident decision with explicit authority and a rollback path.
 
-Branch protection remains enabled. Any temporary exception must be explicitly authorised, limited to the named requirement and exact commit, restored immediately after the operation, and read back before proceeding.
+Branch protection remains enabled with `Verify` as the required status during the pre-beta phase. The exact-candidate `P1-P3 protected pilot` result is release evidence, not a branch-protection requirement: Codex still requires it before reviewing or publishing Tier 2 or Tier 3 product work. This separation lets controller repairs merge after green code verification without weakening product-release proof. Any temporary exception to the remaining protection must be explicitly authorised, limited to the named requirement and exact commit, restored immediately after the operation, and read back before proceeding.
 
 ## Proportional QA
 

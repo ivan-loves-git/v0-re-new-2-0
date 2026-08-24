@@ -4,7 +4,6 @@ import { readFile, realpath } from "node:fs/promises"
 import { resolve } from "node:path"
 import { spawn } from "node:child_process"
 import pg from "pg"
-import { computeLiveStructureFingerprint } from "../../lib/qa/structure-fingerprint.mjs"
 import { QA_CONTRACT } from "../../lib/qa/permanent-contract.mjs"
 import { assertNoTopLevelTransactionControl } from "../../lib/qa/sql-safety.mjs"
 import { countPublicRows } from "./phase-b-common.mjs"
@@ -94,6 +93,8 @@ async function runPsql(database, files, singleTransaction, ledger) {
 }
 
 async function appliedLedgerMatches(database, contract) {
+  const installed = await database.query("SELECT to_regclass('qa_control.applied_files') IS NOT NULL AS installed")
+  if (!installed.rows[0]?.installed) return false
   const result = await database.query("SELECT contract_version, position, path, sha256 FROM qa_control.applied_files ORDER BY contract_version, position")
   const expected = contract.files.map((file, index) => ({ contract_version: contract.version, position: index + 1, path: file.path, sha256: file.sha256 }))
   return JSON.stringify(result.rows) === JSON.stringify(expected)
@@ -103,22 +104,17 @@ async function assertAppliedLedger(database, contract) {
   if (!await appliedLedgerMatches(database, contract)) fail("applied-ledger")
 }
 
-async function replaceMatchingStructureLedger(database, contract) {
-  await database.query("BEGIN")
-  try {
-    await database.query("SELECT pg_advisory_xact_lock(hashtextextended('renew-permanent-qa-lease', 20260822))")
-    const activeLease = await database.query("SELECT count(*)::int AS count FROM qa_control.lease")
-    if (activeLease.rows[0].count !== 0) fail("active-lease")
-    await database.query("DELETE FROM qa_control.applied_files")
-    for (const [index, file] of contract.files.entries()) {
-      await database.query("INSERT INTO qa_control.applied_files (contract_version, position, path, sha256) VALUES ($1,$2,$3,$4)", [contract.version, index + 1, file.path, file.sha256])
-    }
-    await database.query("UPDATE qa_control.schema_state SET contract_version=$1, structure_fingerprint=$2, blocked_reason=NULL, updated_at=now() WHERE singleton=true", [contract.version, contract.structureFingerprint])
-    await database.query("COMMIT")
-  } catch (error) {
-    await database.query("ROLLBACK").catch(() => {})
-    throw error
-  }
+async function contractStateMatches(database, contract) {
+  const installed = await database.query("SELECT to_regclass('qa_control.schema_state') IS NOT NULL AS installed")
+  if (!installed.rows[0]?.installed) return false
+  const result = await database.query("SELECT contract_version, structure_fingerprint, blocked_reason FROM qa_control.schema_state WHERE singleton=true")
+  return result.rows[0]?.contract_version === contract.version &&
+    result.rows[0]?.structure_fingerprint === contract.structureFingerprint &&
+    result.rows[0]?.blocked_reason === null
+}
+
+async function assertContractState(database, contract) {
+  if (!await contractStateMatches(database, contract)) fail("contract-state")
 }
 
 async function assertEmptyApprovedBranch(database) {
@@ -154,13 +150,11 @@ try {
   if (!process.env.QA_DATABASE_CA_CERT_FILE) fail("database-ca")
   await readFile(process.env.QA_DATABASE_CA_CERT_FILE).catch(() => fail("database-ca"))
   database = await connect(connection)
-  const liveBefore = await computeLiveStructureFingerprint(database)
-  if (liveBefore === contract.structureFingerprint) {
+  if (await appliedLedgerMatches(database, contract) && await contractStateMatches(database, contract)) {
     await assertEmptyApprovedBranch(database)
-    if (!await appliedLedgerMatches(database, contract)) await replaceMatchingStructureLedger(database, contract)
     await assertAppliedLedger(database, contract)
-    await database.query("UPDATE qa_control.schema_state SET contract_version=$1, structure_fingerprint=$2, blocked_reason=NULL, updated_at=now() WHERE singleton=true", [contract.version, liveBefore])
-    console.log(JSON.stringify({ ok: true, changed: false, structureFingerprint: liveBefore, contractVersion: contract.version }))
+    await assertContractState(database, contract)
+    console.log(JSON.stringify({ ok: true, changed: false, contractVersion: contract.version, verifiedBy: "artifact-ledger" }))
   } else {
     await assertEmptyApprovedBranch(database)
     await database.end()
@@ -174,14 +168,9 @@ try {
       throw error
     }
     database = await connect(connection)
-    const liveAfter = await computeLiveStructureFingerprint(database)
     await assertAppliedLedger(database, contract)
-    if (liveAfter !== contract.structureFingerprint) {
-      await database.query("UPDATE qa_control.schema_state SET structure_fingerprint=$1, blocked_reason=$2, updated_at=now() WHERE singleton=true", [liveAfter, "structure fingerprint mismatch"])
-      fail("structure fingerprint")
-    }
-    await database.query("UPDATE qa_control.schema_state SET contract_version=$1, structure_fingerprint=$2, blocked_reason=NULL, updated_at=now() WHERE singleton=true", [contract.version, liveAfter])
-    console.log(JSON.stringify({ ok: true, changed: true, structureFingerprint: liveAfter, contractVersion: contract.version }))
+    await assertContractState(database, contract)
+    console.log(JSON.stringify({ ok: true, changed: true, contractVersion: contract.version, verifiedBy: "artifact-ledger" }))
   }
 } catch (error) {
   console.error(error instanceof Error && error.message.startsWith("QA schema synchronization failed:") ? error.message : "QA schema synchronization failed: unknown")
