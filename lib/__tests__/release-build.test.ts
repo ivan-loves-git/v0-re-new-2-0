@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("publishes the cumulative M2 release candidate as build 851", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("851")
+  it("publishes the corrected cumulative M2 release candidate as build 852", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("852")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {

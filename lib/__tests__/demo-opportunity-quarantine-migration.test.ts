@@ -48,8 +48,14 @@ describe("W-126 DEMO quarantine migration", () => {
     expect(migration).toContain("TO service_role")
   })
 
+  it("qualifies the response RPC opportunity status against its table", () => {
+    expect(migration).toContain(
+      "FROM public.opportunities opportunity WHERE opportunity.id=v_match.opportunity_id AND opportunity.status='active' AND NOT opportunity.is_demo FOR UPDATE",
+    )
+  })
+
   it("has a disposable rehearsal that proves trigger-safe retry, exact rollback, and atomic failures", () => {
-    for (const proof of ["w126_success_result_mismatch", "w126_lifecycle_history_changed", "w126_label_inference_detected", "w126_drift_was_not_atomic", "w126_cardinality_was_accepted", "w126_retry_not_idempotent", "w126_retry_dependent_drift_accepted", "w126_apply_actor_drift_accepted", "w126_rollback_not_idempotent", "w126_rollback_state_drift_accepted", "w126_rollback_actor_drift_not_atomic", "w126_rollback_dependent_drift_accepted", "w126_rollback_manifest_drift_not_atomic"]) expect(rehearsal).toContain(proof)
+    for (const proof of ["w126_success_result_mismatch", "w126_lifecycle_history_changed", "w126_label_inference_detected", "w126_drift_was_not_atomic", "w126_cardinality_was_accepted", "w126_retry_not_idempotent", "w126_retry_dependent_drift_accepted", "w126_apply_actor_drift_accepted", "w126_rollback_not_idempotent", "w126_rollback_state_drift_accepted", "w126_rollback_actor_drift_not_atomic", "w126_rollback_dependent_drift_accepted", "w126_rollback_manifest_drift_not_atomic", "w126_portal_response_write_failed"]) expect(rehearsal).toContain(proof)
     expect(rehearsal).toContain("771_public_schema.sql")
     expect(rehearsal).toContain("w126_full_schema_rpc_mismatch")
     expect(rehearsal).toContain("rehearsal_opportunity_updated_at")

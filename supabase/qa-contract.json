@@ -24,7 +24,7 @@
     },
     {
       "path": "supabase/schema/822_demo_opportunity_quarantine.sql",
-      "sha256": "2d226a576136cca703b00ee7a4bf1e70cf58e5ad1bdab12dcf5d99628eaa9d35"
+      "sha256": "5d0414780c2ea2cff23b4a0b457e320b66c70befda906aea729c40ee180e5233"
     },
     {
       "path": "supabase/schema/822_deals_reconsideration.sql",

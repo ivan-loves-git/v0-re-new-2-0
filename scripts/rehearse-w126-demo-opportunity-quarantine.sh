@@ -60,6 +60,49 @@ BEGIN
   ) <> 9 THEN RAISE EXCEPTION 'w126_full_schema_rpc_mismatch'; END IF;
 END $$;
 SQL
+
+# Execute the exact portal response function against the smallest disposable
+# schema that exercises its write path. Compiling the function is insufficient:
+# PL/pgSQL can defer ambiguous column errors until the first invocation.
+"$pg_bin/createdb" -h 127.0.0.1 -p "$port" w126_response_rehearsal
+response_psql=("$pg_bin/psql" -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -d w126_response_rehearsal)
+"${response_psql[@]}" <<'SQL'
+CREATE TABLE public.opportunities (
+  id UUID PRIMARY KEY,
+  status TEXT NOT NULL,
+  is_demo BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE TABLE public.opportunity_matches (
+  id UUID PRIMARY KEY,
+  opportunity_id UUID NOT NULL REFERENCES public.opportunities(id),
+  repreneur_id UUID NOT NULL,
+  status TEXT NOT NULL,
+  decline_reason_categories TEXT[] NOT NULL DEFAULT '{}',
+  decline_reason_text TEXT,
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ
+);
+INSERT INTO public.opportunities(id,status,is_demo)
+VALUES ('20000000-0000-4000-8000-000000000126','active',FALSE);
+INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status)
+VALUES (
+  '30000000-0000-4000-8000-000000000126',
+  '20000000-0000-4000-8000-000000000126',
+  '10000000-0000-4000-8000-000000000126',
+  'proposed'
+);
+SQL
+awk '
+  /^CREATE OR REPLACE FUNCTION public\.update_repreneur_opportunity_response\(/ { capture=1 }
+  capture { print }
+  capture && /^END \$\$;$/ { exit }
+' "$repo_root/scripts/112_demo_opportunity_quarantine.sql" | "${response_psql[@]}"
+"${response_psql[@]}" -c "SELECT * FROM public.update_repreneur_opportunity_response('30000000-0000-4000-8000-000000000126','10000000-0000-4000-8000-000000000126','interested');" >/dev/null
+"${response_psql[@]}" -Atq -c "SELECT status FROM public.opportunity_matches WHERE id='30000000-0000-4000-8000-000000000126';" | grep -qx interested || {
+  echo 'w126_portal_response_write_failed' >&2
+  exit 1
+}
+
 if rg -n -i '^\s*(BEGIN|COMMIT|ROLLBACK)(\s+TRANSACTION)?\s*;\s*$|^\s*SAVEPOINT\s+\S+\s*;\s*$' "$repo_root/scripts/112_demo_opportunity_quarantine.sql"; then
   echo 'w126_migration_transaction_control_forbidden' >&2
   exit 1

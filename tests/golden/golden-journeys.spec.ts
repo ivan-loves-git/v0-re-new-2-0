@@ -389,10 +389,20 @@ test.describe.serial("Golden journeys", () => {
     await expect(sectionFor(portalOne, "Recommended").getByText(`${manifest.fixturePrefix} opportunity`, { exact: true })).toBeVisible()
     await expect(sectionFor(portalOne, "In Progress").getByText(`${manifest.fixturePrefix} opportunity`, { exact: true })).toHaveCount(0)
     await Promise.all([portalOne.goto(`/portal/deals/${matchId}`), portalTwo.goto(`/portal/deals/${matchId}`)])
-    await Promise.allSettled([
-      portalOne.getByRole("button", { name: "I'm interested" }).click(),
-      portalTwo.getByRole("button", { name: "I'm interested" }).click(),
-    ])
+    const submitInterest = async (portalPage: Page) => {
+      const [response] = await Promise.all([
+        portalPage.waitForResponse((candidate) =>
+          candidate.request().method() === "POST"
+          && candidate.url().includes(`/portal/deals/${matchId}`)
+        ),
+        portalPage.getByRole("button", { name: "I'm interested" }).click(),
+      ])
+      expect(
+        response.ok(),
+        `Interest action returned HTTP ${response.status()}`,
+      ).toBe(true)
+    }
+    await Promise.all([submitInterest(portalOne), submitInterest(portalTwo)])
     await expect.poll(async () => {
       const interested = await database.query("SELECT id, status FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2", [opportunityId, manifest.ids.portalRepreneur])
       expect(interested.rows).toHaveLength(1)
