@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "security:verify-pdf-worker-trace": "node scripts/verify-pdf-worker-server-trace.mjs",
     "matching-v2:refresh": "tsx scripts/refresh-matching-v2-buyer-import.ts",
     "design:check": "node scripts/check-wave-visual-policy.mjs && node .agents/skills/impeccable/scripts/detect.mjs app components styles",
     "data-model:check": "node scripts/check-ma-data-model-sync.mjs",

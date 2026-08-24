@@ -52,6 +52,12 @@ const nextConfig = {
       bodySizeLimit: "22mb",
     },
   },
+  // The isolated PDF validator dynamically imports the server-resolved PDF.js
+  // module from an eval worker. Keep that module tree in every server trace;
+  // it must never be emitted as a browser static worker asset.
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/pdfjs-dist/**/*"],
+  },
   // Redirect old intake form to v2
   async redirects() {
     return [
