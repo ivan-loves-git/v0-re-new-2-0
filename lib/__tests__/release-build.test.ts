@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("allows runner-hosted Tier 3 QA to wait for startup as release build 866", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("866")
+  it("allows runner-hosted Tier 3 QA to wait for startup as release build 867", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("867")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {
