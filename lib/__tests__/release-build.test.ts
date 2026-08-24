@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("preserves Golden contract failure evidence as release build 869", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("869")
+  it("preserves Golden contract failure evidence as release build 891", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("891")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {

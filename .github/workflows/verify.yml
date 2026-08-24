@@ -111,8 +111,8 @@ jobs:
       contents: read
     env:
       W147_PROJECT_URL: https://iiuqcdnmxhtyispnykgf.supabase.co
-      W147_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      W147_EXPECTED_KEY_SHA256: 5527e7da1605f27223eec33bc15d6f4ebeff0f686bb80edc1069f1b645d6489f
+      W147_PUBLISHABLE_KEY: sb_publishable_tRKz68evaCCiFtw8tRZEHA_sWtBoPBf
+      W147_EXPECTED_KEY_SHA256: 46d3c0de82a4d8766a92d38ef4fb504328152d6b3ccab2f1aba647d79cb57b6c
     steps:
       - name: Prove production browser-role REST boundary
         shell: bash
