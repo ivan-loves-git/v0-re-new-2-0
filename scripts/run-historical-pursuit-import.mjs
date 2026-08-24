@@ -92,7 +92,7 @@ try {
   await client.query("SET LOCAL lock_timeout = '3s'");
   await client.query("SET LOCAL statement_timeout = '30s'");
   if (config.mode === "rehearse") {
-    await client.query(fs.readFileSync(path.join(directory, "112_historical_pursuit_ledger.sql"), "utf8"));
+    await client.query(fs.readFileSync(path.join(directory, "116_historical_pursuit_ledger.sql"), "utf8"));
   } else {
     const exists = await client.query("SELECT to_regprocedure('public.apply_historical_pursuit_import_row(text,text,integer,uuid,uuid,text[],text[],text,boolean,text,text,text,text,text,text,text[],text[],jsonb,text)') AS fn");
     if (!exists.rows[0]?.fn) throw new Error("Reviewed migration 112 must be applied before --apply.");

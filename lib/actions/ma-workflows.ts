@@ -16,7 +16,7 @@ import {
   MA_TEMPLATE_DEFAULT_BODIES,
   TEMPLATE_METADATA,
 } from "@/lib/email/templates"
-import { getTemplateBody, getTemplateSubject } from "@/lib/actions/emails"
+import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-content"
 import { maContactEmailPurposeForTemplate } from "@/lib/ma-contact-email-policy"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"

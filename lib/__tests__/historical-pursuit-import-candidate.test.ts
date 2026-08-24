@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
-const migration = readFileSync("scripts/112_historical_pursuit_ledger.sql", "utf8")
+const migration = readFileSync("scripts/116_historical_pursuit_ledger.sql", "utf8")
 const runner = readFileSync("scripts/run-historical-pursuit-import.mjs", "utf8")
 const staffProjection = readFileSync("lib/data/historical-pursuit-import.ts", "utf8")
 
@@ -47,7 +47,7 @@ describe("W-112 historical pursuit import candidate", () => {
     expect(runner).toContain('if (config.mode === "rehearse") await client.query("ROLLBACK")')
     expect(runner).toContain('try { await client.query("ROLLBACK"); }')
     expect(runner).toContain("apply_historical_pursuit_import_row")
-    expect(runner).toContain("112_historical_pursuit_ledger.sql")
+    expect(runner).toContain("116_historical_pursuit_ledger.sql")
     expect(runner).toContain("Historical pursuit replay changed a source row")
   })
 

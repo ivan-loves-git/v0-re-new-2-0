@@ -6,8 +6,6 @@ import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-
     const access = await getCurrentUserAccess()
     if (!access) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -15,6 +13,8 @@ export async function POST(request: NextRequest) {
     if (access.role !== "staff") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+
+    const supabase = await createServerClient()
 
     const { repreneurId } = await request.json()
 

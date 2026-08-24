@@ -24,8 +24,6 @@ function verifyFileContent(bytes: Uint8Array, extension: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-
     const access = await getCurrentUserAccess()
     if (!access) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -33,6 +31,8 @@ export async function POST(request: NextRequest) {
     if (access.role !== "staff") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+
+    const supabase = await createServerClient()
 
     const formData = await request.formData()
     const file = formData.get("file") as File
