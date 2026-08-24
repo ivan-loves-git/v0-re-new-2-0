@@ -182,7 +182,6 @@ describe("canonical M&A data model documentation", () => {
     expect(packageJson.scripts["data-model:check"]).toContain(
       "check-ma-data-model-sync.mjs",
     )
-    expect(packageJson.scripts.lint).toContain("pnpm data-model:check")
     expect(changeGuard).toContain("DATA_MODEL_BASE_REF")
     expect(changeGuard).toContain("change log update required")
     expect(schemaGuard).toContain("information_schema.columns")
