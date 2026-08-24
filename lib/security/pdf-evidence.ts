@@ -1,124 +1,89 @@
-/** Bounded, non-executing PDF evidence validation. No document content is logged. */
-const PDF_HEADER = "%PDF-"
-const MAX_PDF_PAGES = 500
+import "server-only"
+import { Worker } from "node:worker_threads"
+
+/** PDF.js parses untrusted syntax in a dedicated resource-limited worker. */
 const PDF_PARSE_TIMEOUT_MS = 3_000
-const ACTIVE_PDF_TOKENS = [
-  "/JavaScript",
-  "/JS",
-  "/OpenAction",
-  "/AA",
-  "/Launch",
-  "/EmbeddedFile",
-  "/XFA",
-  "/SubmitForm",
-  "/ImportData",
-  "/GoToR",
-  "/GoToE",
-  "/RichMedia",
-  "/Sound",
-  "/Movie",
-  "/3D",
-]
+const PDF_WORKER_RESOURCE_LIMITS = {
+  maxOldGenerationSizeMb: 64,
+  maxYoungGenerationSizeMb: 16,
+  stackSizeMb: 4,
+} as const
 
 class PdfEvidenceError extends Error {}
 
-function reject(message: string): never {
-  throw new PdfEvidenceError(message)
+type PdfEvidenceWorkerResult =
+  | { ok: true }
+  | { ok: false; reason: "invalid" | "active" | "page_count" }
+
+function errorForWorkerResult(result: Exclude<PdfEvidenceWorkerResult, { ok: true }>) {
+  if (result.reason === "active") {
+    return new PdfEvidenceError("Active or embedded PDF content is not accepted for NDA evidence")
+  }
+  if (result.reason === "page_count") {
+    return new PdfEvidenceError("NDA evidence has an unsupported page count")
+  }
+  return new PdfEvidenceError("NDA evidence must be a structurally valid PDF file")
 }
 
-function containsPdfNameToken(source: string, token: string) {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  return new RegExp(`${escaped}(?=[\\s<>{}\\[\\]()/]|$)`).test(source)
-}
-
-function assertPdfEnvelope(bytes: Uint8Array) {
-  const text = new TextDecoder("latin1").decode(bytes)
-  if (!text.startsWith(PDF_HEADER)) {
-    reject("NDA evidence must be a valid PDF file")
-  }
-
-  const finalEof = text.lastIndexOf("%%EOF")
-  if (finalEof < 0 || /[^\x00\x09\x0a\x0c\x0d\x20]/.test(text.slice(finalEof + 5))) {
-    reject("NDA evidence must end at its PDF EOF marker")
-  }
-  if (ACTIVE_PDF_TOKENS.some((token) => containsPdfNameToken(text, token))) {
-    reject("Active or embedded PDF content is not accepted for NDA evidence")
-  }
-}
-
-async function withinParseDeadline<T>(promise: Promise<T>) {
-  let timer: ReturnType<typeof setTimeout> | undefined
+async function terminate(worker: Worker) {
   try {
-    return await Promise.race([
-      promise,
-      new Promise<never>((_, rejectPromise) => {
-        timer = setTimeout(
-          () => rejectPromise(new PdfEvidenceError("NDA PDF validation timed out")),
-          PDF_PARSE_TIMEOUT_MS,
-        )
-      }),
-    ])
-  } finally {
-    if (timer) clearTimeout(timer)
+    await worker.terminate()
+  } catch {
+    // The worker can already have exited after posting its result.
   }
 }
 
-async function destroyLoadingTask(
-  loadingTask: { destroy(): Promise<void> },
-) {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  try {
-    await Promise.race([
-      loadingTask.destroy(),
-      new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, 250)
-      }),
-    ])
-  } finally {
-    if (timer) clearTimeout(timer)
-  }
+/**
+ * The worker is the only place PDF.js touches untrusted bytes. A blocked parse
+ * cannot block the request event loop: the parent rejects at the deadline and
+ * terminates the resource-limited worker.
+ */
+async function validateInIsolatedWorker(bytes: Uint8Array) {
+  return new Promise<void>((resolve, reject) => {
+    let settled = false
+    const worker = new Worker(
+      new URL("./pdf-evidence-worker.mjs", import.meta.url),
+      {
+        resourceLimits: PDF_WORKER_RESOURCE_LIMITS,
+      },
+    )
+
+    const finish = (error?: Error) => {
+      if (settled) return
+      settled = true
+      clearTimeout(deadline)
+      void terminate(worker)
+      if (error) reject(error)
+      else resolve()
+    }
+
+    const deadline = setTimeout(() => {
+      finish(new PdfEvidenceError("NDA PDF validation timed out"))
+    }, PDF_PARSE_TIMEOUT_MS)
+
+    worker.once("message", (result: PdfEvidenceWorkerResult) => {
+      if (!result || result.ok !== true) {
+        finish(errorForWorkerResult(result ?? { ok: false, reason: "invalid" }))
+        return
+      }
+      finish()
+    })
+    worker.once("error", () => {
+      finish(new PdfEvidenceError("NDA evidence must be a structurally valid PDF file"))
+    })
+    worker.once("exit", (code) => {
+      if (!settled && code !== 0) {
+        finish(new PdfEvidenceError("NDA evidence must be a structurally valid PDF file"))
+      }
+    })
+
+    // Always make a plain transferable copy. Buffers may share a larger pool
+    // and must never be handed to the worker by reference.
+    const input = Uint8Array.from(bytes)
+    worker.postMessage(input.buffer, [input.buffer])
+  })
 }
 
 export async function assertSafePdfEvidence(bytes: Uint8Array) {
-  assertPdfEnvelope(bytes)
-
-  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs")
-  const loadingTask = getDocument({
-    // Node Buffers extend Uint8Array but PDF.js deliberately rejects Buffer.
-    data: Uint8Array.from(bytes),
-    disableFontFace: true,
-    isEvalSupported: false,
-    stopAtErrors: true,
-    useSystemFonts: false,
-  })
-
-  try {
-    await withinParseDeadline((async () => {
-      const document = await loadingTask.promise
-      if (document.numPages < 1 || document.numPages > MAX_PDF_PAGES) {
-        reject("NDA evidence has an unsupported page count")
-      }
-
-      const [documentActions, attachments, openAction] = await Promise.all([
-        document.getJSActions(),
-        document.getAttachments(),
-        document.getOpenAction(),
-      ])
-      if (documentActions || attachments || openAction) {
-        reject("Active or embedded PDF content is not accepted for NDA evidence")
-      }
-
-      for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-        const page = await document.getPage(pageNumber)
-        if (await page.getJSActions()) {
-          reject("Active PDF page actions are not accepted for NDA evidence")
-        }
-      }
-    })())
-  } catch (error) {
-    if (error instanceof PdfEvidenceError) throw error
-    throw new PdfEvidenceError("NDA evidence must be a structurally valid PDF file")
-  } finally {
-    await destroyLoadingTask(loadingTask)
-  }
+  await validateInIsolatedWorker(bytes)
 }
