@@ -10,8 +10,19 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('cvs', 'cvs', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
-CREATE ROLE anon;
-CREATE ROLE authenticated;
+-- Supabase and its production-shaped local fixtures already own these roles.
+-- A raw PostgreSQL disposable fixture does not, so create them only there.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated;
+  END IF;
+END
+$$;
 GRANT USAGE ON SCHEMA storage TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon, authenticated;
 
