@@ -33,7 +33,9 @@ function compareByRelevance(
   left: RepreneurDealFlowSortCandidate,
   right: RepreneurDealFlowSortCandidate,
 ) {
-  return right.relevance_score - left.relevance_score || dateValue(right) - dateValue(left)
+  return right.relevance_score - left.relevance_score
+    || dateValue(right) - dateValue(left)
+    || left.opportunity_id.localeCompare(right.opportunity_id)
 }
 
 export function sortRepreneurDealFlow(

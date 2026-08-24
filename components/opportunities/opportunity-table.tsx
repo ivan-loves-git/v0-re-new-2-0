@@ -39,6 +39,7 @@ import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
+import { OpportunityDemoBadge } from "@/components/opportunities/opportunity-demo-control"
 import {
   formatOpportunitySourceDate,
   formatOpportunitySourceMonth,
@@ -201,6 +202,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                         Source review required
                       </Badge>
                     ) : null}
+                    {opportunity.is_demo ? <OpportunityDemoBadge className="mt-1" /> : null}
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[220px]">

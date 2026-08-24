@@ -49,6 +49,26 @@ jobs:
       - name: Run repository verification
         run: pnpm verify
 
+      - name: Rehearse W-126 DEMO quarantine and portal response
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-w126-demo-opportunity-quarantine.sh'
+
+      - name: Rehearse W-128 Draft activation and rollback
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-w128-draft-opportunity-activation.sh'
+
   w147-w148-database-rehearsal:
     name: W-147/W-148 database rehearsal
     runs-on: ubuntu-latest
@@ -98,3 +118,4 @@ jobs:
               -d w147_rehearsal \
               -c "CREATE SCHEMA storage; CREATE TABLE storage.buckets(id text PRIMARY KEY, name text NOT NULL, public boolean NOT NULL DEFAULT false); CREATE TABLE storage.objects(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, bucket_id text NOT NULL, name text NOT NULL); ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;" \
               -f /tmp/scripts/rehearse-w148-private-cvs-storage.sql
+

@@ -40,33 +40,29 @@ function declineFormData(reason?: string, rationale?: string) {
 function mockMatchResponse(
   status: "proposed" | "interested" | "declined" = "proposed",
   opportunityStatus: "active" | "paused" | "closed" | "archived" = "active",
+  isDemo = false,
 ) {
   const maybeSingle = vi.fn().mockResolvedValue({
-    data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: opportunityStatus } },
+    data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: opportunityStatus, is_demo: isDemo } },
     error: null,
   })
-  const selectForRepreneur = vi.fn(() => ({ maybeSingle }))
+  const selectForDemo = vi.fn(() => ({ maybeSingle }))
+  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemo }))
   const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }))
   const select = vi.fn(() => ({ eq: selectForMatch }))
-  const updateForRepreneur = vi.fn().mockResolvedValue({ error: null })
-  const updateForMatch = vi.fn(() => ({ eq: updateForRepreneur }))
-  const update = vi.fn(() => ({ eq: updateForMatch }))
-
-  let fromCall = 0
-  const from = vi.fn(() => {
-    fromCall += 1
-    return fromCall === 1 ? { select } : { update }
+  const from = vi.fn(() => ({ select }))
+  const rpc = vi.fn().mockResolvedValue({
+    data: [{ match_id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status }],
+    error: null,
   })
 
-  mocks.createAdminClient.mockReturnValue({ from })
+  mocks.createAdminClient.mockReturnValue({ from, rpc })
 
   return {
     from,
     selectForMatch,
     selectForRepreneur,
-    update,
-    updateForMatch,
-    updateForRepreneur,
+    rpc,
   }
 }
 
@@ -77,7 +73,7 @@ describe("repreneur opportunity decline response", () => {
   })
 
   it.each([undefined, "", " \n\t "])("rejects an empty or whitespace-only rationale", async (rationale) => {
-    const { update } = mockMatchResponse()
+    const { rpc } = mockMatchResponse()
 
     const result = await declineMyOpportunity(
       MATCH_ID,
@@ -89,11 +85,11 @@ describe("repreneur opportunity decline response", () => {
       status: "error",
       message: "Add a written rationale before marking this opportunity as not a fit.",
     })
-    expect(update).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   it("rejects a rationale without an existing structured decline reason", async () => {
-    const { update } = mockMatchResponse()
+    const { rpc } = mockMatchResponse()
 
     const result = await declineMyOpportunity(
       MATCH_ID,
@@ -105,11 +101,11 @@ describe("repreneur opportunity decline response", () => {
       status: "error",
       message: "Choose at least one reason before marking this opportunity as not a fit.",
     })
-    expect(update).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   it("persists a normal structured reason and a trimmed rationale", async () => {
-    const { selectForMatch, selectForRepreneur, update, updateForMatch, updateForRepreneur } = mockMatchResponse()
+    const { selectForMatch, selectForRepreneur, rpc } = mockMatchResponse()
 
     await declineMyOpportunity(
       MATCH_ID,
@@ -119,20 +115,18 @@ describe("repreneur opportunity decline response", () => {
 
     expect(selectForMatch).toHaveBeenCalledWith("id", MATCH_ID)
     expect(selectForRepreneur).toHaveBeenCalledWith("repreneur_id", REPRENEUR_ID)
-    expect(update).toHaveBeenCalledWith({
-      status: "declined",
-      decline_reason_categories: ["geography"],
-      decline_reason_text: "The location is outside our target area.",
-      reviewed_by: null,
-      reviewed_at: null,
+    expect(rpc).toHaveBeenCalledWith("update_repreneur_opportunity_response", {
+      p_match_id: MATCH_ID,
+      p_repreneur_id: REPRENEUR_ID,
+      p_status: "declined",
+      p_decline_reason_categories: ["geography"],
+      p_decline_reason_text: "The location is outside our target area.",
     })
-    expect(updateForMatch).toHaveBeenCalledWith("id", MATCH_ID)
-    expect(updateForRepreneur).toHaveBeenCalledWith("repreneur_id", REPRENEUR_ID)
     expect(mocks.redirect).toHaveBeenCalledWith("/portal/deals")
   })
 
   it("persists Other with its required rationale", async () => {
-    const { update } = mockMatchResponse()
+    const { rpc } = mockMatchResponse()
 
     await declineMyOpportunity(
       MATCH_ID,
@@ -140,21 +134,22 @@ describe("repreneur opportunity decline response", () => {
       declineFormData("other", "The timeline is not viable this quarter."),
     )
 
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({
-      status: "declined",
-      decline_reason_categories: ["other"],
-      decline_reason_text: "The timeline is not viable this quarter.",
+    expect(rpc).toHaveBeenCalledWith("update_repreneur_opportunity_response", expect.objectContaining({
+      p_status: "declined",
+      p_decline_reason_categories: ["other"],
+      p_decline_reason_text: "The timeline is not viable this quarter.",
     }))
   })
 
   it("rejects a foreign match without attempting an update", async () => {
     const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
-    const selectForRepreneur = vi.fn(() => ({ maybeSingle }))
+    const selectForDemo = vi.fn(() => ({ maybeSingle }))
+    const selectForRepreneur = vi.fn(() => ({ eq: selectForDemo }))
     const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }))
     const select = vi.fn(() => ({ eq: selectForMatch }))
-    const update = vi.fn()
-    const from = vi.fn(() => ({ select, update }))
-    mocks.createAdminClient.mockReturnValue({ from })
+    const rpc = vi.fn()
+    const from = vi.fn(() => ({ select }))
+    mocks.createAdminClient.mockReturnValue({ from, rpc })
 
     const result = await declineMyOpportunity(
       MATCH_ID,
@@ -168,11 +163,11 @@ describe("repreneur opportunity decline response", () => {
     })
     expect(selectForMatch).toHaveBeenCalledWith("id", MATCH_ID)
     expect(selectForRepreneur).toHaveBeenCalledWith("repreneur_id", REPRENEUR_ID)
-    expect(update).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   it.each(["paused", "closed", "archived"] as const)("does not accept a late response after the opportunity is %s", async (opportunityStatus) => {
-    const { update } = mockMatchResponse("proposed", opportunityStatus)
+    const { rpc } = mockMatchResponse("proposed", opportunityStatus)
 
     const result = await declineMyOpportunity(
       MATCH_ID,
@@ -184,7 +179,23 @@ describe("repreneur opportunity decline response", () => {
       status: "error",
       message: "This opportunity is no longer available for your response.",
     })
-    expect(update).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it("does not accept a response for a DEMO-classified opportunity", async () => {
+    const { rpc } = mockMatchResponse("proposed", "active", true)
+
+    const result = await declineMyOpportunity(
+      MATCH_ID,
+      EMPTY_ACTION_STATE,
+      declineFormData("sector", "This opportunity is reserved for staff QA."),
+    )
+
+    expect(result).toEqual({
+      status: "error",
+      message: "This opportunity is no longer available for your response.",
+    })
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   it("does not create a database client without a linked repreneur role", async () => {
