@@ -386,7 +386,7 @@ describe("permanent QA lane contract", () => {
     ]) {
       expect(workflow.indexOf(requiredStep)).toBeGreaterThanOrEqual(0)
     }
-    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
+    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.recover.result == 'success' && needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
   })
 
   it("keeps live cleanup rehearsal out of ordinary candidate runs", () => {
