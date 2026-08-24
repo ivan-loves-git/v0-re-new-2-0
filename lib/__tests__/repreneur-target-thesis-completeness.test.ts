@@ -2,50 +2,61 @@ import { describe, expect, it } from "vitest"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
 
 const completeThesis = {
-  who_score: 72,
-  when_score: 68,
-  scoring_flags: [],
   q12_geo_zones: ["ile-de-france"],
   q13_target_sectors_v2: ["construction"],
-  q14_deal_size: ["1-3M"],
+  target_revenue_min_meur: 1,
 }
 
 describe("automatic target-thesis completeness", () => {
-  it("accepts every current scorer dependency", () => {
-    expect(automaticMatchingThesisCompleteness(completeThesis)).toEqual({ complete: true, missing: [] })
+  it("requires sector, geography, and at least one Matching v2 numeric target", () => {
+    expect(automaticMatchingThesisCompleteness(completeThesis)).toEqual({
+      complete: true,
+      missing: [],
+    })
   })
 
   it.each([
-    ["WHO score", { ...completeThesis, who_score: null }],
-    ["WHEN score", { ...completeThesis, when_score: null }],
-    ["matching flags", { ...completeThesis, scoring_flags: null }],
     ["geography", { ...completeThesis, q12_geo_zones: [] }],
     ["sectors", { ...completeThesis, q13_target_sectors_v2: [] }],
-    ["deal size", { ...completeThesis, q14_deal_size: [] }],
+    ["financial or size target", {
+      ...completeThesis,
+      target_revenue_min_meur: null,
+    }],
   ])("reports a missing %s dependency", (expected, thesis) => {
     expect(automaticMatchingThesisCompleteness(thesis).missing).toContain(expected)
   })
 
-  it("keeps legacy matching selections valid until a profile is edited", () => {
+  it("keeps recognized legacy sector and geography selections valid", () => {
     expect(automaticMatchingThesisCompleteness({
-      ...completeThesis,
       q12_geo_zones: [],
       q13_target_sectors_v2: [],
-      q14_deal_size: [],
       target_location: ["ile-de-france"],
       sector_preferences: ["construction"],
-      target_acquisition_size: "1-3M",
+      target_ebitda_margin_min_pct: 12,
     })).toEqual({ complete: true, missing: [] })
   })
 
-  it("does not turn optional financial context into a discovery gate", () => {
+  it.each([
+    { target_revenue_min_meur: 1 },
+    { target_revenue_max_meur: 5 },
+    { target_ebitda_margin_min_pct: 10 },
+    { target_staff_size_min: 5 },
+    { target_staff_size_max: 100 },
+  ])("accepts each supported numeric target as the initial size signal", (target) => {
+    expect(automaticMatchingThesisCompleteness({
+      q12_geo_zones: ["all-france"],
+      q13_target_sectors_v2: ["industry"],
+      ...target,
+    }).complete).toBe(true)
+  })
+
+  it("does not use WHO, WHEN, flags, or the old deal-size bucket as a gate", () => {
     expect(automaticMatchingThesisCompleteness({
       ...completeThesis,
-      target_revenue_min_meur: null,
-      target_revenue_max_meur: null,
-      target_ebitda_margin_min_pct: null,
-      target_staff_size_min: null,
-      target_staff_size_max: null,
+      who_score: null,
+      when_score: null,
+      scoring_flags: null,
+      q14_deal_size: [],
     })).toEqual({ complete: true, missing: [] })
   })
 })

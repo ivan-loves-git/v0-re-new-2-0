@@ -11,6 +11,13 @@ const roadmapStatus = readFileSync(
 )
 
 describe("authoritative opportunity roadmap entry", () => {
+  it("records the Matching 2.0 release candidate", () => {
+    expect(roadmap).toContain('version: "0.9.57"')
+    expect(roadmap).toContain("Client fit now uses the acquisition thesis")
+    expect(roadmap).toContain("Incomplete information stays visible")
+    expect(roadmap).toContain("The first calibration is intentionally provisional")
+  })
+
   it("records the safe staff M&A intake and correction release", () => {
     expect(roadmap).toContain('version: "0.9.56"')
     expect(roadmap).toContain("either a first name or a last name is required")

@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "matching-v2:refresh": "tsx scripts/refresh-matching-v2-buyer-import.ts",
     "design:check": "node scripts/check-wave-visual-policy.mjs && node .agents/skills/impeccable/scripts/detect.mjs app components styles",
     "data-model:check": "node scripts/check-ma-data-model-sync.mjs",
     "w098:source-preflight": "node scripts/verify-w098-source-workbook.mjs"
@@ -99,6 +100,7 @@
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
     "typescript": "^5.9.3",
+    "tsx": "4.20.6",
     "vitest": "^3.0.0"
   }
 }

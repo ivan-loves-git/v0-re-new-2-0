@@ -81,6 +81,43 @@ describe("operational stale tabs and retried staff actions", () => {
     expect(from).toHaveBeenCalledTimes(1)
   })
 
+  it("rejects a forged new match for a free or test client before writing", async () => {
+    const from = vi.fn((table: string) => {
+      if (table === "opportunity_matches") {
+        const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+        const repreneurFilter = vi.fn(() => ({ maybeSingle }))
+        const opportunityFilter = vi.fn(() => ({ eq: repreneurFilter }))
+        return { select: vi.fn(() => ({ eq: opportunityFilter })) }
+      }
+      if (table === "repreneurs") {
+        const maybeSingle = vi.fn().mockResolvedValue({
+          data: {
+            first_name: "Test2Colin",
+            last_name: "Repreneur",
+            lifecycle_status: "client",
+            repreneur_offers: [{ status: "accepted", offer: { name: "End-to-End", price: 0 } }],
+          },
+          error: null,
+        })
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })) }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+    mocks.createAdminClient.mockReturnValue({ from })
+
+    const formData = new FormData()
+    formData.set("opportunity_id", "opportunity-1")
+    formData.set("repreneur_id", "repreneur-1")
+    formData.set("status", "proposed")
+
+    await expect(saveOpportunityMatch(formData)).resolves.toEqual({
+      ok: false,
+      message: "New matches can only be created for accepted paid Deal Flow or End-to-End clients.",
+      field: "repreneur_id",
+    })
+    expect(from).toHaveBeenCalledWith("repreneurs")
+  })
+
   it.each([
     {
       label: "validation",

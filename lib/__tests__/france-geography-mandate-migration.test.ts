@@ -82,7 +82,18 @@ describe("W-039 Phase A/B and W-099 geography and references", () => {
   })
 
   it("does not leak the staff-only geography bridge into repreneur deal projections", () => {
-    expect(repreneurPortal).not.toContain("geography_node_id")
+    const automaticProjection = repreneurPortal.match(
+      /function toDealFlowOpportunity[\s\S]*?\n}\n\nfunction withoutRelevanceScore/,
+    )?.[0]
+    const publicProjection = repreneurPortal.match(
+      /function withoutRelevanceScore[\s\S]*?\n}\n\nexport async function listMyRepreneurOpportunities/,
+    )?.[0]
+
+    expect(repreneurPortal).toContain("geography_node_id")
+    expect(automaticProjection).toBeTruthy()
+    expect(publicProjection).toBeTruthy()
+    expect(automaticProjection).not.toContain("geography_node_id")
+    expect(publicProjection).not.toContain("geography_node_id")
     expect(repreneurPortal).not.toMatch(/from\("opportunities"\)[\s\S]{0,240}\.select\(\s*["']\*["']/)
   })
 

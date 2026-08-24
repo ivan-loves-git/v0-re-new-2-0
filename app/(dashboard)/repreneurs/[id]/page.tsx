@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { connection } from "next/server"
 import { isUuid } from "@/lib/uuid"
 import Link from "next/link"
-import type { ReactNode } from "react"
+import { Suspense, type ReactNode } from "react"
 import {
   AlertTriangle,
   ArrowLeft,
@@ -49,6 +49,7 @@ import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { LeadershipResultsCard } from "@/components/repreneurs/leadership-results-card"
 import { PortalAccessCard } from "@/components/repreneurs/portal-access-card"
 import { RepreneurOpportunityMatchesCard } from "@/components/repreneurs/repreneur-opportunity-matches-card"
+import { HistoricalPursuitHistoryCard, HistoricalPursuitHistoryLoading } from "@/components/repreneurs/historical-pursuit-history-card"
 import { RepreneurDetailTabs } from "@/components/repreneurs/repreneur-detail-tabs"
 import { RepreneurRadarChart } from "@/components/repreneurs/repreneur-radar-chart"
 import { getLatestAssessment, getPendingAssessment } from "@/lib/actions/leadership-assessment"
@@ -984,6 +985,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
 
         <TabsContent value="opportunities" className="space-y-6">
           <RepreneurOpportunityMatchesCard repreneurId={id} matches={opportunityMatches} candidates={opportunityCandidates} />
+          <Suspense fallback={<HistoricalPursuitHistoryLoading />}>
+            <HistoricalPursuitHistoryCard repreneurId={id} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="engagement" className="space-y-6">

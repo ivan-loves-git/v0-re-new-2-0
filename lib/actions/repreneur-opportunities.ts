@@ -8,6 +8,12 @@ import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
+import { isAcceptedPaidMatchingClient } from "@/lib/repreneur-matching-eligibility"
+import {
+  loadMatchingGeographyContext,
+  withMatchingGeography,
+  withMatchingGeographyTargets,
+} from "@/lib/repreneur-opportunity-geography"
 import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
@@ -34,6 +40,8 @@ const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
 ])
 
 type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
+  lifecycle_status?: string | null
+  repreneur_offers?: unknown
   who_score?: number | null
   when_score?: number | null
   scoring_flags?: string[] | null
@@ -44,6 +52,11 @@ type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
   target_location?: string | string[] | null
   target_acquisition_size?: string | null
   investment_capacity?: string | null
+  target_revenue_min_meur?: number | null
+  target_revenue_max_meur?: number | null
+  target_ebitda_margin_min_pct?: number | null
+  target_staff_size_min?: number | null
+  target_staff_size_max?: number | null
 }
 
 type RepreneurDealFlowOpportunityRow = {
@@ -59,6 +72,7 @@ type RepreneurDealFlowOpportunityRow = {
   revenue_meur: number | null
   ebitda_keur: number | null
   headcount: number | null
+  geography_node_id: string | null
   headcount_range: string | null
   date_added: string | null
   date_added_precision: "day" | "month" | null
@@ -176,6 +190,8 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
       first_name,
       last_name,
       email,
+      lifecycle_status,
+      repreneur_offers(status, offer:offers(name, price)),
       who_score,
       when_score,
       scoring_flags,
@@ -185,7 +201,12 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
       sector_preferences,
       target_location,
       target_acquisition_size,
-      investment_capacity
+      investment_capacity,
+      target_revenue_min_meur,
+      target_revenue_max_meur,
+      target_ebitda_margin_min_pct,
+      target_staff_size_min,
+      target_staff_size_max
     `)
     .eq("id", access.repreneurId)
     .maybeSingle()
@@ -399,7 +420,17 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] } }
 
   const supabase = createAdminClient()
-  const automaticMatching = automaticMatchingThesisCompleteness(repreneur)
+  const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
+  const serviceEligible = repreneur.lifecycle_status === "client" && isAcceptedPaidMatchingClient(
+    repreneur,
+    repreneur.repreneur_offers as Parameters<typeof isAcceptedPaidMatchingClient>[1],
+  )
+  const automaticMatching = serviceEligible
+    ? thesisCompleteness
+    : {
+        complete: false,
+        missing: [...thesisCompleteness.missing, "matching service"],
+      }
   const [matchesResult, opportunitiesResult] = await Promise.all([
     supabase
       .from("opportunity_matches")
@@ -458,6 +489,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         revenue_meur,
         ebitda_keur,
         headcount,
+        geography_node_id,
         headcount_range,
         date_added,
         date_added_precision,
@@ -504,11 +536,21 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     .map((opportunity) => withDealBucket(opportunity, false))
     .filter(isDefined)
   const statefulOpportunityIds = new Set(statefulDeals.map((opportunity) => opportunity.opportunity_id))
+  const geography = automaticMatching.complete
+    ? await loadMatchingGeographyContext(supabase, [repreneur.id])
+    : null
+  const geographyAwareRepreneur = geography
+    ? withMatchingGeographyTargets(repreneur, geography)
+    : repreneur
   const liveDeals = automaticMatching.complete ? sortRepreneurDealFlow(
+
     allOpportunities
       .filter((opportunity) => !statefulOpportunityIds.has(opportunity.id))
       .map((opportunity) => ({
-        ...toDealFlowOpportunity(opportunity, repreneur),
+        ...toDealFlowOpportunity(
+          geography ? withMatchingGeography(opportunity, geography) : opportunity,
+          geographyAwareRepreneur,
+        ),
         is_locked_for_other_repreneur: isLockedForOtherRepreneur(
           opportunity.id,
           repreneur.id,
@@ -607,6 +649,7 @@ export async function getMyRepreneurOpportunity(
         revenue_meur,
         ebitda_keur,
         headcount,
+        geography_node_id,
         headcount_range,
         date_added,
         date_added_precision,
@@ -623,13 +666,24 @@ export async function getMyRepreneurOpportunity(
   if (opportunityResult.error) throw new Error(opportunityResult.error.message)
   const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null
   if (!exposure) {
-    if (!automaticMatchingThesisCompleteness(repreneur).complete) return null
+    const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
+    const serviceEligible = repreneur.lifecycle_status === "client" && isAcceptedPaidMatchingClient(
+      repreneur,
+      repreneur.repreneur_offers as Parameters<typeof isAcceptedPaidMatchingClient>[1],
+    )
+    if (!thesisCompleteness.complete || !serviceEligible) return null
     const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
     if (!opportunity || !isRepreneurEligibleOpportunity(opportunity)) return null
 
-    const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [opportunity.id])
+    const [activeOwnerByOpportunity, geography] = await Promise.all([
+      getActivePursuitOwners(supabase, [opportunity.id]),
+      loadMatchingGeographyContext(supabase, [repreneur.id]),
+    ])
     const result = withoutRelevanceScore({
-      ...toDealFlowOpportunity(opportunity, repreneur),
+      ...toDealFlowOpportunity(
+        withMatchingGeography(opportunity, geography),
+        withMatchingGeographyTargets(repreneur, geography),
+      ),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
         opportunity.id,
         repreneur.id,
