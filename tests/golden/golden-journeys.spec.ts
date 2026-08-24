@@ -134,8 +134,17 @@ async function recordW127LastOnlyContact(database: any, fixture: any, lastOnlyNa
 
 function captureClientErrors(page: Page, errors: string[]) {
   page.on("pageerror", (error) => errors.push(`pageerror:${error.message}`))
+  page.on("response", (response) => {
+    if (response.status() >= 400 && response.request().resourceType() !== "document") {
+      errors.push(`http:${response.status()}:${new URL(response.url()).pathname}`)
+    }
+  })
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(`console:${message.text()}`)
+    if (message.type() === "error") {
+      const location = message.location()
+      const source = location.url ? `:${new URL(location.url).pathname}:${location.lineNumber ?? 0}` : ""
+      errors.push(`console:${message.text()}${source}`)
+    }
   })
 }
 

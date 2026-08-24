@@ -49,6 +49,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const analyticsEnabled = process.env.QA_EXECUTION_MODE !== "github-runner"
+
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${_inter.variable} ${_geistMono.variable} ${_sourceSerif_4.variable} font-sans antialiased`} suppressHydrationWarning>
@@ -76,7 +78,7 @@ export default function RootLayout({
             },
           }}
         />
-        <Analytics />
+        {analyticsEnabled ? <Analytics /> : null}
       </body>
     </html>
   )

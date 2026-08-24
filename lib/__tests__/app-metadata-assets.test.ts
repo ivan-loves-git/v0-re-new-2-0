@@ -13,4 +13,9 @@ describe("app metadata assets", () => {
     expect(existsSync(join(repositoryRoot, "public/icon.svg"))).toBe(true)
     expect(existsSync(join(repositoryRoot, "public/apple-icon.png"))).toBe(true)
   })
+
+  it("does not request Vercel Analytics from the runner-hosted QA origin", () => {
+    expect(layoutSource).toContain('process.env.QA_EXECUTION_MODE !== "github-runner"')
+    expect(layoutSource).toContain("analyticsEnabled ? <Analytics /> : null")
+  })
 })
