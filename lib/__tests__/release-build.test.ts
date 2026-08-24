@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("aligns the M2 QA contract with W-147 as build 887", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("887")
+  it("enforces byte-exact M2 QA artifacts as build 888", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("888")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {
