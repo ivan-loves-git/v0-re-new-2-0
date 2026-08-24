@@ -25,6 +25,7 @@ function opportunity(): OpportunityWorkSurfaceRecord {
   return {
     id: "opportunity-1",
     reference: "REF-001",
+    is_demo: false,
     status: "active",
     repreneur_exposure: "staff_only",
     date_added: "2026-08-01",

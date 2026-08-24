@@ -405,6 +405,49 @@ export async function updateOpportunity(id: string, formData: FormData) {
   return updateOpportunityIntake(id, formData)
 }
 
+/**
+ * Changes only the staff-owned DEMO quarantine classification. This deliberately
+ * does not alter lifecycle or repreneur visibility; the portal eligibility gate
+ * enforces the resulting exclusion.
+ */
+export async function setOpportunityDemoClassification(
+  id: string,
+  isDemo: boolean,
+): Promise<OpportunityActionResult> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunities")
+    .update({ is_demo: isDemo })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) {
+    return { success: false, message: "This opportunity no longer exists." }
+  }
+
+  revalidatePath("/opportunities")
+  revalidatePath("/opportunities/find")
+  revalidatePath(`/opportunities/${id}`)
+  revalidatePath("/dashboard")
+  revalidatePath("/portal")
+  revalidatePath("/portal/deals")
+  revalidatePath("/portal/profile")
+  revalidatePath("/portal/pursuits")
+  revalidatePath("/portal-preview")
+  revalidateOpportunityDashboardTags()
+
+  return {
+    success: true,
+    message: isDemo
+      ? "Opportunity marked DEMO and quarantined from repreneur access."
+      : "DEMO classification removed. The opportunity can be eligible for repreneur access again.",
+  }
+}
+
 export async function closeOpportunity(
   id: string,
   reason: unknown,

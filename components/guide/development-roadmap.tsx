@@ -26,7 +26,7 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 23, 2026",
-    version: "0.9.55",
+    version: "0.9.57",
     title: "Matching 2.0 makes opportunity fit explainable",
     isCompleted: true,
     events: [
@@ -44,6 +44,57 @@ const roadmapEvents: RoadmapPeriod[] = [
         title: "The first calibration is intentionally provisional",
         type: "learning",
         description: "Weights and tolerances live in one named configuration so Bertrand's final parameters and later evidence can refine the numbers without redesigning the matcher.",
+      },
+    ],
+  },
+  {
+    period: "Aug 23, 2026",
+    version: "0.9.56",
+    title: "Staff can correct M&A relationships without breaking history",
+    isCompleted: true,
+    events: [
+      {
+        title: "Draft contact names now explain the real rule",
+        type: "fix",
+        description: "New firm and office-contact forms show that either a first name or a last name is required; the other contact details remain optional for a Draft.",
+      },
+      {
+        title: "Existing offices can be selected explicitly",
+        type: "feature",
+        description: "When staff choose an existing firm, they can select one of that firm's real offices or deliberately create a separate new office, without carrying a stale office across firms.",
+      },
+      {
+        title: "Relationship corrections preserve their exact context",
+        type: "feature",
+        description: "Staff can correct only the approved firm, office, contact and selected-affiliation job-title fields through audited services; lifecycle, ownership, source, suppression and disclosure controls remain unchanged.",
+      },
+    ],
+  },
+  {
+    period: "Aug 23, 2026",
+    version: "0.9.55",
+    title: "Repreneurs can follow every deal in one clear place",
+    isCompleted: true,
+    events: [
+      {
+        title: "Deals now move through four clear sections",
+        type: "feature",
+        description: "Recommended, Declined, In Progress and Live Opportunities now use one shared rule, so an eligible opportunity appears once and moves section when its relationship state changes.",
+      },
+      {
+        title: "Known opportunities are quicker to scan",
+        type: "style",
+        description: "In Progress and Declined use compact cards with the safe deal facts, current state and next action, while Recommended and Live Opportunities keep the full opportunity view.",
+      },
+      {
+        title: "Dropped deals can return without reopening a pursuit",
+        type: "feature",
+        description: "A repreneur can ask Re-New to reconsider a dropped deal; it returns only as interest awaiting staff validation and restores no confidential access.",
+      },
+      {
+        title: "Confirmed demonstration opportunities stay internal",
+        type: "decision",
+        description: "Staff can explicitly mark demonstration data, and every repreneur-facing read and action then refuses it while retaining the operational history for staff.",
       },
     ],
   },

@@ -183,13 +183,40 @@ describe("repreneur portal profile scope", () => {
     )
     const dealsPage = source("app/portal/deals/page.tsx")
 
-    expect(dealFlowGetter).toContain("const staffRecommended = matchedOpportunities")
+    expect(dealFlowGetter).toContain("const statefulDeals = matchedOpportunities")
+    expect(dealFlowGetter).toContain('const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")')
     expect(dealFlowGetter).toContain("const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)")
     expect(dealFlowGetter).toContain("const serviceEligible = repreneur.lifecycle_status")
     expect(dealFlowGetter).toContain("const automaticMatching = serviceEligible")
-    expect(dealFlowGetter).toContain("const dealFlow = automaticMatching.complete ?")
+    expect(dealFlowGetter).toContain("const liveDeals = automaticMatching.complete ?")
     expect(detailGetter).toContain("if (!thesisCompleteness.complete || !serviceEligible) return null")
     expect(dealsPage).toContain("Re-New selections remain available")
     expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
+  })
+
+  it("filters DEMO opportunity parents in PostgREST before portal and staff-preview normalization", () => {
+    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
+    const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
+
+    expect((portalOpportunities.match(/opportunity:opportunities!inner\(/g) ?? [])).toHaveLength(3)
+    expect(portalOpportunities).toContain('.eq("opportunity.is_demo", false)')
+    expect(staffPreview).toContain("opportunity:opportunities!inner(")
+    expect(staffPreview).toContain('.eq("opportunity.is_demo", false)')
+    expect(staffPreview).toContain("isRepreneurEligibleOpportunity(opportunity)")
+  })
+
+  it("keeps Staff Portal Preview aligned with exact staff-only and dropped portal history", () => {
+    const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
+    const opportunityList = source("components/opportunities/repreneur-opportunity-list.tsx")
+    const normalizePreview = staffPreview.slice(
+      staffPreview.indexOf("function normalizeExposure"),
+      staffPreview.indexOf("async function getActivePursuitOwners"),
+    )
+
+    expect(staffPreview).toContain('"active_pursuit", "dropped"')
+    expect(normalizePreview).not.toContain('opportunity.repreneur_exposure === "staff_only"')
+    expect(staffPreview).toContain('opportunity:opportunities!inner(is_demo,status)')
+    expect(staffPreview).toContain('if (opportunity.status !== "active") continue')
+    expect(opportunityList).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped"')
   })
 })
