@@ -20,7 +20,7 @@
     },
     {
       "path": "supabase/schema/772_w147_auth_data_api.sql",
-      "sha256": "809fc19c431ce0ec8978d8586496ea6b231756ef7159a191ff67ceb1cdd84109"
+      "sha256": "538fdb23f2a5a8d2be5881a56fa89d3a0eeb32996bb4e7a328c8349574f49029"
     },
     {
       "path": "supabase/schema/771_test_storage.sql",
