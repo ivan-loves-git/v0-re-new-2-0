@@ -308,7 +308,7 @@ test.describe.serial("Golden journeys", () => {
     await expect(w127Page.locator("#office_contact_job_title")).not.toHaveAttribute("required")
     await w127Page.getByRole("button", { name: "Add office contact" }).last().click()
     await expect(w127Page.getByText("Add a first name or last name for the contact.", { exact: true })).toHaveCount(2)
-    await w127Page.getByLabel("Last name").fill(lastOnlyName)
+    await w127Page.locator("#office_contact_last_name").fill(lastOnlyName)
     await w127Page.getByRole("button", { name: "Add office contact" }).last().click()
     await expect(w127Page.getByText("Office contact added.", { exact: true })).toBeVisible()
     await recordW127LastOnlyContact(database, w127FirstOnlyFixture, lastOnlyName)
