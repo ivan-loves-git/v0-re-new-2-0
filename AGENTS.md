@@ -14,7 +14,7 @@ Temporary reviewers and subagents may perform bounded independent work and retur
 
 The binding QA-to-production ladder, evidence boundaries, risk tiers, release authority, specialist work-packet format, and credential ownership rules are in `docs/TESTING_RELEASE_PROTOCOL.md`. Follow it for every change.
 
-Required GitHub configuration: branch protection requires `Verify` universally, while `P1-P3 protected pilot` is selective Tier 3 release evidence and never a universal required check. Codex records the QA tier and a one-sentence reason in the pull request before merge, then applies only that tier's evidence.
+Required GitHub configuration: branch protection requires `Verify` universally, while `P1-P3 protected pilot` remains selective Tier 3 release evidence and is never a universal required check. Codex may classify and execute Tier 0–2 autonomously. A Tier 3 candidate stays `Tier 3 proposed — awaiting Ivan authorization` until Ivan explicitly authorizes that exact candidate; only then may the owner-only manual controller dispatch P1-P3. Codex records the QA tier and a one-sentence reason in the pull request before merge and applies only that tier's evidence.
 
 Candidate behaviour is tested in the isolated QA environment with synthetic data when the risk tier requires it. Production is verified only after the exact approved code reaches `main`; real team or customer records are not the primary test harness, and production writes require separate authority.
 
@@ -61,7 +61,7 @@ emba--renew-platform/
 - **GitHub Repo:** `ivan-loves-git/v0-re-new-2-0`
 - **Production URL:** `app.re-new.team`
 - **Production path:** the reviewed exact candidate merges to `main`, then the Git-connected production project deploys that exact main SHA.
-- **QA path:** only the trusted explicit controller may admit an exact candidate to the isolated validation project. Ordinary branch pushes must not deploy there.
+- **QA path:** only the trusted owner-dispatched controller may admit an Ivan-authorized exact Tier 3 candidate to the isolated validation project. Ordinary branch pushes and API dispatches must not deploy there.
 - **Cron Jobs:** Daily at 9 AM (Hobby plan limits to once/day)
 
 ## Environment Variables (Quick Reference)

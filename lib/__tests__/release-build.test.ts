@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("publishes proportional QA enforcement as release build 843", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("843")
+  it("publishes Ivan-gated Tier 3 QA as release build 845", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("845")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {

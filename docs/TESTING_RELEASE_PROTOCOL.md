@@ -61,7 +61,7 @@ Branch protection remains enabled with `Verify` as the required status during th
 
 ## Proportional QA
 
-Classify the highest consequence introduced by the change. `Verify` is the universal automated check for runtime code. The permanent protected P1-P3 lane is selective: use it only for Tier 3. Tier 2 uses its relevant exact-candidate journey, while Tier 0 and Tier 1 do not dispatch Golden Journeys.
+Classify the highest consequence introduced by the change. `Verify` is the universal automated check for runtime code. The highest QA tier Codex may dispatch without Ivan is Tier 2. The permanent protected P1-P3 lane is selective, not universal: use it only for Tier 3 and only after Ivan explicitly authorizes the exact candidate. Tier 2 uses its relevant exact-candidate journey, while Tier 0 and Tier 1 do not dispatch Golden Journeys.
 
 ### Tier 0 — no runtime code
 
@@ -87,15 +87,18 @@ Examples: authentication, authorization, confidentiality, visibility, data model
 
 Required: the full QA environment and protected P1-P3 lane on the exact candidate; synthetic fixtures; direct-URL and role-boundary tests; persistence and cleanup invariants; independent review; a rollback plan; and separate explicit authority for any production migration, backfill, or other production-data mutation.
 
-Do not inflate a low-risk UI edit into a high-risk release programme. Do not reduce a high-consequence change to unit tests.
+Before authorization, record `Tier 3 proposed — awaiting Ivan authorization` and stop before any candidate QA deployment, schema synchronization, synthetic fixture, protected P1-P3 check, or retry. Ivan's direct Codex instruction is sufficient; do not ask for a PDR PIN or a second website confirmation. Codex then executes the authorized run as a fresh owner-identity manual dispatch, whose GitHub run record is evidence of the authorization rather than a second approval step. Authorization binds to the exact open-PR head SHA and its diff. Any head-SHA change voids it and requires fresh authorization. Tier 3 QA authorization permits only that QA dispatch; it does not authorize merge, production publication, a migration, a backfill, or any other production-data mutation.
+
+Do not inflate a low-risk UI edit into a high-risk release programme. Do not relabel a high-consequence change as Tier 2 to avoid authorization: narrow the scope until it is genuinely Tier 1 or Tier 2, or keep the candidate blocked at Tier 3.
 
 ### GitHub enforcement
 
-- `Verify` is the only universal required status check on `main`.
-- `P1-P3 protected pilot` is selective Tier 3 release evidence, not a universal branch-protection requirement.
-- Codex records `QA tier: <0-3> — <reason>` in the pull request before merge and remains accountable for applying the required evidence. A direct-main emergency or documentation-only exception retains the same classification in an explicitly linked release record.
+- The required live configuration is that `Verify` is the only universal required status check on `main`.
+- `P1-P3 protected pilot` must remain selective Tier 3 release evidence, not a universal branch-protection requirement.
+- Codex records `QA tier: <0–3> — <reason>` in the pull request before merge and remains accountable for applying the required evidence. A direct-main emergency or documentation-only exception must retain the same classification in an explicitly linked release record.
+- Golden Journeys accepts only a fresh manual `workflow_dispatch` from Ivan's repository-owner identity for the exact branch, SHA, and green Verify run. API/repository dispatch, branch pushes, pull-request events, workflow reruns, and other repository writers cannot start Tier 3.
 - A Tier 3 candidate must not merge until its exact-candidate protected P1-P3 check succeeds. Tier 2 requires its named relevant journey; Tier 0 and Tier 1 do not require P1-P3.
-- Do not add a second classifier bot, label workflow, or approval system while Codex remains the single merge owner. Revisit conditional automation only if independent merge authority materially expands.
+- This candidate-bound Tier 3 gate is the sole QA authorization control. Do not add a classifier bot, label ritual, or duplicate approval system while Codex remains the single merge owner.
 
 ## Release authority and hard boundaries
 
@@ -164,9 +167,9 @@ Use temporary agents only for concrete, bounded work such as an independent risk
 - QA deployment tokens must be least-privileged, scoped to the validation project where the provider supports it, and rotated after exposure, suspected compromise, ownership change, or the agreed expiry. Production credentials are never shared with a generic specialist packet.
 - Provider configuration, branch protection, aliases, and cleanup invariants are verified without exposing values. A successful controller run does not prove the product feature; it proves only the lane used to test it.
 
-Once the core QA lane has one clean end-to-end run and its protection/configuration is restored, it becomes background machinery. Freeze further QA-infrastructure development unless a defect directly blocks a real Tier 3 release or creates a security or data risk.
+Once the core QA lane has one clean end-to-end run and its protection/configuration is restored, it becomes background machinery. Freeze further QA-infrastructure development unless a defect directly blocks an Ivan-authorized Tier 3 release or creates a security or data risk.
 
-One automatic retry may be used only for the same candidate SHA and a documented transient provider or controller category, such as rate limiting, temporary provider unavailability, or a bounded readiness or alias-propagation timeout. Contract, schema, isolation, authentication, authorization, cleanup, or residue mismatches are not retryable and require diagnosis. A second same-SHA failure in an eligible transient category stops the release; it does not authorize continued controller development or bypass required Tier 3 evidence. A bounded manual isolated proof or another controller repair or simplification requires an explicit decision.
+There is no automatic Tier 3 retry. Ivan may authorize one same-SHA retry only for a documented transient provider or controller category, such as rate limiting, temporary provider unavailability, or a bounded readiness/alias propagation timeout. Contract, fingerprint, schema, isolation, authentication, authorization, cleanup, or residue mismatches are not retryable and require diagnosis. A second same-SHA failure in an eligible transient category stops the release; it does not authorize continued controller development or bypass required Tier 3 evidence. A bounded manual isolated proof or another controller repair/simplification requires an explicit decision.
 
 ## Completion and reporting
 

@@ -10,7 +10,7 @@ Status: **controller installed; end-to-end commissioning blocked at the provider
 
 - Supabase: exactly one persistent Micro branch under production project `iiuqcdnmxhtyispnykgf`; no production data clone and no PR ownership.
 - Vercel: existing protected project `renew-overnight-validation-20260820`, Preview target, provider-managed stable `qa` branch alias `renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app`, no production/custom domain. The manually assigned `renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app` alias is pinned and must be rejected.
-- GitHub: environment `qa-pilot` (name retained), candidate check `P1-P3 protected pilot`. It is required evidence for an admitted Tier 3 candidate, not a universal branch-protection requirement. The historical `qa` git pointer is retired and must not be moved by the controller.
+- GitHub: environment `qa-pilot` (name retained), candidate check `P1-P3 protected pilot`. It is required evidence only for an exact Tier 3 candidate explicitly authorized by Ivan, not a universal branch-protection requirement. The historical `qa` git pointer is retired and must not be moved by the controller.
 - No premium runner, additional project, email plan or external service is part of this lane.
 
 ## Cost
@@ -19,13 +19,13 @@ Supabase management readback on 2026-08-22 quoted Micro branch compute at USD 0.
 
 ## Candidate operation
 
-1. A trusted `main` workflow admits a candidate only through explicit `repository_dispatch` (`qa_candidate`) or trusted `workflow_dispatch`. There is no `workflow_run` admission and ordinary push/PR events cannot start the lane.
-2. Admission validates that the supplied branch and exact 40-character SHA are the current head of a same-repository open PR, the actor has write access, and the exact GitHub Actions `Verify` run is green. Identical-contract candidates are accepted on explicit admission. A database-changing candidate requires reviewed schema fields (`schema_reviewed=true`, `qa-schema-review-v1`, exact contract SHA-256).
+1. A candidate remains `Tier 3 proposed — awaiting Ivan authorization` until Ivan explicitly authorizes its exact open-PR head SHA. Codex executes that authorization as a fresh manual `workflow_dispatch` under GitHub user `ivan-loves-git`; the run record is the evidence, not a second approval. The trusted `main` workflow rejects `repository_dispatch`, `workflow_run`, push, PR, and workflow-rerun events.
+2. Admission validates that the supplied branch and exact 40-character SHA are the current head of a same-repository open PR, the dispatcher is Ivan's repository-owner identity with write access, and the exact GitHub Actions `Verify` run is green. A changed head SHA requires fresh authorization. Identical-contract candidates are accepted on explicit admission. A database-changing candidate also requires reviewed schema fields (`schema_reviewed=true`, `qa-schema-review-v1`, exact contract SHA-256).
 3. The workflow creates `P1-P3 protected pilot` on that exact SHA and holds global concurrency `renew-permanent-qa`. It does not move any `qa` git pointer and does not request `contents: write`.
 4. A dedicated `deploy-qa` job receives only `QA_VERCEL_TOKEN`, optional `QA_VERCEL_TEAM_ID`, and `VERCEL_AUTOMATION_BYPASS_SECRET`. It checks out the trusted controller only, never executes candidate application code, and never receives `DATABASE_URL` or Supabase service-role credentials. It creates exactly one Preview deployment in project `renew-overnight-validation-20260820` (`prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y`) for the admitted candidate branch and SHA, binds `meta.githubCommitSha` and the candidate ref, waits for `readyState=READY`, assigns the preserved stable alias, and uploads sanitized provider evidence containing deployment id, project, ref, SHA, target, READY state and alias readback.
-5. Database and browser jobs consume that sanitized evidence artifact. They never receive `QA_VERCEL_TOKEN`. Only after identity proof do they verify the deployed non-secret QA contract, synchronize schema when required, acquire the lease, run P1–P3, clean up, and finalize the check.
+5. Database and browser jobs consume that sanitized evidence artifact. They never receive `QA_VERCEL_TOKEN`. Only after identity proof do they verify the deployed non-secret QA contract, synchronize schema when required, acquire the lease, run P1-P3, clean up, and finalize the check.
 
-Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects forks/foreign repositories.
+Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects non-owner dispatchers, forks, and foreign repositories. Tier 3 QA authorization does not authorize merge, production publication, or production-data mutation.
 
 ## Validation deploy architecture (Route A)
 
@@ -33,7 +33,7 @@ Root cause of the Hobby quota burst: both the product project and the validation
 
 Approved architecture:
 
-1. Admit candidates only through explicit dispatch.
+1. Admit only an Ivan-authorized exact Tier 3 candidate through owner-only manual dispatch.
 2. Deploy the admitted candidate branch and exact SHA directly through the Vercel Deployment API. Do not retain a branch-pointer deployment trigger.
 3. Isolate the deploy credential in `deploy-qa`.
 4. Keep database/browser jobs on sanitized provider evidence only.
@@ -53,7 +53,7 @@ Steps already evidenced must not be replayed as a new infrastructure programme. 
 8. Merge the corrected controller through an explicitly documented bootstrap.
 9. Re-enable the corrected Golden Journeys workflow.
 10. Run QA daily health on current `main` and require success before ordinary Golden Journeys admission.
-11. Run one exact-SHA Golden Journeys canary and protected P1–P3.
+11. Run one exact-SHA Golden Journeys canary and protected P1-P3.
 12. Prove one QA validation deployment and no additional product deployment caused by that admission.
 13. Keep cumulative product PR #27 parked until the controller canary and daily health both pass.
 
@@ -77,13 +77,13 @@ Live cutover and rollback evidence for Gate 2 is recorded in `docs/operations/qa
 
 ## Concurrency and supersession
 
-This lane deliberately uses GitHub's latest-pending supersession with `cancel-in-progress: false`. One mutation run remains protected from cancellation, and at most one latest candidate waits. If A is running, B is pending and C arrives, C supersedes B; the superseded B remains blocked because it receives no successful P1–P3 check. C runs after A. If B is still intended, a rebase or push gives it a new exact candidate SHA and automatically re-enters it. The single concurrency group prevents any two candidates from deploying or seeding simultaneously.
+This lane deliberately uses GitHub's latest-pending supersession with `cancel-in-progress: false`. One mutation run remains protected from cancellation, and at most one latest candidate waits. If A is running, B is pending and C is manually dispatched, C supersedes B; the superseded B remains blocked because it receives no successful P1-P3 check. C runs after A. If B is still intended, a rebase or push gives it a new exact candidate SHA that must be authorized and manually dispatched again. The single concurrency group prevents any two candidates from deploying or seeding simultaneously.
 
 Phase C2 must prove A running, B pending, C supersedes B, B remains blocked, C runs after A, and a refreshed B later runs. This is the accepted high-cadence behavior, not an unlimited queue.
 
 ## Daily health
 
-`.github/workflows/qa-daily-health.yml` runs once daily without Playwright or an LLM and can also be started manually for initial acceptance. A first `resolve-sha` job uses only the protection-bypass secret to read the expected SHA from the stable alias. The later health job uses database secrets and that alias-derived SHA; it never reads `origin/qa` and never receives `QA_VERCEL_TOKEN`. It verifies the protected site, exact deployed candidate, provider identities, empty baseline, stale cleanup recovery and lease acquire/heartbeat/release. It never applies schema DDL or calculates a live catalog checksum. Exact-candidate schema synchronization verifies the versioned SQL-file checksums, applies those files transactionally when needed, and reads back the exact applied-file ledger. Golden P1-P3 then proves the user journeys, roles, persistence and cleanup. Ordinary candidates require the latest completed daily health run to have succeeded on exact current `main` within the previous 26 hours. Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock, after trusted candidate admission has verified the same-repository PR, candidate SHA, green Verify run, contract digest, `schema_reviewed=true` and `qa-schema-review-v1`. This recovery only permits the candidate to continue; it does not bypass provider identity, empty-branch and lease checks, schema synchronization, the applied-file ledger, P1-P3, sanitization, cleanup or final check evaluation.
+`.github/workflows/qa-daily-health.yml` runs once daily without Playwright or an LLM and can also be started manually for initial acceptance. It is a scheduled idle-lane maintenance check, not candidate admission or Tier 3 product QA: it creates no candidate deployment, synchronizes no schema, seeds no fixture, and runs no P1-P3 journey. A first `resolve-sha` job uses only the protection-bypass secret to read the expected SHA from the stable alias. The later health job uses database secrets and that alias-derived SHA; it never reads `origin/qa` and never receives `QA_VERCEL_TOKEN`. It verifies the protected site, exact deployed candidate, provider identities, empty baseline, stale cleanup recovery and lease acquire/heartbeat/release. It never applies schema DDL or calculates a live catalog checksum. Exact-candidate schema synchronization verifies the versioned SQL-file checksums, applies those files transactionally when needed, and reads back the exact applied-file ledger. Golden P1-P3 then proves the user journeys, roles, persistence and cleanup. An authorized Tier 3 candidate requires the latest completed daily health run to have succeeded on exact current `main` within the previous 26 hours. Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock, after trusted candidate admission has verified the same-repository PR, candidate SHA, green Verify run, contract digest, `schema_reviewed=true` and `qa-schema-review-v1`. This recovery only permits the candidate to continue; it does not bypass provider identity, empty-branch and lease checks, schema synchronization, the applied-file ledger, P1-P3, sanitization, cleanup or final check evaluation.
 
 The v3 structure fingerprint is retained as a contract identifier for deployed-header and lease binding. It is not recomputed from provider-rendered catalog text during daily health or candidate QA because equivalent PostgreSQL definitions can render differently across sessions and provider versions. Runtime schema proof instead uses exact versioned SQL-file checksums and the applied-file ledger, followed by the protected browser and permission journeys.
 

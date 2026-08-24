@@ -1,8 +1,6 @@
 name: Golden journeys
 
 on:
-  repository_dispatch:
-    types: [qa_candidate]
   workflow_dispatch:
     inputs:
       candidate_branch:
@@ -52,9 +50,7 @@ env:
 jobs:
   lane:
     name: Admit exact candidate
-    if: >-
-      github.event_name == 'repository_dispatch' ||
-      github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       checks: write
@@ -67,12 +63,12 @@ jobs:
       check_run_id: ${{ steps.check.outputs.check_run_id }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      QA_CANDIDATE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_branch || github.event.client_payload.candidate_branch }}
-      QA_EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_sha || github.event.client_payload.candidate_sha }}
-      QA_VERIFY_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_run_id || github.event.client_payload.verify_run_id }}
-      QA_CONTRACT_SHA256: ${{ github.event_name == 'workflow_dispatch' && inputs.contract_sha256 || github.event.client_payload.contract_sha256 }}
-      QA_SCHEMA_REVIEWED: ${{ github.event_name == 'workflow_dispatch' && inputs.schema_reviewed || github.event.client_payload.schema_reviewed }}
-      QA_SCHEMA_REVIEW_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.schema_review_version || github.event.client_payload.schema_review_version }}
+      QA_CANDIDATE_BRANCH: ${{ inputs.candidate_branch }}
+      QA_EXPECTED_SHA: ${{ inputs.candidate_sha }}
+      QA_VERIFY_RUN_ID: ${{ inputs.verify_run_id }}
+      QA_CONTRACT_SHA256: ${{ inputs.contract_sha256 }}
+      QA_SCHEMA_REVIEWED: ${{ inputs.schema_reviewed }}
+      QA_SCHEMA_REVIEW_VERSION: ${{ inputs.schema_review_version }}
       QA_CANDIDATE_ROOT: .qa-candidate
     steps:
       - name: Check out trusted lane controller
@@ -137,6 +133,7 @@ jobs:
 
   deploy-qa:
     name: Deploy admitted candidate to validation project
+    if: ${{ github.run_attempt == '1' && needs.lane.result == 'success' }}
     permissions:
       contents: read
       actions: write
@@ -194,6 +191,7 @@ jobs:
 
   schema-sync:
     name: Synchronize candidate database contract
+    if: ${{ github.run_attempt == '1' && needs.lane.result == 'success' && needs.deploy-qa.result == 'success' }}
     permissions:
       contents: read
     needs: [lane, deploy-qa]
@@ -270,6 +268,7 @@ jobs:
 
   golden:
     name: Run protected P1-P3 on permanent QA
+    if: ${{ github.run_attempt == '1' && needs.lane.result == 'success' && needs.deploy-qa.result == 'success' && needs.schema-sync.result == 'success' }}
     permissions:
       contents: read
       actions: write
@@ -369,9 +368,7 @@ jobs:
         run: pnpm qa:evidence:collect
 
       - name: Pause after lease for serialization proof
-        if: >-
-          (github.event_name == 'repository_dispatch' && github.event.client_payload.pause_after_lease == true) ||
-          (github.event_name == 'workflow_dispatch' && inputs.pause_after_lease == true)
+        if: inputs.pause_after_lease == true
         run: sleep 180
 
       - name: Seed exact Playwright fixtures
@@ -429,7 +426,7 @@ jobs:
       contents: read
       actions: write
       checks: write
-    if: always()
+    if: ${{ always() && github.run_attempt == '1' }}
     needs: [lane, deploy-qa, schema-sync, golden]
     runs-on: ubuntu-latest
     timeout-minutes: 2
