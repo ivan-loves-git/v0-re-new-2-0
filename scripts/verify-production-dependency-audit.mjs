@@ -3,14 +3,16 @@ import { readFile } from "node:fs/promises"
 const severityRank = { low: 1, moderate: 2, medium: 2, high: 3, critical: 4 }
 
 export function assertProductionAudit(audit, policy, now = new Date()) {
-  if (!audit || typeof audit !== "object" || audit.error || !audit.vulnerabilities || typeof audit.vulnerabilities !== "object") {
+  if (!audit || typeof audit !== "object" || audit.error) {
     throw new Error("production-dependency-audit-invalid")
   }
   const minimum = severityRank[policy.minimumSeverity]
   if (!minimum || !Array.isArray(policy.exceptions)) throw new Error("dependency-audit-policy-invalid")
 
   const violations = []
-  for (const [packageName, entry] of Object.entries(audit.vulnerabilities)) {
+  const vulnerabilities = audit.vulnerabilities ?? Object.fromEntries(Object.entries(audit.advisories ?? {}).map(([advisory, entry]) => [entry.module, { severity: entry.severity, via: [{ name: advisory }] }]))
+  if (!Object.keys(vulnerabilities).length && !audit.metadata) throw new Error("production-dependency-audit-invalid")
+  for (const [packageName, entry] of Object.entries(vulnerabilities)) {
     const severity = severityRank[entry.severity] ?? 0
     if (severity < minimum) continue
     const advisories = (entry.via ?? []).flatMap((via) => typeof via === "object" && via ? [String(via.name)] : [])
