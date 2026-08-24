@@ -52,7 +52,7 @@ describe("permanent QA lane contract", () => {
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
         { path: "supabase/schema/permanent_qa_rebuild.sql", sha256: "20565af77093399b6b8ebc7e27ebc78e778faf9df802b702b7d86eea9f323291" },
         { path: "supabase/schema/771_public_schema.sql", sha256: "593d9d2b813c9047568dd5d863e2d4644a18493cff0e63142518fcfeb554788b" },
-        { path: "supabase/schema/772_w147_auth_data_api.sql", sha256: "538fdb23f2a5a8d2be5881a56fa89d3a0eeb32996bb4e7a328c8349574f49029" },
+        { path: "supabase/schema/772_w147_auth_data_api.sql", sha256: "809fc19c431ce0ec8978d8586496ea6b231756ef7159a191ff67ceb1cdd84109" },
         { path: "supabase/schema/771_test_storage.sql", sha256: "ecd41fd86c5566f77fadc53998ff7fdca12a4e81d9142ca07cfc1db620bf545f" },
         { path: "supabase/schema/822_demo_opportunity_quarantine.sql", sha256: "5300d9f9d23cef949406f203fefba5bc5f6ba7ae370388e0f39353789284e7bc" },
         { path: "supabase/schema/822_deals_reconsideration.sql", sha256: "62d693c89a8f2ed19045cbfa62cfd3db111d5a16e6b645a9e024069b4570ef93" },
