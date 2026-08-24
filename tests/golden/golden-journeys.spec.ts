@@ -44,6 +44,11 @@ async function choose(page: Page, label: string | RegExp, option: string | RegEx
   await page.getByRole("option", { name: option }).click()
 }
 
+async function chooseExistingOffice(page: Page, option: string | RegExp) {
+  await page.locator("#existing_office_id").click()
+  await page.getByRole("option", { name: option }).click()
+}
+
 async function clickChoice(page: Page, id: string) {
   await page.locator(`[id="${id.replaceAll('"', '\\"')}"]`).locator("..").evaluate((element) => (element as HTMLElement).click())
 }
@@ -336,22 +341,22 @@ test.describe.serial("Golden journeys", () => {
     await w129Page.getByRole("button", { name: "Add firm context" }).click()
     await w129Page.locator("#existing_firm_context").click()
     await choose(w129Page, "M&A advisory firm", new RegExp(`${manifest.fixturePrefix} firm`, "i"))
-    await w129Page.getByLabel("Existing operating office").click()
+    await w129Page.locator("#existing_office_id").click()
     await expect(w129Page.getByRole("option", { name: new RegExp(`${manifest.fixturePrefix} office`, "i") })).toBeVisible()
     await expect(w129Page.getByRole("option", { name: /Acme Paris/i })).toHaveCount(0)
     await w129Page.keyboard.press("Escape")
-    await choose(w129Page, "Existing operating office", new RegExp(`${manifest.fixturePrefix} office`, "i"))
+    await chooseExistingOffice(w129Page, new RegExp(`${manifest.fixturePrefix} office`, "i"))
     // Changing either the firm or the path clears a stale office before it can
     // be used; return to the seeded firm and select the real office again.
     await choose(w129Page, "M&A advisory firm", /Acme Co\./i)
-    await expect(w129Page.getByLabel("Existing operating office")).toContainText("Choose this firm's operating office")
+    await expect(w129Page.locator("#existing_office_id")).toContainText("Choose this firm's operating office")
     await choose(w129Page, "M&A advisory firm", new RegExp(`${manifest.fixturePrefix} firm`, "i"))
     await w129Page.locator("#add_existing_firm_office").click()
     await expect(w129Page.getByLabel("Operating office")).toBeVisible()
     await expect(w129Page.getByRole("button", { name: "Create staff-only context" })).toBeVisible()
     await w129Page.locator("#use_existing_firm_office").click()
-    await expect(w129Page.getByLabel("Existing operating office")).toContainText("Choose this firm's operating office")
-    await choose(w129Page, "Existing operating office", new RegExp(`${manifest.fixturePrefix} office`, "i"))
+    await expect(w129Page.locator("#existing_office_id")).toContainText("Choose this firm's operating office")
+    await chooseExistingOffice(w129Page, new RegExp(`${manifest.fixturePrefix} office`, "i"))
     await w129Page.getByRole("button", { name: "Use operating office" }).click()
     expect(await maFixtureCounts(database)).toEqual(beforeExistingOfficeSelection)
     await expect(w129Page.getByText(`Firm: ${manifest.fixturePrefix} firm · Office: ${manifest.fixturePrefix} office`, { exact: true })).toBeVisible()
@@ -361,7 +366,7 @@ test.describe.serial("Golden journeys", () => {
     await page.getByRole("button", { name: "Add firm context" }).click()
     await page.locator("#existing_firm_context").click()
     await choose(page, "M&A advisory firm", new RegExp(`${manifest.fixturePrefix} firm`, "i"))
-    await choose(page, "Existing operating office", new RegExp(`${manifest.fixturePrefix} office`, "i"))
+    await chooseExistingOffice(page, new RegExp(`${manifest.fixturePrefix} office`, "i"))
     await page.getByRole("button", { name: "Use operating office" }).click()
     await expect(page.getByText(`Firm: ${manifest.fixturePrefix} firm · Office: ${manifest.fixturePrefix} office`, { exact: true })).toBeVisible()
 
