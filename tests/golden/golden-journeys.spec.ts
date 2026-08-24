@@ -121,6 +121,36 @@ test.describe.serial("Golden journeys", () => {
     await staffPage.goto(`/repreneurs/${result.rows[0].id}`)
     await expect(staffPage.getByText(manifest.actors.applicant.email)).toBeVisible()
     await staffPage.screenshot({ path: `${RUN_DIR}/test-results/p1-staff-readback.png` })
+
+    const staffDownload = await staffPage.request.get(
+      `/api/repreneurs/${result.rows[0].id}/documents/cv`,
+    )
+    expect(staffDownload.status()).toBe(200)
+    expect(staffDownload.headers()["content-type"]).toContain("application/pdf")
+    expect((await staffDownload.body()).subarray(0, 5).toString()).toBe("%PDF-")
+
+    const portal = await portalContext(browser)
+    const ownLdc = await portal.request.get(
+      `/api/repreneurs/${manifest.ids.portalRepreneur}/documents/ldc`,
+    )
+    expect(ownLdc.status()).toBe(200)
+    expect(ownLdc.headers()["content-type"]).toContain("application/pdf")
+    expect((await ownLdc.body()).subarray(0, 5).toString()).toBe("%PDF-")
+    expect(
+      (
+        await portal.request.get(
+          `/api/repreneurs/${manifest.ids.portalRepreneur}/documents/cv`,
+        )
+      ).status(),
+    ).toBe(403)
+    expect(
+      (
+        await portal.request.get(
+          `/api/repreneurs/${result.rows[0].id}/documents/ldc`,
+        )
+      ).status(),
+    ).toBe(403)
+    await portal.close()
     await staff.close()
     await context.close()
   })
