@@ -117,7 +117,7 @@ describe("permanent QA lane contract", () => {
     expect(readFileSync(`${process.cwd()}/lib/qa/permanent-contract.mjs`, "utf8")).toContain('TIER_3_AUTHORIZER = "ivan-loves-git"')
     const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
     expect(validator).toContain("actor,\n    runAttempt: process.env.GITHUB_RUN_ATTEMPT,")
-    for (const job of ["schema-sync", "golden", "finalize"]) {
+    for (const job of ["recover", "schema-sync", "golden", "finalize"]) {
       expect(jobBlock(golden, job)).toContain("github.run_attempt == '1'")
     }
     expect(concurrency).toContain("group: renew-permanent-qa")
@@ -563,6 +563,27 @@ describe("permanent QA lane contract", () => {
     expect(cleanup).toContain("server-manifest-mismatch")
     expect(cleanup).toContain("repreneur-scope")
     expect(cleanup).toContain("opportunity-scope")
+  })
+
+  it("recovers only an expired manifest-bound QA lease before schema synchronization", () => {
+    const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const recover = jobBlock(workflow, "recover")
+    const schemaSync = jobBlock(workflow, "schema-sync")
+    const finalize = jobBlock(workflow, "finalize")
+
+    expect(workflow.indexOf("recover:")).toBeGreaterThan(workflow.indexOf("lane:"))
+    expect(workflow.indexOf("recover:")).toBeLessThan(workflow.indexOf("schema-sync:"))
+    expect(recover).toContain("needs: lane")
+    expect(recover).toContain("ref: ${{ needs.lane.outputs.candidate_sha }}")
+    expect(recover).toContain("persist-credentials: false")
+    expect(recover).toContain("working-directory: .qa-candidate")
+    expect(recover).toContain("pnpm qa:schema:verify")
+    expect(recover).toContain("pnpm qa:lease:acquire")
+    expect(recover).toContain("pnpm qa:lease:release")
+    expect(recover).not.toContain("QA_VERCEL_TOKEN")
+    expect(schemaSync).toContain("needs: [lane, recover]")
+    expect(finalize).toContain("needs: [lane, recover, schema-sync, golden]")
+    expect(finalize).toContain("recovery=${{ needs.recover.result }}")
   })
 
   it("keeps schema synchronization separate and transactional before runner-hosted browser fixtures", () => {
