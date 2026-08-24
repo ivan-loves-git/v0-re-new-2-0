@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { isDeepStrictEqual } from "node:util"
+import { assertRecoveryArtifacts } from "../../lib/qa/phase-b.mjs"
 import { MANIFEST_FILE, RUNTIME_FIXTURES_FILE, RUN_DIR, SINGLETON_BEFORE_FILE, assertLeaseAuthority, assertQaMutationTriggersEnabled, databaseClient, readJson, recordRuntimeFixtures, removeRunnerSecrets, setProvisionalIdentityTriggers, setRetainedFixtureTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
 function safeDatabaseToken(error) {
