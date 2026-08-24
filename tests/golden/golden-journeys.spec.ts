@@ -283,6 +283,7 @@ test.describe.serial("Golden journeys", () => {
     await choose(page, "Status", "Active")
     await choose(page, "Secteur", "Tech & Digital")
     const geographyMandatesEnabled = (await page.getByLabel("Canonical geography").count()) > 0
+    if (githubRunner) expect(geographyMandatesEnabled).toBe(true)
     if (geographyMandatesEnabled) {
       await choose(page, "Canonical geography", new RegExp(manifest.fixturePrefix))
     } else {
