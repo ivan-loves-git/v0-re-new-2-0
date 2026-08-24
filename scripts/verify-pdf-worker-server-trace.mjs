@@ -1,6 +1,8 @@
-import { existsSync } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { cp, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { dirname, join, relative, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
 
 const buildDirectory = process.argv[2] || ".next";
 const serverDirectory = join(buildDirectory, "server");
@@ -22,8 +24,8 @@ if (!existsSync(serverDirectory)) {
   );
 }
 
-const files = await filesUnder(serverDirectory);
-const relativeFiles = files.map((file) => relative(buildDirectory, file));
+const allFiles = await filesUnder(buildDirectory);
+const relativeFiles = allFiles.map((file) => relative(buildDirectory, file));
 if (
   relativeFiles.some(
     (file) => file.includes("static/") && file.includes("pdf-evidence-worker"),
@@ -32,19 +34,73 @@ if (
   throw new Error("pdf-worker-server-trace-static-worker-asset");
 }
 
-const traces = await Promise.all(
-  files
+const traceRecords = await Promise.all(
+  (await filesUnder(serverDirectory))
     .filter((file) => file.endsWith(".nft.json"))
-    .map(async (file) => JSON.parse(await readFile(file, "utf8"))),
+    .map(async (file) => ({
+      file,
+      trace: JSON.parse(await readFile(file, "utf8")),
+    })),
 );
-const tracedFiles = traces.flatMap((trace) => trace.files || []);
-for (const requiredPdfjsFile of [
+const requiredPdfjsFiles = [
   "pdfjs-dist/legacy/build/pdf.mjs",
   "pdfjs-dist/legacy/build/pdf.worker.mjs",
-]) {
-  if (!tracedFiles.some((file) => file.includes(requiredPdfjsFile))) {
-    throw new Error(`pdf-worker-server-trace-pdfjs-not-traced:${requiredPdfjsFile}`);
+];
+const ndaTrace = traceRecords.find(({ file, trace }) => {
+  if (!file.includes("/portal/deals/[matchId]/page.js.nft.json")) return false;
+  return (trace.files || []).some((entry) => {
+    const compiled = resolve(dirname(file), entry);
+    try {
+      return (
+        existsSync(compiled) &&
+        /pdfjsModulePath/.test(readFileSync(compiled, "utf8"))
+      );
+    } catch {
+      return false;
+    }
+  });
+});
+if (!ndaTrace) throw new Error("pdf-worker-server-trace-nda-action-not-found");
+for (const requiredPdfjsFile of requiredPdfjsFiles) {
+  if (
+    !(ndaTrace.trace.files || []).some((file) =>
+      file.includes(requiredPdfjsFile),
+    )
+  ) {
+    throw new Error(
+      `pdf-worker-server-trace-pdfjs-not-traced:${requiredPdfjsFile}`,
+    );
   }
 }
 
-console.log("pdf-worker-server-trace-ok");
+const tracedPdf = (ndaTrace.trace.files || []).find((file) =>
+  file.includes(requiredPdfjsFiles[0]),
+);
+const sourcePdf = resolve(dirname(ndaTrace.file), tracedPdf);
+const packageRoot = sourcePdf.slice(
+  0,
+  sourcePdf.indexOf("/legacy/build/pdf.mjs"),
+);
+const copiedRoot = await mkdtemp(join(tmpdir(), "renew-pdfjs-traced-"));
+try {
+  await cp(packageRoot, join(copiedRoot, "pdfjs-dist"), { recursive: true });
+  const copiedPdf = join(copiedRoot, "pdfjs-dist/legacy/build/pdf.mjs");
+  const copiedWorker = join(
+    copiedRoot,
+    "pdfjs-dist/legacy/build/pdf.worker.mjs",
+  );
+  if (!existsSync(copiedPdf) || !existsSync(copiedWorker))
+    throw new Error("pdf-worker-server-trace-copy-incomplete");
+  // Import resolution is the assertion here; PDF rendering is separately exercised
+  // by the real isolated-worker test. PDF.js initializes DOMMatrix at module load.
+  globalThis.DOMMatrix ||= class DOMMatrix {};
+  const module = await import(pathToFileURL(copiedPdf).href);
+  if (typeof module.getDocument !== "function")
+    throw new Error("pdf-worker-server-trace-copied-runtime-unresolvable");
+} finally {
+  await rm(copiedRoot, { recursive: true, force: true });
+}
+
+console.log(
+  `pdf-worker-server-trace-ok:${relative(buildDirectory, ndaTrace.file)}`,
+);
