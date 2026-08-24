@@ -1,102 +1,130 @@
 import { readFileSync } from "node:fs"
-    import { describe, expect, it } from "vitest"
-        import {
-              assertRecoveryArtifacts. 
-             assertRecoveryFixtureManifest,
-              assertSafeQaRuntime,
-              buildLegacyFixtureManifest,
-              buildFixtureManifest,
-              validateLiveEvidence,
-        } from "@/lib/qa/phase-b.mjs"
-            
+import { describe, expect, it } from "vitest"
+import {
+  assertRecoveryArtifacts,
+  assertRecoveryFixtureManifest,
+  assertSafeQaRuntime,
+  buildLegacyFixtureManifest,
+  buildFixtureManifest,
+  validateLiveEvidence,
+} from "@/lib/qa/phase-b.mjs"
+
 const REF = "ypzrsrykirpqerfpozdm"
-    const SHA = "a".repeat(40)
-        const ORIGIN = "https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app"
-            const FINGERPRINT = "b".repeat(64)
-                const RUNNER_ORIGIN = "https://127.0.0.1:3443"
-                    
+const SHA = "a".repeat(40)
+const ORIGIN = "https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app"
+const FINGERPRINT = "b".repeat(64)
+const RUNNER_ORIGIN = "https://127.0.0.1:3443"
+
 function contractEvidence() {
-      return {
-              candidateContract: { expectedStructureFingerprint: FINGERPRINT },
-              deployedContract: {
-                        candidateSha: SHA,
-                        projectRef: REF,
-                        apiRef: REF,
-                        databaseRef: REF,
-                        storageRef: REF,
-                        structureFingerprint: FINGERPRINT,
-                        validationProject: "renew-overnight-validation-20260820",
-                        mailPolicy: "allowlist",
-                        mailTransport: "simulated",
-              },
-      }
+  return {
+    candidateContract: { expectedStructureFingerprint: FINGERPRINT },
+    deployedContract: {
+      candidateSha: SHA,
+      projectRef: REF,
+      apiRef: REF,
+      databaseRef: REF,
+      storageRef: REF,
+      structureFingerprint: FINGERPRINT,
+      validationProject: "renew-overnight-validation-20260820",
+      mailPolicy: "allowlist",
+      mailTransport: "simulated",
+    },
+  }
 }
 
 function runnerEvidence() {
-      return {
-              ...contractEvidence(),
-              collectedAt: "2026-08-24T10:00:00.000Z",
-              supabase: {
-                        databaseRef: REF,
-                        apiRef: REF,
-                        storageRef: REF,
-                        databaseHealthy: true,
-                        restHealthy: true,
-                        authHealthy: true,
-                        storageHealthy: true,
-                        storageBuckets: [{ id: "cvs", public: false }, { id: "opportunity-documents", public: false }],
-                        customerRows: 0,
-                        applicationRows: 0,
-                        betterAuthUsers: 0,
-                        supabaseAuthUsers: 0,
-                        storageObjects: 0,
-              },
-              runtime: {.                        provider: "github-runner",
-                              origin: RUNNER_ORIGIN,
-                              candidateSha: SHA,
-                              loopbackOnly: true,
-                              productionEnvironmentAttached: false,
-                              authorizedStatus: 200,
-                       },
-      }
+  return {
+    ...contractEvidence(),
+    collectedAt: "2026-08-24T10:00:00.000Z",
+    supabase: {
+      databaseRef: REF,
+      apiRef: REF,
+      storageRef: REF,
+      databaseHealthy: true,
+      restHealthy: true,
+      authHealthy: true,
+      storageHealthy: true,
+      storageBuckets: [{ id: "cvs", public: false }, { id: "opportunity-documents", public: false }],
+      customerRows: 0,
+      applicationRows: 0,
+      betterAuthUsers: 0,
+      supabaseAuthUsers: 0,
+      storageObjects: 0,
+    },
+    runtime: {
+      provider: "github-runner",
+      origin: RUNNER_ORIGIN,
+      candidateSha: SHA,
+      loopbackOnly: true,
+      productionEnvironmentAttached: false,
+      authorizedStatus: 200,
+    },
+  }
 }
 
-describe("Phase B QA contracts", () => {.      it("builds deterministic exact-ID fixtures with a run-scoped TEST prefix", () => {.        const first = buildFixtureManifest("32530000000-1")
-        const second = buildFixtureManifest("32530000000-1").                expect(first).toEqual(second)
-                expect(first.fixturePrefix).toBe("TEST-32530000000-1")
-                        expect(first.databaseRows.length).toBeGreaterThanOrEqual(10).                                expect(first.databaseRows.every((row: { label: string }) => row.label === first.fixturePrefix)).toBe(tru. )
-                               expect(first.betterAuthIdentities).toHaveLen.. th(2)
-                                     expect(first.actors.staff.email).toBe(first.actors.staff.email.toLowerCase())
-                                             expect(first.actors.portal.email).toBe(first.actors.portal.email.toLowerCase()).                                                     expect(first.storageObjects).toEqual([`${first.fixturePrefix}/fixtures/pilot.p. . `])
-                                                   expect(first.ids.provisionalFirm).toMatch(/^[0-9a-f.   ]{36}$/)
-                                                        expect(first.ids.provisionalContextContact).toMatch(/^[0-9a-f-]{36}$/).                                                                expect(first.databaseRows.some((row: { id: string }) => row.id === first.ids.provisionalContext)).to. e(false)
-                                                               expect(first.singletonSnapshots).toContainEqual({ table: "ma_provisional_source_contexts", key: first.ids.provisionalContext }).                                                                     })
-         
-           it("recovers only the exact current or frozen bbfa442 fixture manifest", () => {.        const runId. ="32720805410-1".                  const current = buildFixtureManifest(runId)
-                  const bbfa442 = buildLegacyFixtureManifest(runId)
-    
-    expect(bbfa442.ids.lockedRepreneur).toMatch(/^[0-9a-f-]{36}$/).            expect(bbfa442.databaseRows).toContainEqual({ table: "repreneurs", id: bbfa442.ids.lockedRepreneur, label: `TEST-${runId}`.  })
-          expect(assertRecoveryFixtureManifest(current, runId)).toBe(current)
-                  expect(assertRecoveryFixtureManifest(bbfa442, runId)).toBe(bbfa442).                          expect(() => buildLegacyFixtureManifest("32720805410-2")).toThrow("Fixture manifest failed: legacy-run-id")
-                      
+describe("Phase B QA contracts", () => {
+  it("builds deterministic exact-ID fixtures with a run-scoped TEST prefix", () => {
+    const first = buildFixtureManifest("32530000000-1")
+    const second = buildFixtureManifest("32530000000-1")
+    expect(first).toEqual(second)
+    expect(first.fixturePrefix).toBe("TEST-32530000000-1")
+    expect(first.databaseRows.length).toBeGreaterThanOrEqual(10)
+    expect(first.databaseRows.every((row: { label: string }) => row.label === first.fixturePrefix)).toBe(true)
+    expect(first.betterAuthIdentities).toHaveLength(2)
+    expect(first.actors.staff.email).toBe(first.actors.staff.email.toLowerCase())
+    expect(first.actors.portal.email).toBe(first.actors.portal.email.toLowerCase())
+    expect(first.storageObjects).toEqual([`${first.fixturePrefix}/fixtures/pilot.pdf`])
+    expect(first.ids.provisionalFirm).toMatch(/^[0-9a-f-]{36}$/)
+    expect(first.ids.provisionalContextContact).toMatch(/^[0-9a-f-]{36}$/)
+    expect(first.databaseRows.some((row: { id: string }) => row.id === first.ids.provisionalContext)).toBe(false)
+    expect(first.singletonSnapshots).toContainEqual({ table: "ma_provisional_source_contexts", key: first.ids.provisionalContext })
+  })
 
-    const tamperedId = structuredClone(bbfa442).            tamperedId.ids.lockedRepreneur = current.ids.portalRepreneur.            expect(() => assertRecoveryFixtureManifest(tamperedId, runId)).toThrow("Fixture manifest failed: recovery-manifest". 
-           const tamperedPrefix = structuredClone(cur. ent)
-                                                                                                                                                                                                               tamperedPrefix.fixturePrefix. ="TEST-other-ru. "
-           expect(() => assertRecoveryFixtureManifest(tamperedPrefix, runId)).toThrow("Fixture manifest failed: recovery-shape").                   const tamperedEmail = structuredClone(current).                   tamperedEmail.actors.staff.email = "staff@example.te. t"
-                  expect(() => assertRecoveryFixtureManifest(tamperedEmail, runId)).toThrow("Fixture manifest failed: recovery-shape")
-                          const tamperedStorage = structuredClone(current).                                  tamperedStorage.storageObjects[0]. ="other/fixture.pdf".                                  expect(() => assertRecoveryFixtureManifest(tamperedStorage, runId)).toThrow("Fixture manifest failed: recovery-man. fest")
-                                 const tamperedSingleton = structuredClone(current).                                         tamperedSingleton.singletonSnapshots[0].key = "other_context".                                         expect(() => assertRecoveryFixtureManifest(tamperedSingleton, runId)).toThrow("Fixture manifest failed: recovery. . anifest")
-                                       const unknownHistoricalShape = structuredClone(bbfa442).                                               Object.assign(unknownHistoricalShape.ids, { unreviewed: "not-an-allowed-fixture-id" }).                                               const reorderedLegacy = Object.fromEntries(Object.entries(bbfa44. . .reverse())
-                                             expect(assertRecoveryFixtureManifest(reorderedLegacy, runId)).to. e(reorderedLegacy)
-                                              const reorderedLegacyRows = structuredClone(bbfa44. )
-                                                     reorderedLegacyRows.databaseRows.reverse().                                                             expect(() => assertRecoveryFixtureManifest(reorderedLegacyRows, runId)).toThrow("Fixture manifest failed: recovery-manifest")
-                                                         
-    const { storageObjects: _removedStorageObjects, ...removedLegacyField } = bbfa442.            expect(() => assertRecoveryFixtureManifest(removedLegacyField, runId)).toThrow("Fixture manifest failed: recovery-shape").          
-  expect(() => assertRecoveryFixtureManifest(unknownHistoricalShape, runId)).toThrow("Fixture manifest failed: recovery-manifest").           })
-        
-         it("preserves exact server. ownership forrecovery runtime and singleton artifacts", () =>. {
-                const fixtureManifest = buildLegacyFixtureManifest("32720805410-1").                        const runtimeFixtures = { p1RepreneurId: fixtureManifest.ids.portalRepreneur, storageObjects: fixtureManifest.storageObjects }.                        const singletonBefore = { emailCountDate: "2026-08-24", rateLimitRows: [] }
+  it("recovers only the exact current or frozen bbfa442 fixture manifest", () => {
+    const runId = "32720805410-1"
+    const current = buildFixtureManifest(runId)
+    const bbfa442 = buildLegacyFixtureManifest(runId)
+
+    expect(bbfa442.ids.lockedRepreneur).toMatch(/^[0-9a-f-]{36}$/)
+    expect(bbfa442.databaseRows).toContainEqual({ table: "repreneurs", id: bbfa442.ids.lockedRepreneur, label: `TEST-${runId}` })
+    expect(assertRecoveryFixtureManifest(current, runId)).toBe(current)
+    expect(assertRecoveryFixtureManifest(bbfa442, runId)).toBe(bbfa442)
+    expect(() => buildLegacyFixtureManifest("32720805410-2")).toThrow("Fixture manifest failed: legacy-run-id")
+
+
+    const tamperedId = structuredClone(bbfa442)
+    tamperedId.ids.lockedRepreneur = current.ids.portalRepreneur
+    expect(() => assertRecoveryFixtureManifest(tamperedId, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+    const tamperedPrefix = structuredClone(current)
+    tamperedPrefix.fixturePrefix = "TEST-other-run"
+    expect(() => assertRecoveryFixtureManifest(tamperedPrefix, runId)).toThrow("Fixture manifest failed: recovery-shape")
+    const tamperedEmail = structuredClone(current)
+    tamperedEmail.actors.staff.email = "staff@example.test"
+    expect(() => assertRecoveryFixtureManifest(tamperedEmail, runId)).toThrow("Fixture manifest failed: recovery-shape")
+    const tamperedStorage = structuredClone(current)
+    tamperedStorage.storageObjects[0] = "other/fixture.pdf"
+    expect(() => assertRecoveryFixtureManifest(tamperedStorage, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+    const tamperedSingleton = structuredClone(current)
+    tamperedSingleton.singletonSnapshots[0].key = "other_context"
+    expect(() => assertRecoveryFixtureManifest(tamperedSingleton, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+    const unknownHistoricalShape = structuredClone(bbfa442)
+    Object.assign(unknownHistoricalShape.ids, { unreviewed: "not-an-allowed-fixture-id" })
+    const reorderedLegacy = Object.fromEntries(Object.entries(bbfa442).reverse())
+    expect(assertRecoveryFixtureManifest(reorderedLegacy, runId)).toBe(reorderedLegacy)
+    const reorderedLegacyRows = structuredClone(bbfa442)
+    reorderedLegacyRows.databaseRows.reverse()
+    expect(() => assertRecoveryFixtureManifest(reorderedLegacyRows, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+
+    const { storageObjects: _removedStorageObjects, ...removedLegacyField } = bbfa442
+    expect(() => assertRecoveryFixtureManifest(removedLegacyField, runId)).toThrow("Fixture manifest failed: recovery-shape")
+
+    expect(() => assertRecoveryFixtureManifest(unknownHistoricalShape, runId)).toThrow("Fixture manifest failed: recovery-manifest")
+  })
+
+  it("preserves exact server ownership for recovery runtime and singleton artifacts", () => {
+    const fixtureManifest = buildLegacyFixtureManifest("32720805410-1")
+    const runtimeFixtures = { p1RepreneurId: fixtureManifest.ids.portalRepreneur, storageObjects: fixtureManifest.storageObjects }
+    const singletonBefore = { emailCountDate: "2026-08-24", rateLimitRows: [] }
     const serverManifest = { fixtureManifest, runtime: runtimeFixtures }
 
     expect(assertRecoveryArtifacts({ serverManifest, serverSingletonBefore: singletonBefore, fixtureManifest, runtimeFixtures, singletonBefore })).toBe(true)
