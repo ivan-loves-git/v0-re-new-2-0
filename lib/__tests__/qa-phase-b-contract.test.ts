@@ -254,13 +254,14 @@ describe("Phase B QA contracts", () => {
     expect(workflow).not.toContain("Ignore unrelated deployment")
   })
 
-  it("configures Chromium with automatic screenshots and video off while preserving retry traces", () => {
+  it("configures one Chromium attempt with first-failure evidence and no automatic media", () => {
     const config = readFileSync(`${process.cwd()}/playwright.config.ts`, "utf8")
-    expect(config).toContain("retries: process.env.CI ? 1 : 0")
+    expect(config).toContain("retries: 0")
     expect(config).toContain('name: "chromium"')
     expect(config).not.toContain("webkit")
     expect(config).not.toContain("firefox")
-    expect(config).toContain('trace: "on-first-retry"')
+    expect(config).toContain('trace: "retain-on-failure"')
+    expect(config).not.toContain('trace: "on-first-retry"')
     expect(config).toContain('screenshot: "off"')
     expect(config).not.toContain('screenshot: "only-on-failure"')
     expect(config).toContain('video: "off"')
