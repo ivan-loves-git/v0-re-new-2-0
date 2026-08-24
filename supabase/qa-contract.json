@@ -1,6 +1,6 @@
 {
   "version": "824-m2-p0-security-v1",
-  "structureFingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "structureFingerprint": "492058b304ab766988316c4d7c10b7126b622af02d0d818a61ab4a050cfa1e8b",
   "files": [
     {
       "path": "supabase/schema/771_extensions.sql",
