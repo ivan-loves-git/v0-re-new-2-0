@@ -1,0 +1,12 @@
+{
+  "minimumSeverity": "high",
+  "exceptions": [
+    {
+      "package": "sharp",
+      "advisory": "GHSA-54xq-cgqr-r9vw",
+      "owner": "platform-security",
+      "reason": "Expired fixture proving exceptions cannot become permanent.",
+      "expiresAt": "2026-01-01"
+    }
+  ]
+}

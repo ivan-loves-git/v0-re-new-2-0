@@ -42,9 +42,8 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Report production dependency audit
-        continue-on-error: true
-        run: pnpm audit --prod
+      - name: Enforce production dependency audit policy
+        run: pnpm audit --prod --json > /tmp/production-dependency-audit.json && node scripts/verify-production-dependency-audit.mjs /tmp/production-dependency-audit.json
 
       - name: Install Chromium for generated trace verification
         run: pnpm exec playwright install --with-deps chromium
