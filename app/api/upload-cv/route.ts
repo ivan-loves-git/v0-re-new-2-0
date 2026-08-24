@@ -9,9 +9,11 @@ import {
   IntakeUploadSecurityError,
   verifyAndConsumeIntakeUploadToken,
 } from "@/lib/security/intake-upload"
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024
-const MAX_REQUEST_BYTES = MAX_FILE_BYTES + 1024 * 1024
+import {
+  CV_LDC_MAX_FILE_BYTES,
+  CV_LDC_MAX_FILE_LABEL,
+  VERCEL_FUNCTION_MAX_REQUEST_BYTES,
+} from "@/lib/upload-limits"
 
 const DOCUMENT_FIELDS = {
   cv: "cv_url",
@@ -54,7 +56,7 @@ function documentDownloadUrl(repreneurId: string, documentType: DocumentType) {
 export async function POST(request: NextRequest) {
   try {
     const contentLength = Number(request.headers.get("content-length") ?? 0)
-    if (contentLength > MAX_REQUEST_BYTES) {
+    if (contentLength > VERCEL_FUNCTION_MAX_REQUEST_BYTES) {
       return NextResponse.json(
         { error: "Upload is too large" },
         { status: 413 },
@@ -62,9 +64,9 @@ export async function POST(request: NextRequest) {
     }
 
     const access = await getCurrentUserAccess()
-    // Anonymous intake uploads must prove their one-time capability before we
-    // parse multipart data. Authenticated portal and staff uploads are checked
-    // against their role and profile immediately after parsing their metadata.
+    // Anonymous intake uploads consume their one-time capability before body
+    // parsing. Vercel enforces the outer 4.5 MB request boundary, while the
+    // application enforces the shared 4 MB file contract after multipart parse.
     const anonymousIntakeGrant = !access
       ? await verifyAndConsumeIntakeUploadToken(
           request,
@@ -104,9 +106,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (file.size > MAX_FILE_BYTES) {
+    if (file.size > CV_LDC_MAX_FILE_BYTES) {
       return NextResponse.json(
-        { error: "File size must be less than 10MB" },
+        { error: `File size must not exceed ${CV_LDC_MAX_FILE_LABEL}` },
         { status: 400 },
       )
     }
