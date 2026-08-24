@@ -2,9 +2,8 @@
 import { randomBytes } from "node:crypto"
 import { spawn } from "node:child_process"
 import { resolve } from "node:path"
-import { isDeepStrictEqual } from "node:util"
 import { acquireQaLease, loadAdmittedQaContract } from "../../lib/qa/lease-contract.mjs"
-import { buildFixtureManifest } from "../../lib/qa/phase-b.mjs"
+import { assertRecoveryFixtureManifest } from "../../lib/qa/phase-b.mjs"
 import {
   MANIFEST_FILE,
   RUNTIME_FIXTURES_FILE,
@@ -76,7 +75,11 @@ try {
       if (!fixtureManifest) {
         await assertEmptyUnmanifestedLease(database)
       } else {
-        if (!isDeepStrictEqual(fixtureManifest, buildFixtureManifest(stale.runId))) fail("recovery-manifest")
+        try {
+          assertRecoveryFixtureManifest(fixtureManifest, stale.runId)
+        } catch {
+          fail("recovery-manifest")
+        }
         await writePrivateJson(MANIFEST_FILE, fixtureManifest)
         await writePrivateJson(RUNTIME_FIXTURES_FILE, stale.manifest?.runtime ?? {})
         await writePrivateJson(resolve(RUN_DIR, "singleton-before.json"), stale.singletonBefore ?? {})
