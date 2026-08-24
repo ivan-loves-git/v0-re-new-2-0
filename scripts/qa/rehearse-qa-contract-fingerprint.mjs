@@ -17,7 +17,7 @@ if (!databaseUrl) fail("database-url")
 const { contract, files } = await loadFingerprintRehearsalContract()
 const contractBytes = await readFile(new URL("../../supabase/qa-contract.json", import.meta.url))
 const qaContractSha256 = createHash("sha256").update(contractBytes).digest("hex")
-const candidateSha = process.env.GITHUB_SHA ?? "local"
+const candidateSha = process.env.QA_CANDIDATE_SHA ?? process.env.GITHUB_SHA ?? "local"
 const client = new pg.Client({ connectionString: databaseUrl })
 try {
   await client.connect()
