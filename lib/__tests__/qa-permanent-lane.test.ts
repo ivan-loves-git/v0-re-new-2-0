@@ -33,6 +33,14 @@ function jobBlock(workflow: string, jobName: string) {
 }
 
 describe("permanent QA lane contract", () => {
+  it("runs Golden journeys once and retains the first failure trace", () => {
+    const playwrightConfig = readFileSync(`${process.cwd()}/playwright.config.ts`, "utf8")
+
+    expect(playwrightConfig).toContain("retries: 0")
+    expect(playwrightConfig).toContain('trace: "retain-on-failure"')
+    expect(playwrightConfig).not.toContain('trace: "on-first-retry"')
+  })
+
   it("pins the M2 Draft activation candidate fingerprint and nine immutable schema inputs", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 

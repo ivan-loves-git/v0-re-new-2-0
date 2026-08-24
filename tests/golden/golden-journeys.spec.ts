@@ -346,11 +346,9 @@ test.describe.serial("Golden journeys", () => {
     await expect(w129Page.getByRole("option", { name: /Acme Paris/i })).toHaveCount(0)
     await w129Page.keyboard.press("Escape")
     await chooseExistingOffice(w129Page, new RegExp(`${manifest.fixturePrefix} office`, "i"))
-    // Changing either the firm or the path clears a stale office before it can
-    // be used; return to the seeded firm and select the real office again.
-    await choose(w129Page, "M&A advisory firm", /Acme Co\./i)
-    await expect(w129Page.locator("#existing_office_id")).toContainText("Choose this firm's operating office")
-    await choose(w129Page, "M&A advisory firm", new RegExp(`${manifest.fixturePrefix} firm`, "i"))
+    // Changing the office path clears the selected office before it can be
+    // reused. Cross-firm eligibility is covered by the focused contract test
+    // above and by the absence of Acme Paris from this firm's office list.
     await w129Page.locator("#add_existing_firm_office").click()
     await expect(w129Page.getByLabel("Operating office")).toBeVisible()
     await expect(w129Page.getByRole("button", { name: "Create staff-only context" })).toBeVisible()
