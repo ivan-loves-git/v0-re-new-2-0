@@ -160,5 +160,6 @@ jobs:
 
       - name: Reconstruct reviewed QA contract and verify fingerprint
         env:
+          QA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           QA_CONTRACT_REHEARSAL_DATABASE_URL: postgresql://postgres:qa-contract-rehearsal-only@127.0.0.1:${{ job.services.postgres.ports[5432] }}/qa_contract_rehearsal
         run: node scripts/qa/rehearse-qa-contract-fingerprint.mjs
