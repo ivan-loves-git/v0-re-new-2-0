@@ -378,6 +378,8 @@ export interface MaInteraction {
 export interface Opportunity {
   id: string
   reference: string
+  /** Staff-only quarantine flag. DEMO opportunities are never eligible for repreneur access. */
+  is_demo: boolean
   /** Canonical staff-only W-039 geography identity; literal location remains reader-facing. */
   geography_node_id?: string | null
   status: OpportunityStatus
@@ -581,6 +583,8 @@ export interface Opportunity_Update {
   teaser_summary?: string | null
   internal_notes?: string | null
   archived_at?: string | null
+  /** Staff-only W-126 control; excluded from the normal Opportunity Intake payload. */
+  is_demo?: boolean
 }
 
 export interface OpportunityDocument {
@@ -816,6 +820,8 @@ export interface RepreneurOpportunityExposure {
   interest_notification_sent_at?: string | null
   updated_at: string
   is_locked_for_other_repreneur?: boolean
+  /** Computed server-side after portal authorization; never accepted from the browser. */
+  deal_bucket?: RepreneurDealBucket
 }
 
 export interface RepreneurDealFlowOpportunity {
@@ -850,7 +856,11 @@ export interface RepreneurDealFlowOpportunity {
   is_outside_current_criteria: boolean
   relevance_grade?: OpportunityMatchRecommendation
   is_locked_for_other_repreneur?: boolean
+  /** Computed server-side after portal authorization; never accepted from the browser. */
+  deal_bucket?: RepreneurDealBucket
 }
+
+export type RepreneurDealBucket = "recommended" | "declined" | "in_progress" | "live"
 
 export function getOpportunityStatusLabel(status: OpportunityStatus): string {
   return (

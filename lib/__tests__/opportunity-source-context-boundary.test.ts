@@ -30,6 +30,11 @@ describe("Opportunity source-context boundary", () => {
     expect(sourceContext).toContain("setSelectedAffiliationIds([])");
     expect(sourceContext).toContain("setPrimaryAffiliationId(null)");
     expect(sourceContext).toContain("selectCreatedOfficeContext");
+    expect(sourceContext).toContain("existingFirmEligibleOfficeOptions");
+    expect(sourceContext).toContain("isExistingFirmOfficeSelection");
+    expect(sourceContext).toContain("Use an existing operating office");
+    expect(sourceContext).toContain("Add a new real operating office");
+    expect(sourceContext).toContain("setExistingFirmOfficeId(\"\")");
   });
 
   it("keeps failed opportunity-save feedback focused by the parent form", () => {

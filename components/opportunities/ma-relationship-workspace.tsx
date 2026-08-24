@@ -61,6 +61,7 @@ import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
 import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
+import { MaRelationshipCorrectionAction } from "@/components/opportunities/ma-relationship-correction-action"
 
 const CHANNELS: Array<{ value: MaInteractionChannel; label: string }> = [
   { value: "call", label: "Call" },
@@ -1193,6 +1194,24 @@ function RelationshipContactsDirectory({
                     >
                       Manage email policy
                     </Button>
+                    <MaRelationshipCorrectionAction
+                      target="contact"
+                      id={contact.id}
+                      affiliations={contact.affiliations.map((affiliation) => ({
+                        id: affiliation.id,
+                        label: `${affiliation.officeLabel}${affiliation.isActive ? "" : " (historical)"}`,
+                        jobTitle: affiliation.jobTitle,
+                      }))}
+                      fields={[
+                        { name: "first_name", label: "First name", value: contact.firstName },
+                        { name: "last_name", label: "Last name", value: contact.lastName },
+                        { name: "email", label: "Email", value: contact.email, type: "email" },
+                        { name: "phone", label: "Phone", value: contact.phone },
+                        { name: "linkedin_url", label: "LinkedIn URL", value: contact.linkedinUrl, type: "url" },
+                        { name: "job_title", label: "Job title at selected office", value: contact.affiliations[0]?.jobTitle ?? null },
+                        { name: "internal_notes", label: "Internal notes", value: contact.internalNotes, type: "textarea" },
+                      ]}
+                    />
                   </div>
                 </div>
               ))}

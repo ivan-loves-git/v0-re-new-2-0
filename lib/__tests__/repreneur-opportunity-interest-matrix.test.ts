@@ -46,7 +46,8 @@ describe("repreneur opportunity interest matrix", () => {
 
   it("keeps staff-proposed and declined responses on their existing match action, while interested and active-pursuit matches do not become new cards", () => {
     expect(detailSource).toContain('canRespond(opportunity.match_status)')
-    expect(detailSource).toContain('opportunity.match_status === "interested" ? "Interest sent" : "I\'m interested"')
+    expect(detailSource).toContain('opportunity.match_status === "interested" ? "Interest sent"')
+    expect(detailSource).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped" ? "Review and reconsider"')
     expect(detailSource).toContain('opportunity.match_status === "active_pursuit"')
     expect(listSource).toContain("!opportunity.match_id")
   })

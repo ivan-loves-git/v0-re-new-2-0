@@ -40,6 +40,7 @@ import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
+import { OpportunityDemoBadge } from "@/components/opportunities/opportunity-demo-control"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
@@ -313,6 +314,7 @@ function OpportunityRow({
                 Source review required
               </Badge>
             ) : null}
+            {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
           </div>
         </TableCell>
         <TableCell className="w-[20%]">
@@ -359,6 +361,7 @@ function OpportunityRow({
           <span className="text-xs text-muted-foreground">
             {opportunity.reference}
           </span>
+          {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
         </div>
       </TableCell>
       <TableCell>

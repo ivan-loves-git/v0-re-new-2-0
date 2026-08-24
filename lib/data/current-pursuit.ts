@@ -7,6 +7,7 @@ import {
   type OpportunityPursuitJourneyAction,
 } from "@/lib/opportunity-pursuit-evidence"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 
 export interface PursuitArtifactProjection {
   id: string
@@ -113,7 +114,9 @@ interface MatchRow {
   opportunity_id: string
   repreneur_id: string
   status: string
-  opportunity: { status?: string } | Array<{ status?: string }> | null
+  opportunity: { status?: string; is_demo?: boolean | null }
+    | Array<{ status?: string; is_demo?: boolean | null }>
+    | null
 }
 
 async function loadCurrentPursuit(
@@ -124,7 +127,7 @@ async function loadCurrentPursuit(
   const [matchResult, settingsResult] = await Promise.all([
     supabase
       .from("opportunity_matches")
-      .select("id, opportunity_id, repreneur_id, status, opportunity:opportunities(status)")
+      .select("id, opportunity_id, repreneur_id, status, opportunity:opportunities(status, is_demo)")
       .eq("id", matchId)
       .maybeSingle(),
     supabase
@@ -137,6 +140,12 @@ async function loadCurrentPursuit(
 
   const match = matchResult.data as MatchRow | null
   if (!match || (expectedRepreneurId && match.repreneur_id !== expectedRepreneurId)) {
+    return null
+  }
+  const opportunity = Array.isArray(match.opportunity)
+    ? match.opportunity[0]
+    : match.opportunity
+  if (expectedRepreneurId && !isRepreneurEligibleOpportunity(opportunity)) {
     return null
   }
 
@@ -194,9 +203,6 @@ async function loadCurrentPursuit(
     currentGate2EventId: (gate2Result.data as string | null) ?? null,
     currentDispatchEventId: (dispatchResult.data as string | null) ?? null,
   })
-  const opportunity = Array.isArray(match.opportunity)
-    ? match.opportunity[0]
-    : match.opportunity
   const currentGrant = (
     grantResult.data as PursuitConfidentialGrantProjection | null
   ) ?? null

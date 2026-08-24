@@ -11,6 +11,7 @@ import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
 import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
+import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -18,7 +19,7 @@ import type {
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
 
-const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit"]
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit", "dropped"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
@@ -43,6 +44,7 @@ interface PreviewRepreneurRow {
 
 interface PreviewOpportunityRow {
   id: string
+  is_demo: boolean
   reference: string
   status: string | null
   repreneur_exposure: string | null
@@ -78,6 +80,13 @@ interface PreviewOpportunityMatchRow {
   opportunity: PreviewOpportunityRow | PreviewOpportunityRow[] | null
 }
 
+interface PreviewOpportunityCountRow {
+  repreneur_id: string
+  opportunity: Pick<PreviewOpportunityRow, "is_demo" | "status">
+    | Array<Pick<PreviewOpportunityRow, "is_demo" | "status">>
+    | null
+}
+
 export interface StaffPortalPreviewOption {
   id: string
   name: string
@@ -107,8 +116,12 @@ function normalizeProfile(row: PreviewRepreneurRow): RepreneurOpportunityProfile
 function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
+  if (!isRepreneurEligibleOpportunity(opportunity)) return null
   if (opportunity.status !== "active") return null
-  if (opportunity.repreneur_exposure === "staff_only") return null
+
+  // Staff Portal Preview mirrors the exact owned-match projection. A
+  // staff_only opportunity is excluded from broad discovery, not from the
+  // intended repreneur's proposed or retained match history.
 
   return {
     match_id: row.id,
@@ -208,8 +221,9 @@ async function listVisibleOpportunitiesForRepreneur(
       nda_waived_by,
       nda_updated_at,
       updated_at,
-      opportunity:opportunities(
+      opportunity:opportunities!inner(
         id,
+        is_demo,
         reference,
         status,
         repreneur_exposure,
@@ -228,8 +242,10 @@ async function listVisibleOpportunitiesForRepreneur(
       )
     `)
     .eq("repreneur_id", repreneurId)
+    .eq("opportunity.is_demo", false)
     .in("status", VISIBLE_MATCH_STATUSES)
     .order("updated_at", { ascending: false })
+    .order("id", { ascending: true })
 
   if (matchId) {
     query = query.eq("id", matchId)
@@ -282,7 +298,8 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
       .eq("role", "repreneur"),
     supabase
       .from("opportunity_matches")
-      .select("repreneur_id, status")
+      .select("repreneur_id, status, opportunity:opportunities!inner(is_demo,status)")
+      .eq("opportunity.is_demo", false)
       .in("status", VISIBLE_MATCH_STATUSES),
   ])
 
@@ -295,7 +312,12 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
   const roleEmails = new Set(roles.map((role) => normalizeEmail(role.email)).filter(Boolean))
   const visibleCountByRepreneur = new Map<string, number>()
 
-  for (const match of matchesResult.data ?? []) {
+  for (const match of (matchesResult.data ?? []) as PreviewOpportunityCountRow[]) {
+    const opportunity = Array.isArray(match.opportunity)
+      ? match.opportunity[0]
+      : match.opportunity
+    if (!opportunity || !isRepreneurEligibleOpportunity(opportunity)) continue
+    if (opportunity.status !== "active") continue
     visibleCountByRepreneur.set(match.repreneur_id, (visibleCountByRepreneur.get(match.repreneur_id) ?? 0) + 1)
   }
 

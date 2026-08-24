@@ -24,7 +24,12 @@ export interface MaWorkspaceContact {
   id: string
   affiliationId: string
   name: string
+  firstName: string | null
+  lastName: string | null
   email: string | null
+  phone: string | null
+  linkedinUrl: string | null
+  internalNotes: string | null
   jobTitle: string | null
   isActive: boolean
   endedAt: string | null
@@ -72,6 +77,11 @@ export interface MaOfficeWorkspace {
   firmName: string
   name: string
   city: string | null
+  address: string | null
+  coverageNote: string | null
+  websiteUrl: string | null
+  generalEmail: string | null
+  generalPhone: string | null
   status: "active" | "archived"
   isDefault: boolean
   internalNotes: string | null
@@ -87,6 +97,9 @@ export interface MaOfficeWorkspace {
 export interface MaFirmWorkspace {
   id: string
   name: string
+  category: string | null
+  networkLabel: string | null
+  websiteUrl: string | null
   status: "prospect" | "active" | "archived"
   internalNotes: string | null
   createdAt: string | null
@@ -159,7 +172,12 @@ async function getWorkspaceRows(
       id: row.contactId,
       affiliationId: row.id,
       name: row.contactLabel,
+      firstName: row.contactFirstName,
+      lastName: row.contactLastName,
       email: row.contactEmail,
+      phone: row.contactPhone,
+      linkedinUrl: row.contactLinkedinUrl,
+      internalNotes: row.contactInternalNotes,
       jobTitle: row.jobTitle,
       isActive: row.isActive && !row.endedAt && row.contactStatus === "active",
       endedAt: row.endedAt,
@@ -224,7 +242,7 @@ export async function getMaOfficeWorkspace(
   const { data, error } = await supabase
     .from("ma_offices")
     .select(
-      "id, firm_id, name, city, status, is_default, internal_notes, created_at, updated_at, updated_by, firm:ma_firms(id, name)",
+      "id, firm_id, name, city, address, coverage_note, website_url, general_email, general_phone, status, is_default, internal_notes, created_at, updated_at, updated_by, firm:ma_firms(id, name)",
     )
     .eq("id", officeId)
     .maybeSingle()
@@ -247,6 +265,11 @@ export async function getMaOfficeWorkspace(
     firmName: firm.name,
     name: data.name,
     city: data.city,
+    address: data.address,
+    coverageNote: data.coverage_note,
+    websiteUrl: data.website_url,
+    generalEmail: data.general_email,
+    generalPhone: data.general_phone,
     status: data.status,
     isDefault: data.is_default,
     internalNotes: data.internal_notes,
@@ -279,7 +302,7 @@ export async function getMaFirmWorkspace(
   const { data: firm, error } = await supabase
     .from("ma_firms")
     .select(
-      "id, name, status, internal_notes, created_at, updated_at, updated_by, offices:ma_offices(id, name, city, status, is_default)",
+      "id, name, category, network_label, website_url, status, internal_notes, created_at, updated_at, updated_by, offices:ma_offices(id, name, city, status, is_default)",
     )
     .eq("id", firmId)
     .maybeSingle()
@@ -343,6 +366,9 @@ export async function getMaFirmWorkspace(
   return {
     id: firm.id,
     name: firm.name,
+    category: firm.category,
+    networkLabel: firm.network_label,
+    websiteUrl: firm.website_url,
     status: firm.status,
     internalNotes: firm.internal_notes,
     createdAt: firm.created_at,
@@ -366,6 +392,102 @@ export async function getMaFirmWorkspace(
       },
     ),
   }
+}
+
+type MaCorrectionResult = {
+  success: boolean
+  message: string
+  fieldErrors?: Record<string, string>
+}
+
+const MA_CORRECTION_DB_ERRORS: Record<string, [string, string]> = {
+  ma_firm_name_required: ["name", "Firm name is required."],
+  ma_office_name_required: ["name", "Office name is required."],
+  ma_firm_name_already_exists: ["name", "Another active firm already uses this name."],
+  ma_office_name_already_exists: ["name", "Another current office for this firm already uses this name."],
+  ma_website_url_invalid: ["website_url", "Enter a full http:// or https:// website address."],
+  ma_linkedin_url_invalid: ["linkedin_url", "Enter a full http:// or https:// LinkedIn address."],
+  ma_primary_contact_email_required: ["email", "This person is the usable primary contact for an Active or Paused opportunity. Keep a valid email or correct that opportunity first."],
+  ma_contact_affiliation_not_found: ["form", "That office relationship no longer belongs to this contact."],
+}
+
+function correctionFailure(error: { message?: string } | null): MaCorrectionResult {
+  if (error?.message?.includes("ma_contact_name_required")) {
+    const message = "First name or last name is required."
+    return {
+      success: false,
+      message,
+      fieldErrors: { first_name: message, last_name: message },
+    }
+  }
+  if (error?.message?.includes("ma_email_invalid")) {
+    const message = "Enter a valid email address, or leave it blank."
+    return {
+      success: false,
+      message,
+      fieldErrors: { email: message, general_email: message },
+    }
+  }
+  const match = Object.entries(MA_CORRECTION_DB_ERRORS).find(([code]) => error?.message?.includes(code))
+  if (match) return { success: false, message: match[1][1], fieldErrors: { [match[1][0]]: match[1][1] } }
+  return { success: false, message: "The correction could not be saved. Refresh and try again." }
+}
+
+function correctionField(formData: FormData, name: string) {
+  const value = formData.get(name)
+  return typeof value === "string" ? value : ""
+}
+
+function revalidateMaRelationshipCorrectionPaths() {
+  revalidatePath("/opportunities/ma/contacts")
+  revalidatePath("/opportunities/ma/firms/[firmId]", "page")
+  revalidatePath("/opportunities/ma/offices/[officeId]", "page")
+}
+
+export async function updateMaFirmCorrection(firmId: string, formData: FormData): Promise<MaCorrectionResult> {
+  if (!UUID_PATTERN.test(firmId)) return { success: false, message: "Choose a valid M&A firm." }
+  const { user } = await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { error } = await supabase.rpc("update_ma_firm_correction", {
+    p_firm_id: firmId, p_name: correctionField(formData, "name"), p_category: correctionField(formData, "category"),
+    p_network_label: correctionField(formData, "network_label"), p_website_url: correctionField(formData, "website_url"),
+    p_internal_notes: correctionField(formData, "internal_notes"), p_actor: user.id,
+  })
+  if (error) return correctionFailure(error)
+  revalidatePath(`/opportunities/ma/firms/${firmId}`)
+  revalidateMaRelationshipCorrectionPaths()
+  return { success: true, message: "Firm details saved with staff audit." }
+}
+
+export async function updateMaOfficeCorrection(officeId: string, formData: FormData): Promise<MaCorrectionResult> {
+  if (!UUID_PATTERN.test(officeId)) return { success: false, message: "Choose a valid M&A office." }
+  const { user } = await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { error } = await supabase.rpc("update_ma_office_correction", {
+    p_office_id: officeId, p_name: correctionField(formData, "name"), p_city: correctionField(formData, "city"),
+    p_address: correctionField(formData, "address"), p_coverage_note: correctionField(formData, "coverage_note"),
+    p_website_url: correctionField(formData, "website_url"), p_general_email: correctionField(formData, "general_email"),
+    p_general_phone: correctionField(formData, "general_phone"), p_internal_notes: correctionField(formData, "internal_notes"), p_actor: user.id,
+  })
+  if (error) return correctionFailure(error)
+  revalidatePath(`/opportunities/ma/offices/${officeId}`)
+  revalidateMaRelationshipCorrectionPaths()
+  return { success: true, message: "Office details saved with staff audit." }
+}
+
+export async function updateMaContactCorrection(contactId: string, affiliationId: string, formData: FormData): Promise<MaCorrectionResult> {
+  if (!UUID_PATTERN.test(contactId) || !UUID_PATTERN.test(affiliationId)) return { success: false, message: "Choose a valid office contact." }
+  const { user } = await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { error } = await supabase.rpc("update_ma_contact_correction", {
+    p_contact_id: contactId, p_affiliation_id: affiliationId, p_first_name: correctionField(formData, "first_name"),
+    p_last_name: correctionField(formData, "last_name"), p_email: correctionField(formData, "email"), p_phone: correctionField(formData, "phone"),
+    p_linkedin_url: correctionField(formData, "linkedin_url"), p_internal_notes: correctionField(formData, "internal_notes"),
+    p_job_title: correctionField(formData, "job_title"), p_actor: user.id,
+  })
+  if (error) return correctionFailure(error)
+  revalidateMaRelationshipCorrectionPaths()
+  return { success: true, message: "Contact details saved with staff audit." }
 }
 
 export async function updateMaRelationshipWorkspaceNotes(
