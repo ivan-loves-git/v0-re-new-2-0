@@ -61,6 +61,7 @@ describe("W-126 DEMO quarantine migration", () => {
     expect(rehearsal).toContain("w126_full_schema_rpc_mismatch")
     expect(rehearsal).toContain("rehearsal_opportunity_updated_at")
     expect(rehearsal).toContain("w126_migration_transaction_control_forbidden")
+    expect(rehearsal).toContain('${TMPDIR:-/tmp}/renew-w126-demo-quarantine.XXXXXX')
     expect(verifyWorkflow).toContain("Rehearse W-126 DEMO quarantine and portal response")
     expect(verifyWorkflow).toContain("bash scripts/rehearse-w126-demo-opportunity-quarantine.sh")
   })

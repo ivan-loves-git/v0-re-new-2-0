@@ -6,7 +6,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pg_bin="${PG_BIN:-/opt/homebrew/opt/postgresql@17/bin}"
 if [ ! -x "$pg_bin/initdb" ]; then pg_bin="/opt/homebrew/opt/postgresql@16/bin"; fi
-cluster_dir="$(mktemp -d /private/tmp/renew-w126-demo-quarantine.XXXXXX)"
+cluster_dir="$(mktemp -d "${TMPDIR:-/tmp}/renew-w126-demo-quarantine.XXXXXX")"
 port="${W126_DEMO_REHEARSAL_PORT:-55442}"
 
 cleanup() {
