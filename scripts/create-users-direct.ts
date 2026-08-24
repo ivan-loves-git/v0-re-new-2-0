@@ -6,6 +6,7 @@
 import { randomBytes } from "crypto"
 import { Pool } from "pg"
 import { hashPassword } from "better-auth/crypto"
+import { databaseTls } from "./database-tls.mjs"
 
 const USERS = [
   { email: "alexandre.devulder@sony.com", name: "Alexandre" },
@@ -27,7 +28,7 @@ async function createUsers() {
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: databaseTls(process.env.DATABASE_URL!),
   })
 
   console.log("Creating users directly in database...\n")

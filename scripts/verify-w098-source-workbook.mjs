@@ -5,6 +5,7 @@ import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 import pg from "pg"
+import { databaseTls } from "./database-tls.mjs"
 
 const cliArgs = process.argv.slice(2)
 if (cliArgs[0] === "--") cliArgs.shift()
@@ -55,7 +56,7 @@ function descriptionHash(value) {
 
 const client = new pg.Client({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: databaseTls(connectionString),
 })
 
 try {

@@ -6,6 +6,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { databaseTls } from "./database-tls.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ACTOR = "Ivan Paudice via Codex W-010";
@@ -1461,7 +1462,7 @@ async function main() {
   const source = parseWorkbook(options.workbook);
   const client = new pg.Client({
     connectionString,
-    ssl: { rejectUnauthorized: false },
+    ssl: databaseTls(connectionString, env),
   });
   await client.connect();
   try {

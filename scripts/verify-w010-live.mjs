@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import pg from "pg";
+import { databaseTls } from "./database-tls.mjs";
 
 const [workbook, envFile, parser] = process.argv.slice(2);
 if (!workbook || !envFile || !parser) {
@@ -48,7 +49,7 @@ const source = JSON.parse(
 const env = readEnvironment(envFile);
 const client = new pg.Client({
   connectionString: env.DIRECT_URL ?? env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+    ssl: databaseTls(env.DIRECT_URL ?? env.DATABASE_URL, env),
 });
 await client.connect();
 
