@@ -419,12 +419,9 @@ test.describe.serial("Golden journeys", () => {
         ),
         portalPage.getByRole("button", { name: "I'm interested" }).click(),
       ])
-      const redirectedToDeals = response.status() === 303
-        && new URL(response.headers()["location"] ?? "", response.url()).pathname === "/portal/deals"
-      expect(
-        response.ok() || redirectedToDeals,
-        `Interest action returned unexpected HTTP ${response.status()}`,
-      ).toBe(true)
+      // Next's redirect() deliberately returns 303 from a successful Server Action.
+      // The database and portal assertions below prove the saved state and destination.
+      expect(response.status(), "Interest action must redirect after saving").toBe(303)
     }
     await Promise.all([submitInterest(portalOne), submitInterest(portalTwo)])
     await expect.poll(async () => {
