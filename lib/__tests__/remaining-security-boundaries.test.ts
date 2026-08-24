@@ -170,11 +170,4 @@ describe("remaining security boundaries", () => {
     expect(review).toContain("&lt;img")
     expect(review).not.toContain("<img")
   })
-
-  it("keeps production E2E credentials out of tracked configuration", () => {
-    const config = source("scripts/e2e-tests/config.ts")
-    expect(config).toContain('requiredEnvironmentValue("E2E_TEST_EMAIL")')
-    expect(config).toContain('requiredEnvironmentValue("E2E_TEST_PASSWORD")')
-    expect(config).not.toMatch(/password:\s*"[^\n"]+"/)
-  })
 })

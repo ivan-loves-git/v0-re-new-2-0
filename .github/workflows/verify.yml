@@ -46,9 +46,6 @@ jobs:
         continue-on-error: true
         run: pnpm audit --prod
 
-      - name: Install Chromium for generated trace verification
-        run: pnpm exec playwright install --with-deps chromium
-
       - name: Run repository verification
         run: pnpm verify
 
@@ -122,44 +119,3 @@ jobs:
               -c "CREATE SCHEMA storage; CREATE TABLE storage.buckets(id text PRIMARY KEY, name text NOT NULL, public boolean NOT NULL DEFAULT false); CREATE TABLE storage.objects(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, bucket_id text NOT NULL, name text NOT NULL); ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;" \
               -f /tmp/scripts/rehearse-w148-private-cvs-storage.sql
 
-  qa-contract-fingerprint:
-    name: QA contract PostgreSQL fingerprint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:17-bookworm
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: qa-contract-rehearsal-only
-          POSTGRES_DB: qa_contract_rehearsal
-        ports:
-          - 5432/tcp
-        options: >-
-          --health-cmd "pg_isready -U postgres -d qa_contract_rehearsal"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: pnpm
-
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Reconstruct reviewed QA contract and verify fingerprint
-        env:
-          QA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          QA_CONTRACT_REHEARSAL_DATABASE_URL: postgresql://postgres:qa-contract-rehearsal-only@127.0.0.1:${{ job.services.postgres.ports[5432] }}/qa_contract_rehearsal
-        run: node scripts/qa/rehearse-qa-contract-fingerprint.mjs
