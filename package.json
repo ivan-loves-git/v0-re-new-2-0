@@ -37,6 +37,7 @@
     "qa:schema:verify": "node scripts/qa/verify-permanent-contract.mjs",
     "release:check-build-number": "node scripts/check-release-build-number.mjs",
     "release:prepare-build-number": "node scripts/bump-release-build-number.mjs",
+    "security:verify-pdf-worker-trace": "node scripts/verify-pdf-worker-server-trace.mjs",
     "typecheck": "tsc --noEmit",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "start": "next start",
