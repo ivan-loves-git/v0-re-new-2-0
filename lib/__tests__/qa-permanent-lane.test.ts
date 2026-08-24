@@ -582,6 +582,7 @@ describe("permanent QA lane contract", () => {
     expect(recover).toContain("pnpm qa:lease:release")
     expect(recover).not.toContain("QA_VERCEL_TOKEN")
     expect(schemaSync).toContain("needs: [lane, recover]")
+    expect(schemaSync).toContain("needs.recover.result == 'success'")
     expect(finalize).toContain("needs: [lane, recover, schema-sync, golden]")
     expect(finalize).toContain("recovery=${{ needs.recover.result }}")
   })
