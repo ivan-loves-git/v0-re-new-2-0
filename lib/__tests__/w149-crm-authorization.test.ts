@@ -77,16 +77,24 @@ const boundary = (
 
 const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "app/(dashboard)/dashboard_op/page.tsx": boundary("staff", ["default"]),
+  "app/(dashboard)/journey/page.tsx": boundary("staff", ["default"]),
+  "app/(dashboard)/offers/[id]/edit/page.tsx": boundary("staff", ["default"]),
+  "app/(dashboard)/offers/page.tsx": boundary("staff", ["default"]),
   "app/(dashboard)/opportunities/[id]/documents/[documentId]/route.ts": boundary("staff", ["GET"]),
   "app/(dashboard)/opportunities/[id]/nda-artifacts/[artifactId]/route.ts": boundary("staff", ["GET"]),
   "app/(dashboard)/portal-preview/deals/[matchId]/documents/[documentId]/route.ts": boundary("staff", ["GET"]),
+  "app/(dashboard)/repreneurs/[id]/page.tsx": boundary("staff", ["default"]),
   "app/api/cron/abandoned-forms/route.ts": boundary("cron", ["GET"]),
   "app/api/external-pursuits/[pursuitId]/attachments/[attachmentId]/route.ts": boundary("portal_owner", ["GET"]),
   "app/api/repreneurs/[id]/documents/[documentType]/route.ts": boundary("portal_owner", ["GET"]),
   "app/api/repreneurs/[id]/route.ts": boundary("staff", ["GET"]),
+  "app/api/reset-avatar/route.ts": boundary("staff", ["POST"]),
   "app/api/scrapbook/review-read/route.ts": boundary("staff", ["GET"]),
   "app/api/scrapbook/review/route.ts": boundary("staff", ["POST"]),
+  "app/api/seed/route.ts": boundary("staff", ["POST"]),
   "app/api/upload-cv/route.ts": boundary("authenticated_capability", ["POST", "DELETE"]),
+  "app/api/upload-avatar/route.ts": boundary("staff", ["POST"]),
+  "app/api/update-journey-stages/route.ts": boundary("staff", ["POST"]),
   "app/api/wave-ai/repreneurs/route.ts": boundary("staff", ["GET"]),
   "app/api/wavy/suggestions/route.ts": boundary("staff", ["GET"]),
   "app/api/webhooks/resend/route.ts": boundary("webhook", ["POST"]),
@@ -134,25 +142,71 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "lib/actions/wave-ai.ts": boundary("staff", ["getWaveAiCustomTemplates", "getFollowUpSuggestions"]),
 }
 
+function parsedSource(relativePath: string) {
+  return ts.createSourceFile(
+    relativePath,
+    source(relativePath),
+    ts.ScriptTarget.Latest,
+    true,
+    relativePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  )
+}
+
+function serviceRoleFactoryNames(relativePath: string, parsed = parsedSource(relativePath)) {
+  const names = new Set<string>()
+  for (const statement of parsed.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue
+    const moduleName = statement.moduleSpecifier.text
+    if (moduleName !== "@/lib/supabase/admin" && moduleName !== "@/lib/supabase/server") continue
+    const bindings = statement.importClause?.namedBindings
+    if (!bindings || !ts.isNamedImports(bindings)) continue
+    for (const element of bindings.elements) {
+      const imported = element.propertyName?.text ?? element.name.text
+      if (
+        (moduleName.endsWith("/admin") && imported === "createAdminClient") ||
+        (moduleName.endsWith("/server") && ["createServerClient", "createClient"].includes(imported))
+      ) {
+        names.add(element.name.text)
+      }
+    }
+  }
+  return names
+}
+
+function containsFactoryCall(node: ts.Node, factories: Set<string>) {
+  let found = false
+  const visit = (candidate: ts.Node) => {
+    if (
+      ts.isCallExpression(candidate) &&
+      ts.isIdentifier(candidate.expression) &&
+      factories.has(candidate.expression.text)
+    ) {
+      found = true
+      return
+    }
+    candidate.forEachChild(visit)
+  }
+  visit(node)
+  return found
+}
+
 function filesWithServiceRole(root: string): string[] {
   const absoluteRoot = `${platformRoot}/${root}`
   return readdirSync(absoluteRoot, { withFileTypes: true }).flatMap((entry) => {
     const relativePath = `${root}/${entry.name}`
     if (entry.isDirectory()) return filesWithServiceRole(relativePath)
     if (!entry.isFile() || !/\.tsx?$/.test(entry.name)) return []
-    return source(relativePath).includes("createAdminClient(") ? [relativePath] : []
+    const parsed = parsedSource(relativePath)
+    const factories = serviceRoleFactoryNames(relativePath, parsed)
+    return factories.size > 0 && containsFactoryCall(parsed, factories)
+      ? [relativePath]
+      : []
   })
 }
 
 function exportedServiceRoleFunctions(relativePath: string): string[] {
-  const fileSource = source(relativePath)
-  const parsed = ts.createSourceFile(
-    relativePath,
-    fileSource,
-    ts.ScriptTarget.Latest,
-    true,
-    relativePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  )
+  const parsed = parsedSource(relativePath)
+  const serviceRoleFactories = serviceRoleFactoryNames(relativePath, parsed)
   const localFunctions = new Map<string, string>()
   const exported = new Map<string, string>()
 
@@ -184,7 +238,7 @@ function exportedServiceRoleFunctions(relativePath: string): string[] {
   }
 
   const reachesServiceRole = (body: string, visited = new Set<string>()): boolean => {
-    if (body.includes("createAdminClient(")) return true
+    if ([...serviceRoleFactories].some((factory) => new RegExp(`\\b${factory}\\s*\\(`).test(body))) return true
     return [...localFunctions].some(([name, localBody]) => {
       if (visited.has(name)) return false
       const invoked = new RegExp(`\\b${name}\\b`).test(body)
@@ -196,6 +250,121 @@ function exportedServiceRoleFunctions(relativePath: string): string[] {
     .filter(([, body]) => reachesServiceRole(body))
     .map(([name]) => name)
     .sort()
+}
+
+function staffBoundaryBeforeEveryServiceRolePath(
+  relativePath: string,
+  exportName: string,
+) {
+  if (relativePath.startsWith("app/(dashboard)/")) {
+    expect(source("app/(dashboard)/layout.tsx")).toContain("requireStaffAccess")
+    return true
+  }
+
+  const parsed = parsedSource(relativePath)
+  const factories = serviceRoleFactoryNames(relativePath, parsed)
+  const localFunctions = new Map<string, ts.FunctionLikeDeclaration>()
+  for (const statement of parsed.statements) {
+    if (ts.isFunctionDeclaration(statement) && statement.body) {
+      if (statement.name) localFunctions.set(statement.name.text, statement)
+      if (hasModifier(statement, ts.SyntaxKind.DefaultKeyword)) {
+        localFunctions.set("default", statement)
+      }
+    }
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (
+          ts.isIdentifier(declaration.name) &&
+          declaration.initializer &&
+          (ts.isArrowFunction(declaration.initializer) ||
+            ts.isFunctionExpression(declaration.initializer))
+        ) {
+          localFunctions.set(declaration.name.text, declaration.initializer)
+        }
+      }
+    }
+  }
+
+  const root = localFunctions.get(exportName)
+  expect(root, `${relativePath} must declare ${exportName}`).toBeDefined()
+
+  const isDenyingStaffGuard = (node: ts.Node) => {
+    if (!ts.isIfStatement(node)) return false
+    const condition = node.expression.getText(parsed)
+    if (!condition.includes("role") || !condition.includes('"staff"')) return false
+    return node.thenStatement.getText(parsed).includes("return") ||
+      node.thenStatement.getText(parsed).includes("throw")
+  }
+
+  const analyze = (
+    fn: ts.FunctionLikeDeclaration,
+    guardedOnEntry: boolean,
+    stack: Set<string>,
+  ): { safe: boolean; reachesSink: boolean } => {
+    const body = fn.body
+    if (!body) return { safe: true, reachesSink: false }
+    const events: Array<{
+      position: number
+      kind: "guard" | "factory" | "local"
+      name?: string
+    }> = []
+    const visit = (node: ts.Node) => {
+      if (isDenyingStaffGuard(node)) {
+        events.push({ position: node.end, kind: "guard" })
+        return
+      }
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+        const name = node.expression.text
+        if (name === "requireStaffAccess") {
+          events.push({ position: node.getStart(parsed), kind: "guard" })
+        } else if (factories.has(name)) {
+          events.push({ position: node.getStart(parsed), kind: "factory" })
+        } else if (localFunctions.has(name)) {
+          events.push({ position: node.getStart(parsed), kind: "local", name })
+        }
+      }
+      if (
+        (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+        ts.isIdentifier(node.tagName) &&
+        localFunctions.has(node.tagName.text)
+      ) {
+        events.push({
+          position: node.getStart(parsed),
+          kind: "local",
+          name: node.tagName.text,
+        })
+      }
+      node.forEachChild(visit)
+    }
+    body.forEachChild(visit)
+    events.sort((left, right) => left.position - right.position)
+
+    let guarded = guardedOnEntry
+    let reachesSink = false
+    for (const event of events) {
+      if (event.kind === "guard") {
+        guarded = true
+        continue
+      }
+      if (event.kind === "factory") {
+        reachesSink = true
+        if (!guarded) return { safe: false, reachesSink: true }
+        continue
+      }
+      if (event.name && !stack.has(event.name)) {
+        const called = localFunctions.get(event.name)
+        if (!called) continue
+        const result = analyze(called, guarded, new Set([...stack, event.name]))
+        reachesSink ||= result.reachesSink
+        if (!result.safe) return { safe: false, reachesSink }
+      }
+    }
+    return { safe: true, reachesSink }
+  }
+
+  const result = analyze(root!, false, new Set([exportName]))
+  expect(result.reachesSink, `${relativePath}#${exportName} must reach a service-role client`).toBe(true)
+  return result.safe
 }
 
 function expectExportBoundary(
@@ -469,11 +638,18 @@ describe("W-149 CRM authorization boundaries", () => {
         [...entry.exports].sort(),
       )
       for (const exportName of entry.exports) {
+        const effectiveBoundary = entry.overrides?.[exportName] ?? entry.boundary
         expectExportBoundary(
           relativePath,
           exportName,
-          entry.overrides?.[exportName] ?? entry.boundary,
+          effectiveBoundary,
         )
+        if (effectiveBoundary === "staff") {
+          expect(
+            staffBoundaryBeforeEveryServiceRolePath(relativePath, exportName),
+            `${relativePath}#${exportName} must authorize staff before every service-role path`,
+          ).toBe(true)
+        }
       }
     }
   })
@@ -497,6 +673,19 @@ describe("W-149 CRM authorization boundaries", () => {
         "staff",
       ),
     ).toThrow()
+  })
+
+  it("rejects a local privileged helper reached before a later guard", () => {
+    const relativePath = "lib/__tests__/fixtures/w149-helper-before-guard.fixture.ts"
+    expect(
+      staffBoundaryBeforeEveryServiceRolePath(relativePath, "guardedFirst"),
+    ).toBe(true)
+    expect(
+      staffBoundaryBeforeEveryServiceRolePath(relativePath, "helperFirst"),
+    ).toBe(false)
+    expect(
+      staffBoundaryBeforeEveryServiceRolePath(relativePath, "commentOnly"),
+    ).toBe(false)
   })
 
   it("checks staff authorization before creating the admin client in the CRM API route", () => {
