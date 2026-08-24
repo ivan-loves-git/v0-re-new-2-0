@@ -651,6 +651,8 @@ describe("permanent QA lane contract", () => {
     expect(workflow).toContain("https://127.0.0.1:3443")
     expect(workflow).toContain("Start loopback-only HTTPS candidate runtime")
     expect(workflow).toContain("loopback-https-proxy.mjs")
+    const readinessProbe = workflow.split("\n").find((line) => line.includes('served_sha="$(curl'))
+    expect(readinessProbe).toContain("|| true)")
     expect(workflow).toContain("Stop and remove private loopback runtime")
     expect(evidence).toContain("github-runner")
     expect(evidence).toContain('const deployment = executionMode === "vercel" ? await deploymentEvidence(expectedSha, protection) : null')
