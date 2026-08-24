@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto"
 import { revalidatePath } from "next/cache"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { assertSafePdfEvidence } from "@/lib/security/pdf-evidence"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
   startCriticalOperation,
@@ -45,7 +46,7 @@ async function submitAuthorizedSignedNda(
     capture("validation_error", "validation_failed")
     return { success: false, message: "Choose your signed NDA PDF." }
   }
-  if (file.size > MAX_DOCUMENT_BYTES || !file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf")) {
+  if (file.size > MAX_DOCUMENT_BYTES || !file.name.toLowerCase().endsWith(".pdf") || file.type !== "application/pdf") {
     trace.failure("validation_failed")
     capture("validation_error", "validation_failed")
     return { success: false, message: "The signed NDA must be a PDF smaller than 4 MB." }
@@ -66,6 +67,13 @@ async function submitAuthorizedSignedNda(
     return { success: false, message: "The NDA is not ready for your signature yet." }
   }
   const buffer = Buffer.from(await file.arrayBuffer())
+  try {
+    await assertSafePdfEvidence(buffer)
+  } catch {
+    trace.failure("validation_failed")
+    capture("validation_error", "validation_failed")
+    return { success: false, message: "The signed NDA must be a complete, non-active PDF." }
+  }
   const contentSha256 = createHash("sha256").update(buffer).digest("hex")
   const { data: existing } = await supabase.from("opportunity_nda_artifacts").select("id, version_number").eq("match_id", matchId).eq("artifact_role", "repreneur_signed_copy").eq("content_sha256", contentSha256).maybeSingle()
   if (existing) {
