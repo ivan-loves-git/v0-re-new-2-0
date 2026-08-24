@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// W-154 classification: retired one-time W-010 cutover utility. It is retained
+// only as historical release evidence and is not an application/runtime path.
+
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

@@ -1,11 +1,12 @@
 "use server"
 
 import { randomBytes } from "crypto"
-import { Pool, type PoolClient } from "pg"
+import type { PoolClient } from "pg"
 import { hashPassword } from "better-auth/crypto"
 import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { requireStaffAccess } from "@/lib/access-control"
+import { getApplicationPostgresPool } from "@/lib/database/postgres-pool"
 import {
   normalizePortalEmail,
   planPortalRoleReconciliation,
@@ -14,7 +15,6 @@ import {
   validatePortalEmail,
 } from "@/lib/portal-access-reconciliation"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { env } from "@/lib/env"
 
 export interface RepreneurPortalAccessStatus {
   repreneurId: string
@@ -58,19 +58,6 @@ interface PortalRoleRow extends PortalRoleCandidate {
 }
 
 type QueryExecutor = Pick<PoolClient, "query">
-
-let pool: Pool | null = null
-
-function getPool() {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      max: 3,
-    })
-  }
-  return pool
-}
 
 function fullName(
   firstName: string | null | undefined,
@@ -197,7 +184,9 @@ async function createAuthUser(
 
 async function getCredentialAccountState(userId: string | null) {
   if (!userId) return false
-  const { rows } = await getPool().query<{ has_password: boolean }>(
+  const { rows } = await getApplicationPostgresPool().query<{
+    has_password: boolean
+  }>(
     'SELECT password IS NOT NULL AS has_password FROM "account" WHERE "userId" = $1 AND "providerId" = $2 LIMIT 1',
     [userId, "credential"],
   )
@@ -206,7 +195,7 @@ async function getCredentialAccountState(userId: string | null) {
 
 async function countActiveSessions(userIds: string[]) {
   if (userIds.length === 0) return 0
-  const { rows } = await getPool().query<{ count: string }>(
+  const { rows } = await getApplicationPostgresPool().query<{ count: string }>(
     'SELECT COUNT(*)::text AS count FROM "session" WHERE "userId" = ANY($1::text[]) AND "expiresAt" > NOW()',
     [userIds],
   )
@@ -238,7 +227,7 @@ async function recordAccessEmailSent({
   userId: string
   sentAt: string
 }) {
-  const { rows } = await getPool().query<{ id: string }>(
+  const { rows } = await getApplicationPostgresPool().query<{ id: string }>(
     `UPDATE public.app_user_roles
      SET last_access_email_sent_at = $1, updated_at = NOW()
      WHERE id = $2
@@ -260,7 +249,7 @@ async function provisionPortalAccess({
   email: string
   name: string
 }) {
-  const client = await getPool().connect()
+  const client = await getApplicationPostgresPool().connect()
 
   try {
     await client.query("BEGIN")
@@ -380,9 +369,9 @@ export async function getRepreneurPortalAccessStatus(
     }
   }
   const [roles, emailAuthUsers] = await Promise.all([
-    listPortalRoles(getPool(), repreneurId, normalizedEmail),
+    listPortalRoles(getApplicationPostgresPool(), repreneurId, normalizedEmail),
     normalizedEmail
-      ? findAuthUsersByEmail(getPool(), normalizedEmail)
+      ? findAuthUsersByEmail(getApplicationPostgresPool(), normalizedEmail)
       : Promise.resolve([]),
   ])
   const role =
@@ -399,7 +388,7 @@ export async function getRepreneurPortalAccessStatus(
     emailAuthUsers.length === 1 ? emailAuthUsers[0] : null
   const linkedAuthUser = role?.user_id
     ? (emailAuthUsers.find((user) => user.id === role.user_id) ??
-      (await findAuthUserById(getPool(), role.user_id)))
+      (await findAuthUserById(getApplicationPostgresPool(), role.user_id)))
     : null
   const statusAuthUser = canonicalAuthUser ?? linkedAuthUser
   const hasCredentialAccount = await getCredentialAccountState(
@@ -649,7 +638,7 @@ export async function disableRepreneurPortalAccess(repreneurId: string) {
 
   const repreneur = await getRepreneur(repreneurId)
   const email = normalizePortalEmail(repreneur.email)
-  const client = await getPool().connect()
+  const client = await getApplicationPostgresPool().connect()
 
   try {
     await client.query("BEGIN")

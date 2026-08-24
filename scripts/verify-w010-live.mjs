@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// W-154 classification: retired W-010 verification evidence. It is not part of
+// the application, CI, deployment, or any current operational workflow.
+
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";

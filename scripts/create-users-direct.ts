@@ -1,6 +1,10 @@
 /**
  * Create users directly in the database (bypasses rate limiting)
  * Run with: PASSWORD=YourPassword npx tsx scripts/create-users-direct.ts
+ *
+ * W-154 classification: retired bootstrap utility. It is not imported by the
+ * application or release automation and must not be used for current access
+ * provisioning; the staff portal-access workflow owns that operation.
  */
 
 import { randomBytes } from "crypto"

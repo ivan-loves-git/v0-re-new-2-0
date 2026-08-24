@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// W-154 classification: local-only historical source-evidence preflight. The
+// script is not imported by the application and never runs in CI or deployment.
+
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"

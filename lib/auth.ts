@@ -1,28 +1,9 @@
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
-import { Pool } from "pg"
+import { getApplicationPostgresPool } from "@/lib/database/postgres-pool"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
-
-/**
- * Database connection pool singleton
- * Prevents creating new connections on every import in serverless environment
- */
-let pool: Pool | null = null
-
-function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, // Required for Supabase
-      },
-      max: 5, // Limit connections for serverless
-    })
-  }
-  return pool
-}
 
 function isPortalAccessSetupUrl(url: string) {
   try {
@@ -92,7 +73,7 @@ function renderPasswordResetEmail(
  * - BETTER_AUTH_URL: Base URL of the app (e.g., http://localhost:3000)
  */
 export const auth = betterAuth({
-  database: getPool(),
+  database: getApplicationPostgresPool(),
 
   // Email/password authentication
   emailAndPassword: {

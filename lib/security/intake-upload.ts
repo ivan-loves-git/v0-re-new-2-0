@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
-import { Pool } from "pg"
+import { getApplicationPostgresPool } from "@/lib/database/postgres-pool"
 import { env } from "@/lib/env"
 
 const TOKEN_TTL_SECONDS = 15 * 60
@@ -11,19 +11,6 @@ interface IntakeUploadPayload {
   ip: string
   jti: string
   scope: "intake-upload"
-}
-
-let pool: Pool | null = null
-
-function getPool() {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      max: 3,
-    })
-  }
-  return pool
 }
 
 function requestIp(request: Request) {
@@ -55,7 +42,7 @@ export async function consumeRequestRateLimit(
 ) {
   const now = Date.now()
   const windowMs = windowSeconds * 1000
-  const { rows } = await getPool().query<{
+  const { rows } = await getApplicationPostgresPool().query<{
     count: number
     lastRequest: string
   }>(
