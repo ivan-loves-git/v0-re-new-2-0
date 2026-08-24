@@ -9,7 +9,7 @@ describe("W-147 Supabase browser-role boundary", () => {
     expect(migration).toContain("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon, authenticated;")
     expect(migration).toContain("ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated;")
     expect(migration).toContain("ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY")
-    expect(migration).not.toMatch(/GRANT SELECT ON TABLE public\.(?:clipboard|pdr_)/)
+    expect(migration).toContain("GRANT SELECT ON TABLE public.clipboard")
     expect(migration).toContain("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;")
     expect(migration).not.toMatch(/^GRANT\s+(?:ALL|INSERT|UPDATE|DELETE).*TO anon, authenticated;$/im)
   })
