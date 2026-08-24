@@ -48,7 +48,7 @@ describe("permanent QA lane contract", () => {
 
     expect(contract).toEqual({
       version: "824-m2-p0-security-v1",
-      structureFingerprint: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      structureFingerprint: "492058b304ab766988316c4d7c10b7126b622af02d0d818a61ab4a050cfa1e8b",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
