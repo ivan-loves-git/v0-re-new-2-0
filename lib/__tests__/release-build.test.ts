@@ -6,8 +6,8 @@ import { checkReleaseBuildNumber } from "../release-build-check.mjs"
 import { prepareReleaseBuildNumber } from "../release-build-bump.mjs"
 
 describe("release build identity", () => {
-  it("verifies the merged M2 Gate 2 candidate as build 885", () => {
-    expect(RELEASE_BUILD_NUMBER).toBe("885")
+  it("verifies M2 with repaired Golden admission as build 886", () => {
+    expect(RELEASE_BUILD_NUMBER).toBe("886")
   })
 
   it("keeps the next production build number above the last published build when Git history is shallow", () => {
