@@ -3,13 +3,14 @@
 import crypto from "node:crypto"
 import fs from "node:fs"
 import pg from "pg"
+import { hardenedDatabaseConfig } from "./database-tls.mjs"
 
 const [payloadFile, envFile = ".env.local"] = process.argv.slice(2)
 if (!payloadFile) throw new Error("Usage: node scripts/rehearse-w039-geography-adoption.mjs <payload.json> [.env.local]")
 const payload = JSON.parse(fs.readFileSync(payloadFile, "utf8"))
 if (!Array.isArray(payload.rows) || payload.rows.length !== 148) throw new Error("Payload must contain exactly 148 rows")
 const env = Object.fromEntries(fs.readFileSync(envFile, "utf8").split(/\r?\n/).map(line => line.match(/^([^#=\s]+)=(.*)$/)).filter(Boolean).map(m => [m[1], m[2].replace(/^['"]|['"]$/g, "")]))
-const client = new pg.Client({ connectionString: env.DIRECT_URL ?? env.DATABASE_URL })
+const client = new pg.Client(hardenedDatabaseConfig(env.DIRECT_URL ?? env.DATABASE_URL))
 const sourceHash = "a4b50611de0578a4a2b36f8c6da284c6e53d10b2fd4f418ab560dd31a9a0d6a5"
 await client.connect()
 try {

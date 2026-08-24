@@ -8,6 +8,7 @@ import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 import pg from "pg"
+import { hardenedDatabaseConfig } from "./database-tls.mjs"
 
 const cliArgs = process.argv.slice(2)
 if (cliArgs[0] === "--") cliArgs.shift()
@@ -56,10 +57,7 @@ function descriptionHash(value) {
   return createHash("sha256").update(normalized).digest("hex")
 }
 
-const client = new pg.Client({
-  connectionString,
-  ssl: { rejectUnauthorized: false },
-})
+const client = new pg.Client(hardenedDatabaseConfig(connectionString))
 
 try {
   await client.connect()

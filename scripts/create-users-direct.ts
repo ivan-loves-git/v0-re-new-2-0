@@ -9,6 +9,7 @@
 
 import { randomBytes } from "crypto"
 import { Pool } from "pg"
+import { hardenedDatabaseConfig } from "./database-tls.mjs"
 import { hashPassword } from "better-auth/crypto"
 
 const USERS = [
@@ -29,10 +30,7 @@ async function createUsers() {
     process.exit(1)
   }
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  })
+  const pool = new Pool(hardenedDatabaseConfig(process.env.DATABASE_URL!))
 
   console.log("Creating users directly in database...\n")
 

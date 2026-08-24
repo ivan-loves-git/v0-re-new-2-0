@@ -67,14 +67,18 @@ describe("PostgreSQL transport security", () => {
     }
   })
 
-  it("keeps insecure historical utilities explicitly outside the runtime boundary", () => {
+  it("routes every operational database script through the hardened TLS helper", () => {
     for (const path of [
       "scripts/create-users-direct.ts",
       "scripts/run-w010-cutover.mjs",
       "scripts/verify-w010-live.mjs",
       "scripts/verify-w098-source-workbook.mjs",
+      "scripts/prepare-w039-geography-adoption.mjs",
+      "scripts/rehearse-w039-geography-adoption.mjs",
     ]) {
-      expect(source(path)).toContain("W-154 classification:")
+      expect(source(path)).toContain("hardenedDatabaseConfig")
+      expect(source(path)).not.toContain("rejectUnauthorized: false")
+      expect(source(path)).not.toContain("connectionString:")
     }
   })
 })

@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import pg from "pg"
+import { hardenedDatabaseConfig } from "./database-tls.mjs"
 
 const root = path.dirname(fileURLToPath(import.meta.url))
 const expectedHash = "a4b50611de0578a4a2b36f8c6da284c6e53d10b2fd4f418ab560dd31a9a0d6a5"
@@ -16,7 +17,7 @@ if (crypto.createHash("sha256").update(fs.readFileSync(workbook)).digest("hex") 
 const parsed = JSON.parse(execFileSync("python3", [path.join(root, "parse-w010-workbook.py"), workbook], { encoding: "utf8" }))
 if (parsed.source.sha256 !== expectedHash || parsed.opportunities.length !== 148) throw new Error("Approved W-010 manifest mismatch")
 const env = Object.fromEntries(fs.readFileSync(envFile, "utf8").split(/\r?\n/).map(line => line.match(/^([^#=\s]+)=(.*)$/)).filter(Boolean).map(m => [m[1], m[2].replace(/^['"]|['"]$/g, "")]))
-const client = new pg.Client({ connectionString: env.DIRECT_URL ?? env.DATABASE_URL })
+const client = new pg.Client(hardenedDatabaseConfig(env.DIRECT_URL ?? env.DATABASE_URL))
 await client.connect()
 try {
   const refs = parsed.opportunities.map(row => row.reference)

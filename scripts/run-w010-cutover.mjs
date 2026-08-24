@@ -9,6 +9,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { hardenedDatabaseConfig } from "./database-tls.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ACTOR = "Ivan Paudice via Codex W-010";
@@ -1462,10 +1463,7 @@ async function main() {
     throw new Error("DIRECT_URL or DATABASE_URL is required.");
   }
   const source = parseWorkbook(options.workbook);
-  const client = new pg.Client({
-    connectionString,
-    ssl: { rejectUnauthorized: false },
-  });
+  const client = new pg.Client(hardenedDatabaseConfig(connectionString));
   await client.connect();
   try {
     const writesEnabled = options.apply || options.rehearse;
