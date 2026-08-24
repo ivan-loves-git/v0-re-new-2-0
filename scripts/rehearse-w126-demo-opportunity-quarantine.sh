@@ -25,7 +25,15 @@ psql_base=("$pg_bin/psql" -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -d w126_dem
 
 # First prove the complete migration compiles against the sanctioned build-771
 # schema, including every existing RPC dependency and exact function signature.
-"${psql_base[@]}" -c "CREATE ROLE postgres NOLOGIN; CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN;" >/dev/null
+"${psql_base[@]}" <<'SQL' >/dev/null
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='postgres') THEN CREATE ROLE postgres NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
+END $$;
+SQL
 "$pg_bin/createdb" -h 127.0.0.1 -p "$port" w126_full_schema
 full_psql=("$pg_bin/psql" -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -d w126_full_schema)
 "${full_psql[@]}" -c "CREATE SCHEMA extensions; CREATE SCHEMA auth; CREATE TABLE auth.users (id UUID PRIMARY KEY); CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS 'SELECT NULL::UUID';" >/dev/null
@@ -103,7 +111,7 @@ awk '
   exit 1
 }
 
-if rg -n -i '^\s*(BEGIN|COMMIT|ROLLBACK)(\s+TRANSACTION)?\s*;\s*$|^\s*SAVEPOINT\s+\S+\s*;\s*$' "$repo_root/scripts/112_demo_opportunity_quarantine.sql"; then
+if grep -Eni '^[[:space:]]*(BEGIN|COMMIT|ROLLBACK)([[:space:]]+TRANSACTION)?[[:space:]]*;[[:space:]]*$|^[[:space:]]*SAVEPOINT[[:space:]]+[^[:space:]]+[[:space:]]*;[[:space:]]*$' "$repo_root/scripts/112_demo_opportunity_quarantine.sql"; then
   echo 'w126_migration_transaction_control_forbidden' >&2
   exit 1
 fi
@@ -211,5 +219,5 @@ BEGIN
   BEGIN PERFORM public.apply_w126_demo_opportunity_quarantine('local-cardinality'); RAISE EXCEPTION 'w126_cardinality_was_accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%w126_demo_quarantine_identity_mismatch%' THEN RAISE; END IF; END;
 END $$;
 SQL
-rg -q "concat_ws\('|',o.id,o.reference,COALESCE\(o.public_title,''\)" "$repo_root/scripts/112_demo_opportunity_quarantine.sql"
+grep -Eq "concat_ws\('|',o.id,o.reference,COALESCE\(o.public_title,''\)" "$repo_root/scripts/112_demo_opportunity_quarantine.sql"
 echo "W-126 DEMO quarantine local rehearsal passed"
