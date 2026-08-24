@@ -92,12 +92,85 @@ jobs:
         id: check
         run: node scripts/qa/candidate-check.mjs create
 
+  recover:
+    name: Recover stale QA fixtures before schema sync
+    if: ${{ github.run_attempt == '1' && needs.lane.result == 'success' }}
+    permissions:
+      contents: read
+    needs: lane
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: qa-pilot
+    env:
+      QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
+      QA_CANDIDATE_BRANCH: ${{ needs.lane.outputs.candidate_branch }}
+      QA_SUPABASE_PROJECT_REF: ${{ secrets.QA_SUPABASE_PROJECT_REF }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      QA_BROWSER_BASE_URL: https://127.0.0.1:3443
+      QA_VALIDATION_ORIGIN: https://127.0.0.1:3443
+      QA_EXECUTION_MODE: github-runner
+      QA_RUN_ID: recovery-${{ github.run_id }}-${{ github.run_attempt }}
+      QA_FIXTURE_PREFIX: TEST-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+      QA_CANDIDATE_ROOT: .
+      QA_RUN_DIR: ${{ github.workspace }}/.qa-recovery
+      QA_DATABASE_CA_CERT_FILE: ${{ github.workspace }}/.qa-run/supabase-ca.crt
+    steps:
+      - name: Check out trusted QA controller
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Check out exact admitted candidate for manifest-bound recovery
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.lane.outputs.candidate_sha }}
+          path: .qa-candidate
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+          cache-dependency-path: .qa-candidate/pnpm-lock.yaml
+
+      - name: Install exact candidate dependencies
+        working-directory: .qa-candidate
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Prepare private recovery transport
+        shell: bash
+        run: |
+          umask 077
+          mkdir -p .qa-run .qa-recovery
+          curl --fail --silent --show-error https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt -o "$QA_DATABASE_CA_CERT_FILE"
+          printf 'QA_LEASE_OWNER=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Verify exact candidate schema artifact before recovery
+        working-directory: .qa-candidate
+        run: pnpm qa:schema:verify
+
+      - name: Recover only an expired manifest-bound QA lease
+        working-directory: .qa-candidate
+        run: |
+          pnpm qa:lease:acquire
+          pnpm qa:lease:release
+
   schema-sync:
     name: Synchronize candidate database contract
     if: ${{ github.run_attempt == '1' && needs.lane.result == 'success' }}
     permissions:
       contents: read
-    needs: lane
+    needs: [lane, recover]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     environment: qa-pilot
@@ -357,16 +430,16 @@ jobs:
       actions: write
       checks: write
     if: ${{ always() && github.run_attempt == '1' }}
-    needs: [lane, schema-sync, golden]
+    needs: [lane, recover, schema-sync, golden]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     env:
       GITHUB_TOKEN: ${{ github.token }}
       QA_EXPECTED_SHA: ${{ needs.lane.outputs.candidate_sha }}
       QA_CHECK_RUN_ID: ${{ needs.lane.outputs.check_run_id }}
-      QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}
+      QA_CHECK_CONCLUSION: ${{ needs.recover.result == 'success' && needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}
       QA_RUNTIME_READY_AT: ${{ needs.golden.outputs.runtime_ready_at }}
-      QA_CHECK_SUMMARY: execution=github-runner; schema=${{ needs.schema-sync.result }}; golden=${{ needs.golden.result }}
+      QA_CHECK_SUMMARY: execution=github-runner; recovery=${{ needs.recover.result }}; schema=${{ needs.schema-sync.result }}; golden=${{ needs.golden.result }}
     steps:
       - name: Check out trusted check finalizer
         uses: actions/checkout@v4
