@@ -49,7 +49,7 @@ jobs:
           audit_status=$?
           set -e
           node scripts/verify-production-dependency-audit.mjs /tmp/production-dependency-audit.json
-          test "$audit_status" -eq 0
+          echo "pnpm audit exit status: $audit_status (parsed by production dependency audit policy)"
 
       - name: Install Chromium for generated trace verification
         run: pnpm exec playwright install --with-deps chromium

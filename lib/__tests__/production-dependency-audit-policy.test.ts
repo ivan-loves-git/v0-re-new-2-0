@@ -22,6 +22,12 @@ describe("production dependency audit policy", () => {
       .toThrow("shared-module:high:GHSA-unapproved:root>one>shared-module")
   })
 
+  it("allows an active exception only when it matches the exact high advisory", () => {
+    expect(() => assertProductionAudit(load("scripts/fixtures/production-audit-pnpm-module-name.json"), policy([
+      approved("GHSA-allowed"), approved("GHSA-unapproved"),
+    ]), now)).not.toThrow()
+  })
+
   it("preserves every modern advisory and installed path", () => {
     const findings = collectProductionAuditFindings(load("scripts/fixtures/production-audit-modern-vulnerabilities.json"))
     expect(findings).toHaveLength(4)
@@ -44,6 +50,11 @@ describe("production dependency audit policy", () => {
     const audit = { vulnerabilities: { sharp: { severity: "high", via: [{ name: "GHSA-expired" }], nodes: ["node_modules/sharp"] } } }
     const expired = { minimumSeverity: "high", exceptions: [{ package: "sharp", advisory: "GHSA-expired", owner: "security", reason: "fixture", expiresAt: "2026-08-01" }] }
     expect(() => assertProductionAudit(audit, expired, now)).toThrow("production-dependency-audit-failed")
+  })
+
+  it("fails an unapproved Critical advisory", () => {
+    const audit = { advisories: { "GHSA-critical": { module_name: "critical-module", severity: "critical", findings: [{ paths: ["root>critical-module"] }] } } }
+    expect(() => assertProductionAudit(audit, policy(), now)).toThrow("critical-module:critical:GHSA-critical:root>critical-module")
   })
 
   it("fails closed for malformed or audit-error payloads", () => {
