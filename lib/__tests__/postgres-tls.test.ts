@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs"
+import { X509Certificate } from "node:crypto"
 import type { ConnectionOptions, PeerCertificate } from "node:tls"
 import { describe, expect, it } from "vitest"
 import {
@@ -18,6 +19,18 @@ function tlsOptions(connectionString: string) {
 }
 
 describe("PostgreSQL transport security", () => {
+  it("keeps the approved Supabase CA provenance fingerprint pinned", () => {
+    const certificate = new X509Certificate(SUPABASE_ROOT_CA_2021)
+
+    expect(certificate.ca).toBe(true)
+    expect(certificate.subject).toContain("CN=Supabase Root 2021 CA")
+    expect(certificate.issuer).toContain("CN=Supabase Root 2021 CA")
+    expect(certificate.validTo).toBe("Apr 26 10:56:53 2031 GMT")
+    expect(certificate.fingerprint256).toBe(
+      "80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA",
+    )
+  })
+
   it("pins the verified Supabase CA and hostname without a connection-string override", () => {
     const connectionString =
       "postgresql://postgres.project:secret@aws-0-eu-central-2.pooler.supabase.com:6543/postgres?sslmode=no-verify&sslrootcert=%2Ftmp%2Fattacker.crt"
