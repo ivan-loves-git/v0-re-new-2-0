@@ -3,6 +3,8 @@ import {
   findQaValidationDeployment,
   findVercelSuccess,
   probeStableQaAlias,
+  QA_STABLE_ALIAS_REQUEST_TIMEOUT_MS,
+  waitForStableQaAliasSha,
   waitForQaDeployment,
 } from "@/lib/qa/deployment-status.mjs"
 
@@ -50,7 +52,44 @@ describe("QA deployment status selection", () => {
         "x-vercel-set-bypass-cookie": "true",
       },
       redirect: "manual",
+      signal: expect.any(AbortSignal),
     })
+  })
+
+  it("fails closed when a stable-alias HTTP request hangs until its abort deadline", async () => {
+    const fetchImpl = vi.fn(async (_url, options: RequestInit) => {
+      expect(options.signal).toBeInstanceOf(AbortSignal)
+      return await new Promise((_, reject) => {
+        options.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true })
+        if (options.signal?.aborted) reject(new Error("aborted"))
+      })
+    })
+    const setTimer = vi.fn((callback: () => void) => {
+      callback()
+      return 7 as unknown as ReturnType<typeof setTimeout>
+    })
+    const clearTimer = vi.fn()
+
+    await expect(probeStableQaAlias({
+      origin: "https://qa.example.test",
+      bypass: "test-bypass",
+      fetchImpl: fetchImpl as typeof fetch,
+      requestTimeout: QA_STABLE_ALIAS_REQUEST_TIMEOUT_MS,
+      setTimer: setTimer as unknown as typeof setTimeout,
+      clearTimer: clearTimer as unknown as typeof clearTimeout,
+    })).resolves.toBe("")
+    expect(setTimer).toHaveBeenCalledWith(expect.any(Function), QA_STABLE_ALIAS_REQUEST_TIMEOUT_MS)
+    expect(clearTimer).toHaveBeenCalledWith(7)
+  })
+
+  it("fails closed when a stable-alias HTTP request rejects", async () => {
+    const fetchImpl = vi.fn(async () => { throw new Error("network unavailable") })
+
+    await expect(probeStableQaAlias({
+      origin: "https://qa.example.test",
+      bypass: "test-bypass",
+      fetchImpl,
+    })).resolves.toBe("")
   })
 
   it("follows only same-origin alias redirects and carries the bypass cookie", async () => {
@@ -79,6 +118,7 @@ describe("QA deployment status selection", () => {
         Cookie: "_vercel_jwt=test-cookie",
       },
       redirect: "manual",
+      signal: expect.any(AbortSignal),
     })
   })
 
@@ -94,6 +134,61 @@ describe("QA deployment status selection", () => {
       fetchImpl,
     })).resolves.toBe("")
     expect(fetchImpl).toHaveBeenCalledOnce()
+  })
+
+  it("waits for a stale stable alias to converge to the admitted SHA", async () => {
+    const sleep = vi.fn(async () => undefined)
+    const probeAliasSha = vi.fn()
+      .mockResolvedValueOnce("b".repeat(40))
+      .mockResolvedValueOnce(SHA)
+    const times = [0, 5_000, 5_000]
+
+    await expect(waitForStableQaAliasSha({
+      expectedSha: SHA,
+      probeAliasSha,
+      deadline: 10_000,
+      now: () => times.shift() ?? 10_000,
+      sleep,
+      pollInterval: 5_000,
+    })).resolves.toBe(SHA)
+
+    expect(probeAliasSha).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenCalledTimes(1)
+    expect(sleep).toHaveBeenCalledWith(5_000)
+  })
+
+  it("fails closed when the stable alias never serves the admitted SHA", async () => {
+    const sleep = vi.fn(async () => undefined)
+    const probeAliasSha = vi.fn(async () => "b".repeat(40))
+    const times = [0, 5_000, 5_000, 10_000]
+
+    await expect(waitForStableQaAliasSha({
+      expectedSha: SHA,
+      probeAliasSha,
+      deadline: 10_000,
+      now: () => times.shift() ?? 10_000,
+      sleep,
+      pollInterval: 5_000,
+    })).rejects.toThrow("QA stable alias wait failed: timeout")
+
+    expect(probeAliasSha).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenCalledTimes(1)
+  })
+
+  it("never sleeps beyond the remaining stable-alias convergence budget", async () => {
+    const sleep = vi.fn(async () => undefined)
+    const times = [0, 9_500, 10_000]
+
+    await expect(waitForStableQaAliasSha({
+      expectedSha: SHA,
+      probeAliasSha: async () => "b".repeat(40),
+      deadline: 10_000,
+      now: () => times.shift() ?? 10_000,
+      sleep,
+      pollInterval: 5_000,
+    })).rejects.toThrow("QA stable alias wait failed: timeout")
+
+    expect(sleep).toHaveBeenCalledExactlyOnceWith(500)
   })
 
   it("accepts an old success only when the stable alias serves the exact SHA", async () => {
@@ -181,5 +276,19 @@ describe("QA deployment status selection", () => {
     expect(workflow).not.toContain("createDeployments")
     expect(workflow).not.toContain("git.deploymentEnabled")
     expect(workflow).not.toContain("workflow_run:")
+  })
+
+  it("uses the bounded stable-alias convergence waiter after assignment", async () => {
+    const controller = await import("node:fs/promises").then(({ readFile }) => readFile("scripts/qa/deploy-admitted-candidate.mjs", "utf8"))
+    const workflow = await import("node:fs/promises").then(({ readFile }) => readFile(".github/workflows/golden-journeys.yml", "utf8"))
+    expect(controller).toContain("waitForStableQaAliasSha")
+    expect(controller).toMatch(/deadline: Date\.now\(\) \+ 2 \* 60 \* 1000/)
+    expect(controller).toContain("pollInterval: 5_000")
+    expect(controller).toContain('fail("alias-sha")')
+    expect(workflow).toMatch(/deploy-qa:[\s\S]*?timeout-minutes: 15/)
+    const providerReadinessMs = 8 * 60 * 1000
+    const aliasConvergenceMs = 2 * 60 * 1000
+    const workflowBudgetMs = 15 * 60 * 1000
+    expect(workflowBudgetMs - providerReadinessMs - aliasConvergenceMs).toBeGreaterThanOrEqual(5 * 60 * 1000)
   })
 })
