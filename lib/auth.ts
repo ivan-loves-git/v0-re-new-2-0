@@ -4,6 +4,10 @@ import { Pool } from "pg"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import {
+  trustedAuthOrigins,
+  validatePasswordResetDeliveryUrl,
+} from "@/lib/auth-origin-policy"
 
 /**
  * Database connection pool singleton
@@ -104,7 +108,13 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       const trace = startCriticalOperation("email.password_reset_send")
       try {
-        const isPortalAccessSetup = isPortalAccessSetupUrl(url)
+        const safeResetUrl = validatePasswordResetDeliveryUrl(
+          url,
+          env.BETTER_AUTH_URL,
+          env.NODE_ENV,
+          env.QA_CONTRACT_MODE,
+        )
+        const isPortalAccessSetup = isPortalAccessSetupUrl(safeResetUrl)
         const { error } = await resend.emails.send({
           from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: user.email,
@@ -112,8 +122,8 @@ export const auth = betterAuth({
             ? "Bienvenue sur la plateforme Re-New"
             : "Reset your password",
           html: isPortalAccessSetup
-            ? renderPortalAccessSetupEmail(user.name, url)
-            : renderPasswordResetEmail(user.name, url),
+            ? renderPortalAccessSetupEmail(user.name, safeResetUrl)
+            : renderPasswordResetEmail(user.name, safeResetUrl),
         })
         if (error) {
           trace.failure("provider_rejected")
@@ -174,7 +184,11 @@ export const auth = betterAuth({
   // used to extend this list.
   trustedOrigins: async (request: Request | undefined) => {
     void request
-    return [env.BETTER_AUTH_URL, "https://app.re-new.team"]
+    return trustedAuthOrigins(
+      env.BETTER_AUTH_URL,
+      env.NODE_ENV,
+      env.QA_CONTRACT_MODE,
+    )
   },
 })
 
