@@ -18,6 +18,7 @@ const action = process.argv[2]
 const owner = process.env.QA_LEASE_OWNER
 const runId = process.env.QA_RUN_ID
 const candidateSha = process.env.QA_EXPECTED_SHA
+const allowPreSchemaRecovery = action === "acquire" && process.env.QA_PRE_SCHEMA_RECOVERY === "true"
 const SAFE_CONTRACT_FAILURES = new Set([
   "QA lease contract failed: candidate-root",
   "QA lease contract failed: contract",
@@ -58,7 +59,7 @@ try {
   database = await databaseClient()
   const state = await database.query("SELECT structure_fingerprint, blocked_reason FROM qa_control.schema_state WHERE singleton=true")
   if (state.rows[0]?.blocked_reason) fail("schema-blocked")
-  if (state.rows[0]?.structure_fingerprint !== contract.structureFingerprint) fail("structure-fingerprint")
+  if (!allowPreSchemaRecovery && state.rows[0]?.structure_fingerprint !== contract.structureFingerprint) fail("structure-fingerprint")
 
   if (action === "acquire") {
     let lease = await acquireQaLease(database, {
