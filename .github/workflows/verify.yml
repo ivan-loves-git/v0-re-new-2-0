@@ -133,6 +133,8 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: qa-contract-rehearsal-only
           POSTGRES_DB: qa_contract_rehearsal
+        ports:
+          - 5432/tcp
         options: >-
           --health-cmd "pg_isready -U postgres -d qa_contract_rehearsal"
           --health-interval 5s
