@@ -27,6 +27,7 @@
     "qa:fixture:readback": "node scripts/qa/readback-phase-b.mjs",
     "qa:fixture:seed": "node scripts/qa/seed-phase-b-fixtures.mjs",
     "qa:lease:acquire": "node scripts/qa/lease-phase-b.mjs acquire",
+    "qa:lease:recover": "node scripts/qa/lease-phase-b.mjs recover",
     "qa:lease:heartbeat": "node scripts/qa/lease-phase-b.mjs heartbeat",
     "qa:lease:release": "node scripts/qa/lease-phase-b.mjs release",
     "qa:preflight-isolation": "node scripts/qa/preflight-isolation.mjs",
