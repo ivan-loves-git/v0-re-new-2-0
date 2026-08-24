@@ -587,11 +587,7 @@ describe("permanent QA lane contract", () => {
     expect(lease).toContain('action === "recover"')
     expect(lease).toContain("recoverExpiredLease")
     expect(recover).not.toContain("pnpm qa:lease:release")
-    expect(recover).toContain('QA_PRE_SCHEMA_RECOVERY: "true"')
-    expect(workflow.match(/QA_PRE_SCHEMA_RECOVERY/g)).toHaveLength(1)
-    for (const job of ["lane", "schema-sync", "golden", "finalize"]) {
-      expect(jobBlock(workflow, job)).not.toContain("QA_PRE_SCHEMA_RECOVERY")
-    }
+    expect(workflow).not.toContain("QA_PRE_SCHEMA_RECOVERY")
     expect(recover).not.toContain("QA_VERCEL_TOKEN")
     expect(schemaSync).toContain("needs: [lane, recover]")
     expect(schemaSync).toContain("needs.recover.result == 'success'")
