@@ -7,6 +7,7 @@ import {
 const PRODUCTION_REF = "iiuqcdnmxhtyispnykgf"
 const PREVIEW_REF = "ypzrsrykirpqerfpozdm"
 const VALIDATION_ORIGIN = "https://renew-qa-pilot.example.vercel.app"
+const RUNNER_ORIGIN = "https://127.0.0.1:3443"
 
 function validInput() {
   return {
@@ -66,6 +67,46 @@ function expectFailure(mutator: (input: ReturnType<typeof validInput>) => void, 
   const input = validInput()
   mutator(input)
   expect(() => validateIsolationPreflight(input)).toThrow(`Isolation preflight failed: ${code}`)
+}
+
+type RunnerRuntimeEvidence = {
+  provider: string
+  origin: string
+  candidateSha: string
+  loopbackOnly: boolean
+  productionEnvironmentAttached: boolean
+  authorizedStatus: number
+}
+type RunnerInput = Omit<ReturnType<typeof validInput>, "env" | "evidence"> & {
+  env: ReturnType<typeof validInput>["env"] & Record<string, string>
+  evidence: ReturnType<typeof validInput>["evidence"] & { runtime: RunnerRuntimeEvidence }
+}
+
+function runnerInput(): RunnerInput {
+  const input = validInput()
+  return {
+    ...input,
+    env: {
+      ...input.env,
+      QA_EXECUTION_MODE: "github-runner",
+      BETTER_AUTH_URL: RUNNER_ORIGIN,
+      NEXT_PUBLIC_APP_URL: RUNNER_ORIGIN,
+      QA_BROWSER_BASE_URL: RUNNER_ORIGIN,
+      QA_VALIDATION_ORIGIN: RUNNER_ORIGIN,
+      QA_EXPECTED_SHA: "a".repeat(40),
+    },
+    evidence: {
+      ...input.evidence,
+      runtime: {
+      provider: "github-runner",
+      origin: RUNNER_ORIGIN,
+      candidateSha: "a".repeat(40),
+      loopbackOnly: true,
+      productionEnvironmentAttached: false,
+      authorizedStatus: 200,
+      },
+    },
+  }
 }
 
 describe("QA isolation preflight", () => {
@@ -186,6 +227,33 @@ describe("QA isolation preflight", () => {
     expectFailure((input) => {
       input.evidence.vercel.aliases = ["app.re-new.team"]
     }, "vercel-alias")
+  })
+
+  it("accepts the fixed loopback runtime only in GitHub-runner execution mode", () => {
+    expect(validateIsolationPreflight(runnerInput())).toEqual({
+      projectRef: PREVIEW_REF,
+      origin: RUNNER_ORIGIN,
+      runId: "20260821-phase-a",
+    })
+  })
+
+  it("fails closed when GitHub-runner runtime evidence is not exact and local", () => {
+    const expectRunnerFailure = (mutator: (input: ReturnType<typeof runnerInput>) => void, code: string) => {
+      const input = runnerInput()
+      mutator(input)
+      expect(() => validateIsolationPreflight(input)).toThrow(`Isolation preflight failed: ${code}`)
+    }
+    expectRunnerFailure((input) => {
+      input.env.QA_BROWSER_BASE_URL = VALIDATION_ORIGIN
+      input.env.QA_VALIDATION_ORIGIN = VALIDATION_ORIGIN
+      input.env.BETTER_AUTH_URL = VALIDATION_ORIGIN
+      input.env.NEXT_PUBLIC_APP_URL = VALIDATION_ORIGIN
+    }, "runner-origin")
+    expectRunnerFailure((input) => { input.evidence.runtime.candidateSha = "b".repeat(40) }, "runner-sha")
+    expectRunnerFailure((input) => { input.evidence.runtime.loopbackOnly = false }, "runner-loopback")
+    expectRunnerFailure((input) => { input.evidence.runtime.productionEnvironmentAttached = true }, "runner-production-environment")
+    expectRunnerFailure((input) => { input.evidence.runtime.authorizedStatus = 401 }, "runner-status")
+    expectRunnerFailure((input) => { input.evidence.runtime.provider = "vercel" }, "runner-provider")
   })
 
   it("permits only a Resend designated test recipient or QA-owned inbox", () => {

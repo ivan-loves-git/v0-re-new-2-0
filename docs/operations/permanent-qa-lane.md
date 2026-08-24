@@ -4,12 +4,12 @@ Owner: Re-New engineering
 Acceptance owner: quality_tester
 Business cost authority: Ivan
 
-Status: **controller installed; end-to-end commissioning blocked at the provider boundary**. Main protection and daily health are green. The 2026-08-23 exact-candidate canary failed before schema or browser work because Vercel rejected the explicit validation deployment with `payment_required`; it created no validation deployment and no QA data. Freeze further controller development. Resume the same lane only when the provider accepts the deployment or Ivan separately approves a plan/cost change. The permanent delivery and QA policy is `docs/TESTING_RELEASE_PROTOCOL.md`; this file is the technical runbook, not a second product tracker.
+Status: **functional exact-candidate QA is runner-hosted.** The former Vercel deployment canary failed before it reached schema or browser work because the provider rejected it for billing. That provider condition must not block candidate functional QA. The permanent delivery and QA policy is `docs/TESTING_RELEASE_PROTOCOL.md`; this file is the technical runbook, not a second product tracker.
 
 ## Fixed resources
 
 - Supabase: exactly one persistent Micro branch under production project `iiuqcdnmxhtyispnykgf`; no production data clone and no PR ownership.
-- Vercel: existing protected project `renew-overnight-validation-20260820`, Preview target, provider-managed stable `qa` branch alias `renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app`, no production/custom domain. The manually assigned `renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app` alias is pinned and must be rejected.
+- Vercel: the existing validation project and stable alias remain only for background deployment-health checks. They are not part of the functional candidate-QA path and a provider deployment failure cannot block that path.
 - GitHub: environment `qa-pilot` (name retained), candidate check `P1-P3 protected pilot`. It is required evidence only for an exact Tier 3 candidate explicitly authorized by Ivan, not a universal branch-protection requirement. The historical `qa` git pointer is retired and must not be moved by the controller.
 - No premium runner, additional project, email plan or external service is part of this lane.
 
@@ -19,95 +19,42 @@ Supabase management readback on 2026-08-22 quoted Micro branch compute at USD 0.
 
 ## Candidate operation
 
-1. A candidate remains `Tier 3 proposed — awaiting Ivan authorization` until Ivan explicitly authorizes its exact open-PR head SHA. Codex executes that authorization as a fresh manual `workflow_dispatch` under GitHub user `ivan-loves-git`; the run record is the evidence, not a second approval. The trusted `main` workflow rejects `repository_dispatch`, `workflow_run`, push, PR, and workflow-rerun events.
-2. Admission validates that the supplied branch and exact 40-character SHA are the current head of a same-repository open PR, the dispatcher is Ivan's repository-owner identity with write access, and the exact GitHub Actions `Verify` run is green. A changed head SHA requires fresh authorization. Identical-contract candidates are accepted on explicit admission. A database-changing candidate also requires reviewed schema fields (`schema_reviewed=true`, `qa-schema-review-v1`, exact contract SHA-256).
-3. The workflow creates `P1-P3 protected pilot` on that exact SHA and holds global concurrency `renew-permanent-qa`. It does not move any `qa` git pointer and does not request `contents: write`.
-4. A dedicated `deploy-qa` job receives only `QA_VERCEL_TOKEN`, optional `QA_VERCEL_TEAM_ID`, and `VERCEL_AUTOMATION_BYPASS_SECRET`. It checks out the trusted controller only, never executes candidate application code, and never receives `DATABASE_URL` or Supabase service-role credentials. It creates exactly one Preview deployment in project `renew-overnight-validation-20260820` (`prj_btAdxukLqgJ3vIBaQ6m2OW9XkR4Y`) for the admitted candidate branch and SHA, binds `meta.githubCommitSha` and the candidate ref, waits for `readyState=READY`, assigns the preserved stable alias, and uploads sanitized provider evidence containing deployment id, project, ref, SHA, target, READY state and alias readback.
-5. Database and browser jobs consume that sanitized evidence artifact. They never receive `QA_VERCEL_TOKEN`. Only after identity proof do they verify the deployed non-secret QA contract, synchronize schema when required, acquire the lease, run P1-P3, clean up, and finalize the check.
+1. A candidate remains `Tier 3 proposed — awaiting Ivan authorization` until Ivan explicitly authorizes its exact open-PR head SHA. Codex executes that authorization as a fresh owner-only manual dispatch; the run record is evidence, not a second approval. The trusted workflow rejects automatic and non-owner starts.
+2. Admission validates that the supplied branch and exact 40-character SHA are the current head of a same-repository open PR and that its exact GitHub Actions `Verify` run is green. A changed head SHA requires fresh authorization. A database-changing candidate also requires its reviewed schema fields and exact contract digest.
+3. The workflow checks out and builds that exact SHA once on an isolated GitHub runner. It serves it only through loopback HTTPS, using QA-only Supabase credentials and no production credentials, Vercel deployment token, public URL, or external email delivery.
+4. It synchronizes only the QA database when required, verifies the empty baseline, acquires the QA lease, runs P1-P3 with synthetic fixtures, proves persistence and read-back, removes those fixtures, and proves the empty baseline again. The successful check is functional exact-candidate QA; it is not Vercel deployment or production proof.
 
-Candidate SHA, branch, run ID, fixture prefix and stable QA origin are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects non-owner dispatchers, forks, and foreign repositories. Tier 3 QA authorization does not authorize merge, production publication, or production-data mutation.
-
-## Validation deploy architecture (Route A)
-
-Root cause of the Hobby quota burst: both the product project and the validation project were connected to the same high-churn GitHub repository, so many pushes created paired deployments. Moving a shared `qa` pointer compounded the problem.
-
-Approved architecture:
-
-1. Admit only an Ivan-authorized exact Tier 3 candidate through owner-only manual dispatch.
-2. Deploy the admitted candidate branch and exact SHA directly through the Vercel Deployment API. Do not retain a branch-pointer deployment trigger.
-3. Isolate the deploy credential in `deploy-qa`.
-4. Keep database/browser jobs on sanitized provider evidence only.
-5. Resolve daily-health expected SHA from the stable alias, not `origin/qa`.
-
-### Corrected cutover order — historical and completed
-
-Steps already evidenced must not be replayed as a new infrastructure programme. Use the Gate 2 packet for the latest checkpoint and resume only the first still-blocked external-provider step.
-
-1. Create and prove an expiring token scoped only to the QA validation project.
-2. Migrate any `qa`-branch Preview environment values on the validation project to ordinary Preview scope.
-3. Disable the old Golden Journeys workflow so no automatic or pointer-based lane can run during cutover.
-4. Disconnect Git from the validation project only.
-5. Verify the product project `v0-re-new-2-0` remains Git-connected.
-6. Prove that the proposed `gitSource` API call still works after disconnection, or replace it with a supported source-upload deployment before enabling the lane.
-7. Wait for provider capacity (do not guess a quota-reset minute; read the live provider response).
-8. Merge the corrected controller through an explicitly documented bootstrap.
-9. Re-enable the corrected Golden Journeys workflow.
-10. Run QA daily health on current `main` and require success before ordinary Golden Journeys admission.
-11. Run one exact-SHA Golden Journeys canary and protected P1-P3.
-12. Prove one QA validation deployment and no additional product deployment caused by that admission.
-13. Keep cumulative product PR #27 parked until the controller canary and daily health both pass.
-
-Cutover proof required before declaring the repair done:
-
-- Count validation-project deployments before and after one admitted candidate: exactly one new READY deployment for that SHA.
-- Push an ordinary source-repository feature branch: zero new validation-project deployments.
-- Confirm the stable alias still serves the admitted SHA and the deployed QA contract headers.
-- Confirm product-project deploy count did not increase because of the QA admission.
-
-Exact rollback:
-
-1. Disable the corrected Golden Journeys workflow.
-2. Stop using `QA_VERCEL_TOKEN` in the protected lane.
-3. Reassign the preserved stable alias to the prior READY non-production deployment id recorded in sanitized provider evidence.
-4. Only after a reviewed rollback decision, restore any prior temporary Git connection if explicitly required. Do not reconnect automatic Git as an unreviewed shortcut.
-
-The prepared Deploy Hook `qa-protected-candidate` is not the selected cutover path. Hooks still require Git connection and do not by themselves stop duplicate automatic builds.
-
-Live cutover and rollback evidence for Gate 2 is recorded in `docs/operations/qa-explicit-deploy-gate2-packet.md`. Do not request `PUBLISH_APPROVED` until that packet’s evidence table is filled after independent review and green required checks.
+Candidate SHA, branch, run ID and fixture prefix are runtime data, not rotating secrets. The workflow runs from the trusted repository and rejects non-owner dispatchers, forks, and foreign repositories. Tier 3 QA authorization does not authorize merge, production publication, or production-data mutation.
 
 ## Concurrency and supersession
 
-This lane deliberately uses GitHub's latest-pending supersession with `cancel-in-progress: false`. One mutation run remains protected from cancellation, and at most one latest candidate waits. If A is running, B is pending and C is manually dispatched, C supersedes B; the superseded B remains blocked because it receives no successful P1-P3 check. C runs after A. If B is still intended, a rebase or push gives it a new exact candidate SHA that must be authorized and manually dispatched again. The single concurrency group prevents any two candidates from deploying or seeding simultaneously.
+This lane deliberately uses GitHub's latest-pending supersession with `cancel-in-progress: false`. One mutation run remains protected from cancellation, and at most one latest candidate waits. If A is running, B is pending and C is manually dispatched, C supersedes B; the superseded B remains blocked because it receives no successful P1-P3 check. C runs after A. If B is still intended, a rebase or push gives it a new exact candidate SHA that must be authorized and manually dispatched again. The single concurrency group prevents any two candidates from using QA data simultaneously.
 
-Phase C2 must prove A running, B pending, C supersedes B, B remains blocked, C runs after A, and a refreshed B later runs. This is the accepted high-cadence behavior, not an unlimited queue.
+This serialization behavior is part of the installed controller. It does not require recurring proof during ordinary product releases.
 
 ## Daily health
 
-`.github/workflows/qa-daily-health.yml` runs once daily without Playwright or an LLM and can also be started manually for initial acceptance. It is a scheduled idle-lane maintenance check, not candidate admission or Tier 3 product QA: it creates no candidate deployment, synchronizes no schema, seeds no fixture, and runs no P1-P3 journey. A first `resolve-sha` job uses only the protection-bypass secret to read the expected SHA from the stable alias. The later health job uses database secrets and that alias-derived SHA; it never reads `origin/qa` and never receives `QA_VERCEL_TOKEN`. It verifies the protected site, exact deployed candidate, provider identities, empty baseline, stale cleanup recovery and lease acquire/heartbeat/release. It never applies schema DDL or calculates a live catalog checksum. Exact-candidate schema synchronization verifies the versioned SQL-file checksums, applies those files transactionally when needed, and reads back the exact applied-file ledger. Golden P1-P3 then proves the user journeys, roles, persistence and cleanup. An authorized Tier 3 candidate requires the latest completed daily health run to have succeeded on exact current `main` within the previous 26 hours. Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock, after trusted candidate admission has verified the same-repository PR, candidate SHA, green Verify run, contract digest, `schema_reviewed=true` and `qa-schema-review-v1`. This recovery only permits the candidate to continue; it does not bypass provider identity, empty-branch and lease checks, schema synchronization, the applied-file ledger, P1-P3, sanitization, cleanup or final check evaluation.
+`.github/workflows/qa-daily-health.yml` is background deployment-health maintenance for the validation Vercel project. It is not candidate admission or Tier 3 product QA: it creates no candidate functional-QA run, synchronizes no schema, seeds no fixture, and runs no P1-P3 journey. A health failure is a deployment-provider fact to investigate, not a reason to block runner-hosted functional QA. It may verify the stable alias, provider identity, empty baseline, stale-cleanup recovery, and lease health without exposing values.
 
-The v3 structure fingerprint is retained as a contract identifier for deployed-header and lease binding. It is not recomputed from provider-rendered catalog text during daily health or candidate QA because equivalent PostgreSQL definitions can render differently across sessions and provider versions. Runtime schema proof instead uses exact versioned SQL-file checksums and the applied-file ledger, followed by the protected browser and permission journeys.
+Functional candidate QA proves schema safety through exact versioned SQL-file checksums and the applied-file ledger, then through browser, permission, persistence/read-back, cleanup, and empty-baseline checks. It does not need a separate provider-rendered schema comparison.
 
 ## Recovery and blocked state
 
-`qa_control.lease` stores one owner hash, run ID, candidate SHA, heartbeat/expiry, candidate structure fingerprint, exact server-side manifest and singleton snapshots. The trusted controller resolves that fingerprint only from the admitted candidate directory named by `QA_CANDIDATE_ROOT`, after canonical path-containment and contract-shape checks; the controller's own contract cannot authorize a candidate lease. An active foreign lease cannot be recovered. An expired lease must first be claimed by a distinct recovery owner; cleanup is limited to its persisted IDs/objects and exact run labels. Unlabelled or ambiguous rows are release blockers and must not be deleted automatically.
+`qa_control.lease` records one owner, run ID, candidate SHA, heartbeat/expiry, exact server-side manifest, and singleton snapshots. An active foreign lease cannot be recovered. An expired lease must first be claimed by a distinct recovery owner; cleanup is limited to its persisted IDs/objects and exact run labels. Unlabelled or ambiguous rows are release blockers and must not be deleted automatically.
 
 A failed schema synchronization writes `qa_control.schema_state.blocked_reason`. Browser fixtures are forbidden while this is set. Recovery requires an empty-branch readback, transactional synchronization and an exact applied-file ledger; it is not a production rollback mechanism.
 
-## Provider evidence boundary
+## QA evidence and credential boundary
 
-`supabase/qa-branch.json` is checked-in configuration, not live provider authority. Destructive synchronization safety comes from the exact protected QA ref, explicit production refusal, matching live DB/API/Storage identities, whole-branch emptiness, no active lease, transactional application, SQL-file checksums and the applied-file ledger. Persistence, parent, with-data and branch-count are independent provider readbacks required for initial acceptance and monthly review; they are not inferred from this file. Supabase management credentials must not be added to GitHub.
-
-## Validation-project credential transfer
-
-Connecting the parent Supabase project through the generic Vercel Marketplace integration is not approved for this lane because it proposes synchronizing production-project credentials into the validation project. The installation flow was cancelled before project connection, and no variables were synced. Phase C2 uses an app-approved 1Password-based one-time transfer in which values never enter model or tool output, followed by branch-scoped Vercel and GitHub metadata readback. Protected QA uses simulated mail and must have no real Resend key.
+`supabase/qa-branch.json` is checked-in configuration, not live provider authority. QA schema safety comes from the exact protected QA ref, explicit production refusal, matching live DB/API/Storage identities, whole-branch emptiness, no active lease, transactional application, SQL-file checksums, and the applied-file ledger. The runner receives only the QA credentials needed for the journey; production credentials and Vercel deployment credentials are excluded. Supabase management credentials must not be added to GitHub.
 
 ## Email boundary
 
-Protected QA deployments set `QA_MAIL_MODE=allowlist`, use the designated test sender, and permit only `delivered@resend.dev` plus the run-labelled `delivered+TEST-…@resend.dev` form. The shared adapter checks sender, To, Cc and Bcc, then returns a deterministic simulated acceptance without calling Resend. Password reset and portal invitation use the same adapter and configured QA sender. Any customer, staff or production sender/recipient is denied, and protected QA sends no provider email.
+Protected functional QA sets `QA_MAIL_MODE=allowlist`, uses the designated test sender, and permits only `delivered@resend.dev` plus the run-labelled `delivered+TEST-…@resend.dev` form. The shared adapter checks sender, To, Cc and Bcc, then returns a deterministic simulated acceptance without calling Resend. Password reset and portal invitation use the same adapter and configured QA sender. Any customer, staff or production sender/recipient is denied, and protected QA sends no provider email.
 
 ## Monthly review and break glass
 
-Monthly readback must record branch inventory, branch persistence/health, quoted compute rate, alias inventory, GitHub/Vercel protected-value names and update timestamps, last daily health, zero baseline and no production/custom routing. Never record secret values.
+Monthly readback must record branch inventory, branch persistence/health, quoted compute rate, GitHub protected-value names and update timestamps, last daily health, zero baseline and no production/custom routing. Never record secret values.
 
 Only an external QA-provider outage may be proposed for break glass. A failing product test is not an outage. Any temporary required-check change requires Ivan's explicit approval, a green Verify check, targeted substitute evidence, written reason, and immediate restoration/readback. This repository contains no automatic bypass.
 

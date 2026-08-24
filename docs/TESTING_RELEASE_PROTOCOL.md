@@ -33,7 +33,7 @@ Keep each concern in its proper system:
 | Durable business, data, permission, and lifecycle rules | Relevant canonical contract, including `docs/data-models/ma-advisory-data-model-v1.md` | The meaning the implementation must preserve |
 | Implementation candidate | Exact GitHub branch, commit, and pull-request diff | The code proposed for release |
 | Automated verification | CI results for the exact commit | The checks that ran and their result |
-| Candidate behaviour | Exact-candidate QA deployment plus browser, persistence, read-back, and cleanup evidence | What the candidate did in the isolated environment |
+| Candidate behaviour | Exact-candidate functional QA on an isolated GitHub runner, with browser, persistence, read-back, and cleanup evidence | What the candidate did in the isolated environment |
 | Deployed environment | Vercel and Supabase state | Which code and data environment are actually present |
 | Released user behaviour | Production deployment identity plus live browser proof | What users can use now |
 
@@ -48,14 +48,14 @@ All production code is written once:
 1. Start from current `origin/main` in a clean isolated branch or worktree. Preserve dirty or unrelated worktrees.
 2. Implement the approved behaviour once.
 3. Run focused local checks, then CI for the exact candidate.
-4. When its risk tier requires it, deliberately admit that exact candidate to the isolated QA environment. Random branch pushes must not enter QA automatically.
+4. When its risk tier requires it, deliberately admit that exact candidate to functional QA on an isolated GitHub runner. Random branch pushes must not enter QA automatically.
 5. Use QA-only synthetic fixtures, verify persisted results where applicable, and prove cleanup and zero residue.
 6. Review the exact diff and evidence. Do not rebuild a different QA or production version.
 7. Merge the same approved code into `main` when release authority exists.
 8. Allow the normal production deployment and verify its exact main SHA.
 9. Prove the changed live journey in a production browser, within safe production-data boundaries.
 
-QA holds the latest candidate deliberately admitted for testing, not every branch. Production must not receive a significant feature before required QA, except for a documented emergency incident decision with explicit authority and a rollback path.
+Functional QA runs the exact admitted SHA once, behind loopback HTTPS on the isolated GitHub runner and against the QA-only Supabase environment. It is not a production deployment or Vercel deployment claim. QA holds the latest candidate deliberately admitted for testing, not every branch. Production must not receive a significant feature before required QA, except for a documented emergency incident decision with explicit authority and a rollback path.
 
 Branch protection remains enabled with `Verify` as the required status during the pre-beta phase. `P1-P3 protected pilot` is selective Tier 3 release evidence, not a branch-protection requirement. This separation lets controller repairs merge after green code verification without weakening high-consequence product-release proof. Any temporary exception to the remaining protection must be explicitly authorised, limited to the named requirement and exact commit, restored immediately after the operation, and read back before proceeding.
 
@@ -85,9 +85,9 @@ Required: focused automated tests; an exact-candidate preview or other bounded t
 
 Examples: authentication, authorization, confidentiality, visibility, data models, migrations, destructive actions, lifecycle rules, and production data operations.
 
-Required: the full QA environment and protected P1-P3 lane on the exact candidate; synthetic fixtures; direct-URL and role-boundary tests; persistence and cleanup invariants; independent review; a rollback plan; and separate explicit authority for any production migration, backfill, or other production-data mutation.
+Required: the protected P1-P3 functional QA lane on the exact candidate; QA-only synthetic fixtures; direct-URL and role-boundary tests; persistence, read-back, cleanup, and empty-baseline proof; independent review; a rollback plan; and separate explicit authority for any production migration, backfill, or other production-data mutation.
 
-Before authorization, record `Tier 3 proposed — awaiting Ivan authorization` and stop before any candidate QA deployment, schema synchronization, synthetic fixture, protected P1-P3 check, or retry. Ivan's direct Codex instruction is sufficient; do not ask for a PDR PIN or a second website confirmation. Codex then executes the authorized run as a fresh owner-identity manual dispatch, whose GitHub run record is evidence of the authorization rather than a second approval step. Authorization binds to the exact open-PR head SHA and its diff. Any head-SHA change voids it and requires fresh authorization. Tier 3 QA authorization permits only that QA dispatch; it does not authorize merge, production publication, a migration, a backfill, or any other production-data mutation.
+Before authorization, record `Tier 3 proposed — awaiting Ivan authorization` and stop before any functional-QA run, schema synchronization, synthetic fixture, protected P1-P3 check, or retry. Ivan's direct Codex instruction is sufficient; do not ask for a PDR PIN or a second website confirmation. Codex then executes the authorized run as a fresh owner-identity manual dispatch, whose GitHub run record is evidence of the authorization rather than a second approval step. Authorization binds to the exact open-PR head SHA and its diff. Any head-SHA change voids it and requires fresh authorization. Tier 3 QA authorization permits only that QA dispatch; it does not authorize merge, production publication, a migration, a backfill, or any other production-data mutation.
 
 Do not inflate a low-risk UI edit into a high-risk release programme. Do not relabel a high-consequence change as Tier 2 to avoid authorization: narrow the scope until it is genuinely Tier 1 or Tier 2, or keep the candidate blocked at Tier 3.
 
@@ -160,16 +160,16 @@ Use temporary agents only for concrete, bounded work such as an independent risk
 
 ## QA data, credentials, and infrastructure
 
-- QA uses the isolated validation Vercel project and the isolated QA Supabase environment. Synthetic fixtures must be identifiable, least-privileged, and removed or intentionally retained under an approved invariant.
+- Tier 3 functional QA runs the admitted SHA on an isolated GitHub runner behind loopback HTTPS, against the isolated QA Supabase environment. It uses no production credentials or production data. Synthetic fixtures must be identifiable, least-privileged, and removed under the empty-baseline invariant.
 - Production personas and real customer or team records are not the primary test harness. Production verification is scoped to safe proof of the released behaviour; any write requires explicit production-data authority.
 - Secret values live only in the approved local secret source, GitHub environment `qa-pilot`, or the appropriate Vercel/Supabase project settings. Never put values in code, tracked documents, PR text, logs, screenshots, agent packets, or chat.
 - Ivan is the access authority. An authorised repository or provider administrator performs storage and rotation; Codex may coordinate and verify names, scopes, expiry, and successful use without revealing values.
-- QA deployment tokens must be least-privileged, scoped to the validation project where the provider supports it, and rotated after exposure, suspected compromise, ownership change, or the agreed expiry. Production credentials are never shared with a generic specialist packet.
-- Provider configuration, branch protection, aliases, and cleanup invariants are verified without exposing values. A successful controller run does not prove the product feature; it proves only the lane used to test it.
+- Provider credentials, where retained for background deployment health, must be least-privileged and rotated after exposure, suspected compromise, ownership change, or the agreed expiry. Production credentials are never shared with a generic specialist packet.
+- Branch protection, QA-only credentials, and cleanup invariants are verified without exposing values. A successful functional-QA run proves the tested candidate behaviour in that isolated environment; it is not proof of a Vercel deployment or production behaviour.
 
 Once the core QA lane has one clean end-to-end run and its protection/configuration is restored, it becomes background machinery. Freeze further QA-infrastructure development unless a defect directly blocks an Ivan-authorized Tier 3 release or creates a security or data risk.
 
-There is no automatic Tier 3 retry. Ivan may authorize one same-SHA retry only for a documented transient provider or controller category, such as rate limiting, temporary provider unavailability, or a bounded readiness/alias propagation timeout. Contract, fingerprint, schema, isolation, authentication, authorization, cleanup, or residue mismatches are not retryable and require diagnosis. A second same-SHA failure in an eligible transient category stops the release; it does not authorize continued controller development or bypass required Tier 3 evidence. A bounded manual isolated proof or another controller repair/simplification requires an explicit decision.
+There is no automatic Tier 3 retry. Ivan may authorize one same-SHA retry only for a documented transient runner, browser, or QA-provider failure. Schema, isolation, authentication, authorization, cleanup, or residue mismatches are not retryable and require diagnosis. A second same-SHA failure in an eligible transient category stops the release; it does not authorize bypass of required Tier 3 evidence.
 
 ## Completion and reporting
 

@@ -19,7 +19,13 @@ let database
 try {
   const [manifest, evidence] = await Promise.all([readJson(MANIFEST_FILE), readJson(EVIDENCE_FILE)])
   validateIsolationPreflight({ env: process.env, evidence, manifest })
-  validateLiveEvidence({ expectedRef: process.env.QA_SUPABASE_PROJECT_REF, expectedOrigin: new URL(process.env.QA_BROWSER_BASE_URL).origin, expectedSha: process.env.QA_EXPECTED_SHA, evidence })
+  validateLiveEvidence({
+    expectedRef: process.env.QA_SUPABASE_PROJECT_REF,
+    expectedOrigin: new URL(process.env.QA_BROWSER_BASE_URL).origin,
+    expectedSha: process.env.QA_EXPECTED_SHA,
+    evidence,
+    executionMode: process.env.QA_EXECUTION_MODE || "vercel",
+  })
 
   database = await databaseClient()
   await assertLeaseAuthority(database)

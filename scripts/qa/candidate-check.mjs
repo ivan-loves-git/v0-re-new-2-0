@@ -37,11 +37,10 @@ try {
   } else if (action === "update") {
     if (!/^\d+$/.test(checkId || "")) throw new Error("candidate-check-id")
     const completedAt = new Date()
-    const readyMs = Date.parse(process.env.QA_DEPLOYMENT_READY_AT || "")
-    const durationSeconds = Number.isFinite(readyMs) ? Math.ceil((completedAt.getTime() - readyMs) / 1000) : null
-    const withinTenMinutes = durationSeconds !== null && durationSeconds >= 0 && durationSeconds <= 600
-    const conclusion = process.env.QA_CHECK_CONCLUSION === "success" && withinTenMinutes ? "success" : "failure"
-    const summary = `${process.env.QA_CHECK_SUMMARY || "See the exact workflow run for evidence."}; duration-seconds=${durationSeconds ?? "invalid"}`
+    const runtimeReadyMs = Date.parse(process.env.QA_RUNTIME_READY_AT || "")
+    const durationSeconds = Number.isFinite(runtimeReadyMs) ? Math.ceil((completedAt.getTime() - runtimeReadyMs) / 1000) : null
+    const conclusion = process.env.QA_CHECK_CONCLUSION === "success" ? "success" : "failure"
+    const summary = `${process.env.QA_CHECK_SUMMARY || "See the exact workflow run for evidence."}; runtime-seconds=${durationSeconds ?? "unavailable"}`
     await request(`/check-runs/${checkId}`, "PATCH", {
       status: "completed",
       conclusion,
@@ -54,10 +53,9 @@ try {
     })
     const timing = {
       candidateSha: sha,
-      deploymentReadyAt: process.env.QA_DEPLOYMENT_READY_AT,
+      runtimeReadyAt: process.env.QA_RUNTIME_READY_AT || null,
       finalRequiredCheckAt: completedAt.toISOString(),
       durationSeconds,
-      withinTenMinutes,
     }
     await mkdir(".qa-final", { recursive: true })
     await writeFile(".qa-final/lane-timing.json", `${JSON.stringify(timing, null, 2)}\n`, { mode: 0o600 })

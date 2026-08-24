@@ -6,7 +6,43 @@ import { validateLiveEvidence } from "../../lib/qa/phase-b.mjs"
 
 const CUSTOMER_TABLES = ["repreneurs", "opportunities", "opportunity_matches", "ma_firms", "ma_offices", "ma_contacts", "ma_contact_office_affiliations"]
 
-async function protectedProbe(origin, bypass) {
+async function applicationProbe(origin, bypass, executionMode) {
+  if (executionMode === "github-runner") {
+    let authorized
+    let nextUrl = `${origin}/intake-v2`
+    let cookie = ""
+    for (let redirect = 0; redirect < 4; redirect += 1) {
+      if (new URL(nextUrl).origin !== origin) throw new Error("Live QA evidence failed: runner-redirect-origin")
+      authorized = await fetch(nextUrl, {
+        headers: cookie ? { Cookie: cookie } : {},
+        redirect: "manual",
+      })
+      if (authorized.status < 300 || authorized.status >= 400) break
+      const location = authorized.headers.get("location")
+      if (!location) throw new Error("Live QA evidence failed: runner-redirect")
+      nextUrl = new URL(location, nextUrl).href
+      const setCookie = authorized.headers.get("set-cookie")
+      if (setCookie) cookie = setCookie.split(";", 1)[0]
+    }
+    if (!authorized) throw new Error("Live QA evidence failed: runner-response")
+    return {
+      unauthenticatedBlocked: false,
+      authorizedStatus: authorized.status,
+      deploymentSha: authorized.headers.get("x-renew-deployment-sha") || "",
+      qaRef: authorized.headers.get("x-renew-qa-ref") || "",
+      qaApiRef: authorized.headers.get("x-renew-qa-api-ref") || "",
+      qaDatabaseRef: authorized.headers.get("x-renew-qa-database-ref") || "",
+      qaStorageRef: authorized.headers.get("x-renew-qa-storage-ref") || "",
+      qaStructure: authorized.headers.get("x-renew-qa-structure") || "",
+      qaProject: authorized.headers.get("x-renew-qa-project") || "",
+      qaMailPolicy: authorized.headers.get("x-renew-qa-mail-policy") || "",
+      qaMailTransport: authorized.headers.get("x-renew-qa-mail-transport") || "",
+      authHealthy: authorized.status === 200 && /^[a-z0-9]{20}$/.test(authorized.headers.get("x-renew-qa-database-ref") || ""),
+      finalOrigin: new URL(authorized.url).origin,
+      alias: new URL(authorized.url).hostname,
+    }
+  }
+  if (executionMode !== "vercel") throw new Error("Live QA evidence failed: execution-mode")
   const unauthenticated = await fetch(`${origin}/intake-v2`, { redirect: "manual" })
   let authorized
   let nextUrl = `${origin}/intake-v2`
@@ -97,6 +133,7 @@ async function deploymentEvidence(expectedSha, protection) {
 let database
 try {
   const origin = new URL(process.env.QA_BROWSER_BASE_URL).origin
+  const executionMode = process.env.QA_EXECUTION_MODE || "vercel"
   const expectedRef = process.env.QA_SUPABASE_PROJECT_REF
   const expectedSha = process.env.QA_EXPECTED_SHA
   database = await databaseClient()
@@ -116,8 +153,8 @@ try {
     storage.storage.listBuckets(),
     countPublicRows(database),
   ])
-  const protection = await protectedProbe(origin, process.env.VERCEL_AUTOMATION_BYPASS_SECRET)
-  const deployment = await deploymentEvidence(expectedSha, protection)
+  const protection = await applicationProbe(origin, process.env.VERCEL_AUTOMATION_BYPASS_SECRET, executionMode)
+  const deployment = executionMode === "vercel" ? await deploymentEvidence(expectedSha, protection) : null
   const evidence = {
     collectedAt: new Date().toISOString(),
     supabase: {
@@ -136,21 +173,34 @@ try {
       storageObjects: storageResult.rows[0].count,
       customerTableCounts: Object.fromEntries(customerResult.rows.map((row) => [row.table_name, row.row_count])),
     },
-    vercel: {
-      projectName: deployment.projectName,
-      target: deployment.target,
-      origin: protection.finalOrigin,
-      deploymentSha: protection.deploymentSha,
-      protection: { unauthenticatedBlocked: protection.unauthenticatedBlocked, authorizedStatus: protection.authorizedStatus },
-      aliases: [protection.alias],
-      productionEnvironmentAttached: deployment.productionEnvironmentAttached,
-      githubDeploymentId: deployment.githubDeploymentId || null,
-      vercelDeploymentId: deployment.vercelDeploymentId || null,
-      metaGithubCommitSha: deployment.metaGithubCommitSha || protection.deploymentSha,
-      metaGithubCommitRef: deployment.metaGithubCommitRef || "",
-      providerCreator: deployment.providerCreator,
-      providerEnvironmentUrl: deployment.providerEnvironmentUrl,
-    },
+    ...(executionMode === "github-runner"
+      ? {
+          runtime: {
+            provider: "github-runner",
+            origin: protection.finalOrigin,
+            candidateSha: protection.deploymentSha,
+            loopbackOnly: protection.finalOrigin === "https://127.0.0.1:3443",
+            productionEnvironmentAttached: false,
+            authorizedStatus: protection.authorizedStatus,
+          },
+        }
+      : {
+          vercel: {
+            projectName: deployment.projectName,
+            target: deployment.target,
+            origin: protection.finalOrigin,
+            deploymentSha: protection.deploymentSha,
+            protection: { unauthenticatedBlocked: protection.unauthenticatedBlocked, authorizedStatus: protection.authorizedStatus },
+            aliases: [protection.alias],
+            productionEnvironmentAttached: deployment.productionEnvironmentAttached,
+            githubDeploymentId: deployment.githubDeploymentId || null,
+            vercelDeploymentId: deployment.vercelDeploymentId || null,
+            metaGithubCommitSha: deployment.metaGithubCommitSha || protection.deploymentSha,
+            metaGithubCommitRef: deployment.metaGithubCommitRef || "",
+            providerCreator: deployment.providerCreator,
+            providerEnvironmentUrl: deployment.providerEnvironmentUrl,
+          },
+        }),
     email: { allowedRecipients: [process.env.QA_EMAIL_RECIPIENT], applicationPolicy: protection.qaMailPolicy, applicationTransport: protection.qaMailTransport },
     candidateContract: { expectedStructureFingerprint: contract.structureFingerprint },
     deployedContract: {
@@ -169,9 +219,9 @@ try {
   const failedHealth = ["database", "rest", "auth", "storage"].filter((name) => !evidence.supabase[`${name}Healthy`])
   if (failedHealth.length > 0) throw new Error(`Live QA evidence failed: provider-health-${failedHealth.join("-")}`)
   const allowStaleResidue = process.env.QA_EVIDENCE_MODE === "identity"
-  validateLiveEvidence({ expectedRef, expectedOrigin: origin, expectedSha, evidence, allowStaleResidue })
+  validateLiveEvidence({ expectedRef, expectedOrigin: origin, expectedSha, evidence, allowStaleResidue, executionMode })
   await writePrivateJson(EVIDENCE_FILE, evidence)
-  console.log(JSON.stringify({ ok: true, projectRef: expectedRef, origin, deploymentSha: expectedSha, evidenceMode: allowStaleResidue ? "identity" : "empty", customerRows: evidence.supabase.customerRows, authUsers: evidence.supabase.betterAuthUsers + evidence.supabase.supabaseAuthUsers, storageObjects: evidence.supabase.storageObjects, unauthenticatedBlocked: true, authorizedStatus: 200 }))
+  console.log(JSON.stringify({ ok: true, projectRef: expectedRef, origin, candidateSha: expectedSha, executionMode, evidenceMode: allowStaleResidue ? "identity" : "empty", customerRows: evidence.supabase.customerRows, authUsers: evidence.supabase.betterAuthUsers + evidence.supabase.supabaseAuthUsers, storageObjects: evidence.supabase.storageObjects, unauthenticatedBlocked: protection.unauthenticatedBlocked, authorizedStatus: protection.authorizedStatus }))
 } catch (error) {
   console.error(error instanceof Error && (error.message.startsWith("Live QA evidence failed:") || error.message.startsWith("Isolation preflight failed:") || error.message.startsWith("QA explicit deploy failed:")) ? error.message : "Live QA evidence failed: collection")
   process.exitCode = 1
