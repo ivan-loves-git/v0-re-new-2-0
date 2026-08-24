@@ -14,6 +14,8 @@ Temporary reviewers and subagents may perform bounded independent work and retur
 
 The binding QA-to-production ladder, evidence boundaries, risk tiers, release authority, specialist work-packet format, and credential ownership rules are in `docs/TESTING_RELEASE_PROTOCOL.md`. Follow it for every change.
 
+Required GitHub configuration: branch protection requires `Verify` universally, while `P1-P3 protected pilot` is selective Tier 3 release evidence and never a universal required check. Codex records the QA tier and a one-sentence reason in the pull request before merge, then applies only that tier's evidence.
+
 Candidate behaviour is tested in the isolated QA environment with synthetic data when the risk tier requires it. Production is verified only after the exact approved code reaches `main`; real team or customer records are not the primary test harness, and production writes require separate authority.
 
 Credentials are secrets. Load them only from the approved local source, GitHub environment, or provider project settings without printing them. Never put a secret value or bearer URL in a tracked file, commit, pull request, log, screenshot, agent packet, or chat. Do not stop at a login wall before checking the approved secret source, but do not improvise access or ask Ivan to expose credentials in conversation.
