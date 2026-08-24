@@ -10,5 +10,8 @@ describe("Golden candidate admission controller", () => {
     expect(validator).toContain('Promise.resolve({ permission: "admin" })')
     expect(validator).toContain('github(`/collaborators/${encodeURIComponent(actor)}/permission`, "actor-permission")')
     expect(validator).toContain('QA candidate failed: lookup-${label}-${response.status}')
+    expect(validator).toContain('message.startsWith("QA candidate contract failed:")')
+    expect(validator).toContain('"QA candidate failed: internal"')
+    expect(validator).not.toContain('"QA candidate failed: lookup"')
   })
 })
