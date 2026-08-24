@@ -255,7 +255,7 @@ jobs:
           ready="false"
           for _ in $(seq 1 60); do
             if ! kill -0 "$app_pid" 2>/dev/null || ! kill -0 "$proxy_pid" 2>/dev/null; then break; fi
-            served_sha="$(curl --cacert "$QA_LOOPBACK_PROXY_CERT_FILE" --silent --show-error --dump-header - --output /dev/null "$QA_BROWSER_BASE_URL/intake-v2" 2>/dev/null | tr -d '\r' | awk 'tolower($1) == "x-renew-deployment-sha:" { print $2; exit }')"
+            served_sha="$(curl --cacert "$QA_LOOPBACK_PROXY_CERT_FILE" --silent --show-error --dump-header - --output /dev/null "$QA_BROWSER_BASE_URL/intake-v2" 2>/dev/null | tr -d '\r' | awk 'tolower($1) == "x-renew-deployment-sha:" { print $2; exit }' || true)"
             if [ "$served_sha" = "$QA_EXPECTED_SHA" ]; then ready="true"; break; fi
             sleep 2
           done
