@@ -15,7 +15,6 @@ import { buildFixtureManifest } from "@/lib/qa/phase-b.mjs"
 import { acquireQaLease, loadAdmittedQaContract } from "@/lib/qa/lease-contract.mjs"
 import { assertMatchingStructureFingerprint, fingerprintStructureRows } from "@/lib/qa/structure-fingerprint.mjs"
 import { assertNoTopLevelTransactionControl } from "@/lib/qa/sql-safety.mjs"
-import { assertJobSecretIsolation } from "@/lib/qa/explicit-deploy.mjs"
 
 const QA_REF = "ypzrsrykirpqerfpozdm"
 const SHA = "a".repeat(40)
@@ -117,7 +116,7 @@ describe("permanent QA lane contract", () => {
     expect(readFileSync(`${process.cwd()}/lib/qa/permanent-contract.mjs`, "utf8")).toContain('TIER_3_AUTHORIZER = "ivan-loves-git"')
     const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
     expect(validator).toContain("actor,\n    runAttempt: process.env.GITHUB_RUN_ATTEMPT,")
-    for (const job of ["deploy-qa", "schema-sync", "golden", "finalize"]) {
+    for (const job of ["schema-sync", "golden", "finalize"]) {
       expect(jobBlock(golden, job)).toContain("github.run_attempt == '1'")
     }
     expect(concurrency).toContain("group: renew-permanent-qa")
@@ -170,14 +169,14 @@ describe("permanent QA lane contract", () => {
     expect(workflow).not.toContain("secrets.QA_FIXTURE_PREFIX")
     expect(workflow).toContain("checks: write")
     expect(workflow).toContain("QA_VERIFY_RUN_ID")
-    expect(workflow).toContain("health-created-at")
+    expect(workflow).not.toContain("health-created-at")
     expect(workflow).toContain("Check out authorized candidate contract as data")
     expect(workflow).toContain("Validate candidate database contract admission")
     expect(workflow).toContain("QA_CONTRACT_SHA256")
     expect(workflow).toContain("QA_SCHEMA_REVIEWED")
     expect(workflow).toContain("QA_SCHEMA_REVIEW_VERSION")
-    expect(workflow).toContain("QA_CANDIDATE_ROOT: .qa-candidate")
-    expect(workflow).toContain("Check out trusted QA controller and journeys")
+    expect(workflow).toContain("QA_CANDIDATE_ROOT: .")
+    expect(workflow).toContain("Check out exact authorized candidate")
     expect(sanitizer.match(/secretEnvironmentName = \/(.*)\//)?.[1]).not.toContain("QA_SUPABASE_PROJECT_REF")
   })
 
@@ -365,35 +364,28 @@ describe("permanent QA lane contract", () => {
     }
   })
 
-  it("keeps failed health blocking except after exact reviewed-transition admission", () => {
+  it("uses owner-gated exact-candidate admission without a daily-health or provider-deploy gate", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
-    const healthStart = workflow.indexOf("Require current-main health or reviewed transition recovery")
-    const deployStart = workflow.indexOf("deploy-qa:")
-    const healthStep = workflow.slice(healthStart, deployStart)
 
     expect(validator).toContain("const admission = await validateCandidateContractAdmission")
     expect(validator).toContain('reviewed_schema_transition=${admission.admission === "reviewed-schema-change"}')
     expect(workflow).toContain("reviewed_schema_transition: ${{ steps.candidate.outputs.reviewed_schema_transition }}")
-    expect(healthStart).toBeGreaterThan(workflow.indexOf("Validate candidate database contract admission"))
-    expect(deployStart).toBeGreaterThan(healthStart)
-    expect(healthStep).toContain("health_sha")
-    expect(healthStep).toContain('if [ "$health_ok" = "true" ]; then')
-    expect(healthStep).toContain('if [ "$QA_REVIEWED_SCHEMA_TRANSITION" != "true" ]; then')
-    expect(healthStep).toContain("Reviewed schema transition recovery path used; this does not bypass product tests.")
+    expect(workflow).not.toContain("Require current-main health")
+    expect(workflow).not.toContain("deploy-qa:")
+    expect(workflow).not.toContain("QA_VERCEL_TOKEN")
     for (const requiredStep of [
-      "Verify deployed application identities before database mutation",
       "Synchronize only the empty approved QA branch",
       "Acquire or safely recover database lease",
       "Require empty baseline after recovery",
-      "Run P1-P3 in protected Chromium",
+      "Run P1-P3 in Chromium",
       "Read back exact persisted acceptance state",
       "Cleanup exact manifest and label-owned fixtures",
       "Sanitize runner artifacts",
     ]) {
-      expect(workflow.indexOf(requiredStep)).toBeGreaterThan(deployStart)
+      expect(workflow.indexOf(requiredStep)).toBeGreaterThanOrEqual(0)
     }
-    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.deploy-qa.result == 'success' && needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
+    expect(workflow).toContain("QA_CHECK_CONCLUSION: ${{ needs.schema-sync.result == 'success' && needs.golden.result == 'success' && 'success' || 'failure' }}")
   })
 
   it("keeps live cleanup rehearsal out of ordinary candidate runs", () => {
@@ -572,13 +564,11 @@ describe("permanent QA lane contract", () => {
     expect(cleanup).toContain("opportunity-scope")
   })
 
-  it("keeps schema synchronization separate and transactional before browser fixtures", () => {
+  it("keeps schema synchronization separate and transactional before runner-hosted browser fixtures", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const sync = readFileSync(`${process.cwd()}/scripts/qa/sync-permanent-schema.mjs`, "utf8")
-    expect(workflow.indexOf("deploy-qa:")).toBeLessThan(workflow.indexOf("schema-sync:"))
     expect(workflow.indexOf("schema-sync:")).toBeLessThan(workflow.indexOf("golden:"))
-    expect(workflow).toContain("needs: [lane, deploy-qa, schema-sync]")
-    expect(workflow.indexOf("Verify deployed application identities before database mutation")).toBeLessThan(workflow.indexOf("Synchronize only the empty approved QA branch"))
+    expect(workflow).toContain("needs: [lane, schema-sync]")
     expect(sync).toContain("--single-transaction")
     expect(readFileSync(`${process.cwd()}/supabase/schema/permanent_qa_rebuild.sql`, "utf8")).toContain("DROP SCHEMA public CASCADE")
     expect(sync).toContain("ON_ERROR_STOP")
@@ -619,33 +609,19 @@ describe("permanent QA lane contract", () => {
     expect(deployedPreflight).not.toContain("${origin}/intake-v2")
   })
 
-  it("documents latest-pending supersession and independent provider evidence boundaries", () => {
+  it("documents exact-runner QA and keeps provider deployment health in the background", () => {
     const operations = readFileSync(`${process.cwd()}/docs/operations/permanent-qa-lane.md`, "utf8")
-    expect(operations).toContain("The v3 structure fingerprint")
-    expect(operations).toContain("retained as a contract identifier")
-    expect(operations).toContain("is not recomputed from provider-rendered catalog text")
+    expect(operations).toContain("functional exact-candidate QA is runner-hosted")
+    expect(operations).toContain("loopback HTTPS")
+    expect(operations).toContain("no production credentials, Vercel deployment token, public URL")
+    expect(operations).toContain("not Vercel deployment or production proof")
     expect(operations).toContain("exact versioned SQL-file checksums and the applied-file ledger")
-    expect(operations).toContain("Only an exact reviewed schema transition may recover from an old-contract daily-health deadlock")
-    expect(operations).toContain("does not bypass provider identity, empty-branch and lease checks, schema synchronization, the applied-file ledger, P1-P3, sanitization, cleanup or final check evaluation")
     expect(operations).toContain("latest-pending supersession")
     expect(operations).toContain("checked-in configuration, not live provider authority")
-    expect(operations).toContain("Persistence, parent, with-data and branch-count")
-    expect(operations).toContain("generic Vercel Marketplace integration is not approved")
-    expect(operations).toContain("cancelled before project connection")
-    expect(operations).toContain("1Password-based one-time transfer")
-    expect(operations).toContain("Validation deploy architecture (Route A)")
     expect(operations).toContain("required evidence only for an exact Tier 3 candidate explicitly authorized by Ivan")
-    expect(operations).toContain("QA_VERCEL_TOKEN")
-    expect(operations).toContain("meta.githubCommitSha")
-    expect(operations).toContain("ordinary source-repository feature branch: zero new validation-project deployments")
-    expect(operations).toContain("Corrected cutover order")
-    expect(operations).toContain("qa-explicit-deploy-gate2-packet.md")
+    expect(operations).toContain("not candidate admission or Tier 3 product QA")
+    expect(operations).not.toContain("QA_VERCEL_TOKEN")
     expect(operations).not.toContain("workflow_run admission")
-    const gate2 = readFileSync(`${process.cwd()}/docs/operations/qa-explicit-deploy-gate2-packet.md`, "utf8")
-    expect(gate2).toContain("Do **not** treat product cards as Done until canary + daily health pass")
-    expect(gate2).toContain("Validation Git disconnect")
-    expect(gate2).toContain("gitSource or source-upload")
-    expect(gate2).toContain("PR #27 remains parked")
   })
 
   it("documents proportional QA without making the protected lane a universal merge check", () => {
@@ -661,40 +637,23 @@ describe("permanent QA lane contract", () => {
     expect(agents).toContain("records the QA tier and a one-sentence reason")
   })
 
-  it("deploys admitted candidates from a secret-isolated deploy-qa job before database work", () => {
+  it("runs the exact admitted candidate privately on the GitHub runner without provider deployment credentials", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
-    const deployScript = readFileSync(`${process.cwd()}/scripts/qa/deploy-admitted-candidate.mjs`, "utf8")
     const evidence = readFileSync(`${process.cwd()}/scripts/qa/collect-live-evidence.mjs`, "utf8")
-    const deployStart = workflow.indexOf("deploy-qa:")
     const schemaStart = workflow.indexOf("schema-sync:")
     const goldenStart = workflow.indexOf("golden:")
-    expect(deployStart).toBeGreaterThan(workflow.indexOf("lane:"))
-    expect(schemaStart).toBeGreaterThan(deployStart)
+    expect(schemaStart).toBeGreaterThan(workflow.indexOf("lane:"))
     expect(goldenStart).toBeGreaterThan(schemaStart)
-    expect(workflow).toContain("node scripts/qa/deploy-admitted-candidate.mjs")
-    expect(workflow).toContain("Upload sanitized provider deploy evidence")
-    expect(workflow).toContain("load-provider-evidence.mjs")
-    expect(workflow).toContain("Check out trusted deploy controller only")
-    expect(deployScript).toContain("buildExplicitQaDeployRequest")
-    expect(deployScript).toContain("buildSanitizedProviderDeployEvidence")
-    expect(deployScript).toContain("secret-coexistence")
-    expect(evidence).toContain("providerEvidenceFromArtifact")
-    expect(evidence).toContain("secret-coexistence")
-    expect(workflow).not.toMatch(/golden:[\s\S]*QA_VERCEL_TOKEN/)
-    expect(workflow).not.toMatch(/schema-sync:[\s\S]*QA_VERCEL_TOKEN/)
-
-    expect(assertJobSecretIsolation({
-      jobName: "deploy-qa",
-      envKeys: jobEnvKeys(workflow, "deploy-qa"),
-    })).toEqual({ jobName: "deploy-qa", vercelToken: true, databaseSecrets: false })
-    expect(assertJobSecretIsolation({
-      jobName: "schema-sync",
-      envKeys: jobEnvKeys(workflow, "schema-sync"),
-    })).toEqual({ jobName: "schema-sync", vercelToken: false, databaseSecrets: true })
-    expect(assertJobSecretIsolation({
-      jobName: "golden",
-      envKeys: jobEnvKeys(workflow, "golden"),
-    })).toEqual({ jobName: "golden", vercelToken: false, databaseSecrets: true })
+    expect(workflow).not.toContain("deploy-admitted-candidate.mjs")
+    expect(workflow).not.toContain("QA_VERCEL_TOKEN")
+    expect(workflow).not.toContain("provider-evidence.json")
+    expect(workflow).toContain("QA_EXECUTION_MODE: github-runner")
+    expect(workflow).toContain("https://127.0.0.1:3443")
+    expect(workflow).toContain("Start loopback-only HTTPS candidate runtime")
+    expect(workflow).toContain("loopback-https-proxy.mjs")
+    expect(workflow).toContain("Stop and remove private loopback runtime")
+    expect(evidence).toContain("github-runner")
+    expect(evidence).toContain('const deployment = executionMode === "vercel" ? await deploymentEvidence(expectedSha, protection) : null')
   })
 
   it("proves ordinary feature pushes cannot invoke validation deployment", () => {

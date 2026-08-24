@@ -10,6 +10,7 @@ const REF = "ypzrsrykirpqerfpozdm"
 const SHA = "a".repeat(40)
 const ORIGIN = "https://renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app"
 const FINGERPRINT = "b".repeat(64)
+const RUNNER_ORIGIN = "https://127.0.0.1:3443"
 
 function contractEvidence() {
   return {
@@ -24,6 +25,36 @@ function contractEvidence() {
       validationProject: "renew-overnight-validation-20260820",
       mailPolicy: "allowlist",
       mailTransport: "simulated",
+    },
+  }
+}
+
+function runnerEvidence() {
+  return {
+    ...contractEvidence(),
+    collectedAt: "2026-08-24T10:00:00.000Z",
+    supabase: {
+      databaseRef: REF,
+      apiRef: REF,
+      storageRef: REF,
+      databaseHealthy: true,
+      restHealthy: true,
+      authHealthy: true,
+      storageHealthy: true,
+      storageBuckets: [{ id: "cvs", public: false }, { id: "opportunity-documents", public: false }],
+      customerRows: 0,
+      applicationRows: 0,
+      betterAuthUsers: 0,
+      supabaseAuthUsers: 0,
+      storageObjects: 0,
+    },
+    runtime: {
+      provider: "github-runner",
+      origin: RUNNER_ORIGIN,
+      candidateSha: SHA,
+      loopbackOnly: true,
+      productionEnvironmentAttached: false,
+      authorizedStatus: 200,
     },
   }
 }
@@ -105,6 +136,25 @@ describe("Phase B QA contracts", () => {
     expect(() => validateLiveEvidence({ expectedRef: REF, expectedOrigin: ORIGIN, expectedSha: SHA, evidence: { ...base, vercel: { ...base.vercel, protection: { unauthenticatedBlocked: false, authorizedStatus: 200 } } } })).toThrow("Live QA evidence failed: deployment-protection")
   })
 
+  it("accepts a loopback-only GitHub runner only for the exact candidate and rejects unsafe runtime evidence", () => {
+    const base = runnerEvidence()
+    const options = {
+      expectedRef: REF,
+      expectedOrigin: RUNNER_ORIGIN,
+      expectedSha: SHA,
+      evidence: base,
+      executionMode: "github-runner",
+    }
+
+    expect(validateLiveEvidence(options)).toEqual({ projectRef: REF, origin: RUNNER_ORIGIN, deploymentSha: SHA })
+    expect(() => validateLiveEvidence({ ...options, evidence: { ...base, runtime: { ...base.runtime, origin: ORIGIN } } })).toThrow("Live QA evidence failed: deployment-origin")
+    expect(() => validateLiveEvidence({ ...options, evidence: { ...base, runtime: { ...base.runtime, candidateSha: "c".repeat(40) } } })).toThrow("Live QA evidence failed: deployment-sha")
+    expect(() => validateLiveEvidence({ ...options, evidence: { ...base, runtime: { ...base.runtime, loopbackOnly: false } } })).toThrow("Live QA evidence failed: runner-loopback")
+    expect(() => validateLiveEvidence({ ...options, evidence: { ...base, runtime: { ...base.runtime, productionEnvironmentAttached: true } } })).toThrow("Live QA evidence failed: production-environment")
+    expect(() => validateLiveEvidence({ ...options, evidence: { ...base, runtime: { ...base.runtime, authorizedStatus: 401 } } })).toThrow("Live QA evidence failed: runner-status")
+    expect(() => validateLiveEvidence({ ...options, evidence: { ...base, runtime: { ...base.runtime, provider: "vercel" } } })).toThrow("Live QA evidence failed: runner-provider")
+  })
+
   it("rejects production or mismatched provider URLs before any cleanup connection", () => {
     const safe = {
       QA_SUPABASE_PROJECT_REF: REF,
@@ -117,6 +167,20 @@ describe("Phase B QA contracts", () => {
     expect(() => assertSafeQaRuntime({ ...safe, QA_SUPABASE_PROJECT_REF: "iiuqcdnmxhtyispnykgf" })).toThrow("QA runtime isolation failed: project-ref")
     expect(() => assertSafeQaRuntime({ ...safe, DATABASE_URL: "postgresql://postgres.iiuqcdnmxhtyispnykgf:redacted@aws-0-eu-central-2.pooler.supabase.com:6543/postgres" })).toThrow("QA runtime isolation failed: database-ref")
     expect(() => assertSafeQaRuntime({ ...safe, QA_BROWSER_BASE_URL: "https://app.re-new.team", QA_VALIDATION_ORIGIN: "https://app.re-new.team" })).toThrow("QA runtime isolation failed: origin")
+  })
+
+  it("allows the runner mode only on the fixed local HTTPS origin", () => {
+    const safe = {
+      QA_EXECUTION_MODE: "github-runner",
+      QA_SUPABASE_PROJECT_REF: REF,
+      NEXT_PUBLIC_SUPABASE_URL: `https://${REF}.supabase.co`,
+      DATABASE_URL: `postgresql://postgres.${REF}:redacted@aws-0-eu-central-2.pooler.supabase.com:6543/postgres`,
+      QA_BROWSER_BASE_URL: RUNNER_ORIGIN,
+      QA_VALIDATION_ORIGIN: RUNNER_ORIGIN,
+    }
+    expect(assertSafeQaRuntime(safe)).toEqual({ projectRef: REF, origin: RUNNER_ORIGIN })
+    expect(() => assertSafeQaRuntime({ ...safe, QA_BROWSER_BASE_URL: "https://localhost:3443", QA_VALIDATION_ORIGIN: "https://localhost:3443" })).toThrow("QA runtime isolation failed: origin")
+    expect(() => assertSafeQaRuntime({ ...safe, QA_EXECUTION_MODE: "vercel" })).toThrow("QA runtime isolation failed: origin")
   })
 
   it("rehearses the exact active-opportunity RPC inside a rollback-only savepoint", () => {
@@ -165,7 +229,11 @@ describe("Phase B QA contracts", () => {
     expect(workflow).toContain("contents: read")
     expect(workflow).not.toContain("id-token: write")
     expect(packageJson.scripts["qa:browser:clean-run"]).toBe("node scripts/qa/verify-playwright-clean-run.mjs")
-    expect(workflow.indexOf("Run P1-P3 in protected Chromium")).toBeLessThan(workflow.indexOf("Enforce first-attempt P1-P3 evidence"))
+    expect(workflow).toContain("QA_EXECUTION_MODE: github-runner")
+    expect(workflow).toContain("https://127.0.0.1:3443")
+    expect(workflow).not.toContain("deploy-qa:")
+    expect(workflow).not.toContain("secrets.QA_VERCEL_TOKEN")
+    expect(workflow.indexOf("Run P1-P3 in Chromium")).toBeLessThan(workflow.indexOf("Enforce first-attempt P1-P3 evidence"))
     expect(workflow.indexOf("Enforce first-attempt P1-P3 evidence")).toBeLessThan(workflow.indexOf("Read back exact persisted acceptance state"))
     const cleanup = workflow.indexOf("Cleanup exact manifest and label-owned fixtures")
     const upload = workflow.indexOf("Upload sanitized evidence")

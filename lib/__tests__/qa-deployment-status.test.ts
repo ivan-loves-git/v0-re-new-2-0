@@ -263,32 +263,29 @@ describe("QA deployment status selection", () => {
     ])).toBeUndefined()
   })
 
-  it("keeps exact deployed identity and protection verification immediately after the explicit deploy", async () => {
+  it("runs the exact candidate privately on the GitHub runner without a provider deploy", async () => {
     const workflow = await import("node:fs/promises").then(({ readFile }) => readFile(".github/workflows/golden-journeys.yml", "utf8"))
-    expect(workflow).toMatch(
-      /- name: Explicitly deploy admitted candidate branch and SHA[\s\S]*?run: node scripts\/qa\/deploy-admitted-candidate\.mjs/,
-    )
-    expect(workflow).toContain("Upload sanitized provider deploy evidence")
-    expect(workflow).toContain("load-provider-evidence.mjs")
-    expect(workflow).toContain("Verify deployed application identities before database mutation")
-    expect(workflow).toContain("secrets.QA_VERCEL_TOKEN")
-    expect(workflow).not.toContain("Wait for exact qa deployment Ready event")
+    expect(workflow).toContain("name: Run exact-candidate P1-P3 on isolated QA")
+    expect(workflow).toContain("QA_EXECUTION_MODE: github-runner")
+    expect(workflow).toContain("QA_BROWSER_BASE_URL: https://127.0.0.1:3443")
+    expect(workflow).toContain("Check out exact authorized candidate")
+    expect(workflow).toContain("Start loopback-only HTTPS candidate runtime")
+    expect(workflow).toContain("Collect exact runner identity before recovery")
+    expect(workflow).toContain("Stop and remove private loopback runtime")
+    expect(workflow).not.toContain("deploy-qa:")
+    expect(workflow).not.toContain("secrets.QA_VERCEL_TOKEN")
+    expect(workflow).not.toContain("deploy-admitted-candidate.mjs")
+    expect(workflow).not.toContain("load-provider-evidence.mjs")
     expect(workflow).not.toContain("createDeployments")
     expect(workflow).not.toContain("git.deploymentEnabled")
     expect(workflow).not.toContain("workflow_run:")
   })
 
-  it("uses the bounded stable-alias convergence waiter after assignment", async () => {
+  it("keeps the legacy explicit-deploy controller bounded for the separate daily-health lane", async () => {
     const controller = await import("node:fs/promises").then(({ readFile }) => readFile("scripts/qa/deploy-admitted-candidate.mjs", "utf8"))
-    const workflow = await import("node:fs/promises").then(({ readFile }) => readFile(".github/workflows/golden-journeys.yml", "utf8"))
     expect(controller).toContain("waitForStableQaAliasSha")
     expect(controller).toMatch(/deadline: Date\.now\(\) \+ 2 \* 60 \* 1000/)
     expect(controller).toContain("pollInterval: 5_000")
     expect(controller).toContain('fail("alias-sha")')
-    expect(workflow).toMatch(/deploy-qa:[\s\S]*?timeout-minutes: 15/)
-    const providerReadinessMs = 8 * 60 * 1000
-    const aliasConvergenceMs = 2 * 60 * 1000
-    const workflowBudgetMs = 15 * 60 * 1000
-    expect(workflowBudgetMs - providerReadinessMs - aliasConvergenceMs).toBeGreaterThanOrEqual(5 * 60 * 1000)
   })
 })
