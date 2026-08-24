@@ -10,7 +10,7 @@ Status: **controller installed; end-to-end commissioning blocked at the provider
 
 - Supabase: exactly one persistent Micro branch under production project `iiuqcdnmxhtyispnykgf`; no production data clone and no PR ownership.
 - Vercel: existing protected project `renew-overnight-validation-20260820`, Preview target, provider-managed stable `qa` branch alias `renew-overnight-validation-git-59fa20-myworkmail4-pngs-projects.vercel.app`, no production/custom domain. The manually assigned `renew-overnight-validation-git-qa-myworkmail4-pngs-projects.vercel.app` alias is pinned and must be rejected.
-- GitHub: environment `qa-pilot` (name retained). `Verify` is the only branch-protection status requirement during the pre-beta phase. `P1-P3 protected pilot` remains mandatory release evidence for behavioural and high-consequence product changes, but is not a branch-protection requirement. The historical `qa` git pointer is retired and must not be moved by the controller.
+- GitHub: environment `qa-pilot` (name retained), candidate check `P1-P3 protected pilot`. It is required evidence for an admitted Tier 3 candidate, not a universal branch-protection requirement. The historical `qa` git pointer is retired and must not be moved by the controller.
 - No premium runner, additional project, email plan or external service is part of this lane.
 
 ## Cost

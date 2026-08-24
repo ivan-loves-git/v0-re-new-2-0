@@ -619,6 +619,7 @@ describe("permanent QA lane contract", () => {
     expect(operations).toContain("cancelled before project connection")
     expect(operations).toContain("1Password-based one-time transfer")
     expect(operations).toContain("Validation deploy architecture (Route A)")
+    expect(operations).toContain("required evidence for an admitted Tier 3 candidate")
     expect(operations).toContain("QA_VERCEL_TOKEN")
     expect(operations).toContain("meta.githubCommitSha")
     expect(operations).toContain("ordinary source-repository feature branch: zero new validation-project deployments")
@@ -630,6 +631,19 @@ describe("permanent QA lane contract", () => {
     expect(gate2).toContain("Validation Git disconnect")
     expect(gate2).toContain("gitSource or source-upload")
     expect(gate2).toContain("PR #27 remains parked")
+  })
+
+  it("documents proportional QA without making the protected lane a universal merge check", () => {
+    const protocol = readFileSync(`${process.cwd()}/docs/TESTING_RELEASE_PROTOCOL.md`, "utf8")
+    const agents = readFileSync(`${process.cwd()}/AGENTS.md`, "utf8")
+
+    expect(protocol).toContain("`Verify` is the universal automated check for runtime code")
+    expect(protocol).toContain("use it only for Tier 3")
+    expect(protocol).toContain("Tier 2 uses its relevant exact-candidate journey")
+    expect(protocol).toContain("A Tier 3 candidate must not merge until its exact-candidate protected P1-P3 check succeeds")
+    expect(protocol).toContain("A second same-SHA failure in an eligible transient category stops the release")
+    expect(agents).toContain("branch protection requires `Verify` universally")
+    expect(agents).toContain("records the QA tier and a one-sentence reason")
   })
 
   it("deploys admitted candidates from a secret-isolated deploy-qa job before database work", () => {
