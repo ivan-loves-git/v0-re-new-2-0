@@ -43,7 +43,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Enforce production dependency audit policy
-        run: pnpm audit --prod --json > /tmp/production-dependency-audit.json && node scripts/verify-production-dependency-audit.mjs /tmp/production-dependency-audit.json
+        run: |
+          set +e
+          pnpm audit --prod --json > /tmp/production-dependency-audit.json
+          audit_status=$?
+          set -e
+          node scripts/verify-production-dependency-audit.mjs /tmp/production-dependency-audit.json
+          test "$audit_status" -eq 0
 
       - name: Install Chromium for generated trace verification
         run: pnpm exec playwright install --with-deps chromium

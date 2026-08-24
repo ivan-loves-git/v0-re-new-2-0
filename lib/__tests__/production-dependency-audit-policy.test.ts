@@ -13,4 +13,9 @@ describe("production dependency audit policy", () => {
   it("fails the controlled expired-exception fixture", () => {
     expect(() => assertProductionAudit(audit, policy("scripts/fixtures/production-audit-policy-expired.json"), new Date("2026-08-24T00:00:00Z"))).toThrow("production-dependency-audit-failed")
   })
+
+  it("fails closed for malformed or audit-error payloads", () => {
+    expect(() => assertProductionAudit({ error: "registry" }, policy("scripts/production-dependency-audit-policy.json"))).toThrow("production-dependency-audit-invalid")
+    expect(() => assertProductionAudit({}, policy("scripts/production-dependency-audit-policy.json"))).toThrow("production-dependency-audit-invalid")
+  })
 })
