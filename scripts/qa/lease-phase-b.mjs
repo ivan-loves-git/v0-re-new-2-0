@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { randomBytes } from "node:crypto"
 import { spawn } from "node:child_process"
-import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { isDeepStrictEqual } from "node:util"
+import { acquireQaLease, loadAdmittedQaContract } from "../../lib/qa/lease-contract.mjs"
 import { buildFixtureManifest } from "../../lib/qa/phase-b.mjs"
 import {
   MANIFEST_FILE,
@@ -18,10 +18,15 @@ const action = process.argv[2]
 const owner = process.env.QA_LEASE_OWNER
 const runId = process.env.QA_RUN_ID
 const candidateSha = process.env.QA_EXPECTED_SHA
-const contract = JSON.parse(await readFile(resolve(process.cwd(), "supabase/qa-contract.json"), "utf8"))
+const SAFE_CONTRACT_FAILURES = new Set([
+  "QA lease contract failed: candidate-root",
+  "QA lease contract failed: contract",
+])
+
+class QaLeaseFailure extends Error {}
 
 function fail(code) {
-  throw new Error(`QA lease failed: ${code}`)
+  throw new QaLeaseFailure(`QA lease failed: ${code}`)
 }
 
 async function runRecoveryCleanup() {
@@ -49,13 +54,19 @@ try {
   if (!owner || owner.length < 32) fail("owner")
   if (!runId || !/^[A-Za-z0-9][A-Za-z0-9-]{2,63}$/.test(runId)) fail("run-id")
   if (!/^[0-9a-f]{40}$/.test(candidateSha || "")) fail("candidate-sha")
+  const contract = await loadAdmittedQaContract()
   database = await databaseClient()
   const state = await database.query("SELECT structure_fingerprint, blocked_reason FROM qa_control.schema_state WHERE singleton=true")
   if (state.rows[0]?.blocked_reason) fail("schema-blocked")
   if (state.rows[0]?.structure_fingerprint !== contract.structureFingerprint) fail("structure-fingerprint")
 
   if (action === "acquire") {
-    let lease = (await database.query("SELECT qa_control.acquire_lease($1,$2,$3,$4,$5) AS result", [runId, owner, candidateSha, contract.structureFingerprint, 900])).rows[0].result
+    let lease = await acquireQaLease(database, {
+      runId,
+      owner,
+      candidateSha,
+      structureFingerprint: contract.structureFingerprint,
+    })
     if (lease.status === "busy") fail("busy")
     if (lease.status === "recovery-required") {
       const recoveryOwner = `${owner}-${randomBytes(16).toString("hex")}`
@@ -79,7 +90,12 @@ try {
       await database.query("SELECT qa_control.finish_recovery($1)", [recoveryOwner])
       process.env.QA_RUN_ID = runId
       process.env.QA_FIXTURE_PREFIX = `TEST-${runId}`
-      lease = (await database.query("SELECT qa_control.acquire_lease($1,$2,$3,$4,$5) AS result", [runId, owner, candidateSha, contract.structureFingerprint, 900])).rows[0].result
+      lease = await acquireQaLease(database, {
+        runId,
+        owner,
+        candidateSha,
+        structureFingerprint: contract.structureFingerprint,
+      })
     }
     if (lease.status !== "acquired") fail("acquire")
     console.log(JSON.stringify({ ok: true, status: "acquired", runId, recovered: Boolean(lease.recovered) }))
@@ -96,7 +112,12 @@ try {
     fail("action")
   }
 } catch (error) {
-  console.error(error instanceof Error && error.message.startsWith("QA lease failed:") ? error.message : "QA lease failed: database")
+  const safeMessage = error instanceof QaLeaseFailure || (
+    error instanceof Error && SAFE_CONTRACT_FAILURES.has(error.message)
+  )
+    ? error.message
+    : "QA lease failed: database"
+  console.error(safeMessage)
   process.exitCode = 1
 } finally {
   await database?.end().catch(() => {})
