@@ -17,7 +17,7 @@ vi.mock("@/lib/email", () => ({
   sendEmail: mocks.sendEmail,
   wasEmailSent: mocks.wasEmailSent,
 }))
-vi.mock("@/lib/actions/emails", () => ({
+vi.mock("@/lib/email/template-content", () => ({
   getTemplateSubject: mocks.getTemplateSubject,
   getTemplateBody: mocks.getTemplateBody,
 }))
