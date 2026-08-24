@@ -27,6 +27,8 @@ The existing migration files remain production history and must not be replayed 
 
 Future application schema changes must be captured as ordinary additive migrations after build 771. When the sanctioned baseline changes, create a new versioned artifact and fingerprint rather than editing this one silently.
 
+`772_w147_auth_data_api.sql` is the additive W-147 overlay applied after the immutable build-771 public artifact. Its pinned fingerprint is derived in a disposable PostgreSQL 17.10 fixture with the canonical `STRUCTURE_FINGERPRINT_SQL`; it preserves W-096's explicit clipboard/PDR SELECT-only exceptions while revoking every browser write, sequence and routine path.
+
 ## Commands
 
 Verify the artifact before use:
