@@ -1,6 +1,6 @@
 {
   "version": "824-m2-draft-activation-v1",
-  "structureFingerprint": "a7b92af6d27593b73003d079ae7fc470a4e23e92ab8c8c9b1ed6e2aaa73ddf2b",
+  "structureFingerprint": "2dc6c7bf6588bd23d06e1efe7c01f642bcfe66a6d482ce10f3ec5e120f3c0d48",
   "files": [
     {
       "path": "supabase/schema/771_extensions.sql",

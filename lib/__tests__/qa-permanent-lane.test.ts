@@ -31,7 +31,7 @@ describe("permanent QA lane contract", () => {
 
     expect(contract).toEqual({
       version: "824-m2-draft-activation-v1",
-      structureFingerprint: "a7b92af6d27593b73003d079ae7fc470a4e23e92ab8c8c9b1ed6e2aaa73ddf2b",
+      structureFingerprint: "2dc6c7bf6588bd23d06e1efe7c01f642bcfe66a6d482ce10f3ec5e120f3c0d48",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
