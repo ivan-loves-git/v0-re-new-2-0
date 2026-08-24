@@ -1,4 +1,4 @@
-# Permanent private QA schema contract — release build 771
+# Permanent private QA schema contract — release build 771, contract v4
 
 ## Purpose
 
@@ -13,7 +13,7 @@ This directory provides the deterministic, sanitized structure contract for Re-N
 - `771_public_schema.sha256` fingerprints the sanctioned, sanitized artifact.
 - `771_extensions.sql` records the released extension dependencies needed by the public schema.
 - `771_preview_cleanup.sql` removes only the known partial sequence left by the pre-baseline Git migration attempt, then rejects every other public-schema object inside the same reconstruction transaction.
-- `771_test_storage.sql` creates only two empty private buckets from fixed repository-owned setup; it copies no bucket or object data.
+- `771_test_storage.sql` creates only two empty private buckets from fixed repository-owned setup; it copies no bucket or object data. Its policy fixture is independently checksummed by contract v4 and is intentionally excluded from `structureFingerprint`, which covers only the sanctioned `public` schema export.
 - `qa_control.sql` owns the QA-only lease, heartbeat, server-side manifest, recovery ownership and schema-blocked state. It is not part of the production public schema.
 - `permanent_qa_rebuild.sql` is the mismatch-only, advisory-locked rebuild guard. It runs only after the synchronizer independently proves the exact non-production branch is empty and has no active lease.
 - `../qa-contract.json` checksums every synchronization input and records the expected live catalog fingerprint.

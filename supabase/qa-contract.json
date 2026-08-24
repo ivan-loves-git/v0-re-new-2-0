@@ -1,5 +1,5 @@
 {
-  "version": "771-permanent-qa-v3",
+  "version": "771-permanent-qa-v4",
   "structureFingerprint": "37d01bc56c45aa8fe754893427feacb9da300e62449d34f85e331710eca33f24",
   "files": [
     {
@@ -20,7 +20,7 @@
     },
     {
       "path": "supabase/schema/771_test_storage.sql",
-      "sha256": "55a91d3c3db75e6ea9d0d55f3d0165bb087e83451174147c58a7c951dc91e8b4"
+      "sha256": "ecd41fd86c5566f77fadc53998ff7fdca12a4e81d9142ca07cfc1db620bf545f"
     }
   ]
 }
