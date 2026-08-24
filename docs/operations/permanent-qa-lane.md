@@ -89,7 +89,7 @@ The v3 structure fingerprint uses canonical PostgreSQL `C` ordering for relation
 
 ## Recovery and blocked state
 
-`qa_control.lease` stores one owner hash, run ID, candidate SHA, heartbeat/expiry, candidate structure fingerprint, exact server-side manifest and singleton snapshots. An active foreign lease cannot be recovered. An expired lease must first be claimed by a distinct recovery owner; cleanup is limited to its persisted IDs/objects and exact run labels. Unlabelled or ambiguous rows are release blockers and must not be deleted automatically.
+`qa_control.lease` stores one owner hash, run ID, candidate SHA, heartbeat/expiry, candidate structure fingerprint, exact server-side manifest and singleton snapshots. The trusted controller resolves that fingerprint only from the admitted candidate directory named by `QA_CANDIDATE_ROOT`, after canonical path-containment and contract-shape checks; the controller's own contract cannot authorize a candidate lease. An active foreign lease cannot be recovered. An expired lease must first be claimed by a distinct recovery owner; cleanup is limited to its persisted IDs/objects and exact run labels. Unlabelled or ambiguous rows are release blockers and must not be deleted automatically.
 
 A failed or mismatched schema synchronization writes `qa_control.schema_state.blocked_reason`. Browser fixtures are forbidden while this is set. Recovery requires an empty-branch readback, deterministic synchronization and exact fingerprint match; it is not a production rollback mechanism.
 
