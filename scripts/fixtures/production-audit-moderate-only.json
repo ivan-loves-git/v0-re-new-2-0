@@ -1,0 +1,10 @@
+{
+  "advisories": {
+    "GHSA-moderate": {
+      "module_name": "moderate-module",
+      "severity": "moderate",
+      "findings": [{ "paths": ["root>moderate-module"] }]
+    }
+  },
+  "metadata": {}
+}

@@ -1,0 +1,10 @@
+{
+  "vulnerabilities": {
+    "modern-module": {
+      "severity": "high",
+      "via": [{ "source": 1099999 }, { "name": "GHSA-modern" }],
+      "nodes": ["node_modules/modern-module", "node_modules/other/node_modules/modern-module"]
+    }
+  },
+  "metadata": {}
+}

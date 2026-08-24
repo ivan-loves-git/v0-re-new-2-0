@@ -1,0 +1,15 @@
+{
+  "advisories": {
+    "GHSA-allowed": {
+      "module_name": "shared-module",
+      "severity": "high",
+      "findings": [{ "paths": ["root>one>shared-module", "root>two>shared-module"] }]
+    },
+    "GHSA-unapproved": {
+      "module_name": "shared-module",
+      "severity": "high",
+      "findings": [{ "paths": ["root>one>shared-module"] }]
+    }
+  },
+  "metadata": {}
+}
