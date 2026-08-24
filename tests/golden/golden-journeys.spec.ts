@@ -350,7 +350,7 @@ test.describe.serial("Golden journeys", () => {
     // reused. Cross-firm eligibility is covered by the focused contract test
     // above and by the absence of Acme Paris from this firm's office list.
     await w129Page.locator("#add_existing_firm_office").click()
-    await expect(w129Page.getByLabel("Operating office")).toBeVisible()
+    await expect(w129Page.locator("#office_name")).toBeVisible()
     await expect(w129Page.getByRole("button", { name: "Create staff-only context" })).toBeVisible()
     await w129Page.locator("#use_existing_firm_office").click()
     await expect(w129Page.locator("#existing_office_id")).toContainText("Choose this firm's operating office")
