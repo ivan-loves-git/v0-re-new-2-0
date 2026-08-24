@@ -282,7 +282,8 @@ test.describe.serial("Golden journeys", () => {
     await page.goto("/opportunities/new")
     await choose(page, "Status", "Active")
     await choose(page, "Secteur", "Tech & Digital")
-    if (await page.getByLabel("Canonical geography").count()) {
+    const geographyMandatesEnabled = (await page.getByLabel("Canonical geography").count()) > 0
+    if (geographyMandatesEnabled) {
       await choose(page, "Canonical geography", new RegExp(manifest.fixturePrefix))
     } else {
       await page.getByLabel("Ref. Mandat").fill(`${manifest.fixturePrefix}-REF`)
@@ -371,9 +372,13 @@ test.describe.serial("Golden journeys", () => {
     await page.locator(`#office_affiliation_${manifest.ids.affiliation}`).click()
     await page.locator(`input[name="primary_affiliation_id"][value="${manifest.ids.affiliation}"]`).check()
     const submitted = await page.locator("form").evaluate((form) => Object.fromEntries(new FormData(form as HTMLFormElement).entries()))
+    if (geographyMandatesEnabled) {
+      expect(submitted).toMatchObject({ geography_node_id: manifest.ids.geography })
+    } else {
+      expect(submitted).not.toHaveProperty("geography_node_id")
+    }
     expect(submitted).toMatchObject({
       status: "active",
-      geography_node_id: manifest.ids.geography,
       source_office_id: manifest.ids.office,
       affiliation_ids: manifest.ids.affiliation,
       primary_affiliation_id: manifest.ids.affiliation,
