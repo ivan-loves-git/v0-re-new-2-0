@@ -162,9 +162,7 @@ jobs:
 
       - name: Recover only an expired manifest-bound QA lease
         working-directory: .qa-candidate
-        run: |
-          pnpm qa:lease:acquire
-          pnpm qa:lease:release
+        run: pnpm qa:lease:recover
 
   schema-sync:
     name: Synchronize candidate database contract
