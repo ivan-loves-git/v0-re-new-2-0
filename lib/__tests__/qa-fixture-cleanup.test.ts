@@ -75,6 +75,30 @@ describe("exact QA fixture cleanup rehearsal", () => {
     expect(commit).toBeGreaterThan(enable)
   })
 
+  it("removes only exact retained fixture artifacts and restores every product guard", () => {
+    const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
+    const common = readFileSync(`${process.cwd()}/scripts/qa/phase-b-common.mjs`, "utf8")
+    const begin = script.indexOf('database.query("BEGIN")')
+    const disable = script.indexOf("setRetainedFixtureTriggers(database, false)")
+    const removeArtifacts = script.indexOf("DELETE FROM public.opportunity_nda_artifacts WHERE id = ANY")
+    const removeDocuments = script.indexOf("DELETE FROM public.opportunity_documents WHERE id = ANY")
+    const enable = script.indexOf("setRetainedFixtureTriggers(database, true)")
+    const commit = script.indexOf('database.query("COMMIT")')
+    const postCommitReadback = script.indexOf("assertQaMutationTriggersEnabled(database)", commit)
+
+    expect(common).toContain("opportunity_nda_artifacts_immutable")
+    expect(common).toContain("opportunity_documents_protect_nda_artifacts")
+    expect(common).toContain("opportunity_documents_retain_source_and_im")
+    expect(disable).toBeGreaterThan(begin)
+    expect(removeArtifacts).toBeGreaterThan(disable)
+    expect(removeDocuments).toBeGreaterThan(removeArtifacts)
+    expect(enable).toBeGreaterThan(removeDocuments)
+    expect(commit).toBeGreaterThan(enable)
+    expect(postCommitReadback).toBeGreaterThan(commit)
+    expect(script).toContain("artifactIds")
+    expect(script).toContain("documentIds")
+  })
+
   it("reports only a sanitized database error class when cleanup fails", () => {
     const script = readFileSync(`${process.cwd()}/scripts/qa/cleanup-phase-b.mjs`, "utf8")
     expect(script).toContain("safeDatabaseToken")

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { isDeepStrictEqual } from "node:util"
-import { MANIFEST_FILE, RUNTIME_FIXTURES_FILE, RUN_DIR, SINGLETON_BEFORE_FILE, assertLeaseAuthority, assertQaMutationTriggersEnabled, databaseClient, readJson, recordRuntimeFixtures, removeRunnerSecrets, setProvisionalIdentityTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
+import { MANIFEST_FILE, RUNTIME_FIXTURES_FILE, RUN_DIR, SINGLETON_BEFORE_FILE, assertLeaseAuthority, assertQaMutationTriggersEnabled, databaseClient, readJson, recordRuntimeFixtures, removeRunnerSecrets, setProvisionalIdentityTriggers, setRetainedFixtureTriggers, storageClient, writePrivateJson } from "./phase-b-common.mjs"
 
 function safeDatabaseToken(error) {
   const constraint = String(error?.constraint ?? "").replace(/[^a-z0-9_]/gi, "_")
@@ -97,6 +97,14 @@ try {
     ? await database.query("SELECT id FROM public.opportunity_pursuit_evidence WHERE match_id = ANY($1::uuid[])", [matchIds])
     : { rows: [] }
   const evidenceIds = scopedEvidence.rows.map((row) => row.id)
+  const scopedArtifacts = opportunityIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunity_nda_artifacts WHERE opportunity_id = ANY($1::uuid[])", [opportunityIds])
+    : { rows: [] }
+  const artifactIds = scopedArtifacts.rows.map((row) => row.id)
+  const scopedDocuments = opportunityIds.length > 0
+    ? await database.query("SELECT id FROM public.opportunity_documents WHERE opportunity_id = ANY($1::uuid[])", [opportunityIds])
+    : { rows: [] }
+  const documentIds = scopedDocuments.rows.map((row) => row.id)
   // A browser failure can occur after either W-127 action commits but before
   // the returned IDs reach the runner manifest. Recover only the exact,
   // run-labelled firm owned by this leased staff actor, then require every
@@ -149,6 +157,8 @@ try {
     opportunityProbeIds,
     matchIds,
     evidenceIds,
+    artifactIds,
+    documentIds,
     storageObjects: objectNames,
   })
   if (objectNames.length > 0) {
@@ -158,6 +168,10 @@ try {
 
   await database.query("BEGIN")
   await database.query("ALTER TABLE public.opportunity_pursuit_evidence DISABLE TRIGGER opportunity_pursuit_evidence_immutable")
+  // Product evidence is immutable in every application path. This leased QA
+  // teardown exception is transactional and can delete only the exact child
+  // IDs recovered from the already-owned synthetic opportunities above.
+  await setRetainedFixtureTriggers(database, false)
   await setProvisionalIdentityTriggers(database, false)
   if (opportunityProbeIds.length > 0) {
     await database.query("DELETE FROM public.opportunity_ma_contacts WHERE opportunity_id = ANY($1::uuid[])", [opportunityProbeIds])
@@ -165,6 +179,8 @@ try {
   }
   if (opportunityIds.length > 0) {
     if (evidenceIds.length > 0) await database.query("DELETE FROM public.opportunity_pursuit_evidence WHERE id = ANY($1::uuid[])", [evidenceIds])
+    if (artifactIds.length > 0) await database.query("DELETE FROM public.opportunity_nda_artifacts WHERE id = ANY($1::uuid[])", [artifactIds])
+    if (documentIds.length > 0) await database.query("DELETE FROM public.opportunity_documents WHERE id = ANY($1::uuid[])", [documentIds])
     await database.query("DELETE FROM public.opportunity_pursuit_events WHERE opportunity_id = ANY($1::uuid[])", [opportunityIds])
     await database.query("DELETE FROM public.opportunity_ma_contacts WHERE opportunity_id = ANY($1::uuid[])", [opportunityIds])
     if (matchIds.length > 0) await database.query("DELETE FROM public.opportunity_matches WHERE id = ANY($1::uuid[])", [matchIds])
@@ -219,16 +235,18 @@ try {
   }
   await database.query("SET CONSTRAINTS ALL IMMEDIATE")
   await setProvisionalIdentityTriggers(database, true)
+  await setRetainedFixtureTriggers(database, true)
   await database.query("ALTER TABLE public.opportunity_pursuit_evidence ENABLE TRIGGER opportunity_pursuit_evidence_immutable")
   await database.query("COMMIT")
+  await assertQaMutationTriggersEnabled(database)
 
   const residue = await database.query(`SELECT
     (SELECT count(*)::int FROM public.repreneurs WHERE id = ANY($1::uuid[])) + (SELECT count(*)::int FROM public.email_logs WHERE repreneur_id = ANY($1::uuid[])) AS repreneurs,
     (SELECT count(*)::int FROM public.opportunities WHERE id = ANY($2::uuid[])) + (SELECT count(*)::int FROM public.opportunity_ma_contacts WHERE opportunity_id = ANY($2::uuid[])) AS opportunities,
-    (SELECT count(*)::int FROM public.opportunity_matches WHERE id = ANY($3::uuid[])) + (SELECT count(*)::int FROM public.opportunity_pursuit_evidence WHERE id = ANY($4::uuid[])) AS journey_rows,
+    (SELECT count(*)::int FROM public.opportunity_matches WHERE id = ANY($3::uuid[])) + (SELECT count(*)::int FROM public.opportunity_pursuit_evidence WHERE id = ANY($4::uuid[])) + (SELECT count(*)::int FROM public.opportunity_nda_artifacts WHERE id = ANY($13::uuid[])) + (SELECT count(*)::int FROM public.opportunity_documents WHERE id = ANY($14::uuid[])) AS journey_rows,
     (SELECT count(*)::int FROM public.ma_firms WHERE id = ANY($5::uuid[])) + (SELECT count(*)::int FROM public.ma_offices WHERE id = ANY($6::uuid[])) + (SELECT count(*)::int FROM public.ma_contacts WHERE id = ANY($7::uuid[])) + (SELECT count(*)::int FROM public.ma_contact_office_affiliations WHERE id = ANY($8::uuid[])) + (SELECT count(*)::int FROM public.ma_provisional_source_contexts WHERE context_key=$9) + (SELECT count(*)::int FROM public.wave_journey_settings WHERE singleton=true AND updated_by=$10) AS ma_rows,
     (SELECT count(*)::int FROM public."user" WHERE id = ANY($11::text[])) + (SELECT count(*)::int FROM public."account" WHERE "userId" = ANY($11::text[])) + (SELECT count(*)::int FROM public."session" WHERE "userId" = ANY($11::text[])) + (SELECT count(*)::int FROM public.app_user_roles WHERE user_id = ANY($11::text[])) AS auth_rows,
-    (SELECT count(*)::int FROM storage.objects WHERE bucket_id='cvs' AND name = ANY($12::text[])) AS storage_objects`, [repreneurIds, allOpportunityIds, matchIds, evidenceIds, maFirmIds, maOfficeIds, maContactIds, maAffiliationIds, manifest.ids.provisionalContext, manifest.actors.staff.userId, authIdentityIds, objectNames])
+    (SELECT count(*)::int FROM storage.objects WHERE bucket_id='cvs' AND name = ANY($12::text[])) AS storage_objects`, [repreneurIds, allOpportunityIds, matchIds, evidenceIds, maFirmIds, maOfficeIds, maContactIds, maAffiliationIds, manifest.ids.provisionalContext, manifest.actors.staff.userId, authIdentityIds, objectNames, artifactIds, documentIds])
   const values = residue.rows[0]
   const total = Object.values(values).reduce((sum, value) => sum + Number(value), 0)
   if (total !== 0) throw new Error("Phase B cleanup failed: residue")
@@ -236,12 +254,13 @@ try {
   if (JSON.stringify(restoredEmailCount) !== JSON.stringify(emailCountBefore)) throw new Error("Phase B cleanup failed: email-count-restore")
   const restoredRateLimits = (await database.query('SELECT coalesce(jsonb_agg(to_jsonb(limits) ORDER BY "key", id), \'[]\'::jsonb) AS value FROM public."rateLimit" limits')).rows[0].value
   if (JSON.stringify(restoredRateLimits) !== JSON.stringify(rateLimitBefore)) throw new Error("Phase B cleanup failed: rate-limit-restore")
-  await writePrivateJson(`${RUN_DIR}/cleanup-readback.json`, { runId: manifest.runId, databaseResidue: 0, authResidue: 0, storageResidue: 0, exactIdsChecked: manifest.databaseRows.length + repreneurIds.length + allOpportunityIds.length + matchIds.length + evidenceIds.length + maFirmIds.length + maOfficeIds.length + maContactIds.length + maAffiliationIds.length, dynamicObjectsChecked: objectNames.length, runtimeFixtureIds: { repreneurIds, opportunityIds, opportunityProbeIds, matchIds, evidenceIds, w127FixtureIds: scopedW127FixtureIds } })
+  await writePrivateJson(`${RUN_DIR}/cleanup-readback.json`, { runId: manifest.runId, databaseResidue: 0, authResidue: 0, storageResidue: 0, exactIdsChecked: manifest.databaseRows.length + repreneurIds.length + allOpportunityIds.length + matchIds.length + evidenceIds.length + artifactIds.length + documentIds.length + maFirmIds.length + maOfficeIds.length + maContactIds.length + maAffiliationIds.length, dynamicObjectsChecked: objectNames.length, runtimeFixtureIds: { repreneurIds, opportunityIds, opportunityProbeIds, matchIds, evidenceIds, artifactIds, documentIds, w127FixtureIds: scopedW127FixtureIds } })
   await removeRunnerSecrets()
   console.log(JSON.stringify({ ok: true, runId: manifest.runId, databaseResidue: 0, authResidue: 0, storageResidue: 0 }))
 } catch (error) {
   if (database) await database.query("ROLLBACK").catch(() => {})
   if (database) await setProvisionalIdentityTriggers(database, true).catch(() => {})
+  if (database) await setRetainedFixtureTriggers(database, true).catch(() => {})
   if (database) await database.query("ALTER TABLE public.opportunity_pursuit_evidence ENABLE TRIGGER opportunity_pursuit_evidence_immutable").catch(() => {})
   await removeRunnerSecrets().catch(() => {})
   console.error(error instanceof Error && error.message.startsWith("Phase B cleanup failed:") ? error.message : `Phase B cleanup failed: database-${safeDatabaseToken(error)}`)

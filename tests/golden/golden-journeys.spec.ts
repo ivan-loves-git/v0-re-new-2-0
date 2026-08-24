@@ -479,10 +479,12 @@ test.describe.serial("Golden journeys", () => {
     await database.query("SELECT public.journey_record_evidence($1, 'intermediary_qualified', $2, $3)", [matchId, manifest.actors.staff.email, `${manifest.runId}:intermediary-qualified`])
     await database.query("SELECT public.journey_record_evidence($1, 'template_validated', $2, $3, $4)", [matchId, manifest.actors.staff.email, `${manifest.runId}:template-validated`, templateArtifactId])
     await database.query("SELECT public.journey_record_evidence($1, 'gate_1_passed', $2, $3)", [matchId, manifest.actors.staff.email, `${manifest.runId}:gate-1-passed`])
+    // Information Memoranda remain retained staff-only records. Repreneur
+    // access is pursuit-scoped and never encoded by changing this visibility.
     const memo = await database.query(`INSERT INTO public.opportunity_documents (
         opportunity_id, title, document_type, visibility, storage_bucket, storage_path,
         file_name, size_bytes, mime_type, uploaded_by
-      ) VALUES ($1, $2, 'deal_book', 'approved_for_repreneur', 'opportunity-documents', $3,
+      ) VALUES ($1, $2, 'deal_book', 'staff_only', 'opportunity-documents', $3,
         'qa-information-memo.pdf', 1, 'application/pdf', $4)
       RETURNING id`, [
       opportunityId,

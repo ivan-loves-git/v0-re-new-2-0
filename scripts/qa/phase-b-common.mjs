@@ -129,6 +129,18 @@ export async function setProvisionalIdentityTriggers(database, enabled) {
   }
 }
 
+export async function setRetainedFixtureTriggers(database, enabled) {
+  const action = enabled ? "ENABLE" : "DISABLE"
+  const triggers = [
+    ["opportunity_nda_artifacts", "opportunity_nda_artifacts_immutable"],
+    ["opportunity_documents", "opportunity_documents_protect_nda_artifacts"],
+    ["opportunity_documents", "opportunity_documents_retain_source_and_im"],
+  ]
+  for (const [table, trigger] of triggers) {
+    await database.query(`ALTER TABLE public.${table} ${action} TRIGGER ${trigger}`)
+  }
+}
+
 export async function assertQaMutationTriggersEnabled(database) {
   const triggers = [
     ["ma_firms", "guard_ma_provisional_acme_firm_identity"],
@@ -137,6 +149,9 @@ export async function assertQaMutationTriggersEnabled(database) {
     ["ma_contact_office_affiliations", "guard_ma_provisional_qa_person_affiliation_identity"],
     ["ma_provisional_source_contexts", "guard_ma_provisional_source_context_identity"],
     ["opportunity_pursuit_evidence", "opportunity_pursuit_evidence_immutable"],
+    ["opportunity_nda_artifacts", "opportunity_nda_artifacts_immutable"],
+    ["opportunity_documents", "opportunity_documents_protect_nda_artifacts"],
+    ["opportunity_documents", "opportunity_documents_retain_source_and_im"],
   ]
   for (const [table, trigger] of triggers) {
     const result = await database.query(`SELECT t.tgenabled
