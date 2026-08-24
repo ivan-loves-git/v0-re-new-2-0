@@ -1,186 +1,48 @@
-# Re-New Development and Release Operating Model
+# How we build and release
 
-**Status:** Canonical technical operating contract
+**Status:** Canonical. Replaces the tiered QA lane retired on 2026-08-24.
 
-**Owner:** Codex owns delivery; Ivan owns product intent and the decisions reserved below.
+## The loop
 
-**Purpose:** Make development feel like “built, tested, released” or “blocked for one clear reason” while keeping scope, code, evidence, environments, and authority distinct.
+1. Work on a branch off current `origin/main`.
+2. Implement the change once.
+3. Run `pnpm verify` (lint, typecheck, tests, build). Fix what it reports.
+4. Open a pull request. `Verify` runs in CI and must be green.
+5. Merge when it is green. Vercel deploys `main` automatically.
+6. Check the change works in production, and say so in plain language.
 
-## One accountable owner
+That is the whole process. There are no risk tiers, no QA lease, no synthetic
+fixture programme, no evidence packets, and no build-number ceremony.
 
-Ivan speaks primarily with Codex. Codex owns the path from a rough request to a verified release:
+## Tests
 
-1. Understand the non-developer request and inspect current facts.
-2. Clarify only ambiguity that materially changes behaviour, risk, cost, authority, or an irreversible action.
-3. Translate the intent into a developer-grade specification. Before changing product behaviour, record the approved scope and acceptance criteria in the current PDR Work Card; the specification remains subordinate to that card.
-4. Keep the implementation aligned with the PDR and the relevant canonical contract.
-5. Implement once on an isolated development branch.
-6. Classify risk and run proportional checks and QA.
-7. Review the evidence, publish when authorised, and verify production.
-8. Report one integrated result in plain language.
+Add or update tests in `lib/**/__tests__/` when you change behaviour. Match the
+existing style. Do not write tests that assert the contents of workflow files,
+package scripts, or config JSON — that coupling breaks on every edit and catches
+no real defect.
 
-Codex remains accountable when it uses temporary reviewers, subagents, humans, or external coding tools. These are bounded tools, not parallel project managers. They return a completion packet and terminate; their live conversations are not project state.
+## When to stop and ask Ivan
 
-Do not create a second tracker, duplicate backlog, permanent supervisor agent, AI-to-AI messaging loop, or competing status vocabulary.
+Ask before merging when the change touches authentication, permissions, who can
+see what, the data model, a database migration, anything destructive, or real
+customer data. Say what could go wrong and how to undo it. Everything else:
+just ship it.
 
-## Sources of truth
+Publishing to production is covered by a normal request to build something.
+These always need their own explicit go-ahead: production data changes,
+migrations and backfills, credential or billing changes, and messages to
+anyone outside the team.
 
-Keep each concern in its proper system:
+## Credentials
 
-| Concern | Source of truth | What it proves |
-| --- | --- | --- |
-| Approved product scope and status | Live WAVE Strategic PDR | Acceptance criteria, dependencies, owners, decisions, and product status |
-| Durable business, data, permission, and lifecycle rules | Relevant canonical contract, including `docs/data-models/ma-advisory-data-model-v1.md` | The meaning the implementation must preserve |
-| Implementation candidate | Exact GitHub branch, commit, and pull-request diff | The code proposed for release |
-| Automated verification | CI results for the exact commit | The checks that ran and their result |
-| Candidate behaviour | Exact-candidate functional QA on an isolated GitHub runner, with browser, persistence, read-back, and cleanup evidence | What the candidate did in the isolated environment |
-| Deployed environment | Vercel and Supabase state | Which code and data environment are actually present |
-| Released user behaviour | Production deployment identity plus live browser proof | What users can use now |
+Secrets load only from the approved local source, the GitHub environment, or
+provider project settings. Never put a secret value or bearer URL in a tracked
+file, commit, pull request, log, screenshot, or chat. Do not stop at a login
+wall before checking the approved secret source, and do not ask Ivan to paste
+credentials into a conversation.
 
-One layer never substitutes for another. A PDR approval is not implementation proof; green tests are not browser proof; a Ready deployment is not behaviour proof; an agent message is not merge proof; and a QA failure must be attributed to the product, test, data, controller, or provider layer before drawing a product conclusion.
+## Reporting
 
-The PDR remains the only current backlog and product-status surface. GitHub and QA retain technical evidence; do not copy their internal run-by-run state into a parallel tracker.
-
-## Development and release ladder
-
-All production code is written once:
-
-1. Start from current `origin/main` in a clean isolated branch or worktree. Preserve dirty or unrelated worktrees.
-2. Implement the approved behaviour once.
-3. Run focused local checks, then CI for the exact candidate.
-4. When its risk tier requires it, deliberately admit that exact candidate to functional QA on an isolated GitHub runner. Random branch pushes must not enter QA automatically.
-5. Use QA-only synthetic fixtures, verify persisted results where applicable, and prove cleanup and zero residue.
-6. Review the exact diff and evidence. Do not rebuild a different QA or production version.
-7. Merge the same approved code into `main` when release authority exists.
-8. Allow the normal production deployment and verify its exact main SHA.
-9. Prove the changed live journey in a production browser, within safe production-data boundaries.
-
-Functional QA runs the exact admitted SHA once, behind loopback HTTPS on the isolated GitHub runner and against the QA-only Supabase environment. It is not a production deployment or Vercel deployment claim. QA holds the latest candidate deliberately admitted for testing, not every branch. Production must not receive a significant feature before required QA, except for a documented emergency incident decision with explicit authority and a rollback path.
-
-Branch protection remains enabled with `Verify` as the required status during the pre-beta phase. `P1-P3 protected pilot` is selective Tier 3 release evidence, not a branch-protection requirement. This separation lets controller repairs merge after green code verification without weakening high-consequence product-release proof. Any temporary exception to the remaining protection must be explicitly authorised, limited to the named requirement and exact commit, restored immediately after the operation, and read back before proceeding.
-
-## Proportional QA
-
-Classify the highest consequence introduced by the change. `Verify` is the universal automated check for runtime code. The highest QA tier Codex may dispatch without Ivan is Tier 2. The permanent protected P1-P3 lane is selective, not universal: use it only for Tier 3 and only after Ivan explicitly authorizes the exact candidate. Tier 2 uses its relevant exact-candidate journey, while Tier 0 and Tier 1 do not dispatch Golden Journeys.
-
-### Tier 0 — no runtime code
-
-Examples: strategy, communication, PDR wording, and internal documentation.
-
-Required: review the changed document and its authority links. No software QA or production deployment proof is required solely for the document change.
-
-### Tier 1 — low-risk presentation
-
-Examples: copy, labels, colour, spacing, or an isolated harmless layout.
-
-Required: a focused test or contract check where relevant; typecheck, lint, design check, and build as appropriate; and an automated preview or lightweight visual check. Do not create an elaborate synthetic-data programme unless behaviour is affected.
-
-### Tier 2 — behavioural product change
-
-Examples: bug fixes, forms, navigation, new user actions, and state transitions.
-
-Required: focused automated tests; an exact-candidate preview or other bounded test surface; the relevant browser journey; persistence/read-back proof for writes; and cleanup proof. Do not invoke the full permanent P1-P3 lane solely because runtime code changed.
-
-### Tier 3 — high-consequence change
-
-Examples: authentication, authorization, confidentiality, visibility, data models, migrations, destructive actions, lifecycle rules, and production data operations.
-
-Required: the protected P1-P3 functional QA lane on the exact candidate; QA-only synthetic fixtures; direct-URL and role-boundary tests; persistence, read-back, cleanup, and empty-baseline proof; independent review; a rollback plan; and separate explicit authority for any production migration, backfill, or other production-data mutation.
-
-Before authorization, record `Tier 3 proposed — awaiting Ivan authorization` and stop before any functional-QA run, schema synchronization, synthetic fixture, protected P1-P3 check, or retry. Ivan's direct Codex instruction is sufficient; do not ask for a PDR PIN or a second website confirmation. Codex then executes the authorized run as a fresh owner-identity manual dispatch, whose GitHub run record is evidence of the authorization rather than a second approval step. Authorization binds to the exact open-PR head SHA and its diff. Any head-SHA change voids it and requires fresh authorization. Tier 3 QA authorization permits only that QA dispatch; it does not authorize merge, production publication, a migration, a backfill, or any other production-data mutation.
-
-Do not inflate a low-risk UI edit into a high-risk release programme. Do not relabel a high-consequence change as Tier 2 to avoid authorization: narrow the scope until it is genuinely Tier 1 or Tier 2, or keep the candidate blocked at Tier 3.
-
-### GitHub enforcement
-
-- The required live configuration is that `Verify` is the only universal required status check on `main`.
-- `P1-P3 protected pilot` must remain selective Tier 3 release evidence, not a universal branch-protection requirement.
-- Codex records `QA tier: <0–3> — <reason>` in the pull request before merge and remains accountable for applying the required evidence. A direct-main emergency or documentation-only exception must retain the same classification in an explicitly linked release record.
-- Golden Journeys accepts only a fresh manual `workflow_dispatch` from Ivan's repository-owner identity for the exact branch, SHA, and green Verify run. API/repository dispatch, branch pushes, pull-request events, workflow reruns, and other repository writers cannot start Tier 3.
-- A Tier 3 candidate must not merge until its exact-candidate protected P1-P3 check succeeds. Tier 2 requires its named relevant journey; Tier 0 and Tier 1 do not require P1-P3.
-- This candidate-bound Tier 3 gate is the sole QA authorization control. Do not add a classifier bot, label ritual, or duplicate approval system while Codex remains the single merge owner.
-
-## Release authority and hard boundaries
-
-A request to build authorises scoped branch implementation, normal verification, and a reviewed candidate. Publication to `main` and production requires explicit publication authority, unless Ivan has already granted a clearly scoped release window. During such a window, do not repeatedly ask for the same approval; apply it only to candidates that are independently ready and within the stated scope.
-
-Publication authority never silently includes:
-
-- production migrations, backfills, destructive changes, or other production-data mutations;
-- credential, access, billing, provider, or security-posture changes;
-- external stakeholder messages; or
-- scope beyond the approved cards or specification.
-
-These require their own explicit authority. A Tier 3 data operation must name the exact manifest or migration, preflight, rollback, and post-operation checks before execution.
-
-## External coding specialists
-
-Codex is the default implementation environment. Cursor, another AI, or a human developer may be recommended only when a package is code-heavy, self-contained, independently testable, and likely to save meaningful capacity without excessive handoff cost.
-
-Appropriate packages include one bounded implementation, one reproducible bug, a focused test suite, a mechanical refactor or dependency upgrade, a measurable performance investigation, or an independent read-only review of an exact PR, module, or architecture decision.
-
-Do not delegate overall product ownership, vague strategy, PDR management, product decisions, production publishing, production data, stakeholder communication, agent coordination, or open-ended “improve everything” work. Security delegation is bounded and normally read-only; generic work packets never receive production credentials or live-scanning authority. Architecture review and architecture implementation are separate by default.
-
-When Ivan accepts the recommendation, Codex provides one vendor-neutral Markdown work packet with these exact sections:
-
-```markdown
-# TASK
-One sentence describing the required outcome.
-
-## SOURCE OF TRUTH
-Exact PDR card, specification, contract, baseline SHA, or PR.
-
-## ALLOWED SCOPE
-The precise modules, files, or workflow that may change.
-
-## ACCEPTANCE CRITERIA
-Observable conditions proving completion.
-
-## FORBIDDEN
-No unrelated refactoring, main merge, production deployment, production data,
-PDR mutation, access changes, or external communication.
-
-## VERIFICATION
-Exact focused tests, typecheck, lint, design check, build, and browser checks.
-
-## RETURN
-Branch, full commit SHA, PR, exact changed files, test evidence, residual risk,
-and unresolved questions.
-
-## STOP
-Stop when the reviewed candidate is ready. Do not publish unless this packet
-explicitly grants publication authority.
-```
-
-The specialist works in one isolated environment and returns one completion packet. GitHub commits, tests, and the final diff are the supervision mechanism. No permanent Codex conversation watches it type. If the provider disappears, the same packet must remain executable without changing the project architecture.
-
-## Temporary reviewers and subagents
-
-Use temporary agents only for concrete, bounded work such as an independent risk review, an exact evidence audit, or a parallel test lane. Codex gives each one a narrow input and receives a finite completion packet. When the packet is integrated or rejected, the agent terminates. No agent owns a second backlog, publishes independently, or becomes a permanent control room.
-
-## QA data, credentials, and infrastructure
-
-- Tier 3 functional QA runs the admitted SHA on an isolated GitHub runner behind loopback HTTPS, against the isolated QA Supabase environment. It uses no production credentials or production data. Synthetic fixtures must be identifiable, least-privileged, and removed under the empty-baseline invariant.
-- Production personas and real customer or team records are not the primary test harness. Production verification is scoped to safe proof of the released behaviour; any write requires explicit production-data authority.
-- Secret values live only in the approved local secret source, GitHub environment `qa-pilot`, or the appropriate Vercel/Supabase project settings. Never put values in code, tracked documents, PR text, logs, screenshots, agent packets, or chat.
-- Ivan is the access authority. An authorised repository or provider administrator performs storage and rotation; Codex may coordinate and verify names, scopes, expiry, and successful use without revealing values.
-- Provider credentials, where retained for background deployment health, must be least-privileged and rotated after exposure, suspected compromise, ownership change, or the agreed expiry. Production credentials are never shared with a generic specialist packet.
-- Branch protection, QA-only credentials, and cleanup invariants are verified without exposing values. A successful functional-QA run proves the tested candidate behaviour in that isolated environment; it is not proof of a Vercel deployment or production behaviour.
-
-Once the core QA lane has one clean end-to-end run and its protection/configuration is restored, it becomes background machinery. Freeze further QA-infrastructure development unless a defect directly blocks an Ivan-authorized Tier 3 release or creates a security or data risk.
-
-There is no automatic Tier 3 retry. Ivan may authorize one same-SHA retry only for a documented transient runner, browser, or QA-provider failure. Schema, isolation, authentication, authorization, cleanup, or residue mismatches are not retryable and require diagnosis. A second same-SHA failure in an eligible transient category stops the release; it does not authorize bypass of required Tier 3 evidence.
-
-## Completion and reporting
-
-Before calling a release complete, reconcile the PDR status, exact merged code, required CI/QA evidence, deployed environment identity, and live production proof. Preserve technical details in GitHub and CI.
-
-Default report to Ivan:
-
-- **PRODUCT:** what users can now do.
-- **STATUS:** built, tested, released, or blocked.
-- **EVIDENCE:** one or two plain-language facts.
-- **NEXT:** the next already-authorised PDR or release action, or none.
-- **DECISION NEEDED:** none, or one precise material decision.
-
-PR numbers, SHAs, workflow runs, controller internals, and sanitizer details belong in a compact technical-evidence section only when needed or requested.
+Tell Ivan what users can now do, whether it is shipped or blocked, and the one
+decision you need from him if there is one. Keep PR numbers, SHAs and CI links
+out of it unless he asks.

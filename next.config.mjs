@@ -1,24 +1,10 @@
 import { execFileSync } from "child_process"
 import { RELEASE_BUILD_NUMBER } from "./lib/release-build.mjs"
-import qaContract from "./supabase/qa-contract.json" with { type: "json" }
-import { assertQaBuildEnv } from "./lib/qa/protected-build.mjs"
 
-// The release number is committed so shallow Vercel checkouts cannot turn it
-// into their local history depth. The short hash remains build provenance.
+// Vercel builds from a shallow checkout, so the release number is committed
+// rather than derived from history depth. The short hash is build provenance.
 let gitCommitHash = "dev"
 let gitCommitSha = process.env.VERCEL_GIT_COMMIT_SHA || "dev"
-const qaApiRef = (() => {
-  try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || "").hostname.match(/^([a-z0-9]{20})\.supabase\.co$/)?.[1] || "invalid" } catch { return "invalid" }
-})()
-const qaDatabaseRef = (() => {
-  try {
-    const database = new URL(process.env.DATABASE_URL || "")
-    return database.hostname.match(/^db\.([a-z0-9]{20})\.supabase\.co$/)?.[1]
-      || decodeURIComponent(database.username).match(/^postgres\.([a-z0-9]{20})$/)?.[1]
-      || "invalid"
-  } catch { return "invalid" }
-})()
-const protectedQa = assertQaBuildEnv(process.env)
 
 try {
   const gitOptions = { timeout: 300, encoding: "utf8" }
@@ -52,22 +38,10 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_HASH: gitCommitHash,
   },
   async headers() {
-    const qaHeaders = protectedQa
-      ? [
-          { key: "x-renew-qa-ref", value: protectedQa.projectRef },
-          { key: "x-renew-qa-api-ref", value: qaApiRef },
-          { key: "x-renew-qa-database-ref", value: qaDatabaseRef },
-          { key: "x-renew-qa-storage-ref", value: qaApiRef },
-          { key: "x-renew-qa-structure", value: qaContract.structureFingerprint },
-          { key: "x-renew-qa-project", value: protectedQa.validationProject },
-          { key: "x-renew-qa-mail-policy", value: protectedQa.mailPolicy },
-          { key: "x-renew-qa-mail-transport", value: protectedQa.mailTransport },
-        ]
-      : []
     return [
       {
         source: "/:path*",
-        headers: [{ key: "x-renew-deployment-sha", value: gitCommitSha }, ...qaHeaders],
+        headers: [{ key: "x-renew-deployment-sha", value: gitCommitSha }],
       },
     ]
   },
