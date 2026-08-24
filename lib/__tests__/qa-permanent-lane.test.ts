@@ -41,18 +41,19 @@ describe("permanent QA lane contract", () => {
     expect(playwrightConfig).not.toContain('trace: "on-first-retry"')
   })
 
-  it("pins the M2 Draft activation candidate fingerprint and nine immutable schema inputs", () => {
+  it("pins the combined M2 and P0-security fingerprint and ten immutable schema inputs", () => {
     const contract = JSON.parse(readFileSync(`${process.cwd()}/supabase/qa-contract.json`, "utf8"))
 
     expect(contract).toEqual({
-      version: "824-m2-draft-activation-v1",
-      structureFingerprint: "2dc6c7bf6588bd23d06e1efe7c01f642bcfe66a6d482ce10f3ec5e120f3c0d48",
+      version: "824-m2-p0-security-v1",
+      structureFingerprint: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       files: [
         { path: "supabase/schema/771_extensions.sql", sha256: "755e4469be6630f4a5d274f503a00a17521606a4b36ae6f2f277a005465e68e9" },
         { path: "supabase/schema/qa_control.sql", sha256: "ee0e0136976c0408a4f1d95fe8f071c994e4667824c79804a8b7f3a9da71040e" },
         { path: "supabase/schema/permanent_qa_rebuild.sql", sha256: "20565af77093399b6b8ebc7e27ebc78e778faf9df802b702b7d86eea9f323291" },
         { path: "supabase/schema/771_public_schema.sql", sha256: "593d9d2b813c9047568dd5d863e2d4644a18493cff0e63142518fcfeb554788b" },
-        { path: "supabase/schema/771_test_storage.sql", sha256: "55a91d3c3db75e6ea9d0d55f3d0165bb087e83451174147c58a7c951dc91e8b4" },
+        { path: "supabase/schema/772_w147_auth_data_api.sql", sha256: "809fc19c431ce0ec8978d8586496ea6b231756ef7159a191ff67ceb1cdd84109" },
+        { path: "supabase/schema/771_test_storage.sql", sha256: "ecd41fd86c5566f77fadc53998ff7fdca12a4e81d9142ca07cfc1db620bf545f" },
         { path: "supabase/schema/822_demo_opportunity_quarantine.sql", sha256: "5300d9f9d23cef949406f203fefba5bc5f6ba7ae370388e0f39353789284e7bc" },
         { path: "supabase/schema/822_deals_reconsideration.sql", sha256: "62d693c89a8f2ed19045cbfa62cfd3db111d5a16e6b645a9e024069b4570ef93" },
         { path: "supabase/schema/823_staff_ma_relationship_corrections.sql", sha256: "bfcbd622f471b55c5d5f1352788e3070abf33f1ccf9da246da8d3cb37f9ffedf" },

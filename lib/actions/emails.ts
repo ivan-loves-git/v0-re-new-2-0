@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireStaffAccess } from "@/lib/access-control"
 import { sendEmail } from "@/lib/email"
+import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-content"
 import { revalidatePath } from "next/cache"
 import { render } from "@react-email/render"
 import type { EmailTemplateKey } from "@/lib/types/email"
@@ -242,48 +243,6 @@ export async function updateTemplateSettings(
   }
 
   revalidatePath("/emails")
-}
-
-/**
- * Fetch the editable body markdown for a template at send time.
- * Returns null if the template is not body-editable or has no body set.
- */
-export async function getTemplateBody(templateKey: EmailTemplateKey): Promise<string | null> {
-  try {
-    const supabase = createAdminClient()
-    const { data } = await supabase
-      .from("email_templates")
-      .select("body_markdown, body_editable")
-      .eq("template_key", templateKey)
-      .single()
-    if (!data?.body_editable) return null
-    const body = (data?.body_markdown ?? "").trim()
-    return body || null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Resolve the subject line for a template at send time.
- * Reads from email_templates.subject in the DB, falling back to the
- * hardcoded value if the DB lookup fails.
- */
-export async function getTemplateSubject(
-  templateKey: EmailTemplateKey,
-  fallback: string,
-): Promise<string> {
-  try {
-    const supabase = createAdminClient()
-    const { data } = await supabase
-      .from("email_templates")
-      .select("subject")
-      .eq("template_key", templateKey)
-      .single()
-    return (data?.subject?.trim()) || fallback
-  } catch {
-    return fallback
-  }
 }
 
 /**
