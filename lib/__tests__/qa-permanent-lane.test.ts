@@ -14,6 +14,7 @@ import {
 import { assertQaMailEnvelope, qaMailPolicyFromEnv } from "@/lib/email/qa-mail-policy"
 import { buildFixtureManifest } from "@/lib/qa/phase-b.mjs"
 import { acquireQaLease, loadAdmittedQaContract } from "@/lib/qa/lease-contract.mjs"
+import { isRecoverableExpiredLease } from "@/lib/qa/lease-recovery.mjs"
 import { assertMatchingStructureFingerprint, fingerprintStructureRows } from "@/lib/qa/structure-fingerprint.mjs"
 import { assertNoTopLevelTransactionControl } from "@/lib/qa/sql-safety.mjs"
 
@@ -220,16 +221,6 @@ describe("permanent QA lane contract", () => {
     expect(lease).toContain("acquireQaLease(database")
     expect(lease).not.toContain('resolve(process.cwd(), "supabase/qa-contract.json")')
     expect(lease).not.toContain('message.startsWith("QA lease contract failed:")')
-  })
-
-  it("limits schema-mismatch recovery to exact pre-schema acquisition and release", () => {
-    const lease = readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")
-    const blockedGuard = 'if (state.rows[0]?.blocked_reason) fail("schema-blocked")'
-    const recoveryGuard = 'if (!allowPreSchemaRecovery && state.rows[0]?.structure_fingerprint !== contract.structureFingerprint) fail("structure-fingerprint")'
-
-    expect(lease).toContain('const allowPreSchemaRecovery = process.env.QA_PRE_SCHEMA_RECOVERY === "true" && (action === "acquire" || action === "release")')
-    expect(lease).toContain(recoveryGuard)
-    expect(lease.indexOf(blockedGuard)).toBeLessThan(lease.indexOf(recoveryGuard))
   })
 
   it("passes the admitted candidate fingerprint to the lease acquisition query", async () => {
@@ -612,6 +603,7 @@ describe("permanent QA lane contract", () => {
 
   it("recovers only an expired manifest-bound QA lease before schema synchronization", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
+    const lease = readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")
     const recover = jobBlock(workflow, "recover")
     const schemaSync = jobBlock(workflow, "schema-sync")
     const finalize = jobBlock(workflow, "finalize")
@@ -623,18 +615,32 @@ describe("permanent QA lane contract", () => {
     expect(recover).toContain("persist-credentials: false")
     expect(recover).toContain("working-directory: .qa-candidate")
     expect(recover).toContain("pnpm qa:schema:verify")
-    expect(recover).toContain("pnpm qa:lease:acquire")
-    expect(recover).toContain("pnpm qa:lease:release")
-    expect(recover).toContain('QA_PRE_SCHEMA_RECOVERY: "true"')
-    expect(workflow.match(/QA_PRE_SCHEMA_RECOVERY/g)).toHaveLength(1)
-    for (const job of ["lane", "schema-sync", "golden", "finalize"]) {
-      expect(jobBlock(workflow, job)).not.toContain("QA_PRE_SCHEMA_RECOVERY")
-    }
+    expect(recover).toContain("pnpm qa:lease:recover")
+    expect(recover).not.toContain("pnpm qa:lease:acquire")
+    expect(lease).toContain('action === "recover"')
+    expect(lease).toContain("recoverExpiredLease")
+    expect(recover).not.toContain("pnpm qa:lease:release")
+    expect(workflow).not.toContain("QA_PRE_SCHEMA_RECOVERY")
     expect(recover).not.toContain("QA_VERCEL_TOKEN")
     expect(schemaSync).toContain("needs: [lane, recover]")
     expect(schemaSync).toContain("needs.recover.result == 'success'")
     expect(finalize).toContain("needs: [lane, recover, schema-sync, golden]")
     expect(finalize).toContain("recovery=${{ needs.recover.result }}")
+    const recoverHelper = lease.slice(
+      lease.indexOf("async function recoverExpiredLease"),
+      lease.indexOf("let database"),
+    )
+    expect(recoverHelper).not.toContain("await database.end()")
+    expect(recoverHelper).not.toContain("database = await databaseClient()")
+  })
+
+  it("retries only an expired active or interrupted recovering lease", () => {
+    const now = Date.parse("2026-08-24T16:00:00Z")
+    expect(isRecoverableExpiredLease({ status: "active", expires_at: "2026-08-24T15:59:59Z" }, now)).toBe(true)
+    expect(isRecoverableExpiredLease({ status: "recovering", expires_at: "2026-08-24T15:59:59Z" }, now)).toBe(true)
+    expect(isRecoverableExpiredLease({ status: "recovering", expires_at: "2026-08-24T16:00:01Z" }, now)).toBe(false)
+    expect(isRecoverableExpiredLease({ status: "active", expires_at: "not-a-date" }, now)).toBe(false)
+    expect(isRecoverableExpiredLease({ status: "other", expires_at: "2026-08-24T15:59:59Z" }, now)).toBe(false)
   })
 
   it("keeps schema synchronization separate and transactional before runner-hosted browser fixtures", () => {
