@@ -47,6 +47,19 @@ describe("protected QA build contract", () => {
     })
   })
 
+  it("accepts protected runner QA without pretending to be a Vercel deployment", () => {
+    const runner: Record<string, string> = { ...safe }
+    delete runner.VERCEL_PROJECT_NAME
+    delete runner.VERCEL_PROJECT_ID
+    expect(assertQaBuildEnv({ ...runner, QA_EXECUTION_MODE: "github-runner" })).toEqual({
+      projectRef: REF,
+      validationProject: "renew-overnight-validation-20260820",
+      mailPolicy: "allowlist",
+      mailTransport: "simulated",
+    })
+    expect(() => assertQaBuildEnv({ ...safe, QA_EXECUTION_MODE: "github-runner" })).toThrow("Protected QA build failed: runner-vercel-metadata")
+  })
+
   it("accepts a normal production Vercel project when protected mode is absent", () => {
     expect(assertQaBuildEnv({
       VERCEL_PROJECT_NAME: "v0-re-new-2-0",

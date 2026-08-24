@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test"
 
+const githubRunner = process.env.QA_EXECUTION_MODE === "github-runner"
+
 if (!process.env.QA_BROWSER_BASE_URL) throw new Error("QA_BROWSER_BASE_URL is required")
-if (!process.env.VERCEL_AUTOMATION_BYPASS_SECRET) throw new Error("VERCEL_AUTOMATION_BYPASS_SECRET is required")
+if (!githubRunner && !process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
+  throw new Error("VERCEL_AUTOMATION_BYPASS_SECRET is required")
+}
 
 export default defineConfig({
   testDir: "./tests/golden",
@@ -27,6 +31,7 @@ export default defineConfig({
     screenshot: "off",
     trace: "on-first-retry",
     video: "off",
+    ...(githubRunner ? { ignoreHTTPSErrors: true } : {}),
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

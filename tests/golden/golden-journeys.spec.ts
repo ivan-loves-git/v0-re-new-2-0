@@ -2,12 +2,16 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test"
 import { RUNTIME_FIXTURES_FILE, RUN_DIR, databaseClient, readJson, recordRuntimeFixtures, storageClient } from "../../scripts/qa/phase-b-common.mjs"
 
 let manifest: any
+const githubRunner = process.env.QA_EXECUTION_MODE === "github-runner"
 
 const protectedContext = {
   baseURL: process.env.QA_BROWSER_BASE_URL,
+  ...(githubRunner ? { ignoreHTTPSErrors: true } : {}),
 }
 
 async function protectValidationOrigin(context: BrowserContext) {
+  if (githubRunner) return context
+
   const origin = new URL(process.env.QA_BROWSER_BASE_URL!).origin
   await context.route(`${origin}/**`, async (route) => {
     await route.continue({ headers: {
