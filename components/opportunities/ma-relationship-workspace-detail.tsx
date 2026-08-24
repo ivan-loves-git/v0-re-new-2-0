@@ -12,6 +12,7 @@ import {
 import { MaOfficeContactAction } from "@/components/opportunities/ma-office-contact-action"
 import { MaRelationshipWorkspaceNotes } from "@/components/opportunities/ma-relationship-workspace-notes"
 import { MaFirmOfficeAction } from "@/components/opportunities/ma-firm-office-action"
+import { MaRelationshipCorrectionAction } from "@/components/opportunities/ma-relationship-correction-action"
 import {
   type MaFirmWorkspace,
   type MaOfficeWorkspace,
@@ -215,9 +216,25 @@ function Contacts({
                     </p>
                   ) : null}
                 </div>
-                <Badge variant={contact.isActive ? "outline" : "secondary"}>
-                  {contact.isActive ? "Active" : "Historical"}
-                </Badge>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <Badge variant={contact.isActive ? "outline" : "secondary"}>
+                    {contact.isActive ? "Active" : "Historical"}
+                  </Badge>
+                  <MaRelationshipCorrectionAction
+                    target="contact"
+                    id={contact.id}
+                    affiliationId={contact.affiliationId}
+                    fields={[
+                      { name: "first_name", label: "First name", value: contact.firstName },
+                      { name: "last_name", label: "Last name", value: contact.lastName },
+                      { name: "email", label: "Email", value: contact.email, type: "email" },
+                      { name: "phone", label: "Phone", value: contact.phone },
+                      { name: "linkedin_url", label: "LinkedIn URL", value: contact.linkedinUrl, type: "url" },
+                      { name: "job_title", label: "Job title at this office", value: contact.jobTitle },
+                      { name: "internal_notes", label: "Internal notes", value: contact.internalNotes, type: "textarea" },
+                    ]}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -322,6 +339,20 @@ export function MaOfficeWorkspaceDetail({
           officeId={workspace.id}
           disabled={workspace.status !== "active"}
         />
+        <MaRelationshipCorrectionAction
+          target="office"
+          id={workspace.id}
+          fields={[
+            { name: "name", label: "Office name", value: workspace.name },
+            { name: "city", label: "City", value: workspace.city },
+            { name: "address", label: "Address", value: workspace.address, type: "textarea" },
+            { name: "coverage_note", label: "Coverage note", value: workspace.coverageNote, type: "textarea" },
+            { name: "website_url", label: "Website URL", value: workspace.websiteUrl, type: "url" },
+            { name: "general_email", label: "General email", value: workspace.generalEmail, type: "email" },
+            { name: "general_phone", label: "General phone", value: workspace.generalPhone },
+            { name: "internal_notes", label: "Internal notes", value: workspace.internalNotes, type: "textarea" },
+          ]}
+        />
       </header>
       <Indicators indicators={workspace.indicators} />
       <p className="text-xs text-muted-foreground">
@@ -372,11 +403,20 @@ export function MaFirmWorkspaceDetail({
             through its offices.
           </p>
         </div>
-        <MaFirmOfficeAction
-          firmId={workspace.id}
-          firmName={workspace.name}
-          disabled={workspace.status !== "active"}
-        />
+        <div className="flex flex-wrap gap-2">
+          <MaFirmOfficeAction firmId={workspace.id} firmName={workspace.name} disabled={workspace.status !== "active"} />
+          <MaRelationshipCorrectionAction
+            target="firm"
+            id={workspace.id}
+            fields={[
+              { name: "name", label: "Firm name", value: workspace.name },
+              { name: "category", label: "Category", value: workspace.category },
+              { name: "network_label", label: "Network label", value: workspace.networkLabel },
+              { name: "website_url", label: "Website URL", value: workspace.websiteUrl, type: "url" },
+              { name: "internal_notes", label: "Internal notes", value: workspace.internalNotes, type: "textarea" },
+            ]}
+          />
+        </div>
       </header>
       <Indicators indicators={workspace.indicators} />
       <p className="text-xs text-muted-foreground">

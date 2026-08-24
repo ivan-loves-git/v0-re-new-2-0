@@ -18,6 +18,7 @@ function opportunity(
   return {
     id,
     reference: `OPP-${id}`,
+    is_demo: false,
     status: "active",
     repreneur_exposure: "staff_only",
     created_at: "2026-07-27T09:00:00.000Z",

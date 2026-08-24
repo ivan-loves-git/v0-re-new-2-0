@@ -96,6 +96,7 @@ const REPRENEUR_DASHBOARD_FIELDS = `
 const OPPORTUNITY_LIST_FIELDS = `
   id,
   reference,
+  is_demo,
   status,
   source_id,
   source_office_id,
