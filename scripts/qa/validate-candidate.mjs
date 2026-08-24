@@ -43,6 +43,8 @@ try {
     controllerRef: process.env.GITHUB_REF,
     controllerSha: process.env.GITHUB_SHA,
     mainSha: main.commit?.sha,
+    actor,
+    runAttempt: process.env.GITHUB_RUN_ATTEMPT,
     actorPermission: permission.permission,
     pull,
     verifyCheck: verify,

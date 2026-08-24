@@ -56,16 +56,13 @@ describe("QA candidate database contract admission", () => {
     })).rejects.toThrow("QA candidate contract failed: event")
   })
 
-  it("accepts explicit identical-contract admission through repository_dispatch", async () => {
+  it("refuses repository-dispatch admission even for an identical contract", async () => {
     const input = await roots()
     await expect(validateCandidateContractAdmission({
       eventName: "repository_dispatch",
       trustedRoot: input.trustedRoot,
       candidateRoot: input.candidateRoot,
-    })).resolves.toEqual({
-      admission: "trusted-main-identical",
-      contractSha256: input.candidate.contractSha256,
-    })
+    })).rejects.toThrow("QA candidate contract failed: event")
   })
 
   it("accepts explicit identical-contract admission through workflow_dispatch", async () => {
@@ -92,7 +89,7 @@ describe("QA candidate database contract admission", () => {
   it("refuses missing or incorrect reviewed-dispatch contract hashes", async () => {
     const input = await roots({ candidateSql: "select 2;\n" })
     const base = {
-      eventName: "repository_dispatch",
+      eventName: "workflow_dispatch",
       trustedRoot: input.trustedRoot,
       candidateRoot: input.candidateRoot,
       dispatch: { schemaReviewed: true, schemaReviewVersion: REVIEW_VERSION },
@@ -107,7 +104,7 @@ describe("QA candidate database contract admission", () => {
   it("rejects an explicitly reviewed dispatch identical to trusted main", async () => {
     const input = await roots()
     await expect(validateCandidateContractAdmission({
-      eventName: "repository_dispatch",
+      eventName: "workflow_dispatch",
       trustedRoot: input.trustedRoot,
       candidateRoot: input.candidateRoot,
       dispatch: {

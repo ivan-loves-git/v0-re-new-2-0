@@ -22,11 +22,15 @@ const SHA = "a".repeat(40)
 const FINGERPRINT = "b".repeat(64)
 
 function jobEnvKeys(workflow: string, jobName: string) {
+  const block = jobBlock(workflow, jobName)
+  return [...block.matchAll(/^\s+[A-Z0-9_]+:/gm)].map((match) => match[0].trim().replace(":", ""))
+}
+
+function jobBlock(workflow: string, jobName: string) {
   const jobStart = workflow.indexOf(`  ${jobName}:`)
   expect(jobStart).toBeGreaterThanOrEqual(0)
   const nextJob = workflow.slice(jobStart + 1).search(/\n  [a-z0-9-]+:/)
-  const block = nextJob === -1 ? workflow.slice(jobStart) : workflow.slice(jobStart, jobStart + 1 + nextJob)
-  return [...block.matchAll(/^\s+[A-Z0-9_]+:/gm)].map((match) => match[0].trim().replace(":", ""))
+  return nextJob === -1 ? workflow.slice(jobStart) : workflow.slice(jobStart, jobStart + 1 + nextJob)
 }
 
 describe("permanent QA lane contract", () => {
@@ -100,6 +104,8 @@ describe("permanent QA lane contract", () => {
       controllerRef: "refs/heads/main",
       controllerSha: "c".repeat(40),
       mainSha: "c".repeat(40),
+      actor: "ivan-loves-git",
+      runAttempt: "1",
       actorPermission: "write",
       candidateBranch: "codex/release-a",
       candidateSha: SHA,
@@ -108,17 +114,27 @@ describe("permanent QA lane contract", () => {
     }
     expect(assertAuthorizedCandidate(input)).toEqual({ candidateBranch: input.candidateBranch, candidateSha: SHA })
     expect(() => assertAuthorizedCandidate({ ...input, controllerRef: "refs/heads/codex/release-a" })).toThrow("QA candidate failed: controller")
+    expect(() => assertAuthorizedCandidate({ ...input, actor: "another-writer" })).toThrow("QA candidate failed: ivan-authorization")
+    expect(() => assertAuthorizedCandidate({ ...input, runAttempt: "2" })).toThrow("QA candidate failed: fresh-dispatch-required")
     expect(() => assertAuthorizedCandidate({ ...input, actorPermission: "read" })).toThrow("QA candidate failed: actor-permission")
     expect(() => assertAuthorizedCandidate({ ...input, pull: { ...input.pull, draft: true } })).toThrow("QA candidate failed: pull-request")
     expect(() => assertAuthorizedCandidate({ ...input, verifyCheck: { ...input.verifyCheck, conclusion: "failure" } })).toThrow("QA candidate failed: verify-check")
   })
 
-  it("admits candidates only through explicit repository_dispatch or workflow_dispatch", () => {
+  it("admits Tier 3 candidates only through Ivan's manual workflow dispatch", () => {
     const golden = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const concurrency = golden.split("\njobs:", 1)[0]
-    expect(golden).toContain("repository_dispatch:")
+    expect(golden).not.toContain("repository_dispatch:")
     expect(golden).toContain("workflow_dispatch:")
     expect(golden).not.toContain("workflow_run:")
+    expect(golden).toContain("QA_CANDIDATE_BRANCH: ${{ inputs.candidate_branch }}")
+    expect(golden).toContain("QA_EXPECTED_SHA: ${{ inputs.candidate_sha }}")
+    expect(readFileSync(`${process.cwd()}/lib/qa/permanent-contract.mjs`, "utf8")).toContain('TIER_3_AUTHORIZER = "ivan-loves-git"')
+    const validator = readFileSync(`${process.cwd()}/scripts/qa/validate-candidate.mjs`, "utf8")
+    expect(validator).toContain("actor,\n    runAttempt: process.env.GITHUB_RUN_ATTEMPT,")
+    for (const job of ["deploy-qa", "schema-sync", "golden", "finalize"]) {
+      expect(jobBlock(golden, job)).toContain("github.run_attempt == '1'")
+    }
     expect(concurrency).toContain("group: renew-permanent-qa")
     expect(concurrency).toContain("cancel-in-progress: false")
     expect(concurrency).not.toContain("cancel-in-progress: true")
@@ -160,8 +176,7 @@ describe("permanent QA lane contract", () => {
   it("keeps candidate and run data out of long-lived secrets", () => {
     const workflow = readFileSync(`${process.cwd()}/.github/workflows/golden-journeys.yml`, "utf8")
     const sanitizer = readFileSync(`${process.cwd()}/scripts/qa/sanitize-phase-b-artifacts.mjs`, "utf8")
-    expect(workflow).toContain("github.event.client_payload.candidate_sha")
-    expect(workflow).toContain("github.event.client_payload.candidate_branch")
+    expect(workflow).not.toContain("github.event.client_payload")
     expect(workflow).toContain("inputs.candidate_sha")
     expect(workflow).toContain("inputs.candidate_branch")
     expect(workflow).not.toContain("secrets.QA_BROWSER_BASE_URL")
@@ -634,7 +649,7 @@ describe("permanent QA lane contract", () => {
     expect(operations).toContain("cancelled before project connection")
     expect(operations).toContain("1Password-based one-time transfer")
     expect(operations).toContain("Validation deploy architecture (Route A)")
-    expect(operations).toContain("required evidence for an admitted Tier 3 candidate")
+    expect(operations).toContain("required evidence only for an exact Tier 3 candidate explicitly authorized by Ivan")
     expect(operations).toContain("QA_VERCEL_TOKEN")
     expect(operations).toContain("meta.githubCommitSha")
     expect(operations).toContain("ordinary source-repository feature branch: zero new validation-project deployments")
@@ -703,7 +718,7 @@ describe("permanent QA lane contract", () => {
     expect(onBlock).not.toContain("push:")
     expect(onBlock).not.toContain("pull_request:")
     expect(onBlock).not.toContain("workflow_run:")
-    expect(onBlock).toContain("repository_dispatch:")
+    expect(onBlock).not.toContain("repository_dispatch:")
     expect(onBlock).toContain("workflow_dispatch:")
   })
 
