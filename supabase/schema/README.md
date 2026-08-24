@@ -1,4 +1,4 @@
-# Permanent private QA schema contract — release build 771, contract v4
+# Permanent private QA schema contract — release build 771 with W-147/W-148 overlays
 
 ## Purpose
 
@@ -13,7 +13,7 @@ This directory provides the deterministic, sanitized structure contract for Re-N
 - `771_public_schema.sha256` fingerprints the sanctioned, sanitized artifact.
 - `771_extensions.sql` records the released extension dependencies needed by the public schema.
 - `771_preview_cleanup.sql` removes only the known partial sequence left by the pre-baseline Git migration attempt, then rejects every other public-schema object inside the same reconstruction transaction.
-- `771_test_storage.sql` creates only two empty private buckets from fixed repository-owned setup; it copies no bucket or object data. Its policy fixture is independently checksummed by contract v4 and is intentionally excluded from `structureFingerprint`, which covers only the sanctioned `public` schema export.
+- `771_test_storage.sql` creates only two empty private buckets from fixed repository-owned setup; it copies no bucket or object data. Its W-148 deny-by-default policy fixture is independently checksummed by the integrated P0 contract and is intentionally excluded from `structureFingerprint`, which covers only the sanctioned `public` schema export plus the W-147 overlay.
 - `qa_control.sql` owns the QA-only lease, heartbeat, server-side manifest, recovery ownership and schema-blocked state. It is not part of the production public schema.
 - `permanent_qa_rebuild.sql` is the mismatch-only, advisory-locked rebuild guard. It runs only after the synchronizer independently proves the exact non-production branch is empty and has no active lease.
 - `../qa-contract.json` checksums every synchronization input and records the expected live catalog fingerprint.
@@ -26,6 +26,8 @@ The repository has eight active Supabase migration files and roughly 110 histori
 The existing migration files remain production history and must not be replayed after this build-771 baseline. One-time provisioning applies the sanctioned baseline to the persistent data-less branch. Ordinary candidates run `qa:schema:sync`: a matching fingerprint performs no DDL; a mismatch is reconciled only while the branch is empty, inside one transaction, and is re-fingerprinted before fixtures are permitted. A failed or ambiguous synchronization marks the branch blocked.
 
 Future application schema changes must be captured as ordinary additive migrations after build 771. When the sanctioned baseline changes, create a new versioned artifact and fingerprint rather than editing this one silently.
+
+`772_w147_auth_data_api.sql` is the additive W-147 overlay applied after the immutable build-771 public artifact. Its pinned fingerprint is derived in a disposable PostgreSQL 17.10 fixture with the canonical `STRUCTURE_FINGERPRINT_SQL`; it preserves W-096's explicit clipboard/PDR SELECT-only exceptions while revoking every browser write, sequence and routine path.
 
 ## Commands
 
