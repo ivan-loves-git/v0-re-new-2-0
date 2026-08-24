@@ -82,10 +82,20 @@ export function validatePasswordResetDeliveryUrl(
     throw new Error("Password reset URL rejected")
   }
 
-  const callbackValue = resetUrl.searchParams.get("callbackURL")
-  if (!callbackValue) {
+  if (
+    resetUrl.username ||
+    resetUrl.password ||
+    resetUrl.hash ||
+    !/^\/api\/auth\/reset-password\/[^/]+$/.test(resetUrl.pathname)
+  ) {
     throw new Error("Password reset URL rejected")
   }
+
+  const callbackValues = resetUrl.searchParams.getAll("callbackURL")
+  if (callbackValues.length !== 1 || !callbackValues[0]) {
+    throw new Error("Password reset URL rejected")
+  }
+  const callbackValue = callbackValues[0]
 
   let callback: URL
   try {

@@ -78,6 +78,11 @@ describe("W-151 password-reset origin boundary", () => {
     resetUrl(RENEW_PRODUCTION_ORIGIN, "/dashboard"),
     resetUrl(RENEW_PRODUCTION_ORIGIN, "/auth/reset-password#token-copy"),
     `${RENEW_PRODUCTION_ORIGIN}/api/auth/reset-password/synthetic-token`,
+    `${RENEW_PRODUCTION_ORIGIN}/api/auth/reset-password/synthetic-token/extra?callbackURL=%2Fauth%2Freset-password`,
+    `${RENEW_PRODUCTION_ORIGIN}/api/auth/other/synthetic-token?callbackURL=%2Fauth%2Freset-password`,
+    `${RENEW_PRODUCTION_ORIGIN}/api/auth/reset-password/synthetic-token?callbackURL=%2Fauth%2Freset-password&callbackURL=https%3A%2F%2Fattacker.example%2Fauth%2Freset-password`,
+    `https://user@app.re-new.team/api/auth/reset-password/synthetic-token?callbackURL=%2Fauth%2Freset-password`,
+    `${RENEW_PRODUCTION_ORIGIN}/api/auth/reset-password/synthetic-token?callbackURL=%2Fauth%2Freset-password#fragment`,
     "not-a-url",
   ])("rejects a hostile or malformed reset URL without echoing it", (url) => {
     let error: unknown
