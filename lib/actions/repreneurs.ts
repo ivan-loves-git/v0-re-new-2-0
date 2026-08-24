@@ -1,7 +1,6 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
-import { requireUser } from "@/lib/auth-server"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
@@ -43,10 +42,8 @@ function optionalWebUrl(value: FormDataEntryValue | null) {
  * The action still accepts these fields for backwards compatibility with imports.
  */
 export async function createRepreneur(formData: FormData) {
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  // Get current user from Better Auth
-  const user = await requireUser()
 
   // Parse sector preferences (now sent as JSON array)
   const sectorPrefsRaw = formData.get("sector_preferences") as string
@@ -131,6 +128,7 @@ export async function createRepreneur(formData: FormData) {
  * no longer collects these fields - they come from the v2 questionnaire or historical imports.
  */
 export async function updateRepreneur(id: string, formData: FormData) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const firstName = String(formData.get("first_name") ?? "").trim()
   const lastName = String(formData.get("last_name") ?? "").trim()
@@ -218,6 +216,7 @@ export async function updateRepreneur(id: string, formData: FormData) {
 }
 
 export async function updateRepreneurStatus(id: string, status: LifecycleStatus) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase.from("repreneurs").update({ lifecycle_status: status }).eq("id", id)
@@ -233,6 +232,7 @@ export async function updateRepreneurStatus(id: string, status: LifecycleStatus)
 }
 
 export async function updateRepreneurJourneyStage(id: string, stage: string | null) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase.from("repreneurs").update({ journey_stage: stage }).eq("id", id)
@@ -320,10 +320,8 @@ export async function updateRepreneurIdentity(id: string, firstName: string, las
 }
 
 export async function createNote(repreneurId: string, content: string, noteType: string = "other") {
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
-
-  // Get current user from Better Auth
-  const user = await requireUser()
 
   const { error } = await supabase.from("notes").insert({
     repreneur_id: repreneurId,
@@ -340,6 +338,7 @@ export async function createNote(repreneurId: string, content: string, noteType:
 }
 
 export async function deleteNote(noteId: string, repreneurId: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase.from("notes").delete().eq("id", noteId)
@@ -352,6 +351,7 @@ export async function deleteNote(noteId: string, repreneurId: string) {
 }
 
 export async function deleteRepreneur(id: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data: repreneur, error: fetchError } = await supabase
@@ -440,6 +440,7 @@ export async function deleteRepreneur(id: string) {
  * Only upgrades lead → qualified; won't downgrade client → qualified
  */
 export async function setTier2Stars(id: string, stars: number) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   if (stars < 1 || stars > 5) {
@@ -479,6 +480,7 @@ export async function setTier2Stars(id: string, stars: number) {
  * Does NOT change lifecycle_status - manual intervention required
  */
 export async function clearTier2Stars(id: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -500,6 +502,7 @@ export async function clearTier2Stars(id: string) {
  * Stores the previous status for potential un-reject, sets rejected_at timestamp
  */
 export async function rejectRepreneur(id: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // Fetch status + email fields in one query (avoids N+1)
@@ -558,6 +561,7 @@ export async function rejectRepreneur(id: string) {
  * Un-reject a repreneur (restore to previous status)
  */
 export async function unrejectRepreneur(id: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // Get the previous status
@@ -602,6 +606,7 @@ export async function unrejectRepreneur(id: string) {
  * Different from reject: decline is a manual admin choice, reject sends rejection email
  */
 export async function declineRepreneur(id: string, reasonCategory?: string, reasonText?: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // First, get the current status to store as previous_status
@@ -649,6 +654,7 @@ export async function declineRepreneur(id: string, reasonCategory?: string, reas
  * Restore a declined repreneur to their previous status
  */
 export async function undeclineRepreneur(id: string) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // Get the previous status
@@ -706,6 +712,7 @@ export async function getExportEnrichmentData(): Promise<{
   firstOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }>
   secondOffer: Record<string, { offeredAt: string; status: string; acceptedAt: string; declinedAt: string }>
 }> {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const nowIso = new Date().toISOString()
   const toDate = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "")
@@ -797,6 +804,7 @@ export async function saveAccuracyRating(
   whenAccuracy: string,
   notes?: string,
 ) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -845,6 +853,7 @@ export interface QuestionnaireInput {
  * Score is calculated using database criteria (with hardcoded fallback)
  */
 export async function saveQuestionnaire(id: string, data: QuestionnaireInput) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const industrySectors = canonicalSectorSelections(data.q3_industry_sectors)
   const targetSectors = canonicalSectorSelections(data.q11_target_sectors)
@@ -922,6 +931,7 @@ export async function updateTier1Answer(
   field: string,
   value: string | string[] | boolean | null
 ) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // First update the single field
@@ -1024,6 +1034,7 @@ export async function updateTier1Answers(
   id: string,
   answers: Record<string, string | string[] | boolean | null>
 ) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // Update all fields at once
@@ -1123,6 +1134,7 @@ export async function updateTier1Answers(
  * Only upgrades lead → qualified; won't downgrade client → qualified
  */
 export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Dimensions>) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // Calculate weighted overall score
@@ -1168,6 +1180,7 @@ export async function setTier2Dimensions(id: string, dimensions: Partial<Tier2Di
  * The database trigger will auto-update tier3_milestone_count and journey_stage
  */
 export async function toggleMilestone(id: string, milestoneKey: MilestoneKey, value: boolean) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
 
   // Convert milestone key to database column name (ms_xxx)
@@ -1213,6 +1226,7 @@ export interface QuestionnaireV2Input {
  * This is the new dual scoring system replacing the legacy Tier 1 score
  */
 export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input) {
+  await requireStaffAccess()
   const supabase = createAdminClient()
   const targetSectors = canonicalSectorSelections(data.q13_target_sectors_v2, false)
   if (targetSectors.length === 0) throw new Error("Select at least one approved sector")
