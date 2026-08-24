@@ -298,7 +298,7 @@ BEGIN
  IF v_match.status NOT IN ('proposed','interested','declined') THEN RAISE EXCEPTION 'response_locked' USING ERRCODE='P0001'; END IF;
  SELECT * INTO v_opportunity FROM public.opportunities opportunity WHERE opportunity.id=v_match.opportunity_id AND opportunity.status='active' AND NOT opportunity.is_demo FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'response_not_available' USING ERRCODE='P0001'; END IF;
- UPDATE public.opportunity_matches SET status=p_status,decline_reason_categories=CASE WHEN p_status='declined' THEN COALESCE(p_decline_reason_categories,'{}') ELSE '{}' END,decline_reason_text=CASE WHEN p_status='declined' THEN NULLIF(BTRIM(p_decline_reason_text),'') ELSE NULL END,reviewed_by=NULL,reviewed_at=NULL WHERE id=v_match.id;
+ UPDATE public.opportunity_matches SET status=p_status::public.opportunity_match_status,decline_reason_categories=CASE WHEN p_status='declined' THEN COALESCE(p_decline_reason_categories,'{}') ELSE '{}' END,decline_reason_text=CASE WHEN p_status='declined' THEN NULLIF(BTRIM(p_decline_reason_text),'') ELSE NULL END,reviewed_by=NULL,reviewed_at=NULL WHERE id=v_match.id;
  RETURN QUERY SELECT v_match.id,v_opportunity.id,p_status;
 END $$;
 

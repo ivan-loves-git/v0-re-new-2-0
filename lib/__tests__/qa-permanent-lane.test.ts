@@ -53,7 +53,7 @@ describe("permanent QA lane contract", () => {
         { path: "supabase/schema/permanent_qa_rebuild.sql", sha256: "20565af77093399b6b8ebc7e27ebc78e778faf9df802b702b7d86eea9f323291" },
         { path: "supabase/schema/771_public_schema.sql", sha256: "593d9d2b813c9047568dd5d863e2d4644a18493cff0e63142518fcfeb554788b" },
         { path: "supabase/schema/771_test_storage.sql", sha256: "55a91d3c3db75e6ea9d0d55f3d0165bb087e83451174147c58a7c951dc91e8b4" },
-        { path: "supabase/schema/822_demo_opportunity_quarantine.sql", sha256: "5d0414780c2ea2cff23b4a0b457e320b66c70befda906aea729c40ee180e5233" },
+        { path: "supabase/schema/822_demo_opportunity_quarantine.sql", sha256: "5300d9f9d23cef949406f203fefba5bc5f6ba7ae370388e0f39353789284e7bc" },
         { path: "supabase/schema/822_deals_reconsideration.sql", sha256: "62d693c89a8f2ed19045cbfa62cfd3db111d5a16e6b645a9e024069b4570ef93" },
         { path: "supabase/schema/823_staff_ma_relationship_corrections.sql", sha256: "bfcbd622f471b55c5d5f1352788e3070abf33f1ccf9da246da8d3cb37f9ffedf" },
         { path: "supabase/schema/824_w128_draft_opportunity_activation.sql", sha256: "8a6b751bec0fc5854783b5eada5932c75b00ce3544733894fb72d63339508bed" },

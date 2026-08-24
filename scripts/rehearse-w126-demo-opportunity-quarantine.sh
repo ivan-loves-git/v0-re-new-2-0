@@ -80,11 +80,15 @@ CREATE TABLE public.opportunities (
   status TEXT NOT NULL,
   is_demo BOOLEAN NOT NULL DEFAULT FALSE
 );
+CREATE TYPE public.opportunity_match_status AS ENUM (
+  'draft', 'shortlisted', 'proposed', 'interested', 'declined',
+  'active_pursuit', 'dropped', 'completed'
+);
 CREATE TABLE public.opportunity_matches (
   id UUID PRIMARY KEY,
   opportunity_id UUID NOT NULL REFERENCES public.opportunities(id),
   repreneur_id UUID NOT NULL,
-  status TEXT NOT NULL,
+  status public.opportunity_match_status NOT NULL,
   decline_reason_categories TEXT[] NOT NULL DEFAULT '{}',
   decline_reason_text TEXT,
   reviewed_by TEXT,
@@ -105,6 +109,7 @@ awk '
   capture { print }
   capture && /^END \$\$;$/ { exit }
 ' "$repo_root/scripts/112_demo_opportunity_quarantine.sql" | "${response_psql[@]}"
+"${response_psql[@]}" -c "SELECT * FROM public.update_repreneur_opportunity_response('30000000-0000-4000-8000-000000000126','10000000-0000-4000-8000-000000000126','interested');" >/dev/null
 "${response_psql[@]}" -c "SELECT * FROM public.update_repreneur_opportunity_response('30000000-0000-4000-8000-000000000126','10000000-0000-4000-8000-000000000126','interested');" >/dev/null
 "${response_psql[@]}" -Atq -c "SELECT status FROM public.opportunity_matches WHERE id='30000000-0000-4000-8000-000000000126';" | grep -qx interested || {
   echo 'w126_portal_response_write_failed' >&2
