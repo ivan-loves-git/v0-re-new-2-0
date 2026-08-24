@@ -95,9 +95,10 @@ try {
     VALUES ($1, $2, $3, 'QA provisional context', true, $4)`, [ids.provisionalAffiliation, ids.provisionalContextContact, ids.provisionalOffice, actors.staff.userId])
   await database.query(`INSERT INTO public.repreneurs (
       id, email, first_name, last_name, lifecycle_status, source, created_by,
-      who_score, when_score, scoring_flags, q12_geo_zones, q13_target_sectors_v2, q14_deal_size
-    ) VALUES ($1, $2, 'Portal', $3, 'lead', 'qa_playwright', $4, 80, 80, '[]'::jsonb, '["all-france"]'::jsonb, '["Tech & Digital"]'::jsonb, '["1-3M"]'::jsonb)`,
-    [ids.portalRepreneur, actors.portal.email, fixturePrefix, actors.staff.userId])
+      who_score, when_score, scoring_flags, q12_geo_zones, q13_target_sectors_v2, q14_deal_size,
+      ldc_url
+    ) VALUES ($1, $2, 'Portal', $3, 'lead', 'qa_playwright', $4, 80, 80, '[]'::jsonb, '["all-france"]'::jsonb, '["Tech & Digital"]'::jsonb, '["1-3M"]'::jsonb, $5)`,
+    [ids.portalRepreneur, actors.portal.email, fixturePrefix, actors.staff.userId, manifest.storageObjects[0]])
 
   for (const actor of [actors.staff, actors.portal]) {
     await database.query(`INSERT INTO public."user" (id, name, email, "emailVerified") VALUES ($1, $2, $3, true)`, [actor.userId, `${fixturePrefix} ${actor === actors.staff ? "staff" : "portal"}`, actor.email])
