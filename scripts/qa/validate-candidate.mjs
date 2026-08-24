@@ -77,6 +77,11 @@ try {
   }
   console.log(JSON.stringify({ ok: true, ...result }))
 } catch (error) {
-  console.error(error instanceof Error && error.message.startsWith("QA candidate failed:") ? error.message : "QA candidate failed: lookup")
+  const message = error instanceof Error ? error.message : ""
+  console.error(
+    message.startsWith("QA candidate failed:") || message.startsWith("QA candidate contract failed:")
+      ? message
+      : "QA candidate failed: internal",
+  )
   process.exit(1)
 }
