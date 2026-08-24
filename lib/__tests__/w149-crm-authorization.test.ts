@@ -256,7 +256,10 @@ function staffBoundaryBeforeEveryServiceRolePath(
   relativePath: string,
   exportName: string,
 ) {
-  if (relativePath.startsWith("app/(dashboard)/")) {
+  if (
+    relativePath.startsWith("app/(dashboard)/") &&
+    !relativePath.endsWith("/route.ts")
+  ) {
     expect(source("app/(dashboard)/layout.tsx")).toContain("requireStaffAccess")
     return true
   }
