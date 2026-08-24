@@ -222,6 +222,16 @@ describe("permanent QA lane contract", () => {
     expect(lease).not.toContain('message.startsWith("QA lease contract failed:")')
   })
 
+  it("limits schema-mismatch recovery to exact pre-schema acquisition", () => {
+    const lease = readFileSync(`${process.cwd()}/scripts/qa/lease-phase-b.mjs`, "utf8")
+    const blockedGuard = 'if (state.rows[0]?.blocked_reason) fail("schema-blocked")'
+    const recoveryGuard = 'if (!allowPreSchemaRecovery && state.rows[0]?.structure_fingerprint !== contract.structureFingerprint) fail("structure-fingerprint")'
+
+    expect(lease).toContain('const allowPreSchemaRecovery = action === "acquire" && process.env.QA_PRE_SCHEMA_RECOVERY === "true"')
+    expect(lease).toContain(recoveryGuard)
+    expect(lease.indexOf(blockedGuard)).toBeLessThan(lease.indexOf(recoveryGuard))
+  })
+
   it("passes the admitted candidate fingerprint to the lease acquisition query", async () => {
     const root = mkdtempSync(join(tmpdir(), "renew-qa-lease-contract-"))
     const admittedRoot = join(root, ".qa-candidate", "supabase")
