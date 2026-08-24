@@ -419,9 +419,11 @@ test.describe.serial("Golden journeys", () => {
         ),
         portalPage.getByRole("button", { name: "I'm interested" }).click(),
       ])
+      const redirectedToDeals = response.status() === 303
+        && new URL(response.headers()["location"] ?? "", response.url()).pathname === "/portal/deals"
       expect(
-        response.ok(),
-        `Interest action returned HTTP ${response.status()}`,
+        response.ok() || redirectedToDeals,
+        `Interest action returned unexpected HTTP ${response.status()}`,
       ).toBe(true)
     }
     await Promise.all([submitInterest(portalOne), submitInterest(portalTwo)])
