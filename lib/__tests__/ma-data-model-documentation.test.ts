@@ -70,7 +70,7 @@ describe("canonical M&A data model documentation", () => {
       "`BFC` is an accepted source compatibility alias of canonical `BFR`",
       "109 blank source title cells and the 20 live newly created Draft/staff-only title gaps",
       "A later WAVE edit always wins over stale workbook evidence.",
-      "Campaign suppression belongs to the canonical person and applies across all office affiliations.",
+      "Campaign suppression belongs to the canonical person and applies across the current and historical office affiliations.",
       "At W-072 launch, the operational allowlist contains exactly one purpose",
       "Adding any other operational purpose requires a separately approved PDR decision",
       "Free-text purpose and a generic bypass are not valid authorization.",

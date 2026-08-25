@@ -23,6 +23,7 @@ function one<T>(value: Relation<T>): T | null {
 export interface MaWorkspaceContact {
   id: string
   affiliationId: string
+  officeId: string
   name: string
   firstName: string | null
   lastName: string | null
@@ -171,6 +172,7 @@ async function getWorkspaceRows(
     entries.push({
       id: row.contactId,
       affiliationId: row.id,
+      officeId: row.officeId,
       name: row.contactLabel,
       firstName: row.contactFirstName,
       lastName: row.contactLastName,
@@ -409,6 +411,11 @@ const MA_CORRECTION_DB_ERRORS: Record<string, [string, string]> = {
   ma_linkedin_url_invalid: ["linkedin_url", "Enter a full http:// or https:// LinkedIn address."],
   ma_primary_contact_email_required: ["email", "This person is the usable primary contact for an Active or Paused opportunity. Keep a valid email or correct that opportunity first."],
   ma_contact_affiliation_not_found: ["form", "That office relationship no longer belongs to this contact."],
+  ma_contact_current_affiliation_changed: ["form", "This person's current office changed. Refresh before saving again."],
+  ma_contact_target_office_not_found: ["office_id", "That office no longer exists. Refresh and choose another office."],
+  ma_contact_target_office_must_be_active: ["office_id", "Choose an active office."],
+  ma_contact_target_firm_must_be_current: ["office_id", "Choose an office belonging to a current firm."],
+  ma_contact_move_blocked_by_current_opportunity: ["office_id", "This person is linked to a current opportunity from this office. Correct or close that opportunity before moving the person."],
 }
 
 function correctionFailure(error: { message?: string } | null): MaCorrectionResult {
@@ -476,18 +483,23 @@ export async function updateMaOfficeCorrection(officeId: string, formData: FormD
 }
 
 export async function updateMaContactCorrection(contactId: string, affiliationId: string, formData: FormData): Promise<MaCorrectionResult> {
+  const targetOfficeId = correctionField(formData, "office_id")
   if (!UUID_PATTERN.test(contactId) || !UUID_PATTERN.test(affiliationId)) return { success: false, message: "Choose a valid office contact." }
   const { user } = await requireStaffAccess()
+  if (!UUID_PATTERN.test(targetOfficeId)) {
+    const message = "Choose the person's current firm and office."
+    return { success: false, message, fieldErrors: { office_id: message } }
+  }
   const supabase = createAdminClient()
-  const { error } = await supabase.rpc("update_ma_contact_correction", {
-    p_contact_id: contactId, p_affiliation_id: affiliationId, p_first_name: correctionField(formData, "first_name"),
+  const { error } = await supabase.rpc("update_ma_contact_with_office_correction", {
+    p_contact_id: contactId, p_current_affiliation_id: affiliationId, p_target_office_id: targetOfficeId, p_first_name: correctionField(formData, "first_name"),
     p_last_name: correctionField(formData, "last_name"), p_email: correctionField(formData, "email"), p_phone: correctionField(formData, "phone"),
     p_linkedin_url: correctionField(formData, "linkedin_url"), p_internal_notes: correctionField(formData, "internal_notes"),
     p_job_title: correctionField(formData, "job_title"), p_actor: user.id,
   })
   if (error) return correctionFailure(error)
   revalidateMaRelationshipCorrectionPaths()
-  return { success: true, message: "Contact details saved with staff audit." }
+  return { success: true, message: "Contact details and current office saved with staff audit." }
 }
 
 export async function updateMaRelationshipWorkspaceNotes(

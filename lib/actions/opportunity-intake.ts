@@ -521,9 +521,9 @@ export async function listMaOfficeIntakeOptions(options?: {
 }
 
 /**
- * Staff-only canonical identities available to affiliate with another office.
- * This deliberately returns people, never an existing affiliation or any
- * repreneur-facing data.
+ * Staff-only canonical identity lookup retained for compatibility. Current
+ * product flows do not offer a second affiliation: an existing person must be
+ * moved atomically from the Contacts directory.
  */
 export async function listMaCanonicalContactOptions(): Promise<
   MaCanonicalContactOption[]
@@ -1062,6 +1062,17 @@ export async function createMaOfficeContact(
   )
 
   if (error) {
+    if (error.message?.includes("ma_contact_already_has_active_office")) {
+      return {
+        success: false,
+        message:
+          "This contact already belongs to another current office. Move them from Contacts instead.",
+        fieldErrors: {
+          existing_contact_id:
+            "Move this person from Contacts instead of adding a second office.",
+        },
+      }
+    }
     if (
       error.message?.includes("ma_contact_office_affiliation_already_active")
     ) {

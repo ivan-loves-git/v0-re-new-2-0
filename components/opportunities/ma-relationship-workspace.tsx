@@ -1112,7 +1112,7 @@ function RelationshipContactsDirectory({
         <CardHeader>
           <CardTitle className="text-base">Contacts</CardTitle>
           <CardDescription>
-            Canonical contacts and their active office affiliations.
+            Canonical contacts, each with one current firm and office.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1125,7 +1125,7 @@ function RelationshipContactsDirectory({
               </AlertTitle>
               <AlertDescription>
                 WAVE excludes these people from campaign and general outreach
-                across every office affiliation.
+                even if staff later corrects their office.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -1149,11 +1149,30 @@ function RelationshipContactsDirectory({
             </p>
           ) : (
             <div className="divide-y rounded-md border">
-              {filteredContacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
+              {filteredContacts.map((contact) => {
+                const currentAffiliation =
+                  contact.affiliations.find(
+                    (affiliation) => affiliation.isActive,
+                  ) ?? contact.affiliations[0]
+                const currentOfficeId = currentAffiliation?.officeId ?? ""
+                const moveBlocked = contact.linkedOpportunities.some(
+                  (opportunity) =>
+                    opportunity.affiliationId === currentAffiliation?.id &&
+                    !["closed", "archived"].includes(opportunity.status),
+                )
+                const correctionOfficeOptions = offices
+                  .filter(
+                    (office) =>
+                      office.id === currentOfficeId ||
+                      (office.status === "active" &&
+                        office.firmStatus !== "archived"),
+                  )
+                  .map((office) => ({ id: office.id, label: office.label }))
+                return (
+                  <div
+                    key={contact.id}
+                    className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
+                  >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium">{contact.label}</p>
@@ -1171,19 +1190,44 @@ function RelationshipContactsDirectory({
                         {contact.email}
                       </p>
                     ) : null}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Current firm and office: {currentAffiliation?.officeLabel ?? "Not recorded"}
+                    </p>
                     {contact.campaignEmailSuppressionReason ? (
                       <p className="mt-1 text-xs text-muted-foreground">
                         {contact.campaignEmailSuppressionReason}
                       </p>
                     ) : null}
+                    {contact.linkedOpportunities.length ? (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Linked opportunities
+                        </p>
+                        <ul className="space-y-1">
+                          {contact.linkedOpportunities.map((opportunity) => (
+                            <li
+                              key={`${opportunity.id}-${opportunity.affiliationId}`}
+                              className="flex flex-wrap items-center gap-1.5 text-xs"
+                            >
+                              <Link
+                                href={`/opportunities/${opportunity.id}`}
+                                className="font-medium hover:underline"
+                              >
+                                {opportunity.label}
+                              </Link>
+                              <Badge variant="outline">
+                                {opportunity.status}
+                              </Badge>
+                              {opportunity.isPrimary ? (
+                                <Badge variant="secondary">Primary</Badge>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex flex-col items-start gap-2 sm:max-w-[46%] sm:items-end">
-                    <span className="text-xs text-muted-foreground sm:text-right">
-                      {contact.officeIds
-                        .map((officeId) => officeLabels.get(officeId))
-                        .filter(Boolean)
-                        .join(" · ") || "No active office"}
-                    </span>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1197,24 +1241,24 @@ function RelationshipContactsDirectory({
                     <MaRelationshipCorrectionAction
                       target="contact"
                       id={contact.id}
-                      affiliations={contact.affiliations.map((affiliation) => ({
-                        id: affiliation.id,
-                        label: `${affiliation.officeLabel}${affiliation.isActive ? "" : " (historical)"}`,
-                        jobTitle: affiliation.jobTitle,
-                      }))}
+                      affiliationId={currentAffiliation?.id}
+                      currentOfficeId={currentOfficeId}
+                      officeOptions={correctionOfficeOptions}
+                      moveBlocked={moveBlocked}
                       fields={[
                         { name: "first_name", label: "First name", value: contact.firstName },
                         { name: "last_name", label: "Last name", value: contact.lastName },
                         { name: "email", label: "Email", value: contact.email, type: "email" },
                         { name: "phone", label: "Phone", value: contact.phone },
                         { name: "linkedin_url", label: "LinkedIn URL", value: contact.linkedinUrl, type: "url" },
-                        { name: "job_title", label: "Job title at selected office", value: contact.affiliations[0]?.jobTitle ?? null },
+                        { name: "job_title", label: "Job title at current office", value: currentAffiliation?.jobTitle ?? null },
                         { name: "internal_notes", label: "Internal notes", value: contact.internalNotes, type: "textarea" },
                       ]}
                     />
                   </div>
-                </div>
-              ))}
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>
@@ -1234,8 +1278,9 @@ function RelationshipContactsDirectory({
                 : "Block campaign email"}
             </DialogTitle>
             <DialogDescription>
-              This policy follows the person across every office affiliation.
-              Every change is retained with your identity, time and reason.
+              This policy follows the person if staff later corrects their
+              office. Every change is retained with your identity, time and
+              reason.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

@@ -7,9 +7,9 @@ export interface MaRelationshipTimelineFilters {
 }
 
 /**
- * Contact filtering is based on the canonical contact identity, not a single
- * office affiliation. A person can have several affiliations while the office
- * filter composes independently.
+ * Contact filtering is based on the canonical contact identity, not the one
+ * current affiliation. Historical interactions can still belong to earlier
+ * office affiliations, so the office filter composes independently.
  */
 export function filterMaRelationshipTimeline(
   interactions: MaRelationshipTimelineItem[],

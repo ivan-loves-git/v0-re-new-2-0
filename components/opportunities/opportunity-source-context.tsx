@@ -33,10 +33,8 @@ import {
   createMaFirmOfficeContext,
   createMaOfficeForExistingFirm,
   createMaOfficeContact,
-  listMaCanonicalContactOptions,
 } from "@/lib/actions/opportunity-intake"
 import {
-  type MaCanonicalContactOption,
   type MaOfficeIntakeOffice,
   type OpportunityWithSource,
 } from "@/lib/types/opportunity"
@@ -50,9 +48,7 @@ import {
 } from "@/lib/utils/existing-firm-office-selection"
 
 const NO_OFFICE_OPTION_VALUE = "__no_office__"
-const NO_CANONICAL_CONTACT_OPTION_VALUE = "__no_canonical_contact__"
 const CONTACT_NAME_REQUIREMENT_TEXT = "First or last name required"
-type OfficeContactMode = "existing" | "new"
 type OfficeContextMode = "new_firm" | "existing_firm"
 type ExistingFirmOfficePath = "existing_office" | "new_real_office"
 
@@ -107,15 +103,6 @@ export function OpportunitySourceContext({
   >({})
   const officeContextSummaryRef = useRef<HTMLDivElement>(null)
   const [createContactDialogOpen, setCreateContactDialogOpen] = useState(false)
-  const [contactMode, setContactMode] = useState<OfficeContactMode>("new")
-  const [existingContactId, setExistingContactId] = useState("")
-  const [canonicalContactOptions, setCanonicalContactOptions] = useState<
-    MaCanonicalContactOption[]
-  >([])
-  const [isLoadingCanonicalContacts, setIsLoadingCanonicalContacts] =
-    useState(false)
-  const [canonicalContactLookupFailed, setCanonicalContactLookupFailed] =
-    useState(false)
   const [isCreatingContact, setIsCreatingContact] = useState(false)
   const [officeContactFieldErrors, setOfficeContactFieldErrors] = useState<
     Record<string, string>
@@ -156,14 +143,6 @@ export function OpportunitySourceContext({
       ),
     [availableOfficeOptions, existingFirmId],
   )
-  const affiliateableCanonicalContacts = useMemo(() => {
-    const selectedOfficeContactIds = new Set(
-      selectedOffice?.contacts.map((contact) => contact.contact_id) ?? [],
-    )
-    return canonicalContactOptions.filter(
-      (contact) => !selectedOfficeContactIds.has(contact.contact_id),
-    )
-  }, [canonicalContactOptions, selectedOffice])
   useEffect(() => {
     if (Object.keys(officeContextFieldErrors).length > 0)
       focusValidationSummary(officeContextSummaryRef)
@@ -211,42 +190,8 @@ export function OpportunitySourceContext({
       return next
     })
   }
-  async function loadCanonicalContactOptions() {
-    if (isLoadingCanonicalContacts) return
-    setCanonicalContactOptions([])
-    setExistingContactId("")
-    setCanonicalContactLookupFailed(false)
-    setIsLoadingCanonicalContacts(true)
-    try {
-      setCanonicalContactOptions(await listMaCanonicalContactOptions())
-    } catch (error) {
-      setCanonicalContactOptions([])
-      setCanonicalContactLookupFailed(true)
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Canonical contacts could not be loaded.",
-      )
-    } finally {
-      setIsLoadingCanonicalContacts(false)
-    }
-  }
-  function chooseContactMode(value: string) {
-    const nextMode: OfficeContactMode =
-      value === "existing" ? "existing" : "new"
-    setContactMode(nextMode)
-    setExistingContactId("")
-    if (nextMode === "existing") void loadCanonicalContactOptions()
-    else {
-      setCanonicalContactOptions([])
-      setCanonicalContactLookupFailed(false)
-    }
-  }
   function openCreateContactDialog() {
-    setContactMode("new")
-    setExistingContactId("")
-    setCanonicalContactOptions([])
-    setCanonicalContactLookupFailed(false)
+    setOfficeContactFieldErrors({})
     setCreateContactDialogOpen(true)
   }
   async function handleCreateOfficeContext(event: FormEvent<HTMLFormElement>) {
@@ -336,12 +281,6 @@ export function OpportunitySourceContext({
     event.preventDefault()
     if (!selectedOffice) return
     setOfficeContactFieldErrors({})
-    const selectedCanonicalContact =
-      contactMode === "existing"
-        ? canonicalContactOptions.find(
-            (contact) => contact.contact_id === existingContactId,
-          )
-        : null
     setIsCreatingContact(true)
     try {
       const result = await createMaOfficeContact(
@@ -354,7 +293,6 @@ export function OpportunitySourceContext({
           resultErrors
             ? {
                 form: resultErrors.form,
-                existing_contact_id: resultErrors.existing_contact_id,
                 office_contact_first_name: resultErrors.contact_first_name,
                 office_contact_last_name: resultErrors.contact_last_name,
                 office_contact_email: resultErrors.contact_email,
@@ -366,13 +304,7 @@ export function OpportunitySourceContext({
         })
         return
       }
-      const contact = selectedCanonicalContact
-        ? {
-            ...result.contact,
-            contact_name: selectedCanonicalContact.contact_name,
-            contact_email: selectedCanonicalContact.contact_email,
-          }
-        : result.contact
+      const contact = result.contact
       setCreatedOfficeOptions((current) => {
         const currentOffice =
           current.find(
@@ -399,10 +331,6 @@ export function OpportunitySourceContext({
       )
       setPrimaryAffiliationId((current) => current ?? contact.affiliation_id)
       setCreateContactDialogOpen(false)
-      setContactMode("new")
-      setExistingContactId("")
-      setCanonicalContactOptions([])
-      setCanonicalContactLookupFailed(false)
       toast.success(result.message)
     } catch (error) {
       setOfficeContactFieldErrors({
@@ -997,25 +925,17 @@ export function OpportunitySourceContext({
       <Dialog
         open={createContactDialogOpen}
         onOpenChange={(open) => {
-          if (!isCreatingContact) {
-            setCreateContactDialogOpen(open)
-            if (!open) {
-              setContactMode("new")
-              setExistingContactId("")
-              setCanonicalContactOptions([])
-              setCanonicalContactLookupFailed(false)
-            }
-          }
+          if (!isCreatingContact) setCreateContactDialogOpen(open)
         }}
       >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Add office contact</DialogTitle>
             <DialogDescription>
-              Link an existing canonical person to{" "}
-              {selectedOffice?.office_label ?? "this operating office"}, or
-              create another named person. This relationship remains staff-only
-              until explicitly used in an opportunity.
+              Create a new canonical person at{" "}
+              {selectedOffice?.office_label ?? "this operating office"}. To
+              place an existing person here, move them from Contacts so their
+              earlier office remains in history.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -1029,209 +949,64 @@ export function OpportunitySourceContext({
               errors={officeContactFieldErrors}
               labels={{
                 form: "Office contact",
-                existing_contact_id: "Canonical contact",
                 office_contact_first_name: "Contact first name",
                 office_contact_last_name: "Contact last name",
                 office_contact_email: "Email",
               }}
             />
-            <input type="hidden" name="contact_mode" value={contactMode} />
-            <p id="office_contact_mode_label" className="text-sm font-medium">
-              Contact type
-            </p>
-            <RadioGroup
-              aria-labelledby="office_contact_mode_label"
-              value={contactMode}
-              onValueChange={chooseContactMode}
-              disabled={isCreatingContact}
-              className="gap-2"
-            >
-              <label
-                htmlFor="office_contact_existing_mode"
-                className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
-              >
-                <RadioGroupItem
-                  id="office_contact_existing_mode"
-                  value="existing"
-                  className="mt-0.5"
-                />
-                <span>
-                  <span className="block text-sm font-medium">
-                    Use an existing canonical contact
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    Add a new office affiliation without creating another person
-                    record.
-                  </span>
-                </span>
-              </label>
-              <label
-                htmlFor="office_contact_new_mode"
-                className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
-              >
-                <RadioGroupItem
-                  id="office_contact_new_mode"
-                  value="new"
-                  className="mt-0.5"
-                />
-                <span>
-                  <span className="block text-sm font-medium">
-                    Create a new contact
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    Create a named canonical person and this office affiliation.
-                  </span>
-                </span>
-              </label>
-            </RadioGroup>
-            {contactMode === "existing" ? (
-              <div className="space-y-2">
-                <input
-                  type="hidden"
-                  name="existing_contact_id"
-                  value={existingContactId}
-                />
-                <FormFieldLabel
-                  htmlFor="existing_contact_id"
-                  requirement="required"
-                >
-                  Canonical contact
-                </FormFieldLabel>
-                <Select
-                  value={existingContactId || NO_CANONICAL_CONTACT_OPTION_VALUE}
-                  onValueChange={(value) => {
-                    setExistingContactId(
-                      value === NO_CANONICAL_CONTACT_OPTION_VALUE ? "" : value,
-                    )
-                    clearOfficeContactFieldError("existing_contact_id")
-                  }}
-                  disabled={
-                    isCreatingContact ||
-                    isLoadingCanonicalContacts ||
-                    canonicalContactLookupFailed
-                  }
-                >
-                  <SelectTrigger
-                    id="existing_contact_id"
-                    className="w-full"
-                    {...fieldErrorProps(
-                      "existing_contact_id",
-                      officeContactFieldErrors.existing_contact_id,
-                    )}
-                  >
-                    <SelectValue placeholder="Choose a canonical contact" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem
-                        value={NO_CANONICAL_CONTACT_OPTION_VALUE}
-                        disabled
-                      >
-                        Choose a canonical contact
-                      </SelectItem>
-                      {affiliateableCanonicalContacts.map((contact) => (
-                        <SelectItem
-                          key={contact.contact_id}
-                          value={contact.contact_id}
-                        >
-                          {contact.contact_name}
-                          {contact.contact_email
-                            ? ` · ${contact.contact_email}`
-                            : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FieldError
-                  id="existing_contact_id"
-                  message={officeContactFieldErrors.existing_contact_id}
-                />
-                {isLoadingCanonicalContacts ? (
-                  <p className="text-xs text-muted-foreground">
-                    Loading canonical contacts…
-                  </p>
-                ) : canonicalContactLookupFailed ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs text-destructive">
-                      Canonical contacts could not be loaded.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void loadCanonicalContactOptions()}
-                    >
-                      Retry loading contacts
-                    </Button>
-                  </div>
-                ) : affiliateableCanonicalContacts.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    No other active canonical contacts are available for this
-                    office.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Contacts already affiliated with this office are excluded.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <LabeledInput
-                    id="office_contact_first_name"
-                    name="contact_first_name"
-                    label="First name"
-                    requirement="conditional"
-                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
-                    errorKey="office_contact_first_name"
-                    errors={officeContactFieldErrors}
-                    onChange={() => {
-                      clearOfficeContactFieldError("contact_first_name")
-                      clearOfficeContactFieldError("contact_last_name")
-                      clearOfficeContactFieldError("office_contact_first_name")
-                      clearOfficeContactFieldError("office_contact_last_name")
-                    }}
-                  />
-                  <LabeledInput
-                    id="office_contact_last_name"
-                    name="contact_last_name"
-                    label="Last name"
-                    requirement="conditional"
-                    requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
-                    errorKey="office_contact_last_name"
-                    errors={officeContactFieldErrors}
-                    onChange={() => {
-                      clearOfficeContactFieldError("contact_first_name")
-                      clearOfficeContactFieldError("contact_last_name")
-                      clearOfficeContactFieldError("office_contact_first_name")
-                      clearOfficeContactFieldError("office_contact_last_name")
-                    }}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <LabeledInput
-                    id="office_contact_email"
-                    name="contact_email"
-                    label="Email"
-                    type="email"
-                    errorKey="office_contact_email"
-                    errors={officeContactFieldErrors}
-                    onChange={() => {
-                      clearOfficeContactFieldError("contact_email")
-                      clearOfficeContactFieldError("office_contact_email")
-                    }}
-                  />
-                  <LabeledInput
-                    id="office_contact_phone"
-                    name="contact_phone"
-                    label="Phone"
-                    errors={officeContactFieldErrors}
-                  />
-                </div>
-              </>
-            )}
+            <input type="hidden" name="contact_mode" value="new" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <LabeledInput
+                id="office_contact_first_name"
+                name="contact_first_name"
+                label="First name"
+                requirement="conditional"
+                requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
+                errorKey="office_contact_first_name"
+                errors={officeContactFieldErrors}
+                onChange={() => {
+                  clearOfficeContactFieldError("contact_first_name")
+                  clearOfficeContactFieldError("contact_last_name")
+                  clearOfficeContactFieldError("office_contact_first_name")
+                  clearOfficeContactFieldError("office_contact_last_name")
+                }}
+              />
+              <LabeledInput
+                id="office_contact_last_name"
+                name="contact_last_name"
+                label="Last name"
+                requirement="conditional"
+                requirementText={CONTACT_NAME_REQUIREMENT_TEXT}
+                errorKey="office_contact_last_name"
+                errors={officeContactFieldErrors}
+                onChange={() => {
+                  clearOfficeContactFieldError("contact_first_name")
+                  clearOfficeContactFieldError("contact_last_name")
+                  clearOfficeContactFieldError("office_contact_first_name")
+                  clearOfficeContactFieldError("office_contact_last_name")
+                }}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <LabeledInput
+                id="office_contact_email"
+                name="contact_email"
+                label="Email"
+                type="email"
+                errorKey="office_contact_email"
+                errors={officeContactFieldErrors}
+                onChange={() => {
+                  clearOfficeContactFieldError("contact_email")
+                  clearOfficeContactFieldError("office_contact_email")
+                }}
+              />
+              <LabeledInput
+                id="office_contact_phone"
+                name="contact_phone"
+                label="Phone"
+                errors={officeContactFieldErrors}
+              />
+            </div>
             <LabeledInput
               id="office_contact_job_title"
               name="contact_job_title"
@@ -1249,12 +1024,7 @@ export function OpportunitySourceContext({
               </Button>
               <Button
                 type="submit"
-                disabled={
-                  isCreatingContact ||
-                  !selectedOffice ||
-                  (contactMode === "existing" &&
-                    (!existingContactId || isLoadingCanonicalContacts))
-                }
+                disabled={isCreatingContact || !selectedOffice}
               >
                 {isCreatingContact ? "Adding..." : "Add office contact"}
               </Button>
