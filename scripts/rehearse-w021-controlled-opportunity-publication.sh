@@ -17,11 +17,12 @@ for binary in initdb pg_ctl createdb psql; do [ -x "$pg_bin/$binary" ] || { echo
 "$pg_bin/createdb" -h 127.0.0.1 -p "$port" -U renew_rehearsal_admin w021_rehearsal
 psql=("$pg_bin/psql" -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_rehearsal_admin -d w021_rehearsal)
 
-"${psql[@]}" -c "CREATE ROLE postgres NOLOGIN; CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN; CREATE SCHEMA extensions; CREATE SCHEMA auth; CREATE TABLE auth.users (id UUID PRIMARY KEY); CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS 'SELECT NULL::UUID';" >/dev/null
+"${psql[@]}" -c "CREATE ROLE postgres NOLOGIN; CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS; CREATE SCHEMA extensions; CREATE SCHEMA auth; CREATE TABLE auth.users (id UUID PRIMARY KEY); CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS 'SELECT NULL::UUID';" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/schema/771_extensions.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/schema/771_public_schema.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/scripts/112_demo_opportunity_quarantine.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260825190000_w021_controlled_opportunity_publication.sql" >/dev/null
+"${psql[@]}" -c "SET ROLE service_role; SELECT public.w021_publication_manifest_digest('[]'::JSONB); SELECT count(*) FROM public.w021_opportunity_publication_preflight(); RESET ROLE;" >/dev/null
 "${psql[@]}" -c "ALTER TABLE public.opportunities DISABLE TRIGGER enforce_ma_provisional_source_review_on_opportunity;" >/dev/null
 
 "${psql[@]}" <<'SQL'
@@ -44,10 +45,23 @@ SQL
 
 "${psql[@]}" <<'SQL'
 INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,created_by) VALUES ('00000000-0000-4000-8000-000000002211','00000000-0000-4000-8000-000000002106','00000000-0000-4000-8000-000000002105','interested','rehearsal');
+SET ROLE service_role;
 DO $$
-DECLARE manifest JSONB; digest TEXT; result RECORD; rollback_result RECORD;
+DECLARE manifest JSONB; digest TEXT; result RECORD; rollback_result RECORD; direct_update_denied BOOLEAN := FALSE;
 BEGIN
   IF (SELECT count(*) FROM public.w021_opportunity_publication_preflight() WHERE eligible) <> 2 THEN RAISE EXCEPTION 'w021_eligibility_classification_failed: %', (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('reference',reference,'reasons',exclusion_reasons)) FROM public.w021_opportunity_publication_preflight()); END IF;
+  BEGIN
+    UPDATE public.opportunities SET repreneur_exposure='anonymized' WHERE reference='W021-VALID-A';
+  EXCEPTION WHEN insufficient_privilege THEN
+    direct_update_denied := TRUE;
+  END;
+  IF NOT direct_update_denied THEN RAISE EXCEPTION 'w021_direct_service_role_update_was_allowed'; END IF;
+  BEGIN
+    PERFORM public.set_opportunity_broad_discovery_visibility('00000000-0000-4000-8000-000000002109',TRUE,'staff');
+    RAISE EXCEPTION 'w021_incomplete_publication_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'w021_publication_opportunity_not_eligible:%public_title_missing%' THEN RAISE; END IF;
+  END;
   SELECT JSONB_AGG(JSONB_BUILD_OBJECT('ordinal',ordinal,'id',id,'reference',reference,'updated_at',updated_at,'fingerprint',fingerprint) ORDER BY ordinal) INTO manifest FROM public.w021_opportunity_publication_preflight() WHERE eligible AND reference='W021-VALID-A';
   digest := public.w021_publication_manifest_digest(manifest);
   BEGIN PERFORM public.apply_w021_current_publication(manifest,digest,'rehearsal'); RAISE EXCEPTION 'w021_subset_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'w021_bulk_manifest_set_mismatch' THEN RAISE; END IF; END;
@@ -67,10 +81,40 @@ BEGIN
   SELECT * INTO rollback_result FROM public.rollback_w021_current_publication(result.run_id,'rollback');
   IF rollback_result.rolled_back_count <> 2 OR (SELECT count(*) FROM public.opportunities WHERE reference IN ('W021-VALID-A','W021-VALID-B') AND repreneur_exposure='staff_only') <> 2 THEN RAISE EXCEPTION 'w021_bulk_rollback_failed'; END IF;
   BEGIN PERFORM public.apply_w021_current_publication(manifest,digest,'rehearsal'); RAISE EXCEPTION 'w021_replay_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'w021_bulk_already_completed' THEN RAISE; END IF; END;
-  SELECT * INTO result FROM public.publish_w021_opportunity('00000000-0000-4000-8000-000000002106','staff');
+  SELECT * INTO result FROM public.set_opportunity_broad_discovery_visibility('00000000-0000-4000-8000-000000002106',TRUE,'staff');
   IF result.resulting_exposure <> 'anonymized' THEN RAISE EXCEPTION 'w021_single_publish_failed'; END IF;
-  SELECT * INTO result FROM public.withdraw_w021_opportunity('00000000-0000-4000-8000-000000002106','staff');
+  BEGIN
+    PERFORM public.set_opportunity_broad_discovery_visibility('00000000-0000-4000-8000-000000002106',TRUE,'staff');
+    RAISE EXCEPTION 'w021_stale_publish_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'w021_publication_opportunity_not_eligible' THEN RAISE; END IF;
+  END;
+  SELECT * INTO result FROM public.set_opportunity_broad_discovery_visibility('00000000-0000-4000-8000-000000002106',FALSE,'staff');
   IF result.resulting_exposure <> 'staff_only' THEN RAISE EXCEPTION 'w021_single_withdraw_failed'; END IF;
 END $$;
+RESET ROLE;
+
+UPDATE public.opportunities SET repreneur_exposure='anonymized'
+WHERE reference IN ('W021-DEMO','W021-INACTIVE','W021-INCOMPLETE');
+SET ROLE service_role;
+DO $$
+DECLARE result RECORD;
+BEGIN
+  BEGIN
+    PERFORM public.set_opportunity_broad_discovery_visibility('00000000-0000-4000-8000-000000002108',FALSE,'staff');
+    RAISE EXCEPTION 'w021_demo_withdraw_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'w021_withdraw_opportunity_not_eligible' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM public.set_opportunity_broad_discovery_visibility('00000000-0000-4000-8000-000000002110',FALSE,'staff');
+    RAISE EXCEPTION 'w021_terminal_withdraw_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'w021_withdraw_opportunity_not_eligible' THEN RAISE; END IF;
+  END;
+  SELECT * INTO result FROM public.set_opportunity_broad_discovery_visibility('00000000-0000-4000-8000-000000002109',FALSE,'staff');
+  IF result.resulting_exposure <> 'staff_only' THEN RAISE EXCEPTION 'w021_incomplete_active_withdraw_failed'; END IF;
+END $$;
+RESET ROLE;
 SQL
 echo "W-021 controlled opportunity publication rehearsal passed"

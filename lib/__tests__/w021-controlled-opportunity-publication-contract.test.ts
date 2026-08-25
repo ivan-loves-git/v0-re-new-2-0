@@ -17,12 +17,16 @@ describe("W-021 controlled opportunity publication contract", () => {
   it("allows only service-role audited publish and withdrawal with no pursuit or document mutation", () => {
     expect(migration).toContain("publish_w021_opportunity")
     expect(migration).toContain("withdraw_w021_opportunity")
+    expect(migration).toContain("set_opportunity_broad_discovery_visibility")
     expect(migration).toContain("w021_opportunity_publication_events")
     expect(migration).toContain("REVOKE ALL ON FUNCTION")
     expect(migration).toContain("GRANT EXECUTE")
     expect(migration).not.toContain("UPDATE public.opportunity_matches")
     expect(migration).not.toContain("UPDATE public.opportunity_documents")
     expect(migration).not.toContain("UPDATE public.opportunity_nda_artifacts")
+    expect(migration).toContain("REVOKE UPDATE ON TABLE public.opportunities FROM service_role")
+    expect(migration).toContain("attribute.attname <> 'repreneur_exposure'")
+    expect(migration).toContain("status = 'active' AND NOT is_demo")
   })
 
   it("rejects incomplete, demo, inactive, and legacy-exposure records", () => {
@@ -41,5 +45,8 @@ describe("W-021 controlled opportunity publication contract", () => {
     ]) expect(migration).toContain(expected)
     expect(preflight).toContain("BEGIN READ ONLY")
     expect(preflight).toContain("w021_publication_manifest_digest")
+    expect(migration).toContain(
+      "GRANT EXECUTE ON FUNCTION public.w021_opportunity_publication_preflight(), public.w021_publication_manifest_digest(JSONB)",
+    )
   })
 })

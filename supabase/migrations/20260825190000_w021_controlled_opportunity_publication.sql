@@ -145,14 +145,20 @@ $$;
 CREATE OR REPLACE FUNCTION public.publish_w021_opportunity(p_opportunity_id UUID, p_actor TEXT)
 RETURNS TABLE (event_id UUID, opportunity_id UUID, resulting_exposure public.opportunity_visibility)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE v_actor TEXT := NULLIF(BTRIM(p_actor), ''); v_event UUID;
+DECLARE v_actor TEXT := NULLIF(BTRIM(p_actor), ''); v_event UUID; v_reasons TEXT[];
 BEGIN
   IF v_actor IS NULL THEN RAISE EXCEPTION 'w021_publication_actor_required'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('w021:opportunity-publication:' || p_opportunity_id::TEXT, 21));
   LOCK TABLE public.opportunities, public.ma_offices, public.ma_firms, public.opportunity_ma_contacts,
     public.ma_contact_office_affiliations, public.ma_contacts IN SHARE ROW EXCLUSIVE MODE;
-  IF NOT EXISTS (SELECT 1 FROM public.w021_opportunity_publication_preflight() WHERE id = p_opportunity_id AND eligible) THEN
+  SELECT exclusion_reasons INTO v_reasons
+  FROM public.w021_opportunity_publication_preflight()
+  WHERE id = p_opportunity_id;
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'w021_publication_opportunity_not_eligible';
+  END IF;
+  IF CARDINALITY(v_reasons) > 0 THEN
+    RAISE EXCEPTION 'w021_publication_opportunity_not_eligible:%', ARRAY_TO_STRING(v_reasons, ',');
   END IF;
   UPDATE public.opportunities SET repreneur_exposure = 'anonymized', updated_by = v_actor
     WHERE id = p_opportunity_id AND status = 'active' AND NOT is_demo AND repreneur_exposure = 'staff_only';
@@ -171,11 +177,37 @@ BEGIN
   IF v_actor IS NULL THEN RAISE EXCEPTION 'w021_withdraw_actor_required'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('w021:opportunity-publication:' || p_opportunity_id::TEXT, 21));
   UPDATE public.opportunities SET repreneur_exposure = 'staff_only', updated_by = v_actor
-    WHERE id = p_opportunity_id AND repreneur_exposure = 'anonymized';
-  IF NOT FOUND THEN RAISE EXCEPTION 'w021_withdraw_opportunity_not_published'; END IF;
+    WHERE id = p_opportunity_id AND status = 'active' AND NOT is_demo
+      AND repreneur_exposure = 'anonymized';
+  IF NOT FOUND THEN RAISE EXCEPTION 'w021_withdraw_opportunity_not_eligible'; END IF;
   INSERT INTO public.w021_opportunity_publication_events(opportunity_id, action, actor, previous_exposure, resulting_exposure)
     VALUES (p_opportunity_id, 'withdraw', v_actor, 'anonymized', 'staff_only') RETURNING id INTO v_event;
   RETURN QUERY SELECT v_event, p_opportunity_id, 'staff_only'::public.opportunity_visibility;
+END;
+$$;
+
+-- One application-facing entry point keeps the staff action explicit while the
+-- narrower publish and withdraw primitives retain their independent guards and
+-- audit semantics.
+CREATE OR REPLACE FUNCTION public.set_opportunity_broad_discovery_visibility(
+  p_opportunity_id UUID,
+  p_visible BOOLEAN,
+  p_actor TEXT
+)
+RETURNS TABLE (event_id UUID, opportunity_id UUID, resulting_exposure public.opportunity_visibility)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF p_visible IS NULL THEN
+    RAISE EXCEPTION 'w021_visibility_decision_required';
+  END IF;
+
+  IF p_visible THEN
+    RETURN QUERY
+      SELECT * FROM public.publish_w021_opportunity(p_opportunity_id, p_actor);
+  ELSE
+    RETURN QUERY
+      SELECT * FROM public.withdraw_w021_opportunity(p_opportunity_id, p_actor);
+  END IF;
 END;
 $$;
 
@@ -230,7 +262,35 @@ $$;
 
 REVOKE ALL ON TABLE public.w021_opportunity_publication_events, public.w021_opportunity_publication_runs, public.w021_opportunity_publication_rollbacks FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.w021_opportunity_publication_events, public.w021_opportunity_publication_runs, public.w021_opportunity_publication_rollbacks TO service_role;
-REVOKE ALL ON FUNCTION public.w021_opportunity_publication_preflight(), public.w021_publication_manifest_digest(JSONB), public.publish_w021_opportunity(UUID,TEXT), public.withdraw_w021_opportunity(UUID,TEXT), public.apply_w021_current_publication(JSONB,TEXT,TEXT), public.rollback_w021_current_publication(UUID,TEXT) FROM PUBLIC, anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.w021_opportunity_publication_preflight(), public.publish_w021_opportunity(UUID,TEXT), public.withdraw_w021_opportunity(UUID,TEXT), public.apply_w021_current_publication(JSONB,TEXT,TEXT), public.rollback_w021_current_publication(UUID,TEXT) TO service_role;
+
+-- Server code may update every current opportunity column except the broad
+-- publication decision. The SECURITY DEFINER services above remain the sole
+-- service-role path to change repreneur_exposure, while the existing canonical
+-- intake service can still reset it during Draft transitions as its owner.
+REVOKE UPDATE ON TABLE public.opportunities FROM service_role;
+REVOKE UPDATE (repreneur_exposure) ON TABLE public.opportunities FROM service_role;
+DO $$
+DECLARE update_columns TEXT;
+BEGIN
+  SELECT STRING_AGG(FORMAT('%I', attribute.attname), ', ' ORDER BY attribute.attnum)
+  INTO update_columns
+  FROM pg_attribute attribute
+  WHERE attribute.attrelid = 'public.opportunities'::REGCLASS
+    AND attribute.attnum > 0
+    AND NOT attribute.attisdropped
+    AND attribute.attname <> 'repreneur_exposure';
+
+  IF update_columns IS NULL THEN
+    RAISE EXCEPTION 'w021_opportunity_update_columns_missing';
+  END IF;
+
+  EXECUTE FORMAT(
+    'GRANT UPDATE (%s) ON TABLE public.opportunities TO service_role',
+    update_columns
+  );
+END $$;
+
+REVOKE ALL ON FUNCTION public.w021_opportunity_publication_preflight(), public.w021_publication_manifest_digest(JSONB), public.publish_w021_opportunity(UUID,TEXT), public.withdraw_w021_opportunity(UUID,TEXT), public.set_opportunity_broad_discovery_visibility(UUID,BOOLEAN,TEXT), public.apply_w021_current_publication(JSONB,TEXT,TEXT), public.rollback_w021_current_publication(UUID,TEXT) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.w021_opportunity_publication_preflight(), public.w021_publication_manifest_digest(JSONB), public.publish_w021_opportunity(UUID,TEXT), public.withdraw_w021_opportunity(UUID,TEXT), public.set_opportunity_broad_discovery_visibility(UUID,BOOLEAN,TEXT), public.apply_w021_current_publication(JSONB,TEXT,TEXT), public.rollback_w021_current_publication(UUID,TEXT) TO service_role;
 REVOKE ALL ON FUNCTION public.enforce_w021_new_opportunity_staff_only(), public.prevent_w021_opportunity_publication_audit_mutation() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.enforce_w021_new_opportunity_staff_only(), public.prevent_w021_opportunity_publication_audit_mutation() TO service_role;

@@ -115,7 +115,7 @@ describe("controlled Deal Flow publication", () => {
       data: null,
       error: {
         code: "P0001",
-        message: "opportunity_broad_discovery_missing_reader_fields",
+        message: "w021_publication_opportunity_not_eligible:teaser_summary_missing,primary_email_unusable",
       },
     })
     mocks.createAdminClient.mockReturnValue({ from, rpc })
@@ -124,7 +124,7 @@ describe("controlled Deal Flow publication", () => {
       setOpportunityBroadDiscoveryVisibility("opportunity-1", true),
     ).resolves.toEqual({
       success: false,
-      message: "Add the title, teaser, sector and location before making this opportunity visible in Deal Flow.",
+      message: "This opportunity is not ready for Deal Flow. Add or correct an anonymized teaser, one valid primary contact with email, then try again.",
     })
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })

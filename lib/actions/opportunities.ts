@@ -453,25 +453,36 @@ export async function setOpportunityDemoClassification(
 }
 
 function broadDiscoveryVisibilityFailure(message: string): OpportunityActionResult {
-  if (message.includes("opportunity_not_found")) {
-    return { success: false, message: "This opportunity no longer exists." }
-  }
-  if (message.includes("opportunity_broad_discovery_demo")) {
-    return { success: false, message: "DEMO opportunities cannot be made visible in Deal Flow." }
-  }
-  if (message.includes("opportunity_broad_discovery_not_active")) {
-    return { success: false, message: "Only active opportunities can be made visible in Deal Flow." }
-  }
-  if (message.includes("opportunity_broad_discovery_legacy_visibility")) {
-    return { success: false, message: "This legacy visibility state cannot be changed through Deal Flow publication." }
-  }
-  if (message.includes("opportunity_broad_discovery_missing_reader_fields")) {
+  if (message.includes("w021_publication_opportunity_not_eligible")) {
+    const repairs = [
+      message.includes("public_title_missing") ? "an anonymized title" : null,
+      message.includes("teaser_summary_missing") ? "an anonymized teaser" : null,
+      message.includes("sector_missing") ? "a sector" : null,
+      message.includes("location_missing") ? "a location" : null,
+      message.includes("source_office_missing") ||
+      message.includes("source_office_inactive_or_missing") ||
+      message.includes("source_firm_inactive_or_missing")
+        ? "an active source office"
+        : null,
+      message.includes("active_contact_missing") ||
+      message.includes("primary_contact_not_exactly_one") ||
+      message.includes("primary_email_unusable") ||
+      message.includes("active_contact_invalid_or_wrong_office")
+        ? "one valid primary contact with email"
+        : null,
+    ].filter((repair): repair is string => repair !== null)
+
     return {
       success: false,
-      message: "Add the title, teaser, sector and location before making this opportunity visible in Deal Flow.",
+      message: repairs.length > 0
+        ? `This opportunity is not ready for Deal Flow. Add or correct ${repairs.join(", ")}, then try again.`
+        : "This opportunity is not ready for Deal Flow. Refresh it and check its status, DEMO classification and current visibility.",
     }
   }
-  if (message.includes("opportunity_broad_discovery_invalid_transition")) {
+  if (
+    message.includes("w021_publication_state_drift") ||
+    message.includes("w021_withdraw_opportunity_not_eligible")
+  ) {
     return { success: false, message: "This Deal Flow visibility change is no longer available. Refresh and try again." }
   }
   return { success: false, message: "Deal Flow visibility could not be updated. Please refresh and try again." }
