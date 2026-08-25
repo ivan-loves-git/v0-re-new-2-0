@@ -26,7 +26,9 @@ describe("Opportunity source-context boundary", () => {
     expect(sourceContext).toContain("createMaFirmOfficeContext");
     expect(sourceContext).toContain("createMaOfficeForExistingFirm");
     expect(sourceContext).toContain("createMaOfficeContact");
-    expect(sourceContext).toContain("listMaCanonicalContactOptions");
+    expect(sourceContext).not.toContain("listMaCanonicalContactOptions");
+    expect(sourceContext).toContain("move them from Contacts");
+    expect(sourceContext).toContain('name="contact_mode" value="new"');
     expect(sourceContext).toContain("setSelectedAffiliationIds([])");
     expect(sourceContext).toContain("setPrimaryAffiliationId(null)");
     expect(sourceContext).toContain("selectCreatedOfficeContext");

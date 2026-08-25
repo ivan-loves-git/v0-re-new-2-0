@@ -64,8 +64,9 @@ describe("W-086/W-087 relationship workspaces", () => {
     expect(detail).toContain("No opportunities are linked to this workspace.")
     expect(detail).toContain("No relationship activity recorded.")
     expect(contactAction).toContain("createMaOfficeContact")
-    expect(contactAction).toContain("listMaCanonicalContactOptions")
-    expect(contactAction).toContain("already-active office affiliation")
+    expect(contactAction).not.toContain("listMaCanonicalContactOptions")
+    expect(contactAction).toContain("move them from Contacts")
+    expect(contactAction).toContain('formData.set("contact_mode", "new")')
     expect(contactAction).not.toContain('.from("ma_contacts")')
   })
 

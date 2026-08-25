@@ -44,7 +44,9 @@ describe("W-130 staff M&A corrections", () => {
     expect(actions).toContain("await requireStaffAccess()")
     expect(actions).toContain('supabase.rpc("update_ma_firm_correction"')
     expect(actions).toContain('supabase.rpc("update_ma_office_correction"')
-    expect(actions).toContain('supabase.rpc("update_ma_contact_correction"')
+    expect(actions).toContain(
+      'supabase.rpc("update_ma_contact_with_office_correction"',
+    )
     expect(ui).toContain("This does not move, merge, archive, or disclose any record.")
     expect(ui).not.toContain("status")
     expect(contract).toContain("W-130 staff correction boundary")
@@ -56,12 +58,16 @@ describe("W-130 staff M&A corrections", () => {
     )
   })
 
-  it("lets the canonical contacts workspace choose an exact affiliation for its job title", () => {
+  it("lets the canonical contacts workspace correct one current office with the profile", () => {
     expect(contactsProjection).toContain("affiliations: Array<")
     expect(contactsProjection).toContain("officeLabel")
+    expect(contactsProjection).toContain("linkedOpportunities: Array<")
     expect(contactsWorkspace).toContain("target=\"contact\"")
-    expect(ui).toContain("Office affiliation for job title")
-    expect(ui).toContain("selectedAffiliationId")
+    expect(ui).toContain("Current firm and office")
+    expect(ui).toContain("selectedOfficeId")
+    expect(ui).toContain('formData.set("office_id", selectedOfficeId)')
+    expect(contactsWorkspace).toContain("currentOfficeId={currentOfficeId}")
+    expect(contactsWorkspace).toContain("linkedOpportunities")
     expect(actions).toContain('revalidatePath("/opportunities/ma/contacts")')
   })
 })

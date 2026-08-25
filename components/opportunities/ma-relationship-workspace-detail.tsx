@@ -184,8 +184,8 @@ function Contacts({
         <CardTitle className="text-base">Contacts</CardTitle>
         <CardDescription>
           {includeHistorical
-            ? "Current and historical office affiliations remain distinct from the canonical person identity."
-            : "Distinct active canonical people across this firm's offices."}
+            ? "Every active person has one current office. Earlier office relationships remain visible as history."
+            : "Distinct active people, each with one current office."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -220,20 +220,23 @@ function Contacts({
                   <Badge variant={contact.isActive ? "outline" : "secondary"}>
                     {contact.isActive ? "Active" : "Historical"}
                   </Badge>
-                  <MaRelationshipCorrectionAction
-                    target="contact"
-                    id={contact.id}
-                    affiliationId={contact.affiliationId}
-                    fields={[
-                      { name: "first_name", label: "First name", value: contact.firstName },
-                      { name: "last_name", label: "Last name", value: contact.lastName },
-                      { name: "email", label: "Email", value: contact.email, type: "email" },
-                      { name: "phone", label: "Phone", value: contact.phone },
-                      { name: "linkedin_url", label: "LinkedIn URL", value: contact.linkedinUrl, type: "url" },
-                      { name: "job_title", label: "Job title at this office", value: contact.jobTitle },
-                      { name: "internal_notes", label: "Internal notes", value: contact.internalNotes, type: "textarea" },
-                    ]}
-                  />
+                  {contact.isActive ? (
+                    <MaRelationshipCorrectionAction
+                      target="contact"
+                      id={contact.id}
+                      affiliationId={contact.affiliationId}
+                      currentOfficeId={contact.officeId}
+                      fields={[
+                        { name: "first_name", label: "First name", value: contact.firstName },
+                        { name: "last_name", label: "Last name", value: contact.lastName },
+                        { name: "email", label: "Email", value: contact.email, type: "email" },
+                        { name: "phone", label: "Phone", value: contact.phone },
+                        { name: "linkedin_url", label: "LinkedIn URL", value: contact.linkedinUrl, type: "url" },
+                        { name: "job_title", label: "Job title at this office", value: contact.jobTitle },
+                        { name: "internal_notes", label: "Internal notes", value: contact.internalNotes, type: "textarea" },
+                      ]}
+                    />
+                  ) : null}
                 </div>
               </li>
             ))}

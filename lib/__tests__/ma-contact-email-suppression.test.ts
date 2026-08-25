@@ -209,8 +209,8 @@ describe("W-072 purpose-aware M&A contact email suppression", () => {
     expect(relationshipWorkspace).toContain(
       "Manage email policy",
     )
-    expect(relationshipWorkspace).toContain(
-      "Every change is retained with your identity, time and reason.",
+    expect(relationshipWorkspace).toMatch(
+      /Every change is retained with your identity,\s+time and\s+reason\./,
     )
     expect(relationshipWorkspace).toContain(
       "setMaContactCampaignEmailSuppression",

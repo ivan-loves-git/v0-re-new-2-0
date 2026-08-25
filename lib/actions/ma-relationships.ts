@@ -44,6 +44,13 @@ export interface MaRelationshipContactFilterOption {
     jobTitle: string | null
     isActive: boolean
   }>
+  linkedOpportunities: Array<{
+    id: string
+    affiliationId: string
+    label: string
+    status: string
+    isPrimary: boolean
+  }>
   campaignEmailSuppressed: boolean
   campaignEmailSuppressionReason: string | null
 }
@@ -52,6 +59,7 @@ export interface MaRelationshipOfficeOption {
   id: string
   firmId: string
   firmName: string
+  firmStatus: "prospect" | "active" | "archived"
   status: "active" | "archived"
   officeName: string
   label: string
@@ -162,6 +170,12 @@ interface OfficeRow {
   }>
 }
 
+interface OpportunityContactRow {
+  opportunity_id: string
+  affiliation_id: string
+  is_primary: boolean
+}
+
 function one<T>(value: Relation<T>): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null)
 }
@@ -229,6 +243,18 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     })),
     ledger.activePursuitOpportunityIds,
   )
+  const opportunityContactResult = await supabase
+    .from("opportunity_ma_contacts")
+    .select("opportunity_id, affiliation_id, is_primary")
+    .eq("is_active", true)
+
+  if (opportunityContactResult.error)
+    throw new Error(opportunityContactResult.error.message)
+  const activeOpportunityContactRows = (opportunityContactResult.data ??
+    []) as OpportunityContactRow[]
+  const ledgerOpportunityById = new Map(
+    ledger.opportunities.map((opportunity) => [opportunity.id, opportunity]),
+  )
 
   const contactsByOffice = new Map<
     string,
@@ -275,8 +301,29 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
           isActive: relation.isActive && !relation.endedAt,
         },
       ],
+      linkedOpportunities: existing?.linkedOpportunities ?? [],
       campaignEmailSuppressed: relation.campaignEmailSuppressed,
       campaignEmailSuppressionReason: relation.campaignEmailSuppressionReason,
+    })
+  }
+
+  const contactIdByAffiliationId = new Map(
+    ledger.affiliations.map((affiliation) => [
+      affiliation.id,
+      affiliation.contactId,
+    ]),
+  )
+  for (const link of activeOpportunityContactRows) {
+    const contactId = contactIdByAffiliationId.get(link.affiliation_id)
+    const contact = contactId ? contactsById.get(contactId) : null
+    const opportunity = ledgerOpportunityById.get(link.opportunity_id)
+    if (!contact || !opportunity) continue
+    contact.linkedOpportunities.push({
+      id: opportunity.id,
+      affiliationId: link.affiliation_id,
+      label: opportunity.label,
+      status: opportunity.status,
+      isPrimary: link.is_primary,
     })
   }
 
@@ -288,6 +335,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
         id: office.id,
         firmId,
         firmName: firm?.name ?? "Unknown firm",
+        firmStatus: firm?.status ?? "archived",
         status: office.status,
         officeName: office.name,
         label: [firm?.name, office.name].filter(Boolean).join(" · "),
@@ -330,9 +378,6 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     }))
     .sort((left, right) => left.name.localeCompare(right.name))
 
-  const ledgerOpportunityById = new Map(
-    ledger.opportunities.map((opportunity) => [opportunity.id, opportunity]),
-  )
   const opportunitiesWithReview = await withStaffSourceReviewState(
     supabase,
     ledger.opportunities.map((opportunity) => ({
@@ -351,7 +396,9 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       status: opportunity.status,
     }))
 
-  const officeLabels = new Map(offices.map((office) => [office.id, office.label]))
+  const officeLabels = new Map(
+    offices.map((office) => [office.id, office.label]),
+  )
   const contacts = [...contactsById.values()]
     .map((contact) => ({
       ...contact,
@@ -359,6 +406,9 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
         ...affiliation,
         officeLabel: officeLabels.get(affiliation.officeId) ?? "Unknown office",
       })),
+      linkedOpportunities: [...contact.linkedOpportunities].sort(
+        (left, right) => left.label.localeCompare(right.label),
+      ),
     }))
     .sort((left, right) => left.label.localeCompare(right.label))
 

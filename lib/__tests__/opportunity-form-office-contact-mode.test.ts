@@ -47,52 +47,31 @@ describe("OpportunitySourceContext office contact mode", () => {
     }
   })
 
-  it("makes existing-contact affiliation and new-person creation mutually exclusive", () => {
+  it("creates only a new person from the opportunity source dialog", () => {
     const dialog = contactDialogSource()
-    const existingModeStart = dialog.indexOf('{contactMode === "existing" ? (')
-    const newModeStart = dialog.indexOf(") : (", existingModeStart)
 
-    expect(dialog).toContain('value="existing"')
-    expect(dialog).toContain('value="new"')
-    expect(dialog).toContain('aria-labelledby="office_contact_mode_label"')
-    expect(dialog).toContain('id="office_contact_mode_label"')
-    expect(dialog).toContain("Contact type")
-    expect(existingModeStart).toBeGreaterThanOrEqual(0)
-    expect(newModeStart).toBeGreaterThan(existingModeStart)
-
-    const existingMode = dialog.slice(existingModeStart, newModeStart)
-    const newMode = dialog.slice(newModeStart)
-
-    expect(existingMode).toContain('name="existing_contact_id"')
-    expect(existingMode).toContain("affiliateableCanonicalContacts.map")
-    expect(existingMode).toContain("value={contact.contact_id}")
-    expect(existingMode).not.toContain('name="contact_first_name"')
-    expect(existingMode).not.toContain('name="contact_last_name"')
-    expect(existingMode).not.toContain('name="contact_email"')
-    expect(existingMode).not.toContain('name="contact_phone"')
-
-    expect(newMode).toContain('name="contact_first_name"')
-    expect(newMode).toContain('name="contact_last_name"')
-    expect(newMode).toContain('name="contact_email"')
-    expect(newMode).toContain('name="contact_phone"')
+    expect(dialog).toContain('name="contact_mode" value="new"')
+    expect(dialog).toContain('name="contact_first_name"')
+    expect(dialog).toContain('name="contact_last_name"')
+    expect(dialog).toContain('name="contact_email"')
+    expect(dialog).toContain('name="contact_phone"')
+    expect(dialog).toContain("move them from Contacts")
+    expect(dialog).not.toContain('name="existing_contact_id"')
+    expect(dialog).not.toContain('value="existing"')
+    expect(dialog).not.toContain("affiliateableCanonicalContacts")
   })
 
-  it("loads canonical contacts through the staff action and excludes the selected office's contacts", () => {
+  it("keeps the compatibility action fail-closed for a second current office", () => {
     const component = readFileSync(componentPath, "utf8")
     const action = readFileSync(
       `${process.cwd()}/lib/actions/opportunity-intake.ts`,
       "utf8",
     )
 
-    expect(component).toContain("listMaCanonicalContactOptions")
-    expect(component).toContain("loadCanonicalContactOptions")
-    expect(component).toContain("selectedOffice?.contacts.map")
-    expect(component).toContain("!selectedOfficeContactIds.has(contact.contact_id)")
-    expect(component).toContain("setCanonicalContactOptions([])")
-    expect(component).toContain("canonicalContactLookupFailed")
-    expect(component).toContain("Retry loading contacts")
+    expect(component).not.toContain("listMaCanonicalContactOptions")
+    expect(component).not.toContain("existing_contact_id")
     expect(action).toContain(
-      "This canonical contact is already affiliated with the selected office.",
+      "This contact already belongs to another current office. Move them from Contacts instead.",
     )
   })
 })
