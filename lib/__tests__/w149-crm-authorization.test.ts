@@ -105,6 +105,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "app/scrapbook/page.tsx": boundary("staff", ["default"]),
   "lib/actions/activities.ts": boundary("staff", ["createActivity", "getActivities", "deleteActivity"]),
   "lib/actions/analytics.ts": boundary("staff", ["getAnalyticsData"]),
+  "lib/actions/client-pursuit-portfolio.ts": boundary("staff", ["listClientPursuitPortfolio"]),
   "lib/actions/emails.ts": boundary("staff", ["getEmailStats", "getEmailLogs", "getTemplateSettings", "toggleTemplateEnabled", "updateTemplateSettings", "getRenderedTemplate", "getRepreneursForManualSend", "sendManualEmail", "getDailyEmailCounts"]),
   "lib/actions/evaluation-criteria.ts": boundary("staff", ["updateCriterion", "updateQuestionLabel", "updateMultipleCriteria"]),
   "lib/actions/external-pursuit-attachments.ts": boundary("portal_owner", ["getExternalPursuitAttachments", "getExternalPursuitAttachmentMap", "uploadExternalPursuitAttachment", "deleteExternalPursuitAttachment", "fulfillExternalPursuitDeletionWithAttachments"], { fulfillExternalPursuitDeletionWithAttachments: "staff" }),

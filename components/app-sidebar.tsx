@@ -25,6 +25,7 @@ import {
   Sparkles,
   Palette,
   ListTree,
+  UsersRound,
   Inbox,
   type LucideIcon,
 } from "lucide-react"
@@ -80,6 +81,7 @@ const opportunityNavigation: NavigationItem[] = [
   { name: "Groups", href: "/opportunities/groups", icon: FolderKanban },
   { name: "Find", href: "/opportunities/find", icon: Search },
   { name: "Pursuits", href: "/opportunities/pursuits", icon: ListTree },
+  { name: "Client portfolio", href: "/opportunities/pursuits/clients", icon: UsersRound },
   { name: "Analytics", href: "/analytics_op", icon: BarChart3 },
   { name: "External capacity", href: "/opportunities/pursuits/capacity", icon: Gauge },
 ]
@@ -147,6 +149,8 @@ export function AppSidebar({
       return pathname === "/opportunities/groups"
     if (href === "/opportunities/find")
       return pathname === "/opportunities/find"
+    if (href === "/opportunities/pursuits")
+      return pathname === "/opportunities/pursuits"
     if (href === "/repreneurs") return pathname === "/repreneurs"
     return pathname.startsWith(href)
   }
