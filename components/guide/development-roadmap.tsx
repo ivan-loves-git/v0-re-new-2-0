@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 25, 2026",
+    version: "0.9.58",
+    title: "Staff controls when an opportunity enters Deal Flow",
+    isCompleted: true,
+    events: [
+      {
+        title: "Active and visible remain separate decisions",
+        type: "decision",
+        description: "An Active opportunity is a current Re-New record. It enters broad Deal Flow only after staff explicitly approves its complete anonymized teaser.",
+      },
+      {
+        title: "Visibility can be changed safely from the opportunity",
+        type: "feature",
+        description: "Staff can make a ready opportunity visible or remove it from broad discovery without changing its lifecycle, recommendations, pursuits, NDA or Information Memorandum controls.",
+      },
+      {
+        title: "The current inventory uses a guarded one-time release",
+        type: "decision",
+        description: "Only the complete, current, non-demo set can be published in bulk; incomplete records remain a clear staff cleanup queue and every change is retained for rollback.",
+      },
+    ],
+  },
+  {
     period: "Aug 23, 2026",
     version: "0.9.57",
     title: "Matching 2.0 makes opportunity fit explainable",

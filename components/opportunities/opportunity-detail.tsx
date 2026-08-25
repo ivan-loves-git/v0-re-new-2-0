@@ -31,6 +31,7 @@ import {
   OpportunityDemoBadge,
   OpportunityDemoControl,
 } from "@/components/opportunities/opportunity-demo-control"
+import { OpportunityBroadDiscoveryControl } from "@/components/opportunities/opportunity-broad-discovery-control"
 import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
@@ -87,6 +88,9 @@ interface OpportunityDetailProps {
   ) => Promise<OpportunityActionResult>
   demoClassificationAction: (
     isDemo: boolean,
+  ) => Promise<OpportunityActionResult>
+  broadDiscoveryVisibilityAction: (
+    visible: boolean,
   ) => Promise<OpportunityActionResult>
   officeOptions: MaOfficeIntakeOffice[]
   geographyOptions: OpportunityGeographyOption[]
@@ -151,6 +155,7 @@ export function OpportunityDetail({
   closureHistory,
   closeAction,
   demoClassificationAction,
+  broadDiscoveryVisibilityAction,
   officeOptions,
   geographyOptions,
   geographyMandatesEnabled,
@@ -240,6 +245,10 @@ export function OpportunityDetail({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <OpportunityBroadDiscoveryControl
+            opportunity={opportunity}
+            action={broadDiscoveryVisibilityAction}
+          />
           <OpportunityDemoControl
             isDemo={opportunity.is_demo}
             action={demoClassificationAction}

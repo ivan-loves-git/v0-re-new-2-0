@@ -136,6 +136,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
     "getOpportunityClosureHistory",
     "closeOpportunity",
     "archiveOpportunity",
+    "setOpportunityBroadDiscoveryVisibility",
     "setOpportunityDemoClassification",
   ]),
   "lib/actions/opportunity-analytics.ts": boundary("staff", ["getOpportunityKpiData"]),

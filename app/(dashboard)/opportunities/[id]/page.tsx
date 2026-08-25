@@ -17,6 +17,7 @@ import {
   closeOpportunity,
   getOpportunity,
   getOpportunityClosureHistory,
+  setOpportunityBroadDiscoveryVisibility,
   setOpportunityDemoClassification,
 } from "@/lib/actions/opportunities"
 import {
@@ -108,6 +109,11 @@ async function OpportunityDetailContent({
     return setOpportunityDemoClassification(id, isDemo)
   }
 
+  async function broadDiscoveryVisibilityAction(visible: boolean) {
+    "use server"
+    return setOpportunityBroadDiscoveryVisibility(id, visible)
+  }
+
   async function resolveSourceAction(formData: FormData) {
     "use server"
     if (waveAiOutcome) formData.set("wave_ai_outcome", waveAiOutcome)
@@ -137,6 +143,7 @@ async function OpportunityDetailContent({
         closureHistory={closureHistory}
         closeAction={closeAction}
         demoClassificationAction={demoClassificationAction}
+        broadDiscoveryVisibilityAction={broadDiscoveryVisibilityAction}
         officeOptions={officeOptions}
         geographyOptions={geographyOptions}
         geographyMandatesEnabled={geographyMandatesEnabled}

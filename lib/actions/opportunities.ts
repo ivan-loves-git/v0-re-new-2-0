@@ -10,6 +10,10 @@ import {
 } from "@/lib/actions/opportunity-intake"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
+  broadDiscoveryPublicationState,
+  isAllowedBroadDiscoveryVisibility,
+} from "@/lib/opportunity-broad-discovery-publication"
+import {
   isOpportunityClosureReason,
   type MaSource,
   type MaSourceContact,
@@ -445,6 +449,102 @@ export async function setOpportunityDemoClassification(
     message: isDemo
       ? "Opportunity marked DEMO and quarantined from repreneur access."
       : "DEMO classification removed. The opportunity can be eligible for repreneur access again.",
+  }
+}
+
+function broadDiscoveryVisibilityFailure(message: string): OpportunityActionResult {
+  if (message.includes("w021_publication_opportunity_not_eligible")) {
+    const repairs = [
+      message.includes("public_title_missing") ? "an anonymized title" : null,
+      message.includes("teaser_summary_missing") ? "an anonymized teaser" : null,
+      message.includes("sector_missing") ? "a sector" : null,
+      message.includes("location_missing") ? "a location" : null,
+      message.includes("source_office_missing") ||
+      message.includes("source_office_inactive_or_missing") ||
+      message.includes("source_firm_inactive_or_missing")
+        ? "an active source office"
+        : null,
+      message.includes("active_contact_missing") ||
+      message.includes("primary_contact_not_exactly_one") ||
+      message.includes("primary_email_unusable") ||
+      message.includes("active_contact_invalid_or_wrong_office")
+        ? "one valid primary contact with email"
+        : null,
+    ].filter((repair): repair is string => repair !== null)
+
+    return {
+      success: false,
+      message: repairs.length > 0
+        ? `This opportunity is not ready for Deal Flow. Add or correct ${repairs.join(", ")}, then try again.`
+        : "This opportunity is not ready for Deal Flow. Refresh it and check its status, DEMO classification and current visibility.",
+    }
+  }
+  if (
+    message.includes("w021_publication_state_drift") ||
+    message.includes("w021_withdraw_opportunity_not_eligible")
+  ) {
+    return { success: false, message: "This Deal Flow visibility change is no longer available. Refresh and try again." }
+  }
+  return { success: false, message: "Deal Flow visibility could not be updated. Please refresh and try again." }
+}
+
+/**
+ * Applies the staff-reviewed broad-discovery decision only. The database
+ * function is authoritative and preserves matching and pursuit history.
+ */
+export async function setOpportunityBroadDiscoveryVisibility(
+  id: string,
+  visible: boolean,
+): Promise<OpportunityActionResult> {
+  const { user } = await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { data: current, error: readError } = await supabase
+    .from("opportunities")
+    .select("status, is_demo, repreneur_exposure, public_title, teaser_summary, sector, location")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (readError) throw new Error(readError.message)
+  if (!current) return { success: false, message: "This opportunity no longer exists." }
+
+  const state = broadDiscoveryPublicationState(current)
+  const expectedMode = visible ? "publish" : "remove"
+  if (state.mode === "incomplete") {
+    return {
+      success: false,
+      message: `Add ${state.missingFields.join(", ")} before making this opportunity visible in Deal Flow.`,
+    }
+  }
+  if (state.mode !== expectedMode || !isAllowedBroadDiscoveryVisibility(current.repreneur_exposure)) {
+    return {
+      success: false,
+      message: "This Deal Flow visibility change is not available for the opportunity's current state.",
+    }
+  }
+
+  const { error } = await supabase.rpc("set_opportunity_broad_discovery_visibility", {
+    p_opportunity_id: id,
+    p_visible: visible,
+    p_actor: user.id,
+  })
+  if (error) return broadDiscoveryVisibilityFailure(error.message)
+
+  revalidatePath("/opportunities")
+  revalidatePath("/opportunities/find")
+  revalidatePath(`/opportunities/${id}`)
+  revalidatePath("/dashboard")
+  revalidatePath("/portal")
+  revalidatePath("/portal/deals")
+  revalidatePath("/portal/profile")
+  revalidatePath("/portal/pursuits")
+  revalidatePath("/portal-preview")
+  revalidateOpportunityDashboardTags()
+
+  return {
+    success: true,
+    message: visible
+      ? "Opportunity is now visible in Deal Flow through its anonymized teaser."
+      : "Opportunity removed from Deal Flow. Existing staff recommendations and pursuits are unchanged.",
   }
 }
 

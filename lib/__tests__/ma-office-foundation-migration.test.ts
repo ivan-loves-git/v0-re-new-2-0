@@ -264,7 +264,8 @@ describe("M&A operating-office foundation migration", () => {
   })
 
   it("records the approved exposure and sourcing exclusions in the contract", () => {
-    expect(contract).toContain("retires `opportunities.repreneur_exposure` from the target operating model")
+    expect(contract).toContain("W-021 now governs its bounded use as the broad Deal Flow publication control")
+    expect(contract).toContain("Only the separate W-021 staff publication action")
     expect(contract).toContain("does not add an opportunity sourcing channel")
     expect(contract).toContain(
       "Migrations 076 to 090 are live and schema-verified",
