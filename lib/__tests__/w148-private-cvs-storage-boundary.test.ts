@@ -11,12 +11,14 @@ describe("W-148 private CV/LDC storage boundary", () => {
   const migrationPath =
     "supabase/migrations/20260824093630_w148_private_cvs_storage_boundary.sql"
 
-  it("makes the bucket private and removes every observed legacy CV policy", () => {
+  it("requires the hosted private/RLS boundary and removes every observed legacy CV policy", () => {
     const migration = source(migrationPath)
 
-    expect(migration).toContain("SET public = false")
-    expect(migration).toContain("WHERE id = 'cvs';")
-    expect(migration).toContain("ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;")
+    expect(migration).toContain("WHERE id = 'cvs'")
+    expect(migration).toContain("AND public = false")
+    expect(migration).toContain("AND c.relrowsecurity")
+    expect(migration).not.toContain("SET public = false")
+    expect(migration).not.toContain("ALTER TABLE storage.objects")
 
     for (const policy of [
       "Allow authenticated deletes",
@@ -45,6 +47,10 @@ describe("W-148 private CV/LDC storage boundary", () => {
     expect(migration).toContain("TO public")
     expect(migration).toContain("USING (bucket_id <> 'cvs')")
     expect(migration).toContain("WITH CHECK (bucket_id <> 'cvs')")
+
+    expect(migration.indexOf('CREATE POLICY "W-148 deny browser cvs select"')).toBeLessThan(
+      migration.indexOf('DROP POLICY IF EXISTS "Allow public read access"'),
+    )
   })
 
   it("keeps the QA storage configuration aligned with the migration", () => {
