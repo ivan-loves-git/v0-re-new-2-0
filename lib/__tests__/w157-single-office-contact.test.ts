@@ -97,6 +97,8 @@ describe("W-157 single current office per contact", () => {
     expect(contract).toContain(
       "earlier office affiliations remain historical evidence",
     )
-    expect(contract).toContain("W-157 implementation candidate")
+    expect(contract).toContain(
+      "W-157 single-office contact boundary (released)",
+    )
   })
 })
