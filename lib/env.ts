@@ -22,6 +22,7 @@ const envSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email("RESEND_FROM_EMAIL must be a valid email").default("noreply@re-new.com"),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   RENEW_STAFF_NOTIFICATION_EMAIL: z.string().email("RENEW_STAFF_NOTIFICATION_EMAIL must be a valid email").optional(),
+  WAVE_CRITICAL_ALERT_EMAIL: z.string().email("WAVE_CRITICAL_ALERT_EMAIL must be a valid email").optional(),
 
   // Vercel Cron
   CRON_SECRET: z.string().min(1, "CRON_SECRET is required"),

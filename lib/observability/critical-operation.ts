@@ -1,6 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
+import { scheduleCriticalOperationAlert } from "@/lib/observability/critical-operation-alert"
 
 export type CriticalOperationName =
   | "opportunity.create"
@@ -36,7 +37,11 @@ export type CriticalOperationErrorCategory =
   | "storage_failed"
   | "validation_failed"
 
-type RuntimeEnvironment = "test" | "development" | "preview" | "production"
+export type RuntimeEnvironment =
+  | "test"
+  | "development"
+  | "preview"
+  | "production"
 
 interface CriticalOperationBaseEvent {
   event: "wave_critical_operation"
@@ -138,6 +143,12 @@ export function startCriticalOperation(
       stage,
       duration_ms,
       error_category: errorCategory ?? "internal_error",
+    })
+    scheduleCriticalOperationAlert({
+      operation: base.operation,
+      error_category: errorCategory ?? "internal_error",
+      environment: base.environment,
+      release: base.release,
     })
   }
 
