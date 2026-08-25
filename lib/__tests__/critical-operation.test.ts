@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+const alertMocks = vi.hoisted(() => ({
+  scheduleCriticalOperationAlert: vi.fn(),
+}))
+
+vi.mock("@/lib/observability/critical-operation-alert", () => alertMocks)
+
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 
 describe("critical operation runtime trace", () => {
@@ -11,6 +17,7 @@ describe("critical operation runtime trace", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.clearAllMocks()
     vi.spyOn(console, "info").mockImplementation(() => undefined)
     vi.spyOn(console, "error").mockImplementation(() => undefined)
     process.env.VERCEL_ENV = "preview"
@@ -70,6 +77,12 @@ describe("critical operation runtime trace", () => {
       stage: "failure",
       duration_ms: expect.any(Number),
       error_category: "signature_invalid",
+    })
+    expect(alertMocks.scheduleCriticalOperationAlert).toHaveBeenCalledWith({
+      operation: "email.resend_webhook",
+      error_category: "signature_invalid",
+      environment: "test",
+      release: "dd65c28",
     })
   })
 
