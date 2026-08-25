@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { Worker } from "node:worker_threads";
 
 /** PDF.js parses untrusted syntax in a dedicated resource-limited worker. */
+const MAX_PDF_EVIDENCE_BYTES = 4 * 1024 * 1024;
 const PDF_PARSE_TIMEOUT_MS = 3_000;
 const PDF_WORKER_RESOURCE_LIMITS = {
   maxOldGenerationSizeMb: 64,
@@ -25,6 +26,11 @@ const ACTIVE_PDF_TOKENS = [
   "/Sound", "/Movie", "/3D",
 ]
 
+// PDF.js references DOMMatrix while loading its display module. Validation
+// never renders, so a no-op class avoids shipping an optional native canvas
+// package into the server function.
+globalThis.DOMMatrix ||= class DOMMatrix {}
+
 function reject(reason) { throw new Error(reason) }
 
 function containsPdfNameToken(source, token) {
@@ -42,6 +48,7 @@ function assertPdfEnvelope(bytes) {
 
 async function validate(bytes) {
   assertPdfEnvelope(bytes)
+  await import(workerData.pdfjsWorkerModulePath)
   const { getDocument } = await import(workerData.pdfjsModulePath)
   const loadingTask = getDocument({
     data: new Uint8Array(bytes), disableFontFace: true, isEvalSupported: false,
@@ -76,6 +83,9 @@ parentPort.once("message", async (buffer) => {
 
 const require = createRequire(import.meta.url);
 const PDFJS_MODULE_PATH = require.resolve("pdfjs-dist/legacy/build/pdf.mjs");
+const PDFJS_WORKER_MODULE_PATH = require.resolve(
+  "pdfjs-dist/legacy/build/pdf.worker.mjs",
+);
 
 class PdfEvidenceError extends Error {}
 
@@ -99,6 +109,25 @@ function errorForWorkerResult(
   );
 }
 
+function isSuccessfulWorkerResult(value: unknown): value is { ok: true } {
+  if (!value || typeof value !== "object") return false;
+  const result = value as Record<string, unknown>;
+  return result.ok === true && Object.keys(result).length === 1;
+}
+
+function failureWorkerResult(value: unknown): Exclude<PdfEvidenceWorkerResult, { ok: true }> {
+  if (!value || typeof value !== "object") return { ok: false, reason: "invalid" };
+  const result = value as Record<string, unknown>;
+  if (
+    result.ok !== false ||
+    !["invalid", "active", "page_count"].includes(String(result.reason)) ||
+    Object.keys(result).some((key) => key !== "ok" && key !== "reason")
+  ) {
+    return { ok: false, reason: "invalid" };
+  }
+  return result as Exclude<PdfEvidenceWorkerResult, { ok: true }>;
+}
+
 async function terminate(worker: Worker) {
   try {
     await worker.terminate();
@@ -117,7 +146,10 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
     let settled = false;
     const worker = new Worker(PDF_WORKER_SOURCE, {
       eval: true,
-      workerData: { pdfjsModulePath: PDFJS_MODULE_PATH },
+      workerData: {
+        pdfjsModulePath: PDFJS_MODULE_PATH,
+        pdfjsWorkerModulePath: PDFJS_WORKER_MODULE_PATH,
+      },
       resourceLimits: PDF_WORKER_RESOURCE_LIMITS,
     });
 
@@ -134,11 +166,9 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
       finish(new PdfEvidenceError("NDA PDF validation timed out"));
     }, PDF_PARSE_TIMEOUT_MS);
 
-    worker.once("message", (result: PdfEvidenceWorkerResult) => {
-      if (!result || result.ok !== true) {
-        finish(
-          errorForWorkerResult(result ?? { ok: false, reason: "invalid" }),
-        );
+    worker.once("message", (result: unknown) => {
+      if (!isSuccessfulWorkerResult(result)) {
+        finish(errorForWorkerResult(failureWorkerResult(result)));
         return;
       }
       finish();
@@ -150,8 +180,8 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
         ),
       );
     });
-    worker.once("exit", (code) => {
-      if (!settled && code !== 0) {
+    worker.once("exit", () => {
+      if (!settled) {
         finish(
           new PdfEvidenceError(
             "NDA evidence must be a structurally valid PDF file",
@@ -168,5 +198,8 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
 }
 
 export async function assertSafePdfEvidence(bytes: Uint8Array) {
+  if (bytes.byteLength > MAX_PDF_EVIDENCE_BYTES) {
+    throw new PdfEvidenceError("NDA PDF evidence must not exceed 4 MB");
+  }
   await validateInIsolatedWorker(bytes);
 }

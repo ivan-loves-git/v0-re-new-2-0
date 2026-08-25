@@ -65,6 +65,7 @@ function portalClient(options: { existing?: boolean } = {}) {
       opportunity_id: "opportunity-synthetic-1",
       repreneur_id: "repreneur-synthetic-1",
       status: "active_pursuit",
+      opportunity: { is_demo: false },
     },
     error: null,
   })
@@ -76,10 +77,13 @@ function portalClient(options: { existing?: boolean } = {}) {
   })
   const from = vi.fn((table: string) => {
     if (table === "opportunity_matches") {
+      const query = {
+        eq: vi.fn(),
+        maybeSingle: matchMaybeSingle,
+      }
+      query.eq.mockReturnValue(query)
       return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({ maybeSingle: matchMaybeSingle })),
-        })),
+        select: vi.fn(() => query),
       }
     }
     if (table === "opportunity_nda_artifacts") {

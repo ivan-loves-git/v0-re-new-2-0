@@ -19,8 +19,10 @@ upload paths, not a claim of antivirus coverage.
    non-whitespace polyglot trailer, active-action names or embedded payload.
 4. PDF.js must parse a non-empty document with no more than 500 pages in a
    dedicated Node worker. The parent enforces the shared three-second wall-clock
-   deadline by terminating that worker; V8 heap, young-generation and stack
-   limits bound the parser process independently of the request.
+   deadline by terminating that worker. Node `resourceLimits` constrain the
+   worker's V8 heap and stack, but not ArrayBuffers, native allocations or total
+   process memory; the 4 MB validator limit and Vercel function boundary remain
+   the outer memory controls.
 5. Document/page JavaScript, attachments and open actions are rejected.
 6. Only then may Storage upload and canonical evidence registration run.
 
@@ -44,11 +46,12 @@ registration. Wrong-signature, malformed, active, embedded and polyglot inputs
 are rejected; action-level negatives prove that rejection leaves no Storage
 object and no evidence record.
 
-## Gate 2 and rollback
+## Production check and rollback
 
-After deployment, UAT must upload and download one synthetic inert PDF through
-each approved path, then remove the disposable evidence through the normal
-controlled cleanup path. No malicious fixture is sent to production.
+After deployment, upload and download one synthetic inert PDF through each
+approved path, then remove the disposable evidence through the normal
+controlled cleanup path. No malicious fixture is sent to production and no
+customer document is used for verification.
 
 Rollback is application-only: restore the prior Vercel deployment or revert the
 W-152 commit. No schema or bucket-policy rollback is involved. A parser failure

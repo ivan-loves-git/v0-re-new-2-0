@@ -27,7 +27,7 @@ or reflect that contract.
   multipart parsing. Lowering the file ceiling does not weaken replay control.
 - There is no schema, bucket-policy or production-data change in this rollout.
 
-## Gate-1 evidence
+## Verification
 
 Run:
 
@@ -41,17 +41,18 @@ The synthetic suite proves exact-4-MB acceptance, one-byte-over rejection,
 false-small-`Content-Length` rejection before persistence, early 4.5-MB
 envelope rejection, capability ordering and complete client-surface alignment.
 
-## Gate-2 production evidence
+## Production check
 
 After the exact candidate is deployed, execute one bounded, synthetic request
 slightly above 4.5 MB without a valid upload capability and retain only response
 status/headers. It must return Vercel's `413 FUNCTION_PAYLOAD_TOO_LARGE`; it must
 not reach application telemetry, Storage or a database record. Do not execute a
 denial-of-service sequence or upload customer material. Then perform one normal
-synthetic upload through the approved QA/UAT path and clean up its disposable
-object through that path's normal control.
+synthetic upload through an approved application path and clean up its
+disposable object through that path's normal control.
 
-This production boundary check is deliberately not executed during Gate 1.
+The oversized production boundary check is deliberately not part of local
+verification.
 
 ## Rollback
 
