@@ -67,7 +67,7 @@ INSERT INTO public.opportunity_ma_contacts(id, opportunity_id, affiliation_id, i
 COMMIT;
 SQL
 
-"${psql[@]}" --file "$repo_root/supabase/migrations/20260825072313_w157_single_office_per_contact.sql" >/dev/null
+"${psql[@]}" --single-transaction --file "$repo_root/supabase/migrations/20260825072313_w157_single_office_per_contact.sql" >/dev/null
 
 "${psql[@]}" <<'SQL'
 DO $$

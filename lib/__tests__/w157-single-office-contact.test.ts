@@ -58,6 +58,8 @@ describe("W-157 single current office per contact", () => {
   })
 
   it("rehearses selection, history, movement, rollback-on-error and roles", () => {
+    expect(rehearsal).toContain("--single-transaction")
+    expect(migration).toContain("SET CONSTRAINTS ALL IMMEDIATE")
     for (const assertion of [
       "w157_central_office_preference_failed",
       "w157_active_firm_preference_failed",

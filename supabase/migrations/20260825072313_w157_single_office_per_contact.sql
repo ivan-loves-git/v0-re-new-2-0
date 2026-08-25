@@ -160,6 +160,14 @@ BEGIN
 END;
 $$;
 
+-- The normalization update queues the existing deferred opportunity-context
+-- triggers. Flush those validations before creating an index on the same
+-- table, then restore deferred mode for the new transaction-level invariant.
+-- This keeps the migration compatible with Supabase's single-transaction
+-- execution while still rolling everything back on any invalid relationship.
+SET CONSTRAINTS ALL IMMEDIATE;
+SET CONSTRAINTS ALL DEFERRED;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ma_contact_office_affiliations_one_active_contact
   ON public.ma_contact_office_affiliations(contact_id)
   WHERE is_active;
