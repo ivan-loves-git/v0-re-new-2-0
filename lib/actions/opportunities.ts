@@ -10,6 +10,10 @@ import {
 } from "@/lib/actions/opportunity-intake"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
+  broadDiscoveryPublicationState,
+  isAllowedBroadDiscoveryVisibility,
+} from "@/lib/opportunity-broad-discovery-publication"
+import {
   isOpportunityClosureReason,
   type MaSource,
   type MaSourceContact,
@@ -445,6 +449,91 @@ export async function setOpportunityDemoClassification(
     message: isDemo
       ? "Opportunity marked DEMO and quarantined from repreneur access."
       : "DEMO classification removed. The opportunity can be eligible for repreneur access again.",
+  }
+}
+
+function broadDiscoveryVisibilityFailure(message: string): OpportunityActionResult {
+  if (message.includes("opportunity_not_found")) {
+    return { success: false, message: "This opportunity no longer exists." }
+  }
+  if (message.includes("opportunity_broad_discovery_demo")) {
+    return { success: false, message: "DEMO opportunities cannot be made visible in Deal Flow." }
+  }
+  if (message.includes("opportunity_broad_discovery_not_active")) {
+    return { success: false, message: "Only active opportunities can be made visible in Deal Flow." }
+  }
+  if (message.includes("opportunity_broad_discovery_legacy_visibility")) {
+    return { success: false, message: "This legacy visibility state cannot be changed through Deal Flow publication." }
+  }
+  if (message.includes("opportunity_broad_discovery_missing_reader_fields")) {
+    return {
+      success: false,
+      message: "Add the title, teaser, sector and location before making this opportunity visible in Deal Flow.",
+    }
+  }
+  if (message.includes("opportunity_broad_discovery_invalid_transition")) {
+    return { success: false, message: "This Deal Flow visibility change is no longer available. Refresh and try again." }
+  }
+  return { success: false, message: "Deal Flow visibility could not be updated. Please refresh and try again." }
+}
+
+/**
+ * Applies the staff-reviewed broad-discovery decision only. The database
+ * function is authoritative and preserves matching and pursuit history.
+ */
+export async function setOpportunityBroadDiscoveryVisibility(
+  id: string,
+  visible: boolean,
+): Promise<OpportunityActionResult> {
+  const { user } = await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { data: current, error: readError } = await supabase
+    .from("opportunities")
+    .select("status, is_demo, repreneur_exposure, public_title, teaser_summary, sector, location")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (readError) throw new Error(readError.message)
+  if (!current) return { success: false, message: "This opportunity no longer exists." }
+
+  const state = broadDiscoveryPublicationState(current)
+  const expectedMode = visible ? "publish" : "remove"
+  if (state.mode === "incomplete") {
+    return {
+      success: false,
+      message: `Add ${state.missingFields.join(", ")} before making this opportunity visible in Deal Flow.`,
+    }
+  }
+  if (state.mode !== expectedMode || !isAllowedBroadDiscoveryVisibility(current.repreneur_exposure)) {
+    return {
+      success: false,
+      message: "This Deal Flow visibility change is not available for the opportunity's current state.",
+    }
+  }
+
+  const { error } = await supabase.rpc("set_opportunity_broad_discovery_visibility", {
+    p_opportunity_id: id,
+    p_visible: visible,
+    p_actor: user.id,
+  })
+  if (error) return broadDiscoveryVisibilityFailure(error.message)
+
+  revalidatePath("/opportunities")
+  revalidatePath("/opportunities/find")
+  revalidatePath(`/opportunities/${id}`)
+  revalidatePath("/dashboard")
+  revalidatePath("/portal")
+  revalidatePath("/portal/deals")
+  revalidatePath("/portal/profile")
+  revalidatePath("/portal/pursuits")
+  revalidatePath("/portal-preview")
+  revalidateOpportunityDashboardTags()
+
+  return {
+    success: true,
+    message: visible
+      ? "Opportunity is now visible in Deal Flow through its anonymized teaser."
+      : "Opportunity removed from Deal Flow. Existing staff recommendations and pursuits are unchanged.",
   }
 }
 
