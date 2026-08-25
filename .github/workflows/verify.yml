@@ -42,9 +42,14 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Report production dependency audit
-        continue-on-error: true
-        run: pnpm audit --prod
+      - name: Enforce production dependency audit policy
+        run: |
+          set +e
+          pnpm audit --prod --json > /tmp/production-dependency-audit.json
+          audit_status=$?
+          set -e
+          node scripts/verify-production-dependency-audit.mjs /tmp/production-dependency-audit.json
+          echo "pnpm audit exit status: $audit_status (parsed by production dependency audit policy)"
 
       - name: Run repository verification
         run: pnpm verify
@@ -118,4 +123,3 @@ jobs:
               -d w147_rehearsal \
               -c "CREATE SCHEMA storage; CREATE TABLE storage.buckets(id text PRIMARY KEY, name text NOT NULL, public boolean NOT NULL DEFAULT false); CREATE TABLE storage.objects(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, bucket_id text NOT NULL, name text NOT NULL); ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;" \
               -f /tmp/scripts/rehearse-w148-private-cvs-storage.sql
-
