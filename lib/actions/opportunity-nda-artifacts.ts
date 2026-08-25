@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { assertSafePdfEvidence } from "@/lib/security/pdf-evidence"
 import type { OpportunityNdaArtifact, OpportunityNdaArtifactRole } from "@/lib/types/opportunity"
 
 const OPPORTUNITY_DOCUMENTS_BUCKET = "opportunity-documents"
@@ -45,7 +46,7 @@ function artifactMimeType(role: OpportunityNdaArtifactRole, file: File) {
       ? DOCX_MIME_TYPE
       : null
 
-  if (!expectedMimeType || (file.type && file.type !== expectedMimeType)) {
+  if (!expectedMimeType || file.type !== expectedMimeType) {
     if (role === "blank_template") {
       throw new Error("The blank NDA template must be a PDF or DOCX file")
     }
@@ -105,6 +106,7 @@ export async function registerOpportunityNdaArtifact(formData: FormData) {
   const mimeType = artifactMimeType(artifactRole, file)
 
   const fileBuffer = Buffer.from(await file.arrayBuffer())
+  if (mimeType === PDF_MIME_TYPE) await assertSafePdfEvidence(fileBuffer)
   const contentSha256 = createHash("sha256").update(fileBuffer).digest("hex")
   const storagePath = `${opportunityId}/nda-artifacts/${artifactRole}/${crypto.randomUUID()}-${safeFileName(file.name)}`
 

@@ -22,6 +22,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import {
+  CV_LDC_MAX_FILE_BYTES,
+  CV_LDC_MAX_FILE_LABEL,
+} from "@/lib/upload-limits"
+import {
   canonicalTargetThesisValues,
   legacyTargetThesisValues,
   targetThesisInputValidationMessage,
@@ -392,8 +396,8 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
       toast.error("Upload a PDF or Word document.")
       return
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("The document must be smaller than 10 MB.")
+    if (file.size > CV_LDC_MAX_FILE_BYTES) {
+      toast.error(`The document must not exceed ${CV_LDC_MAX_FILE_LABEL}.`)
       return
     }
 

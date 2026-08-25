@@ -4,6 +4,10 @@ import { useState, useRef } from "react"
 import { FileText, Upload, Trash2, Loader2, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import {
+  CV_LDC_MAX_FILE_BYTES,
+  CV_LDC_MAX_FILE_LABEL,
+} from "@/lib/upload-limits"
 
 interface CVSectionProps {
   repreneurId: string
@@ -31,8 +35,8 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size must be less than 10MB")
+    if (file.size > CV_LDC_MAX_FILE_BYTES) {
+      toast.error(`File size must not exceed ${CV_LDC_MAX_FILE_LABEL}`)
       return
     }
 

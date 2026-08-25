@@ -9,6 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DocumentRowActions, type DocumentRowPolicy } from "@/components/opportunities/document-row-actions"
 import { FieldError, fieldErrorProps } from "@/components/forms/validation-feedback"
 import { toast } from "sonner"
+import {
+  CV_LDC_MAX_FILE_BYTES,
+  CV_LDC_MAX_FILE_LABEL,
+} from "@/lib/upload-limits"
 
 interface DocumentsCardProps {
   repreneurId: string
@@ -49,9 +53,9 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("Choose a PDF smaller than 10 MB.")
-      toast.error("File size must be less than 10MB")
+    if (file.size > CV_LDC_MAX_FILE_BYTES) {
+      setUploadError(`Choose a PDF no larger than ${CV_LDC_MAX_FILE_LABEL}.`)
+      toast.error(`File size must not exceed ${CV_LDC_MAX_FILE_LABEL}`)
       return
     }
 

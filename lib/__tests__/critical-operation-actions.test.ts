@@ -31,6 +31,7 @@ import {
   startOpportunityPursuit,
 } from "@/lib/actions/opportunity-pursuit-journey"
 import { submitPortalPursuitSignedNda } from "@/lib/actions/portal-pursuit-nda"
+import { syntheticPdfBytes } from "@/lib/__tests__/fixtures/synthetic-pdf"
 
 function emittedEvents() {
   return [...vi.mocked(console.info).mock.calls, ...vi.mocked(console.error).mock.calls]
@@ -272,7 +273,7 @@ describe("critical server action traces", () => {
     formData.set("match_id", "match-private-1")
     formData.set(
       "file",
-      new File(["private PDF bytes"], "private-signed-nda.pdf", {
+      new File([syntheticPdfBytes()], "private-signed-nda.pdf", {
         type: "application/pdf",
       }),
     )
