@@ -10,7 +10,11 @@ import {
   withMatchingGeography,
   withMatchingGeographyTargets,
 } from "@/lib/repreneur-opportunity-geography"
-import { isAcceptedPaidMatchingClient } from "@/lib/repreneur-matching-eligibility"
+import {
+  hasInvitedLinkedIdentity,
+  isAcceptedPaidMatchingClient,
+  isEligibleForManualRecommendation,
+} from "@/lib/repreneur-matching-eligibility"
 import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
@@ -221,15 +225,29 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
 }
 
 async function ensureNewMatchEligible(repreneurId: string) {
-  const { data, error } = await createAdminClient()
-    .from("repreneurs")
-    .select("first_name, last_name, lifecycle_status, repreneur_offers(status, offer:offers(name, price))")
-    .eq("id", repreneurId)
-    .maybeSingle()
+  const supabase = createAdminClient()
+  const [{ data: repreneur, error: repreneurError }, { data: role, error: roleError }] = await Promise.all([
+    supabase
+      .from("repreneurs")
+      .select("id, is_demo")
+      .eq("id", repreneurId)
+      .maybeSingle(),
+    supabase
+      .from("app_user_roles")
+      .select("role, repreneur_id, user_id")
+      .eq("role", "repreneur")
+      .eq("repreneur_id", repreneurId)
+      .not("user_id", "is", null)
+      .maybeSingle(),
+  ])
 
-  if (error) throw new Error(error.message)
-  if (!data || data.lifecycle_status !== "client" || !isAcceptedPaidMatchingClient(data, data.repreneur_offers)) {
-    throw formError("New matches can only be created for accepted paid Deal Flow or End-to-End clients.", "repreneur_id")
+  if (repreneurError) throw new Error(repreneurError.message)
+  if (roleError) throw new Error(roleError.message)
+  if (!isEligibleForManualRecommendation(repreneur)) {
+    throw formError("DEMO profiles cannot receive a staff recommendation.", "repreneur_id")
+  }
+  if (!hasInvitedLinkedIdentity(role, repreneurId)) {
+    throw formError("Enable portal access for this repreneur before creating a staff recommendation.", "repreneur_id")
   }
 }
 

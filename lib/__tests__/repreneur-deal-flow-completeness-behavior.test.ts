@@ -69,6 +69,15 @@ const completeProfile = {
   target_revenue_max_meur: 3,
 }
 
+const invitedProfileWithoutPaidOffer = {
+  ...completeProfile,
+  lifecycle_status: "qualified",
+  repreneur_offers: [{
+    status: "accepted",
+    offer: { name: "Diagnostic Flash", price: 0 },
+  }],
+}
+
 const opportunity = {
   id: "opportunity-auto",
   reference: "Re-New - IDF - QA",
@@ -153,6 +162,25 @@ describe("incomplete-thesis portal behavior", () => {
     expect(result.staffRecommended.map((item) => item.opportunity_id)).toEqual(["opportunity-staff"])
     expect(result.dealFlow.map((item) => item.opportunity_id)).toEqual(["opportunity-auto"])
     expect(mocks.from.mock.calls.map(([table]) => table)).toContain("opportunities")
+  })
+
+  it("keeps automatic deal flow available to an invited portal repreneur without a paid offer", async () => {
+    setResponses({
+      repreneurs: [{ data: invitedProfileWithoutPaidOffer, error: null }],
+      opportunity_matches: [
+        { data: [staffMatch], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ],
+      opportunities: [{ data: [opportunity], error: null }],
+      geography_nodes: [{ data: [], error: null }],
+      repreneur_geography_targets: [{ data: [], error: null }],
+    })
+
+    const result = await listMyRepreneurDealFlow("relevance")
+
+    expect(result.automaticMatching.complete).toBe(true)
+    expect(result.dealFlow.map((item) => item.opportunity_id)).toEqual(["opportunity-auto"])
   })
 
   it("projects each visible deal once into the approved four Deals buckets", async () => {

@@ -8,7 +8,6 @@ import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
-import { isAcceptedPaidMatchingClient } from "@/lib/repreneur-matching-eligibility"
 import {
   loadMatchingGeographyContext,
   withMatchingGeography,
@@ -421,16 +420,10 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
 
   const supabase = createAdminClient()
   const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
-  const serviceEligible = repreneur.lifecycle_status === "client" && isAcceptedPaidMatchingClient(
-    repreneur,
-    repreneur.repreneur_offers as Parameters<typeof isAcceptedPaidMatchingClient>[1],
-  )
-  const automaticMatching = serviceEligible
-    ? thesisCompleteness
-    : {
-        complete: false,
-        missing: [...thesisCompleteness.missing, "matching service"],
-      }
+  // Staff controls portal access. Once a repreneur has that access, offer and
+  // payment metadata must not silently remove the wider Deal Flow. A complete
+  // acquisition project remains necessary for useful automatic recommendations.
+  const automaticMatching = thesisCompleteness
   const [matchesResult, opportunitiesResult] = await Promise.all([
     supabase
       .from("opportunity_matches")
@@ -667,11 +660,7 @@ export async function getMyRepreneurOpportunity(
   const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null
   if (!exposure) {
     const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
-    const serviceEligible = repreneur.lifecycle_status === "client" && isAcceptedPaidMatchingClient(
-      repreneur,
-      repreneur.repreneur_offers as Parameters<typeof isAcceptedPaidMatchingClient>[1],
-    )
-    if (!thesisCompleteness.complete || !serviceEligible) return null
+    if (!thesisCompleteness.complete) return null
     const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
     if (!opportunity || !isRepreneurEligibleOpportunity(opportunity)) return null
 
