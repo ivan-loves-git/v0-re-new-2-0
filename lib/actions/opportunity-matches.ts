@@ -377,10 +377,12 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
       reviewed_by,
       reviewed_at,
       updated_at,
-      opportunity:opportunities(id, reference, public_title, sector, location),
-      repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)
+      opportunity:opportunities!inner(id, reference, public_title, sector, location, is_demo),
+      repreneur:repreneurs!inner(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score, is_demo)
     `)
     .in("status", ["interested", "declined"])
+    .eq("opportunity.is_demo", false)
+    .eq("repreneur.is_demo", false)
     .order("reviewed_at", { ascending: true, nullsFirst: true })
     .order("updated_at", { ascending: false })
 
@@ -439,6 +441,7 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
         last_name,
         email,
         lifecycle_status,
+        is_demo,
         journey_stage,
         recommendation,
         repreneur_offers!inner(status, offer:offers(name, price)),
@@ -487,7 +490,7 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
     await Promise.all([
       supabase
         .from("repreneurs")
-        .select(`id, first_name, last_name, lifecycle_status, repreneur_offers!inner(status, offer:offers(name, price)), ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+        .select(`id, first_name, last_name, is_demo, lifecycle_status, repreneur_offers!inner(status, offer:offers(name, price)), ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
         .eq("id", repreneurId)
         .maybeSingle(),
       supabase

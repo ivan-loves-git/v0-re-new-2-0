@@ -39,6 +39,7 @@ const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
 ])
 
 type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
+  is_demo?: boolean | null
   lifecycle_status?: string | null
   repreneur_offers?: unknown
   who_score?: number | null
@@ -189,6 +190,7 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
       first_name,
       last_name,
       email,
+      is_demo,
       lifecycle_status,
       repreneur_offers(status, offer:offers(name, price)),
       who_score,

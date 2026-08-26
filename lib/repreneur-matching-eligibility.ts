@@ -6,6 +6,7 @@ export type RepreneurOfferAssignment = {
 export type MatchingRepreneurIdentity = {
   first_name?: string | null
   last_name?: string | null
+  is_demo?: boolean | null
 }
 
 export type ManualRecommendationRepreneur = {
@@ -44,6 +45,7 @@ export function isAcceptedPaidMatchingClient(
   identity: MatchingRepreneurIdentity,
   assignments: RepreneurOfferAssignment[] | null | undefined,
 ) {
+  if (identity.is_demo) return false
   if (isTestMarkedMatchingProfile(identity)) return false
 
   return (assignments ?? []).some((assignment) => {

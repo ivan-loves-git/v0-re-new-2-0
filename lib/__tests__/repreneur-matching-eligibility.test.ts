@@ -26,6 +26,10 @@ describe("matching client eligibility", () => {
     expect(isAcceptedPaidMatchingClient({ first_name: "Colin", last_name: "Martin" }, acceptedEndToEnd)).toBe(true)
   })
 
+  it("excludes an explicitly classified DEMO profile without relying on its display name", () => {
+    expect(isAcceptedPaidMatchingClient({ first_name: "Ari", last_name: "Martin", is_demo: true }, acceptedEndToEnd)).toBe(false)
+  })
+
   it("keeps an accepted paid Deal Flow client eligible", () => {
     expect(isAcceptedPaidMatchingClient(
       { first_name: "Ada", last_name: "Martin" },

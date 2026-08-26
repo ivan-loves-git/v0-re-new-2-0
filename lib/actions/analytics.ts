@@ -130,10 +130,12 @@ async function getCachedAnalyticsData(
   // Fetch all repreneurs (excluding rejected/declined for most metrics)
   const { data: allRepreneurs } = await supabase
     .from("repreneurs")
-    .select("id, first_name, last_name, email, lifecycle_status, journey_stage, who_score, when_score, who_accuracy, when_accuracy, created_at, updated_at")
+    .select("id, first_name, last_name, email, is_demo, lifecycle_status, journey_stage, who_score, when_score, who_accuracy, when_accuracy, created_at, updated_at")
     .order("created_at", { ascending: false })
 
-  const repreneurs = allRepreneurs || []
+  const allProfiles = allRepreneurs || []
+  const demoRepreneurIds = new Set(allProfiles.filter((repreneur) => repreneur.is_demo).map((repreneur) => repreneur.id))
+  const repreneurs = allProfiles.filter((repreneur) => !repreneur.is_demo)
 
   // Filter by period
   const inPeriod = period === "all"
@@ -227,7 +229,7 @@ async function getCachedAnalyticsData(
     .from("repreneur_offers")
     .select("id, repreneur_id, offer_id, status, offered_at, accepted_at, offer:offers(name)")
 
-  const assignments = offerAssignments || []
+  const assignments = (offerAssignments || []).filter((assignment) => !demoRepreneurIds.has(assignment.repreneur_id))
 
   // Build a lookup: repreneur_id → created_at
   const repreneurCreatedAt = new Map(repreneurs.map(r => [r.id, r.created_at]))
@@ -289,7 +291,7 @@ async function getCachedAnalyticsData(
     .from("activities")
     .select("repreneur_id, activity_type, event_date, created_at")
 
-  const activityList = allActivities || []
+  const activityList = (allActivities || []).filter((activity) => !demoRepreneurIds.has(activity.repreneur_id))
   const interviews = activityList.filter(a => a.activity_type === "interview")
   const noShows = activityList.filter(a => a.activity_type === "no_show")
 
@@ -356,6 +358,7 @@ async function getCachedAnalyticsData(
     .from("repreneurs")
     .select("id, decline_reason_category")
     .eq("lifecycle_status", "declined")
+    .eq("is_demo", false)
 
   const declineByReason = new Map<string, number>()
   for (const row of declinedRepreneurs || []) {

@@ -88,20 +88,26 @@ async function listActivePursuits(): Promise<{
         pursuit_stage,
         nda_status,
         updated_at,
-        opportunity:opportunities(id, reference, public_title, sector, location),
-        repreneur:repreneurs(id, first_name, last_name, email)
+        opportunity:opportunities!inner(id, reference, public_title, sector, location, is_demo),
+        repreneur:repreneurs!inner(id, first_name, last_name, email, is_demo)
       `)
       .eq("status", "active_pursuit")
+      .eq("opportunity.is_demo", false)
+      .eq("repreneur.is_demo", false)
       .order("updated_at", { ascending: false })
       .limit(8),
     supabase
       .from("opportunity_matches")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "active_pursuit"),
+      .select("id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)", { count: "exact", head: true })
+      .eq("status", "active_pursuit")
+      .eq("opportunity.is_demo", false)
+      .eq("repreneur.is_demo", false),
     supabase
       .from("opportunity_matches")
-      .select("id", { count: "exact", head: true })
+      .select("id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)", { count: "exact", head: true })
       .eq("status", "active_pursuit")
+      .eq("opportunity.is_demo", false)
+      .eq("repreneur.is_demo", false)
       .in("nda_status", ["required", "sent"]),
   ])
 
