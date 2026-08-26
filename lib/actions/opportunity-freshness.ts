@@ -53,6 +53,7 @@ interface OpportunityFreshnessRow {
   location: string | null
   sector: string | null
   status: OpportunityStatus
+  is_demo: boolean
   date_added: string | null
   date_added_precision: "day" | "month" | null
   created_at: string
@@ -96,14 +97,15 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
     supabase
       .from("opportunities")
       .select(
-        "id, reference, public_title, source_label, location, sector, status, date_added, date_added_precision, created_at, source_office:ma_offices(name, firm:ma_firms(name))",
+        "id, reference, public_title, source_label, location, sector, status, is_demo, date_added, date_added_precision, created_at, source_office:ma_offices(name, firm:ma_firms(name))",
       )
       .in("status", [...CANDIDATE_STALE_OPPORTUNITY_STATUSES])
+      .eq("is_demo", false)
       .order("date_added", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true }),
     supabase
       .from("opportunity_matches")
-      .select("opportunity_id")
+      .select("opportunity_id, repreneur:repreneurs!inner(is_demo)")
       .eq("status", "active_pursuit"),
   ])
 
@@ -115,6 +117,12 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
   const now = new Date()
   const activePursuitOpportunityIds = new Set(
     (activePursuitsResult.data ?? [])
+      .filter((match) => {
+        const repreneur = Array.isArray(match.repreneur)
+          ? match.repreneur[0]
+          : match.repreneur
+        return !repreneur?.is_demo
+      })
       .map((match) => match.opportunity_id)
       .filter((id): id is string => Boolean(id)),
   )

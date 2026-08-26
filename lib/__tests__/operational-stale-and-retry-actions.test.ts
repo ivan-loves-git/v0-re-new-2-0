@@ -81,7 +81,7 @@ describe("operational stale tabs and retried staff actions", () => {
     expect(from).toHaveBeenCalledTimes(1)
   })
 
-  it("rejects a forged new match for a free or test client before writing", async () => {
+  it("rejects a new manual match for an uninvited repreneur before writing", async () => {
     const from = vi.fn((table: string) => {
       if (table === "opportunity_matches") {
         const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
@@ -92,14 +92,19 @@ describe("operational stale tabs and retried staff actions", () => {
       if (table === "repreneurs") {
         const maybeSingle = vi.fn().mockResolvedValue({
           data: {
-            first_name: "Test2Colin",
-            last_name: "Repreneur",
-            lifecycle_status: "client",
-            repreneur_offers: [{ status: "accepted", offer: { name: "End-to-End", price: 0 } }],
+            id: "repreneur-1",
+            is_demo: false,
           },
           error: null,
         })
         return { select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })) }
+      }
+      if (table === "app_user_roles") {
+        const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+        const not = vi.fn(() => ({ maybeSingle }))
+        const repreneurFilter = vi.fn(() => ({ not }))
+        const roleFilter = vi.fn(() => ({ eq: repreneurFilter }))
+        return { select: vi.fn(() => ({ eq: roleFilter })) }
       }
       throw new Error(`Unexpected table: ${table}`)
     })
@@ -112,10 +117,10 @@ describe("operational stale tabs and retried staff actions", () => {
 
     await expect(saveOpportunityMatch(formData)).resolves.toEqual({
       ok: false,
-      message: "New matches can only be created for accepted paid Deal Flow or End-to-End clients.",
+      message: "Enable portal access for this repreneur before creating a staff recommendation.",
       field: "repreneur_id",
     })
-    expect(from).toHaveBeenCalledWith("repreneurs")
+    expect(from).toHaveBeenCalledWith("app_user_roles")
   })
 
   it.each([

@@ -107,12 +107,12 @@ export async function getOpportunityKpiData(): Promise<OpportunityKpiData> {
       supabase
         .from("opportunities")
         .select(
-          "id, status, source_id, source_label, source:ma_sources(source_type), source_office:ma_offices(firm:ma_firms(id))",
+          "id, is_demo, status, source_id, source_label, source:ma_sources(source_type), source_office:ma_offices(firm:ma_firms(id))",
         ),
       supabase
         .from("opportunity_matches")
-        .select("id, status, pursuit_stage, nda_status, reviewed_at"),
-      supabase.from("opportunity_documents").select("id, visibility"),
+        .select("id, opportunity_id, status, pursuit_stage, nda_status, reviewed_at, opportunity:opportunities(is_demo), repreneur:repreneurs(is_demo)"),
+      supabase.from("opportunity_documents").select("id, visibility, opportunity:opportunities(is_demo)"),
     ])
 
   if (opportunitiesResult.error)
@@ -124,10 +124,22 @@ export async function getOpportunityKpiData(): Promise<OpportunityKpiData> {
   const matches = matchesResult.data ?? []
   const documents = documentsResult.data ?? []
 
-  const activeOpportunities = opportunities.filter(
+  const productionOpportunities = opportunities.filter(
+    (opportunity) => !opportunity.is_demo,
+  )
+  const productionMatches = matches.filter((match) => {
+    const opportunity = Array.isArray(match.opportunity) ? match.opportunity[0] : match.opportunity
+    const repreneur = Array.isArray(match.repreneur) ? match.repreneur[0] : match.repreneur
+    return !opportunity?.is_demo && !repreneur?.is_demo
+  })
+  const productionDocuments = documents.filter((document) => {
+    const opportunity = Array.isArray(document.opportunity) ? document.opportunity[0] : document.opportunity
+    return !opportunity?.is_demo
+  })
+  const activeOpportunities = productionOpportunities.filter(
     (opportunity) => opportunity.status === "active",
   )
-  const openOpportunities = opportunities.filter(
+  const openOpportunities = productionOpportunities.filter(
     (opportunity) => !["archived", "closed"].includes(opportunity.status),
   )
   const activeIntermediaryKeys = new Set(
@@ -136,13 +148,13 @@ export async function getOpportunityKpiData(): Promise<OpportunityKpiData> {
       .filter((key): key is string => Boolean(key)),
   )
 
-  const introducedMatches = matches.filter((match) =>
+  const introducedMatches = productionMatches.filter((match) =>
     INTRODUCTION_STATUSES.includes(match.status as OpportunityMatchStatus),
   )
-  const activePursuitMatches = matches.filter(
+  const activePursuitMatches = productionMatches.filter(
     (match) => match.status === "active_pursuit",
   )
-  const pendingReviews = matches.filter(
+  const pendingReviews = productionMatches.filter(
     (match) =>
       ["interested", "declined"].includes(match.status) && !match.reviewed_at,
   ).length
@@ -150,23 +162,23 @@ export async function getOpportunityKpiData(): Promise<OpportunityKpiData> {
   const stageRows = OPPORTUNITY_PURSUIT_STAGE_OPTIONS.map((option) => ({
     stage: option.value,
     label: option.label,
-    count: matches.filter((match) => match.pursuit_stage === option.value)
+    count: productionMatches.filter((match) => match.pursuit_stage === option.value)
       .length,
   }))
 
   const sellerMeetings =
     stageRows.find((row) => row.stage === "seller_meeting")?.count ?? 0
   const lois = stageRows.find((row) => row.stage === "loi")?.count ?? 0
-  const droppedDeals = matches.filter(
+  const droppedDeals = productionMatches.filter(
     (match) => match.status === "dropped" || match.pursuit_stage === "dropped",
   ).length
-  const closedDeals = matches.filter(
+  const closedDeals = productionMatches.filter(
     (match) => match.pursuit_stage === "closed",
   ).length
   const ndaBlockedPursuits = activePursuitMatches.filter((match) =>
     ["required", "sent"].includes(match.nda_status ?? ""),
   ).length
-  const approvedDocuments = documents.filter(
+  const approvedDocuments = productionDocuments.filter(
     (document) => document.visibility === "approved_for_repreneur",
   ).length
 

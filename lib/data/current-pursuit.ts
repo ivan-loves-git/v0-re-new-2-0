@@ -99,14 +99,14 @@ export type AuthorizedPortalPursuitResource =
     }
   | { kind: "information-memorandum"; documentId: string }
 
-async function resolveViewerRepreneurId(viewer: PortalPursuitViewer) {
+async function resolveViewer(viewer: PortalPursuitViewer) {
   if (viewer.kind === "staff-preview") {
     await requireStaffAccess()
-    return viewer.repreneurId || null
+    return { repreneurId: viewer.repreneurId || null, isActualPortal: false }
   }
 
   const access = await requirePortalAccess()
-  return access.repreneurId
+  return { repreneurId: access.repreneurId, isActualPortal: true }
 }
 
 interface MatchRow {
@@ -117,17 +117,21 @@ interface MatchRow {
   opportunity: { status?: string; is_demo?: boolean | null }
     | Array<{ status?: string; is_demo?: boolean | null }>
     | null
+  repreneur: { is_demo?: boolean | null }
+    | Array<{ is_demo?: boolean | null }>
+    | null
 }
 
 async function loadCurrentPursuit(
   matchId: string,
   expectedRepreneurId?: string,
+  options?: { excludeDemoRepreneur?: boolean },
 ): Promise<StaffCurrentPursuit | null> {
   const supabase = createAdminClient()
   const [matchResult, settingsResult] = await Promise.all([
     supabase
       .from("opportunity_matches")
-      .select("id, opportunity_id, repreneur_id, status, opportunity:opportunities(status, is_demo)")
+      .select("id, opportunity_id, repreneur_id, status, opportunity:opportunities(status, is_demo), repreneur:repreneurs(is_demo)")
       .eq("id", matchId)
       .maybeSingle(),
     supabase
@@ -145,9 +149,13 @@ async function loadCurrentPursuit(
   const opportunity = Array.isArray(match.opportunity)
     ? match.opportunity[0]
     : match.opportunity
+  const matchedRepreneur = Array.isArray(match.repreneur)
+    ? match.repreneur[0]
+    : match.repreneur
   if (expectedRepreneurId && !isRepreneurEligibleOpportunity(opportunity)) {
     return null
   }
+  if (options?.excludeDemoRepreneur && matchedRepreneur?.is_demo) return null
 
   const [
     evidenceResult,
@@ -346,9 +354,12 @@ export async function readPortalCurrentPursuit(input: {
   matchId: string
   viewer: PortalPursuitViewer
 }): Promise<PortalCurrentPursuit | null> {
-  const repreneurId = await resolveViewerRepreneurId(input.viewer)
+  const viewer = await resolveViewer(input.viewer)
+  const repreneurId = viewer.repreneurId
   if (!repreneurId) return null
-  const pursuit = await loadCurrentPursuit(input.matchId, repreneurId)
+  const pursuit = await loadCurrentPursuit(input.matchId, repreneurId, {
+    excludeDemoRepreneur: viewer.isActualPortal,
+  })
   return pursuit ? toPortalCurrentPursuit(pursuit) : null
 }
 
@@ -361,10 +372,23 @@ export async function resolvePortalPursuitResource(input: {
   viewer: PortalPursuitViewer
   resource: PortalPursuitResourceRequest
 }): Promise<AuthorizedPortalPursuitResource | null> {
-  const repreneurId = await resolveViewerRepreneurId(input.viewer)
+  const viewer = await resolveViewer(input.viewer)
+  const repreneurId = viewer.repreneurId
   if (!repreneurId) return null
-
   const supabase = createAdminClient()
+
+  // A staff preview is a staff-authorised inspection surface. Only a real
+  // repreneur portal session is denied DEMO pursuit resources.
+  if (viewer.isActualPortal) {
+    const { data: match, error: matchError } = await supabase
+      .from("opportunity_matches")
+      .select("id, repreneur:repreneurs!inner(is_demo)")
+      .eq("id", input.matchId)
+      .eq("repreneur.is_demo", false)
+      .maybeSingle()
+    if (matchError || !match) return null
+  }
+
   if (input.resource.kind === "information-memorandum") {
     const { data, error } = await supabase.rpc(
       "journey_repreneur_can_access_confidential",

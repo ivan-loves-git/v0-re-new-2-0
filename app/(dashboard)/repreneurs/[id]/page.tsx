@@ -59,6 +59,8 @@ import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { ScoringAccuracy } from "@/components/repreneurs/scoring-accuracy"
 import { StaffRepreneurTargetThesisEditor } from "@/components/repreneurs/repreneur-target-thesis-editor"
+import { RepreneurDemoBadge, RepreneurDemoControl } from "@/components/repreneurs/repreneur-demo-control"
+import { setRepreneurDemoClassification } from "@/lib/actions/repreneurs"
 import { SECTORS } from "@/lib/constants/sectors"
 import { WHO_QUESTIONS, WHEN_QUESTIONS, NEEDS_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
@@ -502,6 +504,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </div>
             </div>
             <MissingFieldsBadge repreneur={repreneur} />
+            {profile.is_demo ? <RepreneurDemoBadge /> : null}
             {profile.needs_data_completion && (
               <NeedsCompletionBadge repreneurId={id} compact />
             )}
@@ -528,6 +531,12 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               repreneurId={repreneur.id}
               currentStatus={repreneur.lifecycle_status}
               repreneurName={`${repreneur.first_name} ${repreneur.last_name}`}
+            />
+          </div>
+          <div className="pb-px">
+            <RepreneurDemoControl
+              isDemo={Boolean(profile.is_demo)}
+              action={(isDemo) => setRepreneurDemoClassification(id, isDemo)}
             />
           </div>
         </div>

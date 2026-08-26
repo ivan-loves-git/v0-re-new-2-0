@@ -43,11 +43,12 @@ function mockMatchResponse(
   isDemo = false,
 ) {
   const maybeSingle = vi.fn().mockResolvedValue({
-    data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: opportunityStatus, is_demo: isDemo } },
+    data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: opportunityStatus, is_demo: isDemo }, repreneur: { is_demo: false } },
     error: null,
   })
-  const selectForDemo = vi.fn(() => ({ maybeSingle }))
-  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemo }))
+  const selectForDemoRepreneur = vi.fn(() => ({ maybeSingle }))
+  const selectForDemoOpportunity = vi.fn(() => ({ eq: selectForDemoRepreneur }))
+  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemoOpportunity }))
   const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }))
   const select = vi.fn(() => ({ eq: selectForMatch }))
   const from = vi.fn(() => ({ select }))
@@ -143,8 +144,9 @@ describe("repreneur opportunity decline response", () => {
 
   it("rejects a foreign match without attempting an update", async () => {
     const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
-    const selectForDemo = vi.fn(() => ({ maybeSingle }))
-    const selectForRepreneur = vi.fn(() => ({ eq: selectForDemo }))
+    const selectForDemoRepreneur = vi.fn(() => ({ maybeSingle }))
+    const selectForDemoOpportunity = vi.fn(() => ({ eq: selectForDemoRepreneur }))
+    const selectForRepreneur = vi.fn(() => ({ eq: selectForDemoOpportunity }))
     const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }))
     const select = vi.fn(() => ({ eq: selectForMatch }))
     const rpc = vi.fn()

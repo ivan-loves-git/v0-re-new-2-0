@@ -10,7 +10,10 @@ import {
   withMatchingGeography,
   withMatchingGeographyTargets,
 } from "@/lib/repreneur-opportunity-geography"
-import { isAcceptedPaidMatchingClient } from "@/lib/repreneur-matching-eligibility"
+import {
+  hasInvitedLinkedIdentity,
+  isEligibleForManualRecommendation,
+} from "@/lib/repreneur-matching-eligibility"
 import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
@@ -221,15 +224,29 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
 }
 
 async function ensureNewMatchEligible(repreneurId: string) {
-  const { data, error } = await createAdminClient()
-    .from("repreneurs")
-    .select("first_name, last_name, lifecycle_status, repreneur_offers(status, offer:offers(name, price))")
-    .eq("id", repreneurId)
-    .maybeSingle()
+  const supabase = createAdminClient()
+  const [{ data: repreneur, error: repreneurError }, { data: role, error: roleError }] = await Promise.all([
+    supabase
+      .from("repreneurs")
+      .select("id, is_demo")
+      .eq("id", repreneurId)
+      .maybeSingle(),
+    supabase
+      .from("app_user_roles")
+      .select("role, repreneur_id, user_id")
+      .eq("role", "repreneur")
+      .eq("repreneur_id", repreneurId)
+      .not("user_id", "is", null)
+      .maybeSingle(),
+  ])
 
-  if (error) throw new Error(error.message)
-  if (!data || data.lifecycle_status !== "client" || !isAcceptedPaidMatchingClient(data, data.repreneur_offers)) {
-    throw formError("New matches can only be created for accepted paid Deal Flow or End-to-End clients.", "repreneur_id")
+  if (repreneurError) throw new Error(repreneurError.message)
+  if (roleError) throw new Error(roleError.message)
+  if (!isEligibleForManualRecommendation(repreneur)) {
+    throw formError("DEMO profiles cannot receive a staff recommendation.", "repreneur_id")
+  }
+  if (!hasInvitedLinkedIdentity(role, repreneurId)) {
+    throw formError("Enable portal access for this repreneur before creating a staff recommendation.", "repreneur_id")
   }
 }
 
@@ -359,10 +376,12 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
       reviewed_by,
       reviewed_at,
       updated_at,
-      opportunity:opportunities(id, reference, public_title, sector, location),
-      repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)
+      opportunity:opportunities!inner(id, reference, public_title, sector, location, is_demo),
+      repreneur:repreneurs!inner(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score, is_demo)
     `)
     .in("status", ["interested", "declined"])
+    .eq("opportunity.is_demo", false)
+    .eq("repreneur.is_demo", false)
     .order("reviewed_at", { ascending: true, nullsFirst: true })
     .order("updated_at", { ascending: false })
 
@@ -379,10 +398,11 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
       id,
       opportunity_id,
       repreneur_id,
-      repreneur:repreneurs(id, first_name, last_name, email)
+      repreneur:repreneurs!inner(id, first_name, last_name, email, is_demo)
     `)
     .in("opportunity_id", opportunityIds)
     .eq("status", "active_pursuit")
+    .eq("repreneur.is_demo", false)
 
   if (activeError) throw new Error(activeError.message)
 
@@ -407,7 +427,7 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const [{ data: opportunity, error: opportunityError }, { data, error }] = await Promise.all([
+  const [{ data: opportunity, error: opportunityError }, { data, error }, { data: roles, error: rolesError }] = await Promise.all([
     supabase
       .from("opportunities")
       .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
@@ -421,24 +441,33 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
         last_name,
         email,
         lifecycle_status,
+        is_demo,
         journey_stage,
         recommendation,
-        repreneur_offers!inner(status, offer:offers(name, price)),
         ${REPRENEUR_MATCHING_INPUT_FIELDS}
       `)
-      .eq("lifecycle_status", "client")
+      .eq("is_demo", false)
       .order("updated_at", { ascending: false })
       .limit(250),
+    supabase
+      .from("app_user_roles")
+      .select("role, repreneur_id, user_id")
+      .eq("role", "repreneur")
+      .not("user_id", "is", null),
   ])
 
   if (opportunityError) throw new Error(opportunityError.message)
   if (error) throw new Error(error.message)
+  if (rolesError) throw new Error(rolesError.message)
 
   const geography = await loadMatchingGeographyContext(
     supabase,
     (data ?? []).map((candidate) => candidate.id),
   )
-  return (data ?? []).filter((candidate) => isAcceptedPaidMatchingClient(candidate, candidate.repreneur_offers)).map((candidate) => {
+  return (data ?? []).filter((candidate) =>
+    isEligibleForManualRecommendation(candidate) &&
+    (roles ?? []).some((role) => hasInvitedLinkedIdentity(role, candidate.id)),
+  ).map((candidate) => {
     if (!opportunity) return candidate as OpportunityMatchCandidate
     const platformMatch = calculateOpportunityMatchScore(
       withMatchingGeographyTargets(candidate, geography),
@@ -465,30 +494,37 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const [{ data: repreneur, error: repreneurError }, { data: opportunities, error: opportunitiesError }, { data: existingMatches, error: matchesError }] =
+  const [{ data: repreneur, error: repreneurError }, { data: opportunities, error: opportunitiesError }, { data: existingMatches, error: matchesError }, { data: roles, error: rolesError }] =
     await Promise.all([
       supabase
         .from("repreneurs")
-        .select(`id, first_name, last_name, lifecycle_status, repreneur_offers!inner(status, offer:offers(name, price)), ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+        .select(`id, first_name, last_name, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
         .eq("id", repreneurId)
         .maybeSingle(),
       supabase
         .from("opportunities")
         .select("id, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id, status, repreneur_exposure")
         .eq("status", "active")
-        .neq("repreneur_exposure", "staff_only")
+        .eq("is_demo", false)
         .order("updated_at", { ascending: false })
         .limit(250),
       supabase
         .from("opportunity_matches")
         .select("opportunity_id")
         .eq("repreneur_id", repreneurId),
+      supabase
+        .from("app_user_roles")
+        .select("role, repreneur_id, user_id")
+        .eq("role", "repreneur")
+        .eq("repreneur_id", repreneurId)
+        .not("user_id", "is", null),
     ])
 
   if (repreneurError) throw new Error(repreneurError.message)
   if (opportunitiesError) throw new Error(opportunitiesError.message)
   if (matchesError) throw new Error(matchesError.message)
-  if (!repreneur || repreneur.lifecycle_status !== "client" || !isAcceptedPaidMatchingClient(repreneur, repreneur.repreneur_offers)) return []
+  if (rolesError) throw new Error(rolesError.message)
+  if (!repreneur || !isEligibleForManualRecommendation(repreneur) || !(roles ?? []).some((role) => hasInvitedLinkedIdentity(role, repreneurId))) return []
 
   const existingOpportunityIds = new Set((existingMatches ?? []).map((match) => match.opportunity_id))
   const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])

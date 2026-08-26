@@ -115,6 +115,7 @@ interface AffiliationRow {
 
 interface OpportunityRow {
   id: string
+  is_demo?: boolean | null
   reference: string
   public_title: string | null
   activity: string | null
@@ -292,7 +293,7 @@ export async function readMaRelationshipLedger(
     purpose === "detail"
       ? `id, office_id, opportunity_id, channel, title, occurred_at, delivery_status,
          provider_idempotency_key, provider_message_id, delivery_finalized_at, sent_at,
-         opportunity:opportunities(reference, public_title, activity)`
+         opportunity:opportunities(reference, public_title, activity, is_demo)`
       : `id, office_id, affiliation_id, opportunity_id, channel, direction, occurred_at,
          title, summary, outcome, next_action, next_action_due_at, delivery_status,
          provider_idempotency_key, provider_message_id, delivery_finalized_at, sent_at,
@@ -300,7 +301,7 @@ export async function readMaRelationshipLedger(
          owner_verification_state, owner_verified_at, created_at,
          office:ma_offices(id, name, firm:ma_firms(name)),
          affiliation:ma_contact_office_affiliations(id, office_id, contact:ma_contacts(id, display_name, email)),
-         opportunity:opportunities(id, reference, public_title, activity)`
+         opportunity:opportunities(id, reference, public_title, activity, is_demo)`
   let interactionsQuery = supabase
     .from("ma_interactions")
     .select(activityColumns)
@@ -346,6 +347,7 @@ export async function readMaRelationshipLedger(
       "id, reference, public_title, activity, status, date_added, date_added_precision, source_office_id",
     )
     .in("source_office_id", officeIds)
+    .eq("is_demo", false)
   const [
     affiliationsResult,
     opportunitiesResult,
@@ -369,10 +371,12 @@ export async function readMaRelationshipLedger(
     supabase
       .from("opportunity_matches")
       .select(
-        "opportunity_id, opportunity:opportunities!inner(source_office_id)",
+        "opportunity_id, opportunity:opportunities!inner(source_office_id, is_demo), repreneur:repreneurs!inner(is_demo)",
       )
       .eq("status", "active_pursuit")
-      .in("opportunity.source_office_id", officeIds),
+      .in("opportunity.source_office_id", officeIds)
+      .eq("opportunity.is_demo", false)
+      .eq("repreneur.is_demo", false),
   ])
 
   for (const result of [
@@ -446,6 +450,8 @@ export async function readMaRelationshipLedger(
   const activities: MaRelationshipLedgerActivity[] = []
   for (const row of (interactionsResult.data ??
     []) as unknown as InteractionRow[]) {
+    const relatedOpportunity = oneMaRelationshipRecord(row.opportunity)
+    if (relatedOpportunity?.is_demo) continue
     const activity = normalizeMaRelationshipActivity(row)
     activities.push(activity)
     const officeActivities = activitiesByOffice.get(activity.officeId) ?? []

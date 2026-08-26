@@ -55,10 +55,11 @@ async function updateMyOpportunityResponse(
   const supabase = createAdminClient()
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select("id, opportunity_id, status, opportunity:opportunities!inner(status, is_demo)")
+    .select("id, opportunity_id, status, opportunity:opportunities!inner(status, is_demo), repreneur:repreneurs!inner(is_demo)")
     .eq("id", matchId)
     .eq("repreneur_id", access.repreneurId)
     .eq("opportunity.is_demo", false)
+    .eq("repreneur.is_demo", false)
     .maybeSingle()
 
   if (matchError) throw new Error(matchError.message)

@@ -8,6 +8,7 @@ import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-sc
 
 type RepreneurMatchRecord = {
   id: string
+  is_demo?: boolean | null
   who_score?: number | null
   when_score?: number | null
   scoring_flags?: string[] | null
@@ -28,6 +29,7 @@ type RepreneurMatchRecord = {
 }
 
 type OpportunityRecord = {
+  is_demo?: boolean | null
   sector?: string | null
   activity?: string | null
   location?: string | null
@@ -39,6 +41,7 @@ type OpportunityRecord = {
 
 const MATCHING_FIELDS = `
   id,
+  is_demo,
   who_score,
   when_score,
   scoring_flags,
@@ -78,10 +81,13 @@ export async function refreshStoredRepreneurMatchesWithClient(
     .maybeSingle()
   if (repreneurError) throw new Error(repreneurError.message)
   if (!repreneur) return { repreneurId, matchedRows: 0, refreshedRows: 0, skippedMissingOpportunityRows: 0, failedMatchRows: [] }
+  if ((repreneur as RepreneurMatchRecord).is_demo) {
+    return { repreneurId, matchedRows: 0, refreshedRows: 0, skippedMissingOpportunityRows: 0, failedMatchRows: [] }
+  }
 
   const { data: matches, error: matchesError } = await supabase
     .from("opportunity_matches")
-    .select(`id, opportunity_id, opportunity:opportunities(sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id)`)
+    .select(`id, opportunity_id, opportunity:opportunities(is_demo, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id)`)
     .eq("repreneur_id", repreneurId)
   if (matchesError) throw new Error(matchesError.message)
 
@@ -93,7 +99,7 @@ export async function refreshStoredRepreneurMatchesWithClient(
   )
   const settled = await Promise.allSettled(matchRows.map(async (match) => {
     const opportunity = Array.isArray(match.opportunity) ? match.opportunity[0] : match.opportunity
-    if (!opportunity) return "skipped" as const
+    if (!opportunity || opportunity.is_demo) return "skipped" as const
     const score = calculateOpportunityMatchScore(
       geographyAwareRepreneur,
       withMatchingGeography(opportunity, geography),

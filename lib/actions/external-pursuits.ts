@@ -194,7 +194,20 @@ export async function listExternalPursuitBoard(): Promise<ExternalPursuitBoardRe
   if (error) throw new Error(message(error, "Could not load External Pursuits."))
   type BoardContactRow = { id: string; name?: string | null; organisation?: string | null; role_title?: string | null; email?: string | null; phone?: string | null }
   type BoardRow = { id: string; owner_repreneur_id: string; owner_name?: string | null; title: string; stage: ExternalPursuitBoardRecord["stage"]; availability: ExternalPursuitBoardRecord["availability"]; deletion_status: ExternalPursuitBoardRecord["deletionStatus"]; is_open_capacity?: boolean; external_url?: string | null; target_company?: string | null; source_channel?: string | null; revenue_meur?: number | string | null; ebitda_keur?: number | string | null; headcount?: number | string | null; contacts?: BoardContactRow[]; next_action?: string | null; responsible_party?: ExternalPursuitBoardRecord["responsibleParty"]; due_at?: string | null; shared_notes?: string | null; staff_internal_notes?: string | null; updated_at: string }
-  return ((Array.isArray(data) ? data : []) as BoardRow[]).map((row) => ({
+  const rows = (Array.isArray(data) ? data : []) as BoardRow[]
+  let productionRows = rows
+  if (access.role === "staff" && rows.length > 0) {
+    const ownerIds = [...new Set(rows.map((row) => row.owner_repreneur_id))]
+    const { data: productionOwners, error: ownerError } = await createAdminClient()
+      .from("repreneurs")
+      .select("id")
+      .in("id", ownerIds)
+      .eq("is_demo", false)
+    if (ownerError) throw new Error(message(ownerError, "Could not classify External Pursuits."))
+    const productionOwnerIds = new Set((productionOwners ?? []).map((owner) => owner.id))
+    productionRows = rows.filter((row) => productionOwnerIds.has(row.owner_repreneur_id))
+  }
+  return productionRows.map((row) => ({
     id: row.id,
     ownerRepreneurId: row.owner_repreneur_id,
     ownerName: row.owner_name ?? null,

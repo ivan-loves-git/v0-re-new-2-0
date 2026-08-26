@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUserAccess: vi.fn(),
   requireStaffAccess: vi.fn(),
   rpc: vi.fn(),
+  from: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({
@@ -12,12 +13,13 @@ vi.mock("@/lib/access-control", () => ({
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({ rpc: mocks.rpc }),
+  createAdminClient: () => ({ rpc: mocks.rpc, from: mocks.from }),
 }))
 
 import {
   createExternalPursuit,
   fulfillExternalPursuitDeletion,
+  listExternalPursuitBoard,
   moveExternalPursuitStage,
   requestExternalPursuitDeletion,
   saveExternalPursuitContact,
@@ -60,6 +62,29 @@ describe("External Pursuit patch actions", () => {
       p_ebitda_keur: null,
       p_headcount: null,
     }))
+  })
+
+  it("keeps demo-owned dossiers out of the staff operating board", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: [
+        { id: "real-pursuit", owner_repreneur_id: "real-owner", title: "Real", stage: "identified", availability: "unknown", deletion_status: "active", updated_at: "2026-08-26T10:00:00Z" },
+        { id: "demo-pursuit", owner_repreneur_id: "demo-owner", title: "Demo", stage: "identified", availability: "unknown", deletion_status: "active", updated_at: "2026-08-26T10:00:00Z" },
+      ],
+      error: null,
+    })
+    const ownerQuery = {
+      select: vi.fn(),
+      in: vi.fn(),
+      eq: vi.fn(),
+    }
+    ownerQuery.select.mockReturnValue(ownerQuery)
+    ownerQuery.in.mockReturnValue(ownerQuery)
+    ownerQuery.eq.mockResolvedValue({ data: [{ id: "real-owner" }], error: null })
+    mocks.from.mockReturnValue(ownerQuery)
+
+    await expect(listExternalPursuitBoard()).resolves.toEqual([
+      expect.objectContaining({ id: "real-pursuit", ownerRepreneurId: "real-owner" }),
+    ])
   })
 
   it("requires staff to choose an owner and rejects unassigned actors before an RPC", async () => {

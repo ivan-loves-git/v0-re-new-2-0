@@ -170,9 +170,10 @@ async function getActivePursuitOwners(
 
   const { data, error } = await supabase
     .from("opportunity_matches")
-    .select("opportunity_id, repreneur_id")
+    .select("opportunity_id, repreneur_id, repreneur:repreneurs!inner(is_demo)")
     .in("opportunity_id", opportunityIds)
     .eq("status", "active_pursuit")
+    .eq("repreneur.is_demo", false)
 
   if (error) throw new Error(error.message)
   return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))

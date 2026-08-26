@@ -6,6 +6,33 @@ export type RepreneurOfferAssignment = {
 export type MatchingRepreneurIdentity = {
   first_name?: string | null
   last_name?: string | null
+  is_demo?: boolean | null
+}
+
+export type ManualRecommendationRepreneur = {
+  /** UAT 7 adds this explicit classification to the canonical repreneur row. */
+  is_demo?: boolean | null
+}
+
+export type InvitedRepreneurIdentity = {
+  role?: string | null
+  repreneur_id?: string | null
+  user_id?: string | null
+}
+
+/** Staff recommendation is manual; the explicit DEMO flag remains a veto. */
+export function isEligibleForManualRecommendation(
+  repreneur: ManualRecommendationRepreneur | null | undefined,
+) {
+  return repreneur !== null && repreneur !== undefined && repreneur.is_demo !== true
+}
+
+/** Portal invitation is the operating boundary for staff proposals. */
+export function hasInvitedLinkedIdentity(
+  role: InvitedRepreneurIdentity | null | undefined,
+  repreneurId: string,
+) {
+  return role?.role === "repreneur" && role.repreneur_id === repreneurId && Boolean(role.user_id)
 }
 
 export function isTestMarkedMatchingProfile(identity: MatchingRepreneurIdentity) {
@@ -18,6 +45,7 @@ export function isAcceptedPaidMatchingClient(
   identity: MatchingRepreneurIdentity,
   assignments: RepreneurOfferAssignment[] | null | undefined,
 ) {
+  if (identity.is_demo) return false
   if (isTestMarkedMatchingProfile(identity)) return false
 
   return (assignments ?? []).some((assignment) => {

@@ -10,6 +10,7 @@ export type ClientPortfolioRepreneurRow = {
   last_name: string | null
   email: string | null
   lifecycle_status: string
+  is_demo?: boolean | null
   updated_at: string | null
   repreneur_offers?: Array<{
     status: string
@@ -147,6 +148,7 @@ export function projectClientPursuitPortfolio(input: {
 
   return input.repreneurs
     .filter((repreneur) => repreneur.lifecycle_status === "client")
+    .filter((repreneur) => !repreneur.is_demo)
     .map((repreneur) => {
       const serviceScope = [...new Set(
         (repreneur.repreneur_offers ?? [])

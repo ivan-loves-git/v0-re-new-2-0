@@ -69,8 +69,9 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
       const [repreneurResult, opportunityResult, activePursuitResult] = await Promise.all([
         supabase
           .from("repreneurs")
-          .select("id, first_name, last_name, email")
+          .select("id, first_name, last_name, email, is_demo")
           .eq("id", input.repreneurId)
+          .eq("is_demo", false)
           .maybeSingle(),
         supabase
           .from("opportunities")

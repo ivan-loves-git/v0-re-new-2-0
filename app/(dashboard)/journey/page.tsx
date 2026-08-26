@@ -78,6 +78,7 @@ export default async function JourneyPage() {
   const { data: repreneurs } = await supabase
     .from("repreneurs")
     .select("*")
+    .eq("is_demo", false)
     .not("lifecycle_status", "in", "(rejected,declined,to_reactivate)")
     .order("created_at", { ascending: false })
 

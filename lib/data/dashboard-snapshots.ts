@@ -35,6 +35,7 @@ const REPRENEUR_LIST_FIELDS = `
   avatar_url,
   source,
   lifecycle_status,
+  is_demo,
   journey_stage,
   persona,
   recommendation,
@@ -83,6 +84,7 @@ const REPRENEUR_DASHBOARD_FIELDS = `
   last_name,
   email,
   lifecycle_status,
+  is_demo,
   journey_stage,
   created_at,
   updated_at,
@@ -219,12 +221,14 @@ export interface RepreneurDashboardSnapshot {
     repreneurs?: {
       first_name: string | null
       last_name: string | null
+      is_demo?: boolean | null
     } | null
   }>
   chartRepreneurs: Array<{
     id: string
     created_at: string
     lifecycle_status?: string | null
+    is_demo?: boolean | null
   }>
   chartActivities: Array<{ id: string; created_at: string }>
 }
@@ -528,7 +532,8 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
           repreneur_id,
           repreneurs (
             first_name,
-            last_name
+            last_name,
+            is_demo
           )
         `,
         )
@@ -537,11 +542,11 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
       Promise.all([
         supabase
           .from("repreneurs")
-          .select("id, created_at, lifecycle_status")
+          .select("id, created_at, lifecycle_status, is_demo")
           .order("created_at", { ascending: false }),
         supabase
           .from("activities")
-          .select("id, created_at")
+          .select("id, created_at, repreneur_id, repreneurs(is_demo)")
           .order("created_at", { ascending: false }),
       ]),
     ])
@@ -559,13 +564,22 @@ async function getCachedRepreneurDashboardSnapshot(): Promise<RepreneurDashboard
   }
 
   return {
-    repreneurs: (repreneursResult.data ?? []) as Repreneur[],
-    assessments: assessmentsResult.data ?? [],
-    activities: (
-      (activitiesResult.data ?? []) as DashboardActivityQueryRow[]
-    ).map(normalizeDashboardActivity),
-    chartRepreneurs: chartRepreneursResult.data ?? [],
-    chartActivities: chartActivitiesResult.data ?? [],
+    repreneurs: ((repreneursResult.data ?? []).filter((repreneur) => !repreneur.is_demo)) as Repreneur[],
+    assessments: (assessmentsResult.data ?? []).filter((assessment) => {
+      const repreneur = (repreneursResult.data ?? []).find((candidate) => candidate.id === assessment.repreneur_id)
+      return !repreneur?.is_demo
+    }),
+    activities: ((activitiesResult.data ?? []) as DashboardActivityQueryRow[])
+      .filter((activity) => {
+        const repreneur = Array.isArray(activity.repreneurs) ? activity.repreneurs[0] : activity.repreneurs
+        return !repreneur?.is_demo
+      })
+      .map(normalizeDashboardActivity),
+    chartRepreneurs: (chartRepreneursResult.data ?? []).filter((repreneur) => !repreneur.is_demo),
+    chartActivities: (chartActivitiesResult.data ?? []).filter((activity) => {
+      const repreneur = Array.isArray(activity.repreneurs) ? activity.repreneurs[0] : activity.repreneurs
+      return !repreneur?.is_demo
+    }),
   }
 }
 
@@ -612,6 +626,7 @@ async function getCachedOpportunityWorkSurfaceSnapshot(): Promise<
         first_name,
         last_name,
         email,
+        is_demo,
         lifecycle_status,
         journey_stage,
         recommendation,

@@ -8,7 +8,6 @@ import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
-import { isAcceptedPaidMatchingClient } from "@/lib/repreneur-matching-eligibility"
 import {
   loadMatchingGeographyContext,
   withMatchingGeography,
@@ -40,6 +39,7 @@ const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
 ])
 
 type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
+  is_demo?: boolean | null
   lifecycle_status?: string | null
   repreneur_offers?: unknown
   who_score?: number | null
@@ -85,6 +85,7 @@ function normalizeProfile(row: any): RepreneurOpportunityProfile {
     first_name: row.first_name,
     last_name: row.last_name,
     email: row.email,
+    is_demo: row.is_demo === true,
   }
 }
 
@@ -146,9 +147,10 @@ async function getActivePursuitOwners(
 
   const { data, error } = await supabase
     .from("opportunity_matches")
-    .select("opportunity_id, repreneur_id")
+    .select("opportunity_id, repreneur_id, repreneur:repreneurs!inner(is_demo)")
     .in("opportunity_id", opportunityIds)
     .eq("status", "active_pursuit")
+    .eq("repreneur.is_demo", false)
 
   if (error) throw new Error(error.message)
   return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))
@@ -170,7 +172,7 @@ async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile
   const supabase = createAdminClient()
   const { data: profile, error } = await supabase
     .from("repreneurs")
-    .select("id, first_name, last_name, email")
+    .select("id, first_name, last_name, email, is_demo")
     .eq("id", access.repreneurId)
     .maybeSingle()
 
@@ -190,6 +192,7 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
       first_name,
       last_name,
       email,
+      is_demo,
       lifecycle_status,
       repreneur_offers(status, offer:offers(name, price)),
       who_score,
@@ -330,6 +333,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
 }> {
   const repreneur = await getCurrentRepreneurProfile()
   if (!repreneur) return { repreneur: null, opportunities: [] }
+  if (repreneur.is_demo) return { repreneur, opportunities: [] }
 
   const supabase = createAdminClient()
   const { data, error } = await supabase
@@ -415,22 +419,27 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   dealFlow: RepreneurDealFlowOpportunity[]
   deals: RepreneurDealFlowOpportunity[]
   automaticMatching: { complete: boolean; missing: string[] }
+  demoProfile: boolean
 }> {
   const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] } }
+  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] }, demoProfile: false }
+  if (repreneur.is_demo) {
+    return {
+      repreneur,
+      staffRecommended: [],
+      dealFlow: [],
+      deals: [],
+      automaticMatching: { complete: false, missing: [] },
+      demoProfile: true,
+    }
+  }
 
   const supabase = createAdminClient()
   const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
-  const serviceEligible = repreneur.lifecycle_status === "client" && isAcceptedPaidMatchingClient(
-    repreneur,
-    repreneur.repreneur_offers as Parameters<typeof isAcceptedPaidMatchingClient>[1],
-  )
-  const automaticMatching = serviceEligible
-    ? thesisCompleteness
-    : {
-        complete: false,
-        missing: [...thesisCompleteness.missing, "matching service"],
-      }
+  // Staff controls portal access. Once a repreneur has that access, offer and
+  // payment metadata must not silently remove the wider Deal Flow. A complete
+  // acquisition project remains necessary for useful automatic recommendations.
+  const automaticMatching = thesisCompleteness
   const [matchesResult, opportunitiesResult] = await Promise.all([
     supabase
       .from("opportunity_matches")
@@ -571,6 +580,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     dealFlow,
     deals,
     automaticMatching,
+    demoProfile: false,
   }
   const access = await requirePortalAccess()
   queueM2RepreneurEvent({
@@ -588,7 +598,7 @@ export async function getMyRepreneurOpportunity(
 ): Promise<RepreneurOpportunityExposure | RepreneurDealFlowOpportunity | null> {
   if (!isUuid(dealId)) return null
   const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur) return null
+  if (!repreneur || repreneur.is_demo) return null
 
   const supabase = createAdminClient()
   const [matchResult, opportunityResult] = await Promise.all([
@@ -667,11 +677,7 @@ export async function getMyRepreneurOpportunity(
   const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null
   if (!exposure) {
     const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
-    const serviceEligible = repreneur.lifecycle_status === "client" && isAcceptedPaidMatchingClient(
-      repreneur,
-      repreneur.repreneur_offers as Parameters<typeof isAcceptedPaidMatchingClient>[1],
-    )
-    if (!thesisCompleteness.complete || !serviceEligible) return null
+    if (!thesisCompleteness.complete) return null
     const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
     if (!opportunity || !isRepreneurEligibleOpportunity(opportunity)) return null
 

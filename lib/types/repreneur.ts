@@ -160,6 +160,10 @@ export interface Repreneur {
   ldc_self_certified_at?: string | null
   advisory_team_self_certified_at?: string | null
   lifecycle_status: LifecycleStatus
+  /** Staff-only operational classification; demo profiles never count as production activity. */
+  is_demo?: boolean
+  demo_classification_updated_at?: string | null
+  demo_classification_updated_by?: string | null
   journey_stage?: JourneyStage
   persona?: PersonaType // Acquisition style/profile type
   source?: string

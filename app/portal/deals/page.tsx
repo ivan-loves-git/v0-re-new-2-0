@@ -17,7 +17,7 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
   await connection()
   const params = await searchParams
   const sort = parseRepreneurDealSort(params.sort)
-  const { repreneur, deals, automaticMatching } = await listMyRepreneurDealFlow(sort)
+  const { repreneur, deals, automaticMatching, demoProfile } = await listMyRepreneurDealFlow(sort)
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,12 +31,21 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
           </div>
           {automaticMatching.complete ? <RepreneurDealSortSelector value={sort} /> : null}
         </div>
-        {!automaticMatching.complete && repreneur ? (
+        {demoProfile ? (
           <Alert>
             <BriefcaseBusiness />
-            <AlertTitle>Complete your acquisition project to see the full deal flow</AlertTitle>
+            <AlertTitle>Demo profile</AlertTitle>
+            <AlertDescription>
+              This test profile is kept outside the production Deal Flow and its operating statistics.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {!demoProfile && !automaticMatching.complete && repreneur ? (
+          <Alert>
+            <BriefcaseBusiness />
+            <AlertTitle>Complete your acquisition project to receive tailored recommendations</AlertTitle>
             <AlertDescription className="flex flex-col gap-3">
-              <span>Re-New selections remain available. Complete the missing profile and acquisition-project information so WAVE can order the wider deal flow for you.</span>
+              <span>Your current Re-New selections remain available. Add the missing acquisition-project information so WAVE can recommend further opportunities that fit your criteria.</span>
               <Button asChild className="w-fit" size="sm" variant="outline">
                 <Link href="/portal/profile#target-thesis">Edit acquisition project</Link>
               </Button>

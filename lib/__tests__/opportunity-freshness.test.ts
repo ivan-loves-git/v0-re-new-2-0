@@ -27,7 +27,7 @@ function freshnessClient(rows: unknown[]) {
   })
 
   opportunitiesSelect.mockReturnValue({ in: opportunityStatusFilter })
-  opportunityStatusFilter.mockReturnValue({ order: firstOrder })
+  opportunityStatusFilter.mockReturnValue({ eq: vi.fn().mockReturnValue({ order: firstOrder }) })
   firstOrder.mockReturnValue({ order: secondOrder })
   activePursuitsSelect.mockReturnValue({ eq: activePursuitsFilter })
 
