@@ -142,4 +142,13 @@ describe("W-037 client pursuit portfolio projection", () => {
       ],
     })
   })
+
+  it("does not create a production portfolio row for a demo repreneur", () => {
+    const rows = projectClientPursuitPortfolio({
+      repreneurs: [client({ id: "demo-client", is_demo: true })],
+      matches: [match({ repreneur_id: "demo-client" })],
+      activities: [{ repreneur_id: "demo-client", created_at: "2026-08-01T09:00:00Z" }],
+    })
+    expect(rows).toEqual([])
+  })
 })

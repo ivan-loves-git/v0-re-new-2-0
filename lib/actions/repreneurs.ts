@@ -319,6 +319,43 @@ export async function updateRepreneurIdentity(id: string, firstName: string, las
   revalidateRepreneurDashboardTags()
 }
 
+/**
+ * Changes only the staff-owned DEMO classification. It deliberately preserves
+ * lifecycle, portal access and retained operating history.
+ */
+export async function setRepreneurDemoClassification(id: string, isDemo: boolean) {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("repreneurs")
+    .update({ is_demo: isDemo })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle()
+
+  if (error) throw new Error(repreneurWriteErrorMessage(error))
+  if (!data) return { success: false as const, message: "This repreneur no longer exists." }
+
+  revalidatePath("/repreneurs")
+  revalidatePath("/repreneurs/explore")
+  revalidatePath(`/repreneurs/${id}`)
+  revalidatePath("/pipeline")
+  revalidatePath("/dashboard_re")
+  revalidatePath("/dashboard_op")
+  revalidatePath("/analytics")
+  revalidatePath("/analytics_op")
+  revalidatePath("/opportunities/pursuits/clients")
+  revalidatePath("/opportunities/pursuits/capacity")
+  revalidateRepreneurDashboardTags()
+
+  return {
+    success: true as const,
+    message: isDemo
+      ? "Repreneur marked DEMO and excluded from production reporting and automatic matching."
+      : "DEMO classification removed. Normal reporting and matching rules now apply.",
+  }
+}
+
 export async function createNote(repreneurId: string, content: string, noteType: string = "other") {
   const { user } = await requireStaffAccess()
   const supabase = createAdminClient()

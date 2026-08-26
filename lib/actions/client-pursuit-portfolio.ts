@@ -23,10 +23,12 @@ export async function listClientPursuitPortfolio(): Promise<ClientPursuitPortfol
       last_name,
       email,
       lifecycle_status,
+      is_demo,
       updated_at,
       repreneur_offers(status, offer:offers(name))
     `)
     .eq("lifecycle_status", "client")
+    .eq("is_demo", false)
     .order("last_name", { ascending: true })
 
   if (repreneurError) throw new Error(repreneurError.message)
