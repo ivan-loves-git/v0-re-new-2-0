@@ -4,6 +4,8 @@ import path from "node:path"
 
 const root = process.cwd()
 const migration = fs.readFileSync(path.join(root, "supabase/migrations/20260826170000_w160_demo_repreneur_reporting.sql"), "utf8")
+const profilePage = fs.readFileSync(path.join(root, "app/(dashboard)/repreneurs/[id]/page.tsx"), "utf8")
+const demoControl = fs.readFileSync(path.join(root, "components/repreneurs/repreneur-demo-control.tsx"), "utf8")
 
 describe("W-160 DEMO repreneur classification contract", () => {
   it("uses an explicit default-false staff classification and a fixed 20-row manifest", () => {
@@ -34,5 +36,12 @@ describe("W-160 DEMO repreneur classification contract", () => {
     expect(migration).toContain("JOIN public.repreneurs owner ON owner.id = dossier.owner_repreneur_id AND owner.is_demo = FALSE")
     expect(migration).toContain("opportunity.is_demo = FALSE")
     expect(migration).toContain("external_pursuit_capacity_for_staff")
+  })
+
+  it("calls the protected server action from the client control without passing an inline function", () => {
+    expect(profilePage).toContain("repreneurId={id}")
+    expect(profilePage).not.toContain("action={(isDemo)")
+    expect(demoControl).toContain('import { setRepreneurDemoClassification } from "@/lib/actions/repreneurs"')
+    expect(demoControl).toContain("await setRepreneurDemoClassification(")
   })
 })
