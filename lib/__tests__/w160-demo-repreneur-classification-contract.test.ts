@@ -8,6 +8,8 @@ const migration = fs.readFileSync(path.join(root, "supabase/migrations/202608261
 describe("W-160 DEMO repreneur classification contract", () => {
   it("uses an explicit default-false staff classification and a fixed 20-row manifest", () => {
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE")
+    expect(migration).toContain("ADD COLUMN IF NOT EXISTS demo_classification_updated_at TIMESTAMPTZ")
+    expect(migration).toContain("ADD COLUMN IF NOT EXISTS demo_classification_updated_by TEXT")
     expect(migration).toContain("apply_w160_demo_repreneur_classification")
     expect(migration).toContain("rollback_w160_demo_repreneur_classification")
     expect((migration.match(/\('[0-9a-f-]{36}', '20/g) ?? []).length).toBe(20)
@@ -23,7 +25,9 @@ describe("W-160 DEMO repreneur classification contract", () => {
     expect(migration).toContain("r.updated_at IS DISTINCT FROM m.updated_at")
     expect(migration).toContain("extensions.digest")
     expect(migration).toContain("r.first_name")
-    expect(migration).toContain("lower(r.email)")
+    expect(migration).toContain("COALESCE(r.email, '')")
+    expect(migration).toContain(`'YYYY-MM-DD"T"HH24:MI:SS.US+00:00'`)
+    expect(migration).toContain("demo_classification_updated_by=v_actor")
   })
 
   it("excludes demo owners and demo opportunities from External Pursuit capacity", () => {

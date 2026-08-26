@@ -2,10 +2,16 @@
 -- in the database and in staff dossiers, but never enter production metrics
 -- or automatic recommendation candidates.
 ALTER TABLE public.repreneurs
-  ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE;
+  ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS demo_classification_updated_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS demo_classification_updated_by TEXT;
 
 COMMENT ON COLUMN public.repreneurs.is_demo IS
   'Staff-only operating classification. A DEMO repreneur is excluded from production reporting and automatic matching; historical records are retained.';
+COMMENT ON COLUMN public.repreneurs.demo_classification_updated_at IS
+  'Last time staff changed the DEMO classification.';
+COMMENT ON COLUMN public.repreneurs.demo_classification_updated_by IS
+  'Staff user that last changed the DEMO classification.';
 
 CREATE OR REPLACE FUNCTION public.w160_demo_repreneur_manifest()
 RETURNS TABLE (id UUID, updated_at TIMESTAMPTZ, fingerprint TEXT)
@@ -21,7 +27,7 @@ AS $$
     ('dc5187f3-74c3-4a02-9920-6ea13d1d1a98', '2026-08-21T04:35:54.551734+00:00', '1142c924a2b812e9ae3b74b62d77c8e8dfb05b3735ad6aa5afb8ecb6b12055b7'),
     ('8dfed9c5-ee06-4b3b-8bf4-aad720c0c5ea', '2026-08-21T04:27:05.798042+00:00', '4b2a198105c55378fcb33dce9b5484b0830a9d8665ea7fb1f7d207376fc0a073'),
     ('9d608166-3c2c-482e-a304-591e6daeddb1', '2026-08-21T04:27:05.798042+00:00', '182c4f83b106543982de93f4f4038ff1a0badce2e80cf5727df855d8a62cf24d'),
-    ('1b22699e-01ff-4480-b279-7d822a8fc40b', '2026-08-25T12:12:00.330463+00:00', 'fa7bde10f20a904fa9d3a91dd0f91792fd8d31bba66352009fb1dc4f346d1c4b'),
+    ('1b22699e-01ff-4480-b279-7d822a8fc40b', '2026-08-25T12:12:00.330463+00:00', 'fa7bde10f20b904fa9d3a91dd0f91792fd8d31bba66352009fb1dc4f346d1c4b'),
     ('e7e0ba45-0262-4ef8-abcb-2d0644559977', '2026-08-21T04:35:54.551734+00:00', 'c9a0218313083cfe211056a87d9fd41545c1d61ca5cb7c66f78e5854c2e01371'),
     ('dd25d9e0-28f7-4cec-b26c-86c635768005', '2026-08-21T04:35:54.551734+00:00', '367906b8ae1cb5ce9cfeb745ec4182fe3af2903c8d26501fa34c66511b815210'),
     ('91ce3e4a-b838-464c-8314-04b3eb68f846', '2026-08-21T04:35:54.551734+00:00', '208741e7e6cf3f8dc084912dce084fcfa4cdbd027e10dc243e07ff5a1d546cbe'),
@@ -53,7 +59,7 @@ BEGIN
   PERFORM 1 FROM public.repreneurs r JOIN pg_temp.w160_manifest m ON m.id=r.id FOR UPDATE OF r;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
   IF v_rows <> 20 THEN RAISE EXCEPTION 'w160_demo_repreneur_identity_mismatch'; END IF;
-  IF EXISTS (SELECT 1 FROM public.repreneurs r JOIN pg_temp.w160_manifest m ON m.id=r.id WHERE r.is_demo AND r.updated_by IS DISTINCT FROM v_actor) THEN RAISE EXCEPTION 'w160_demo_repreneur_existing_state_drift'; END IF;
+  IF EXISTS (SELECT 1 FROM public.repreneurs r JOIN pg_temp.w160_manifest m ON m.id=r.id WHERE r.is_demo AND r.demo_classification_updated_by IS DISTINCT FROM v_actor) THEN RAISE EXCEPTION 'w160_demo_repreneur_existing_state_drift'; END IF;
   IF EXISTS (
     SELECT 1
     FROM public.repreneurs r
@@ -61,10 +67,13 @@ BEGIN
     WHERE NOT r.is_demo
       AND (
         r.updated_at IS DISTINCT FROM m.updated_at
-        OR encode(extensions.digest(convert_to(concat_ws('|', r.id, COALESCE(r.first_name, ''), COALESCE(r.last_name, ''), COALESCE(lower(r.email), ''), to_char(r.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')), 'UTF8'), 'sha256'), 'hex') IS DISTINCT FROM m.fingerprint
+        OR encode(extensions.digest(convert_to(concat_ws('|', r.id, COALESCE(r.email, ''), COALESCE(r.first_name, ''), COALESCE(r.last_name, ''), to_char(r.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US+00:00')), 'UTF8'), 'sha256'), 'hex') IS DISTINCT FROM m.fingerprint
       )
   ) THEN RAISE EXCEPTION 'w160_demo_repreneur_manifest_drift'; END IF;
-  UPDATE public.repreneurs r SET is_demo=TRUE, updated_by=v_actor FROM pg_temp.w160_manifest m WHERE r.id=m.id AND NOT r.is_demo;
+  UPDATE public.repreneurs r
+  SET is_demo=TRUE, demo_classification_updated_at=clock_timestamp(), demo_classification_updated_by=v_actor
+  FROM pg_temp.w160_manifest m
+  WHERE r.id=m.id AND NOT r.is_demo;
   GET DIAGNOSTICS v_changed = ROW_COUNT;
   RETURN QUERY SELECT v_changed;
 END;
@@ -82,8 +91,11 @@ BEGIN
   PERFORM 1 FROM public.repreneurs r JOIN pg_temp.w160_manifest m ON m.id=r.id FOR UPDATE OF r;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
   IF v_rows <> 20 OR (SELECT count(*) FROM pg_temp.w160_manifest) <> 20 THEN RAISE EXCEPTION 'w160_demo_repreneur_rollback_identity_mismatch'; END IF;
-  IF EXISTS (SELECT 1 FROM public.repreneurs r JOIN pg_temp.w160_manifest m ON m.id=r.id WHERE NOT r.is_demo OR r.updated_by IS DISTINCT FROM v_apply) THEN RAISE EXCEPTION 'w160_demo_repreneur_rollback_state_drift'; END IF;
-  UPDATE public.repreneurs r SET is_demo=FALSE, updated_by=v_rollback FROM pg_temp.w160_manifest m WHERE r.id=m.id;
+  IF EXISTS (SELECT 1 FROM public.repreneurs r JOIN pg_temp.w160_manifest m ON m.id=r.id WHERE NOT r.is_demo OR r.demo_classification_updated_by IS DISTINCT FROM v_apply) THEN RAISE EXCEPTION 'w160_demo_repreneur_rollback_state_drift'; END IF;
+  UPDATE public.repreneurs r
+  SET is_demo=FALSE, demo_classification_updated_at=clock_timestamp(), demo_classification_updated_by=v_rollback
+  FROM pg_temp.w160_manifest m
+  WHERE r.id=m.id;
   GET DIAGNOSTICS v_changed = ROW_COUNT;
   RETURN QUERY SELECT v_changed;
 END;

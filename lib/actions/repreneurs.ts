@@ -328,7 +328,11 @@ export async function setRepreneurDemoClassification(id: string, isDemo: boolean
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("repreneurs")
-    .update({ is_demo: isDemo, updated_by: user.id })
+    .update({
+      is_demo: isDemo,
+      demo_classification_updated_at: new Date().toISOString(),
+      demo_classification_updated_by: user.id,
+    })
     .eq("id", id)
     .select("id")
     .maybeSingle()

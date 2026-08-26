@@ -16,6 +16,7 @@ describe("W-160 production reporting boundary", () => {
     const pursuitBoard = source("lib/actions/external-pursuit-board.ts")
     const externalPursuits = source("lib/actions/external-pursuits.ts")
     const relationshipLedger = source("lib/data/ma-relationship-ledger.ts")
+    const repreneurActions = source("lib/actions/repreneurs.ts")
 
     expect(opportunityKpis).toContain("opportunity.is_demo")
     expect(opportunityKpis).toContain("repreneur?.is_demo")
@@ -41,6 +42,8 @@ describe("W-160 production reporting boundary", () => {
     expect(externalPursuits).toContain('.eq("is_demo", false)')
     expect(relationshipLedger).toContain('.eq("opportunity.is_demo", false)')
     expect(relationshipLedger).toContain('.eq("repreneur.is_demo", false)')
+    expect(repreneurActions).toContain("demo_classification_updated_at")
+    expect(repreneurActions).toContain("demo_classification_updated_by")
   })
 
   it("keeps DEMO records out of stored automatic score refreshes", () => {
