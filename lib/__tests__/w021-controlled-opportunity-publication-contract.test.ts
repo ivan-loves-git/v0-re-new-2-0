@@ -3,6 +3,7 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 
 const migration = readFileSync(path.join(process.cwd(), "supabase/migrations/20260825190000_w021_controlled_opportunity_publication.sql"), "utf8")
+const firmStatusCorrection = readFileSync(path.join(process.cwd(), "supabase/migrations/20260826142358_remove_firm_status_from_w021_publication.sql"), "utf8")
 const preflight = readFileSync(path.join(process.cwd(), "scripts/run-w021-current-publication-preflight.sql"), "utf8")
 
 describe("W-021 controlled opportunity publication contract", () => {
@@ -35,6 +36,13 @@ describe("W-021 controlled opportunity publication contract", () => {
       "source_office_inactive_or_missing", "primary_contact_not_exactly_one", "primary_email_unusable",
       "o.status = 'active' AND o.repreneur_exposure = 'staff_only' AND NOT o.is_demo",
     ]) expect(migration).toContain(expected)
+  })
+
+  it("treats firm status as commercial metadata rather than publication eligibility", () => {
+    expect(firmStatusCorrection).toContain("office.status AS office_status")
+    expect(firmStatusCorrection).toContain("source_office_inactive_or_missing")
+    expect(firmStatusCorrection).not.toContain("firm.status")
+    expect(firmStatusCorrection).not.toContain("source_firm_inactive_or_missing")
   })
 
   it("binds the one-time bulk operation to the complete ordered current set and immutable evidence", () => {
