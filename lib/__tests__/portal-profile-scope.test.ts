@@ -194,6 +194,39 @@ describe("repreneur portal profile scope", () => {
     expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
   })
 
+  it("uses invitation, not offer or lifecycle, in both staff manual-recommendation pickers", () => {
+    const opportunityMatches = source("lib/actions/opportunity-matches.ts")
+    const pickerByOpportunity = opportunityMatches.slice(
+      opportunityMatches.indexOf("export async function listOpportunityMatchCandidates"),
+      opportunityMatches.indexOf("export async function listOpportunityCandidatesForRepreneur"),
+    )
+    const pickerByRepreneur = opportunityMatches.slice(
+      opportunityMatches.indexOf("export async function listOpportunityCandidatesForRepreneur"),
+      opportunityMatches.indexOf("export async function saveOpportunityMatch"),
+    )
+
+    for (const picker of [pickerByOpportunity, pickerByRepreneur]) {
+      expect(picker).toContain('from("app_user_roles")')
+      expect(picker).toContain("hasInvitedLinkedIdentity")
+      expect(picker).toContain("isEligibleForManualRecommendation")
+      expect(picker).not.toContain("isAcceptedPaidMatchingClient")
+      expect(picker).not.toContain('"lifecycle_status"')
+    }
+    expect(pickerByRepreneur).toContain('.eq("is_demo", false)')
+    expect(pickerByRepreneur).not.toContain('.neq("repreneur_exposure", "staff_only")')
+  })
+
+  it("excludes DEMO active-pursuit owners from the staff response read", () => {
+    const opportunityMatches = source("lib/actions/opportunity-matches.ts")
+    const activeOwnerRead = opportunityMatches.slice(
+      opportunityMatches.indexOf("const { data: activeRows"),
+      opportunityMatches.indexOf("const activeByOpportunity"),
+    )
+
+    expect(activeOwnerRead).toContain("repreneurs!inner")
+    expect(activeOwnerRead).toContain('.eq("repreneur.is_demo", false)')
+  })
+
   it("filters DEMO opportunity parents in PostgREST before portal and staff-preview normalization", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const staffPreview = source("lib/actions/repreneur-portal-preview.ts")

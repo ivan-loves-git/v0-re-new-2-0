@@ -193,6 +193,7 @@ function setupCurrentPursuit(options: {
         repreneur_id: "repreneur-1",
         status: "active_pursuit",
         opportunity: { status: "active", is_demo: false },
+        repreneur: { is_demo: false },
       },
       error: null,
     })
@@ -359,6 +360,38 @@ describe("current pursuit reads", () => {
     })
   })
 
+  it("denies a demo repreneur only to the real portal while retaining staff preview and staff history", async () => {
+    const demoRepreneurMatch = {
+      data: {
+        id: "match-1",
+        opportunity_id: "opportunity-1",
+        repreneur_id: "repreneur-1",
+        status: "active_pursuit",
+        opportunity: { status: "active", is_demo: false },
+        repreneur: { is_demo: true },
+      },
+      error: null,
+    }
+
+    setupCurrentPursuit({ match: demoRepreneurMatch })
+    await expect(readPortalCurrentPursuit({
+      matchId: "match-1",
+      viewer: { kind: "portal" },
+    })).resolves.toBeNull()
+
+    setupCurrentPursuit({ match: demoRepreneurMatch })
+    await expect(readPortalCurrentPursuit({
+      matchId: "match-1",
+      viewer: { kind: "staff-preview", repreneurId: "repreneur-1" },
+    })).resolves.toMatchObject({ matchId: "match-1" })
+
+    setupCurrentPursuit({ match: demoRepreneurMatch })
+    await expect(readStaffCurrentPursuit("match-1")).resolves.toMatchObject({
+      matchId: "match-1",
+      entries: evidence,
+    })
+  })
+
   it("denies source disclosure when the canonical confidential predicate errors", async () => {
     setupCurrentPursuit({
       canonicalAccess: { data: null, error: { message: "unavailable" } },
@@ -490,9 +523,31 @@ describe("resolvePortalPursuitResource", () => {
     mocks.requireStaffAccess.mockResolvedValue({ role: "staff" })
   })
 
+  function resourceClient(rpc: ReturnType<typeof vi.fn>, isDemo = false) {
+    const match = {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: isDemo ? null : { id: "match-1" },
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    }
+    return {
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "opportunity_matches") return match
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+    }
+  }
+
   it("authorizes only the exact requested information memorandum for the current portal user", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: true, error: null })
-    mocks.createAdminClient.mockReturnValue({ rpc })
+    mocks.createAdminClient.mockReturnValue(resourceClient(rpc))
 
     await expect(resolvePortalPursuitResource({
       matchId: "match-1",
@@ -510,9 +565,8 @@ describe("resolvePortalPursuitResource", () => {
   })
 
   it("fails closed when exact information-memorandum authorization errors", async () => {
-    mocks.createAdminClient.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "unavailable" } }),
-    })
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "unavailable" } })
+    mocks.createAdminClient.mockReturnValue(resourceClient(rpc))
 
     await expect(resolvePortalPursuitResource({
       matchId: "match-1",
@@ -534,7 +588,7 @@ describe("resolvePortalPursuitResource", () => {
 
   it("uses the selected repreneur only after staff access is proven", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: true, error: null })
-    mocks.createAdminClient.mockReturnValue({ rpc })
+    mocks.createAdminClient.mockReturnValue(resourceClient(rpc))
 
     await resolvePortalPursuitResource({
       matchId: "match-1",
@@ -560,7 +614,7 @@ describe("resolvePortalPursuitResource", () => {
       }],
       error: null,
     })
-    mocks.createAdminClient.mockReturnValue({ rpc })
+    mocks.createAdminClient.mockReturnValue(resourceClient(rpc))
 
     await expect(resolvePortalPursuitResource({
       matchId: "match-1",
@@ -580,17 +634,28 @@ describe("resolvePortalPursuitResource", () => {
   })
 
   it("rejects a malformed template resolver response", async () => {
-    mocks.createAdminClient.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({
+    const rpc = vi.fn().mockResolvedValue({
         data: [{ document_id: "template-v2", storage_bucket: null }],
         error: null,
-      }),
-    })
+      })
+    mocks.createAdminClient.mockReturnValue(resourceClient(rpc))
 
     await expect(resolvePortalPursuitResource({
       matchId: "match-1",
       viewer: { kind: "portal" },
       resource: { kind: "nda-template" },
     })).resolves.toBeNull()
+  })
+
+  it("denies a demo repreneur's actual portal resource request before an NDA or memo resolver runs", async () => {
+    const rpc = vi.fn()
+    mocks.createAdminClient.mockReturnValue(resourceClient(rpc, true))
+
+    await expect(resolvePortalPursuitResource({
+      matchId: "match-1",
+      viewer: { kind: "portal" },
+      resource: { kind: "information-memorandum", documentId: "memo-1" },
+    })).resolves.toBeNull()
+    expect(rpc).not.toHaveBeenCalled()
   })
 })

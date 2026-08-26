@@ -24,10 +24,12 @@ const officeId = "11111111-1111-4111-8111-111111111111"
 const opportunityId = "22222222-2222-4222-8222-222222222222"
 
 function workspaceClient(opportunities: Array<Record<string, unknown>>) {
-  const pursuitOpportunityFilter = vi.fn().mockResolvedValue({
+  const pursuitRepreneurDemoFilter = vi.fn().mockResolvedValue({
     data: [],
     error: null,
   })
+  const pursuitOpportunityDemoFilter = vi.fn(() => ({ eq: pursuitRepreneurDemoFilter }))
+  const pursuitOpportunityFilter = vi.fn(() => ({ eq: pursuitOpportunityDemoFilter }))
   const pursuitStatusFilter = vi.fn(() => ({ in: pursuitOpportunityFilter }))
   const pursuitSelect = vi.fn(() => ({ eq: pursuitStatusFilter }))
 
@@ -55,7 +57,8 @@ function workspaceClient(opportunities: Array<Record<string, unknown>>) {
     data: opportunities,
     error: null,
   })
-  const opportunitiesIn = vi.fn(() => ({ order: opportunitiesOrder }))
+  const opportunitiesDemoFilter = vi.fn(() => ({ order: opportunitiesOrder }))
+  const opportunitiesIn = vi.fn(() => ({ eq: opportunitiesDemoFilter }))
   const opportunitiesSelect = vi.fn(() => ({ in: opportunitiesIn }))
 
   const interactionsIn = vi.fn().mockResolvedValue({
@@ -126,7 +129,7 @@ describe("M&A workspace active-pursuit scope", () => {
     await getMaOfficeWorkspace(officeId)
 
     expect(client.pursuitSelect).toHaveBeenCalledWith(
-      "opportunity_id, opportunity:opportunities!inner(source_office_id)",
+      "opportunity_id, opportunity:opportunities!inner(source_office_id, is_demo), repreneur:repreneurs!inner(is_demo)",
     )
     expect(client.pursuitOpportunityFilter).toHaveBeenCalledWith(
       "opportunity.source_office_id",

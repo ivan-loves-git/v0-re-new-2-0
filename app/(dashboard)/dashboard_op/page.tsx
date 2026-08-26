@@ -137,10 +137,14 @@ export default async function OpportunityDashboardPage() {
     listActivePursuits(),
   ])
 
+  // The dashboard is a production operating surface. Demo records remain
+  // available in the staff opportunity list, but must not affect its counts
+  // or follow-up queues.
+  const productionOpportunities = opportunities.filter((opportunity) => !opportunity.is_demo)
   const pendingResponses = responses.filter((response) => !response.reviewed_at).slice(0, 6)
-  const recentOpportunities = opportunities.slice(0, 6)
+  const recentOpportunities = productionOpportunities.slice(0, 6)
   const activePursuits = activePursuitSummary.rows
-  const openOpportunities = opportunities.filter(
+  const openOpportunities = productionOpportunities.filter(
     (opportunity) => !["archived", "closed"].includes(opportunity.status)
   )
 

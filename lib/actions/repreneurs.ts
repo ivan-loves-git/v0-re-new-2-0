@@ -324,11 +324,11 @@ export async function updateRepreneurIdentity(id: string, firstName: string, las
  * lifecycle, portal access and retained operating history.
  */
 export async function setRepreneurDemoClassification(id: string, isDemo: boolean) {
-  await requireStaffAccess()
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("repreneurs")
-    .update({ is_demo: isDemo })
+    .update({ is_demo: isDemo, updated_by: user.id })
     .eq("id", id)
     .select("id")
     .maybeSingle()
@@ -340,12 +340,15 @@ export async function setRepreneurDemoClassification(id: string, isDemo: boolean
   revalidatePath("/repreneurs/explore")
   revalidatePath(`/repreneurs/${id}`)
   revalidatePath("/pipeline")
+  revalidatePath("/journey")
   revalidatePath("/dashboard_re")
   revalidatePath("/dashboard_op")
   revalidatePath("/analytics")
   revalidatePath("/analytics_op")
   revalidatePath("/opportunities/pursuits/clients")
   revalidatePath("/opportunities/pursuits/capacity")
+  revalidatePath("/opportunities/pursuits")
+  revalidatePath("/opportunities/ma")
   revalidateRepreneurDashboardTags()
 
   return {

@@ -17,7 +17,7 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
   await connection()
   const params = await searchParams
   const sort = parseRepreneurDealSort(params.sort)
-  const { repreneur, deals, automaticMatching } = await listMyRepreneurDealFlow(sort)
+  const { repreneur, deals, automaticMatching, demoProfile } = await listMyRepreneurDealFlow(sort)
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,7 +31,16 @@ export default async function PortalDealsPage({ searchParams }: PortalDealsPageP
           </div>
           {automaticMatching.complete ? <RepreneurDealSortSelector value={sort} /> : null}
         </div>
-        {!automaticMatching.complete && repreneur ? (
+        {demoProfile ? (
+          <Alert>
+            <BriefcaseBusiness />
+            <AlertTitle>Demo profile</AlertTitle>
+            <AlertDescription>
+              This test profile is kept outside the production Deal Flow and its operating statistics.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {!demoProfile && !automaticMatching.complete && repreneur ? (
           <Alert>
             <BriefcaseBusiness />
             <AlertTitle>Complete your acquisition project to receive tailored recommendations</AlertTitle>

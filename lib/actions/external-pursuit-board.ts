@@ -43,15 +43,30 @@ export async function listPortalReNewPursuitBoard(): Promise<ReNewPursuitBoardRe
 
 export async function listStaffReNewPursuitBoard(): Promise<ReNewPursuitBoardRecord[]> {
   const opportunities = await listOpportunityWorkSurfaceRecords({ includeSourceReview: false })
-  return opportunities.flatMap((opportunity) => opportunity.matches.flatMap((match) => {
-    const ownerName = match.repreneur ? [match.repreneur.first_name, match.repreneur.last_name].filter(Boolean).join(" ") || null : null
-    const record = recordFromCanonical({
-      id: match.id, title: opportunity.public_title || opportunity.reference,
-      href: `/opportunities/${opportunity.id}`, ownerName, updatedAt: match.updated_at,
-      opportunityStatus: opportunity.status, matchStatus: match.status, pursuitStage: match.pursuit_stage ?? null,
-    })
-    return record ? [record] : []
-  }))
+  return opportunities
+    .filter((opportunity) => !opportunity.is_demo)
+    .flatMap((opportunity) =>
+      opportunity.matches
+        .filter((match) => !match.repreneur?.is_demo)
+        .flatMap((match) => {
+          const ownerName = match.repreneur
+            ? [match.repreneur.first_name, match.repreneur.last_name]
+                .filter(Boolean)
+                .join(" ") || null
+            : null
+          const record = recordFromCanonical({
+            id: match.id,
+            title: opportunity.public_title || opportunity.reference,
+            href: `/opportunities/${opportunity.id}`,
+            ownerName,
+            updatedAt: match.updated_at,
+            opportunityStatus: opportunity.status,
+            matchStatus: match.status,
+            pursuitStage: match.pursuit_stage ?? null,
+          })
+          return record ? [record] : []
+        }),
+    )
 }
 
 export async function listExternalPursuitOwners() {
@@ -59,6 +74,7 @@ export async function listExternalPursuitOwners() {
   const { data, error } = await createAdminClient()
     .from("repreneurs")
     .select("id, first_name, last_name")
+    .eq("is_demo", false)
     .order("last_name", { ascending: true })
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => ({ id: row.id as string, name: [row.first_name, row.last_name].filter(Boolean).join(" ") || "Unnamed repreneur" }))

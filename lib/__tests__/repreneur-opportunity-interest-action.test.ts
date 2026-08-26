@@ -35,13 +35,14 @@ function mockSuccessfulInterestUpdates(
   const maybeSingle = vi.fn();
   for (const status of statuses) {
     maybeSingle.mockResolvedValueOnce({
-      data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: "active", is_demo: false } },
+      data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
       error: null,
     });
   }
 
-  const selectForDemo = vi.fn(() => ({ maybeSingle }));
-  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemo }));
+  const selectForDemoRepreneur = vi.fn(() => ({ maybeSingle }));
+  const selectForDemoOpportunity = vi.fn(() => ({ eq: selectForDemoRepreneur }));
+  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemoOpportunity }));
   const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }));
   const select = vi.fn(() => ({ eq: selectForMatch }));
 
@@ -135,11 +136,13 @@ describe("repreneur opportunity interest response", () => {
         opportunity_id: OPPORTUNITY_ID,
         status: "proposed",
         opportunity: { status: "active", is_demo: true },
+        repreneur: { is_demo: false },
       },
       error: null,
     });
-    const eqForDemo = vi.fn(() => ({ maybeSingle }));
-    const eqForRepreneur = vi.fn(() => ({ eq: eqForDemo }));
+    const eqForDemoRepreneur = vi.fn(() => ({ maybeSingle }));
+    const eqForDemoOpportunity = vi.fn(() => ({ eq: eqForDemoRepreneur }));
+    const eqForRepreneur = vi.fn(() => ({ eq: eqForDemoOpportunity }));
     const eqForMatch = vi.fn(() => ({ eq: eqForRepreneur }));
     const select = vi.fn(() => ({ eq: eqForMatch }));
     const rpc = vi.fn();

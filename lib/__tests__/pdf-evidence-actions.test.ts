@@ -56,11 +56,11 @@ function portalForm(bytes: Uint8Array) {
   return form
 }
 
-function portalClient(options: { existing?: boolean } = {}) {
+function portalClient(options: { existing?: boolean; demo?: boolean } = {}) {
   const upload = vi.fn().mockResolvedValue({ error: null })
   const remove = vi.fn().mockResolvedValue({ error: null })
   const matchMaybeSingle = vi.fn().mockResolvedValue({
-    data: {
+    data: options.demo ? null : {
       id: "match-synthetic-1",
       opportunity_id: "opportunity-synthetic-1",
       repreneur_id: "repreneur-synthetic-1",
@@ -239,6 +239,20 @@ describe("W-152 PDF evidence action boundary", () => {
     expect(portal.rpc.mock.calls.map(([name]) => name)).toEqual([
       "journey_current_gate_1_event",
     ])
+  })
+
+  it("denies a demo repreneur before any NDA gate, upload, or registration", async () => {
+    const portal = portalClient({ demo: true })
+    mocks.createAdminClient.mockReturnValue(portal.client)
+
+    await expect(
+      submitPortalPursuitSignedNda(portalForm(syntheticPdfBytes())),
+    ).resolves.toEqual({
+      success: false,
+      message: "This NDA is not available for upload.",
+    })
+    expect(portal.upload).not.toHaveBeenCalled()
+    expect(portal.rpc).not.toHaveBeenCalled()
   })
 
   it("rejects misleading portal PDF metadata before creating a persistence client", async () => {

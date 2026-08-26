@@ -55,9 +55,10 @@ async function submitAuthorizedSignedNda(
   const supabase = createAdminClient()
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select("id, opportunity_id, repreneur_id, status, opportunity:opportunities!inner(is_demo)")
+    .select("id, opportunity_id, repreneur_id, status, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
     .eq("id", matchId)
     .eq("opportunity.is_demo", false)
+    .eq("repreneur.is_demo", false)
     .maybeSingle()
   const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
   if (

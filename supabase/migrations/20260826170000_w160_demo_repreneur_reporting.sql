@@ -206,3 +206,106 @@ $$;
 
 REVOKE ALL ON FUNCTION public.external_pursuit_capacity_for_staff(TEXT, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.external_pursuit_capacity_for_staff(TEXT, TIMESTAMPTZ) TO service_role;
+
+-- A portal session for a DEMO profile may exercise the demo estate, but it
+-- must never create, respond to, upload against, or receive confidential
+-- material for a real opportunity. These are the service-role authority
+-- functions behind the portal actions; application filters alone are not a
+-- sufficient boundary.
+CREATE OR REPLACE FUNCTION public.w160_require_non_demo_repreneur(p_repreneur_id UUID)
+RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.repreneurs WHERE id=p_repreneur_id AND is_demo=FALSE) THEN
+    RAISE EXCEPTION 'demo_repreneur_not_available' USING ERRCODE='P0001';
+  END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.express_opportunity_interest(p_opportunity_id UUID,p_repreneur_id UUID,p_actor_id TEXT,p_expressed_at TIMESTAMPTZ DEFAULT NOW())
+RETURNS TABLE(match_id UUID,expressed_at TIMESTAMPTZ,notification_sent_at TIMESTAMPTZ)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE v_opportunity public.opportunities%ROWTYPE; v_match public.opportunity_matches%ROWTYPE; v_has_match BOOLEAN:=FALSE;
+BEGIN
+ PERFORM public.w160_require_non_demo_repreneur(p_repreneur_id);
+ SELECT * INTO v_opportunity FROM public.opportunities WHERE id=p_opportunity_id AND status='active' AND NOT is_demo FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
+ SELECT * INTO v_match FROM public.opportunity_matches WHERE opportunity_id=p_opportunity_id AND repreneur_id=p_repreneur_id FOR UPDATE; v_has_match:=FOUND;
+ IF v_opportunity.repreneur_exposure='staff_only' AND (NOT v_has_match OR v_match.status NOT IN ('proposed','interested','declined','dropped','active_pursuit')) THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
+ IF v_has_match AND v_match.status='active_pursuit' THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
+ IF v_has_match AND ((v_match.nda_status='signed' AND v_match.nda_signed_at IS NULL) OR (v_match.nda_status='waived' AND (v_match.nda_waived_at IS NULL OR NULLIF(BTRIM(v_match.nda_waived_by),'') IS NULL))) THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
+ PERFORM 1 FROM public.opportunity_matches WHERE opportunity_id=p_opportunity_id AND status='active_pursuit' AND repreneur_id<>p_repreneur_id FOR UPDATE;
+ IF v_has_match AND v_match.status='interested' THEN IF v_match.interest_expressed_at IS NULL THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF; RETURN QUERY SELECT v_match.id,v_match.interest_expressed_at,v_match.interest_notification_sent_at; RETURN; END IF;
+ IF v_has_match THEN UPDATE public.opportunity_matches SET status='interested',decline_reason_categories='{}',decline_reason_text=NULL,pursuit_stage=NULL,pursuit_stage_notes=NULL,pursuit_stage_updated_by=NULL,pursuit_stage_updated_at=NULL,reviewed_by=NULL,reviewed_at=NULL,interest_expressed_at=p_expressed_at,interest_notification_sent_at=NULL WHERE id=v_match.id RETURNING * INTO v_match;
+ ELSE INSERT INTO public.opportunity_matches(opportunity_id,repreneur_id,status,created_by,interest_expressed_at) VALUES(p_opportunity_id,p_repreneur_id,'interested',p_actor_id,p_expressed_at) RETURNING * INTO v_match; END IF;
+ RETURN QUERY SELECT v_match.id,v_match.interest_expressed_at,v_match.interest_notification_sent_at;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.update_repreneur_opportunity_response(p_match_id UUID,p_repreneur_id UUID,p_status TEXT,p_decline_reason_categories TEXT[] DEFAULT '{}',p_decline_reason_text TEXT DEFAULT NULL)
+RETURNS TABLE(match_id UUID,opportunity_id UUID,status TEXT)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE v_match public.opportunity_matches%ROWTYPE; v_opportunity public.opportunities%ROWTYPE;
+BEGIN
+ PERFORM public.w160_require_non_demo_repreneur(p_repreneur_id);
+ IF p_status NOT IN ('interested','declined') THEN RAISE EXCEPTION 'response_not_available' USING ERRCODE='P0001'; END IF;
+ SELECT * INTO v_match FROM public.opportunity_matches WHERE id=p_match_id AND repreneur_id=p_repreneur_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'response_not_available' USING ERRCODE='P0001'; END IF;
+ IF v_match.status NOT IN ('proposed','interested','declined') THEN RAISE EXCEPTION 'response_locked' USING ERRCODE='P0001'; END IF;
+ SELECT * INTO v_opportunity FROM public.opportunities opportunity WHERE opportunity.id=v_match.opportunity_id AND opportunity.status='active' AND NOT opportunity.is_demo FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'response_not_available' USING ERRCODE='P0001'; END IF;
+ UPDATE public.opportunity_matches SET status=p_status::public.opportunity_match_status,decline_reason_categories=CASE WHEN p_status='declined' THEN COALESCE(p_decline_reason_categories,'{}') ELSE '{}' END,decline_reason_text=CASE WHEN p_status='declined' THEN NULLIF(BTRIM(p_decline_reason_text),'') ELSE NULL END,reviewed_by=NULL,reviewed_at=NULL WHERE id=v_match.id;
+ RETURN QUERY SELECT v_match.id,v_opportunity.id,p_status;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.journey_repreneur_can_access_confidential(p_match_id UUID,p_repreneur_id UUID,p_document_id UUID)
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+ SELECT public.wave_journey_is_enabled() AND EXISTS(SELECT 1 FROM public.opportunity_matches m JOIN public.repreneurs r ON r.id=m.repreneur_id AND r.is_demo=FALSE JOIN public.opportunities o ON o.id=m.opportunity_id JOIN public.opportunity_pursuit_confidential_grants g ON g.match_id=m.id WHERE m.id=p_match_id AND m.repreneur_id=p_repreneur_id AND m.status='active_pursuit' AND o.status='active' AND NOT o.is_demo AND g.information_memo_document_id=p_document_id AND g.revoked_at IS NULL AND g.nda_expires_at>NOW() AND g.cycle_started_evidence_id=public.journey_current_cycle_event(m.id) AND g.gate_2_evidence_id=public.journey_current_gate_2_event(m.id) AND g.dispatch_evidence_id=public.journey_current_dispatch_event(m.id))
+$$;
+
+CREATE OR REPLACE FUNCTION public.journey_repreneur_authorized_template(p_match_id UUID,p_repreneur_id UUID)
+RETURNS TABLE(document_id UUID,storage_bucket TEXT,storage_path TEXT)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+ SELECT d.id,d.storage_bucket,d.storage_path FROM public.wave_journey_settings settings JOIN public.opportunity_matches match ON match.id=p_match_id JOIN public.repreneurs r ON r.id=match.repreneur_id AND r.is_demo=FALSE JOIN public.opportunities opportunity ON opportunity.id=match.opportunity_id JOIN public.opportunity_nda_artifacts artifact ON artifact.id=public.journey_current_template_id(match.id) JOIN public.opportunity_documents d ON d.id=artifact.document_id WHERE settings.singleton=TRUE AND settings.enabled=TRUE AND match.repreneur_id=p_repreneur_id AND match.status='active_pursuit' AND opportunity.status='active' AND NOT opportunity.is_demo AND public.journey_current_gate_1_event(match.id) IS NOT NULL AND artifact.opportunity_id=match.opportunity_id AND artifact.match_id IS NULL AND artifact.artifact_role='blank_template' AND d.opportunity_id=match.opportunity_id AND d.document_type='nda' AND d.visibility='staff_only' AND d.external_url IS NULL AND d.storage_bucket='opportunity-documents' AND d.storage_path LIKE match.opportunity_id::TEXT||'/nda-artifacts/blank_template/%' AND ((LOWER(COALESCE(d.file_name,'')) LIKE '%.pdf' AND LOWER(COALESCE(d.mime_type,''))='application/pdf') OR (LOWER(COALESCE(d.file_name,'')) LIKE '%.docx' AND LOWER(COALESCE(d.mime_type,''))='application/vnd.openxmlformats-officedocument.wordprocessingml.document')) AND COALESCE(d.size_bytes,0)>0 LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION public.journey_submit_repreneur_signed_copy(p_match_id UUID,p_repreneur_id UUID,p_actor_email TEXT,p_title TEXT,p_storage_path TEXT,p_file_name TEXT,p_file_size BIGINT,p_content_sha256 TEXT)
+RETURNS TABLE(artifact_id UUID,document_id UUID,version_number INTEGER) LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE v_match public.opportunity_matches%ROWTYPE; v_email TEXT; v_gate UUID; v_prior UUID; v_version INTEGER; v_document UUID; v_artifact UUID;
+BEGIN
+ PERFORM public.w160_require_non_demo_repreneur(p_repreneur_id);
+ IF NOT public.wave_journey_is_enabled() THEN RAISE EXCEPTION 'wave_journey_disabled'; END IF;
+ SELECT * INTO v_match FROM public.opportunity_matches WHERE id=p_match_id FOR UPDATE; SELECT LOWER(BTRIM(email)) INTO v_email FROM public.repreneurs WHERE id=p_repreneur_id;
+ IF v_match.id IS NULL OR v_match.status<>'active_pursuit' OR v_match.repreneur_id<>p_repreneur_id OR v_email IS NULL OR v_email<>LOWER(BTRIM(p_actor_email)) OR NOT EXISTS(SELECT 1 FROM public.opportunities WHERE id=v_match.opportunity_id AND status='active' AND NOT is_demo) THEN RAISE EXCEPTION 'Only the active pursuit repreneur may submit this signed copy.'; END IF;
+ v_gate:=public.journey_current_gate_1_event(p_match_id); IF v_gate IS NULL THEN RAISE EXCEPTION 'Current Gate 1 is required before signed-copy submission.'; END IF;
+ IF NULLIF(BTRIM(p_title),'') IS NULL OR NULLIF(BTRIM(p_storage_path),'') IS NULL OR LOWER(p_file_name) NOT LIKE '%.pdf' OR p_file_size<=0 OR LOWER(p_content_sha256)!~'^[0-9a-f]{64}$' OR p_storage_path NOT LIKE v_match.opportunity_id::TEXT||'/nda-artifacts/repreneur_signed_copy/%' THEN RAISE EXCEPTION 'Submit one retained PDF in the canonical signed-copy path.'; END IF;
+ SELECT a.id,a.version_number INTO v_artifact,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' AND a.content_sha256=LOWER(p_content_sha256) LIMIT 1; IF v_artifact IS NOT NULL THEN RETURN QUERY SELECT v_artifact,(SELECT a.document_id FROM public.opportunity_nda_artifacts a WHERE a.id=v_artifact),v_version; RETURN; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_match_id::TEXT||':repreneur_signed_copy',0)); SELECT a.id,a.document_id,a.version_number INTO v_artifact,v_document,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' AND a.content_sha256=LOWER(p_content_sha256) LIMIT 1; IF v_artifact IS NOT NULL THEN RETURN QUERY SELECT v_artifact,v_document,v_version; RETURN; END IF;
+ SELECT a.id,a.version_number+1 INTO v_prior,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' ORDER BY a.version_number DESC LIMIT 1; v_version:=COALESCE(v_version,1);
+ INSERT INTO public.opportunity_documents(opportunity_id,title,document_type,visibility,storage_bucket,storage_path,file_name,size_bytes,mime_type,uploaded_by) VALUES(v_match.opportunity_id,p_title,'nda','staff_only','opportunity-documents',p_storage_path,p_file_name,p_file_size,'application/pdf',p_actor_email) RETURNING id INTO v_document; PERFORM set_config('wave.journey_portal_repreneur_upload','on',true); INSERT INTO public.opportunity_nda_artifacts(opportunity_id,match_id,document_id,artifact_role,version_number,content_sha256,supersedes_artifact_id,recorded_by,recorded_at) VALUES(v_match.opportunity_id,p_match_id,v_document,'repreneur_signed_copy',v_version,LOWER(p_content_sha256),v_prior,p_actor_email,clock_timestamp()) RETURNING id INTO v_artifact; RETURN QUERY SELECT v_artifact,v_document,v_version;
+ EXCEPTION WHEN unique_violation THEN SELECT a.id,a.document_id,a.version_number INTO v_artifact,v_document,v_version FROM public.opportunity_nda_artifacts a WHERE a.match_id=p_match_id AND a.artifact_role='repreneur_signed_copy' AND a.content_sha256=LOWER(p_content_sha256) LIMIT 1; IF v_artifact IS NULL THEN RAISE; END IF; RETURN QUERY SELECT v_artifact,v_document,v_version;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.claim_opportunity_memo_notification(p_opportunity_id UUID,p_match_id UUID DEFAULT NULL,p_attempted_at TIMESTAMPTZ DEFAULT NOW())
+RETURNS TABLE(match_id UUID,opportunity_id UUID,repreneur_id UUID,recipient_email TEXT,repreneur_first_name TEXT,opportunity_title TEXT)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE v public.opportunity_matches%ROWTYPE; v_email TEXT; v_first TEXT; v_title TEXT; v_claim UUID;
+BEGIN
+ SELECT m.* INTO v FROM public.opportunity_matches m JOIN public.opportunities o ON o.id=m.opportunity_id JOIN public.repreneurs r ON r.id=m.repreneur_id AND r.is_demo=FALSE JOIN public.opportunity_pursuit_confidential_grants g ON g.match_id=m.id LEFT JOIN public.opportunity_memo_notifications n ON n.match_id=m.id WHERE m.opportunity_id=p_opportunity_id AND (p_match_id IS NULL OR m.id=p_match_id) AND m.status='active_pursuit' AND o.status='active' AND NOT o.is_demo AND g.revoked_at IS NULL AND g.nda_expires_at>p_attempted_at AND g.cycle_started_evidence_id=public.journey_current_cycle_event(m.id) AND g.gate_2_evidence_id=public.journey_current_gate_2_event(m.id) AND g.dispatch_evidence_id=public.journey_current_dispatch_event(m.id) AND NULLIF(BTRIM(r.email),'') IS NOT NULL AND (n.match_id IS NULL OR (n.sent_at IS NULL AND (n.status IN ('pending','failed') OR (n.status='sending' AND n.last_attempt_at<p_attempted_at-INTERVAL '15 minutes')))) ORDER BY m.updated_at DESC LIMIT 1 FOR UPDATE OF m;
+ IF v.id IS NULL THEN RETURN; END IF;
+ SELECT BTRIM(email),COALESCE(NULLIF(BTRIM(first_name),''),'Madame, Monsieur') INTO v_email,v_first FROM public.repreneurs WHERE id=v.repreneur_id; SELECT COALESCE(NULLIF(BTRIM(public_title),''),'votre opportunite') INTO v_title FROM public.opportunities WHERE id=v.opportunity_id;
+ INSERT INTO public.opportunity_memo_notifications(match_id,opportunity_id,repreneur_id,recipient_email) VALUES(v.id,v.opportunity_id,v.repreneur_id,v_email) ON CONFLICT ON CONSTRAINT opportunity_memo_notifications_match_id_key DO UPDATE SET recipient_email=EXCLUDED.recipient_email,updated_at=p_attempted_at WHERE opportunity_memo_notifications.sent_at IS NULL; UPDATE public.opportunity_memo_notifications n SET status='sending',attempt_count=n.attempt_count+1,last_attempt_at=p_attempted_at,failed_at=NULL,last_error=NULL,updated_at=p_attempted_at WHERE n.match_id=v.id AND n.sent_at IS NULL AND (n.status IN ('pending','failed') OR (n.status='sending' AND n.last_attempt_at<p_attempted_at-INTERVAL '15 minutes')) RETURNING n.match_id INTO v_claim; IF v_claim IS NULL THEN RETURN; END IF; RETURN QUERY SELECT v.id,v.opportunity_id,v.repreneur_id,v_email,v_first,v_title;
+END $$;
+
+REVOKE ALL ON FUNCTION public.w160_require_non_demo_repreneur(UUID) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.w160_require_non_demo_repreneur(UUID) TO service_role;
+
+REVOKE ALL ON FUNCTION public.express_opportunity_interest(UUID,UUID,TEXT,TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.update_repreneur_opportunity_response(UUID,UUID,TEXT,TEXT[],TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.journey_repreneur_can_access_confidential(UUID,UUID,UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.journey_repreneur_authorized_template(UUID,UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.journey_submit_repreneur_signed_copy(UUID,UUID,TEXT,TEXT,TEXT,TEXT,BIGINT,TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.claim_opportunity_memo_notification(UUID,UUID,TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.express_opportunity_interest(UUID,UUID,TEXT,TIMESTAMPTZ) TO service_role;
+GRANT EXECUTE ON FUNCTION public.update_repreneur_opportunity_response(UUID,UUID,TEXT,TEXT[],TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.journey_repreneur_can_access_confidential(UUID,UUID,UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.journey_repreneur_authorized_template(UUID,UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.journey_submit_repreneur_signed_copy(UUID,UUID,TEXT,TEXT,TEXT,TEXT,BIGINT,TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.claim_opportunity_memo_notification(UUID,UUID,TIMESTAMPTZ) TO service_role;

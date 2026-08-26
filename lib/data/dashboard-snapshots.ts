@@ -626,6 +626,7 @@ async function getCachedOpportunityWorkSurfaceSnapshot(): Promise<
         first_name,
         last_name,
         email,
+        is_demo,
         lifecycle_status,
         journey_stage,
         recommendation,

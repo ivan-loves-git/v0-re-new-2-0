@@ -4,7 +4,9 @@ import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { GitBranch } from "lucide-react"
 
 export default async function PipelinePage() {
-  const repreneurs = await getRepreneurListSnapshot()
+  const repreneurs = (await getRepreneurListSnapshot()).filter(
+    (repreneur) => !repreneur.is_demo,
+  )
 
   return (
     <div className="flex flex-col gap-6">

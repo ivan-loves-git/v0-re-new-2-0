@@ -655,6 +655,7 @@ export interface OpportunityMatchRepreneur {
   first_name: string
   last_name: string
   email: string
+  is_demo?: boolean | null
   lifecycle_status?: string | null
   journey_stage?: string | null
   recommendation?: string | null
@@ -769,6 +770,7 @@ export interface RepreneurOpportunityProfile {
   first_name: string
   last_name: string
   email: string
+  is_demo?: boolean | null
 }
 
 export interface RepreneurOpportunityDocument {

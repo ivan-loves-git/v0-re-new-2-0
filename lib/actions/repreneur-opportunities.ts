@@ -85,6 +85,7 @@ function normalizeProfile(row: any): RepreneurOpportunityProfile {
     first_name: row.first_name,
     last_name: row.last_name,
     email: row.email,
+    is_demo: row.is_demo === true,
   }
 }
 
@@ -146,9 +147,10 @@ async function getActivePursuitOwners(
 
   const { data, error } = await supabase
     .from("opportunity_matches")
-    .select("opportunity_id, repreneur_id")
+    .select("opportunity_id, repreneur_id, repreneur:repreneurs!inner(is_demo)")
     .in("opportunity_id", opportunityIds)
     .eq("status", "active_pursuit")
+    .eq("repreneur.is_demo", false)
 
   if (error) throw new Error(error.message)
   return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))
@@ -170,7 +172,7 @@ async function getCurrentRepreneurProfile(): Promise<RepreneurOpportunityProfile
   const supabase = createAdminClient()
   const { data: profile, error } = await supabase
     .from("repreneurs")
-    .select("id, first_name, last_name, email")
+    .select("id, first_name, last_name, email, is_demo")
     .eq("id", access.repreneurId)
     .maybeSingle()
 
@@ -331,6 +333,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
 }> {
   const repreneur = await getCurrentRepreneurProfile()
   if (!repreneur) return { repreneur: null, opportunities: [] }
+  if (repreneur.is_demo) return { repreneur, opportunities: [] }
 
   const supabase = createAdminClient()
   const { data, error } = await supabase
@@ -416,9 +419,20 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   dealFlow: RepreneurDealFlowOpportunity[]
   deals: RepreneurDealFlowOpportunity[]
   automaticMatching: { complete: boolean; missing: string[] }
+  demoProfile: boolean
 }> {
   const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] } }
+  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] }, demoProfile: false }
+  if (repreneur.is_demo) {
+    return {
+      repreneur,
+      staffRecommended: [],
+      dealFlow: [],
+      deals: [],
+      automaticMatching: { complete: false, missing: [] },
+      demoProfile: true,
+    }
+  }
 
   const supabase = createAdminClient()
   const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
@@ -566,6 +580,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     dealFlow,
     deals,
     automaticMatching,
+    demoProfile: false,
   }
   const access = await requirePortalAccess()
   queueM2RepreneurEvent({
@@ -583,7 +598,7 @@ export async function getMyRepreneurOpportunity(
 ): Promise<RepreneurOpportunityExposure | RepreneurDealFlowOpportunity | null> {
   if (!isUuid(dealId)) return null
   const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur) return null
+  if (!repreneur || repreneur.is_demo) return null
 
   const supabase = createAdminClient()
   const [matchResult, opportunityResult] = await Promise.all([
