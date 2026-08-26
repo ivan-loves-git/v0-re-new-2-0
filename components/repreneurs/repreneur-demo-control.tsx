@@ -4,6 +4,7 @@ import { useState } from "react"
 import { FlaskConical } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { setRepreneurDemoClassification } from "@/lib/actions/repreneurs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,11 +32,11 @@ export function RepreneurDemoBadge() {
 
 /** Staff-only control. It changes no lifecycle, portal role or retained history. */
 export function RepreneurDemoControl({
+  repreneurId,
   isDemo,
-  action,
 }: {
+  repreneurId: string
   isDemo: boolean
-  action: (isDemo: boolean) => Promise<DemoClassificationResult>
 }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -44,7 +45,10 @@ export function RepreneurDemoControl({
   async function confirm() {
     setIsSubmitting(true)
     try {
-      const result = await action(nextIsDemo)
+      const result: DemoClassificationResult = await setRepreneurDemoClassification(
+        repreneurId,
+        nextIsDemo,
+      )
       if (!result.success) {
         toast.error(result.message)
         return
