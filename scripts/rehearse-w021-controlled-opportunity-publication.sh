@@ -22,12 +22,13 @@ psql=("$pg_bin/psql" -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_rehears
 "${psql[@]}" --file "$repo_root/supabase/schema/771_public_schema.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/scripts/112_demo_opportunity_quarantine.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260825190000_w021_controlled_opportunity_publication.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260826142358_remove_firm_status_from_w021_publication.sql" >/dev/null
 "${psql[@]}" -c "SET ROLE service_role; SELECT public.w021_publication_manifest_digest('[]'::JSONB); SELECT count(*) FROM public.w021_opportunity_publication_preflight(); RESET ROLE;" >/dev/null
 "${psql[@]}" -c "ALTER TABLE public.opportunities DISABLE TRIGGER enforce_ma_provisional_source_review_on_opportunity;" >/dev/null
 
 "${psql[@]}" <<'SQL'
 BEGIN;
-INSERT INTO public.ma_firms(id,name,status,created_by) VALUES ('00000000-0000-4000-8000-000000002101','Fixture Firm','active','rehearsal');
+INSERT INTO public.ma_firms(id,name,status,created_by) VALUES ('00000000-0000-4000-8000-000000002101','Fixture Firm','prospect','rehearsal');
 INSERT INTO public.ma_offices(id,firm_id,name,status,is_default,created_by) VALUES ('00000000-0000-4000-8000-000000002102','00000000-0000-4000-8000-000000002101','Paris','active',FALSE,'rehearsal');
 COMMIT;
 INSERT INTO public.ma_contacts(id,first_name,display_name,status,email,created_by) VALUES ('00000000-0000-4000-8000-000000002103','Ada','Ada','active','ada@example.test','rehearsal');
