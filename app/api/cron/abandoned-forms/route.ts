@@ -14,6 +14,7 @@ import {
   startCriticalOperation,
   type CriticalOperationTrace,
 } from "@/lib/observability/critical-operation"
+import { cleanupExpiredPrivateUploads } from "@/lib/private-upload-server"
 
 export const maxDuration = 60
 
@@ -354,6 +355,7 @@ export async function GET(request: Request) {
         .from("repreneurs")
         .select("id")
         .eq("lifecycle_status", "lead")
+        .eq("is_demo", false)
         .lte("created_at", thirtyDaysAgo)
 
       if (staleCandidateError) {
@@ -377,9 +379,11 @@ export async function GET(request: Request) {
             .in("status", ["offered", "accepted", "active"]),
           supabase
             .from("opportunity_matches")
-            .select("repreneur_id")
+            .select("repreneur_id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
             .in("repreneur_id", candidateIds)
-            .eq("status", "active_pursuit"),
+            .eq("status", "active_pursuit")
+            .eq("opportunity.is_demo", false)
+            .eq("repreneur.is_demo", false),
           supabase
             .from("external_pursuits")
             .select("owner_repreneur_id")
@@ -421,7 +425,29 @@ export async function GET(request: Request) {
     else staleTrace.success()
     activeSubjobTrace = null
 
-    const allErrors = [...errors, ...interviewErrors, ...bookingErrors, ...staleErrors]
+    // Reuse the one available production cron slot. A bounded daily batch is
+    // enough at the current upload volume; the durable queue carries any
+    // remainder to the next run, and the dedicated route remains available
+    // for an authorized manual catch-up.
+    const privateUploadCleanupErrors: string[] = []
+    const privateUploadCleanupTrace = startCriticalOperation("cron.private_upload_cleanup")
+    activeSubjobTrace = privateUploadCleanupTrace
+    try {
+      await cleanupExpiredPrivateUploads({ batchSize: 25 })
+    } catch {
+      privateUploadCleanupErrors.push("private_upload_cleanup_failed")
+    }
+    if (privateUploadCleanupErrors.length > 0) privateUploadCleanupTrace.failure("persistence_failed")
+    else privateUploadCleanupTrace.success()
+    activeSubjobTrace = null
+
+    const allErrors = [
+      ...errors,
+      ...interviewErrors,
+      ...bookingErrors,
+      ...staleErrors,
+      ...privateUploadCleanupErrors,
+    ]
     if (
       allErrors.length > 0 ||
       abandonedDeliveryFailed ||

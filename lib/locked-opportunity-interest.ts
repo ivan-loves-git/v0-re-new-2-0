@@ -2,6 +2,8 @@ export interface LockedOpportunityInterestRecord {
   matchId: string
   expressedAt: string
   notificationSentAt: string | null
+  /** DEMO activity remains in the UAT namespace and never sends a real alert. */
+  notificationSuppressed?: boolean
 }
 
 export interface LockedOpportunityInterestNotificationDetails {
@@ -93,6 +95,14 @@ export async function expressOpportunityInterest(
     return {
       status: "success",
       alreadyRecorded: true,
+      expressedAt: interest.expressedAt,
+    }
+  }
+
+  if (interest.notificationSuppressed) {
+    return {
+      status: "success",
+      alreadyRecorded: false,
       expressedAt: interest.expressedAt,
     }
   }

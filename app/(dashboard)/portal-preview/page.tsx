@@ -92,6 +92,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               <Badge variant="outline">Portal access not enabled</Badge>
             )}
             {selectedOption && <Badge variant="outline">{selectedOption.visibleOpportunityCount} visible deal(s)</Badge>}
+            {selectedOption?.isDemo ? <Badge variant="outline">DEMO namespace</Badge> : null}
           </div>
           <div>
             <p className="text-sm font-medium">Preview as</p>

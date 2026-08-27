@@ -38,7 +38,8 @@ vi.mock("@/lib/repreneur-profile-refresh", () => ({
 
 import { POST } from "@/app/api/upload-cv/route"
 import {
-  CV_LDC_MAX_FILE_BYTES,
+  LEGACY_MULTIPART_MAX_FILE_BYTES,
+  LEGACY_MULTIPART_MAX_FILE_LABEL,
   VERCEL_FUNCTION_MAX_REQUEST_BYTES,
 } from "@/lib/upload-limits"
 
@@ -90,7 +91,7 @@ function successfulAdminClient() {
   }
 }
 
-describe("W-153 CV and LDC upload ceiling", () => {
+describe("W-153 legacy multipart CV and LDC upload ceiling", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getCurrentUserAccess.mockResolvedValue({
@@ -106,7 +107,7 @@ describe("W-153 CV and LDC upload ceiling", () => {
     const admin = successfulAdminClient()
     mocks.createAdminClient.mockReturnValue(admin.client)
 
-    const response = await POST(multipartRequest(pdfFile(CV_LDC_MAX_FILE_BYTES)))
+    const response = await POST(multipartRequest(pdfFile(LEGACY_MULTIPART_MAX_FILE_BYTES)))
 
     expect(response.status).toBe(200)
     expect(admin.upload).toHaveBeenCalledOnce()
@@ -115,19 +116,19 @@ describe("W-153 CV and LDC upload ceiling", () => {
 
   it("rejects a file one byte over 4 MB before Storage or record persistence", async () => {
     const response = await POST(
-      multipartRequest(pdfFile(CV_LDC_MAX_FILE_BYTES + 1)),
+      multipartRequest(pdfFile(LEGACY_MULTIPART_MAX_FILE_BYTES + 1)),
     )
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({
-      error: "File size must not exceed 4 MB",
+      error: `File size must not exceed ${LEGACY_MULTIPART_MAX_FILE_LABEL}`,
     })
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
   it("does not trust a false small Content-Length to bypass the file limit", async () => {
     const response = await POST(
-      multipartRequest(pdfFile(CV_LDC_MAX_FILE_BYTES + 1), {
+      multipartRequest(pdfFile(LEGACY_MULTIPART_MAX_FILE_BYTES + 1), {
         contentLength: "1",
       }),
     )
@@ -140,7 +141,7 @@ describe("W-153 CV and LDC upload ceiling", () => {
     mocks.getCurrentUserAccess.mockResolvedValue(null)
 
     const response = await POST(
-      multipartRequest(pdfFile(CV_LDC_MAX_FILE_BYTES + 1), {
+      multipartRequest(pdfFile(LEGACY_MULTIPART_MAX_FILE_BYTES + 1), {
         anonymous: true,
       }),
     )
@@ -163,9 +164,8 @@ describe("W-153 CV and LDC upload ceiling", () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })
 
-  it("uses one shared 4 MB constant on every CV and LDC upload surface", () => {
-    const runtimeSurfaces = [
-      "app/api/upload-cv/route.ts",
+  it("uses the 20 MiB direct-upload constant on every current CV and LDC surface", () => {
+    const directUploadSurfaces = [
       "components/intake-v2/steps/step-contact.tsx",
       "components/intake-v2/steps/step-needs.tsx",
       "components/repreneurs/cv-section.tsx",
@@ -173,10 +173,13 @@ describe("W-153 CV and LDC upload ceiling", () => {
       "components/portal/repreneur-target-thesis-editor.tsx",
       "lib/types/intake-v2.ts",
     ]
-    for (const relativePath of runtimeSurfaces) {
+    for (const relativePath of directUploadSurfaces) {
       const source = readFileSync(`${process.cwd()}/${relativePath}`, "utf8")
       expect(source, relativePath).toContain("CV_LDC_MAX_FILE_BYTES")
-      expect(source, relativePath).not.toMatch(/10\s*\*\s*1024\s*\*\s*1024/)
     }
+
+    const legacyRoute = readFileSync(`${process.cwd()}/app/api/upload-cv/route.ts`, "utf8")
+    expect(legacyRoute).toContain("LEGACY_MULTIPART_MAX_FILE_BYTES")
+    expect(legacyRoute).not.toContain("CV_LDC_MAX_FILE_BYTES")
   })
 })

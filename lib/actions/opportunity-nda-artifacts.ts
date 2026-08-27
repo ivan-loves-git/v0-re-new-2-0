@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { assertSafePdfEvidence } from "@/lib/security/pdf-evidence"
 import type { OpportunityNdaArtifact, OpportunityNdaArtifactRole } from "@/lib/types/opportunity"
 
@@ -72,7 +73,28 @@ export async function listOpportunityNdaArtifacts(opportunityId: string): Promis
     .order("recorded_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as unknown as OpportunityNdaArtifact[]
+  const artifacts = (data ?? []) as unknown as OpportunityNdaArtifact[]
+  const matchIds = artifacts
+    .map((artifact) => artifact.match_id)
+    .filter((matchId): matchId is string => Boolean(matchId))
+  if (matchIds.length === 0) return artifacts
+
+  const { data: matches, error: matchError } = await supabase
+    .from("opportunity_matches")
+    .select("id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
+    .in("id", matchIds)
+  if (matchError) throw new Error(matchError.message)
+  const sameNamespaceMatchIds = new Set(
+    (matches ?? [])
+      .filter((match) => isOpportunityInRepreneurNamespace(
+        Array.isArray(match.opportunity) ? match.opportunity[0] : match.opportunity,
+        Array.isArray(match.repreneur) ? match.repreneur[0] : match.repreneur,
+      ))
+      .map((match) => match.id),
+  )
+  return artifacts.filter((artifact) => (
+    !artifact.match_id || sameNamespaceMatchIds.has(artifact.match_id)
+  ))
 }
 
 export async function registerOpportunityNdaArtifact(formData: FormData) {
@@ -101,7 +123,7 @@ export async function registerOpportunityNdaArtifact(formData: FormData) {
   }
 
   if (file.size > MAX_DOCUMENT_BYTES) {
-    throw new Error("NDA artifacts must be smaller than 4MB")
+    throw new Error("The legacy multipart route is limited to 4 MiB. Use the direct private upload.")
   }
   const mimeType = artifactMimeType(artifactRole, file)
 

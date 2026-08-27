@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/lib/i18n/language-context"
 import type { IntakeV2StepProps, FileUploadState } from "@/lib/types/intake-v2"
 import { CV_LDC_MAX_FILE_BYTES } from "@/lib/upload-limits"
+import { abandonPrivateIntakeUpload, uploadPrivateDocument } from "@/lib/private-upload"
 import { Upload, FileText, X, Loader2 } from "lucide-react"
 
 /**
@@ -58,26 +59,18 @@ export function StepContact({
     setCvUpload((prev) => ({ ...prev, file, uploading: true, error: null }))
 
     try {
-      // Create form data for upload
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("documentType", "cv")
-
       const tokenResponse = await fetch("/api/intake-upload-token", {
         method: "POST",
       })
       if (!tokenResponse.ok) throw new Error("Upload authorization failed")
       const { token } = await tokenResponse.json()
-
-      const response = await fetch("/api/upload-cv", {
-        method: "POST",
-        headers: { "x-intake-upload-token": token },
-        body: formData,
+      const result = await uploadPrivateDocument(file, {
+        kind: "repreneur_document",
+        intakeToken: token,
+        metadata: { document_type: "cv" },
       })
-
-      if (!response.ok) throw new Error("Upload failed")
-
-      const { url } = await response.json()
+      const url = typeof result.url === "string" ? result.url : null
+      if (!url) throw new Error("Upload failed")
       setCvUpload((prev) => ({ ...prev, uploading: false, url }))
       onChange({ cv_url: url })
     } catch {
@@ -90,6 +83,7 @@ export function StepContact({
   }
 
   const removeFile = () => {
+    void abandonPrivateIntakeUpload(cvUpload.url)
     setCvUpload({
       file: null,
       uploading: false,

@@ -11,10 +11,10 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
-  registerOpportunityDocument,
   removeOpportunityDocument,
   updateOpportunityDocumentVisibility,
 } from "@/lib/actions/opportunity-documents"
+import { PRIVATE_DOCUMENT_MAX_LABEL, uploadPrivateDocument } from "@/lib/private-upload"
 import { DocumentRowActions, type DocumentInteractionState } from "@/components/opportunities/document-row-actions"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import { formatDisplayDate } from "@/lib/utils/display-date-time"
@@ -87,19 +87,21 @@ export function OpportunityDocumentsPanel({
     setIsSubmitting(true)
     setFieldErrors({})
     try {
-      const result = await registerOpportunityDocument(formData)
-      if (!result.success) {
-        setFieldErrors({ form: result.message })
-        focusValidationSummary(validationSummaryRef)
-        toast.error("Document not added", { description: result.message })
-        return
-      }
-      toast.success("Document added", { description: result.message })
+      const file = formData.get("file") as File
+      const title = String(formData.get("title") ?? "").trim()
+      const visibility = String(formData.get("visibility") ?? "staff_only") as OpportunityDocumentVisibility
+      const result = await uploadPrivateDocument(file, {
+        kind: "opportunity_document",
+        resourceId: opportunityId,
+        metadata: { title, document_type: documentType, visibility },
+      })
+      toast.success("Document added", { description: String(result.message ?? "Document added.") })
       router.refresh()
-    } catch {
-      setFieldErrors({ form: "Please try again." })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Please try again."
+      setFieldErrors({ form: message })
       focusValidationSummary(validationSummaryRef)
-      toast.error("Document not added", { description: "Please try again." })
+      toast.error("Document not added", { description: message })
     } finally {
       setIsSubmitting(false)
     }
@@ -224,6 +226,7 @@ export function OpportunityDocumentsPanel({
                 onChange={() => setFieldErrors((current) => ({ ...current, "document-file": "", form: "" }))}
               />
               <FieldError id="document-file" message={fieldErrors["document-file"]} />
+              <p className="text-xs text-muted-foreground">Private upload, maximum {PRIVATE_DOCUMENT_MAX_LABEL}.</p>
             </div>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Adding..." : "Add"}

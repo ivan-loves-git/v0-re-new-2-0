@@ -3,11 +3,15 @@ import { createRequire } from "node:module";
 import { Worker } from "node:worker_threads";
 
 /** PDF.js parses untrusted syntax in a dedicated resource-limited worker. */
-const MAX_PDF_EVIDENCE_BYTES = 4 * 1024 * 1024;
-const PDF_PARSE_TIMEOUT_MS = 3_000;
+export const MAX_PDF_EVIDENCE_BYTES = 20 * 1024 * 1024;
+const MIN_PDF_PARSE_TIMEOUT_MS = 5_000;
+const MAX_PDF_PARSE_TIMEOUT_MS = 15_000;
 const PDF_WORKER_RESOURCE_LIMITS = {
-  maxOldGenerationSizeMb: 64,
-  maxYoungGenerationSizeMb: 16,
+  // A 20 MiB input can transiently exist as transferred bytes, parsed PDF.js
+  // structures and bounded decoded streams. This remains below the function
+  // memory envelope while avoiding the former 4 MiB parser bottleneck.
+  maxOldGenerationSizeMb: 160,
+  maxYoungGenerationSizeMb: 32,
   stackSizeMb: 4,
 } as const;
 
@@ -162,9 +166,13 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
       else resolve();
     };
 
+    const timeoutMs = Math.min(
+      MAX_PDF_PARSE_TIMEOUT_MS,
+      MIN_PDF_PARSE_TIMEOUT_MS + Math.ceil(bytes.byteLength / (1024 * 1024)) * 500,
+    );
     const deadline = setTimeout(() => {
       finish(new PdfEvidenceError("NDA PDF validation timed out"));
-    }, PDF_PARSE_TIMEOUT_MS);
+    }, timeoutMs);
 
     worker.once("message", (result: unknown) => {
       if (!isSuccessfulWorkerResult(result)) {
@@ -199,7 +207,7 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
 
 export async function assertSafePdfEvidence(bytes: Uint8Array) {
   if (bytes.byteLength > MAX_PDF_EVIDENCE_BYTES) {
-    throw new PdfEvidenceError("NDA PDF evidence must not exceed 4 MB");
+    throw new PdfEvidenceError("PDF files must not exceed 20 MiB");
   }
   await validateInIsolatedWorker(bytes);
 }

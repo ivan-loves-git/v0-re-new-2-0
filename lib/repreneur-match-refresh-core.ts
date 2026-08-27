@@ -81,9 +81,8 @@ export async function refreshStoredRepreneurMatchesWithClient(
     .maybeSingle()
   if (repreneurError) throw new Error(repreneurError.message)
   if (!repreneur) return { repreneurId, matchedRows: 0, refreshedRows: 0, skippedMissingOpportunityRows: 0, failedMatchRows: [] }
-  if ((repreneur as RepreneurMatchRecord).is_demo) {
-    return { repreneurId, matchedRows: 0, refreshedRows: 0, skippedMissingOpportunityRows: 0, failedMatchRows: [] }
-  }
+  const repreneurIsDemo = (repreneur as RepreneurMatchRecord).is_demo
+  if (typeof repreneurIsDemo !== "boolean") return { repreneurId, matchedRows: 0, refreshedRows: 0, skippedMissingOpportunityRows: 0, failedMatchRows: [] }
 
   const { data: matches, error: matchesError } = await supabase
     .from("opportunity_matches")
@@ -99,7 +98,7 @@ export async function refreshStoredRepreneurMatchesWithClient(
   )
   const settled = await Promise.allSettled(matchRows.map(async (match) => {
     const opportunity = Array.isArray(match.opportunity) ? match.opportunity[0] : match.opportunity
-    if (!opportunity || opportunity.is_demo) return "skipped" as const
+    if (!opportunity || opportunity.is_demo !== repreneurIsDemo) return "skipped" as const
     const score = calculateOpportunityMatchScore(
       geographyAwareRepreneur,
       withMatchingGeography(opportunity, geography),

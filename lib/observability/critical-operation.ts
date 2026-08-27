@@ -22,6 +22,7 @@ export type CriticalOperationName =
   | "cron.interview_reminders"
   | "cron.booking_reminders"
   | "cron.stale_leads"
+  | "cron.private_upload_cleanup"
 
 export type CriticalOperationErrorCategory =
   | "authorization_denied"

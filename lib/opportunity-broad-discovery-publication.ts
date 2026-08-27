@@ -1,10 +1,10 @@
-import type { Opportunity, OpportunityVisibility } from "@/lib/types/opportunity"
+import type { Opportunity } from "@/lib/types/opportunity"
 
-export type BroadDiscoveryPublicationState =
-  | { mode: "publish" }
-  | { mode: "remove" }
-  | { mode: "incomplete"; missingFields: string[] }
-  | { mode: "unavailable" }
+export type BroadDiscoveryPublicationState = {
+  mode: "visible" | "hidden"
+  namespace: "REAL" | "DEMO"
+  missingFields: string[]
+}
 
 const readerFacingFields = [
   ["public_title", "title"],
@@ -40,26 +40,9 @@ export function broadDiscoveryPublicationState(
     | "location"
   >,
 ): BroadDiscoveryPublicationState {
-  if (opportunity.is_demo || opportunity.status !== "active") {
-    return { mode: "unavailable" }
+  return {
+    mode: opportunity.status === "active" ? "visible" : "hidden",
+    namespace: opportunity.is_demo ? "DEMO" : "REAL",
+    missingFields: missingBroadDiscoveryReaderFields(opportunity),
   }
-
-  if (opportunity.repreneur_exposure === "anonymized") {
-    return { mode: "remove" }
-  }
-
-  if (opportunity.repreneur_exposure !== "staff_only") {
-    return { mode: "unavailable" }
-  }
-
-  const missingFields = missingBroadDiscoveryReaderFields(opportunity)
-  return missingFields.length > 0
-    ? { mode: "incomplete", missingFields }
-    : { mode: "publish" }
-}
-
-export function isAllowedBroadDiscoveryVisibility(
-  visibility: OpportunityVisibility,
-) {
-  return visibility === "staff_only" || visibility === "anonymized"
 }

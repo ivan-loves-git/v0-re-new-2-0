@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
-import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import type { OpportunityDeclineReasonCategory, OpportunityMatchStatus } from "@/lib/types/opportunity"
 
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "dropped"]
@@ -58,16 +58,15 @@ async function updateMyOpportunityResponse(
     .select("id, opportunity_id, status, opportunity:opportunities!inner(status, is_demo), repreneur:repreneurs!inner(is_demo)")
     .eq("id", matchId)
     .eq("repreneur_id", access.repreneurId)
-    .eq("opportunity.is_demo", false)
-    .eq("repreneur.is_demo", false)
     .maybeSingle()
 
   if (matchError) throw new Error(matchError.message)
   const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
+  const repreneur = Array.isArray(match?.repreneur) ? match.repreneur[0] : match?.repreneur
   if (
     !match
     || opportunity?.status !== "active"
-    || !isRepreneurEligibleOpportunity(opportunity)
+    || !isOpportunityInRepreneurNamespace(opportunity, repreneur)
   ) {
     throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
   }

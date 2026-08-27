@@ -264,8 +264,8 @@ describe("M&A operating-office foundation migration", () => {
   })
 
   it("records the approved exposure and sourcing exclusions in the contract", () => {
-    expect(contract).toContain("W-021 now governs its bounded use as the broad Deal Flow publication control")
-    expect(contract).toContain("Only the separate W-021 staff publication action")
+    expect(contract).toContain("W-164 now owns the approved target discovery rule")
+    expect(contract).toContain("The database derives compatibility exposure from lifecycle")
     expect(contract).toContain("does not add an opportunity sourcing channel")
     expect(contract).toContain(
       "Migrations 076 to 090 are live and schema-verified",
@@ -275,7 +275,7 @@ describe("M&A operating-office foundation migration", () => {
     )
     expect(contract).toContain("Canonical firm and operating-office model live since migration 076")
     expect(contract).toContain("W-061 and migration 076")
-    expect(contract).toContain("compatibility firewall")
+    expect(contract).toContain("W-021 manual publication rule remains production history")
     expect(contract).toContain("W-063 staff intake reconciliation")
     expect(contract).toContain("p_opportunity_fields JSONB")
     expect(contract).toContain("Reopening is a separate explicit workflow")

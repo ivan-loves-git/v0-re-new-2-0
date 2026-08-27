@@ -1,30 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import {
   broadDiscoveryPublicationState,
   missingBroadDiscoveryReaderFields,
 } from "@/lib/opportunity-broad-discovery-publication"
 
-const mocks = vi.hoisted(() => ({
-  createAdminClient: vi.fn(),
-  requireStaffAccess: vi.fn(),
-  revalidateOpportunityDashboardTags: vi.fn(),
-  revalidatePath: vi.fn(),
-}))
-
-vi.mock("@/lib/access-control", () => ({
-  requireStaffAccess: mocks.requireStaffAccess,
-}))
-vi.mock("@/lib/data/dashboard-snapshots", () => ({
-  revalidateOpportunityDashboardTags: mocks.revalidateOpportunityDashboardTags,
-}))
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: mocks.createAdminClient,
-}))
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }))
-
-import { setOpportunityBroadDiscoveryVisibility } from "@/lib/actions/opportunities"
-
-const readyOpportunity = {
+const completeOpportunity = {
   status: "active" as const,
   is_demo: false,
   repreneur_exposure: "staff_only" as const,
@@ -34,108 +14,53 @@ const readyOpportunity = {
   location: "Occitanie",
 }
 
-describe("controlled Deal Flow publication", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mocks.requireStaffAccess.mockResolvedValue({ user: { id: "qa-staff" } })
-  })
-
-  it("requires a staff-reviewed active, non-DEMO anonymized teaser", () => {
-    expect(broadDiscoveryPublicationState(readyOpportunity)).toEqual({ mode: "publish" })
-    expect(
-      broadDiscoveryPublicationState({ ...readyOpportunity, repreneur_exposure: "anonymized" }),
-    ).toEqual({ mode: "remove" })
-    expect(
-      broadDiscoveryPublicationState({ ...readyOpportunity, is_demo: true }),
-    ).toEqual({ mode: "unavailable" })
-    expect(
-      broadDiscoveryPublicationState({ ...readyOpportunity, status: "draft" }),
-    ).toEqual({ mode: "unavailable" })
-    expect(
-      broadDiscoveryPublicationState({ ...readyOpportunity, repreneur_exposure: "repreneur_visible" }),
-    ).toEqual({ mode: "unavailable" })
-  })
-
-  it("names the reader-facing fields a staff member must complete", () => {
-    expect(
-      missingBroadDiscoveryReaderFields({
-        ...readyOpportunity,
-        public_title: " ",
-        teaser_summary: null,
-        sector: null,
-        location: "",
-      }),
-    ).toEqual(["title", "teaser", "sector", "location"])
-  })
-
-  it("calls the guarded RPC only for the matching current state", async () => {
-    const maybeSingle = vi.fn().mockResolvedValue({ data: readyOpportunity, error: null })
-    const eq = vi.fn().mockReturnValue({ maybeSingle })
-    const select = vi.fn().mockReturnValue({ eq })
-    const from = vi.fn().mockReturnValue({ select })
-    const rpc = vi.fn().mockResolvedValue({ data: { id: "opportunity-1" }, error: null })
-    mocks.createAdminClient.mockReturnValue({ from, rpc })
-
-    await expect(
-      setOpportunityBroadDiscoveryVisibility("opportunity-1", true),
-    ).resolves.toMatchObject({ success: true })
-
-    expect(mocks.requireStaffAccess).toHaveBeenCalled()
-    expect(rpc).toHaveBeenCalledWith("set_opportunity_broad_discovery_visibility", {
-      p_opportunity_id: "opportunity-1",
-      p_visible: true,
-      p_actor: "qa-staff",
+describe("lifecycle-derived Deal Flow publication", () => {
+  it("uses lifecycle as the publication control in both namespaces", () => {
+    expect(broadDiscoveryPublicationState(completeOpportunity)).toEqual({
+      mode: "visible",
+      namespace: "REAL",
+      missingFields: [],
     })
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/portal/deals")
+    expect(
+      broadDiscoveryPublicationState({ ...completeOpportunity, is_demo: true }),
+    ).toMatchObject({ mode: "visible", namespace: "DEMO" })
+    expect(
+      broadDiscoveryPublicationState({ ...completeOpportunity, status: "draft" }),
+    ).toMatchObject({ mode: "hidden", namespace: "REAL" })
+    expect(
+      broadDiscoveryPublicationState({ ...completeOpportunity, status: "paused" }),
+    ).toMatchObject({ mode: "hidden", namespace: "REAL" })
   })
 
-  it("does not mutate a legacy visibility state or incomplete opportunity", async () => {
-    const maybeSingle = vi.fn().mockResolvedValue({
-      data: { ...readyOpportunity, repreneur_exposure: "repreneur_visible" },
-      error: null,
-    })
-    const eq = vi.fn().mockReturnValue({ maybeSingle })
-    const select = vi.fn().mockReturnValue({ eq })
-    const from = vi.fn().mockReturnValue({ select })
-    const rpc = vi.fn()
-    mocks.createAdminClient.mockReturnValue({ from, rpc })
+  it("treats missing reader-facing fields as warnings, never publication blockers", () => {
+    const incomplete = {
+      ...completeOpportunity,
+      public_title: " ",
+      teaser_summary: null,
+      sector: null,
+      location: "",
+    }
 
-    await expect(
-      setOpportunityBroadDiscoveryVisibility("opportunity-1", false),
-    ).resolves.toMatchObject({ success: false })
-    expect(rpc).not.toHaveBeenCalled()
+    expect(missingBroadDiscoveryReaderFields(incomplete)).toEqual([
+      "title",
+      "teaser",
+      "sector",
+      "location",
+    ])
+    expect(broadDiscoveryPublicationState(incomplete)).toMatchObject({
+      mode: "visible",
+      missingFields: ["title", "teaser", "sector", "location"],
+    })
   })
 
-  it("maps a guarded database rejection to a staff-readable response", async () => {
-    const maybeSingle = vi.fn().mockResolvedValue({ data: readyOpportunity, error: null })
-    const eq = vi.fn().mockReturnValue({ maybeSingle })
-    const select = vi.fn().mockReturnValue({ eq })
-    const from = vi.fn().mockReturnValue({ select })
-    const rpc = vi.fn().mockResolvedValue({
-      data: null,
-      error: {
-        code: "P0001",
-        message: "w021_publication_opportunity_not_eligible:teaser_summary_missing,primary_email_unusable",
-      },
-    })
-    mocks.createAdminClient.mockReturnValue({ from, rpc })
-
-    await expect(
-      setOpportunityBroadDiscoveryVisibility("opportunity-1", true),
-    ).resolves.toEqual({
-      success: false,
-      message: "This opportunity is not ready for Deal Flow. Add or correct an anonymized teaser, one valid primary contact with email, then try again.",
-    })
-    expect(mocks.revalidatePath).not.toHaveBeenCalled()
-  })
-
-  it("keeps the detail control explicit about anonymized exposure and retained history", async () => {
+  it("shows the lifecycle result without a second staff visibility control", async () => {
     const control = await import("node:fs/promises").then(({ readFile }) =>
       readFile("components/opportunities/opportunity-broad-discovery-control.tsx", "utf8"),
     )
 
-    expect(control).toContain("Make visible in Deal Flow")
-    expect(control).toContain("Only the anonymized teaser is exposed")
-    expect(control).toContain("Existing staff recommendations and pursuits are retained unchanged")
+    expect(control).toContain("Active lifecycle")
+    expect(control).toContain("warning, not a visibility blocker")
+    expect(control).not.toContain("Make visible in Deal Flow")
+    expect(control).not.toContain("setOpportunityBroadDiscoveryVisibility")
   })
 })

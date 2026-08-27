@@ -1,60 +1,57 @@
 # NDA PDF evidence validation
 
-## M2 decision
+## Current decision
 
-W-152 accepts a PDF as canonical NDA evidence only after server-side signature,
-envelope and structural validation. The maintained parser is Mozilla PDF.js,
-pinned exactly in `package.json` and configured without `eval` support.
+W-152 established deterministic PDF validation without claiming antivirus
+coverage. W-165 preserves that decision and makes the validator safe for valid
+PDFs up to and including 20 MiB through the private direct-upload protocol.
+No malware-scanning or quarantine vendor is selected in this release.
 
-No malware-scanning or quarantine vendor is selected, purchased or introduced
-in M2. The canonical PDR decision defers that vendor/cost choice to M3. The M2
-control is therefore deterministic PDF validation on both already-approved
-upload paths, not a claim of antivirus coverage.
+The canonical upload contract is
+[`private-direct-upload-contract.md`](./private-direct-upload-contract.md).
 
 ## Accepted path
 
-1. Existing role, pursuit ownership, Gate 1 and 4 MB checks run first.
-2. The browser MIME and extension must match the approved role.
-3. The server reads the already-bounded file and rejects a missing PDF header,
-   non-whitespace polyglot trailer, active-action names or embedded payload.
-4. PDF.js must parse a non-empty document with no more than 500 pages in a
-   dedicated Node worker. The parent enforces the shared three-second wall-clock
-   deadline by terminating that worker. Node `resourceLimits` constrain the
-   worker's V8 heap and stack, but not ArrayBuffers, native allocations or total
-   process memory; the 4 MB validator limit and Vercel function boundary remain
-   the outer memory controls.
-5. Document/page JavaScript, attachments and open actions are rejected.
-6. Only then may Storage upload and canonical evidence registration run.
+1. The intent service checks the exact actor, pursuit or opportunity, role,
+   filename, PDF MIME and declared size before issuing an exact private path.
+2. The browser uploads directly to private Storage. The object is untrusted and
+   has no canonical document row at this stage.
+3. Finalize downloads the exact object, proves its declared byte count and MIME
+   type, then computes SHA-256.
+4. The server rejects a missing PDF header, non-whitespace polyglot trailer,
+   active-action names, embedded payload, JavaScript, attachments or open
+   actions.
+5. PDF.js parses one to 500 pages in a dedicated Node worker with `eval`
+   disabled. The parent applies a size-scaled 5-to-15-second deadline and
+   terminates the worker on timeout. V8 limits are 160 MiB old generation,
+   32 MiB young generation and a 4 MiB stack.
+6. Only a successful validation may atomically register the canonical NDA
+   evidence. Failure first records durable exact-path cleanup and then attempts
+   private-object deletion.
 
-The parser never renders or executes the document and application code does not
-log document bytes, resettable URLs or parser exceptions containing content.
+The parser never renders or executes the document. Application logs contain no
+document bytes, filename, private path, signed capability or parser exception
+with customer content.
 
-## Evidence
+## Historical W-152 route
 
-Run with synthetic documents only:
+The W-152 4 MiB multipart action remains rollback-compatible and historically
+closed. It is not the current 20 MiB path. Its role, Gate and evidence rules are
+unchanged and it continues to fail closed.
+
+## Verification and rollback
+
+Run `pnpm verify`; the focused parser/action suites are:
 
 ```sh
 pnpm exec vitest run \
   lib/__tests__/pdf-evidence.test.ts \
   lib/__tests__/pdf-evidence-isolation.test.ts \
   lib/__tests__/pdf-evidence-actions.test.ts \
-  lib/__tests__/critical-operation-actions.test.ts
+  lib/__tests__/w165-private-upload.test.ts
 ```
 
-The action tests prove valid staff and portal PDFs reach Storage plus canonical
-registration. Wrong-signature, malformed, active, embedded and polyglot inputs
-are rejected; action-level negatives prove that rejection leaves no Storage
-object and no evidence record.
-
-## Production check and rollback
-
-After deployment, upload and download one synthetic inert PDF through each
-approved path, then remove the disposable evidence through the normal
-controlled cleanup path. No malicious fixture is sent to production and no
-customer document is used for verification.
-
-Rollback is application-only: restore the prior Vercel deployment or revert the
-W-152 commit. No schema or bucket-policy rollback is involved. A parser failure
-must fail closed; do not bypass validation to restore uploads. If normal PDFs
-show a compatibility issue, hold the upload and adjust the parser contract in a
-new reviewed candidate.
+Production verification uses synthetic inert PDFs only. A parser failure never
+authorizes bypass. Application rollback restores the previous deployment;
+finalized W-165 metadata and private files remain valid and must not be removed
+as part of that rollback.

@@ -10,6 +10,10 @@ import { WelcomeEmail } from "@/lib/email/templates/welcome"
 import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
+import {
+  claimPrivateIntakeUploads,
+  parsePrivateIntakeUploadHandle,
+} from "@/lib/private-upload-server"
 
 /**
  * Submit complete intake form v2
@@ -21,6 +25,14 @@ export async function submitIntakeV2(
   formData: IntakeV2FormData
 ): Promise<IntakeV2SubmissionResult> {
   try {
+    const cvUpload=parsePrivateIntakeUploadHandle(formData.cv_url)
+    const ldcUpload=parsePrivateIntakeUploadHandle(formData.q18_investment_thesis_url)
+    if (formData.cv_url?.startsWith("w165-intake:") && !cvUpload) {
+      return { success: false, error: "Le CV téléversé n’est plus valide. Veuillez le sélectionner à nouveau." }
+    }
+    if (formData.q18_investment_thesis_url?.startsWith("w165-intake:") && !ldcUpload) {
+      return { success: false, error: "La lettre de cadrage téléversée n’est plus valide. Veuillez la sélectionner à nouveau." }
+    }
     const targetSectors = canonicalSectorSelections(formData.q13_target_sectors_v2, false)
     if (targetSectors.length === 0) {
       return { success: false, error: "Sélectionnez au moins un secteur cible." }
@@ -78,8 +90,10 @@ export async function submitIntakeV2(
       last_name: formData.last_name.trim(),
       email: formData.email.toLowerCase().trim(),
       phone: formData.phone.trim(),
-      cv_url: formData.cv_url,
-      ldc_url: formData.q18_investment_thesis_url || null,
+      // W-165 intake handles are claimed after the row exists. Legacy private
+      // paths remain accepted for already-open drafts during the cutover.
+      cv_url: cvUpload ? null : formData.cv_url,
+      ldc_url: ldcUpload ? null : formData.q18_investment_thesis_url || null,
       linkedin_url: formData.linkedin_url?.trim() || null,
 
       // WHO answers (Q05-Q10)
@@ -140,6 +154,17 @@ export async function submitIntakeV2(
         return { success: false, error: "Cette adresse email est déjà enregistrée." }
       }
       return { success: false, error: "Erreur lors de l'enregistrement. Veuillez réessayer." }
+    }
+
+    if (cvUpload || ldcUpload) {
+      try {
+        await claimPrivateIntakeUploads(repreneur.id,cvUpload,ldcUpload)
+      } catch (claimError) {
+        const {error:rollbackError}=await supabase.from("repreneurs").delete().eq("id",repreneur.id)
+        if (rollbackError) console.error("W-165 intake claim compensation failed",rollbackError)
+        console.error("W-165 intake document claim failed",claimError)
+        return { success: false, error: "Le document téléversé n’est plus valide. Veuillez le sélectionner à nouveau." }
+      }
     }
 
     // Revalidate relevant paths

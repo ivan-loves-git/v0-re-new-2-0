@@ -323,7 +323,7 @@ describe("current pursuit reads", () => {
     expect(serialized).not.toContain("entries")
   })
 
-  it("denies DEMO pursuits to portal and staff preview while retaining the staff workspace", async () => {
+  it("allows DEMO-to-DEMO pursuits in both portal and staff preview", async () => {
     const demoMatch = {
       data: {
         id: "match-1",
@@ -331,6 +331,7 @@ describe("current pursuit reads", () => {
         repreneur_id: "repreneur-1",
         status: "active_pursuit",
         opportunity: { status: "active", is_demo: true },
+        repreneur: { is_demo: true },
       },
       error: null,
     }
@@ -339,18 +340,14 @@ describe("current pursuit reads", () => {
     await expect(readPortalCurrentPursuit({
       matchId: "match-1",
       viewer: { kind: "portal" },
-    })).resolves.toBeNull()
-    expect(portal.from.mock.calls.map(([table]) => table)).toEqual([
-      "opportunity_matches",
-      "wave_journey_settings",
-    ])
-    expect(portal.rpc).not.toHaveBeenCalled()
+    })).resolves.toMatchObject({ matchId: "match-1" })
+    expect(portal.rpc).toHaveBeenCalled()
 
     setupCurrentPursuit({ match: demoMatch })
     await expect(readPortalCurrentPursuit({
       matchId: "match-1",
       viewer: { kind: "staff-preview", repreneurId: "repreneur-1" },
-    })).resolves.toBeNull()
+    })).resolves.toMatchObject({ matchId: "match-1" })
 
     setupCurrentPursuit({ match: demoMatch })
     await expect(readStaffCurrentPursuit("match-1")).resolves.toMatchObject({
@@ -360,7 +357,7 @@ describe("current pursuit reads", () => {
     })
   })
 
-  it("denies a demo repreneur only to the real portal while retaining staff preview and staff history", async () => {
+  it("freezes a historical REAL-to-DEMO pursuit out of both portal surfaces while retaining staff history", async () => {
     const demoRepreneurMatch = {
       data: {
         id: "match-1",
@@ -383,7 +380,7 @@ describe("current pursuit reads", () => {
     await expect(readPortalCurrentPursuit({
       matchId: "match-1",
       viewer: { kind: "staff-preview", repreneurId: "repreneur-1" },
-    })).resolves.toMatchObject({ matchId: "match-1" })
+    })).resolves.toBeNull()
 
     setupCurrentPursuit({ match: demoRepreneurMatch })
     await expect(readStaffCurrentPursuit("match-1")).resolves.toMatchObject({
@@ -418,6 +415,7 @@ describe("current pursuit reads", () => {
             repreneur_id: "repreneur-1",
             status: "dropped",
             opportunity: { status: "active", is_demo: false },
+            repreneur: { is_demo: false },
           },
           error: null,
         },
@@ -433,6 +431,7 @@ describe("current pursuit reads", () => {
             repreneur_id: "repreneur-1",
             status: "active_pursuit",
             opportunity: { status: "paused", is_demo: false },
+            repreneur: { is_demo: false },
           },
           error: null,
         },
@@ -523,13 +522,17 @@ describe("resolvePortalPursuitResource", () => {
     mocks.requireStaffAccess.mockResolvedValue({ role: "staff" })
   })
 
-  function resourceClient(rpc: ReturnType<typeof vi.fn>, isDemo = false) {
+  function resourceClient(rpc: ReturnType<typeof vi.fn>, crossNamespace = false) {
     const match = {
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           eq: vi.fn(() => ({
             maybeSingle: vi.fn().mockResolvedValue({
-              data: isDemo ? null : { id: "match-1" },
+              data: {
+                id: "match-1",
+                opportunity: { is_demo: false },
+                repreneur: { is_demo: crossNamespace },
+              },
               error: null,
             }),
           })),
@@ -647,7 +650,7 @@ describe("resolvePortalPursuitResource", () => {
     })).resolves.toBeNull()
   })
 
-  it("denies a demo repreneur's actual portal resource request before an NDA or memo resolver runs", async () => {
+  it("denies a historical cross-namespace portal resource request before an NDA or memo resolver runs", async () => {
     const rpc = vi.fn()
     mocks.createAdminClient.mockReturnValue(resourceClient(rpc, true))
 

@@ -99,6 +99,13 @@ describe("operational stale tabs and retried staff actions", () => {
         })
         return { select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })) }
       }
+      if (table === "opportunities") {
+        const maybeSingle = vi.fn().mockResolvedValue({
+          data: { id: "opportunity-1", is_demo: false },
+          error: null,
+        })
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })) }
+      }
       if (table === "app_user_roles") {
         const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
         const not = vi.fn(() => ({ maybeSingle }))

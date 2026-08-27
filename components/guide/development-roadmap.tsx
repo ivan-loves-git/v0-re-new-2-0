@@ -25,6 +25,29 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 27, 2026",
+    version: "0.9.59",
+    title: "Lifecycle-led Deal Flow and private 20 MiB uploads",
+    isCompleted: true,
+    events: [
+      {
+        title: "Lifecycle now controls Deal Flow",
+        type: "decision",
+        description: "An Active opportunity is visible inside its REAL or DEMO namespace. Draft, paused, archived and closed opportunities are hidden; incomplete fields remain staff warnings rather than publication blockers.",
+      },
+      {
+        title: "REAL and DEMO work remains isolated",
+        type: "feature",
+        description: "Matching, recommendations, pursuits, documents, portal actions and production reporting now enforce REAL-to-REAL and DEMO-to-DEMO relationships only.",
+      },
+      {
+        title: "Private document uploads support 20 MiB",
+        type: "feature",
+        description: "Document workflows upload directly to private storage through a short-lived authorized intent, then validate and register the exact file before it becomes usable.",
+      },
+    ],
+  },
+  {
     period: "Aug 25, 2026",
     version: "0.9.58",
     title: "Staff controls when an opportunity enters Deal Flow",

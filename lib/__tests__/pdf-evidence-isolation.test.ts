@@ -49,7 +49,7 @@ describe("W-152 PDF parser isolation", () => {
       const validation = expect(
         assertSafePdfEvidence(new Uint8Array([0x25, 0x50, 0x44, 0x46])),
       ).rejects.toThrow("NDA PDF validation timed out");
-      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(5_500);
 
       await validation;
       expect(mocks.terminate).toHaveBeenCalledOnce();
@@ -64,8 +64,8 @@ describe("W-152 PDF parser isolation", () => {
           ),
         },
         resourceLimits: {
-          maxOldGenerationSizeMb: 64,
-          maxYoungGenerationSizeMb: 16,
+          maxOldGenerationSizeMb: 160,
+          maxYoungGenerationSizeMb: 32,
           stackSizeMb: 4,
         },
       });
@@ -79,10 +79,19 @@ describe("W-152 PDF parser isolation", () => {
     }
   });
 
-  it("rejects a 4 MB plus one byte input before creating a worker", async () => {
+  it("accepts the exact 20 MiB boundary before handing it to the isolated worker", async () => {
+    const validation = assertSafePdfEvidence(new Uint8Array(20 * 1024 * 1024));
+    mocks.handlers.get("message")?.({ ok: true });
+
+    await expect(validation).resolves.toBeUndefined();
+    expect(mocks.constructed).toHaveBeenCalledOnce();
+    expect(mocks.postMessage).toHaveBeenCalledOnce();
+  });
+
+  it("rejects 20 MiB plus one byte before creating a worker", async () => {
     await expect(
-      assertSafePdfEvidence(new Uint8Array(4 * 1024 * 1024 + 1)),
-    ).rejects.toThrow("must not exceed 4 MB");
+      assertSafePdfEvidence(new Uint8Array(20 * 1024 * 1024 + 1)),
+    ).rejects.toThrow("must not exceed 20 MiB");
     expect(mocks.constructed).not.toHaveBeenCalled();
     expect(mocks.postMessage).not.toHaveBeenCalled();
   });

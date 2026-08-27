@@ -25,6 +25,7 @@ import {
   CV_LDC_MAX_FILE_BYTES,
   CV_LDC_MAX_FILE_LABEL,
 } from "@/lib/upload-limits"
+import { uploadPrivateDocument } from "@/lib/private-upload"
 import {
   canonicalTargetThesisValues,
   legacyTargetThesisValues,
@@ -403,15 +404,11 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
 
     setIsUploading(true)
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("repreneurId", repreneur.id)
-      formData.append("documentType", "ldc")
-      const response = await fetch("/api/upload-cv", { method: "POST", body: formData })
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null)
-        throw new Error(payload?.error || "Could not upload your Lettre de cadrage.")
-      }
+      await uploadPrivateDocument(file, {
+        kind: "repreneur_document",
+        resourceId: repreneur.id,
+        metadata: { document_type: "ldc" },
+      })
       toast.success("Lettre de cadrage added and certified as current.")
       router.refresh()
     } catch (error) {

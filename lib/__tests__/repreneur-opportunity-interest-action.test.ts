@@ -40,9 +40,7 @@ function mockSuccessfulInterestUpdates(
     });
   }
 
-  const selectForDemoRepreneur = vi.fn(() => ({ maybeSingle }));
-  const selectForDemoOpportunity = vi.fn(() => ({ eq: selectForDemoRepreneur }));
-  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemoOpportunity }));
+  const selectForRepreneur = vi.fn(() => ({ maybeSingle }));
   const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }));
   const select = vi.fn(() => ({ eq: selectForMatch }));
 
@@ -129,7 +127,7 @@ describe("repreneur opportunity interest response", () => {
     expect(mocks.redirect).toHaveBeenCalledWith("/portal/deals");
   });
 
-  it("blocks a DEMO-classified opportunity before the response RPC", async () => {
+  it("blocks a REAL repreneur from a DEMO opportunity before the response RPC", async () => {
     const maybeSingle = vi.fn().mockResolvedValue({
       data: {
         id: MATCH_ID,
@@ -140,9 +138,7 @@ describe("repreneur opportunity interest response", () => {
       },
       error: null,
     });
-    const eqForDemoRepreneur = vi.fn(() => ({ maybeSingle }));
-    const eqForDemoOpportunity = vi.fn(() => ({ eq: eqForDemoRepreneur }));
-    const eqForRepreneur = vi.fn(() => ({ eq: eqForDemoOpportunity }));
+    const eqForRepreneur = vi.fn(() => ({ maybeSingle }));
     const eqForMatch = vi.fn(() => ({ eq: eqForRepreneur }));
     const select = vi.fn(() => ({ eq: eqForMatch }));
     const rpc = vi.fn();

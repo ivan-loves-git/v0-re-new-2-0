@@ -130,7 +130,7 @@ describe("repreneur portal profile scope", () => {
     expect(opportunityDetail).toContain("(opportunity.match_status || canExpressUnassignedInterest) ? <Card>")
   })
 
-  it("resolves proposed deal details only through the current repreneur's owned match", () => {
+  it("resolves deal details through an owned match or the namespace-safe live inventory", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const detailGetter = portalOpportunities.slice(
       portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
@@ -143,13 +143,14 @@ describe("repreneur portal profile scope", () => {
     expect(detailGetter).toContain('.eq("repreneur_id", repreneur.id)')
     expect(detailGetter).toContain('.in("status", VISIBLE_MATCH_STATUSES)')
     expect(detailGetter).toContain("if (matchResult.error) throw new Error(matchResult.error.message)")
-    expect(detailGetter).toContain("const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null")
+    expect(detailGetter).toContain("const exposure = matchResult.data ? normalizeExposure(matchResult.data, repreneur) : null")
+    expect(detailGetter).toContain('supabase.rpc("w164_repreneur_live_inventory"')
     expect(detailPage).toContain("const opportunity = await getMyRepreneurOpportunity(matchId)")
     expect(detailPage).toContain("if (!opportunity)")
     expect(detailPage).toContain("notFound()")
   })
 
-  it("keeps a staff-only opportunity out of broad discovery while its exact proposed match remains visible to its owner", () => {
+  it("ignores the legacy exposure value and uses lifecycle plus namespace authority", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const normalizeExposureSource = portalOpportunities.slice(
       portalOpportunities.indexOf("function normalizeExposure"),
@@ -165,13 +166,13 @@ describe("repreneur portal profile scope", () => {
     )
 
     expect(normalizeExposureSource).not.toContain('opportunity.repreneur_exposure === "staff_only"')
-    expect(normalizeExposureSource).toContain("current repreneur's exact")
-    expect(dealFlowGetter).toContain('.neq("repreneur_exposure", "staff_only")')
+    expect(dealFlowGetter).toContain('supabase.rpc("w164_repreneur_live_inventory"')
+    expect(dealFlowGetter).not.toContain('.neq("repreneur_exposure", "staff_only")')
     expect(detailGetter).toContain('.eq("repreneur_id", repreneur.id)')
-    expect(detailGetter).toContain('.neq("repreneur_exposure", "staff_only")')
+    expect(detailGetter).not.toContain('.neq("repreneur_exposure", "staff_only")')
   })
 
-  it("suppresses only automatic discovery when the shared thesis is incomplete", () => {
+  it("keeps neutral inventory visible while suppressing only personalized ranking for an incomplete thesis", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const dealFlowGetter = portalOpportunities.slice(
       portalOpportunities.indexOf("export async function listMyRepreneurDealFlow"),
@@ -188,8 +189,9 @@ describe("repreneur portal profile scope", () => {
     expect(dealFlowGetter).toContain("const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)")
     expect(dealFlowGetter).not.toContain("isAcceptedPaidMatchingClient")
     expect(dealFlowGetter).toContain("const automaticMatching = thesisCompleteness")
-    expect(dealFlowGetter).toContain("const liveDeals = automaticMatching.complete ?")
-    expect(detailGetter).toContain("if (!thesisCompleteness.complete) return null")
+    expect(dealFlowGetter).toContain("toNeutralDealFlowOpportunity(opportunity)")
+    expect(dealFlowGetter).not.toContain("const liveDeals = automaticMatching.complete ?")
+    expect(detailGetter).not.toContain("if (!thesisCompleteness.complete) return null")
     expect(dealsPage).toContain("Your current Re-New selections remain available")
     expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
   })
@@ -208,11 +210,10 @@ describe("repreneur portal profile scope", () => {
     for (const picker of [pickerByOpportunity, pickerByRepreneur]) {
       expect(picker).toContain('from("app_user_roles")')
       expect(picker).toContain("hasInvitedLinkedIdentity")
-      expect(picker).toContain("isEligibleForManualRecommendation")
       expect(picker).not.toContain("isAcceptedPaidMatchingClient")
-      expect(picker).not.toContain('"lifecycle_status"')
     }
-    expect(pickerByRepreneur).toContain('.eq("is_demo", false)')
+    expect(pickerByOpportunity).toContain("candidate.is_demo === opportunity.is_demo")
+    expect(pickerByRepreneur).toContain("opportunity.is_demo === repreneur.is_demo")
     expect(pickerByRepreneur).not.toContain('.neq("repreneur_exposure", "staff_only")')
   })
 
@@ -227,15 +228,15 @@ describe("repreneur portal profile scope", () => {
     expect(activeOwnerRead).toContain('.eq("repreneur.is_demo", false)')
   })
 
-  it("filters DEMO opportunity parents in PostgREST before portal and staff-preview normalization", () => {
+  it("filters opportunity parents to the current REAL or DEMO namespace before normalization", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
 
     expect((portalOpportunities.match(/opportunity:opportunities!inner\(/g) ?? [])).toHaveLength(3)
-    expect(portalOpportunities).toContain('.eq("opportunity.is_demo", false)')
+    expect(portalOpportunities).toContain('.eq("opportunity.is_demo", repreneur.is_demo === true)')
     expect(staffPreview).toContain("opportunity:opportunities!inner(")
-    expect(staffPreview).toContain('.eq("opportunity.is_demo", false)')
-    expect(staffPreview).toContain("isRepreneurEligibleOpportunity(opportunity)")
+    expect(staffPreview).toContain('.eq("opportunity.is_demo", repreneur.is_demo === true)')
+    expect(staffPreview).toContain("isOpportunityInRepreneurNamespace(opportunity, repreneur)")
   })
 
   it("keeps Staff Portal Preview aligned with exact staff-only and dropped portal history", () => {

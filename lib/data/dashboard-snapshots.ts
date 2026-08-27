@@ -3,6 +3,7 @@ import { connection } from "next/server"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { withStaffSourceReviewState } from "@/lib/data/provisional-source-review"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import type { Repreneur } from "@/lib/types/repreneur"
 import type {
   MaSource,
@@ -640,9 +641,16 @@ async function getCachedOpportunityWorkSurfaceSnapshot(): Promise<
 
   if (matchError) throw new Error(matchError.message)
 
+  const opportunityById = new Map(
+    opportunities.map((opportunity) => [opportunity.id, opportunity]),
+  )
   const matchesByOpportunity = new Map<string, OpportunityWorkSurfaceMatch[]>()
   for (const row of matchRows ?? []) {
     const match = normalizeWorkSurfaceMatch(row)
+    if (!isOpportunityInRepreneurNamespace(
+      opportunityById.get(match.opportunity_id),
+      match.repreneur,
+    )) continue
     const current = matchesByOpportunity.get(match.opportunity_id) ?? []
     current.push(match)
     matchesByOpportunity.set(match.opportunity_id, current)

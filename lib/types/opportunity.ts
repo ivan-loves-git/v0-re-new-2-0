@@ -378,7 +378,7 @@ export interface MaInteraction {
 export interface Opportunity {
   id: string
   reference: string
-  /** Staff-only quarantine flag. DEMO opportunities are never eligible for repreneur access. */
+  /** Staff-only namespace flag. DEMO opportunities pair only with DEMO repreneurs. */
   is_demo: boolean
   /** Canonical staff-only W-039 geography identity; literal location remains reader-facing. */
   geography_node_id?: string | null

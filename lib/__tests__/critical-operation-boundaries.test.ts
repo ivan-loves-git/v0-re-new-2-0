@@ -61,6 +61,7 @@ describe("W-113 critical operation boundaries", () => {
       "cron.interview_reminders",
       "cron.booking_reminders",
       "cron.stale_leads",
+      "cron.private_upload_cleanup",
     ]) {
       expect(cron).toContain(`startCriticalOperation("${operation}")`)
     }

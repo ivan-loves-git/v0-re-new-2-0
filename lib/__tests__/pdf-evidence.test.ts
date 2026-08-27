@@ -8,6 +8,15 @@ describe("W-152 PDF evidence validation", () => {
     await expect(assertSafePdfEvidence(syntheticPdfBytes())).resolves.toBeUndefined()
   })
 
+  it("accepts a structurally valid PDF at the exact 20 MiB boundary", async () => {
+    const base = syntheticPdfBytes()
+    const exactBoundary = new Uint8Array(20 * 1024 * 1024)
+    exactBoundary.fill(0x20)
+    exactBoundary.set(base)
+
+    await expect(assertSafePdfEvidence(exactBoundary)).resolves.toBeUndefined()
+  }, 20_000)
+
   it("rejects a document whose declared page count exceeds the parser bound", async () => {
     await expect(assertSafePdfEvidence(syntheticPdfBytes(501))).rejects.toThrow(
       "unsupported page count",

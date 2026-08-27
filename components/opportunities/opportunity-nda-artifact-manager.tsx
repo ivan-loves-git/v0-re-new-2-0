@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
-import { registerOpportunityNdaArtifact } from "@/lib/actions/opportunity-nda-artifacts"
+import { uploadPrivateDocument } from "@/lib/private-upload"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
 import {
@@ -45,7 +45,7 @@ const ARTIFACT_ROLES: ArtifactRoleDefinition[] = [
     defaultTitle: "Blank NDA template",
     acceptedFileLabel: "PDF or DOCX file",
     acceptedFileTypes: "application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx",
-    uploadHelp: "Upload one retained PDF or DOCX template. Files are limited to 4 MB.",
+    uploadHelp: "Upload one retained PDF or DOCX template. Files are limited to 20 MiB.",
   },
   {
     role: "renew_signed_copy",
@@ -54,7 +54,7 @@ const ARTIFACT_ROLES: ArtifactRoleDefinition[] = [
     defaultTitle: "NDA signed by Re-New",
     acceptedFileLabel: "PDF file",
     acceptedFileTypes: "application/pdf,.pdf",
-    uploadHelp: "Upload one retained PDF file. Files are limited to 4 MB.",
+    uploadHelp: "Upload one retained PDF file. Files are limited to 20 MiB.",
   },
   {
     role: "repreneur_signed_copy",
@@ -64,7 +64,7 @@ const ARTIFACT_ROLES: ArtifactRoleDefinition[] = [
     defaultTitle: "NDA signed by repreneur",
     acceptedFileLabel: "PDF file",
     acceptedFileTypes: "application/pdf,.pdf",
-    uploadHelp: "Upload one retained PDF file. Files are limited to 4 MB.",
+    uploadHelp: "Upload one retained PDF file. Files are limited to 20 MiB.",
   },
 ]
 
@@ -114,11 +114,20 @@ export function OpportunityNdaArtifactManager({
     setMessage(null)
     setFieldErrors((current) => ({ ...current, [role]: {} }))
     try {
-      const result = await registerOpportunityNdaArtifact(formData)
+      const result = await uploadPrivateDocument(file as File, {
+        kind: "staff_nda_artifact",
+        resourceId: opportunityId,
+        relatedId: role === "blank_template" ? null : activeMatchId,
+        metadata: {
+          artifact_role: role,
+          title: String(formData.get("title") ?? "").trim(),
+        },
+      })
+      const versionNumber = typeof result.versionNumber === "number" ? result.versionNumber : null
       setMessage({
         role,
         tone: "success",
-        text: result.versionNumber ? `Version ${result.versionNumber} recorded.` : "New version recorded.",
+        text: versionNumber ? `Version ${versionNumber} recorded.` : "New version recorded.",
       })
       router.refresh()
     } catch (error) {

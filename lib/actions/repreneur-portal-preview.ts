@@ -9,9 +9,12 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
-import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
+import {
+  safeRepreneurOpportunityTitle,
+  safeRepreneurTeaserSummary,
+} from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
-import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
@@ -40,6 +43,7 @@ interface PreviewRepreneurRow {
   last_name: string | null
   email: string | null
   lifecycle_status: string | null
+  is_demo: boolean
 }
 
 interface PreviewOpportunityRow {
@@ -85,6 +89,7 @@ interface PreviewOpportunityCountRow {
   opportunity: Pick<PreviewOpportunityRow, "is_demo" | "status">
     | Array<Pick<PreviewOpportunityRow, "is_demo" | "status">>
     | null
+  repreneur: { is_demo: boolean } | Array<{ is_demo: boolean }> | null
 }
 
 export interface StaffPortalPreviewOption {
@@ -94,6 +99,7 @@ export interface StaffPortalPreviewOption {
   lifecycleStatus: string | null
   hasPortalAccess: boolean
   visibleOpportunityCount: number
+  isDemo: boolean
 }
 
 function normalizeEmail(email: string | null | undefined) {
@@ -110,18 +116,21 @@ function normalizeProfile(row: PreviewRepreneurRow): RepreneurOpportunityProfile
     first_name: row.first_name ?? "",
     last_name: row.last_name ?? "",
     email: row.email ?? "",
+    is_demo: row.is_demo,
   }
 }
 
-function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunityExposure | null {
+function normalizeExposure(
+  row: PreviewOpportunityMatchRow,
+  repreneur: RepreneurOpportunityProfile,
+): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
-  if (!isRepreneurEligibleOpportunity(opportunity)) return null
+  if (!isOpportunityInRepreneurNamespace(opportunity, repreneur)) return null
   if (opportunity.status !== "active") return null
 
-  // Staff Portal Preview mirrors the exact owned-match projection. A
-  // staff_only opportunity is excluded from broad discovery, not from the
-  // intended repreneur's proposed or retained match history.
+  // Staff Portal Preview mirrors the exact owned-match projection inside the
+  // selected repreneur's REAL or DEMO namespace.
 
   return {
     match_id: row.id,
@@ -132,8 +141,8 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
     opportunity_id: opportunity.id,
-    reference: opportunity.reference,
-    public_title: opportunity.public_title,
+    reference: "Confidential opportunity",
+    public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
     teaser_summary: safeRepreneurTeaserSummary(
       opportunity.teaser_summary,
       opportunity.description,
@@ -164,7 +173,8 @@ function normalizeExposure(row: PreviewOpportunityMatchRow): RepreneurOpportunit
 
 async function getActivePursuitOwners(
   supabase: ReturnType<typeof createAdminClient>,
-  opportunityIds: string[]
+  opportunityIds: string[],
+  isDemo: boolean,
 ): Promise<Map<string, string>> {
   if (opportunityIds.length === 0) return new Map()
 
@@ -173,7 +183,7 @@ async function getActivePursuitOwners(
     .select("opportunity_id, repreneur_id, repreneur:repreneurs!inner(is_demo)")
     .in("opportunity_id", opportunityIds)
     .eq("status", "active_pursuit")
-    .eq("repreneur.is_demo", false)
+    .eq("repreneur.is_demo", isDemo)
 
   if (error) throw new Error(error.message)
   return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))
@@ -194,7 +204,7 @@ async function getRepreneurProfileById(
 ): Promise<RepreneurOpportunityProfile | null> {
   const { data, error } = await supabase
     .from("repreneurs")
-    .select("id, first_name, last_name, email, lifecycle_status")
+    .select("id, first_name, last_name, email, lifecycle_status, is_demo")
     .eq("id", repreneurId)
     .maybeSingle()
 
@@ -204,7 +214,7 @@ async function getRepreneurProfileById(
 
 async function listVisibleOpportunitiesForRepreneur(
   supabase: ReturnType<typeof createAdminClient>,
-  repreneurId: string,
+  repreneur: RepreneurOpportunityProfile,
   matchId?: string
 ) {
   let query = supabase
@@ -242,8 +252,8 @@ async function listVisibleOpportunitiesForRepreneur(
         date_added_precision
       )
     `)
-    .eq("repreneur_id", repreneurId)
-    .eq("opportunity.is_demo", false)
+    .eq("repreneur_id", repreneur.id)
+    .eq("opportunity.is_demo", repreneur.is_demo === true)
     .in("status", VISIBLE_MATCH_STATUSES)
     .order("updated_at", { ascending: false })
     .order("id", { ascending: true })
@@ -256,12 +266,13 @@ async function listVisibleOpportunitiesForRepreneur(
   if (error) throw new Error(error.message)
 
   const opportunities = (data ?? [])
-    .map((row) => normalizeExposure(row as PreviewOpportunityMatchRow))
+    .map((row) => normalizeExposure(row as PreviewOpportunityMatchRow, repreneur))
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
-    opportunities.map((opportunity) => opportunity.opportunity_id)
+    opportunities.map((opportunity) => opportunity.opportunity_id),
+    repreneur.is_demo === true,
   )
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
     supabase,
@@ -274,7 +285,7 @@ async function listVisibleOpportunitiesForRepreneur(
       ...interestStateByMatch.get(exposure.match_id),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
         exposure.opportunity_id,
-        repreneurId,
+        repreneur.id,
         activeOwnerByOpportunity,
       ),
       // Exact IM disclosure is intentionally resolved only by the canonical
@@ -290,7 +301,7 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
   const [repreneursResult, rolesResult, matchesResult] = await Promise.all([
     supabase
       .from("repreneurs")
-      .select("id, first_name, last_name, email, lifecycle_status")
+      .select("id, first_name, last_name, email, lifecycle_status, is_demo")
       .order("last_name", { ascending: true })
       .order("first_name", { ascending: true }),
     supabase
@@ -299,8 +310,7 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
       .eq("role", "repreneur"),
     supabase
       .from("opportunity_matches")
-      .select("repreneur_id, status, opportunity:opportunities!inner(is_demo,status)")
-      .eq("opportunity.is_demo", false)
+      .select("repreneur_id, status, opportunity:opportunities!inner(is_demo,status), repreneur:repreneurs!inner(is_demo)")
       .in("status", VISIBLE_MATCH_STATUSES),
   ])
 
@@ -317,7 +327,10 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
     const opportunity = Array.isArray(match.opportunity)
       ? match.opportunity[0]
       : match.opportunity
-    if (!opportunity || !isRepreneurEligibleOpportunity(opportunity)) continue
+    const repreneur = Array.isArray(match.repreneur)
+      ? match.repreneur[0]
+      : match.repreneur
+    if (!opportunity || !isOpportunityInRepreneurNamespace(opportunity, repreneur)) continue
     if (opportunity.status !== "active") continue
     visibleCountByRepreneur.set(match.repreneur_id, (visibleCountByRepreneur.get(match.repreneur_id) ?? 0) + 1)
   }
@@ -332,6 +345,7 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
       lifecycleStatus: repreneur.lifecycle_status,
       hasPortalAccess: roleRepreneurIds.has(repreneur.id) || Boolean(normalizedEmail && roleEmails.has(normalizedEmail)),
       visibleOpportunityCount: visibleCountByRepreneur.get(repreneur.id) ?? 0,
+      isDemo: repreneur.is_demo,
     }
   })
 }
@@ -364,7 +378,7 @@ export async function listStaffPortalPreviewOpportunities(repreneurId: string): 
 
   return {
     repreneur,
-    opportunities: await listVisibleOpportunitiesForRepreneur(supabase, repreneur.id),
+    opportunities: await listVisibleOpportunitiesForRepreneur(supabase, repreneur),
   }
 }
 
@@ -376,6 +390,8 @@ export async function getStaffPortalPreviewOpportunity(
   if (!isUuid(repreneurId) || !isUuid(matchId)) return null
 
   const supabase = createAdminClient()
-  const opportunities = await listVisibleOpportunitiesForRepreneur(supabase, repreneurId, matchId)
+  const repreneur = await getRepreneurProfileById(supabase, repreneurId)
+  if (!repreneur) return null
+  const opportunities = await listVisibleOpportunitiesForRepreneur(supabase, repreneur, matchId)
   return opportunities[0] ?? null
 }

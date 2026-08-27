@@ -122,3 +122,12 @@ export function safeRepreneurTeaserSummary(
     ? null
     : teaserSummary
 }
+
+export const REPRENEUR_OPPORTUNITY_PLACEHOLDER_TITLE =
+  "Confidential acquisition opportunity"
+
+export function safeRepreneurOpportunityTitle(
+  publicTitle: string | null | undefined,
+) {
+  return publicTitle?.trim() || REPRENEUR_OPPORTUNITY_PLACEHOLDER_TITLE
+}

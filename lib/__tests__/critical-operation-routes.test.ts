@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateSubject: vi.fn(),
   getTemplateBody: vi.fn(),
   deliverCronReminder: vi.fn(),
+  cleanupExpiredPrivateUploads: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -28,6 +29,9 @@ vi.mock("@/lib/email/cron-reminder-delivery", async (importOriginal) => {
     deliverCronReminder: mocks.deliverCronReminder,
   }
 })
+vi.mock("@/lib/private-upload-server", () => ({
+  cleanupExpiredPrivateUploads: mocks.cleanupExpiredPrivateUploads,
+}))
 vi.mock("@/lib/env", () => ({
   env: {
     CRON_SECRET: "test-cron-secret",
@@ -111,6 +115,12 @@ describe("critical route traces", () => {
           : { status: "failed" }
       },
     )
+    mocks.cleanupExpiredPrivateUploads.mockResolvedValue({
+      expiredIntentsExamined: 0,
+      expiredClaimsExamined: 0,
+      examined: 0,
+      cleaned: 0,
+    })
   })
 
   it("traces an accepted Resend webhook without copying provider payload data", async () => {
@@ -192,6 +202,7 @@ describe("critical route traces", () => {
       "cron.interview_reminders",
       "cron.booking_reminders",
       "cron.stale_leads",
+      "cron.private_upload_cleanup",
       "cron.abandoned_forms",
     ])
   })

@@ -46,10 +46,30 @@ describe("W-160 production reporting boundary", () => {
     expect(repreneurActions).toContain("demo_classification_updated_by")
   })
 
-  it("keeps DEMO records out of stored automatic score refreshes", () => {
+  it("refreshes scores only within the same REAL or DEMO namespace", () => {
     const refresh = source("lib/repreneur-match-refresh-core.ts")
-    expect(refresh).toContain("if ((repreneur as RepreneurMatchRecord).is_demo)")
-    expect(refresh).toContain("if (!opportunity || opportunity.is_demo)")
+    expect(refresh).toContain("const repreneurIsDemo = (repreneur as RepreneurMatchRecord).is_demo")
+    expect(refresh).toContain("opportunity.is_demo !== repreneurIsDemo")
+  })
+
+  it("removes historical cross-namespace matches from every staff operating reader", () => {
+    for (const file of [
+      "lib/actions/opportunities.ts",
+      "lib/data/dashboard-snapshots.ts",
+      "lib/actions/ma-workflows.ts",
+      "lib/actions/opportunity-matches.ts",
+      "lib/actions/opportunity-nda-artifacts.ts",
+      "app/(dashboard)/opportunities/[id]/nda-artifacts/[artifactId]/route.ts",
+    ]) {
+      expect(source(file)).toContain("isOpportunityInRepreneurNamespace")
+    }
+
+    const reminders = source("app/api/cron/abandoned-forms/route.ts")
+    const lockedInterest = source("lib/data/locked-opportunity-interest.ts")
+    for (const reader of [reminders, lockedInterest]) {
+      expect(reader).toContain('.eq("opportunity.is_demo", false)')
+      expect(reader).toContain('.eq("repreneur.is_demo", false)')
+    }
   })
 
   it("keeps document and NDA-related production counts coupled to the classified opportunity or match", () => {
@@ -69,13 +89,13 @@ describe("W-160 production reporting boundary", () => {
     expect(migration).toContain("w160_demo_repreneur_identity_mismatch")
   })
 
-  it("makes the database authority reject DEMO repreneurs across each portal mutation or confidential read", () => {
-    const migration = source("supabase/migrations/20260826170000_w160_demo_repreneur_reporting.sql")
-    expect(migration).toContain("w160_require_non_demo_repreneur")
+  it("makes the current database authority allow equal namespaces and reject cross-namespace access", () => {
+    const migration = source("supabase/migrations/20260827103000_w164_lifecycle_namespace_visibility.sql")
+    expect(migration).toContain("w164_match_has_same_namespace")
+    expect(migration).toContain("w164_cross_namespace_match_denied")
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.express_opportunity_interest")
-    expect(migration).toContain("'proposed','interested','declined','dropped','active_pursuit'")
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.update_repreneur_opportunity_response")
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.journey_submit_repreneur_signed_copy")
-    expect(migration).toContain("JOIN public.repreneurs r ON r.id=m.repreneur_id AND r.is_demo=FALSE")
+    expect(migration).toContain("opportunity.is_demo=v_repreneur_demo")
   })
 })

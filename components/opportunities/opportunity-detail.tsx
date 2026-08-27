@@ -89,9 +89,6 @@ interface OpportunityDetailProps {
   demoClassificationAction: (
     isDemo: boolean,
   ) => Promise<OpportunityActionResult>
-  broadDiscoveryVisibilityAction: (
-    visible: boolean,
-  ) => Promise<OpportunityActionResult>
   officeOptions: MaOfficeIntakeOffice[]
   geographyOptions: OpportunityGeographyOption[]
   geographyMandatesEnabled: boolean
@@ -155,7 +152,6 @@ export function OpportunityDetail({
   closureHistory,
   closeAction,
   demoClassificationAction,
-  broadDiscoveryVisibilityAction,
   officeOptions,
   geographyOptions,
   geographyMandatesEnabled,
@@ -247,7 +243,6 @@ export function OpportunityDetail({
         <div className="flex flex-wrap gap-2">
           <OpportunityBroadDiscoveryControl
             opportunity={opportunity}
-            action={broadDiscoveryVisibilityAction}
           />
           <OpportunityDemoControl
             isDemo={opportunity.is_demo}

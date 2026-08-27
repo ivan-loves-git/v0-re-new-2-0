@@ -4,7 +4,10 @@ import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
-import { safeRepreneurTeaserSummary } from "@/lib/opportunity-confidentiality"
+import {
+  safeRepreneurOpportunityTitle,
+  safeRepreneurTeaserSummary,
+} from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
@@ -13,7 +16,7 @@ import {
   withMatchingGeography,
   withMatchingGeographyTargets,
 } from "@/lib/repreneur-opportunity-geography"
-import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
@@ -65,7 +68,7 @@ type RepreneurDealFlowOpportunityRow = {
   reference: string
   public_title: string | null
   teaser_summary: string | null
-  description: string | null
+  description?: string | null
   sector: string | null
   activity: string | null
   location: string | null
@@ -89,10 +92,13 @@ function normalizeProfile(row: any): RepreneurOpportunityProfile {
   }
 }
 
-function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
+function normalizeExposure(
+  row: any,
+  repreneur: Pick<RepreneurOpportunityProfile, "is_demo">,
+): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
-  if (!isRepreneurEligibleOpportunity(opportunity)) return null
+  if (!isOpportunityInRepreneurNamespace(opportunity, repreneur)) return null
   if (opportunity.status !== "active") return null
 
   // This projection is reached only through the current repreneur's exact
@@ -109,8 +115,8 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
     opportunity_id: opportunity.id,
-    reference: opportunity.reference,
-    public_title: opportunity.public_title,
+    reference: "Confidential opportunity",
+    public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
     teaser_summary: safeRepreneurTeaserSummary(
       opportunity.teaser_summary,
       opportunity.description,
@@ -141,7 +147,8 @@ function normalizeExposure(row: any): RepreneurOpportunityExposure | null {
 
 async function getActivePursuitOwners(
   supabase: ReturnType<typeof createAdminClient>,
-  opportunityIds: string[]
+  opportunityIds: string[],
+  isDemo: boolean,
 ): Promise<Map<string, string>> {
   if (opportunityIds.length === 0) return new Map()
 
@@ -150,7 +157,7 @@ async function getActivePursuitOwners(
     .select("opportunity_id, repreneur_id, repreneur:repreneurs!inner(is_demo)")
     .in("opportunity_id", opportunityIds)
     .eq("status", "active_pursuit")
-    .eq("repreneur.is_demo", false)
+    .eq("repreneur.is_demo", isDemo)
 
   if (error) throw new Error(error.message)
   return new Map((data ?? []).map((row) => [row.opportunity_id, row.repreneur_id]))
@@ -267,12 +274,9 @@ function toDealFlowOpportunity(
     match_status: null,
     visible_documents: [],
     opportunity_id: opportunity.id,
-    reference: opportunity.reference,
-    public_title: opportunity.public_title,
-    teaser_summary: safeRepreneurTeaserSummary(
-      opportunity.teaser_summary,
-      opportunity.description,
-    ),
+    reference: "Confidential opportunity",
+    public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
+    teaser_summary: opportunity.teaser_summary,
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -290,6 +294,37 @@ function toDealFlowOpportunity(
     is_outside_current_criteria: relevance.recommendation === "not_fit",
     relevance_grade: relevance.recommendation,
     relevance_score: relevance.score,
+  }
+}
+
+function toNeutralDealFlowOpportunity(
+  opportunity: RepreneurDealFlowOpportunityRow,
+): RepreneurDealFlowSortCandidate {
+  return {
+    match_id: null,
+    match_status: null,
+    visible_documents: [],
+    opportunity_id: opportunity.id,
+    reference: "Confidential opportunity",
+    public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
+    teaser_summary: opportunity.teaser_summary,
+    sector: opportunity.sector,
+    activity: opportunity.activity,
+    location: opportunity.location,
+    revenue_meur: opportunity.revenue_meur,
+    ebitda_keur: opportunity.ebitda_keur,
+    headcount: opportunity.headcount,
+    headcount_range: opportunity.headcount_range,
+    date_added: opportunity.date_added,
+    date_added_display: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+    ),
+    updated_at: opportunity.updated_at,
+    is_staff_recommended: false,
+    is_outside_current_criteria: false,
+    relevance_grade: "not_evaluated",
+    relevance_score: 0,
   }
 }
 
@@ -333,7 +368,6 @@ export async function listMyRepreneurOpportunities(): Promise<{
 }> {
   const repreneur = await getCurrentRepreneurProfile()
   if (!repreneur) return { repreneur: null, opportunities: [] }
-  if (repreneur.is_demo) return { repreneur, opportunities: [] }
 
   const supabase = createAdminClient()
   const { data, error } = await supabase
@@ -372,7 +406,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       )
     `)
     .eq("repreneur_id", repreneur.id)
-    .eq("opportunity.is_demo", false)
+    .eq("opportunity.is_demo", repreneur.is_demo === true)
     .in("status", VISIBLE_MATCH_STATUSES)
     .order("updated_at", { ascending: false })
     .order("id", { ascending: true })
@@ -380,12 +414,13 @@ export async function listMyRepreneurOpportunities(): Promise<{
   if (error) throw new Error(error.message)
 
   const opportunities = (data ?? [])
-    .map(normalizeExposure)
+    .map((row) => normalizeExposure(row, repreneur))
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
-    opportunities.map((opportunity) => opportunity.opportunity_id)
+    opportunities.map((opportunity) => opportunity.opportunity_id),
+    repreneur.is_demo === true,
   )
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
     supabase,
@@ -423,16 +458,6 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
 }> {
   const repreneur = await getCurrentRepreneurDealFlowProfile()
   if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] }, demoProfile: false }
-  if (repreneur.is_demo) {
-    return {
-      repreneur,
-      staffRecommended: [],
-      dealFlow: [],
-      deals: [],
-      automaticMatching: { complete: false, missing: [] },
-      demoProfile: true,
-    }
-  }
 
   const supabase = createAdminClient()
   const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
@@ -477,52 +502,28 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
         )
       `)
       .eq("repreneur_id", repreneur.id)
-      .eq("opportunity.is_demo", false)
+      .eq("opportunity.is_demo", repreneur.is_demo === true)
       .in("status", VISIBLE_MATCH_STATUSES)
       .order("updated_at", { ascending: false })
       .order("id", { ascending: true }),
-    automaticMatching.complete && supabase
-      .from("opportunities")
-      .select(`
-        id,
-        is_demo,
-        reference,
-        status,
-        repreneur_exposure,
-        public_title,
-        teaser_summary,
-        description,
-        sector,
-        activity,
-        location,
-        revenue_meur,
-        ebitda_keur,
-        headcount,
-        geography_node_id,
-        headcount_range,
-        date_added,
-        date_added_precision,
-        updated_at
-      `)
-      .eq("status", "active")
-      .eq("is_demo", false)
-      .neq("repreneur_exposure", "staff_only"),
+    supabase.rpc("w164_repreneur_live_inventory", {
+      p_repreneur_id: repreneur.id,
+      p_opportunity_id: null,
+    }),
   ])
 
   if (matchesResult.error) throw new Error(matchesResult.error.message)
   if (opportunitiesResult && opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
 
   const matchedOpportunities = (matchesResult.data ?? [])
-    .map(normalizeExposure)
+    .map((row) => normalizeExposure(row, repreneur))
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
-  const allOpportunities = opportunitiesResult
-    ? (opportunitiesResult.data ?? []).filter(isRepreneurEligibleOpportunity)
-    : []
+  const allOpportunities = ((opportunitiesResult.data ?? []) as RepreneurDealFlowOpportunityRow[])
+    .filter((opportunity) => opportunity.is_demo === (repreneur.is_demo === true))
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
-    automaticMatching.complete
-      ? allOpportunities.map((opportunity) => opportunity.id)
-      : matchedOpportunities.map((opportunity) => opportunity.opportunity_id),
+    allOpportunities.map((opportunity) => opportunity.id),
+    repreneur.is_demo === true,
   )
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
     supabase,
@@ -551,25 +552,25 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   const geographyAwareRepreneur = geography
     ? withMatchingGeographyTargets(repreneur, geography)
     : repreneur
-  const liveDeals = automaticMatching.complete ? sortRepreneurDealFlow(
-
-    allOpportunities
+  const liveInventory = allOpportunities
       .filter((opportunity) => !statefulOpportunityIds.has(opportunity.id))
       .map((opportunity) => ({
-        ...toDealFlowOpportunity(
-          geography ? withMatchingGeography(opportunity, geography) : opportunity,
-          geographyAwareRepreneur,
-        ),
+        ...(automaticMatching.complete
+          ? toDealFlowOpportunity(
+              geography ? withMatchingGeography(opportunity, geography) : opportunity,
+              geographyAwareRepreneur,
+            )
+          : toNeutralDealFlowOpportunity(opportunity)),
         is_locked_for_other_repreneur: isLockedForOtherRepreneur(
           opportunity.id,
           repreneur.id,
           activeOwnerByOpportunity,
         ),
-      })),
-    sort,
-  ).map(withoutRelevanceScore)
+      }))
+  const liveDeals = sortRepreneurDealFlow(liveInventory, sort)
+    .map(withoutRelevanceScore)
     .map((opportunity) => withDealBucket(opportunity, true))
-    .filter(isDefined) : []
+    .filter(isDefined)
   const deals = [...statefulDeals, ...liveDeals]
   const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")
   const dealFlow = deals.filter((opportunity) => opportunity.deal_bucket !== "recommended")
@@ -580,7 +581,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     dealFlow,
     deals,
     automaticMatching,
-    demoProfile: false,
+    demoProfile: repreneur.is_demo === true,
   }
   const access = await requirePortalAccess()
   queueM2RepreneurEvent({
@@ -598,7 +599,7 @@ export async function getMyRepreneurOpportunity(
 ): Promise<RepreneurOpportunityExposure | RepreneurDealFlowOpportunity | null> {
   if (!isUuid(dealId)) return null
   const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur || repreneur.is_demo) return null
+  if (!repreneur) return null
 
   const supabase = createAdminClient()
   const [matchResult, opportunityResult] = await Promise.all([
@@ -639,57 +640,38 @@ export async function getMyRepreneurOpportunity(
       `)
       .eq("id", dealId)
       .eq("repreneur_id", repreneur.id)
-      .eq("opportunity.is_demo", false)
+      .eq("opportunity.is_demo", repreneur.is_demo === true)
       .in("status", VISIBLE_MATCH_STATUSES)
       .maybeSingle(),
-    supabase
-      .from("opportunities")
-      .select(`
-        id,
-        is_demo,
-        reference,
-        status,
-        repreneur_exposure,
-        public_title,
-        teaser_summary,
-        description,
-        sector,
-        activity,
-        location,
-        revenue_meur,
-        ebitda_keur,
-        headcount,
-        geography_node_id,
-        headcount_range,
-        date_added,
-        date_added_precision,
-        updated_at
-      `)
-      .eq("id", dealId)
-      .eq("status", "active")
-      .eq("is_demo", false)
-      .neq("repreneur_exposure", "staff_only")
-      .maybeSingle(),
+    supabase.rpc("w164_repreneur_live_inventory", {
+      p_repreneur_id: repreneur.id,
+      p_opportunity_id: dealId,
+    }),
   ])
 
   if (matchResult.error) throw new Error(matchResult.error.message)
   if (opportunityResult.error) throw new Error(opportunityResult.error.message)
-  const exposure = matchResult.data ? normalizeExposure(matchResult.data) : null
+  const exposure = matchResult.data ? normalizeExposure(matchResult.data, repreneur) : null
   if (!exposure) {
     const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
-    if (!thesisCompleteness.complete) return null
-    const opportunity = opportunityResult.data as RepreneurDealFlowOpportunityRow | null
-    if (!opportunity || !isRepreneurEligibleOpportunity(opportunity)) return null
+    const candidate = (opportunityResult.data?.[0] ?? null) as RepreneurDealFlowOpportunityRow | null
+    const opportunity = candidate?.is_demo === (repreneur.is_demo === true) ? candidate : null
+    if (!opportunity) return null
 
     const [activeOwnerByOpportunity, geography] = await Promise.all([
-      getActivePursuitOwners(supabase, [opportunity.id]),
-      loadMatchingGeographyContext(supabase, [repreneur.id]),
+      getActivePursuitOwners(supabase, [opportunity.id], repreneur.is_demo === true),
+      thesisCompleteness.complete
+        ? loadMatchingGeographyContext(supabase, [repreneur.id])
+        : Promise.resolve(null),
     ])
+    const neutralOrRanked = thesisCompleteness.complete && geography
+      ? toDealFlowOpportunity(
+          withMatchingGeography(opportunity, geography),
+          withMatchingGeographyTargets(repreneur, geography),
+        )
+      : toNeutralDealFlowOpportunity(opportunity)
     const result = withoutRelevanceScore({
-      ...toDealFlowOpportunity(
-        withMatchingGeography(opportunity, geography),
-        withMatchingGeographyTargets(repreneur, geography),
-      ),
+      ...neutralOrRanked,
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
         opportunity.id,
         repreneur.id,
@@ -707,7 +689,11 @@ export async function getMyRepreneurOpportunity(
     return result
   }
 
-  const activeOwnerByOpportunity = await getActivePursuitOwners(supabase, [exposure.opportunity_id])
+  const activeOwnerByOpportunity = await getActivePursuitOwners(
+    supabase,
+    [exposure.opportunity_id],
+    repreneur.is_demo === true,
+  )
 
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(supabase, [exposure.match_id])
   const result = {

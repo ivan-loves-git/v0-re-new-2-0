@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   responses: new Map<string, Array<{ data: unknown; error: null }>>(),
   from: vi.fn(),
+  rpc: vi.fn(),
   access: vi.fn(async () => ({
     user: { id: "qa-auth-user", email: "qa@example.invalid" },
     repreneurId: "repreneur-qa",
@@ -31,6 +32,11 @@ vi.mock("@/lib/supabase/admin", () => ({
         Promise.resolve(response).then(resolve, reject)
       return builder
     }),
+    rpc: mocks.rpc.mockImplementation((name: string) => {
+      const response = mocks.responses.get(`rpc:${name}`)?.shift()
+      if (!response) throw new Error(`Missing ${name} RPC test response`)
+      return Promise.resolve(response)
+    }),
   }),
 }))
 
@@ -41,6 +47,7 @@ import {
 
 const incompleteProfile = {
   id: "repreneur-qa",
+  is_demo: false,
   first_name: "QA",
   last_name: "Repreneur",
   email: "qa@example.invalid",
@@ -125,13 +132,14 @@ describe("incomplete-thesis portal behavior", () => {
     mocks.responses = new Map()
   })
 
-  it("keeps staff selections while returning no automatic deal flow without loading or scoring the global inventory", async () => {
+  it("keeps staff selections and neutral live inventory when the thesis is incomplete", async () => {
     setResponses({
       repreneurs: [{ data: incompleteProfile, error: null }],
       opportunity_matches: [
         { data: [staffMatch], error: null },
         { data: [], error: null },
       ],
+      "rpc:w164_repreneur_live_inventory": [{ data: [opportunity], error: null }],
     })
 
     const result = await listMyRepreneurDealFlow("relevance")
@@ -139,8 +147,12 @@ describe("incomplete-thesis portal behavior", () => {
     expect(result.automaticMatching.complete).toBe(false)
     expect(result.staffRecommended).toHaveLength(1)
     expect(result.staffRecommended[0]?.opportunity_id).toBe("opportunity-staff")
-    expect(result.dealFlow).toEqual([])
-    expect(mocks.from.mock.calls.map(([table]) => table)).not.toContain("opportunities")
+    expect(result.dealFlow.map((item) => item.opportunity_id)).toEqual(["opportunity-auto"])
+    expect(result.dealFlow[0]?.relevance_grade).toBe("not_evaluated")
+    expect(mocks.rpc).toHaveBeenCalledWith("w164_repreneur_live_inventory", {
+      p_repreneur_id: "repreneur-qa",
+      p_opportunity_id: null,
+    })
   })
 
   it("keeps automatic matching available for a complete thesis", async () => {
@@ -151,7 +163,7 @@ describe("incomplete-thesis portal behavior", () => {
         { data: [], error: null },
         { data: [], error: null },
       ],
-      opportunities: [{ data: [opportunity], error: null }],
+      "rpc:w164_repreneur_live_inventory": [{ data: [opportunity], error: null }],
       geography_nodes: [{ data: [], error: null }],
       repreneur_geography_targets: [{ data: [], error: null }],
     })
@@ -161,7 +173,7 @@ describe("incomplete-thesis portal behavior", () => {
     expect(result.automaticMatching.complete).toBe(true)
     expect(result.staffRecommended.map((item) => item.opportunity_id)).toEqual(["opportunity-staff"])
     expect(result.dealFlow.map((item) => item.opportunity_id)).toEqual(["opportunity-auto"])
-    expect(mocks.from.mock.calls.map(([table]) => table)).toContain("opportunities")
+    expect(mocks.rpc).toHaveBeenCalled()
   })
 
   it("keeps automatic deal flow available to an invited portal repreneur without a paid offer", async () => {
@@ -172,7 +184,7 @@ describe("incomplete-thesis portal behavior", () => {
         { data: [], error: null },
         { data: [], error: null },
       ],
-      opportunities: [{ data: [opportunity], error: null }],
+      "rpc:w164_repreneur_live_inventory": [{ data: [opportunity], error: null }],
       geography_nodes: [{ data: [], error: null }],
       repreneur_geography_targets: [{ data: [], error: null }],
     })
@@ -197,7 +209,7 @@ describe("incomplete-thesis portal behavior", () => {
         { data: matches, error: null },
         { data: [], error: null },
       ],
-      opportunities: [{ data: [{ ...opportunity, id: "opportunity-live" }, ...matches.map((match) => match.opportunity)], error: null }],
+      "rpc:w164_repreneur_live_inventory": [{ data: [{ ...opportunity, id: "opportunity-live" }, ...matches.map((match) => match.opportunity)], error: null }],
       geography_nodes: [{ data: [], error: null }],
       repreneur_geography_targets: [{ data: [], error: null }],
     })
@@ -229,7 +241,7 @@ describe("incomplete-thesis portal behavior", () => {
         }],
         error: null,
       }],
-      opportunities: [{
+      "rpc:w164_repreneur_live_inventory": [{
         data: [{
           ...opportunity,
           id: "opportunity-demo-auto",
@@ -247,25 +259,33 @@ describe("incomplete-thesis portal behavior", () => {
     expect(result.dealFlow).toEqual([])
   })
 
-  it("blocks a direct unassigned deal lookup", async () => {
+  it("allows a direct lookup for an active same-namespace inventory deal", async () => {
+    const opportunityId = "00000000-0000-4000-8000-000000000001"
     setResponses({
       repreneurs: [{ data: incompleteProfile, error: null }],
-      opportunity_matches: [{ data: null, error: null }],
-      opportunities: [{ data: opportunity, error: null }],
+      opportunity_matches: [
+        { data: null, error: null },
+        { data: [], error: null },
+      ],
+      "rpc:w164_repreneur_live_inventory": [{ data: [{ ...opportunity, id: opportunityId }], error: null }],
     })
 
-    await expect(getMyRepreneurOpportunity("opportunity-auto")).resolves.toBeNull()
-    expect(mocks.queueEvent).not.toHaveBeenCalled()
+    await expect(getMyRepreneurOpportunity(opportunityId)).resolves.toMatchObject({
+      opportunity_id: opportunityId,
+      relevance_grade: "not_evaluated",
+    })
+    expect(mocks.queueEvent).toHaveBeenCalled()
   })
 
-  it("blocks a direct DEMO deal lookup even when a query mock returns it", async () => {
+  it("blocks a cross-namespace direct deal lookup even when a query mock returns it", async () => {
+    const opportunityId = "00000000-0000-4000-8000-000000000002"
     setResponses({
       repreneurs: [{ data: completeProfile, error: null }],
       opportunity_matches: [{ data: null, error: null }],
-      opportunities: [{ data: { ...opportunity, is_demo: true }, error: null }],
+      "rpc:w164_repreneur_live_inventory": [{ data: [{ ...opportunity, id: opportunityId, is_demo: true }], error: null }],
     })
 
-    await expect(getMyRepreneurOpportunity("opportunity-auto")).resolves.toBeNull()
+    await expect(getMyRepreneurOpportunity(opportunityId)).resolves.toBeNull()
     expect(mocks.queueEvent).not.toHaveBeenCalled()
   })
 })
