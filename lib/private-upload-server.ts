@@ -10,7 +10,11 @@ import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { recalculateRepreneurScoresAndMatches } from "@/lib/repreneur-profile-refresh"
 import { matchesExpectedFileStructure } from "@/lib/security/external-pursuit-attachment-content"
-import { assertSafePdfEvidence } from "@/lib/security/pdf-evidence"
+import {
+  assertSafePdfEvidence,
+  PdfEvidenceRuntimeError,
+  PdfEvidenceValidationError,
+} from "@/lib/security/pdf-evidence"
 import {
   IntakeUploadSecurityError,
   requestFingerprint,
@@ -508,7 +512,14 @@ async function assertValidPrivateUpload(intent:PrivateUploadIntentRow,bytes:Uint
     throw new PrivateUploadError("The uploaded content type does not match the authorized file.")
   }
   if (intent.content_type==="application/pdf") {
-    await assertSafePdfEvidence(bytes)
+    try {
+      await assertSafePdfEvidence(bytes)
+    } catch(error) {
+      if (error instanceof PdfEvidenceValidationError) {
+        throw new PrivateUploadError(error.message,400)
+      }
+      throw error
+    }
     return
   }
   if (intent.content_type==="application/msword") {
@@ -609,7 +620,9 @@ export async function finalizePrivateUpload(request:Request,payload:unknown) {
   const bytes=new Uint8Array(await blob.arrayBuffer())
   try { await assertValidPrivateUpload(intent,bytes,blob.type) }
   catch(error) {
-    await closeIntent(intent,"content_validation_failed")
+    await closeIntent(intent,error instanceof PdfEvidenceRuntimeError
+      ? "content_validation_runtime_failed"
+      : "content_validation_failed")
     throw error
   }
   const digest=createHash("sha256").update(bytes).digest("hex")

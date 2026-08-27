@@ -1,5 +1,6 @@
 import "server-only";
-import { createRequire } from "node:module";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 
 /** PDF.js parses untrusted syntax in a dedicated resource-limited worker. */
@@ -85,13 +86,19 @@ parentPort.once("message", async (buffer) => {
 })
 `;
 
-const require = createRequire(import.meta.url);
-const PDFJS_MODULE_PATH = require.resolve("pdfjs-dist/legacy/build/pdf.mjs");
-const PDFJS_WORKER_MODULE_PATH = require.resolve(
-  "pdfjs-dist/legacy/build/pdf.worker.mjs",
-);
+// Do not use require.resolve here. Turbopack rewrites require.resolve calls in
+// a server chunk to numeric module IDs, but an eval Worker needs a real import
+// URL. next.config.mjs traces both files into the deployed function at these
+// stable package paths.
+const PDFJS_MODULE_PATH = pathToFileURL(
+  join(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.mjs"),
+).href;
+const PDFJS_WORKER_MODULE_PATH = pathToFileURL(
+  join(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"),
+).href;
 
-class PdfEvidenceError extends Error {}
+export class PdfEvidenceValidationError extends Error {}
+export class PdfEvidenceRuntimeError extends Error {}
 
 type PdfEvidenceWorkerResult =
   | { ok: true }
@@ -101,14 +108,16 @@ function errorForWorkerResult(
   result: Exclude<PdfEvidenceWorkerResult, { ok: true }>,
 ) {
   if (result.reason === "active") {
-    return new PdfEvidenceError(
+    return new PdfEvidenceValidationError(
       "Active or embedded PDF content is not accepted for NDA evidence",
     );
   }
   if (result.reason === "page_count") {
-    return new PdfEvidenceError("NDA evidence has an unsupported page count");
+    return new PdfEvidenceValidationError(
+      "NDA evidence has an unsupported page count",
+    );
   }
-  return new PdfEvidenceError(
+  return new PdfEvidenceValidationError(
     "NDA evidence must be a structurally valid PDF file",
   );
 }
@@ -119,8 +128,11 @@ function isSuccessfulWorkerResult(value: unknown): value is { ok: true } {
   return result.ok === true && Object.keys(result).length === 1;
 }
 
-function failureWorkerResult(value: unknown): Exclude<PdfEvidenceWorkerResult, { ok: true }> {
-  if (!value || typeof value !== "object") return { ok: false, reason: "invalid" };
+function failureWorkerResult(
+  value: unknown,
+): Exclude<PdfEvidenceWorkerResult, { ok: true }> {
+  if (!value || typeof value !== "object")
+    return { ok: false, reason: "invalid" };
   const result = value as Record<string, unknown>;
   if (
     result.ok !== false ||
@@ -168,10 +180,11 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
 
     const timeoutMs = Math.min(
       MAX_PDF_PARSE_TIMEOUT_MS,
-      MIN_PDF_PARSE_TIMEOUT_MS + Math.ceil(bytes.byteLength / (1024 * 1024)) * 500,
+      MIN_PDF_PARSE_TIMEOUT_MS +
+        Math.ceil(bytes.byteLength / (1024 * 1024)) * 500,
     );
     const deadline = setTimeout(() => {
-      finish(new PdfEvidenceError("NDA PDF validation timed out"));
+      finish(new PdfEvidenceRuntimeError("NDA PDF validation timed out"));
     }, timeoutMs);
 
     worker.once("message", (result: unknown) => {
@@ -183,16 +196,16 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
     });
     worker.once("error", () => {
       finish(
-        new PdfEvidenceError(
-          "NDA evidence must be a structurally valid PDF file",
+        new PdfEvidenceRuntimeError(
+          "NDA PDF validation is temporarily unavailable",
         ),
       );
     });
     worker.once("exit", () => {
       if (!settled) {
         finish(
-          new PdfEvidenceError(
-            "NDA evidence must be a structurally valid PDF file",
+          new PdfEvidenceRuntimeError(
+            "NDA PDF validation is temporarily unavailable",
           ),
         );
       }
@@ -207,7 +220,7 @@ async function validateInIsolatedWorker(bytes: Uint8Array) {
 
 export async function assertSafePdfEvidence(bytes: Uint8Array) {
   if (bytes.byteLength > MAX_PDF_EVIDENCE_BYTES) {
-    throw new PdfEvidenceError("PDF files must not exceed 20 MiB");
+    throw new PdfEvidenceValidationError("PDF files must not exceed 20 MiB");
   }
   await validateInIsolatedWorker(bytes);
 }

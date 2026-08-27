@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   revalidateOpportunityDashboardTags: vi.fn(),
   revalidateRepreneurDashboardTags: vi.fn(),
   recalculateRepreneurScoresAndMatches: vi.fn(),
+  PdfEvidenceValidationError: class MockPdfEvidenceValidationError extends Error {},
+  PdfEvidenceRuntimeError: class MockPdfEvidenceRuntimeError extends Error {},
 }))
 
 vi.mock("@/lib/env", () => ({
@@ -25,6 +27,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 }))
 vi.mock("@/lib/security/pdf-evidence", () => ({
   assertSafePdfEvidence: mocks.assertSafePdfEvidence,
+  PdfEvidenceValidationError: mocks.PdfEvidenceValidationError,
+  PdfEvidenceRuntimeError: mocks.PdfEvidenceRuntimeError,
 }))
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }))
 vi.mock("@/lib/data/dashboard-snapshots", () => ({
@@ -64,6 +68,55 @@ function staffAccess() {
     role: "staff",
     repreneurId: null,
     user: { id: "staff-user", email: "staff@example.test" },
+  }
+}
+
+function pendingPdfIntent(bytes: Uint8Array) {
+  return {
+    id: intentId,
+    actor_kind: "staff",
+    actor_key: "staff:staff-user:",
+    actor_user_id: "staff-user",
+    actor_repreneur_id: null,
+    actor_email: "staff@example.test",
+    actor_fingerprint: null,
+    upload_kind: "opportunity_document",
+    resource_id: opportunityId,
+    related_id: null,
+    bucket_id: "opportunity-documents",
+    storage_path: `${opportunityId}/documents/${intentId}-memo.pdf`,
+    original_filename: "memo.pdf",
+    content_type: "application/pdf",
+    declared_size: bytes.byteLength,
+    metadata: { document_type: "deal_book", visibility: "staff_only", title: "Memo" },
+    finalize_secret_hash: createHash("sha256").update(secret).digest("hex"),
+    status: "pending",
+    content_sha256: null,
+    result: null,
+    expires_at: new Date(Date.now() + 60_000).toISOString(),
+  }
+}
+
+function validationFailureClient(bytes: Uint8Array, closeRpc: ReturnType<typeof vi.fn>) {
+  const intent = pendingPdfIntent(bytes)
+  return {
+    from: vi.fn((table: string) => {
+      if (table !== "private_upload_intents") throw new Error(`Unexpected table ${table}`)
+      return {
+        select: () => ({
+          eq: () => ({ maybeSingle: async () => ({ data: intent, error: null }) }),
+        }),
+      }
+    }),
+    storage: {
+      from: () => ({
+        download: async () => ({
+          data: new Blob([Uint8Array.from(bytes).buffer], { type: "application/pdf" }),
+          error: null,
+        }),
+      }),
+    },
+    rpc: closeRpc,
   }
 }
 
@@ -276,6 +329,42 @@ describe("W-165 server upload authority", () => {
       p_finalize_secret_hash: intent.finalize_secret_hash,
       p_content_sha256: digest,
     })
+  })
+
+  it("returns a clear client rejection for an invalid PDF and records the content failure", async () => {
+    const bytes = new TextEncoder().encode("%PDF-1.4\n%%EOF\n")
+    const closeRpc = vi.fn().mockResolvedValue({ data: null, error: null, status: 200 })
+    mocks.createAdminClient.mockReturnValue(validationFailureClient(bytes,closeRpc))
+    mocks.assertSafePdfEvidence.mockRejectedValue(
+      new mocks.PdfEvidenceValidationError("NDA evidence must be a structurally valid PDF file"),
+    )
+
+    await expect(finalizePrivateUpload(request({ intentId, finalizeSecret: secret }), {
+      intentId,
+      finalizeSecret: secret,
+    })).rejects.toMatchObject({
+      status: 400,
+      message: "NDA evidence must be a structurally valid PDF file",
+    })
+    expect(closeRpc).toHaveBeenCalledWith("close_w165_private_upload_intent", expect.objectContaining({
+      p_failure_code: "content_validation_failed",
+    }))
+  })
+
+  it("keeps parser infrastructure failures as server errors with a distinct audit code", async () => {
+    const bytes = new TextEncoder().encode("%PDF-1.4\n%%EOF\n")
+    const closeRpc = vi.fn().mockResolvedValue({ data: null, error: null, status: 200 })
+    mocks.createAdminClient.mockReturnValue(validationFailureClient(bytes,closeRpc))
+    const runtimeError = new mocks.PdfEvidenceRuntimeError("NDA PDF validation is temporarily unavailable")
+    mocks.assertSafePdfEvidence.mockRejectedValue(runtimeError)
+
+    await expect(finalizePrivateUpload(request({ intentId, finalizeSecret: secret }), {
+      intentId,
+      finalizeSecret: secret,
+    })).rejects.toBe(runtimeError)
+    expect(closeRpc).toHaveBeenCalledWith("close_w165_private_upload_intent", expect.objectContaining({
+      p_failure_code: "content_validation_runtime_failed",
+    }))
   })
 
   it("caps metadata JSON before parsing", async () => {
