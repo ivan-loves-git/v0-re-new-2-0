@@ -2,14 +2,16 @@
 
 ## Authority and status
 
-This is the approved W-165 contract for private document uploads up to and
+This is the released W-165 contract for private document uploads up to and
 including 20 MiB. It extends the historically closed W-152/W-153 4 MiB
 multipart route; it does not falsify those earlier cards. The implementation
 authority is migration `20260827113000_w165_private_direct_uploads.sql` and the
 shared intent/upload/finalize service in `lib/private-upload-server.ts`.
 
-Production keeps the prior effective limit until the W-165 candidate and its
-migration are explicitly published.
+The migration was published with PR #74 on 2026-08-27. A production-only PDF
+worker import defect found during live verification was corrected in PR #75;
+the final verified production application SHA is
+`fe989446e74a5cc1af3afd2e3aeea2b28d0ba2c5`.
 
 ## Protocol
 
@@ -92,3 +94,19 @@ application, then assess schema retirement as a separate authorized change.
   and recoverable through the durable queue;
 - production proof uses synthetic private documents only and confirms no
   public bucket or public URL was introduced.
+
+## Production proof
+
+The deployed browser-to-private-Storage path finalized and downloaded valid
+synthetic PDFs of 9.5 MB, 12.2 MB and exactly 20 MiB with exact byte counts. A
+20 MiB-plus-one-byte file was rejected before an intent was created. Malformed
+and active PDFs were rejected; wrong-actor, cross-resource and cross-namespace
+operations failed closed; finalize replay returned the same result; duplicate
+idempotency keys were refused.
+
+Rejected and abandoned test paths finished with zero Storage objects, zero
+document metadata and zero pending cleanup rows. Four successful DEMO-only
+documents remain as retained audit evidence because the canonical teaser and
+Information Memorandum retention guard correctly forbids their deletion.
+Existing private document downloads and the Gate 1/Gate 2 NDA surfaces remained
+available after release.
