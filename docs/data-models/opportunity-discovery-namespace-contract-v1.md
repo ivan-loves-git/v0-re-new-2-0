@@ -2,14 +2,15 @@
 
 ## Authority and status
 
-This is the approved product and data contract for W-164. It supersedes the
-W-021 manual broad-publication operating rule when the W-164 migration is
-released. W-021 remains historical evidence; it is not rewritten.
+This is the released product and data contract for W-164. It supersedes the
+W-021 manual broad-publication operating rule. W-021 remains historical
+evidence; it was not rewritten.
 
 The implementation authority is migration
 `20260827103000_w164_lifecycle_namespace_visibility.sql` plus the portal and
-staff application reads in the same release candidate. Production keeps its
-current rule until that candidate is explicitly published.
+staff application reads released from PR #74. The migration and its exact
+manifest-bound reconciliation were published on 2026-08-27; the final verified
+production application SHA is `fe989446e74a5cc1af3afd2e3aeea2b28d0ba2c5`.
 
 ## Discovery rule
 
@@ -100,6 +101,26 @@ exact recorded W-164 run and is a separate, explicitly authorized production
 action. A full return to the superseded W-021 operating model would also need
 a reviewed corrective schema migration plus the prior application deployment;
 the manifest rollback alone does not restore that old workflow.
+
+## Production proof
+
+The authorized 2026-08-27 reconciliation applied the complete 104-row manifest
+with digest
+`eff8b0e9a529717310825bcaae7e974941e6f5775953894b2788d0290929f8a2`.
+The immutable run is `75b5f1bd-a077-4333-a03e-b4328fc2ed0a`; it recorded 104
+changes and 104 exact rollback rows without adding W-021 publication events.
+
+The final production check found zero lifecycle/exposure mismatches. Current
+inventory comprised 153 REAL active and 22 DEMO active opportunities, visible
+only inside their matching namespaces. All 66 inactive opportunities were
+hidden: 58 REAL drafts, three REAL archived, one REAL closed, one DEMO draft
+and three DEMO closed. Current-row movement after the manifest therefore
+followed the database lifecycle trigger without another publication action.
+
+Portal proof confirmed neutral inventory for an incomplete thesis, safe-title
+fallback, no raw or source fields in the projection, and denial of historical
+cross-namespace detail and NDA actions. The nine historical cross-namespace
+matches and their evidence remain retained and non-actionable.
 
 ## Acceptance trace
 

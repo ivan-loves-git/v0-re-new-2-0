@@ -275,7 +275,7 @@ describe("M&A operating-office foundation migration", () => {
     )
     expect(contract).toContain("Canonical firm and operating-office model live since migration 076")
     expect(contract).toContain("W-061 and migration 076")
-    expect(contract).toContain("W-021 manual publication rule remains production history")
+    expect(contract).toContain("W-021 manual publication rule is retained only as production history")
     expect(contract).toContain("W-063 staff intake reconciliation")
     expect(contract).toContain("p_opportunity_fields JSONB")
     expect(contract).toContain("Reopening is a separate explicit workflow")
