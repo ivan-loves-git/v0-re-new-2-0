@@ -32,7 +32,10 @@ vi.mock("node:worker_threads", () => ({
   },
 }));
 
-import { assertSafePdfEvidence } from "@/lib/security/pdf-evidence";
+import {
+  assertSafePdfEvidence,
+  PdfEvidenceRuntimeError,
+} from "@/lib/security/pdf-evidence";
 
 describe("W-152 PDF parser isolation", () => {
   beforeEach(() => {
@@ -57,10 +60,10 @@ describe("W-152 PDF parser isolation", () => {
         eval: true,
         workerData: {
           pdfjsModulePath: expect.stringMatching(
-            /pdfjs-dist\/legacy\/build\/pdf\.mjs$/,
+            /^file:.*pdfjs-dist\/legacy\/build\/pdf\.mjs$/,
           ),
           pdfjsWorkerModulePath: expect.stringMatching(
-            /pdfjs-dist\/legacy\/build\/pdf\.worker\.mjs$/,
+            /^file:.*pdfjs-dist\/legacy\/build\/pdf\.worker\.mjs$/,
           ),
         },
         resourceLimits: {
@@ -101,7 +104,7 @@ describe("W-152 PDF parser isolation", () => {
     async (code) => {
       const assertion = expect(
         assertSafePdfEvidence(new Uint8Array([0x25, 0x50, 0x44, 0x46])),
-      ).rejects.toThrow("structurally valid PDF");
+      ).rejects.toBeInstanceOf(PdfEvidenceRuntimeError);
       mocks.handlers.get("exit")?.(code);
       await assertion;
     },
@@ -110,7 +113,7 @@ describe("W-152 PDF parser isolation", () => {
   it("fails closed when the worker emits an error", async () => {
     const assertion = expect(
       assertSafePdfEvidence(new Uint8Array([0x25, 0x50, 0x44, 0x46])),
-    ).rejects.toThrow("structurally valid PDF");
+    ).rejects.toBeInstanceOf(PdfEvidenceRuntimeError);
     mocks.handlers.get("error")?.(new Error("synthetic worker error"));
     await assertion;
   });
