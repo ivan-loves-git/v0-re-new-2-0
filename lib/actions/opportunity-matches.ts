@@ -12,8 +12,8 @@ import {
 } from "@/lib/repreneur-opportunity-geography"
 import {
   hasInvitedLinkedIdentity,
-  isEligibleForManualRecommendation,
 } from "@/lib/repreneur-matching-eligibility"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
@@ -177,14 +177,18 @@ async function ensureOpportunityCanExposeMoreMatches(opportunityId: string, stat
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("opportunity_matches")
-    .select("id")
+    .select("id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
     .eq("opportunity_id", opportunityId)
     .eq("status", "active_pursuit")
-    .limit(1)
-    .maybeSingle()
 
   if (error) throw new Error(error.message)
-  if (data) {
+  const hasSameNamespacePursuit = (data ?? []).some((match) => (
+    isOpportunityInRepreneurNamespace(
+      Array.isArray(match.opportunity) ? match.opportunity[0] : match.opportunity,
+      Array.isArray(match.repreneur) ? match.repreneur[0] : match.repreneur,
+    )
+  ))
+  if (hasSameNamespacePursuit) {
     // Staff cannot expose or alter an external proposal while the opportunity
     // is locked. The only exception is the separate portal-owned response
     // action, which turns an already-proposed candidate into interest.
@@ -196,14 +200,11 @@ async function ensureOpportunityReadyForExternalMatch(opportunityId: string, sta
   if (status !== "proposed" && status !== "interested") return
   const { data, error } = await createAdminClient()
     .from("opportunities")
-    .select("status, sector, location, public_title, teaser_summary")
+    .select("status")
     .eq("id", opportunityId)
     .maybeSingle()
   if (error) throw new Error(error.message)
   if (!data || data.status !== "active") throw formError("Only an active opportunity can be proposed externally.", "status")
-  const missing = [data.sector, data.location, data.public_title, data.teaser_summary]
-    .some((value) => typeof value !== "string" || !value.trim())
-  if (missing) throw formError("Sector, location, public title and teaser summary are required before an external proposal.", "status")
 }
 
 async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId: string) {
@@ -223,9 +224,18 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   return data as { id: string; status: OpportunityMatchStatus; updated_at: string } | null
 }
 
-async function ensureNewMatchEligible(repreneurId: string) {
+async function ensureMatchNamespaceAndPortalIdentity(opportunityId: string, repreneurId: string) {
   const supabase = createAdminClient()
-  const [{ data: repreneur, error: repreneurError }, { data: role, error: roleError }] = await Promise.all([
+  const [
+    { data: opportunity, error: opportunityError },
+    { data: repreneur, error: repreneurError },
+    { data: role, error: roleError },
+  ] = await Promise.all([
+    supabase
+      .from("opportunities")
+      .select("id, is_demo")
+      .eq("id", opportunityId)
+      .maybeSingle(),
     supabase
       .from("repreneurs")
       .select("id, is_demo")
@@ -240,10 +250,17 @@ async function ensureNewMatchEligible(repreneurId: string) {
       .maybeSingle(),
   ])
 
+  if (opportunityError) throw new Error(opportunityError.message)
   if (repreneurError) throw new Error(repreneurError.message)
   if (roleError) throw new Error(roleError.message)
-  if (!isEligibleForManualRecommendation(repreneur)) {
-    throw formError("DEMO profiles cannot receive a staff recommendation.", "repreneur_id")
+  if (
+    !opportunity
+    || !repreneur
+    || typeof opportunity.is_demo !== "boolean"
+    || typeof repreneur.is_demo !== "boolean"
+    || opportunity.is_demo !== repreneur.is_demo
+  ) {
+    throw formError("Recommendations must stay inside the same REAL or DEMO data namespace.", "repreneur_id")
   }
   if (!hasInvitedLinkedIdentity(role, repreneurId)) {
     throw formError("Enable portal access for this repreneur before creating a staff recommendation.", "repreneur_id")
@@ -256,12 +273,12 @@ async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: 
   const [{ data: opportunity, error: opportunityError }, { data: repreneur, error: repreneurError }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
+      .select("id, is_demo, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
       .eq("id", opportunityId)
       .maybeSingle(),
     supabase
       .from("repreneurs")
-      .select(`id, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+      .select(`id, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
       .eq("id", repreneurId)
       .maybeSingle(),
   ])
@@ -270,6 +287,9 @@ async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: 
   if (repreneurError) throw new Error(repreneurError.message)
   if (!opportunity) throw formError("Opportunity was not found.", "opportunity_id")
   if (!repreneur) throw formError("Repreneur was not found.", "repreneur_id")
+  if (opportunity.is_demo !== repreneur.is_demo) {
+    throw formError("Recommendations must stay inside the same REAL or DEMO data namespace.", "repreneur_id")
+  }
 
   const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
   return calculateOpportunityMatchScore(
@@ -292,12 +312,17 @@ export async function listOpportunityMatches(opportunityId: string): Promise<Opp
 
   const { data, error } = await supabase
     .from("opportunity_matches")
-    .select("*, repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)")
+    .select("*, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(id, first_name, last_name, email, is_demo, lifecycle_status, journey_stage, recommendation, who_score, when_score)")
     .eq("opportunity_id", opportunityId)
     .order("updated_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(normalizeMatch)
+  return (data ?? [])
+    .filter((row) => isOpportunityInRepreneurNamespace(
+      Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity,
+      Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
+    ))
+    .map(normalizeMatch)
 }
 
 export async function listOpportunityMatchesForRepreneur(repreneurId: string): Promise<RepreneurOpportunityMatch[]> {
@@ -323,6 +348,7 @@ export async function listOpportunityMatchesForRepreneur(repreneurId: string): P
       updated_at,
       opportunity:opportunities(
         id,
+        is_demo,
         reference,
         public_title,
         sector,
@@ -332,13 +358,19 @@ export async function listOpportunityMatchesForRepreneur(repreneurId: string): P
         teaser_summary,
         headcount_range,
         internal_notes
-      )
+      ),
+      repreneur:repreneurs!inner(is_demo)
     `)
     .eq("repreneur_id", repreneurId)
     .order("updated_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(normalizeRepreneurMatch)
+  return (data ?? [])
+    .filter((row) => isOpportunityInRepreneurNamespace(
+      Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity,
+      Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
+    ))
+    .map(normalizeRepreneurMatch)
 }
 
 export async function listOpportunityPursuitEvents(opportunityId: string): Promise<OpportunityPursuitEvent[]> {
@@ -347,13 +379,18 @@ export async function listOpportunityPursuitEvents(opportunityId: string): Promi
 
   const { data, error } = await supabase
     .from("opportunity_pursuit_events")
-    .select("*, repreneur:repreneurs(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score)")
+    .select("*, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(id, first_name, last_name, email, is_demo, lifecycle_status, journey_stage, recommendation, who_score, when_score)")
     .eq("opportunity_id", opportunityId)
     .order("created_at", { ascending: false })
     .limit(50)
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(normalizePursuitEvent)
+  return (data ?? [])
+    .filter((row) => isOpportunityInRepreneurNamespace(
+      Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity,
+      Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
+    ))
+    .map(normalizePursuitEvent)
 }
 
 export async function listOpportunityMatchResponses(): Promise<OpportunityMatchResponse[]> {
@@ -430,7 +467,7 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
   const [{ data: opportunity, error: opportunityError }, { data, error }, { data: roles, error: rolesError }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
+      .select("id, is_demo, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
       .eq("id", opportunityId)
       .maybeSingle(),
     supabase
@@ -446,7 +483,6 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
         recommendation,
         ${REPRENEUR_MATCHING_INPUT_FIELDS}
       `)
-      .eq("is_demo", false)
       .order("updated_at", { ascending: false })
       .limit(250),
     supabase
@@ -462,10 +498,12 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
 
   const geography = await loadMatchingGeographyContext(
     supabase,
-    (data ?? []).map((candidate) => candidate.id),
+    (data ?? [])
+      .filter((candidate) => opportunity && candidate.is_demo === opportunity.is_demo)
+      .map((candidate) => candidate.id),
   )
   return (data ?? []).filter((candidate) =>
-    isEligibleForManualRecommendation(candidate) &&
+    opportunity && candidate.is_demo === opportunity.is_demo &&
     (roles ?? []).some((role) => hasInvitedLinkedIdentity(role, candidate.id)),
   ).map((candidate) => {
     if (!opportunity) return candidate as OpportunityMatchCandidate
@@ -503,9 +541,8 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
         .maybeSingle(),
       supabase
         .from("opportunities")
-        .select("id, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id, status, repreneur_exposure")
+        .select("id, is_demo, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id, status, repreneur_exposure")
         .eq("status", "active")
-        .eq("is_demo", false)
         .order("updated_at", { ascending: false })
         .limit(250),
       supabase
@@ -524,14 +561,17 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
   if (opportunitiesError) throw new Error(opportunitiesError.message)
   if (matchesError) throw new Error(matchesError.message)
   if (rolesError) throw new Error(rolesError.message)
-  if (!repreneur || !isEligibleForManualRecommendation(repreneur) || !(roles ?? []).some((role) => hasInvitedLinkedIdentity(role, repreneurId))) return []
+  if (!repreneur || !(roles ?? []).some((role) => hasInvitedLinkedIdentity(role, repreneurId))) return []
 
   const existingOpportunityIds = new Set((existingMatches ?? []).map((match) => match.opportunity_id))
   const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
   const geographyAwareRepreneur = withMatchingGeographyTargets(repreneur, geography)
 
   return (opportunities ?? [])
-    .filter((opportunity) => !existingOpportunityIds.has(opportunity.id))
+    .filter((opportunity) => (
+      opportunity.is_demo === repreneur.is_demo
+      && !existingOpportunityIds.has(opportunity.id)
+    ))
     .map((opportunity) => {
       const platformMatch = calculateOpportunityMatchScore(
         geographyAwareRepreneur,
@@ -565,7 +605,6 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     const status = readStatus(formData)
     ensureStaffMatchStatus(status)
     const existingMatch = await ensureExistingMatchCanBeSaved(opportunityId, repreneurId)
-    if (!existingMatch) await ensureNewMatchEligible(repreneurId)
     const expectedUpdatedAt = readExpectedUpdatedAt(formData)
     if (existingMatch && !expectedUpdatedAt) {
       throw formError("This recommendation was already saved or changed by another staff member. Refresh before editing it again.")
@@ -573,6 +612,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     if (existingMatch && existingMatch.updated_at !== expectedUpdatedAt) {
       throw formError("This recommendation changed while you were editing it. Refresh to see the latest staff notes.")
     }
+    await ensureMatchNamespaceAndPortalIdentity(opportunityId, repreneurId)
     await ensureOpportunityReadyForExternalMatch(opportunityId, status)
     await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 

@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto"
 import { revalidatePath } from "next/cache"
 import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { assertSafePdfEvidence } from "@/lib/security/pdf-evidence"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
@@ -50,23 +50,22 @@ async function submitAuthorizedSignedNda(
   if (file.size > MAX_DOCUMENT_BYTES || !file.name.toLowerCase().endsWith(".pdf") || file.type !== "application/pdf") {
     trace.failure("validation_failed")
     capture("validation_error", "validation_failed")
-    return { success: false, message: "The signed NDA must be a PDF smaller than 4 MB." }
+    return { success: false, message: "The signed NDA must be a PDF no larger than 4 MiB on the legacy route." }
   }
   const supabase = createAdminClient()
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
     .select("id, opportunity_id, repreneur_id, status, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
     .eq("id", matchId)
-    .eq("opportunity.is_demo", false)
-    .eq("repreneur.is_demo", false)
     .maybeSingle()
   const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
+  const repreneur = Array.isArray(match?.repreneur) ? match.repreneur[0] : match?.repreneur
   if (
     matchError
     || !match
     || match.repreneur_id !== access.repreneurId
     || match.status !== "active_pursuit"
-    || !isRepreneurEligibleOpportunity(opportunity)
+    || !isOpportunityInRepreneurNamespace(opportunity, repreneur)
   ) {
     trace.failure(matchError ? "persistence_failed" : "precondition_failed")
     capture("failure", "unavailable")

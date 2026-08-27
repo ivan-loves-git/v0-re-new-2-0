@@ -6,6 +6,7 @@ import {
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { isUuid } from "@/lib/uuid"
 
 export async function GET(request: Request, context: { params: Promise<{ id: string; artifactId: string }> }) {
@@ -18,7 +19,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   const { data: artifact, error: artifactError } = await supabase
     .from("opportunity_nda_artifacts")
-    .select("document_id")
+    .select("document_id, match_id")
     .eq("id", artifactId)
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
@@ -28,6 +29,18 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
   if (!artifact) {
     return privateStorageDownloadError("Not found", 404)
+  }
+  if (artifact.match_id) {
+    const { data: match, error: matchError } = await supabase
+      .from("opportunity_matches")
+      .select("opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
+      .eq("id", artifact.match_id)
+      .maybeSingle()
+    const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
+    const repreneur = Array.isArray(match?.repreneur) ? match.repreneur[0] : match?.repreneur
+    if (matchError || !isOpportunityInRepreneurNamespace(opportunity, repreneur)) {
+      return privateStorageDownloadError("Not found", 404)
+    }
   }
 
   const { data: document, error: documentError } = await supabase

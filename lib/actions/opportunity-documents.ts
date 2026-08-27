@@ -13,9 +13,10 @@ import type {
   OpportunityDocumentType,
   OpportunityDocumentVisibility,
 } from "@/lib/types/opportunity"
+import { LEGACY_MULTIPART_MAX_FILE_BYTES } from "@/lib/upload-limits"
 
 const OPPORTUNITY_DOCUMENTS_BUCKET = "opportunity-documents"
-const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
+const MAX_DOCUMENT_BYTES = LEGACY_MULTIPART_MAX_FILE_BYTES
 
 export type OpportunityDocumentMutationResult =
   | { success: true; message: string; documentId?: string }
@@ -103,7 +104,7 @@ export async function registerOpportunityDocument(formData: FormData): Promise<O
 
     if (file instanceof File && file.size > 0) {
     if (file.size > MAX_DOCUMENT_BYTES) {
-      throw new Error("Document must be smaller than 20MB")
+      throw new Error("The legacy multipart route is limited to 4 MiB. Use the direct private upload.")
     }
 
     fileName = file.name

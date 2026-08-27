@@ -46,9 +46,7 @@ function mockMatchResponse(
     data: { id: MATCH_ID, opportunity_id: OPPORTUNITY_ID, status, opportunity: { status: opportunityStatus, is_demo: isDemo }, repreneur: { is_demo: false } },
     error: null,
   })
-  const selectForDemoRepreneur = vi.fn(() => ({ maybeSingle }))
-  const selectForDemoOpportunity = vi.fn(() => ({ eq: selectForDemoRepreneur }))
-  const selectForRepreneur = vi.fn(() => ({ eq: selectForDemoOpportunity }))
+  const selectForRepreneur = vi.fn(() => ({ maybeSingle }))
   const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }))
   const select = vi.fn(() => ({ eq: selectForMatch }))
   const from = vi.fn(() => ({ select }))
@@ -144,9 +142,7 @@ describe("repreneur opportunity decline response", () => {
 
   it("rejects a foreign match without attempting an update", async () => {
     const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
-    const selectForDemoRepreneur = vi.fn(() => ({ maybeSingle }))
-    const selectForDemoOpportunity = vi.fn(() => ({ eq: selectForDemoRepreneur }))
-    const selectForRepreneur = vi.fn(() => ({ eq: selectForDemoOpportunity }))
+    const selectForRepreneur = vi.fn(() => ({ maybeSingle }))
     const selectForMatch = vi.fn(() => ({ eq: selectForRepreneur }))
     const select = vi.fn(() => ({ eq: selectForMatch }))
     const rpc = vi.fn()
@@ -184,7 +180,7 @@ describe("repreneur opportunity decline response", () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it("does not accept a response for a DEMO-classified opportunity", async () => {
+  it("does not accept a response across the REAL-to-DEMO namespace boundary", async () => {
     const { rpc } = mockMatchResponse("proposed", "active", true)
 
     const result = await declineMyOpportunity(

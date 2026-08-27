@@ -38,6 +38,7 @@ function tableBuilder(table: string) {
     return {
       data: {
         id: "repreneur-1",
+        is_demo: false,
         q12_geo_zones: ["bretagne"],
         q13_target_sectors_v2: ["industry"],
         target_revenue_min_meur: 1.5,
@@ -62,6 +63,7 @@ function tableBuilder(table: string) {
           id: "match-1",
           opportunity_id: "opportunity-1",
           opportunity: {
+            is_demo: false,
             sector: "industry",
             activity: "precision workshop",
             location: "Bretagne",

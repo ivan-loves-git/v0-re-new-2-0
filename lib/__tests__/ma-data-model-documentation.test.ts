@@ -146,7 +146,7 @@ describe("canonical M&A data model documentation", () => {
     for (const scopedCard of [
       "W-001, repreneur action and staff-verified transition authority",
       "W-008, signed-client Matching v2 financial calibration",
-      "W-021, conditional source-identity disclosure",
+      "W-021, historical controlled publication",
       "W-039, canonical France geography and Matching v2 placement",
     ]) {
       expect(contract).toContain(scopedCard)

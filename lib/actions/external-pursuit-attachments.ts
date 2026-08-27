@@ -10,6 +10,7 @@ import {
 import { matchesExpectedFileStructure } from "@/lib/security/external-pursuit-attachment-content"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
+import { LEGACY_MULTIPART_MAX_FILE_BYTES } from "@/lib/upload-limits"
 
 type Result = { success: boolean; message: string; attachmentId?: string; retryExact?: boolean; retryCleanup?: boolean }
 type Registration = { attachmentId: string; storagePath: string }
@@ -245,6 +246,9 @@ export async function uploadExternalPursuitAttachment(
     if (!(file instanceof File)) return { success: false, message: "Choose a file to attach." }
     const validation = validateExternalPursuitAttachment(file)
     if (validation) return { success: false, message: validation }
+    if (file.size > LEGACY_MULTIPART_MAX_FILE_BYTES) {
+      return { success: false, message: "The legacy multipart route is limited to 4 MiB. Use the direct private upload." }
+    }
     const bytes = new Uint8Array(await file.arrayBuffer())
     if (!matchesExpectedFileStructure(file.name, bytes)) return { success: false, message: "The file contents do not match its permitted type." }
     const originalFilename = safeAttachmentFilename(file.name)

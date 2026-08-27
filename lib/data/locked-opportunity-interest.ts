@@ -58,10 +58,18 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
       const row = (Array.isArray(data) ? data[0] : data) as LockedInterestRpcRow | null
       if (!row) throw new LockedOpportunityInterestUnavailableError()
 
+      const { data: repreneur, error: repreneurError } = await supabase
+        .from("repreneurs")
+        .select("is_demo")
+        .eq("id", input.repreneurId)
+        .maybeSingle()
+      if (repreneurError || !repreneur) throw new LockedOpportunityInterestUnavailableError()
+
       return {
         matchId: row.match_id,
         expressedAt: row.expressed_at,
         notificationSentAt: row.notification_sent_at,
+        notificationSuppressed: repreneur.is_demo === true,
       }
     },
 
@@ -81,9 +89,11 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
           .maybeSingle(),
         supabase
           .from("opportunity_matches")
-          .select("id")
+          .select("id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
           .eq("opportunity_id", input.opportunityId)
           .eq("status", "active_pursuit")
+          .eq("opportunity.is_demo", false)
+          .eq("repreneur.is_demo", false)
           .neq("repreneur_id", input.repreneurId)
           .limit(1),
       ])

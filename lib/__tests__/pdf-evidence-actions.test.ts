@@ -66,6 +66,7 @@ function portalClient(options: { existing?: boolean; demo?: boolean } = {}) {
       repreneur_id: "repreneur-synthetic-1",
       status: "active_pursuit",
       opportunity: { is_demo: false },
+      repreneur: { is_demo: false },
     },
     error: null,
   })
@@ -241,7 +242,7 @@ describe("W-152 PDF evidence action boundary", () => {
     ])
   })
 
-  it("denies a demo repreneur before any NDA gate, upload, or registration", async () => {
+  it("denies an unavailable match before any NDA gate, upload, or registration", async () => {
     const portal = portalClient({ demo: true })
     mocks.createAdminClient.mockReturnValue(portal.client)
 
@@ -264,7 +265,7 @@ describe("W-152 PDF evidence action boundary", () => {
 
     await expect(submitPortalPursuitSignedNda(form)).resolves.toEqual({
       success: false,
-      message: "The signed NDA must be a PDF smaller than 4 MB.",
+      message: "The signed NDA must be a PDF no larger than 4 MiB on the legacy route.",
     })
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
   })

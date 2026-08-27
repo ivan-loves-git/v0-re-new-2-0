@@ -10,8 +10,8 @@ import {
   verifyAndConsumeIntakeUploadToken,
 } from "@/lib/security/intake-upload"
 import {
-  CV_LDC_MAX_FILE_BYTES,
-  CV_LDC_MAX_FILE_LABEL,
+  LEGACY_MULTIPART_MAX_FILE_BYTES,
+  LEGACY_MULTIPART_MAX_FILE_LABEL,
   VERCEL_FUNCTION_MAX_REQUEST_BYTES,
 } from "@/lib/upload-limits"
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const access = await getCurrentUserAccess()
     // Anonymous intake uploads consume their one-time capability before body
     // parsing. Vercel enforces the outer 4.5 MB request boundary, while the
-    // application enforces the shared 4 MB file contract after multipart parse.
+    // deprecated compatibility endpoint enforces its 4 MiB file ceiling after multipart parse.
     const anonymousIntakeGrant = !access
       ? await verifyAndConsumeIntakeUploadToken(
           request,
@@ -106,9 +106,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (file.size > CV_LDC_MAX_FILE_BYTES) {
+    if (file.size > LEGACY_MULTIPART_MAX_FILE_BYTES) {
       return NextResponse.json(
-        { error: `File size must not exceed ${CV_LDC_MAX_FILE_LABEL}` },
+        { error: `File size must not exceed ${LEGACY_MULTIPART_MAX_FILE_LABEL}` },
         { status: 400 },
       )
     }

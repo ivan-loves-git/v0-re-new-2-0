@@ -19,6 +19,7 @@ import {
 import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-content"
 import { maContactEmailPurposeForTemplate } from "@/lib/ma-contact-email-policy"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { deriveMaWorkflowRecommendation } from "@/lib/utils/ma-workflow-recommendations"
 import type { EmailTemplateKey } from "@/lib/types/email"
 import type {
@@ -48,6 +49,7 @@ const UUID_PATTERN =
 
 interface OpportunityWorkflowRow {
   id: string
+  is_demo: boolean
   reference: string
   status: string
   public_title: string | null
@@ -127,6 +129,7 @@ interface MatchRow {
   nda_waived_by: string | null
   updated_at: string
   repreneur?: {
+    is_demo: boolean
     first_name: string | null
     last_name: string | null
     email: string | null
@@ -456,6 +459,7 @@ async function loadOpportunityContext(opportunityId: string) {
       .select(
         `
         id,
+        is_demo,
         reference,
         status,
         public_title,
@@ -523,6 +527,7 @@ async function loadOpportunityContext(opportunityId: string) {
         nda_waived_by,
         updated_at,
         repreneur:repreneurs(
+          is_demo,
           first_name,
           last_name,
           email,
@@ -546,12 +551,14 @@ async function loadOpportunityContext(opportunityId: string) {
   if (matchError) throw new Error(matchError.message)
 
   const opportunity = normalizeSource(opportunityRow)
-  const matches = ((matchRows ?? []) as MatchQueryRow[]).map((row) => ({
-    ...row,
-    repreneur: Array.isArray(row.repreneur)
-      ? (row.repreneur[0] ?? null)
-      : (row.repreneur ?? null),
-  })) as MatchRow[]
+  const matches = ((matchRows ?? []) as MatchQueryRow[])
+    .map((row) => ({
+      ...row,
+      repreneur: Array.isArray(row.repreneur)
+        ? (row.repreneur[0] ?? null)
+        : (row.repreneur ?? null),
+    }))
+    .filter((match) => isOpportunityInRepreneurNamespace(opportunity, match.repreneur)) as MatchRow[]
 
   const match = bestMatch(matches)
   const activeMatch = activePursuit(matches)

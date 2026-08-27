@@ -354,6 +354,7 @@ export async function GET(request: Request) {
         .from("repreneurs")
         .select("id")
         .eq("lifecycle_status", "lead")
+        .eq("is_demo", false)
         .lte("created_at", thirtyDaysAgo)
 
       if (staleCandidateError) {
@@ -377,9 +378,11 @@ export async function GET(request: Request) {
             .in("status", ["offered", "accepted", "active"]),
           supabase
             .from("opportunity_matches")
-            .select("repreneur_id")
+            .select("repreneur_id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
             .in("repreneur_id", candidateIds)
-            .eq("status", "active_pursuit"),
+            .eq("status", "active_pursuit")
+            .eq("opportunity.is_demo", false)
+            .eq("repreneur.is_demo", false),
           supabase
             .from("external_pursuits")
             .select("owner_repreneur_id")

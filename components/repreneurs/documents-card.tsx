@@ -13,6 +13,7 @@ import {
   CV_LDC_MAX_FILE_BYTES,
   CV_LDC_MAX_FILE_LABEL,
 } from "@/lib/upload-limits"
+import { uploadPrivateDocument } from "@/lib/private-upload"
 
 interface DocumentsCardProps {
   repreneurId: string
@@ -62,23 +63,12 @@ function DocumentRow({ repreneurId, label, field, url }: DocumentRowProps) {
     setIsUploading(true)
     setUploadError(null)
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("repreneurId", repreneurId)
-      formData.append("documentType", documentType)
-
-      const response = await fetch("/api/upload-cv", {
-        method: "POST",
-        body: formData,
+      const result = await uploadPrivateDocument(file, {
+        kind: "repreneur_document",
+        resourceId: repreneurId,
+        metadata: { document_type: documentType },
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Upload failed")
-      }
-
-      const { path } = await response.json()
-      const newUrl = path || null
+      const newUrl = typeof result.path === "string" ? result.path : null
       setCurrentUrl(newUrl)
       toast.success(`${label} uploaded successfully`)
     } catch (error) {

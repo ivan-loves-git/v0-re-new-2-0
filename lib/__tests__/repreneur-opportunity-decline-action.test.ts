@@ -76,7 +76,7 @@ describe("repreneur opportunity not-a-fit response", () => {
     const action = source("lib/actions/repreneur-opportunity-responses.ts")
 
     expect(action).toContain('"update_repreneur_opportunity_response"')
-    expect(action).toContain('.eq("opportunity.is_demo", false)')
+    expect(action).toContain("isOpportunityInRepreneurNamespace(opportunity, repreneur)")
     expect(action).not.toContain('.from("opportunity_matches")\n    .update(')
   })
 

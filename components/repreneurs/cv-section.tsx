@@ -8,6 +8,7 @@ import {
   CV_LDC_MAX_FILE_BYTES,
   CV_LDC_MAX_FILE_LABEL,
 } from "@/lib/upload-limits"
+import { uploadPrivateDocument } from "@/lib/private-upload"
 
 interface CVSectionProps {
   repreneurId: string
@@ -42,22 +43,12 @@ export function CVSection({ repreneurId, cvUrl }: CVSectionProps) {
 
     setIsUploading(true)
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("repreneurId", repreneurId)
-
-      const response = await fetch("/api/upload-cv", {
-        method: "POST",
-        body: formData,
+      const result = await uploadPrivateDocument(file, {
+        kind: "repreneur_document",
+        resourceId: repreneurId,
+        metadata: { document_type: "cv" },
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Upload failed")
-      }
-
-      const { path } = await response.json()
-      setCurrentCvUrl(path || null)
+      setCurrentCvUrl(typeof result.path === "string" ? result.path : null)
       toast.success("CV uploaded successfully")
     } catch (error) {
       console.error("CV upload failed")

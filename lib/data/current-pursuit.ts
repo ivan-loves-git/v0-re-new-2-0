@@ -7,7 +7,7 @@ import {
   type OpportunityPursuitJourneyAction,
 } from "@/lib/opportunity-pursuit-evidence"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { isRepreneurEligibleOpportunity } from "@/lib/repreneur-opportunity-eligibility"
+import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 
 export interface PursuitArtifactProjection {
   id: string
@@ -125,7 +125,6 @@ interface MatchRow {
 async function loadCurrentPursuit(
   matchId: string,
   expectedRepreneurId?: string,
-  options?: { excludeDemoRepreneur?: boolean },
 ): Promise<StaffCurrentPursuit | null> {
   const supabase = createAdminClient()
   const [matchResult, settingsResult] = await Promise.all([
@@ -152,10 +151,9 @@ async function loadCurrentPursuit(
   const matchedRepreneur = Array.isArray(match.repreneur)
     ? match.repreneur[0]
     : match.repreneur
-  if (expectedRepreneurId && !isRepreneurEligibleOpportunity(opportunity)) {
+  if (expectedRepreneurId && !isOpportunityInRepreneurNamespace(opportunity, matchedRepreneur)) {
     return null
   }
-  if (options?.excludeDemoRepreneur && matchedRepreneur?.is_demo) return null
 
   const [
     evidenceResult,
@@ -357,9 +355,7 @@ export async function readPortalCurrentPursuit(input: {
   const viewer = await resolveViewer(input.viewer)
   const repreneurId = viewer.repreneurId
   if (!repreneurId) return null
-  const pursuit = await loadCurrentPursuit(input.matchId, repreneurId, {
-    excludeDemoRepreneur: viewer.isActualPortal,
-  })
+  const pursuit = await loadCurrentPursuit(input.matchId, repreneurId)
   return pursuit ? toPortalCurrentPursuit(pursuit) : null
 }
 
@@ -377,17 +373,17 @@ export async function resolvePortalPursuitResource(input: {
   if (!repreneurId) return null
   const supabase = createAdminClient()
 
-  // A staff preview is a staff-authorised inspection surface. Only a real
-  // repreneur portal session is denied DEMO pursuit resources.
-  if (viewer.isActualPortal) {
-    const { data: match, error: matchError } = await supabase
-      .from("opportunity_matches")
-      .select("id, repreneur:repreneurs!inner(is_demo)")
-      .eq("id", input.matchId)
-      .eq("repreneur.is_demo", false)
-      .maybeSingle()
-    if (matchError || !match) return null
-  }
+  // Both the staff preview and the real portal must fail closed on historical
+  // cross-namespace matches before invoking the database resource authority.
+  const { data: match, error: matchError } = await supabase
+    .from("opportunity_matches")
+    .select("id, opportunity:opportunities!inner(is_demo), repreneur:repreneurs!inner(is_demo)")
+    .eq("id", input.matchId)
+    .eq("repreneur_id", repreneurId)
+    .maybeSingle()
+  const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
+  const repreneur = Array.isArray(match?.repreneur) ? match.repreneur[0] : match?.repreneur
+  if (matchError || !match || !isOpportunityInRepreneurNamespace(opportunity, repreneur)) return null
 
   if (input.resource.kind === "information-memorandum") {
     const { data, error } = await supabase.rpc(

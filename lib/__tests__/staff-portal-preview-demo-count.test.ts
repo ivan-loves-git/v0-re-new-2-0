@@ -42,15 +42,16 @@ describe("Staff Portal Preview DEMO counts", () => {
           last_name: "Repreneur",
           email: "qa@example.invalid",
           lifecycle_status: "active",
+          is_demo: false,
         }],
         error: null,
       })
       if (table === "app_user_roles") return query({ data: [], error: null })
       if (table === "opportunity_matches") return query({
         data: [
-          { repreneur_id: "repreneur-1", opportunity: { is_demo: false, status: "active" } },
-          { repreneur_id: "repreneur-1", opportunity: { is_demo: true, status: "active" } },
-          { repreneur_id: "repreneur-1", opportunity: { is_demo: false, status: "paused" } },
+          { repreneur_id: "repreneur-1", opportunity: { is_demo: false, status: "active" }, repreneur: { is_demo: false } },
+          { repreneur_id: "repreneur-1", opportunity: { is_demo: true, status: "active" }, repreneur: { is_demo: false } },
+          { repreneur_id: "repreneur-1", opportunity: { is_demo: false, status: "paused" }, repreneur: { is_demo: false } },
         ],
         error: null,
       })
@@ -58,7 +59,7 @@ describe("Staff Portal Preview DEMO counts", () => {
     })
   })
 
-  it("counts only active, explicitly non-DEMO opportunities even if a query adapter returns ineligible parents", async () => {
+  it("counts only active opportunities in the selected repreneur's namespace", async () => {
     const [option] = await listStaffPortalPreviewOptions()
 
     expect(option.visibleOpportunityCount).toBe(1)

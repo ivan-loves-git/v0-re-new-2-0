@@ -240,6 +240,7 @@ describe("critical server action traces", () => {
         repreneur_id: "repreneur-private-1",
         status: "active_pursuit",
         opportunity: { is_demo: false },
+        repreneur: { is_demo: false },
       },
       error: null,
     })
@@ -249,9 +250,7 @@ describe("critical server action traces", () => {
     })
     const from = vi.fn((table: string) => {
       if (table === "opportunity_matches") {
-        const thirdEq = vi.fn(() => ({ maybeSingle: matchMaybeSingle }))
-        const secondEq = vi.fn(() => ({ eq: thirdEq }))
-        const firstEq = vi.fn(() => ({ eq: secondEq }))
+        const firstEq = vi.fn(() => ({ maybeSingle: matchMaybeSingle }))
         return {
           select: vi.fn(() => ({
             eq: firstEq,
@@ -314,9 +313,7 @@ describe("critical server action traces", () => {
       "lookup exploded for match-private-1 owner@example.test",
     )
     const matchMaybeSingle = vi.fn().mockRejectedValue(rawError)
-    const thirdEq = vi.fn(() => ({ maybeSingle: matchMaybeSingle }))
-    const secondEq = vi.fn(() => ({ eq: thirdEq }))
-    const firstEq = vi.fn(() => ({ eq: secondEq }))
+    const firstEq = vi.fn(() => ({ maybeSingle: matchMaybeSingle }))
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({ eq: firstEq })),

@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   deleteExternalPursuitAttachment,
-  uploadExternalPursuitAttachment,
 } from "@/lib/actions/external-pursuit-attachments"
+import { uploadPrivateDocument } from "@/lib/private-upload"
 import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES, type ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { toast } from "sonner"
@@ -42,9 +42,8 @@ export function ExternalPursuitAttachmentsPanel({
   const operationLockToken = `external-pursuit-attachments:${pursuitId}:${generatedId}`
   const [attachments, setAttachments] = useState(initialAttachments)
   const [pending, startTransition] = useTransition()
-  const [recovery, setRecovery] = useState<"upload" | { attachmentId: string } | null>(null)
+  const [recovery, setRecovery] = useState<{ attachmentId: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const uploadAttempt = useRef<{ formData: FormData; idempotencyKey: string; cleanupRecovery: boolean } | null>(null)
   const deleteAttempt = useRef<{ attachmentId: string; idempotencyKey: string } | null>(null)
   const operationLockHeld = useRef(false)
   const controlsLocked = pending || recovery !== null
@@ -62,49 +61,31 @@ export function ExternalPursuitAttachmentsPanel({
   }
 
   function upload(formData: FormData) {
-    if (recovery && recovery !== "upload") return
-    const attempt = uploadAttempt.current ?? { formData, idempotencyKey: crypto.randomUUID(), cleanupRecovery: false }
-    uploadAttempt.current = attempt
+    if (recovery) return
+    const file = formData.get("file")
+    if (!(file instanceof File)) return
     holdOperationLock()
     startTransition(async () => {
-      let result
       try {
-        result = await uploadExternalPursuitAttachment(pursuitId, attempt.formData, attempt.idempotencyKey, attempt.cleanupRecovery)
-      } catch {
-        // A lost action response can hide an upload/cleanup mutation. The next
-        // exact retry may therefore reconcile only its deterministic path.
-        attempt.cleanupRecovery = true
-        setRecovery("upload")
-        toast.error("The upload result is unclear. Retry the exact same file.")
-        return
-      }
-      if (!result.success) {
-        if (result.retryExact) {
-          attempt.cleanupRecovery = result.retryCleanup === true
-          setRecovery("upload")
-          toast.error(result.message)
-          return
-        }
-        uploadAttempt.current = null
-        setRecovery(null)
+        const result = await uploadPrivateDocument(file, {
+          kind: "external_pursuit_attachment",
+          resourceId: pursuitId,
+        })
         releaseOperationLock()
-        toast.error(result.message)
+        captureExternalPursuitCompleted(role, "upload")
+        toast.success(String(result.message ?? "Attachment added."))
+        if (fileRef.current) fileRef.current.value = ""
+        window.location.reload()
+      } catch (error) {
+        releaseOperationLock()
+        toast.error(error instanceof Error ? error.message : "Could not add attachment.")
         return
       }
-      uploadAttempt.current = null
-      setRecovery(null)
-      releaseOperationLock()
-      captureExternalPursuitCompleted(role, "upload")
-      toast.success(result.message)
-      // Parent board integration refreshes the server projection. Clearing the
-      // local chooser prevents an accidental duplicate submission meanwhile.
-      if (fileRef.current) fileRef.current.value = ""
-      window.location.reload()
     })
   }
 
   function remove(attachmentId: string) {
-    if (recovery && (recovery === "upload" || recovery.attachmentId !== attachmentId)) return
+    if (recovery && recovery.attachmentId !== attachmentId) return
     const attempt = deleteAttempt.current?.attachmentId === attachmentId
       ? deleteAttempt.current
       : { attachmentId, idempotencyKey: crypto.randomUUID() }
@@ -150,19 +131,19 @@ export function ExternalPursuitAttachmentsPanel({
       <Paperclip className="size-4 text-muted-foreground" aria-hidden="true" />
     </div>
     {recovery ? <p role="alert" className="mt-3 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-      The last file action is not confirmed. This view is locked; retry the exact {recovery === "upload" ? "upload" : "removal"} below.
+      The last removal is not confirmed. This view is locked; retry the exact removal below.
     </p> : null}
     <ul className="mt-4 divide-y rounded-md border" aria-label="Attachments">
       {attachments.length ? attachments.map((attachment) => <li key={attachment.id} className="flex items-center gap-3 p-3">
         <Paperclip className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{attachment.original_filename}</p><p className="text-xs text-muted-foreground">{attachment.content_type} · {readableBytes(attachment.byte_size)} · Uploaded by {attachment.uploader_label.toLowerCase()} on {formatDisplayDate(attachment.created_at, "en-GB")}</p></div>
         <Button asChild variant="ghost" size="icon" aria-label={`Download ${attachment.original_filename}`}><a href={`/api/external-pursuits/${pursuitId}/attachments/${attachment.id}`}><Download className="size-4" /></a></Button>
-        {!readOnly ? <Button variant="ghost" size="icon" aria-label={`${recovery && recovery !== "upload" && recovery.attachmentId === attachment.id ? "Retry removal of" : "Remove"} ${attachment.original_filename}`} disabled={pending || Boolean(recovery && (recovery === "upload" || recovery.attachmentId !== attachment.id))} onClick={() => remove(attachment.id)}><Trash2 className="size-4" /></Button> : null}
+        {!readOnly ? <Button variant="ghost" size="icon" aria-label={`${recovery?.attachmentId === attachment.id ? "Retry removal of" : "Remove"} ${attachment.original_filename}`} disabled={pending || Boolean(recovery && recovery.attachmentId !== attachment.id)} onClick={() => remove(attachment.id)}><Trash2 className="size-4" /></Button> : null}
       </li>) : <li className="p-3 text-sm text-muted-foreground">No private attachments yet.</li>}
     </ul>
     {!readOnly ? <form action={upload} className="mt-4 flex flex-wrap items-end gap-3">
       <div className="min-w-56 flex-1 space-y-2"><Label htmlFor={fileInputId}>Choose a private attachment</Label><Input id={fileInputId} ref={fileRef} name="file" type="file" required accept=".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/jpeg,image/png,image/webp,image/gif" disabled={controlsLocked} /></div>
-      <Button type="submit" disabled={pending || Boolean(recovery && recovery !== "upload")}><Upload data-icon="inline-start" />{pending ? "Adding…" : recovery === "upload" ? "Retry exact upload" : "Add attachment"}</Button>
+      <Button type="submit" disabled={pending || Boolean(recovery)}><Upload data-icon="inline-start" />{pending ? "Adding…" : "Add attachment"}</Button>
     </form> : <p className="mt-4 text-sm text-muted-foreground">Deletion is pending. Files are available for staff review but cannot be changed.</p>}
     <p className="mt-2 text-xs text-muted-foreground">PDF, DOCX, XLSX, CSV and images only; maximum {EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MiB. Legacy Office files, executables, archives, HTML and SVG are not accepted.</p>
   </section>

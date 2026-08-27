@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/abandoned-forms",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/private-upload-cleanup",
+      "schedule": "17 * * * *"
     }
   ]
 }

@@ -64,8 +64,8 @@ export const translations = {
     en: 'Resume',
   },
   cvHelpText: {
-    fr: 'PDF, DOC ou DOCX. Maximum 4 MB.',
-    en: 'PDF, DOC or DOCX. Maximum 4 MB.',
+    fr: 'PDF, DOC ou DOCX. Maximum 20 Mio.',
+    en: 'PDF, DOC or DOCX. Maximum 20 MiB.',
   },
   cvUploadText: {
     fr: 'Cliquez ou déposez votre CV ici',
@@ -576,8 +576,8 @@ export const translations = {
     en: 'Invalid format. Use PDF, DOC or DOCX.',
   },
   errorFileSize: {
-    fr: 'Fichier trop volumineux. Maximum 4 MB.',
-    en: 'File too large. Maximum 4 MB.',
+    fr: 'Fichier trop volumineux. Maximum 20 Mio.',
+    en: 'File too large. Maximum 20 MiB.',
   },
   errorUpload: {
     fr: 'Erreur lors du téléchargement',

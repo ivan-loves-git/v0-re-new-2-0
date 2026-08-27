@@ -8,6 +8,7 @@ import { NEEDS_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import { useLanguage } from "@/lib/i18n/language-context"
 import type { IntakeV2StepProps, FileUploadState } from "@/lib/types/intake-v2"
 import { CV_LDC_MAX_FILE_BYTES } from "@/lib/upload-limits"
+import { abandonPrivateIntakeUpload, uploadPrivateDocument } from "@/lib/private-upload"
 import { Upload, FileText, X, Loader2, Info } from "lucide-react"
 
 // Translation keys for Q17 options - values must match NEEDS_QUESTIONS in questionnaire-v2.ts
@@ -81,25 +82,18 @@ export function StepNeeds({
     }))
 
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("documentType", "ldc")
-
       const tokenResponse = await fetch("/api/intake-upload-token", {
         method: "POST",
       })
       if (!tokenResponse.ok) throw new Error("Upload authorization failed")
       const { token } = await tokenResponse.json()
-
-      const response = await fetch("/api/upload-cv", {
-        method: "POST",
-        headers: { "x-intake-upload-token": token },
-        body: formData,
+      const result = await uploadPrivateDocument(file, {
+        kind: "repreneur_document",
+        intakeToken: token,
+        metadata: { document_type: "ldc" },
       })
-
-      if (!response.ok) throw new Error("Upload failed")
-
-      const { url } = await response.json()
+      const url = typeof result.url === "string" ? result.url : null
+      if (!url) throw new Error("Upload failed")
       setThesisUpload((prev) => ({ ...prev, uploading: false, url }))
       onChange({ q18_investment_thesis_url: url })
     } catch {
@@ -112,6 +106,7 @@ export function StepNeeds({
   }
 
   const removeFile = () => {
+    void abandonPrivateIntakeUpload(thesisUpload.url)
     setThesisUpload({
       file: null,
       uploading: false,
