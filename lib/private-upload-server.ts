@@ -650,9 +650,10 @@ export async function abortPrivateUpload(request:Request,payload:unknown) {
   return {success:true}
 }
 
-export async function cleanupExpiredPrivateUploads() {
+export async function cleanupExpiredPrivateUploads(options: { batchSize?: number } = {}) {
+  const batchSize = Math.max(1, Math.min(200, Math.trunc(options.batchSize ?? 200)))
   const supabase=createAdminClient()
-  const {data,error}=await supabase.from("private_upload_intents").select("*").eq("status","pending").lt("expires_at",new Date().toISOString()).limit(200)
+  const {data,error}=await supabase.from("private_upload_intents").select("*").eq("status","pending").lt("expires_at",new Date().toISOString()).limit(batchSize)
   if (error) throw new Error(error.message)
   for (const row of (data??[]) as PrivateUploadIntentRow[]) {
     await closeIntent(row,"expired_cleanup","expired").catch(()=>undefined)
@@ -664,7 +665,7 @@ export async function cleanupExpiredPrivateUploads() {
     .is("claimed_at",null)
     .is("expired_at",null)
     .lt("claim_expires_at",new Date().toISOString())
-    .limit(200)
+    .limit(batchSize)
   if (claimError) throw new Error(claimError.message)
   for (const claim of claims??[]) {
     const intent=Array.isArray(claim.intent)?claim.intent[0]:claim.intent

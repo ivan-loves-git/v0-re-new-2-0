@@ -28,8 +28,9 @@ migration are explicitly published.
    atomically registers canonical metadata. Repeating finalize returns the
    same result only when the digest is unchanged.
 6. Rejected, expired, abandoned, duplicate or replaced objects enter a durable
-   exact-path cleanup queue before deletion is attempted. The scheduled cleanup
-   retries unconfirmed deletions.
+   exact-path cleanup queue before deletion is attempted. The bounded daily
+   maintenance run retries unconfirmed deletions; an authenticated manual route
+   can drain a larger catch-up batch without requiring another Vercel cron slot.
 
 ## Scope
 
