@@ -26,7 +26,7 @@ describe("shared document-row vocabulary", () => {
   it("keeps canonical NDA history locked and does not offer overwrite or removal", () => {
     const manager = source("components/opportunities/opportunity-nda-artifact-manager.tsx")
 
-    expect(manager).toContain('state="locked"')
+    expect(manager).toContain('artifact.can_remove_unused_retained ? "available" : "locked"')
     expect(manager).toContain('getOpportunityDocumentPolicy("nda", true)')
     expect(manager).toContain('definition.role !== "repreneur_signed_copy"')
   })

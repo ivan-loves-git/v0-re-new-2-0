@@ -27,7 +27,7 @@ const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 29, 2026",
     version: "0.9.60 candidate",
-    title: "Matching 2.1 calibration is ready for review",
+    title: "Matching 2.1 and document correction are ready for review",
     isCompleted: false,
     events: [
       {
@@ -39,6 +39,16 @@ const roadmapEvents: RoadmapPeriod[] = [
         title: "Matching 2.1 is a release candidate",
         type: "decision",
         description: "This candidate adds weighted revenue, absolute EBITDA, EBITDA margin and headcount rules with strict sector and geography eligibility. Matching 2.0 stays live until this candidate is separately released; staff recommendations and their status remain unchanged.",
+      },
+      {
+        title: "Unused uploads can be corrected safely",
+        type: "fix",
+        description: "Staff can remove an accidental unused Information Memorandum or latest NDA version. Source teasers and any document already used in a pursuit stay protected.",
+      },
+      {
+        title: "Private cleanup stays reliable",
+        type: "decision",
+        description: "WAVE removes the live record before private file cleanup; if storage is temporarily unavailable, staff can safely retry without leaving a broken document link. The database update is applied before this screen is released.",
       },
     ],
   },
