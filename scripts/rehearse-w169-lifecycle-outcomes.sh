@@ -116,6 +116,7 @@ SET enabled = EXCLUDED.enabled, updated_by = EXCLUDED.updated_by, updated_at = N
 SQL
 
 "${psql[@]}" --single-transaction --file "$repo_root/supabase/migrations/20260829180000_w169_lifecycle_outcome_separation.sql" >/dev/null
+"${psql[@]}" --single-transaction --file "$repo_root/supabase/migrations/20260829203000_w169_pause_guard_scope.sql" >/dev/null
 
 "${psql[@]}" <<'SQL'
 DO $$
@@ -233,6 +234,20 @@ BEGIN
     ) THEN
     RAISE EXCEPTION 'w169_pause_not_recorded_once';
   END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+  BEGIN
+    UPDATE public.opportunities
+    SET status = 'paused'
+    WHERE id = '16900000-0000-4000-8000-000000000005';
+    RAISE EXCEPTION 'w169_pause_guard_leaked_after_service';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'w169_pause_guard_leaked_after_service' THEN RAISE; END IF;
+    IF SQLERRM NOT LIKE '%opportunity_pause_reason_required%' THEN RAISE; END IF;
+  END;
 END;
 $$;
 
