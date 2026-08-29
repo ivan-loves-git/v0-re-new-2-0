@@ -604,6 +604,8 @@ export interface OpportunityDocument {
   repreneur_approved_by?: string | null
   uploaded_at: string
   updated_at: string
+  /** Server-read W-170 projection only; the removal RPC rechecks under lock. */
+  can_remove_unused_retained?: boolean
 }
 
 export interface OpportunityDocument_Insert {
@@ -648,6 +650,8 @@ export interface OpportunityNdaArtifact {
   recorded_by: string
   recorded_at: string
   document?: OpportunityDocument | null
+  /** Server-read W-170 projection only; the removal RPC rechecks under lock. */
+  can_remove_unused_retained?: boolean
 }
 
 export interface OpportunityMatchRepreneur {

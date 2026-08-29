@@ -74,10 +74,34 @@ export async function listOpportunityNdaArtifacts(opportunityId: string): Promis
 
   if (error) throw new Error(error.message)
   const artifacts = (data ?? []) as unknown as OpportunityNdaArtifact[]
+  if (artifacts.length === 0) return artifacts
   const matchIds = artifacts
     .map((artifact) => artifact.match_id)
     .filter((matchId): matchId is string => Boolean(matchId))
-  if (matchIds.length === 0) return artifacts
+  const artifactIds = artifacts.map((artifact) => artifact.id)
+  const documentIds = artifacts.map((artifact) => artifact.document_id)
+  const [evidenceResult, legacyResult] = await Promise.all([
+    supabase.from("opportunity_pursuit_evidence").select("nda_artifact_id, document_id").or(`nda_artifact_id.in.(${artifactIds.join(",")}),document_id.in.(${documentIds.join(",")})`),
+    supabase.from("opportunity_matches").select("nda_document_id").in("nda_document_id", documentIds),
+  ])
+  if (evidenceResult.error) throw new Error(evidenceResult.error.message)
+  if (legacyResult.error) throw new Error(legacyResult.error.message)
+  const usedArtifactIds = new Set((evidenceResult.data ?? []).map((row) => row.nda_artifact_id).filter((id): id is string => Boolean(id)))
+  const usedDocumentIds = new Set([
+    ...(evidenceResult.data ?? []).map((row) => row.document_id),
+    ...(legacyResult.data ?? []).map((row) => row.nda_document_id),
+  ].filter((id): id is string => Boolean(id)))
+  const projected = artifacts.map((artifact) => ({
+    ...artifact,
+    can_remove_unused_retained: !usedArtifactIds.has(artifact.id)
+      && !usedDocumentIds.has(artifact.document_id)
+      && !artifacts.some((other) => other.supersedes_artifact_id === artifact.id
+        || (other.opportunity_id === artifact.opportunity_id
+          && other.match_id === artifact.match_id
+          && other.artifact_role === artifact.artifact_role
+          && other.version_number > artifact.version_number)),
+  }))
+  if (matchIds.length === 0) return projected
 
   const { data: matches, error: matchError } = await supabase
     .from("opportunity_matches")
@@ -92,7 +116,7 @@ export async function listOpportunityNdaArtifacts(opportunityId: string): Promis
       ))
       .map((match) => match.id),
   )
-  return artifacts.filter((artifact) => (
+  return projected.filter((artifact) => (
     !artifact.match_id || sameNamespaceMatchIds.has(artifact.match_id)
   ))
 }

@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 29, 2026",
+    version: "0.9.60",
+    title: "Safe correction for unused confidential documents",
+    isCompleted: true,
+    events: [
+      {
+        title: "Unused uploads can be corrected safely",
+        type: "fix",
+        description: "Staff can remove an accidental unused Information Memorandum or latest NDA version. Source teasers and any document already used in a pursuit stay protected.",
+      },
+      {
+        title: "Private cleanup stays reliable",
+        type: "decision",
+        description: "WAVE removes the live record before private file cleanup; if storage is temporarily unavailable, staff can safely retry without leaving a broken document link.",
+      },
+    ],
+  },
+  {
     period: "Aug 27, 2026",
     version: "0.9.59",
     title: "Lifecycle-led Deal Flow and private 20 MiB uploads",

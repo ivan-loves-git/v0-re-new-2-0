@@ -77,7 +77,28 @@ export async function listOpportunityDocuments(opportunityId: string): Promise<O
     .order("uploaded_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as OpportunityDocument[]
+  const documents = (data ?? []) as OpportunityDocument[]
+  const documentIds = documents.map((document) => document.id)
+  if (documentIds.length === 0) return documents
+
+  const [grantsResult, evidenceResult, legacyResult] = await Promise.all([
+    supabase.from("opportunity_pursuit_confidential_grants").select("information_memo_document_id").in("information_memo_document_id", documentIds),
+    supabase.from("opportunity_pursuit_evidence").select("document_id").in("document_id", documentIds),
+    supabase.from("opportunity_matches").select("nda_document_id").in("nda_document_id", documentIds),
+  ])
+  if (grantsResult.error) throw new Error(grantsResult.error.message)
+  if (evidenceResult.error) throw new Error(evidenceResult.error.message)
+  if (legacyResult.error) throw new Error(legacyResult.error.message)
+
+  const usedDocumentIds = new Set([
+    ...(grantsResult.data ?? []).map((row) => row.information_memo_document_id),
+    ...(evidenceResult.data ?? []).map((row) => row.document_id),
+    ...(legacyResult.data ?? []).map((row) => row.nda_document_id),
+  ].filter((id): id is string => Boolean(id)))
+  return documents.map((document) => ({
+    ...document,
+    can_remove_unused_retained: document.document_type === "deal_book" && !usedDocumentIds.has(document.id),
+  }))
 }
 
 export async function registerOpportunityDocument(formData: FormData): Promise<OpportunityDocumentMutationResult> {
@@ -247,5 +268,69 @@ export async function removeOpportunityDocument(documentId: string, opportunityI
     return { success: true, message: "Document removed." }
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : "Document could not be removed." }
+  }
+}
+
+/**
+ * W-170's only retained-document correction path. The database removes the
+ * live metadata before this action touches Storage, so a Storage outage leaves
+ * a harmless private orphan plus a retryable server-only receipt, never a
+ * document row that points to missing bytes.
+ */
+export async function removeUnusedRetainedOpportunityDocument({
+  opportunityId,
+  documentId,
+}: {
+  opportunityId: string
+  documentId: string
+}): Promise<OpportunityDocumentMutationResult> {
+  try {
+    await requireStaffAccess()
+    if (!opportunityId || !documentId) throw new Error("Opportunity and document are required.")
+
+    const supabase = createAdminClient()
+    const { data, error } = await supabase.rpc("remove_unused_retained_opportunity_document", {
+      p_opportunity_id: opportunityId,
+      p_document_id: documentId,
+    })
+    if (error) throw new Error(error.message)
+
+    const cleanup = (Array.isArray(data) ? data[0] : data) as {
+      cleanup_id?: string
+      storage_bucket?: string
+      storage_path?: string
+    } | null
+    if (!cleanup?.cleanup_id || !cleanup.storage_bucket || !cleanup.storage_path) {
+      throw new Error("The retained-document correction did not return private cleanup details.")
+    }
+
+    const { error: storageError } = await supabase.storage
+      .from(cleanup.storage_bucket).remove([cleanup.storage_path])
+    if (storageError) {
+      return {
+        success: false,
+        message: "Document metadata was removed, but private Storage cleanup is still pending. Retry Remove to finish cleanup.",
+      }
+    }
+
+    const { error: completionError } = await supabase.rpc(
+      "complete_unused_retained_opportunity_document_cleanup",
+      { p_cleanup_id: cleanup.cleanup_id, p_opportunity_id: opportunityId },
+    )
+    if (completionError) {
+      return {
+        success: false,
+        message: "Document metadata and private bytes were removed, but cleanup confirmation is still pending. Retry Remove safely.",
+      }
+    }
+
+    revalidatePath(`/opportunities/${opportunityId}`)
+    revalidateOpportunityDashboardTags()
+    return { success: true, message: "Unused retained document removed." }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unused retained document could not be removed.",
+    }
   }
 }

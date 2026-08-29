@@ -139,7 +139,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
     "setOpportunityDemoClassification",
   ]),
   "lib/actions/opportunity-analytics.ts": boundary("staff", ["getOpportunityKpiData"]),
-  "lib/actions/opportunity-documents.ts": boundary("staff", ["listOpportunityDocuments", "registerOpportunityDocument", "updateOpportunityDocumentVisibility", "removeOpportunityDocument"]),
+  "lib/actions/opportunity-documents.ts": boundary("staff", ["listOpportunityDocuments", "registerOpportunityDocument", "updateOpportunityDocumentVisibility", "removeOpportunityDocument", "removeUnusedRetainedOpportunityDocument"]),
   "lib/actions/opportunity-freshness.ts": boundary("staff", ["getOpportunityFreshnessData"]),
   "lib/actions/opportunity-intake.ts": boundary("staff", ["listOpportunityGeographyOptions", "listMaOfficeIntakeOptions", "listMaCanonicalContactOptions", "createOpportunityIntake", "updateOpportunityIntake", "resolveAcmeProvisionalSource", "createMaFirmOfficeContext", "createMaOfficeForExistingFirm", "createMaOfficeContact"]),
   "lib/actions/opportunity-matches.ts": boundary("staff", ["listOpportunityMatches", "listOpportunityMatchesForRepreneur", "listOpportunityPursuitEvents", "listOpportunityMatchResponses", "listOpportunityMatchCandidates", "listOpportunityCandidatesForRepreneur", "saveOpportunityMatch", "removeOpportunityMatch", "markOpportunityMatchReviewed", "validateOpportunityPursuit", "dropOpportunityPursuit", "reopenDroppedOpportunityMatch"]),

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
+import { removeUnusedRetainedOpportunityDocument } from "@/lib/actions/opportunity-documents"
 import { uploadPrivateDocument } from "@/lib/private-upload"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
@@ -89,6 +90,7 @@ export function OpportunityNdaArtifactManager({
 }: OpportunityNdaArtifactManagerProps) {
   const router = useRouter()
   const [pendingRole, setPendingRole] = useState<OpportunityNdaArtifactRole | null>(null)
+  const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null)
   const [message, setMessage] = useState<{
     role: OpportunityNdaArtifactRole
     tone: "success" | "error"
@@ -143,6 +145,29 @@ export function OpportunityNdaArtifactManager({
       })
     } finally {
       setPendingRole(null)
+    }
+  }
+
+  async function handleRemoveUnusedArtifact(artifact: OpportunityNdaArtifact) {
+    const title = artifact.document?.title ?? `NDA version ${artifact.version_number}`
+    if (!window.confirm(`Remove this unused NDA version: ${title}? Used versions cannot be deleted.`)) return
+    setPendingRemovalId(artifact.id)
+    setMessage(null)
+    try {
+      const result = await removeUnusedRetainedOpportunityDocument({
+        opportunityId,
+        documentId: artifact.document_id,
+      })
+      setMessage({
+        role: artifact.artifact_role,
+        tone: result.success ? "success" : "error",
+        text: result.message,
+      })
+      if (result.success) router.refresh()
+    } catch {
+      setMessage({ role: artifact.artifact_role, tone: "error", text: "Unused NDA version could not be removed." })
+    } finally {
+      setPendingRemovalId(null)
     }
   }
 
@@ -289,16 +314,21 @@ export function OpportunityNdaArtifactManager({
                           {formatPursuitDateTime(artifact.recorded_at)}
                           {artifact.match_id ? ` · pursuit ${artifact.match_id.slice(0, 8)}` : " · opportunity"}
                         </p>
+                        {!artifact.can_remove_unused_retained && (
+                          <p className="mt-1 text-xs text-muted-foreground">Locked after use or supersession. Record a corrected next version instead.</p>
+                        )}
                       </div>
                     </div>
                     <DocumentRowActions
                       policy={{
                         ...getOpportunityDocumentPolicy("nda", true),
                         canView: artifact.document?.mime_type !== "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        canRemove: artifact.can_remove_unused_retained === true,
                       }}
-                      state="locked"
+                      state={pendingRemovalId === artifact.id ? "pending" : artifact.can_remove_unused_retained ? "available" : "locked"}
                       viewHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`}
                       downloadHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}?download`}
+                      onRemove={artifact.can_remove_unused_retained ? () => handleRemoveUnusedArtifact(artifact) : undefined}
                     />
                   </div>
                 ))}

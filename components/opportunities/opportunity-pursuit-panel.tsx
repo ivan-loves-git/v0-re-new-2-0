@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
+import { removeUnusedRetainedOpportunityDocument } from "@/lib/actions/opportunity-documents"
 import { toast } from "sonner"
 import {
   grantOpportunityPursuitConfidentialAccess,
@@ -89,6 +90,12 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
     })
   }
 
+  function removeUnusedArtifact(artifact: OpportunityNdaArtifact) {
+    const title = artifact.document?.title ?? `NDA version ${artifact.version_number}`
+    if (!window.confirm(`Remove this unused NDA version: ${title}? Used versions cannot be deleted.`)) return
+    run(() => removeUnusedRetainedOpportunityDocument({ opportunityId, documentId: artifact.document_id }))
+  }
+
   const nextAction = projection?.nextAction
   const hasLiveGrant = Boolean(projection?.hasLiveConfidentialGrant)
   const canDrop = projection?.allowedActions.includes("drop") ?? false
@@ -134,7 +141,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
 
       <Card>
         <CardHeader><CardTitle>NDA artifacts</CardTitle><CardDescription>Staff records the blank template and Re-New copy. The repreneur uploads their own signed copy in the portal after Gate 1.</CardDescription></CardHeader>
-        <CardContent className="flex flex-col gap-5"><OpportunityNdaArtifactManager opportunityId={opportunityId} activeMatchId={activeMatch?.id ?? null} artifacts={ndaArtifacts} />{activeMatch ? <section className="flex flex-col gap-3 border-t pt-5"><div><h3 className="font-medium">Repreneur-signed copies</h3><p className="text-sm text-muted-foreground">The repreneur uploads these in the portal. Staff can review retained versions and validate only the current copy.</p></div>{repreneurArtifacts.length ? <div className="divide-y rounded-md border">{repreneurArtifacts.map((artifact) => <div key={artifact.id} className="flex items-center justify-between gap-3 p-3"><span className="text-sm">v{artifact.version_number} · {artifact.document?.title ?? "Signed NDA"}</span><DocumentRowActions policy={getOpportunityDocumentPolicy("nda", true)} state="locked" viewHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`} downloadHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}?download`} /></div>)}</div> : <p className="text-sm text-muted-foreground">No repreneur-signed copy has been uploaded yet.</p>}</section> : null}</CardContent>
+        <CardContent className="flex flex-col gap-5"><OpportunityNdaArtifactManager opportunityId={opportunityId} activeMatchId={activeMatch?.id ?? null} artifacts={ndaArtifacts} />{activeMatch ? <section className="flex flex-col gap-3 border-t pt-5"><div><h3 className="font-medium">Repreneur-signed copies</h3><p className="text-sm text-muted-foreground">The repreneur uploads these in the portal. Staff can review retained versions and validate only the current copy.</p></div>{repreneurArtifacts.length ? <div className="divide-y rounded-md border">{repreneurArtifacts.map((artifact) => <div key={artifact.id} className="flex items-center justify-between gap-3 p-3"><span className="text-sm">v{artifact.version_number} · {artifact.document?.title ?? "Signed NDA"}{!artifact.can_remove_unused_retained && <span className="block text-xs text-muted-foreground">Locked after use or supersession. Record a corrected next version instead.</span>}</span><DocumentRowActions policy={{ ...getOpportunityDocumentPolicy("nda", true), canRemove: artifact.can_remove_unused_retained === true }} state={pending ? "pending" : artifact.can_remove_unused_retained ? "available" : "locked"} viewHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}`} downloadHref={`/opportunities/${opportunityId}/nda-artifacts/${artifact.id}?download`} onRemove={artifact.can_remove_unused_retained ? () => removeUnusedArtifact(artifact) : undefined} /></div>)}</div> : <p className="text-sm text-muted-foreground">No repreneur-signed copy has been uploaded yet.</p>}</section> : null}</CardContent>
       </Card>
 
       {activeMatch && projection?.gate2Passed && projection.dispatched ? <Card>

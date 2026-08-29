@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   removeOpportunityDocument,
+  removeUnusedRetainedOpportunityDocument,
   updateOpportunityDocumentVisibility,
 } from "@/lib/actions/opportunity-documents"
 import { PRIVATE_DOCUMENT_MAX_LABEL, uploadPrivateDocument } from "@/lib/private-upload"
@@ -136,6 +137,24 @@ export function OpportunityDocumentsPanel({
       router.refresh()
     } catch {
       toast.error("Document not removed", { description: "Please try again." })
+    } finally {
+      setPendingDocumentId(null)
+    }
+  }
+
+  async function handleRemoveUnusedRetained(documentId: string, title: string) {
+    if (!window.confirm(`Remove this unused Information Memorandum: ${title}? Used versions cannot be deleted.`)) return
+    setPendingDocumentId(documentId)
+    try {
+      const result = await removeUnusedRetainedOpportunityDocument({ opportunityId, documentId })
+      if (!result.success) {
+        toast.error("Unused document not fully removed", { description: result.message })
+        return
+      }
+      toast.success("Unused document removed", { description: result.message })
+      router.refresh()
+    } catch {
+      toast.error("Unused document not removed", { description: "Please try again." })
     } finally {
       setPendingDocumentId(null)
     }
@@ -267,15 +286,21 @@ export function OpportunityDocumentsPanel({
                   documents.map((document) => {
                     const isCanonicalNdaArtifact = canonicalNdaDocumentIdSet.has(document.id)
                     const policy = getOpportunityDocumentPolicy(document.document_type, isCanonicalNdaArtifact)
+                    const canRemoveUnusedIm = document.can_remove_unused_retained === true
                     const state: DocumentInteractionState = pendingDocumentId === document.id
                       ? "pending"
-                      : policy.retained
-                        ? "locked"
-                        : "available"
+                      : canRemoveUnusedIm
+                        ? "available"
+                        : policy.retained
+                          ? "locked"
+                          : "available"
                     return (
                     <TableRow key={document.id}>
                       <TableCell>
                         <div className="font-medium">{document.title}</div>
+                        {document.document_type === "deal_book" && !canRemoveUnusedIm && (
+                          <p className="mt-1 text-xs text-muted-foreground">Locked after use. Upload a corrected next version instead.</p>
+                        )}
                       </TableCell>
                       <TableCell>{documentTypeLabel(document.document_type)}</TableCell>
                       <TableCell>
@@ -299,13 +324,15 @@ export function OpportunityDocumentsPanel({
                       <TableCell>{formatDate(document.uploaded_at)}</TableCell>
                       <TableCell>
                         <DocumentRowActions
-                          policy={policy}
+                          policy={canRemoveUnusedIm ? { ...policy, canRemove: true } : policy}
                           state={state}
                           viewHref={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`}
                           downloadHref={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}?download`}
                           onMarkStaffOnly={() => handleVisibility(document.id, "staff_only")}
                           onMarkApproved={() => handleVisibility(document.id, "approved_for_repreneur")}
-                          onRemove={() => handleRemove(document.id)}
+                          onRemove={canRemoveUnusedIm
+                            ? () => handleRemoveUnusedRetained(document.id, document.title)
+                            : policy.canRemove ? () => handleRemove(document.id) : undefined}
                         />
                       </TableCell>
                     </TableRow>
