@@ -28,7 +28,7 @@ const roadmapEvents: RoadmapPeriod[] = [
     period: "Aug 29, 2026",
     version: "0.9.60",
     title: "Safe correction for unused confidential documents",
-    isCompleted: false,
+    isCompleted: true,
     events: [
       {
         title: "Unused uploads can be corrected safely",
