@@ -25,15 +25,15 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
-    period: "Aug 29, 2026",
-    version: "0.9.62 candidate",
-    title: "Reviewed opportunity titles ready for controlled release",
-    isCompleted: false,
+    period: "Aug 30, 2026",
+    version: "0.9.62",
+    title: "Reviewed opportunity titles are live",
+    isCompleted: true,
     events: [
       {
-        title: "Reviewed titles have a guarded release path",
+        title: "Reviewed titles were reconciled safely",
         type: "feature",
-        description: "Staff can first check the exact reviewed workbook without changing records. A later approved run updates only the public title, stops if a record changed in the meantime, and leaves blank source cells untouched.",
+        description: "The guarded production run updated only the 22 reviewed public titles that needed correction, left 17 already-correct titles unchanged, and verified all 39 reviewed titles after release.",
       },
       {
         title: "Daily opportunity scanning leads with the decision fields",
