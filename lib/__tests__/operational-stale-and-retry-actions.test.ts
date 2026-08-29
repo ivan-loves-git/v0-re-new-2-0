@@ -139,7 +139,11 @@ describe("operational stale tabs and retried staff actions", () => {
     {
       label: "drop",
       current: { id: "match-1", status: "dropped", pursuit_stage: "dropped" },
-      invoke: () => dropOpportunityPursuit("match-1", "opportunity-1"),
+      invoke: () => dropOpportunityPursuit(
+        "match-1",
+        "opportunity-1",
+        "no_viable_match",
+      ),
     },
     {
       label: "reopen",

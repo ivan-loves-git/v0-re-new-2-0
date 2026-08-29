@@ -49,6 +49,8 @@ import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
   OpportunityNdaArtifact,
+  OpportunityPauseHistoryEntry,
+  OpportunityPauseReason,
   OpportunityPursuitEvent,
   OpportunityWithSource,
 } from "@/lib/types/opportunity"
@@ -85,8 +87,12 @@ interface OpportunityDetailProps {
   updateAction: (formData: FormData) => Promise<OpportunityActionResult | void>
   resolveSourceAction: (formData: FormData) => Promise<OpportunityActionResult>
   closureHistory: OpportunityClosureHistoryEntry[]
+  pauseHistory: OpportunityPauseHistoryEntry[]
   closeAction: (
     reason: OpportunityClosureReason,
+  ) => Promise<OpportunityActionResult>
+  pauseAction: (
+    reason: OpportunityPauseReason,
   ) => Promise<OpportunityActionResult>
   demoClassificationAction: (
     isDemo: boolean,
@@ -153,7 +159,9 @@ export function OpportunityDetail({
   updateAction,
   resolveSourceAction,
   closureHistory,
+  pauseHistory,
   closeAction,
+  pauseAction,
   demoClassificationAction,
   officeOptions,
   geographyOptions,
@@ -322,7 +330,9 @@ export function OpportunityDetail({
             opportunityStatus={opportunity.status}
             sourceReviewRequired={opportunity.source_review_required === true}
             closureHistory={closureHistory}
+            pauseHistory={pauseHistory}
             closeAction={closeAction}
+            pauseAction={pauseAction}
           />
 
           <dl className="grid overflow-hidden rounded-lg border bg-card sm:grid-cols-3 sm:divide-x">

@@ -81,11 +81,20 @@ export type OpportunityClosureReason =
   | "stale"
   | "sold"
   | "signed_repreneur"
-  | "paused_cabinet"
   | "withdrawn_seller"
-  | "no_viable_match"
   | "dd_disqualified"
   | "duplicate"
+
+export type HistoricalOpportunityClosureReason =
+  | OpportunityClosureReason
+  | "paused_cabinet"
+  | "no_viable_match"
+
+export type OpportunityPauseReason = "paused_cabinet"
+
+export type OpportunityPursuitDropReason =
+  | "no_viable_match"
+  | "dd_disqualified_repreneur"
 
 export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -99,13 +108,32 @@ export const OPPORTUNITY_CLOSURE_REASON_OPTIONS = [
   { value: "stale", label: "Stale" },
   { value: "sold", label: "Sold" },
   { value: "signed_repreneur", label: "Signed repreneur" },
-  { value: "paused_cabinet", label: "Paused by cabinet" },
   { value: "withdrawn_seller", label: "Withdrawn by seller" },
-  { value: "no_viable_match", label: "No viable match" },
-  { value: "dd_disqualified", label: "Disqualified in due diligence" },
   { value: "duplicate", label: "Duplicate" },
+  {
+    value: "dd_disqualified",
+    label: "Due diligence — deal unsuitable for every repreneur",
+  },
 ] as const satisfies ReadonlyArray<{
   value: OpportunityClosureReason
+  label: string
+}>
+
+export const OPPORTUNITY_PAUSE_REASON_OPTIONS = [
+  { value: "paused_cabinet", label: "Paused by cabinet" },
+] as const satisfies ReadonlyArray<{
+  value: OpportunityPauseReason
+  label: string
+}>
+
+export const OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS = [
+  { value: "no_viable_match", label: "No viable match" },
+  {
+    value: "dd_disqualified_repreneur",
+    label: "Due diligence — this repreneur only",
+  },
+] as const satisfies ReadonlyArray<{
+  value: OpportunityPursuitDropReason
   label: string
 }>
 
@@ -217,6 +245,22 @@ export function isOpportunityClosureReason(
   value: unknown,
 ): value is OpportunityClosureReason {
   return OPPORTUNITY_CLOSURE_REASON_OPTIONS.some(
+    (option) => option.value === value,
+  )
+}
+
+export function isOpportunityPauseReason(
+  value: unknown,
+): value is OpportunityPauseReason {
+  return OPPORTUNITY_PAUSE_REASON_OPTIONS.some(
+    (option) => option.value === value,
+  )
+}
+
+export function isOpportunityPursuitDropReason(
+  value: unknown,
+): value is OpportunityPursuitDropReason {
+  return OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.some(
     (option) => option.value === value,
   )
 }
@@ -509,9 +553,18 @@ export interface OpportunitySourceContact {
 export interface OpportunityClosureHistoryEntry {
   id: string
   opportunity_id: string
-  reason: OpportunityClosureReason
+  reason: HistoricalOpportunityClosureReason
   closed_by: string
   closed_at: string
+}
+
+export interface OpportunityPauseHistoryEntry {
+  id: string
+  opportunity_id: string
+  reason: OpportunityPauseReason
+  previous_status: OpportunityStatus
+  paused_by: string
+  paused_at: string
 }
 
 export interface OpportunityActionResult {
@@ -876,11 +929,32 @@ export function getOpportunityStatusLabel(status: OpportunityStatus): string {
 }
 
 export function getOpportunityClosureReasonLabel(
-  reason: OpportunityClosureReason,
+  reason: HistoricalOpportunityClosureReason,
 ): string {
+  if (reason === "paused_cabinet") return "Paused by cabinet (historical closure)"
+  if (reason === "no_viable_match") return "No viable match (historical closure)"
   return (
     OPPORTUNITY_CLOSURE_REASON_OPTIONS.find((option) => option.value === reason)
       ?.label ?? reason
+  )
+}
+
+export function getOpportunityPauseReasonLabel(
+  reason: OpportunityPauseReason,
+): string {
+  return (
+    OPPORTUNITY_PAUSE_REASON_OPTIONS.find((option) => option.value === reason)
+      ?.label ?? reason
+  )
+}
+
+export function getOpportunityPursuitDropReasonLabel(
+  reason: OpportunityPursuitDropReason,
+): string {
+  return (
+    OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.find(
+      (option) => option.value === reason,
+    )?.label ?? reason
   )
 }
 

@@ -33,9 +33,17 @@ describe("staff dialog validation feedback", () => {
   it("keeps closure failures beside the required reason control", () => {
     const closure = source("components/opportunities/opportunity-closure-controls.tsx")
 
-    expect(closure).toContain('<FormFieldLabel htmlFor="opportunity-closure-reason" requirement="required">')
-    expect(closure).toContain("<ValidationSummary ref={summaryRef}")
-    expect(closure).toContain("setFieldErrors({ form: result.message })")
-    expect(closure).toContain('id="opportunity-closure-reason" {...fieldErrorProps')
+    expect(closure).toContain('htmlFor="opportunity-closure-reason"')
+    expect(closure).toContain('htmlFor="opportunity-pause-reason"')
+    expect(closure).toContain('requirement="required"')
+    expect(closure).toContain("<ValidationSummary")
+    expect(closure).toContain("ref={summaryRef}")
+    expect(closure).toContain(
+      "setFieldErrors(result.fieldErrors ?? { form: result.message })",
+    )
+    expect(closure).toContain('id="opportunity-closure-reason"')
+    expect(closure).toContain('id="opportunity-pause-reason"')
+    expect(closure).toContain("fieldErrors.closure_reason")
+    expect(closure).toContain("fieldErrors.pause_reason")
   })
 })

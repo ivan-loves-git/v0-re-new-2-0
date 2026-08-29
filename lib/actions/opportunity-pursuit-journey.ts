@@ -7,6 +7,7 @@ import type { OpportunityPursuitJourneyAction } from "@/lib/opportunity-pursuit-
 import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
 import { queueM2StaffPursuitEvent } from "@/lib/telemetry/m2-repreneur"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
 
 export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string } | { success: false; message: string }
 
@@ -55,6 +56,14 @@ export async function runOpportunityPursuitJourneyAction(input: {
     })
   }
   try {
+    if (input.action === "drop" && !isOpportunityPursuitDropReason(input.reason)) {
+      trace.failure("validation_failed")
+      capture("validation_error", "validation_failed")
+      return {
+        success: false,
+        message: "Choose why this pursuit is ending.",
+      }
+    }
     if (input.action === "grant_confidential_access") {
       if (!input.documentId) {
         trace.failure("validation_failed")

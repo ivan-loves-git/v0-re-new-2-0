@@ -9,6 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
@@ -29,7 +37,15 @@ import {
 import type { StaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
-import type { OpportunityDocument, OpportunityMatch, OpportunityNdaArtifact } from "@/lib/types/opportunity"
+import {
+  getOpportunityPursuitDropReasonLabel,
+  isOpportunityPursuitDropReason,
+  OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS,
+  type OpportunityDocument,
+  type OpportunityMatch,
+  type OpportunityNdaArtifact,
+  type OpportunityPursuitDropReason,
+} from "@/lib/types/opportunity"
 
 interface OpportunityPursuitPanelProps {
   opportunityId: string
@@ -68,6 +84,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null)
   const [outcomeReason, setOutcomeReason] = useState("")
+  const [dropReason, setDropReason] = useState<OpportunityPursuitDropReason | "">("")
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
   const visibleMatch = activeMatch ?? matches.find((match) => match.status === "dropped") ?? null
   const currentTemplate = projection?.currentTemplate ?? ndaArtifacts.find((artifact) => artifact.artifact_role === "blank_template" && !artifact.match_id) ?? null
@@ -128,7 +145,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
             {nextAction === "pass_gate_2" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => passOpportunityPursuitGate2(activeMatch.id))}><ShieldCheck data-icon="inline-start" />{pending ? "Recording..." : "Pass Gate 2"}</Button> : null}
             {nextAction === "record_dispatch" ? <Button disabled={pending} variant="outline" data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => recordOpportunityPursuitDispatch(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Recording..." : "Record manual dispatch"}</Button> : null}
           </div> : null}
-          {activeMatch && canDrop ? <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-drop-reason">Reason required to drop this pursuit</Label><Input id="pursuit-drop-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} variant="destructive" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "drop", outcomeReason.trim()))}>Drop pursuit</Button></div> : null}
+          {activeMatch && canDrop ? <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-drop-reason">Choose why this pursuit is ending</Label><Select value={dropReason} onValueChange={(value) => setDropReason(value as OpportunityPursuitDropReason)}><SelectTrigger id="pursuit-drop-reason"><SelectValue placeholder="Choose a Drop reason" /></SelectTrigger><SelectContent><SelectGroup>{OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent></Select></div><Button disabled={pending || !dropReason} variant="destructive" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "drop", dropReason))}>Drop pursuit</Button></div> : null}
         </CardContent>
       </Card>
 
@@ -165,7 +182,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><History data-icon="inline-start" />Evidence log</CardTitle><CardDescription>Append-only operational history for this pursuit. {legacyEventCount ? `${legacyEventCount} legacy stage record${legacyEventCount === 1 ? " is" : "s are"} retained as read-only history.` : ""}</CardDescription></CardHeader>
-        <CardContent>{projection?.entries.length ? <div className="divide-y rounded-md border">{projection.entries.map((entry) => <div key={entry.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">{EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>{entry.evidence_reference ? <p className="text-xs text-muted-foreground">{entry.evidence_reference}</p> : null}</div><p className="text-xs text-muted-foreground">{entry.actor} · {formatPursuitDateTime(entry.recorded_at)}</p></div>)}</div> : <p className="text-sm text-muted-foreground">No canonical evidence has been recorded yet.</p>}</CardContent>
+        <CardContent>{projection?.entries.length ? <div className="divide-y rounded-md border">{projection.entries.map((entry) => { const evidenceReference = entry.event_type === "dropped" && isOpportunityPursuitDropReason(entry.evidence_reference) ? getOpportunityPursuitDropReasonLabel(entry.evidence_reference) : entry.evidence_reference; return <div key={entry.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">{EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>{evidenceReference ? <p className="text-xs text-muted-foreground">{evidenceReference}</p> : null}</div><p className="text-xs text-muted-foreground">{entry.actor} · {formatPursuitDateTime(entry.recorded_at)}</p></div> })}</div> : <p className="text-sm text-muted-foreground">No canonical evidence has been recorded yet.</p>}</CardContent>
       </Card>
     </div>
   )
