@@ -26,8 +26,8 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 29, 2026",
-    version: "0.9.60 candidate",
-    title: "Matching 2.1 and document correction are ready for review",
+    version: "0.9.61 candidate",
+    title: "Matching 2.1 is ready for review",
     isCompleted: false,
     events: [
       {
@@ -40,6 +40,14 @@ const roadmapEvents: RoadmapPeriod[] = [
         type: "decision",
         description: "This candidate adds weighted revenue, absolute EBITDA, EBITDA margin and headcount rules with strict sector and geography eligibility. Matching 2.0 stays live until this candidate is separately released; staff recommendations and their status remain unchanged.",
       },
+    ],
+  },
+  {
+    period: "Aug 29, 2026",
+    version: "0.9.60",
+    title: "Safe correction for unused confidential documents",
+    isCompleted: true,
+    events: [
       {
         title: "Unused uploads can be corrected safely",
         type: "fix",
