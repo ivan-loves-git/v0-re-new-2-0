@@ -117,6 +117,8 @@ export async function submitIntakeV2(
       q16_equity: formData.q16_equity,
       target_revenue_min_meur: formData.target_revenue_min_meur,
       target_revenue_max_meur: formData.target_revenue_max_meur,
+      target_ebitda_min_keur: formData.target_ebitda_min_keur,
+      target_ebitda_max_keur: formData.target_ebitda_max_keur,
       target_ebitda_margin_min_pct: formData.target_ebitda_margin_min_pct,
       target_staff_size_min: formData.target_staff_size_min,
       target_staff_size_max: formData.target_staff_size_max,

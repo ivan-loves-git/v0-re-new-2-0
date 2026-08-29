@@ -104,6 +104,7 @@ function thesisFields(repreneur: PortalRepreneurProfile) {
     { label: "Deal size", value: dealSize !== "To refine" ? dealSize : displayValue(repreneur.target_acquisition_size) },
     { label: "Investment capacity", value: displayValue(investmentCapacity, EQUITY_LABELS) },
     { label: "Revenue range", value: formatRange(repreneur.target_revenue_min_meur, repreneur.target_revenue_max_meur, "M EUR") },
+    { label: "EBITDA range", value: formatRange(repreneur.target_ebitda_min_keur, repreneur.target_ebitda_max_keur, "k EUR") },
     { label: "Minimum EBITDA margin", value: repreneur.target_ebitda_margin_min_pct === null ? "To refine" : `${formatNumber(repreneur.target_ebitda_margin_min_pct)}%` },
     { label: "Staff-size range", value: formatRange(repreneur.target_staff_size_min, repreneur.target_staff_size_max, "people") },
   ]

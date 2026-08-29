@@ -39,6 +39,8 @@ describe("automatic target-thesis completeness", () => {
   it.each([
     { target_revenue_min_meur: 1 },
     { target_revenue_max_meur: 5 },
+    { target_ebitda_min_keur: 100 },
+    { target_ebitda_max_keur: 500 },
     { target_ebitda_margin_min_pct: 10 },
     { target_staff_size_min: 5 },
     { target_staff_size_max: 100 },

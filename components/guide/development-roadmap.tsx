@@ -25,6 +25,24 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Aug 29, 2026",
+    version: "0.9.60 candidate",
+    title: "Richer acquisition-thesis details are ready for review",
+    isCompleted: false,
+    events: [
+      {
+        title: "Optional absolute EBITDA target range",
+        type: "feature",
+        description: "A repreneur and the Re-New team can record a target EBITDA range in thousands of euros, including a one-sided range, without changing current deal access or matching recommendations.",
+      },
+      {
+        title: "Matching calibration remains unchanged",
+        type: "decision",
+        description: "This candidate records an additional financial detail for review; it does not change the current Matching 2.0 calculation or any human recommendation state.",
+      },
+    ],
+  },
+  {
     period: "Aug 27, 2026",
     version: "0.9.59",
     title: "Lifecycle-led Deal Flow and private 20 MiB uploads",

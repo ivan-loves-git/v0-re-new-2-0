@@ -14,6 +14,8 @@ type TargetThesisValidationInput = {
   q16_equity: string
   target_revenue_min_meur: number | null
   target_revenue_max_meur: number | null
+  target_ebitda_min_keur: number | null
+  target_ebitda_max_keur: number | null
   target_ebitda_margin_min_pct: number | null
   target_staff_size_min: number | null
   target_staff_size_max: number | null
@@ -67,11 +69,20 @@ export function targetThesisInputValidationMessage(input: TargetThesisValidation
   const numberError =
     optionalNumberValidationMessage(input.target_revenue_min_meur, "Revenue minimum", 100000) ??
     optionalNumberValidationMessage(input.target_revenue_max_meur, "Revenue maximum", 100000) ??
+    optionalNumberValidationMessage(input.target_ebitda_min_keur, "EBITDA minimum", 100000) ??
+    optionalNumberValidationMessage(input.target_ebitda_max_keur, "EBITDA maximum", 100000) ??
     optionalNumberValidationMessage(input.target_ebitda_margin_min_pct, "Minimum EBITDA margin", 100) ??
     optionalNumberValidationMessage(input.target_staff_size_min, "Staff-size minimum", 100000, true) ??
     optionalNumberValidationMessage(input.target_staff_size_max, "Staff-size maximum", 100000, true)
   if (numberError) return numberError
 
+  if (
+    input.target_ebitda_min_keur !== null &&
+    input.target_ebitda_max_keur !== null &&
+    input.target_ebitda_min_keur > input.target_ebitda_max_keur
+  ) {
+    return "EBITDA range minimum cannot be greater than its maximum."
+  }
   if (
     input.target_revenue_min_meur !== null &&
     input.target_revenue_max_meur !== null &&

@@ -43,6 +43,8 @@ export const TEST_WHEN_DATA: Partial<IntakeV2FormData> = {
   q16_equity: '>450',                // Best equity = GREEN fit
   target_revenue_min_meur: 1.5,
   target_revenue_max_meur: 4,
+  target_ebitda_min_keur: 150,
+  target_ebitda_max_keur: 600,
   target_ebitda_margin_min_pct: 10,
   target_staff_size_min: 10,
   target_staff_size_max: 60,
