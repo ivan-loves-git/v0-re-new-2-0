@@ -26,6 +26,24 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 29, 2026",
+    version: "0.9.62 candidate",
+    title: "Reviewed opportunity titles ready for controlled release",
+    isCompleted: false,
+    events: [
+      {
+        title: "Reviewed titles have a guarded release path",
+        type: "feature",
+        description: "Staff can first check the exact reviewed workbook without changing records. A later approved run updates only the public title, stops if a record changed in the meantime, and leaves blank source cells untouched.",
+      },
+      {
+        title: "Daily opportunity scanning leads with the decision fields",
+        type: "style",
+        description: "Find and Groups now put the title, region, sector, revenue and EBITDA before the operational journey and pursuit context, while keeping the internal reference available beneath the title.",
+      },
+    ],
+  },
+  {
+    period: "Aug 29, 2026",
     version: "0.9.61",
     title: "Matching 2.1 is live",
     isCompleted: true,

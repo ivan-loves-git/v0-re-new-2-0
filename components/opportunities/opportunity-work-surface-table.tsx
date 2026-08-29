@@ -109,21 +109,16 @@ const GROUP_PAGE_DEFAULTS: Record<OpportunityGroupKey, number> = {
   closed: 1,
 }
 
-function formatDealSize(opportunity: OpportunityWorkSurfaceRecord) {
-  const revenue =
-    opportunity.revenue_meur === null || opportunity.revenue_meur === undefined
-      ? "Rev -"
-      : `Rev ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(opportunity.revenue_meur)}M`
-  const ebitda =
-    opportunity.ebitda_keur === null || opportunity.ebitda_keur === undefined
-      ? "EBITDA -"
-      : `EBITDA ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(opportunity.ebitda_keur)}K`
-  const headcountValue = opportunity.headcount_range ?? opportunity.headcount
-  const headcount =
-    headcountValue === null || headcountValue === undefined
-      ? "HC -"
-      : `HC ${headcountValue}`
-  return [revenue, ebitda, headcount]
+function formatRevenue(opportunity: OpportunityWorkSurfaceRecord) {
+  return opportunity.revenue_meur === null || opportunity.revenue_meur === undefined
+    ? "-"
+    : `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(opportunity.revenue_meur)}M`
+}
+
+function formatEbitda(opportunity: OpportunityWorkSurfaceRecord) {
+  return opportunity.ebitda_keur === null || opportunity.ebitda_keur === undefined
+    ? "-"
+    : `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(opportunity.ebitda_keur)}K`
 }
 
 function getAgeDays(
@@ -298,7 +293,7 @@ function OpportunityRow({
           }
         }}
       >
-        <TableCell className="w-[27%]">
+        <TableCell className="w-[24%]">
           <div className="flex min-w-0 flex-col gap-1">
             <span className="truncate font-semibold text-foreground">
               {opportunity.public_title ?? opportunity.reference}
@@ -317,23 +312,22 @@ function OpportunityRow({
             {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
           </div>
         </TableCell>
-        <TableCell className="w-[20%]">
-          <OpportunityJourneyBadge journey={item.journey} />
-        </TableCell>
-        <TableCell className="w-[10%]">
-          <OpportunityStatusBadge status={opportunity.status} />
-        </TableCell>
-        <TableCell className="w-[16%]">
-          <OpportunityVisibilityBadge
-            visibility={opportunity.repreneur_exposure}
-          />
+        <TableCell className="w-[12%]">
+          <span className="block truncate text-sm">{opportunity.location ?? "-"}</span>
         </TableCell>
         <TableCell className="w-[13%]">
-          <span className="block truncate text-sm">
-            {opportunity.sector ?? "-"}
-          </span>
+          <span className="block truncate text-sm">{opportunity.sector ?? "-"}</span>
         </TableCell>
-        <TableCell className="w-[14%]">
+        <TableCell className="w-[10%] tabular-nums">
+          {formatRevenue(opportunity)}
+        </TableCell>
+        <TableCell className="w-[10%] tabular-nums">
+          {formatEbitda(opportunity)}
+        </TableCell>
+        <TableCell className="w-[16%]">
+          <OpportunityJourneyBadge journey={item.journey} />
+        </TableCell>
+        <TableCell className="w-[15%]">
           <OpportunityPursuitBadge item={item} />
         </TableCell>
       </TableRow>
@@ -364,29 +358,7 @@ function OpportunityRow({
           {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
         </div>
       </TableCell>
-      <TableCell>
-        <div className="flex flex-col gap-1">
-          <span className="block max-w-[190px] truncate text-sm">
-            {sourceContextLabel(opportunity)}
-          </span>
-          {opportunity.source_review_required ? (
-            <Badge variant="outline" className="w-fit border-amber-500/60 bg-amber-50 text-amber-900">
-              Source review required
-            </Badge>
-          ) : null}
-        </div>
-      </TableCell>
-      <TableCell>
-        <OpportunityJourneyBadge journey={item.journey} />
-      </TableCell>
-      <TableCell>
-        <div className="flex flex-wrap gap-1">
-          <OpportunityStatusBadge status={opportunity.status} />
-          <OpportunityVisibilityBadge
-            visibility={opportunity.repreneur_exposure}
-          />
-        </div>
-      </TableCell>
+      <TableCell>{opportunity.location ?? "-"}</TableCell>
       <TableCell>
         <div className="max-w-[220px]">
           <p className="truncate">{opportunity.sector ?? "-"}</p>
@@ -397,12 +369,17 @@ function OpportunityRow({
           )}
         </div>
       </TableCell>
-      <TableCell>{opportunity.location ?? "-"}</TableCell>
+      <TableCell className="tabular-nums">{formatRevenue(opportunity)}</TableCell>
+      <TableCell className="tabular-nums">{formatEbitda(opportunity)}</TableCell>
       <TableCell>
-        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {formatDealSize(opportunity).map((value) => (
-            <span key={value}>{value}</span>
-          ))}
+        <OpportunityJourneyBadge journey={item.journey} />
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          <OpportunityStatusBadge status={opportunity.status} />
+          <OpportunityVisibilityBadge
+            visibility={opportunity.repreneur_exposure}
+          />
         </div>
       </TableCell>
       <TableCell>
@@ -697,15 +674,16 @@ export function OpportunityWorkSurfaceTable({
 
                 {!isCollapsed && (
                   <div className="overflow-x-auto bg-card">
-                    <Table className="min-w-[720px] table-fixed">
+                    <Table className="min-w-[860px] table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[27%]">Opportunity</TableHead>
-                          <TableHead className="w-[20%]">Journey</TableHead>
-                          <TableHead className="w-[10%]">Status</TableHead>
-                          <TableHead className="w-[16%]">Visibility</TableHead>
+                          <TableHead className="w-[24%]">Title</TableHead>
+                          <TableHead className="w-[12%]">Region</TableHead>
                           <TableHead className="w-[13%]">Sector</TableHead>
-                          <TableHead className="w-[14%]">Pursuit</TableHead>
+                          <TableHead className="w-[10%]">Revenue</TableHead>
+                          <TableHead className="w-[10%]">EBITDA</TableHead>
+                          <TableHead className="w-[16%]">Journey</TableHead>
+                          <TableHead className="w-[15%]">Pursuit</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -809,16 +787,16 @@ export function OpportunityWorkSurfaceTable({
 
       <div>
         <div className="overflow-x-auto">
-          <Table className="min-w-[1160px]">
+          <Table className="min-w-[980px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Reference</TableHead>
-                <TableHead>Source</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Region</TableHead>
+                <TableHead>Sector</TableHead>
+                <TableHead>Revenue</TableHead>
+                <TableHead>EBITDA</TableHead>
                 <TableHead>Journey</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Sector / activity</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Size</TableHead>
                 <TableHead>Added</TableHead>
                 <TableHead>Pursuit signal</TableHead>
               </TableRow>
