@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
+import { trustedAuthOrigins } from "@/lib/auth-origin-policy"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
@@ -82,6 +83,15 @@ function renderPasswordResetEmail(
   `
 }
 
+const authTrustedOrigins = trustedAuthOrigins({
+  betterAuthUrl: env.BETTER_AUTH_URL,
+  betterAuthTrustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS,
+  nodeEnv: env.NODE_ENV,
+  vercelUrl: process.env.VERCEL_URL,
+  vercelBranchUrl: process.env.VERCEL_BRANCH_URL,
+  vercelProjectProductionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+})
+
 /**
  * Better Auth server configuration
  * Uses Supabase PostgreSQL for storage
@@ -92,6 +102,7 @@ function renderPasswordResetEmail(
  * - BETTER_AUTH_URL: Base URL of the app (e.g., http://localhost:3000)
  */
 export const auth = betterAuth({
+  baseURL: env.BETTER_AUTH_URL,
   database: getPool(),
 
   // Email/password authentication
@@ -169,25 +180,9 @@ export const auth = betterAuth({
     },
   },
 
-  // Trusted origins for CORS
-  // Better Auth 1.4.14: function receives Request (can be undefined), must return string[]
-  trustedOrigins: async (request: Request | undefined) => {
-    const origins = [env.BETTER_AUTH_URL, "https://app.re-new.team"]
-    // Dynamically allow Vercel preview deployments and V0 app builder
-    const origin = request?.headers?.get("origin")
-    if (origin) {
-      if (
-        origin.endsWith(".vercel.app") ||
-        origin.endsWith(".v0.dev") ||
-        origin === "https://v0.dev" ||
-        origin.endsWith(".v0.app") ||
-        origin === "https://v0.app"
-      ) {
-        origins.push(origin)
-      }
-    }
-    return origins
-  },
+  // Exact server-owned origins only. Never reflect the caller's Origin header
+  // into Better Auth's allowlist.
+  trustedOrigins: authTrustedOrigins,
 })
 
 // Export types for client-side usage
