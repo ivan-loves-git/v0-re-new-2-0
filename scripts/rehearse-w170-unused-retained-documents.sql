@@ -37,11 +37,11 @@ INSERT INTO public.opportunities VALUES
   ('00000000-0000-4000-8000-000000000001'),
   ('00000000-0000-4000-8000-000000000002');
 INSERT INTO public.opportunity_documents (id, opportunity_id, title, document_type, storage_path) VALUES
-  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Unused IM', 'deal_book', 'one/unused-im.pdf'),
-  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'Used IM', 'deal_book', 'one/used-im.pdf'),
-  ('10000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000001', 'Original source teaser', 'source_teaser', 'one/source.pdf'),
-  ('10000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000001', 'NDA v1', 'nda', 'one/nda-v1.pdf'),
-  ('10000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000001', 'NDA v2', 'nda', 'one/nda-v2.pdf');
+  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Unused IM', 'deal_book', '00000000-0000-4000-8000-000000000001/unused-im.pdf'),
+  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'Used IM', 'deal_book', '00000000-0000-4000-8000-000000000001/used-im.pdf'),
+  ('10000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000001', 'Original source teaser', 'source_teaser', '00000000-0000-4000-8000-000000000001/source.pdf'),
+  ('10000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000001', 'NDA v1', 'nda', '00000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/v1.pdf'),
+  ('10000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000001', 'NDA v2', 'nda', '00000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/v2.pdf');
 INSERT INTO public.opportunity_nda_artifacts (id, opportunity_id, document_id, artifact_role, version_number, supersedes_artifact_id) VALUES
   ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000004', 'blank_template', 1, NULL),
   ('20000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000005', 'blank_template', 2, '20000000-0000-4000-8000-000000000001');
@@ -75,6 +75,16 @@ BEGIN
   END;
 END;
 $$;
+
+-- wrong bucket, cross-opportunity path, and wrong NDA role path must fail closed.
+UPDATE public.opportunity_documents SET storage_bucket = 'wrong bucket' WHERE id = '10000000-0000-4000-8000-000000000001';
+DO $$ BEGIN BEGIN PERFORM * FROM public.remove_unused_retained_opportunity_document('00000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001'); RAISE EXCEPTION 'Expected wrong bucket rejection'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='Expected wrong bucket rejection' THEN RAISE; END IF; END; END $$;
+UPDATE public.opportunity_documents SET storage_bucket = 'opportunity-documents', storage_path = '00000000-0000-4000-8000-000000000002/cross-opportunity path.pdf' WHERE id = '10000000-0000-4000-8000-000000000001';
+DO $$ BEGIN BEGIN PERFORM * FROM public.remove_unused_retained_opportunity_document('00000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001'); RAISE EXCEPTION 'Expected cross-opportunity path rejection'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='Expected cross-opportunity path rejection' THEN RAISE; END IF; END; END $$;
+UPDATE public.opportunity_documents SET storage_path = '00000000-0000-4000-8000-000000000001/unused-im.pdf' WHERE id = '10000000-0000-4000-8000-000000000001';
+UPDATE public.opportunity_documents SET storage_path = '00000000-0000-4000-8000-000000000001/nda-artifacts/renew_signed_copy/wrong NDA role path.pdf' WHERE id = '10000000-0000-4000-8000-000000000005';
+DO $$ BEGIN BEGIN PERFORM * FROM public.remove_unused_retained_opportunity_document('00000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000005'); RAISE EXCEPTION 'Expected wrong NDA role path rejection'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='Expected wrong NDA role path rejection' THEN RAISE; END IF; END; END $$;
+UPDATE public.opportunity_documents SET storage_path = '00000000-0000-4000-8000-000000000001/nda-artifacts/blank_template/v2.pdf' WHERE id = '10000000-0000-4000-8000-000000000005';
 
 SELECT * FROM public.remove_unused_retained_opportunity_document('00000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001');
 SELECT * FROM public.remove_unused_retained_opportunity_document('00000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000005');

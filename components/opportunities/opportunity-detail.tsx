@@ -37,6 +37,7 @@ import {
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
+import type { PendingUnusedRetainedDocumentCleanup } from "@/lib/actions/opportunity-documents"
 import type { StaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import type {
   OpportunityActionResult,
@@ -74,6 +75,7 @@ const OPPORTUNITY_DETAIL_TABS = new Set(OPPORTUNITY_DETAIL_TAB_VALUES)
 interface OpportunityDetailProps {
   opportunity: OpportunityWithSource
   documents: OpportunityDocument[]
+  pendingCleanups: PendingUnusedRetainedDocumentCleanup[]
   ndaArtifacts: OpportunityNdaArtifact[]
   matches: OpportunityMatch[]
   matchCandidates: OpportunityMatchCandidate[]
@@ -141,6 +143,7 @@ function recommendationVariant(
 export function OpportunityDetail({
   opportunity,
   documents,
+  pendingCleanups,
   ndaArtifacts,
   matches,
   matchCandidates,
@@ -611,6 +614,7 @@ export function OpportunityDetail({
           <OpportunityDocumentsPanel
             opportunityId={opportunity.id}
             documents={documents}
+            pendingCleanups={pendingCleanups}
             canonicalNdaDocumentIds={ndaArtifacts.map(
               (artifact) => artifact.document_id,
             )}

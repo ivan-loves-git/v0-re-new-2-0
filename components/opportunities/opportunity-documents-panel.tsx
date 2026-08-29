@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
+  type PendingUnusedRetainedDocumentCleanup,
   removeOpportunityDocument,
   removeUnusedRetainedOpportunityDocument,
   updateOpportunityDocumentVisibility,
@@ -39,6 +40,7 @@ interface OpportunityDocumentsPanelProps {
   opportunityId: string
   documents: OpportunityDocument[]
   canonicalNdaDocumentIds?: string[]
+  pendingCleanups?: PendingUnusedRetainedDocumentCleanup[]
 }
 
 function formatBytes(bytes: number | null | undefined) {
@@ -59,6 +61,7 @@ export function OpportunityDocumentsPanel({
   opportunityId,
   documents,
   canonicalNdaDocumentIds = [],
+  pendingCleanups = [],
 }: OpportunityDocumentsPanelProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -160,8 +163,21 @@ export function OpportunityDocumentsPanel({
     }
   }
 
+  async function handleRetryCleanup(documentId: string) {
+    setPendingDocumentId(documentId)
+    const result = await removeUnusedRetainedOpportunityDocument({ opportunityId, documentId })
+    if (result.success) {
+      toast.success("Private cleanup completed", { description: result.message })
+      router.refresh()
+    } else {
+      toast.error("Private cleanup still pending", { description: result.message })
+    }
+    setPendingDocumentId(null)
+  }
+
   return (
     <div className="space-y-6">
+      {pendingCleanups.length > 0 && <Card><CardHeader><CardTitle>Pending private cleanup</CardTitle><CardDescription>Document metadata is already removed. Retry safely to remove the remaining private file.</CardDescription></CardHeader><CardContent className="space-y-2">{pendingCleanups.map((cleanup) => <div key={cleanup.documentId} className="flex items-center justify-between gap-3 rounded-md border p-3"><span className="text-sm">Private document cleanup pending</span><Button type="button" variant="outline" disabled={pendingDocumentId === cleanup.documentId} onClick={() => handleRetryCleanup(cleanup.documentId)}>{pendingDocumentId === cleanup.documentId ? "Retrying..." : "Retry cleanup"}</Button></div>)}</CardContent></Card>}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

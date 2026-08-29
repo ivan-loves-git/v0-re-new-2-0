@@ -10,6 +10,7 @@ describe("W-170 unused retained-document correction", () => {
   const documentsPanel = source("components/opportunities/opportunity-documents-panel.tsx")
   const ndaManager = source("components/opportunities/opportunity-nda-artifact-manager.tsx")
   const pursuitPanel = source("components/opportunities/opportunity-pursuit-panel.tsx")
+  const detailPage = source("app/(dashboard)/opportunities/[id]/page.tsx")
 
   it("exposes one staff-only removal seam backed by the guarded RPC", () => {
     expect(actions).toContain("removeUnusedRetainedOpportunityDocument")
@@ -37,6 +38,18 @@ describe("W-170 unused retained-document correction", () => {
     expect(actions).toContain("Storage cleanup is still pending")
     expect(actions).toContain(".from(cleanup.storage_bucket).remove([cleanup.storage_path])")
     expect(actions).toContain("complete_unused_retained_opportunity_document_cleanup")
+    expect(actions).toContain("listPendingUnusedRetainedDocumentCleanups")
+    expect(documentsPanel).toContain("Pending private cleanup")
+    expect(detailPage).toContain("listPendingUnusedRetainedDocumentCleanups")
+  })
+
+  it("binds eligible private objects to their exact opportunity and NDA role folders", () => {
+    expect(migration).toContain("v_document.storage_bucket <> 'opportunity-documents'")
+    expect(migration).toContain("p_opportunity_id::TEXT || '/%'")
+    expect(migration).toContain("'/nda-artifacts/' || v_artifact.artifact_role::TEXT || '/%'")
+    expect(rehearsal).toContain("wrong bucket")
+    expect(rehearsal).toContain("cross-opportunity path")
+    expect(rehearsal).toContain("wrong NDA role path")
   })
 
   it("offers removal only through the conditional staff document rows with confirmation", () => {
@@ -49,6 +62,7 @@ describe("W-170 unused retained-document correction", () => {
     expect(ndaManager).toContain("Locked after use or supersession")
     expect(pursuitPanel).toContain("artifact.artifact_role === \"repreneur_signed_copy\"")
     expect(pursuitPanel).toContain("artifact.can_remove_unused_retained ? \"available\" : \"locked\"")
+    expect(pursuitPanel).toContain("ndaArtifacts.filter((artifact) => artifact.artifact_role === \"repreneur_signed_copy\")")
   })
 
   it("rehearses success, current-version fallback, and fail-closed boundaries", () => {

@@ -19,6 +19,8 @@ GRANT SELECT ON TABLE public.opportunity_document_storage_cleanup_receipts TO se
 CREATE OR REPLACE FUNCTION public.prevent_retained_opportunity_document_delete()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF OLD.document_type::TEXT = 'source_teaser' THEN
@@ -35,6 +37,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.reject_opportunity_nda_artifact_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF TG_OP = 'DELETE'
@@ -149,6 +153,15 @@ BEGIN
   IF NULLIF(BTRIM(v_document.storage_bucket), '') IS NULL
     OR NULLIF(BTRIM(v_document.storage_path), '') IS NULL THEN
     RAISE EXCEPTION 'Retained private storage metadata is required for this correction.';
+  END IF;
+  IF v_document.storage_bucket <> 'opportunity-documents'
+    OR v_document.storage_path <> BTRIM(v_document.storage_path)
+    OR v_document.storage_path NOT LIKE p_opportunity_id::TEXT || '/%' THEN
+    RAISE EXCEPTION 'Retained private storage must belong to the selected opportunity.';
+  END IF;
+  IF v_artifact.id IS NOT NULL
+    AND v_document.storage_path NOT LIKE p_opportunity_id::TEXT || '/nda-artifacts/' || v_artifact.artifact_role::TEXT || '/%' THEN
+    RAISE EXCEPTION 'Canonical NDA private storage must belong to its exact opportunity and role.';
   END IF;
 
   INSERT INTO public.opportunity_document_storage_cleanup_receipts (

@@ -22,6 +22,22 @@ export type OpportunityDocumentMutationResult =
   | { success: true; message: string; documentId?: string }
   | { success: false; message: string }
 
+export interface PendingUnusedRetainedDocumentCleanup {
+  documentId: string
+}
+
+export async function listPendingUnusedRetainedDocumentCleanups(opportunityId: string): Promise<PendingUnusedRetainedDocumentCleanup[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("opportunity_document_storage_cleanup_receipts")
+    .select("document_id")
+    .eq("opportunity_id", opportunityId)
+    .order("deleted_at", { ascending: true })
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((row) => ({ documentId: row.document_id }))
+}
+
 function readString(formData: FormData, key: string): string | null {
   const value = formData.get(key)
   if (typeof value !== "string") return null
