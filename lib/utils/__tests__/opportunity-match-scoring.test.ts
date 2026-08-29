@@ -387,5 +387,17 @@ describe("calculateOpportunityMatchScore — Matching 2.1", () => {
         },
       ).score,
     ).toBe(92)
+    expect(
+      score(
+        { sector: null, activity: "BTP / Construction" },
+        { q13_target_sectors_v2: ["BTP & Construction"] },
+      ).score,
+    ).toBe(92)
+    expect(
+      score(
+        { sector: null, activity: "BTP / Construction" },
+        { q13_target_sectors_v2: ["healthcare"] },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
   })
 })

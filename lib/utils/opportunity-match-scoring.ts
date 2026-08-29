@@ -362,6 +362,7 @@ function sectorCriterion(
     opportunity.sector,
     opportunity.activity,
     sectorCompatibilityValues(opportunity.sector),
+    sectorCompatibilityValues(opportunity.activity),
   )
   const targetValues = targetThesisMatchTerms(
     preferredList(
