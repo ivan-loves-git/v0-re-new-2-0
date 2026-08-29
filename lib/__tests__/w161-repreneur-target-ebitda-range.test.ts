@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { validateIntakeTargetThesis } from "@/lib/actions/intake-v2"
 
 const platformRoot = process.cwd()
 const source = (relativePath: string) => readFileSync(`${platformRoot}/${relativePath}`, "utf8")
@@ -26,5 +27,26 @@ describe("W-161 optional absolute EBITDA thesis range", () => {
     expect(scorer).not.toContain("target_ebitda_max_keur")
     expect(completeness).toContain("target_ebitda_min_keur")
     expect(completeness).toContain("target_ebitda_max_keur")
+  })
+
+  it("rejects invalid public-intake targets before any database access and leaves blank bounds optional", () => {
+    expect(validateIntakeTargetThesis({
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    })).toBeNull()
+    expect(validateIntakeTargetThesis({
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: 500,
+      target_ebitda_max_keur: 100,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    })).toBe("La borne minimale d’EBITDA ne peut pas dépasser la borne maximale.")
   })
 })

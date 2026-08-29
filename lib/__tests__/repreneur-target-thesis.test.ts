@@ -4,6 +4,7 @@ import {
   canonicalTargetThesisValues,
   legacyTargetThesisValues,
   targetThesisInputValidationMessage,
+  targetThesisNumericValidationMessage,
   targetThesisLabels,
 } from "@/lib/repreneur-target-thesis"
 
@@ -117,6 +118,27 @@ describe("target thesis compatibility", () => {
     expect(targetThesisInputValidationMessage({ ...input, target_ebitda_min_keur: 400, target_ebitda_max_keur: 250 })).toBe(
       "EBITDA range minimum cannot be greater than its maximum.",
     )
+  })
+
+  it("shares numeric validation with public intake without requiring thesis selections", () => {
+    expect(targetThesisNumericValidationMessage({
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: 350,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    })).toBeNull()
+    expect(targetThesisNumericValidationMessage({
+      target_revenue_min_meur: Number.NaN,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    })).toBe("Revenue minimum must be a number between 0 and 100000.")
   })
 
   it("accepts complete criteria with truthful optional ranges", () => {

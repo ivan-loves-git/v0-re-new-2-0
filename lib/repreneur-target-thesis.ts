@@ -21,6 +21,17 @@ type TargetThesisValidationInput = {
   target_staff_size_max: number | null
 }
 
+type TargetThesisNumericInput = Pick<
+  TargetThesisValidationInput,
+  | "target_revenue_min_meur"
+  | "target_revenue_max_meur"
+  | "target_ebitda_min_keur"
+  | "target_ebitda_max_keur"
+  | "target_ebitda_margin_min_pct"
+  | "target_staff_size_min"
+  | "target_staff_size_max"
+>
+
 const LEGACY_SELECTION_ALIASES: Record<SelectionKind, Record<string, string>> = {
   geography: {},
   sector: {},
@@ -66,6 +77,11 @@ export function targetThesisInputValidationMessage(input: TargetThesisValidation
   if (input.q14_deal_size.length === 0) return "Deal size needs at least one selection."
   if (!input.q16_equity) return "Investment capacity needs at least one selection."
 
+  return targetThesisNumericValidationMessage(input)
+}
+
+/** Shared optional financial-target validation for intake and thesis editors. */
+export function targetThesisNumericValidationMessage(input: TargetThesisNumericInput) {
   const numberError =
     optionalNumberValidationMessage(input.target_revenue_min_meur, "Revenue minimum", 100000) ??
     optionalNumberValidationMessage(input.target_revenue_max_meur, "Revenue maximum", 100000) ??
@@ -99,6 +115,24 @@ export function targetThesisInputValidationMessage(input: TargetThesisValidation
   }
 
   return null
+}
+
+/** Keeps public-intake validation specific and easy to act on in French. */
+export function frenchTargetThesisNumericValidationMessage(message: string | null) {
+  if (!message) return null
+  const messages: Record<string, string> = {
+    "Revenue minimum must be a number between 0 and 100000.": "Le chiffre d’affaires cible minimum doit être un nombre positif.",
+    "Revenue maximum must be a number between 0 and 100000.": "Le chiffre d’affaires cible maximum doit être un nombre positif.",
+    "EBITDA minimum must be a number between 0 and 100000.": "L’EBITDA cible minimum doit être un nombre positif.",
+    "EBITDA maximum must be a number between 0 and 100000.": "L’EBITDA cible maximum doit être un nombre positif.",
+    "Minimum EBITDA margin must be a number between 0 and 100.": "La marge EBITDA minimale doit être comprise entre 0 et 100 %.",
+    "Staff-size minimum must be a number between 0 and 100000.": "L’effectif cible minimum doit être un nombre entier positif.",
+    "Staff-size maximum must be a number between 0 and 100000.": "L’effectif cible maximum doit être un nombre entier positif.",
+    "Revenue range minimum cannot be greater than its maximum.": "La borne minimale de chiffre d’affaires ne peut pas dépasser la borne maximale.",
+    "EBITDA range minimum cannot be greater than its maximum.": "La borne minimale d’EBITDA ne peut pas dépasser la borne maximale.",
+    "Staff-size range minimum cannot be greater than its maximum.": "La borne minimale d’effectif ne peut pas dépasser la borne maximale.",
+  }
+  return messages[message] ?? "Vérifiez les critères financiers complémentaires."
 }
 
 /**

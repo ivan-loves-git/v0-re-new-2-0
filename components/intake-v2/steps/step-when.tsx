@@ -276,6 +276,9 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
               : 'These answers improve opportunity matching. They are not scored.'}
           </p>
         </div>
+        {errors.target_thesis && (
+          <p role="alert" className="text-sm text-red-500">{errors.target_thesis}</p>
+        )}
         <div className="grid gap-3 md:grid-cols-3">
           <div className="grid grid-cols-2 gap-2">
             <Label className="col-span-2 text-sm">{language === 'fr' ? 'Chiffre d’affaires cible (M€)' : 'Target revenue (M EUR)'}</Label>

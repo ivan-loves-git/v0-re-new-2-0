@@ -18,6 +18,10 @@ import {
 import type { IntakeV2FormData, IntakeV2FormState } from '@/lib/types/intake-v2'
 import { submitIntakeV2 } from '@/lib/actions/intake-v2'
 import {
+  frenchTargetThesisNumericValidationMessage,
+  targetThesisNumericValidationMessage,
+} from '@/lib/repreneur-target-thesis'
+import {
   clearIntakeDraft,
   createIntakeDraft,
   INTAKE_DRAFT_STORAGE_KEY,
@@ -102,13 +106,31 @@ export function IntakeFormV2() {
 
   // Navigate to next step
   const handleNext = useCallback(() => {
+    if (currentStep === 4) {
+      const thesisError = frenchTargetThesisNumericValidationMessage(
+        targetThesisNumericValidationMessage({
+          target_revenue_min_meur: data.target_revenue_min_meur ?? null,
+          target_revenue_max_meur: data.target_revenue_max_meur ?? null,
+          target_ebitda_min_keur: data.target_ebitda_min_keur ?? null,
+          target_ebitda_max_keur: data.target_ebitda_max_keur ?? null,
+          target_ebitda_margin_min_pct: data.target_ebitda_margin_min_pct ?? null,
+          target_staff_size_min: data.target_staff_size_min ?? null,
+          target_staff_size_max: data.target_staff_size_max ?? null,
+        }),
+      )
+      if (thesisError) {
+        setState((prev) => ({ ...prev, errors: { target_thesis: thesisError } }))
+        return
+      }
+    }
     setState(prev => ({
       ...prev,
-      currentStep: Math.min(prev.currentStep + 1, INTAKE_STEPS.length)
+      currentStep: Math.min(prev.currentStep + 1, INTAKE_STEPS.length),
+      errors: {},
     }))
     // Scroll to top
     scrollToTop()
-  }, [])
+  }, [currentStep, data])
 
   // Navigate to previous step
   const handleBack = useCallback(() => {
