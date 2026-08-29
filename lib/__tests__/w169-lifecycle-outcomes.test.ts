@@ -15,6 +15,9 @@ describe("W-169 lifecycle outcome separation", () => {
   const migration = source(
     "supabase/migrations/20260829180000_w169_lifecycle_outcome_separation.sql",
   )
+  const pauseGuardMigration = source(
+    "supabase/migrations/20260829203000_w169_pause_guard_scope.sql",
+  )
   const rehearsal = source("scripts/rehearse-w169-lifecycle-outcomes.sh")
   const opportunityActions = source("lib/actions/opportunities.ts")
   const pursuitActions = source("lib/actions/opportunity-pursuit-journey.ts")
@@ -116,6 +119,7 @@ describe("W-169 lifecycle outcome separation", () => {
       "w169_direct_pause_bypass_allowed",
       "w169_direct_paused_insert_allowed",
       "w169_pause_not_recorded_once",
+      "w169_pause_guard_leaked_after_service",
       "w169_unreasoned_drop_allowed",
       "w169_invalid_drop_reason_allowed",
       "w169_drop_changed_opportunity",
@@ -125,5 +129,10 @@ describe("W-169 lifecycle outcome separation", () => {
     ]) {
       expect(rehearsal).toContain(proof)
     }
+    expect(rehearsal).toContain("20260829203000_w169_pause_guard_scope.sql")
+    expect(pauseGuardMigration).toContain("v_previous_transition_flag")
+    expect(pauseGuardMigration).toContain(
+      "COALESCE(v_previous_transition_flag, '')",
+    )
   })
 })
