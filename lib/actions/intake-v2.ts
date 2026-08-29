@@ -11,26 +11,12 @@ import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 import {
-  frenchTargetThesisNumericValidationMessage,
-  targetThesisNumericValidationMessage,
+  validateIntakeTargetThesis,
 } from "@/lib/repreneur-target-thesis"
 import {
   claimPrivateIntakeUploads,
   parsePrivateIntakeUploadHandle,
 } from "@/lib/private-upload-server"
-
-export function validateIntakeTargetThesis(formData: Pick<
-  IntakeV2FormData,
-  | "target_revenue_min_meur"
-  | "target_revenue_max_meur"
-  | "target_ebitda_min_keur"
-  | "target_ebitda_max_keur"
-  | "target_ebitda_margin_min_pct"
-  | "target_staff_size_min"
-  | "target_staff_size_max"
->) {
-  return frenchTargetThesisNumericValidationMessage(targetThesisNumericValidationMessage(formData))
-}
 
 /**
  * Submit complete intake form v2

@@ -135,6 +135,11 @@ export function frenchTargetThesisNumericValidationMessage(message: string | nul
   return messages[message] ?? "Vérifiez les critères financiers complémentaires."
 }
 
+/** Public-intake wrapper kept outside a Server Action module for direct validation. */
+export function validateIntakeTargetThesis(input: TargetThesisNumericInput) {
+  return frenchTargetThesisNumericValidationMessage(targetThesisNumericValidationMessage(input))
+}
+
 /**
  * Moves recognized historic labels onto the v2 value set on the first edit,
  * while retaining a profile's existing custom value until the owner removes it.

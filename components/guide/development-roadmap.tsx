@@ -27,7 +27,7 @@ const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 29, 2026",
     version: "0.9.60 candidate",
-    title: "Richer acquisition-thesis details are ready for review",
+    title: "Matching 2.1 calibration is ready for review",
     isCompleted: false,
     events: [
       {
@@ -36,9 +36,9 @@ const roadmapEvents: RoadmapPeriod[] = [
         description: "A repreneur and the Re-New team can record a target EBITDA range in thousands of euros, including a one-sided range, without changing current deal access or matching recommendations.",
       },
       {
-        title: "Matching calibration remains unchanged",
+        title: "Matching 2.1 is a release candidate",
         type: "decision",
-        description: "This candidate records an additional financial detail for review; it does not change the current Matching 2.0 calculation or any human recommendation state.",
+        description: "This candidate adds weighted revenue, absolute EBITDA, EBITDA margin and headcount rules with strict sector and geography eligibility. Matching 2.0 stays live until this candidate is separately released; staff recommendations and their status remain unchanged.",
       },
     ],
   },
