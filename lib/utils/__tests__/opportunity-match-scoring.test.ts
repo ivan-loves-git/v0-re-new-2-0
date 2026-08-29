@@ -399,5 +399,11 @@ describe("calculateOpportunityMatchScore — Matching 2.1", () => {
         { q13_target_sectors_v2: ["healthcare"] },
       ),
     ).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(
+      score(
+        { sector: null, activity: "Unclassified family business" },
+        { q13_target_sectors_v2: ["other"] },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
   })
 })

@@ -96,6 +96,18 @@ function preferredList(
   const values = normalizeList(canonical)
   return values.length > 0 ? values : normalizeList(legacy)
 }
+
+/**
+ * Imported activity labels are not a second sector taxonomy. Keep the one
+ * reviewed spelling bridge explicit so arbitrary free text cannot fall into
+ * a generic sector such as `Autre`.
+ */
+function reviewedActivitySectorAliases(activity: string | null | undefined) {
+  return normalizeText(activity) === "btp / construction"
+    ? ["BTP & Construction"]
+    : []
+}
+
 function recommendationFromScore(
   score: number,
 ): OpportunityMatchRecommendation {
@@ -362,7 +374,7 @@ function sectorCriterion(
     opportunity.sector,
     opportunity.activity,
     sectorCompatibilityValues(opportunity.sector),
-    sectorCompatibilityValues(opportunity.activity),
+    reviewedActivitySectorAliases(opportunity.activity),
   )
   const targetValues = targetThesisMatchTerms(
     preferredList(
