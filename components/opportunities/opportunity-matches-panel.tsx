@@ -41,11 +41,13 @@ import {
 import {
   OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS,
   OPPORTUNITY_MATCH_STATUS_OPTIONS,
+  OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS,
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
   type OpportunityMatch,
   type OpportunityMatchCandidate,
   type OpportunityMatchRecommendation,
+  type OpportunityPursuitDropReason,
 } from "@/lib/types/opportunity"
 
 const STAFF_EDITABLE_STATUS_OPTIONS = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter((option) => option.value !== "active_pursuit")
@@ -136,6 +138,7 @@ function FieldInfo({ label, description, example }: FieldInfoProps) {
 export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: OpportunityMatchesPanelProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
+  const [dropReason, setDropReason] = useState<OpportunityPursuitDropReason | "">("")
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const validationSummaryRef = useRef<HTMLDivElement>(null)
@@ -266,16 +269,20 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     }
   }
 
-  async function handleDrop(matchId: string) {
+  async function handleDrop(
+    matchId: string,
+    reason: OpportunityPursuitDropReason,
+  ) {
     setPendingActionId(matchId)
     setFeedback(null)
     try {
-      await dropOpportunityPursuit(matchId, opportunityId)
+      await dropOpportunityPursuit(matchId, opportunityId, reason)
       showFeedback({
         type: "success",
         title: "Pursuit dropped",
         description: "The opportunity is unlocked for another interested repreneur.",
       })
+      setDropReason("")
     } catch (error) {
       showFeedback({
         type: "error",
@@ -609,7 +616,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                             )}
 
                             {match.status === "active_pursuit" && (
-                              <AlertDialog>
+                              <AlertDialog onOpenChange={(open) => { if (open) setDropReason("") }}>
                                 <AlertDialogTrigger asChild>
                                   <Button type="button" variant="outline" size="sm" disabled={isPending}>
                                     <CircleSlash2 data-icon="inline-start" />
@@ -623,9 +630,28 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                                       This will unlock the opportunity so another interested repreneur can be validated.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
+                                  <div className="space-y-2">
+                                    <FormFieldLabel htmlFor={`drop-reason-${match.id}`} requirement="required">
+                                      Choose why this pursuit is ending
+                                    </FormFieldLabel>
+                                    <Select value={dropReason} onValueChange={(value) => setDropReason(value as OpportunityPursuitDropReason)}>
+                                      <SelectTrigger id={`drop-reason-${match.id}`}>
+                                        <SelectValue placeholder="Choose a Drop reason" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectGroup>
+                                          {OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => void handleDrop(match.id)}>Drop pursuit</AlertDialogAction>
+                                    <AlertDialogAction disabled={!dropReason || isPending} onClick={() => dropReason && void handleDrop(match.id, dropReason)}>Drop pursuit</AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>

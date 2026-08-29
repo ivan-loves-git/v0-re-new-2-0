@@ -22,9 +22,11 @@ import type {
   OpportunityMatchRecommendation,
   OpportunityMatchResponse,
   OpportunityMatchStatus,
+  OpportunityPursuitDropReason,
   RepreneurOpportunityCandidate,
 } from "@/lib/types/opportunity"
 import {
+  isOpportunityPursuitDropReason,
   OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS,
   OPPORTUNITY_MATCH_STATUS_OPTIONS,
 } from "@/lib/types/opportunity"
@@ -749,10 +751,17 @@ export async function validateOpportunityPursuit(matchId: string, opportunityId:
   revalidateMatchPaths(opportunityId, matchId)
 }
 
-export async function dropOpportunityPursuit(matchId: string, opportunityId: string) {
+export async function dropOpportunityPursuit(
+  matchId: string,
+  opportunityId: string,
+  reason: OpportunityPursuitDropReason,
+) {
   const access = await requireStaffAccess()
+  if (!isOpportunityPursuitDropReason(reason)) {
+    throw new Error("Choose why this pursuit is ending.")
+  }
   const supabase = createAdminClient()
-  const { error } = await supabase.rpc("journey_transition_terminal", { p_match_id: matchId, p_transition: "drop", p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_closure_reason: "staff drop" })
+  const { error } = await supabase.rpc("journey_transition_terminal", { p_match_id: matchId, p_transition: "drop", p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_closure_reason: reason })
   if (error) {
     const alreadyStored = await pursuitTransitionAlreadyStored(
       supabase,

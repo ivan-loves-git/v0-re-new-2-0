@@ -155,9 +155,9 @@ describe("canonical M&A data model documentation", () => {
 
   it("distinguishes opportunity and pursuit closure authority", () => {
     expect(contract).toContain("| Close opportunity |")
-    expect(contract).toContain("| Close pursuit |")
+    expect(contract).toContain("| Drop pursuit |")
     expect(contract).toContain("an unresolved Acme source does not block this action")
-    expect(contract).toContain("closure immediately revokes any source-identity disclosure")
+    expect(contract).toContain("Drop immediately revokes any source-identity disclosure")
   })
 
   it("does not restore superseded absolute visibility or projection policy", () => {

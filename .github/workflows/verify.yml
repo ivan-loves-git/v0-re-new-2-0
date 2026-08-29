@@ -74,6 +74,16 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-w128-draft-opportunity-activation.sh'
 
+      - name: Rehearse W-169 lifecycle outcome separation
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-w169-lifecycle-outcomes.sh'
+
   w147-w148-database-rehearsal:
     name: W-147/W-148 database rehearsal
     runs-on: ubuntu-latest

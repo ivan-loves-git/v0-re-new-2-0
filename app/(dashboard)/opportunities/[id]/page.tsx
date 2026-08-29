@@ -17,6 +17,8 @@ import {
   closeOpportunity,
   getOpportunity,
   getOpportunityClosureHistory,
+  getOpportunityPauseHistory,
+  pauseOpportunity,
   setOpportunityDemoClassification,
 } from "@/lib/actions/opportunities"
 import {
@@ -26,7 +28,10 @@ import {
   updateOpportunityIntake,
 } from "@/lib/actions/opportunity-intake"
 import { isFranceGeographyMandatesEnabled } from "@/lib/opportunity-geography-release"
-import type { OpportunityClosureReason } from "@/lib/types/opportunity"
+import type {
+  OpportunityClosureReason,
+  OpportunityPauseReason,
+} from "@/lib/types/opportunity"
 import { isUuid } from "@/lib/uuid"
 
 export default function OpportunityDetailPage({
@@ -65,6 +70,7 @@ async function OpportunityDetailContent({
     pursuitEvents,
     maWorkflow,
     closureHistory,
+    pauseHistory,
     ndaArtifacts,
     pendingCleanups,
   ] = await Promise.all([
@@ -74,6 +80,7 @@ async function OpportunityDetailContent({
     listOpportunityPursuitEvents(id),
     getMaOpportunityWorkflow(id),
     getOpportunityClosureHistory(id),
+    getOpportunityPauseHistory(id),
     listOpportunityNdaArtifacts(id),
     listPendingUnusedRetainedDocumentCleanups(id),
   ])
@@ -103,6 +110,11 @@ async function OpportunityDetailContent({
   async function closeAction(reason: OpportunityClosureReason) {
     "use server"
     return closeOpportunity(id, reason)
+  }
+
+  async function pauseAction(reason: OpportunityPauseReason) {
+    "use server"
+    return pauseOpportunity(id, reason)
   }
 
   async function demoClassificationAction(isDemo: boolean) {
@@ -138,7 +150,9 @@ async function OpportunityDetailContent({
         updateAction={updateAction}
         resolveSourceAction={resolveSourceAction}
         closureHistory={closureHistory}
+        pauseHistory={pauseHistory}
         closeAction={closeAction}
+        pauseAction={pauseAction}
         demoClassificationAction={demoClassificationAction}
         officeOptions={officeOptions}
         geographyOptions={geographyOptions}

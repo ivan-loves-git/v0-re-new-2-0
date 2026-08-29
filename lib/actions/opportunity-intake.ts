@@ -188,6 +188,11 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
     message:
       "Use the dedicated closure controls for closed or archived opportunities.",
   },
+  opportunity_pause_reason_required: {
+    field: "status",
+    message:
+      "Use the dedicated Pause opportunity control so the reason is recorded.",
+  },
   opportunity_office_context_cannot_change_historical_status: {
     field: "status",
     message:

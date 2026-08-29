@@ -30,11 +30,9 @@ describe("opportunity closure history", () => {
       "stale",
       "sold",
       "signed_repreneur",
-      "paused_cabinet",
       "withdrawn_seller",
-      "no_viable_match",
-      "dd_disqualified",
       "duplicate",
+      "dd_disqualified",
     ])
 
     expect(isOpportunityClosureReason("stale")).toBe(true)
@@ -64,7 +62,9 @@ describe("opportunity closure history", () => {
     expect(intakeActions).toContain(
       "opportunity_office_context_supports_draft_active_or_paused_only",
     )
-    expect(controls).toContain("disabled={!selectedReason || isSubmitting}")
+    expect(controls).toContain(
+      "disabled={!selectedClosureReason || isSubmitting}",
+    )
   })
 
   it("keeps closure rows immutable and disables the old source-only reopen path", () => {

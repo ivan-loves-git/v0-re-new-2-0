@@ -48,12 +48,6 @@ import {
 } from "@/lib/utils/opportunity-sector"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 
-const INTAKE_STATUS_OPTIONS = OPPORTUNITY_STATUS_OPTIONS.filter(
-  (option) =>
-    option.value === "draft" ||
-    option.value === "active" ||
-    option.value === "paused",
-)
 interface OpportunityFormProps {
   opportunity?: OpportunityWithSource
   action: (formData: FormData) => Promise<OpportunityActionResult | void>
@@ -102,6 +96,11 @@ export function OpportunityForm({
     opportunity?.status === "active" || opportunity?.status === "paused"
       ? opportunity.status
       : "draft",
+  )
+  const intakeStatusOptions = OPPORTUNITY_STATUS_OPTIONS.filter((option) =>
+    option.value === "draft" ||
+    option.value === "active" ||
+    (option.value === "paused" && opportunity?.status === "paused"),
   )
   const [selectedGeographyNodeId, setSelectedGeographyNodeId] = useState(
     opportunity?.geography_node_id ?? "",
@@ -165,9 +164,10 @@ export function OpportunityForm({
               {opportunity ? "Edit opportunity" : "Create opportunity"}
             </CardTitle>
             <CardDescription>
-              Drafts can start with a reference only. Activating or pausing a
-              deal requires a verified operating office and one named primary
-              contact.
+              Drafts can start with a reference only. Activation requires a
+              verified operating office and one named primary contact. Use the
+              lifecycle control to pause an active opportunity with a recorded
+              reason.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -268,7 +268,7 @@ export function OpportunityForm({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          {INTAKE_STATUS_OPTIONS.map((option) => (
+                          {intakeStatusOptions.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>

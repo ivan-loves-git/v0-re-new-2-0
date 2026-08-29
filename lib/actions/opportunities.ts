@@ -12,11 +12,13 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import {
   isOpportunityClosureReason,
+  isOpportunityPauseReason,
   type MaSource,
   type MaSourceContact,
   type Opportunity,
   type OpportunityActionResult,
   type OpportunityClosureHistoryEntry,
+  type OpportunityPauseHistoryEntry,
   type OpportunityMaContact,
   type OpportunitySourceOffice,
   type OpportunitySourceContact,
@@ -395,6 +397,22 @@ export async function getOpportunityClosureHistory(
   return (data ?? []) as OpportunityClosureHistoryEntry[]
 }
 
+export async function getOpportunityPauseHistory(
+  id: string,
+): Promise<OpportunityPauseHistoryEntry[]> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("opportunity_pause_history")
+    .select("id, opportunity_id, reason, previous_status, paused_by, paused_at")
+    .eq("opportunity_id", id)
+    .order("paused_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []) as OpportunityPauseHistoryEntry[]
+}
+
 export async function createOpportunity(formData: FormData) {
   return createOpportunityIntake(formData)
 }
@@ -495,6 +513,51 @@ export async function closeOpportunity(
   return {
     success: true,
     message: "Opportunity closed. Its closure reason is retained in history.",
+  }
+}
+
+export async function pauseOpportunity(
+  id: string,
+  reason: unknown,
+): Promise<OpportunityActionResult> {
+  const { user } = await requireStaffAccess()
+  if (!isOpportunityPauseReason(reason)) {
+    return {
+      success: false,
+      message: "Choose the pause reason before pausing this opportunity.",
+      fieldErrors: { pause_reason: "Choose a valid pause reason." },
+    }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.rpc("pause_opportunity_with_reason", {
+    p_opportunity_id: id,
+    p_reason: reason,
+    p_paused_by: user.id,
+  })
+
+  if (error) {
+    if (error.message.includes("opportunity_not_active_for_pause")) {
+      return {
+        success: false,
+        message: "Only an active opportunity can be paused.",
+      }
+    }
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/opportunities")
+  revalidatePath("/opportunities/find")
+  revalidatePath(`/opportunities/${id}`)
+  revalidatePath("/dashboard")
+  revalidatePath("/portal")
+  revalidatePath("/portal/deals")
+  revalidatePath("/portal/pursuits")
+  revalidatePath("/portal-preview")
+  revalidateOpportunityDashboardTags()
+  return {
+    success: true,
+    message: "Opportunity paused. The reason is retained in history.",
   }
 }
 
