@@ -28,7 +28,7 @@ const roadmapEvents: RoadmapPeriod[] = [
     period: "Aug 29, 2026",
     version: "0.9.60",
     title: "Safe correction for unused confidential documents",
-    isCompleted: true,
+    isCompleted: false,
     events: [
       {
         title: "Unused uploads can be corrected safely",
@@ -38,7 +38,7 @@ const roadmapEvents: RoadmapPeriod[] = [
       {
         title: "Private cleanup stays reliable",
         type: "decision",
-        description: "WAVE removes the live record before private file cleanup; if storage is temporarily unavailable, staff can safely retry without leaving a broken document link.",
+        description: "WAVE removes the live record before private file cleanup; if storage is temporarily unavailable, staff can safely retry without leaving a broken document link. The database update is applied before this screen is released.",
       },
     ],
   },

@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest"
 const source = (path: string) => readFileSync(`${process.cwd()}/${path}`, "utf8")
 
 describe("W-170 unused retained-document correction", () => {
-  const migration = source("scripts/117_remove_unused_retained_opportunity_documents.sql")
-  const rehearsal = source("scripts/rehearse-w170-unused-retained-documents.sql")
+  const migration = source("supabase/migrations/20260829123000_w170_unused_retained_document_correction.sql")
+  const rehearsal = source("scripts/rehearse-w170-unused-retained-documents.sh")
   const actions = source("lib/actions/opportunity-documents.ts")
   const documentsPanel = source("components/opportunities/opportunity-documents-panel.tsx")
   const ndaManager = source("components/opportunities/opportunity-nda-artifact-manager.tsx")
@@ -47,9 +47,9 @@ describe("W-170 unused retained-document correction", () => {
     expect(migration).toContain("v_document.storage_bucket <> 'opportunity-documents'")
     expect(migration).toContain("p_opportunity_id::TEXT || '/%'")
     expect(migration).toContain("'/nda-artifacts/' || v_artifact.artifact_role::TEXT || '/%'")
-    expect(rehearsal).toContain("wrong bucket")
-    expect(rehearsal).toContain("cross-opportunity path")
-    expect(rehearsal).toContain("wrong NDA role path")
+    expect(rehearsal).toContain("w170_wrong_bucket_allowed")
+    expect(rehearsal).toContain("w170_cross_path_allowed")
+    expect(rehearsal).toContain("w170_wrong_nda_role_allowed")
   })
 
   it("offers removal only through the conditional staff document rows with confirmation", () => {
@@ -66,12 +66,14 @@ describe("W-170 unused retained-document correction", () => {
   })
 
   it("rehearses success, current-version fallback, and fail-closed boundaries", () => {
-    expect(rehearsal).toContain("117_remove_unused_retained_opportunity_documents.sql")
-    expect(rehearsal).toContain("Unused IM")
-    expect(rehearsal).toContain("prior retained version")
-    expect(rehearsal).toContain("cross-opportunity")
-    expect(rehearsal).toContain("source teaser")
-    expect(rehearsal).toContain("used IM")
-    expect(rehearsal).toContain("superseded")
+    expect(rehearsal).toContain("771_public_schema.sql")
+    expect(rehearsal).toContain("771_extensions.sql")
+    expect(rehearsal).toContain("20260829123000_w170_unused_retained_document_correction.sql")
+    expect(rehearsal).toContain("w170_real_delete_update_trigger_configuration_missing")
+    expect(rehearsal).toContain("w170_eligible_removal_or_latest_fallback_failed")
+    expect(rehearsal).toContain("w170_cross_opportunity_allowed")
+    expect(rehearsal).toContain("w170_used_or_retained_document_was_removed")
+    expect(rehearsal).toContain("w170_stale_retry_not_idempotent")
+    expect(rehearsal).toContain("w170_cleanup_receipts_remained")
   })
 })
