@@ -13,6 +13,8 @@ export type AutomaticMatchingThesis = {
   target_acquisition_size?: string | null
   target_revenue_min_meur?: number | null
   target_revenue_max_meur?: number | null
+  target_ebitda_min_keur?: number | null
+  target_ebitda_max_keur?: number | null
   target_ebitda_margin_min_pct?: number | null
   target_staff_size_min?: number | null
   target_staff_size_max?: number | null
@@ -48,6 +50,8 @@ export function automaticMatchingThesisCompleteness(
   if (![
     repreneur.target_revenue_min_meur,
     repreneur.target_revenue_max_meur,
+    repreneur.target_ebitda_min_keur,
+    repreneur.target_ebitda_max_keur,
     repreneur.target_ebitda_margin_min_pct,
     repreneur.target_staff_size_min,
     repreneur.target_staff_size_max,

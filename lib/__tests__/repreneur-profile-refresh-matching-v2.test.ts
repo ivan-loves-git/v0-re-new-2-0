@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   revalidateOpportunityDashboardTags: vi.fn(),
   revalidateRepreneurDashboardTags: vi.fn(),
+  opportunityIsDemo: false,
 }))
 
 vi.mock("server-only", () => ({}))
@@ -63,7 +64,7 @@ function tableBuilder(table: string) {
           id: "match-1",
           opportunity_id: "opportunity-1",
           opportunity: {
-            is_demo: false,
+            is_demo: mocks.opportunityIsDemo,
             sector: "industry",
             activity: "precision workshop",
             location: "Bretagne",
@@ -101,6 +102,7 @@ describe("stored Matching v2 refresh", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.updates = []
+    mocks.opportunityIsDemo = false
     mocks.from.mockImplementation(tableBuilder)
   })
 
@@ -109,17 +111,27 @@ describe("stored Matching v2 refresh", () => {
 
     expect(mocks.updates).toEqual([{
       platform_recommendation: "strong_fit",
-      platform_score: 100,
+      platform_score: 91,
       platform_reasons: [
         "Sector or activity matches the repreneur target preference.",
         "Geography matches the canonical France hierarchy.",
         "Revenue is within the target range.",
-        "EBITDA margin meets the minimum target.",
+        "Absolute EBITDA is not targeted by this repreneur.",
+        "EBITDA margin is above the target and below the cap.",
         "Headcount is within the target range.",
       ],
     }])
     expect(mocks.updates[0]).not.toHaveProperty("status")
     expect(mocks.updates[0]).not.toHaveProperty("human_recommendation")
     expect(mocks.updates[0]).not.toHaveProperty("human_notes")
+  })
+
+  it("skips a cross-namespace historical row without changing any human or platform field", async () => {
+    mocks.opportunityIsDemo = true
+
+    const result = await refreshStoredRepreneurMatches("repreneur-1")
+
+    expect(result).toMatchObject({ matchedRows: 1, refreshedRows: 0, skippedMissingOpportunityRows: 1 })
+    expect(mocks.updates).toEqual([])
   })
 })

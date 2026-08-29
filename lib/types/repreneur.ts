@@ -271,6 +271,8 @@ export interface Repreneur {
   // Optional matching inputs; not part of the WHO/WHEN score.
   target_revenue_min_meur?: number | null
   target_revenue_max_meur?: number | null
+  target_ebitda_min_keur?: number | null
+  target_ebitda_max_keur?: number | null
   target_ebitda_margin_min_pct?: number | null
   target_staff_size_min?: number | null
   target_staff_size_max?: number | null
@@ -386,6 +388,8 @@ export interface Repreneur_Insert {
   q16_equity?: string
   target_revenue_min_meur?: number | null
   target_revenue_max_meur?: number | null
+  target_ebitda_min_keur?: number | null
+  target_ebitda_max_keur?: number | null
   target_ebitda_margin_min_pct?: number | null
   target_staff_size_min?: number | null
   target_staff_size_max?: number | null

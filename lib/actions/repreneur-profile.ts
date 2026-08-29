@@ -19,6 +19,8 @@ export type TargetThesisInput = {
   q16_equity: string
   target_revenue_min_meur: number | null
   target_revenue_max_meur: number | null
+  target_ebitda_min_keur: number | null
+  target_ebitda_max_keur: number | null
   target_ebitda_margin_min_pct: number | null
   target_staff_size_min: number | null
   target_staff_size_max: number | null
@@ -146,10 +148,13 @@ async function updateTargetThesisForRepreneur(repreneurId: string, input: Target
 
   const revenueMin = optionalNumber(input.target_revenue_min_meur, "Revenue minimum", 100000)
   const revenueMax = optionalNumber(input.target_revenue_max_meur, "Revenue maximum", 100000)
+  const ebitdaMin = optionalNumber(input.target_ebitda_min_keur, "EBITDA minimum", 100000)
+  const ebitdaMax = optionalNumber(input.target_ebitda_max_keur, "EBITDA maximum", 100000)
   const ebitdaMarginMin = optionalNumber(input.target_ebitda_margin_min_pct, "Minimum EBITDA margin", 100)
   const staffSizeMin = optionalNumber(input.target_staff_size_min, "Staff-size minimum", 100000, true)
   const staffSizeMax = optionalNumber(input.target_staff_size_max, "Staff-size maximum", 100000, true)
   validateRange(revenueMin, revenueMax, "Revenue range")
+  validateRange(ebitdaMin, ebitdaMax, "EBITDA range")
   validateRange(staffSizeMin, staffSizeMax, "Staff-size range")
 
   const { error } = await supabase
@@ -163,6 +168,8 @@ async function updateTargetThesisForRepreneur(repreneurId: string, input: Target
       target_location: geoZones,
       target_revenue_min_meur: revenueMin,
       target_revenue_max_meur: revenueMax,
+      target_ebitda_min_keur: ebitdaMin,
+      target_ebitda_max_keur: ebitdaMax,
       target_ebitda_margin_min_pct: ebitdaMarginMin,
       target_staff_size_min: staffSizeMin,
       target_staff_size_max: staffSizeMax,

@@ -384,6 +384,13 @@ export function StepReview({
             </div>
           )}
 
+          {formatRange(data.target_ebitda_min_keur, data.target_ebitda_max_keur, 'k€') && (
+            <div>
+              <div className="text-muted-foreground text-xs">{language === 'fr' ? 'EBITDA cible' : 'Target EBITDA'}</div>
+              <div>{formatRange(data.target_ebitda_min_keur, data.target_ebitda_max_keur, 'k€')}</div>
+            </div>
+          )}
+
           {data.target_ebitda_margin_min_pct != null && (
             <div>
               <div className="text-muted-foreground text-xs">{labels.minimumEbitdaMargin}</div>

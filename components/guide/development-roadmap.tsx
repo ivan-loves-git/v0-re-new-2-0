@@ -26,6 +26,24 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 29, 2026",
+    version: "0.9.61 candidate",
+    title: "Matching 2.1 is ready for review",
+    isCompleted: false,
+    events: [
+      {
+        title: "Optional absolute EBITDA target range",
+        type: "feature",
+        description: "A repreneur and the Re-New team can record a target EBITDA range in thousands of euros, including a one-sided range, without changing current deal access or matching recommendations.",
+      },
+      {
+        title: "Matching 2.1 is a release candidate",
+        type: "decision",
+        description: "This candidate adds weighted revenue, absolute EBITDA, EBITDA margin and headcount rules with strict sector and geography eligibility. Matching 2.0 stays live until this candidate is separately released; staff recommendations and their status remain unchanged.",
+      },
+    ],
+  },
+  {
+    period: "Aug 29, 2026",
     version: "0.9.60",
     title: "Safe correction for unused confidential documents",
     isCompleted: true,

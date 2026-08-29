@@ -4,6 +4,7 @@ import {
   canonicalTargetThesisValues,
   legacyTargetThesisValues,
   targetThesisInputValidationMessage,
+  targetThesisNumericValidationMessage,
   targetThesisLabels,
 } from "@/lib/repreneur-target-thesis"
 
@@ -69,6 +70,8 @@ describe("target thesis compatibility", () => {
       q16_equity: "351-450k",
       target_revenue_min_meur: 10,
       target_revenue_max_meur: 1,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
       target_ebitda_margin_min_pct: null,
       target_staff_size_min: null,
       target_staff_size_max: null,
@@ -82,10 +85,60 @@ describe("target thesis compatibility", () => {
         ...input,
         target_revenue_min_meur: 1,
         target_revenue_max_meur: 10,
+        target_ebitda_min_keur: 200,
+        target_ebitda_max_keur: 100,
         target_staff_size_min: 50,
         target_staff_size_max: 10,
       }),
-    ).toBe("Staff-size range minimum cannot be greater than its maximum.")
+    ).toBe("EBITDA range minimum cannot be greater than its maximum.")
+  })
+
+  it("validates the optional absolute EBITDA range without requiring both sides", () => {
+    const input = {
+      q12_geo_zones: ["ile-de-france"],
+      q13_target_sectors_v2: ["Tech & Digital"],
+      q14_deal_size: ["1-3m"],
+      q16_equity: "351-450k",
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: 250,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    }
+
+    expect(targetThesisInputValidationMessage(input)).toBeNull()
+    expect(targetThesisInputValidationMessage({ ...input, target_ebitda_min_keur: -1 })).toBe(
+      "EBITDA minimum must be a number between 0 and 100000.",
+    )
+    expect(targetThesisInputValidationMessage({ ...input, target_ebitda_min_keur: Number.NaN })).toBe(
+      "EBITDA minimum must be a number between 0 and 100000.",
+    )
+    expect(targetThesisInputValidationMessage({ ...input, target_ebitda_min_keur: 400, target_ebitda_max_keur: 250 })).toBe(
+      "EBITDA range minimum cannot be greater than its maximum.",
+    )
+  })
+
+  it("shares numeric validation with public intake without requiring thesis selections", () => {
+    expect(targetThesisNumericValidationMessage({
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: 350,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    })).toBeNull()
+    expect(targetThesisNumericValidationMessage({
+      target_revenue_min_meur: Number.NaN,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    })).toBe("Revenue minimum must be a number between 0 and 100000.")
   })
 
   it("accepts complete criteria with truthful optional ranges", () => {
@@ -97,6 +150,8 @@ describe("target thesis compatibility", () => {
         q16_equity: "351-450k",
         target_revenue_min_meur: 1,
         target_revenue_max_meur: 10,
+        target_ebitda_min_keur: 150,
+        target_ebitda_max_keur: 800,
         target_ebitda_margin_min_pct: 15,
         target_staff_size_min: 10,
         target_staff_size_max: 50,

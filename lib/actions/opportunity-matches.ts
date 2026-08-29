@@ -47,6 +47,8 @@ const REPRENEUR_MATCHING_INPUT_FIELDS = `
   investment_capacity,
   target_revenue_min_meur,
   target_revenue_max_meur,
+  target_ebitda_min_keur,
+  target_ebitda_max_keur,
   target_ebitda_margin_min_pct,
   target_staff_size_min,
   target_staff_size_max

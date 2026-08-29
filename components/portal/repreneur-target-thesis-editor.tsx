@@ -50,6 +50,8 @@ export type TargetThesisProfile = {
   investment_capacity?: string | null
   target_revenue_min_meur?: number | null
   target_revenue_max_meur?: number | null
+  target_ebitda_min_keur?: number | null
+  target_ebitda_max_keur?: number | null
   target_ebitda_margin_min_pct?: number | null
   target_staff_size_min?: number | null
   target_staff_size_max?: number | null
@@ -65,9 +67,11 @@ export type ProfileContributionsProfile = {
   ms_advisory_team_identified?: boolean
 }
 
-type Draft = Omit<TargetThesisInput, "target_revenue_min_meur" | "target_revenue_max_meur" | "target_ebitda_margin_min_pct" | "target_staff_size_min" | "target_staff_size_max"> & {
+type Draft = Omit<TargetThesisInput, "target_revenue_min_meur" | "target_revenue_max_meur" | "target_ebitda_min_keur" | "target_ebitda_max_keur" | "target_ebitda_margin_min_pct" | "target_staff_size_min" | "target_staff_size_max"> & {
   target_revenue_min_meur: string
   target_revenue_max_meur: string
+  target_ebitda_min_keur: string
+  target_ebitda_max_keur: string
   target_ebitda_margin_min_pct: string
   target_staff_size_min: string
   target_staff_size_max: string
@@ -108,6 +112,8 @@ function initialDraft(repreneur: TargetThesisProfile): Draft {
     )[0] ?? "",
     target_revenue_min_meur: repreneur.target_revenue_min_meur?.toString() ?? "",
     target_revenue_max_meur: repreneur.target_revenue_max_meur?.toString() ?? "",
+    target_ebitda_min_keur: repreneur.target_ebitda_min_keur?.toString() ?? "",
+    target_ebitda_max_keur: repreneur.target_ebitda_max_keur?.toString() ?? "",
     target_ebitda_margin_min_pct: repreneur.target_ebitda_margin_min_pct?.toString() ?? "",
     target_staff_size_min: repreneur.target_staff_size_min?.toString() ?? "",
     target_staff_size_max: repreneur.target_staff_size_max?.toString() ?? "",
@@ -200,6 +206,8 @@ export function RepreneurTargetThesisEditor({
       q16_equity: draft.q16_equity,
       target_revenue_min_meur: optionalNumber(draft.target_revenue_min_meur),
       target_revenue_max_meur: optionalNumber(draft.target_revenue_max_meur),
+      target_ebitda_min_keur: optionalNumber(draft.target_ebitda_min_keur),
+      target_ebitda_max_keur: optionalNumber(draft.target_ebitda_max_keur),
       target_ebitda_margin_min_pct: optionalNumber(draft.target_ebitda_margin_min_pct),
       target_staff_size_min: optionalNumber(draft.target_staff_size_min),
       target_staff_size_max: optionalNumber(draft.target_staff_size_max),
@@ -309,6 +317,14 @@ export function RepreneurTargetThesisEditor({
                 value={draft.target_revenue_max_meur}
                 onChange={(event) => setDraft((current) => ({ ...current, target_revenue_max_meur: event.target.value }))}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="target-ebitda-absolute-min">EBITDA range, minimum (k€)</Label>
+              <Input id="target-ebitda-absolute-min" type="number" min="0" step="0.01" inputMode="decimal" value={draft.target_ebitda_min_keur} onChange={(event) => setDraft((current) => ({ ...current, target_ebitda_min_keur: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="target-ebitda-absolute-max">EBITDA range, maximum (k€)</Label>
+              <Input id="target-ebitda-absolute-max" type="number" min="0" step="0.01" inputMode="decimal" value={draft.target_ebitda_max_keur} onChange={(event) => setDraft((current) => ({ ...current, target_ebitda_max_keur: event.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="target-ebitda-min">Minimum EBITDA margin (%)</Label>

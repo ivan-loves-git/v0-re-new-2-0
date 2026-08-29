@@ -22,6 +22,8 @@ type RepreneurMatchRecord = {
   investment_capacity?: string | null
   target_revenue_min_meur?: number | string | null
   target_revenue_max_meur?: number | string | null
+  target_ebitda_min_keur?: number | string | null
+  target_ebitda_max_keur?: number | string | null
   target_ebitda_margin_min_pct?: number | string | null
   target_ebitda_margin_max_pct?: number | string | null
   target_staff_size_min?: number | string | null
@@ -55,6 +57,8 @@ const MATCHING_FIELDS = `
   investment_capacity,
   target_revenue_min_meur,
   target_revenue_max_meur,
+  target_ebitda_min_keur,
+  target_ebitda_max_keur,
   target_ebitda_margin_min_pct,
   target_ebitda_margin_max_pct,
   target_staff_size_min,

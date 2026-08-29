@@ -11,6 +11,9 @@ import type { WhoAnswers, WhenAnswers } from "@/lib/types/scoring-v2"
 import type { IntakeV2FormData, IntakeV2SubmissionResult } from "@/lib/types/intake-v2"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 import {
+  validateIntakeTargetThesis,
+} from "@/lib/repreneur-target-thesis"
+import {
   claimPrivateIntakeUploads,
   parsePrivateIntakeUploadHandle,
 } from "@/lib/private-upload-server"
@@ -37,6 +40,8 @@ export async function submitIntakeV2(
     if (targetSectors.length === 0) {
       return { success: false, error: "Sélectionnez au moins un secteur cible." }
     }
+    const targetThesisError = validateIntakeTargetThesis(formData)
+    if (targetThesisError) return { success: false, error: targetThesisError }
 
     const supabase = createAdminClient()
 
@@ -117,6 +122,8 @@ export async function submitIntakeV2(
       q16_equity: formData.q16_equity,
       target_revenue_min_meur: formData.target_revenue_min_meur,
       target_revenue_max_meur: formData.target_revenue_max_meur,
+      target_ebitda_min_keur: formData.target_ebitda_min_keur,
+      target_ebitda_max_keur: formData.target_ebitda_max_keur,
       target_ebitda_margin_min_pct: formData.target_ebitda_margin_min_pct,
       target_staff_size_min: formData.target_staff_size_min,
       target_staff_size_max: formData.target_staff_size_max,

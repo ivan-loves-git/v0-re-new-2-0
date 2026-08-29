@@ -276,11 +276,21 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
               : 'These answers improve opportunity matching. They are not scored.'}
           </p>
         </div>
+        {errors.target_thesis && (
+          <p role="alert" className="text-sm text-red-500">{errors.target_thesis}</p>
+        )}
         <div className="grid gap-3 md:grid-cols-3">
           <div className="grid grid-cols-2 gap-2">
             <Label className="col-span-2 text-sm">{language === 'fr' ? 'Chiffre d’affaires cible (M€)' : 'Target revenue (M EUR)'}</Label>
             <Input aria-label={language === 'fr' ? 'Chiffre d’affaires cible minimum' : 'Minimum target revenue'} type="number" min="0" step="0.1" placeholder="Min" value={data.target_revenue_min_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_min_meur', e.target.value)} />
             <Input aria-label={language === 'fr' ? 'Chiffre d’affaires cible maximum' : 'Maximum target revenue'} type="number" min="0" step="0.1" placeholder="Max" value={data.target_revenue_max_meur ?? ''} onChange={(e) => updateOptionalNumber('target_revenue_max_meur', e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label className="text-sm">{language === 'fr' ? 'EBITDA cible (k€)' : 'Target EBITDA (k EUR)'}</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input aria-label={language === 'fr' ? 'EBITDA cible minimum' : 'Minimum target EBITDA'} type="number" min="0" step="0.1" placeholder="Min" value={data.target_ebitda_min_keur ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_min_keur', e.target.value)} />
+              <Input aria-label={language === 'fr' ? 'EBITDA cible maximum' : 'Maximum target EBITDA'} type="number" min="0" step="0.1" placeholder="Max" value={data.target_ebitda_max_keur ?? ''} onChange={(e) => updateOptionalNumber('target_ebitda_max_keur', e.target.value)} />
+            </div>
           </div>
           <div className="grid gap-2">
             <Label className="text-sm">{language === 'fr' ? 'Marge EBITDA mini (%)' : 'Minimum EBITDA margin (%)'}</Label>

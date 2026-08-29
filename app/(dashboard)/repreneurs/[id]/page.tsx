@@ -675,6 +675,9 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
                 <FieldSummary label="Revenue range">
                   {formatThesisRange(profile.target_revenue_min_meur, profile.target_revenue_max_meur, "M€") || <EmptyText>Not set</EmptyText>}
                 </FieldSummary>
+                <FieldSummary label="EBITDA range">
+                  {formatThesisRange(profile.target_ebitda_min_keur, profile.target_ebitda_max_keur, "k€") || <EmptyText>Not set</EmptyText>}
+                </FieldSummary>
                 <FieldSummary label="Minimum EBITDA margin">
                   {profile.target_ebitda_margin_min_pct === null || profile.target_ebitda_margin_min_pct === undefined
                     ? <EmptyText>Not set</EmptyText>

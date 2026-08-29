@@ -45,6 +45,8 @@ export interface IntakeV2FormData {
   // Optional matching inputs. They are deliberately excluded from WHO/WHEN scoring.
   target_revenue_min_meur: number | null
   target_revenue_max_meur: number | null
+  target_ebitda_min_keur: number | null
+  target_ebitda_max_keur: number | null
   target_ebitda_margin_min_pct: number | null
   target_staff_size_min: number | null
   target_staff_size_max: number | null
@@ -82,6 +84,8 @@ export const EMPTY_INTAKE_FORM: IntakeV2FormData = {
   q16_equity: '',
   target_revenue_min_meur: null,
   target_revenue_max_meur: null,
+  target_ebitda_min_keur: null,
+  target_ebitda_max_keur: null,
   target_ebitda_margin_min_pct: null,
   target_staff_size_min: null,
   target_staff_size_max: null,

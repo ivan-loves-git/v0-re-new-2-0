@@ -4,388 +4,406 @@ import {
   MATCHING_V2_CONFIG,
 } from "../opportunity-match-scoring"
 
-const completeRepreneur = {
+const repreneur = {
+  is_demo: false,
   q13_target_sectors_v2: ["industry"],
   q12_geo_zones: ["ile-de-france"],
-  target_revenue_min_meur: 1.5,
-  target_revenue_max_meur: 3,
-  target_ebitda_margin_min_pct: 12,
+  target_revenue_min_meur: 100,
+  target_revenue_max_meur: 200,
+  target_ebitda_min_keur: 10_000,
+  target_ebitda_max_keur: 20_000,
+  target_ebitda_margin_min_pct: 10,
   target_staff_size_min: 10,
-  target_staff_size_max: 40,
+  target_staff_size_max: 30,
 }
-
-const completeOpportunity = {
+const opportunity = {
+  is_demo: false,
   sector: "industry",
-  activity: "precision workshop",
   location: "Île-de-France",
-  revenue_meur: 2,
-  ebitda_keur: 300,
-  headcount: 24,
+  revenue_meur: 150,
+  ebitda_keur: 15_000,
+  headcount: 20,
 }
+const score = (
+  changes: Record<string, unknown> = {},
+  profile: Record<string, unknown> = {},
+) =>
+  calculateOpportunityMatchScore(
+    { ...repreneur, ...profile },
+    { ...opportunity, ...changes },
+  )
+const revenueOnly = (value: number) =>
+  score(
+    { revenue_meur: value },
+    {
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    },
+  )
+const absoluteEbitdaOnly = (value: number) =>
+  score(
+    { ebitda_keur: value },
+    {
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    },
+  )
+const marginOnly = (
+  marginPercent: number,
+  targets: Record<string, unknown> = {},
+) =>
+  score(
+    { revenue_meur: 100, ebitda_keur: marginPercent * 1_000 },
+    {
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+      ...targets,
+    },
+  )
+const headcountOnly = (value: number, targets: Record<string, unknown> = {}) =>
+  score(
+    { headcount: value },
+    {
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      ...targets,
+    },
+  )
 
-describe("calculateOpportunityMatchScore", () => {
-  it("publishes one named provisional calibration", () => {
-    expect(MATCHING_V2_CONFIG).toMatchObject({
-      version: "provisional-2026-08-23",
+describe("calculateOpportunityMatchScore — Matching 2.1", () => {
+  it("uses the explicit four-criterion 2.1 calibration", () => {
+    expect(MATCHING_V2_CONFIG).toEqual({
+      version: "2.1-candidate-2026-08-29",
       weights: {
-        sector: 30,
-        geography: 25,
-        revenue: 25,
-        ebitdaMargin: 12,
-        headcount: 8,
+        revenue: 36,
+        absoluteEbitda: 29,
+        ebitdaMargin: 21,
+        headcount: 14,
       },
-      tolerances: {
-        rangeRelativeOutside: 0.2,
-        ebitdaMarginPercentagePointsBelow: 2,
-      },
+      rangeBuffers: { lower: 0.9, upper: 1.3 },
+      evidence: { reviewMaximumScore: 70 },
+    })
+    expect(score()).toMatchObject({ score: 92, recommendation: "strong_fit" })
+  })
+
+  it("pins revenue and absolute EBITDA inclusive boundaries, buffer midpoints and hard limits", () => {
+    expect(revenueOnly(100).score).toBe(100)
+    expect(revenueOnly(200).score).toBe(100)
+    expect(revenueOnly(95).score).toBe(50)
+    expect(revenueOnly(90).score).toBe(0)
+    expect(revenueOnly(89.99)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(revenueOnly(230).score).toBe(50)
+    expect(revenueOnly(260).score).toBe(0)
+    expect(revenueOnly(260.01)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(absoluteEbitdaOnly(10_000).score).toBe(100)
+    expect(absoluteEbitdaOnly(20_000).score).toBe(100)
+    expect(absoluteEbitdaOnly(9_500).score).toBe(50)
+    expect(absoluteEbitdaOnly(9_000).score).toBe(0)
+    expect(absoluteEbitdaOnly(8_999.99)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(absoluteEbitdaOnly(23_000).score).toBe(50)
+    expect(absoluteEbitdaOnly(26_000).score).toBe(0)
+    expect(absoluteEbitdaOnly(26_000.01)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(absoluteEbitdaOnly(-1)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+      reasons: expect.arrayContaining([
+        "Absolute EBITDA is below the 90% lower eligibility boundary.",
+      ]),
     })
   })
 
-  it("returns a strong fit when all five Matching v2 inputs align", () => {
-    const result = calculateOpportunityMatchScore(
-      completeRepreneur,
-      completeOpportunity,
-    )
-
-    expect(result.score).toBe(100)
-    expect(result.recommendation).toBe("strong_fit")
-    expect(result.reasons).toEqual([
-      "Sector or activity matches the repreneur target preference.",
-      "Location matches the repreneur geographic preference.",
-      "Revenue is within the target range.",
-      "EBITDA margin meets the minimum target.",
-      "Headcount is within the target range.",
-    ])
+  it("handles one-sided financial ranges with the same exact boundaries", () => {
+    expect(
+      score(
+        { revenue_meur: 100 },
+        {
+          target_revenue_min_meur: 100,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: null,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ).score,
+    ).toBe(100)
+    expect(
+      score(
+        { revenue_meur: 95 },
+        {
+          target_revenue_min_meur: 100,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: null,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ).score,
+    ).toBe(50)
+    expect(
+      score(
+        { ebitda_keur: 23_000 },
+        {
+          target_revenue_min_meur: null,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: 20_000,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ).score,
+    ).toBe(50)
   })
 
-  it("does not use WHO, WHEN, or scoring flags for signed-client matching", () => {
-    const lowQualification = calculateOpportunityMatchScore(
-      {
-        ...completeRepreneur,
-        who_score: 0,
-        when_score: 0,
-        scoring_flags: ["review"],
-      },
-      completeOpportunity,
-    )
-    const highQualification = calculateOpportunityMatchScore(
-      {
-        ...completeRepreneur,
-        who_score: 100,
-        when_score: 100,
-        scoring_flags: [],
-      },
-      completeOpportunity,
-    )
-
-    expect(lowQualification).toEqual(highQualification)
+  it("uses the exact continuous EBITDA margin curve and deterministic zero threshold", () => {
+    // revenue 100 mEUR: 9%, 9.5%, 10%, 15%, 20% and >20% respectively.
+    expect(marginOnly(9).score).toBe(0)
+    expect(marginOnly(9.5).score).toBe(30)
+    expect(marginOnly(10).score).toBe(60)
+    expect(marginOnly(15).score).toBe(80)
+    expect(marginOnly(20).score).toBe(100)
+    expect(marginOnly(8.99999)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(marginOnly(0, { target_ebitda_margin_min_pct: 0 }).score).toBe(100)
+    expect(
+      marginOnly(-0.00001, { target_ebitda_margin_min_pct: 0 }),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
   })
 
-  it("treats revenue and headcount bounds as inclusive", () => {
-    for (const [revenue, headcount] of [[1.5, 10], [3, 40]]) {
-      const result = calculateOpportunityMatchScore(
-        completeRepreneur,
-        { ...completeOpportunity, revenue_meur: revenue, headcount },
-      )
-
-      expect(result.reasons).toContain("Revenue is within the target range.")
-      expect(result.reasons).toContain("Headcount is within the target range.")
-    }
-  })
-
-  it("gives half credit inside the provisional 20 percent range tolerance", () => {
-    const result = calculateOpportunityMatchScore(
-      completeRepreneur,
-      { ...completeOpportunity, revenue_meur: 3.5, headcount: 45 },
-    )
-
-    expect(result.reasons).toContain(
-      "Revenue is close to the target range and needs staff judgement.",
-    )
-    expect(result.reasons).toContain(
-      "Headcount is close to the target range and needs staff judgement.",
-    )
-  })
-
-  it("marks values beyond the provisional range tolerance as mismatches", () => {
-    const result = calculateOpportunityMatchScore(
-      completeRepreneur,
-      { ...completeOpportunity, revenue_meur: 4, headcount: 50 },
-    )
-
-    expect(result.reasons).toContain("Revenue is outside the target range.")
-    expect(result.reasons).toContain("Headcount is outside the target range.")
-  })
-
-  it("calculates EBITDA margin from kEUR EBITDA and mEUR revenue", () => {
-    const atThreshold = calculateOpportunityMatchScore(
-      completeRepreneur,
-      { ...completeOpportunity, revenue_meur: 2, ebitda_keur: 240 },
-    )
-    const borderline = calculateOpportunityMatchScore(
-      completeRepreneur,
-      { ...completeOpportunity, revenue_meur: 2, ebitda_keur: 220 },
-    )
-    const mismatch = calculateOpportunityMatchScore(
-      completeRepreneur,
-      { ...completeOpportunity, revenue_meur: 2, ebitda_keur: 180 },
-    )
-
-    expect(atThreshold.reasons).toContain("EBITDA margin meets the minimum target.")
-    expect(borderline.reasons).toContain(
-      "EBITDA margin is close to the minimum target and needs staff judgement.",
-    )
-    expect(mismatch.reasons).toContain("EBITDA margin is below the minimum target.")
-  })
-
-  it("uses the provisional 0 percent margin fallback without changing buyer data", () => {
-    const result = calculateOpportunityMatchScore(
-      { ...completeRepreneur, target_ebitda_margin_min_pct: null },
-      completeOpportunity,
-    )
-
-    expect(result.reasons).toContain(
-      "EBITDA margin meets the provisional 0% fallback because no buyer minimum is recorded.",
-    )
-  })
-
-  it("does not turn missing financial data into a fake strong fit", () => {
-    const result = calculateOpportunityMatchScore(
-      {
-        q13_target_sectors_v2: ["industry"],
-        q12_geo_zones: ["ile-de-france"],
-      },
-      {
-        sector: "industry",
-        location: "Île-de-France",
-        revenue_meur: null,
-        ebitda_keur: null,
-        headcount: null,
-      },
-    )
-
-    expect(result.score).toBe(70)
-    expect(result.recommendation).toBe("possible_fit")
-    expect(result.reasons).toContain(
-      "Revenue needs review because the target or opportunity value is missing.",
-    )
-    expect(result.reasons).toContain(
-      "EBITDA margin needs review because opportunity revenue or EBITDA is missing.",
-    )
-  })
-
-  it("keeps any incomplete criterion in staff review even with strong known evidence", () => {
-    const result = calculateOpportunityMatchScore(
-      {
-        ...completeRepreneur,
-        target_staff_size_min: null,
+  it("keeps headcount non-excluding with range, one-sided and zero-width decay", () => {
+    expect(headcountOnly(0).score).toBe(50)
+    expect(headcountOnly(40).score).toBe(50)
+    expect(headcountOnly(50).score).toBe(0)
+    expect(
+      headcountOnly(5, {
+        target_staff_size_min: 10,
         target_staff_size_max: null,
-      },
-      completeOpportunity,
-    )
-
-    expect(result.score).toBe(70)
-    expect(result.recommendation).toBe("possible_fit")
-    expect(result.reasons).toContain(
-      "Headcount needs review because the target or opportunity value is missing.",
-    )
+      }).score,
+    ).toBe(50)
+    expect(
+      headcountOnly(0, {
+        target_staff_size_min: 10,
+        target_staff_size_max: null,
+      }).score,
+    ).toBe(0)
+    expect(
+      headcountOnly(10, {
+        target_staff_size_min: 10,
+        target_staff_size_max: 10,
+      }).score,
+    ).toBe(100)
+    expect(
+      headcountOnly(11, {
+        target_staff_size_min: 10,
+        target_staff_size_max: 10,
+      }).score,
+    ).toBe(0)
+    expect(
+      headcountOnly(30, {
+        target_staff_size_min: null,
+        target_staff_size_max: 30,
+      }).score,
+    ).toBe(100)
+    expect(
+      headcountOnly(45, {
+        target_staff_size_min: null,
+        target_staff_size_max: 30,
+      }).score,
+    ).toBe(50)
   })
 
-  it("keeps clear revenue and margin misses outside normal recommendations", () => {
-    const revenueMiss = calculateOpportunityMatchScore(
-      completeRepreneur,
-      { ...completeOpportunity, revenue_meur: 4 },
-    )
-    const marginMiss = calculateOpportunityMatchScore(
-      completeRepreneur,
-      { ...completeOpportunity, ebitda_keur: 180 },
-    )
-
-    expect(revenueMiss.score).toBe(44)
-    expect(revenueMiss.recommendation).toBe("not_fit")
-    expect(marginMiss.score).toBe(44)
-    expect(marginMiss.recommendation).toBe("not_fit")
+  it("omits buyer-undefined criteria, caps targeted missing evidence, and never invents a fit", () => {
+    expect(
+      score(
+        {},
+        {
+          target_revenue_min_meur: null,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: null,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(score({ revenue_meur: null })).toMatchObject({
+      score: 70,
+      recommendation: "possible_fit",
+    })
+    expect(
+      score({}, { target_revenue_min_meur: 200, target_revenue_max_meur: 100 }),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
   })
 
-  it("keeps a known sector mismatch outside normal recommendations", () => {
-    const result = calculateOpportunityMatchScore(
-      { ...completeRepreneur, q13_target_sectors_v2: ["healthcare"] },
-      completeOpportunity,
-    )
-
-    expect(result.score).toBe(44)
-    expect(result.recommendation).toBe("not_fit")
-    expect(result.reasons).toContain(
-      "Sector or activity does not match the repreneur target preferences.",
-    )
+  it("makes known sector, geography, financial and namespace exclusions unambiguous not_fit", () => {
+    expect(score({}, { q13_target_sectors_v2: ["healthcare"] })).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: ["fr-idf", "france"],
+        },
+        {
+          target_geography_paths_stable_keys: [["fr-bretagne", "france"]],
+        },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(score({ is_demo: true })).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
   })
 
-  it("matches an all-France target to a canonical region", () => {
-    const result = calculateOpportunityMatchScore(
-      {
-        ...completeRepreneur,
-        target_geography_paths_stable_keys: [["france"]],
-      },
-      {
-        ...completeOpportunity,
-        geography_node_id: "region-idf",
-        geography_path_stable_keys: [
-          "fr-region-ile-de-france",
-          "fr-macro-ile-de-france",
-          "france",
-        ],
-      },
-    )
-
-    expect(result.reasons).toContain(
-      "Geography matches the canonical France hierarchy.",
-    )
+  it("keeps unknown sector and geography as review, and ignores WHO/WHEN/tags/freshness", () => {
+    const baseline = score()
+    expect(
+      score({}, { q13_target_sectors_v2: null, q12_geo_zones: null }),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
+    expect(
+      score(
+        {},
+        {
+          who_score: 0,
+          when_score: 0,
+          scoring_flags: ["review"],
+          thesis_tags: ["ignored"],
+          skills: ["ignored"],
+          profile_freshness: "stale",
+        },
+      ),
+    ).toEqual(baseline)
   })
 
-  it("matches an ancestor target to a narrower canonical opportunity", () => {
-    const result = calculateOpportunityMatchScore(
-      {
-        ...completeRepreneur,
-        target_geography_paths_stable_keys: [
-          ["fr-macro-south-east", "france"],
-        ],
-      },
-      {
-        ...completeOpportunity,
-        geography_node_id: "region-aura",
-        geography_path_stable_keys: [
-          "fr-region-auvergne-rhone-alpes",
-          "fr-macro-south-east",
-          "france",
-        ],
-      },
-    )
-
-    expect(result.score).toBe(100)
-    expect(result.reasons).toContain(
-      "Geography matches the canonical France hierarchy.",
-    )
+  it("keeps the published recommendation thresholds", () => {
+    expect(revenueOnly(98)).toMatchObject({
+      score: 80,
+      recommendation: "strong_fit",
+    })
+    expect(revenueOnly(96.5)).toMatchObject({
+      score: 65,
+      recommendation: "possible_fit",
+    })
+    expect(revenueOnly(94.5)).toMatchObject({
+      score: 45,
+      recommendation: "weak_fit",
+    })
+    expect(revenueOnly(94)).toMatchObject({
+      score: 40,
+      recommendation: "not_fit",
+    })
   })
 
-  it("marks a broader opportunity than the target area for review", () => {
-    const result = calculateOpportunityMatchScore(
-      {
-        ...completeRepreneur,
-        target_geography_paths_stable_keys: [
-          ["fr-region-ile-de-france", "fr-macro-ile-de-france", "france"],
-        ],
-      },
-      {
-        ...completeOpportunity,
-        geography_node_id: "france-node",
-        geography_path_stable_keys: ["france"],
-      },
-    )
-
-    expect(result.score).toBe(70)
-    expect(result.reasons).toContain(
-      "Geography needs review because the opportunity is broader than the target area.",
-    )
-  })
-
-  it("demotes a disjoint canonical geography but keeps it visible", () => {
-    const result = calculateOpportunityMatchScore(
-      {
-        ...completeRepreneur,
-        target_geography_paths_stable_keys: [
-          ["fr-region-bretagne", "fr-macro-west", "france"],
-        ],
-      },
-      {
-        ...completeOpportunity,
-        geography_node_id: "region-idf",
-        geography_path_stable_keys: [
-          "fr-region-ile-de-france",
-          "fr-macro-ile-de-france",
-          "france",
-        ],
-      },
-    )
-
-    expect(result.score).toBe(60)
-    expect(result.recommendation).toBe("weak_fit")
-    expect(result.reasons).toContain(
-      "Geography does not match the canonical France hierarchy.",
-    )
-  })
-
-  it("does not infer an unmapped special geography label", () => {
-    const result = calculateOpportunityMatchScore(
-      { ...completeRepreneur, q12_geo_zones: ["Grand Ouest"] },
-      { ...completeOpportunity, location: "Bretagne" },
-    )
-
-    expect(result.score).toBe(70)
-    expect(result.reasons).toContain(
-      "Geography needs review because the current data is incomplete or not mapped.",
-    )
-  })
-
-  it("requires review when a canonical opportunity has no mapped target bridge", () => {
-    const result = calculateOpportunityMatchScore(
-      completeRepreneur,
-      {
-        ...completeOpportunity,
-        geography_node_id: "region-idf",
-        geography_path_stable_keys: [
-          "fr-region-ile-de-france",
-          "fr-macro-ile-de-france",
-          "france",
-        ],
-      },
-    )
-
-    expect(result.score).toBe(70)
-    expect(result.reasons).toContain(
-      "Geography needs review because one side has not been mapped to the France hierarchy.",
-    )
-  })
-
-  it("keeps canonical Tech and Digital selections compatible with legacy labels", () => {
-    const result = calculateOpportunityMatchScore(
-      { ...completeRepreneur, q13_target_sectors_v2: ["Tech & Digital"] },
-      { ...completeOpportunity, sector: "Digital/IT services" },
-    )
-
-    expect(result.reasons).toContain(
-      "Sector or activity matches the repreneur target preference.",
-    )
-  })
-
-  it("matches both successors of a broad legacy Services opportunity", () => {
-    for (const target of [
-      "Services aux entreprises (B2B)",
-      "Services aux particuliers (B2C)",
-    ]) {
-      const result = calculateOpportunityMatchScore(
-        { ...completeRepreneur, q13_target_sectors_v2: [target] },
-        { ...completeOpportunity, sector: "Services" },
-      )
-
-      expect(result.reasons).toContain(
-        "Sector or activity matches the repreneur target preference.",
-      )
-    }
-  })
-
-  it("matches both successors of a broad legacy Sante target", () => {
-    for (const sector of [
-      "Industrie pharmaceutique & Dispositifs médicaux",
-      "Services de santé",
-    ]) {
-      const result = calculateOpportunityMatchScore(
-        { ...completeRepreneur, q13_target_sectors_v2: ["healthcare"] },
-        { ...completeOpportunity, sector },
-      )
-
-      expect(result.reasons).toContain(
-        "Sector or activity matches the repreneur target preference.",
-      )
-    }
+  it("keeps canonical geography compatibility and legacy sector aliases", () => {
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: ["fr-region-ile-de-france", "france"],
+        },
+        {
+          target_geography_paths_stable_keys: [["france"]],
+        },
+      ).score,
+    ).toBe(92)
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: [
+            "fr-region-ile-de-france",
+            "fr-macro-ile-de-france",
+            "france",
+          ],
+        },
+        {
+          target_geography_paths_stable_keys: [
+            ["fr-macro-ile-de-france", "france"],
+          ],
+        },
+      ).score,
+    ).toBe(92)
+    expect(
+      score(
+        {
+          geography_node_id: "france",
+          geography_path_stable_keys: ["france"],
+        },
+        {
+          target_geography_paths_stable_keys: [
+            ["fr-region-ile-de-france", "france"],
+          ],
+        },
+      ),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: ["fr-idf", "france"],
+        },
+        {
+          target_geography_paths_stable_keys: null,
+        },
+      ),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
+    expect(
+      score(
+        { sector: "Digital/IT services" },
+        {
+          q13_target_sectors_v2: ["Tech & Digital"],
+        },
+      ).score,
+    ).toBe(92)
+    expect(
+      score(
+        { sector: null, activity: "BTP / Construction" },
+        { q13_target_sectors_v2: ["BTP & Construction"] },
+      ).score,
+    ).toBe(92)
+    expect(
+      score(
+        { sector: null, activity: "BTP / Construction" },
+        { q13_target_sectors_v2: ["healthcare"] },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(
+      score(
+        { sector: null, activity: "Unclassified family business" },
+        { q13_target_sectors_v2: ["other"] },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
   })
 })

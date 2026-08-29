@@ -6,61 +6,35 @@ import {
 } from "@/lib/repreneur-target-thesis"
 import { sectorCompatibilityValues } from "@/lib/utils/opportunity-sector"
 
-/**
- * Temporary commercial calibration approved by Ivan for the first Matching v2
- * release. Bertrand's later calibration should change only this object and the
- * version label, followed by the representative matching tests.
- */
+/** Matching 2.1 candidate; Matching 2.0 remains live until separately released. */
 export const MATCHING_V2_CONFIG = {
-  version: "provisional-2026-08-23",
-  weights: {
-    sector: 30,
-    geography: 25,
-    revenue: 25,
-    ebitdaMargin: 12,
-    headcount: 8,
-  },
-  tolerances: {
-    rangeRelativeOutside: 0.2,
-    ebitdaMarginPercentagePointsBelow: 2,
-  },
-  fallbacks: {
-    ebitdaMarginMinimumPct: 0,
-  },
-  evidence: {
-    reviewMaximumScore: 70,
-  },
-  placementCaps: {
-    sectorMismatch: 44,
-    sectorReview: 70,
-    geographyMismatch: 60,
-    geographyReview: 70,
-    revenueMismatch: 44,
-    ebitdaMarginMismatch: 44,
-    headcountMismatch: 64,
-  },
+  version: "2.1-candidate-2026-08-29",
+  weights: { revenue: 36, absoluteEbitda: 29, ebitdaMargin: 21, headcount: 14 },
+  rangeBuffers: { lower: 0.9, upper: 1.3 },
+  evidence: { reviewMaximumScore: 70 },
 } as const
 
 type ScoringRepreneur = {
-  // WHO, WHEN and scoring flags remain qualification inputs only. They are
-  // accepted here for backwards-compatible callers but never read below.
+  // Legacy qualification inputs remain accepted but are never scored.
   who_score?: number | null
   when_score?: number | null
   scoring_flags?: string[] | null
+  is_demo?: boolean | null
   q12_geo_zones?: string | string[] | null
   q13_target_sectors_v2?: string | string[] | null
   sector_preferences?: string | string[] | null
   target_location?: string | string[] | null
   target_revenue_min_meur?: number | string | null
   target_revenue_max_meur?: number | string | null
+  target_ebitda_min_keur?: number | string | null
+  target_ebitda_max_keur?: number | string | null
   target_ebitda_margin_min_pct?: number | string | null
   target_staff_size_min?: number | string | null
   target_staff_size_max?: number | string | null
-  /** One self-to-root stable-key path per canonical target node. */
   target_geography_paths_stable_keys?: string[][] | null
 }
-
 type ScoringOpportunity = {
+  is_demo?: boolean | null
   sector?: string | null
   activity?: string | null
   location?: string | null
@@ -68,18 +42,19 @@ type ScoringOpportunity = {
   ebitda_keur?: number | string | null
   headcount?: number | string | null
   geography_node_id?: string | null
-  /** Canonical node followed by its France-tree ancestors. */
   geography_path_stable_keys?: string[] | null
 }
-
 export type OpportunityMatchScoreResult = {
   score: number
   recommendation: OpportunityMatchRecommendation
   reasons: string[]
 }
-
-type CriterionOutcome = "match" | "borderline" | "mismatch" | "review"
-
+type CriterionOutcome =
+  | "match"
+  | "partial"
+  | "review"
+  | "omitted"
+  | "hard_exclusion"
 type CriterionResult = {
   points: number
   knownWeight: number
@@ -87,27 +62,19 @@ type CriterionResult = {
   reason: string
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function normalizeText(value: string | null | undefined) {
-  return value
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value))
+const normalizeText = (value: string | null | undefined) =>
+  value
     ?.normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase() ?? ""
-}
-
-function toTextList(value: string | string[] | null | undefined) {
-  if (Array.isArray(value)) return value
-  return value ? [value] : []
-}
-
-function normalizeList(...values: Array<string | string[] | null | undefined>) {
-  return values.flatMap(toTextList).map(normalizeText).filter(Boolean)
-}
-
+const toTextList = (value: string | string[] | null | undefined) =>
+  Array.isArray(value) ? value : value ? [value] : []
+const normalizeList = (
+  ...values: Array<string | string[] | null | undefined>
+) => values.flatMap(toTextList).map(normalizeText).filter(Boolean)
 function toNumber(value: number | string | null | undefined) {
   if (typeof value === "number") return Number.isFinite(value) ? value : null
   if (typeof value === "string") {
@@ -116,84 +83,107 @@ function toNumber(value: number | string | null | undefined) {
   }
   return null
 }
-
-function hasTextMatch(sourceValues: string[], targetValues: string[]) {
-  if (sourceValues.length === 0 || targetValues.length === 0) return null
-  return sourceValues.some((source) =>
-    targetValues.some((target) => source.includes(target) || target.includes(source)),
+function hasTextMatch(source: string[], target: string[]) {
+  if (source.length === 0 || target.length === 0) return null
+  return source.some((candidate) =>
+    target.some((term) => candidate.includes(term) || term.includes(candidate)),
   )
 }
-
 function preferredList(
   canonical: string | string[] | null | undefined,
   legacy: string | string[] | null | undefined,
 ) {
-  const canonicalValues = normalizeList(canonical)
-  return canonicalValues.length > 0 ? canonicalValues : normalizeList(legacy)
+  const values = normalizeList(canonical)
+  return values.length > 0 ? values : normalizeList(legacy)
 }
 
-function recommendationFromScore(score: number): OpportunityMatchRecommendation {
+/**
+ * Imported activity labels are not a second sector taxonomy. Keep the one
+ * reviewed spelling bridge explicit so arbitrary free text cannot fall into
+ * a generic sector such as `Autre`.
+ */
+function reviewedActivitySectorAliases(activity: string | null | undefined) {
+  return normalizeText(activity) === "btp / construction"
+    ? ["BTP & Construction"]
+    : []
+}
+
+function recommendationFromScore(
+  score: number,
+): OpportunityMatchRecommendation {
   if (score >= 80) return "strong_fit"
   if (score >= 65) return "possible_fit"
   if (score >= 45) return "weak_fit"
   return "not_fit"
 }
+const omitted = (label: string): CriterionResult => ({
+  points: 0,
+  knownWeight: 0,
+  outcome: "omitted",
+  reason: `${label} is not targeted by this repreneur.`,
+})
+const review = (label: string, detail: string): CriterionResult => ({
+  points: 0,
+  knownWeight: 0,
+  outcome: "review",
+  reason: `${label} needs review because ${detail}.`,
+})
 
-function rangeCriterion(
+function numericRangeCriterion(
   value: number | null,
   minimum: number | null,
   maximum: number | null,
   weight: number,
   label: string,
+  allowNegativeValue = false,
 ): CriterionResult {
-  if (minimum !== null && maximum !== null && minimum > maximum) {
-    return {
-      points: 0,
-      knownWeight: 0,
-      outcome: "review",
-      reason: `${label} needs review because the target range is invalid.`,
-    }
+  if (minimum === null && maximum === null) return omitted(label)
+  if (
+    (minimum !== null && minimum < 0) ||
+    (maximum !== null && maximum < 0) ||
+    (minimum !== null && maximum !== null && minimum > maximum)
+  )
+    return review(label, "the target range is invalid")
+  if (value === null || (!allowNegativeValue && value < 0)) {
+    return review(label, "the opportunity value is missing or invalid")
   }
-
-  if (value === null || (minimum === null && maximum === null)) {
+  if (minimum !== null && value < minimum) {
+    const lower = minimum * MATCHING_V2_CONFIG.rangeBuffers.lower
+    if (value < lower)
+      return {
+        points: 0,
+        knownWeight: weight,
+        outcome: "hard_exclusion",
+        reason: `${label} is below the 90% lower eligibility boundary.`,
+      }
     return {
-      points: 0,
-      knownWeight: 0,
-      outcome: "review",
-      reason: `${label} needs review because the target or opportunity value is missing.`,
-    }
-  }
-
-  const below = minimum !== null && value < minimum
-  const above = maximum !== null && value > maximum
-  if (!below && !above) {
-    return {
-      points: weight,
+      points: weight * clamp((value - lower) / (minimum - lower || 1), 0, 1),
       knownWeight: weight,
-      outcome: "match",
-      reason: `${label} is within the target range.`,
+      outcome: "partial",
+      reason: `${label} is within the lower buffer.`,
     }
   }
-
-  const boundary = below ? minimum! : maximum!
-  const relativeOutside = boundary > 0
-    ? Math.abs(value - boundary) / boundary
-    : Number.POSITIVE_INFINITY
-
-  if (relativeOutside <= MATCHING_V2_CONFIG.tolerances.rangeRelativeOutside) {
+  if (maximum !== null && value > maximum) {
+    const upper = maximum * MATCHING_V2_CONFIG.rangeBuffers.upper
+    if (value > upper)
+      return {
+        points: 0,
+        knownWeight: weight,
+        outcome: "hard_exclusion",
+        reason: `${label} is above the 130% upper eligibility boundary.`,
+      }
     return {
-      points: weight / 2,
+      points: weight * clamp((upper - value) / (upper - maximum || 1), 0, 1),
       knownWeight: weight,
-      outcome: "borderline",
-      reason: `${label} is close to the target range and needs staff judgement.`,
+      outcome: "partial",
+      reason: `${label} is within the upper buffer.`,
     }
   }
-
   return {
-    points: 0,
+    points: weight,
     knownWeight: weight,
-    outcome: "mismatch",
-    reason: `${label} is outside the target range.`,
+    outcome: "match",
+    reason: `${label} is within the target range.`,
   }
 }
 
@@ -201,159 +191,110 @@ function ebitdaMarginCriterion(
   repreneur: ScoringRepreneur,
   opportunity: ScoringOpportunity,
 ): CriterionResult {
+  const threshold = toNumber(repreneur.target_ebitda_margin_min_pct)
   const weight = MATCHING_V2_CONFIG.weights.ebitdaMargin
-  const configuredMinimumMargin = toNumber(repreneur.target_ebitda_margin_min_pct)
-  const minimumMargin = configuredMinimumMargin ??
-    MATCHING_V2_CONFIG.fallbacks.ebitdaMarginMinimumPct
-  const revenueMeur = toNumber(opportunity.revenue_meur)
-  const ebitdaKeur = toNumber(opportunity.ebitda_keur)
-
-  if (
-    revenueMeur === null ||
-    ebitdaKeur === null ||
-    revenueMeur <= 0
-  ) {
+  if (threshold === null) return omitted("EBITDA margin")
+  if (threshold < 0)
+    return review("EBITDA margin", "the target threshold is invalid")
+  const revenue = toNumber(opportunity.revenue_meur)
+  const ebitda = toNumber(opportunity.ebitda_keur)
+  if (revenue === null || ebitda === null || revenue <= 0)
+    return review(
+      "EBITDA margin",
+      "opportunity revenue or EBITDA is missing or invalid",
+    )
+  const margin = (ebitda / (revenue * 1_000)) * 100
+  if (threshold === 0)
+    return margin < 0
+      ? {
+          points: 0,
+          knownWeight: weight,
+          outcome: "hard_exclusion",
+          reason: "EBITDA margin is below the 0% eligibility threshold.",
+        }
+      : {
+          points: weight,
+          knownWeight: weight,
+          outcome: "match",
+          reason: "EBITDA margin meets the 0% target.",
+        }
+  const lower = threshold * 0.9
+  if (margin < lower)
     return {
       points: 0,
-      knownWeight: 0,
-      outcome: "review",
-      reason: "EBITDA margin needs review because opportunity revenue or EBITDA is missing.",
-    }
-  }
-
-  const marginPercent = (ebitdaKeur / (revenueMeur * 1_000)) * 100
-  if (marginPercent >= minimumMargin) {
-    return {
-      points: weight,
       knownWeight: weight,
-      outcome: "match",
-      reason: configuredMinimumMargin === null
-        ? "EBITDA margin meets the provisional 0% fallback because no buyer minimum is recorded."
-        : "EBITDA margin meets the minimum target.",
+      outcome: "hard_exclusion",
+      reason: "EBITDA margin is below the 90% eligibility boundary.",
     }
-  }
-
-  if (
-    minimumMargin - marginPercent <=
-    MATCHING_V2_CONFIG.tolerances.ebitdaMarginPercentagePointsBelow
-  ) {
+  if (margin <= threshold)
     return {
-      points: weight / 2,
+      points:
+        weight * 0.6 * clamp((margin - lower) / (threshold - lower), 0, 1),
       knownWeight: weight,
-      outcome: "borderline",
-      reason: "EBITDA margin is close to the minimum target and needs staff judgement.",
+      outcome: "partial",
+      reason: "EBITDA margin is in the lower buffer.",
     }
-  }
-
+  if (margin < threshold * 2)
+    return {
+      points:
+        weight * (0.6 + 0.4 * clamp((margin - threshold) / threshold, 0, 1)),
+      knownWeight: weight,
+      outcome: "partial",
+      reason: "EBITDA margin is above the target and below the cap.",
+    }
   return {
-    points: 0,
+    points: weight,
     knownWeight: weight,
-    outcome: "mismatch",
-    reason: "EBITDA margin is below the minimum target.",
+    outcome: "match",
+    reason: "EBITDA margin meets the capped target.",
   }
 }
 
-function canonicalGeographyCriterion(
-  targetPaths: string[][],
-  opportunityPath: string[],
+function headcountCriterion(
+  value: number | null,
+  minimum: number | null,
+  maximum: number | null,
 ): CriterionResult {
-  const weight = MATCHING_V2_CONFIG.weights.geography
-
-  if (targetPaths.length === 0 || opportunityPath.length === 0) {
-    return {
-      points: 0,
-      knownWeight: 0,
-      outcome: "review",
-      reason: "Geography needs review because one side has not been mapped to the France hierarchy.",
-    }
-  }
-
-  const targetNodeKeys = targetPaths.map((path) => path[0]).filter(Boolean)
-  if (targetNodeKeys.some((targetKey) => opportunityPath.includes(targetKey))) {
+  const label = "Headcount"
+  const weight = MATCHING_V2_CONFIG.weights.headcount
+  if (minimum === null && maximum === null) return omitted(label)
+  if (
+    (minimum !== null && minimum < 0) ||
+    (maximum !== null && maximum < 0) ||
+    (minimum !== null && maximum !== null && minimum > maximum)
+  )
+    return review(label, "the target range is invalid")
+  if (value === null || value < 0)
+    return review(label, "the opportunity value is missing or invalid")
+  if (
+    (minimum === null || value >= minimum) &&
+    (maximum === null || value <= maximum)
+  )
     return {
       points: weight,
       knownWeight: weight,
       outcome: "match",
-      reason: "Geography matches the canonical France hierarchy.",
+      reason: "Headcount is within the target range.",
     }
-  }
-
-  const opportunityNodeKey = opportunityPath[0]
-  if (targetPaths.some((targetPath) => targetPath.includes(opportunityNodeKey))) {
+  // One-sided targets use their known bound as a finite width. A zero-width target
+  // scores only exact equality. Neither case makes a pair ineligible.
+  const width =
+    minimum !== null && maximum !== null
+      ? maximum - minimum
+      : Math.abs(minimum ?? maximum ?? 0)
+  if (width === 0)
     return {
       points: 0,
-      knownWeight: 0,
-      outcome: "review",
-      reason: "Geography needs review because the opportunity is broader than the target area.",
-    }
-  }
-
-  return {
-    points: 0,
-    knownWeight: weight,
-    outcome: "mismatch",
-    reason: "Geography does not match the canonical France hierarchy.",
-  }
-}
-
-function legacyGeographyCriterion(
-  repreneur: ScoringRepreneur,
-  opportunity: ScoringOpportunity,
-): CriterionResult {
-  const weight = MATCHING_V2_CONFIG.weights.geography
-  const selectedValues = preferredList(repreneur.q12_geo_zones, repreneur.target_location)
-  const canonicalValues = canonicalTargetThesisValues(
-    selectedValues,
-    WHEN_QUESTIONS.q12.options,
-    "geography",
-  )
-  const allowedValues = new Set<string>(
-    WHEN_QUESTIONS.q12.options.map((option) => option.value),
-  )
-  const knownValues = canonicalValues.filter((value) => allowedValues.has(value))
-  const hasUnknownValue = canonicalValues.some((value) => !allowedValues.has(value))
-  const opportunityLocationValues = normalizeList(opportunity.location)
-
-  if (knownValues.length === 0 || opportunityLocationValues.length === 0) {
-    return {
-      points: 0,
-      knownWeight: 0,
-      outcome: "review",
-      reason: "Geography needs review because the current data is incomplete or not mapped.",
-    }
-  }
-
-  const targetTerms = targetThesisMatchTerms(
-    knownValues,
-    WHEN_QUESTIONS.q12.options,
-    "geography",
-  ).map(normalizeText)
-  const locationMatches = targetTerms.includes("all-france") ||
-    hasTextMatch(opportunityLocationValues, targetTerms)
-
-  if (locationMatches) {
-    return {
-      points: weight,
       knownWeight: weight,
-      outcome: "match",
-      reason: "Location matches the repreneur geographic preference.",
+      outcome: "partial",
+      reason: "Headcount is outside the zero-width target.",
     }
-  }
-
-  if (hasUnknownValue) {
-    return {
-      points: 0,
-      knownWeight: 0,
-      outcome: "review",
-      reason: "Geography needs review because a target area is not mapped.",
-    }
-  }
-
+  const boundary = minimum !== null && value < minimum ? minimum : maximum!
   return {
-    points: 0,
+    points: weight * clamp(1 - Math.abs(value - boundary) / width, 0, 1),
     knownWeight: weight,
-    outcome: "mismatch",
-    reason: "Location does not match the repreneur geographic preference.",
+    outcome: "partial",
+    reason: "Headcount is outside the target range.",
   }
 }
 
@@ -363,124 +304,170 @@ function geographyCriterion(
 ): CriterionResult {
   const targetPaths = repreneur.target_geography_paths_stable_keys ?? []
   const opportunityPath = opportunity.geography_path_stable_keys ?? []
-  const hasCanonicalIdentity = Boolean(
-    opportunity.geography_node_id || targetPaths.length > 0,
-  )
-
-  if (hasCanonicalIdentity) {
-    return canonicalGeographyCriterion(targetPaths, opportunityPath)
+  if (opportunity.geography_node_id || targetPaths.length > 0) {
+    if (targetPaths.length === 0 || opportunityPath.length === 0)
+      return review(
+        "Geography",
+        "one side has not been mapped to the France hierarchy",
+      )
+    const targetNodes = targetPaths.map((path) => path[0]).filter(Boolean)
+    if (targetNodes.some((node) => opportunityPath.includes(node)))
+      return {
+        points: 0,
+        knownWeight: 0,
+        outcome: "match",
+        reason: "Geography matches the canonical France hierarchy.",
+      }
+    if (targetPaths.some((path) => path.includes(opportunityPath[0])))
+      return review(
+        "Geography",
+        "the opportunity is broader than the target area",
+      )
+    return {
+      points: 0,
+      knownWeight: 0,
+      outcome: "hard_exclusion",
+      reason: "Geography does not match the canonical France hierarchy.",
+    }
   }
-
-  return legacyGeographyCriterion(repreneur, opportunity)
+  const canonical = canonicalTargetThesisValues(
+    preferredList(repreneur.q12_geo_zones, repreneur.target_location),
+    WHEN_QUESTIONS.q12.options,
+    "geography",
+  )
+  const allowed = new Set<string>(
+    WHEN_QUESTIONS.q12.options.map((option) => option.value),
+  )
+  const known = canonical.filter((value) => allowed.has(value))
+  const locations = normalizeList(opportunity.location)
+  if (
+    known.length === 0 ||
+    locations.length === 0 ||
+    canonical.some((value) => !allowed.has(value))
+  )
+    return review("Geography", "the current data is incomplete or not mapped")
+  const terms = targetThesisMatchTerms(
+    known,
+    WHEN_QUESTIONS.q12.options,
+    "geography",
+  ).map(normalizeText)
+  if (terms.includes("all-france") || hasTextMatch(locations, terms))
+    return {
+      points: 0,
+      knownWeight: 0,
+      outcome: "match",
+      reason: "Location matches the repreneur geographic preference.",
+    }
+  return {
+    points: 0,
+    knownWeight: 0,
+    outcome: "hard_exclusion",
+    reason: "Location does not match the repreneur geographic preference.",
+  }
 }
 
 function sectorCriterion(
   repreneur: ScoringRepreneur,
   opportunity: ScoringOpportunity,
 ): CriterionResult {
-  const weight = MATCHING_V2_CONFIG.weights.sector
   const opportunityValues = normalizeList(
     opportunity.sector,
     opportunity.activity,
     sectorCompatibilityValues(opportunity.sector),
+    reviewedActivitySectorAliases(opportunity.activity),
   )
   const targetValues = targetThesisMatchTerms(
-    preferredList(repreneur.q13_target_sectors_v2, repreneur.sector_preferences),
+    preferredList(
+      repreneur.q13_target_sectors_v2,
+      repreneur.sector_preferences,
+    ),
     WHEN_QUESTIONS.q13.options,
     "sector",
   ).map(normalizeText)
-  const sectorMatches = targetValues.includes("all")
+  const matches = targetValues.includes("all")
     ? true
     : hasTextMatch(opportunityValues, targetValues)
-
-  if (sectorMatches === true) {
+  if (matches === true)
     return {
-      points: weight,
-      knownWeight: weight,
+      points: 0,
+      knownWeight: 0,
       outcome: "match",
       reason: "Sector or activity matches the repreneur target preference.",
     }
-  }
-
-  if (sectorMatches === false) {
+  if (matches === false)
     return {
       points: 0,
-      knownWeight: weight,
-      outcome: "mismatch",
-      reason: "Sector or activity does not match the repreneur target preferences.",
+      knownWeight: 0,
+      outcome: "hard_exclusion",
+      reason:
+        "Sector or activity does not match the repreneur target preferences.",
     }
-  }
-
-  return {
-    points: 0,
-    knownWeight: 0,
-    outcome: "review",
-    reason: "Sector fit needs review because the current data is incomplete.",
-  }
+  return review("Sector fit", "the current data is incomplete")
 }
 
 export function calculateOpportunityMatchScore(
   repreneur: ScoringRepreneur,
   opportunity: ScoringOpportunity,
 ): OpportunityMatchScoreResult {
-  const sector = sectorCriterion(repreneur, opportunity)
-  const geography = geographyCriterion(repreneur, opportunity)
-  const revenue = rangeCriterion(
-    toNumber(opportunity.revenue_meur),
-    toNumber(repreneur.target_revenue_min_meur),
-    toNumber(repreneur.target_revenue_max_meur),
-    MATCHING_V2_CONFIG.weights.revenue,
-    "Revenue",
+  if (
+    typeof repreneur.is_demo === "boolean" &&
+    typeof opportunity.is_demo === "boolean" &&
+    repreneur.is_demo !== opportunity.is_demo
   )
-  const ebitdaMargin = ebitdaMarginCriterion(repreneur, opportunity)
-  const headcount = rangeCriterion(
-    toNumber(opportunity.headcount),
-    toNumber(repreneur.target_staff_size_min),
-    toNumber(repreneur.target_staff_size_max),
-    MATCHING_V2_CONFIG.weights.headcount,
-    "Headcount",
-  )
-  const criteria = [sector, geography, revenue, ebitdaMargin, headcount]
+    return {
+      score: 0,
+      recommendation: "not_fit",
+      reasons: ["REAL and DEMO records cannot be matched."],
+    }
+  const criteria = [
+    sectorCriterion(repreneur, opportunity),
+    geographyCriterion(repreneur, opportunity),
+    numericRangeCriterion(
+      toNumber(opportunity.revenue_meur),
+      toNumber(repreneur.target_revenue_min_meur),
+      toNumber(repreneur.target_revenue_max_meur),
+      MATCHING_V2_CONFIG.weights.revenue,
+      "Revenue",
+    ),
+    numericRangeCriterion(
+      toNumber(opportunity.ebitda_keur),
+      toNumber(repreneur.target_ebitda_min_keur),
+      toNumber(repreneur.target_ebitda_max_keur),
+      MATCHING_V2_CONFIG.weights.absoluteEbitda,
+      "Absolute EBITDA",
+      true,
+    ),
+    ebitdaMarginCriterion(repreneur, opportunity),
+    headcountCriterion(
+      toNumber(opportunity.headcount),
+      toNumber(repreneur.target_staff_size_min),
+      toNumber(repreneur.target_staff_size_max),
+    ),
+  ]
+  if (criteria.some((criterion) => criterion.outcome === "hard_exclusion"))
+    return {
+      score: 0,
+      recommendation: "not_fit",
+      reasons: criteria.map((criterion) => criterion.reason),
+    }
   const knownWeight = criteria.reduce(
     (total, criterion) => total + criterion.knownWeight,
     0,
   )
-  const availablePoints = criteria.reduce(
+  const points = criteria.reduce(
     (total, criterion) => total + criterion.points,
     0,
   )
-  const normalizedScore = knownWeight > 0
-    ? (availablePoints / knownWeight) * 100
-    : 0
-
-  let scoreCap = 100
-  if (criteria.some((criterion) => criterion.outcome === "review")) {
-    scoreCap = MATCHING_V2_CONFIG.evidence.reviewMaximumScore
-  }
-  if (sector.outcome === "mismatch") {
-    scoreCap = Math.min(scoreCap, MATCHING_V2_CONFIG.placementCaps.sectorMismatch)
-  } else if (sector.outcome === "review") {
-    scoreCap = Math.min(scoreCap, MATCHING_V2_CONFIG.placementCaps.sectorReview)
-  }
-  if (geography.outcome === "mismatch") {
-    scoreCap = Math.min(scoreCap, MATCHING_V2_CONFIG.placementCaps.geographyMismatch)
-  } else if (geography.outcome === "review") {
-    scoreCap = Math.min(scoreCap, MATCHING_V2_CONFIG.placementCaps.geographyReview)
-  }
-  if (revenue.outcome === "mismatch") {
-    scoreCap = Math.min(scoreCap, MATCHING_V2_CONFIG.placementCaps.revenueMismatch)
-  }
-  if (ebitdaMargin.outcome === "mismatch") {
-    scoreCap = Math.min(
-      scoreCap,
-      MATCHING_V2_CONFIG.placementCaps.ebitdaMarginMismatch,
-    )
-  }
-  if (headcount.outcome === "mismatch") {
-    scoreCap = Math.min(scoreCap, MATCHING_V2_CONFIG.placementCaps.headcountMismatch)
-  }
-
-  const score = Math.round(clamp(normalizedScore, 0, scoreCap))
+  const needsReview =
+    criteria.some((criterion) => criterion.outcome === "review") ||
+    knownWeight === 0
+  const score = Math.round(
+    clamp(
+      knownWeight > 0 ? (points / knownWeight) * 100 : 0,
+      0,
+      needsReview ? MATCHING_V2_CONFIG.evidence.reviewMaximumScore : 100,
+    ),
+  )
   return {
     score,
     recommendation: recommendationFromScore(score),
