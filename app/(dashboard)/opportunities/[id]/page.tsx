@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { OpportunityDetail } from "@/components/opportunities/opportunity-detail"
 import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
-import { listOpportunityDocuments } from "@/lib/actions/opportunity-documents"
+import { listOpportunityDocuments, listPendingUnusedRetainedDocumentCleanups } from "@/lib/actions/opportunity-documents"
 import { listOpportunityNdaArtifacts } from "@/lib/actions/opportunity-nda-artifacts"
 import { readStaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import {
@@ -66,6 +66,7 @@ async function OpportunityDetailContent({
     maWorkflow,
     closureHistory,
     ndaArtifacts,
+    pendingCleanups,
   ] = await Promise.all([
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
@@ -74,6 +75,7 @@ async function OpportunityDetailContent({
     getMaOpportunityWorkflow(id),
     getOpportunityClosureHistory(id),
     listOpportunityNdaArtifacts(id),
+    listPendingUnusedRetainedDocumentCleanups(id),
   ])
 
   const geographyMandatesEnabled = isFranceGeographyMandatesEnabled()
@@ -126,6 +128,7 @@ async function OpportunityDetailContent({
       <OpportunityDetail
         opportunity={opportunity}
         documents={documents}
+        pendingCleanups={pendingCleanups}
         ndaArtifacts={ndaArtifacts}
         matches={matches}
         matchCandidates={matchCandidates}
