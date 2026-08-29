@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { calculateOpportunityMatchScore, MATCHING_V2_CONFIG } from "../opportunity-match-scoring"
+import {
+  calculateOpportunityMatchScore,
+  MATCHING_V2_CONFIG,
+} from "../opportunity-match-scoring"
 
 const repreneur = {
   is_demo: false,
@@ -21,33 +24,75 @@ const opportunity = {
   ebitda_keur: 15_000,
   headcount: 20,
 }
-const score = (changes: Record<string, unknown> = {}, profile: Record<string, unknown> = {}) =>
-  calculateOpportunityMatchScore({ ...repreneur, ...profile }, { ...opportunity, ...changes })
-const revenueOnly = (value: number) => score({ revenue_meur: value }, {
-  target_ebitda_min_keur: null, target_ebitda_max_keur: null,
-  target_ebitda_margin_min_pct: null, target_staff_size_min: null, target_staff_size_max: null,
-})
-const absoluteEbitdaOnly = (value: number) => score({ ebitda_keur: value }, {
-  target_revenue_min_meur: null, target_revenue_max_meur: null,
-  target_ebitda_margin_min_pct: null, target_staff_size_min: null, target_staff_size_max: null,
-})
-const marginOnly = (marginPercent: number, targets: Record<string, unknown> = {}) => score({ revenue_meur: 100, ebitda_keur: marginPercent * 1_000 }, {
-  target_revenue_min_meur: null, target_revenue_max_meur: null,
-  target_ebitda_min_keur: null, target_ebitda_max_keur: null,
-  target_staff_size_min: null, target_staff_size_max: null, ...targets,
-})
-const headcountOnly = (value: number, targets: Record<string, unknown> = {}) => score({ headcount: value }, {
-  target_revenue_min_meur: null, target_revenue_max_meur: null,
-  target_ebitda_min_keur: null, target_ebitda_max_keur: null,
-  target_ebitda_margin_min_pct: null,
-  ...targets,
-})
+const score = (
+  changes: Record<string, unknown> = {},
+  profile: Record<string, unknown> = {},
+) =>
+  calculateOpportunityMatchScore(
+    { ...repreneur, ...profile },
+    { ...opportunity, ...changes },
+  )
+const revenueOnly = (value: number) =>
+  score(
+    { revenue_meur: value },
+    {
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    },
+  )
+const absoluteEbitdaOnly = (value: number) =>
+  score(
+    { ebitda_keur: value },
+    {
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_margin_min_pct: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+    },
+  )
+const marginOnly = (
+  marginPercent: number,
+  targets: Record<string, unknown> = {},
+) =>
+  score(
+    { revenue_meur: 100, ebitda_keur: marginPercent * 1_000 },
+    {
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_staff_size_min: null,
+      target_staff_size_max: null,
+      ...targets,
+    },
+  )
+const headcountOnly = (value: number, targets: Record<string, unknown> = {}) =>
+  score(
+    { headcount: value },
+    {
+      target_revenue_min_meur: null,
+      target_revenue_max_meur: null,
+      target_ebitda_min_keur: null,
+      target_ebitda_max_keur: null,
+      target_ebitda_margin_min_pct: null,
+      ...targets,
+    },
+  )
 
 describe("calculateOpportunityMatchScore — Matching 2.1", () => {
   it("uses the explicit four-criterion 2.1 calibration", () => {
     expect(MATCHING_V2_CONFIG).toEqual({
       version: "2.1-candidate-2026-08-29",
-      weights: { revenue: 36, absoluteEbitda: 29, ebitdaMargin: 21, headcount: 14 },
+      weights: {
+        revenue: 36,
+        absoluteEbitda: 29,
+        ebitdaMargin: 21,
+        headcount: 14,
+      },
       rangeBuffers: { lower: 0.9, upper: 1.3 },
       evidence: { reviewMaximumScore: 70 },
     })
@@ -59,14 +104,82 @@ describe("calculateOpportunityMatchScore — Matching 2.1", () => {
     expect(revenueOnly(200).score).toBe(100)
     expect(revenueOnly(95).score).toBe(50)
     expect(revenueOnly(90).score).toBe(0)
-    expect(revenueOnly(89.99)).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(revenueOnly(89.99)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
     expect(revenueOnly(230).score).toBe(50)
     expect(revenueOnly(260).score).toBe(0)
-    expect(revenueOnly(260.01)).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(revenueOnly(260.01)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
     expect(absoluteEbitdaOnly(10_000).score).toBe(100)
+    expect(absoluteEbitdaOnly(20_000).score).toBe(100)
     expect(absoluteEbitdaOnly(9_500).score).toBe(50)
     expect(absoluteEbitdaOnly(9_000).score).toBe(0)
-    expect(absoluteEbitdaOnly(8_999.99)).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(absoluteEbitdaOnly(8_999.99)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(absoluteEbitdaOnly(23_000).score).toBe(50)
+    expect(absoluteEbitdaOnly(26_000).score).toBe(0)
+    expect(absoluteEbitdaOnly(26_000.01)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(absoluteEbitdaOnly(-1)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+      reasons: expect.arrayContaining([
+        "Absolute EBITDA is below the 90% lower eligibility boundary.",
+      ]),
+    })
+  })
+
+  it("handles one-sided financial ranges with the same exact boundaries", () => {
+    expect(
+      score(
+        { revenue_meur: 100 },
+        {
+          target_revenue_min_meur: 100,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: null,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ).score,
+    ).toBe(100)
+    expect(
+      score(
+        { revenue_meur: 95 },
+        {
+          target_revenue_min_meur: 100,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: null,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ).score,
+    ).toBe(50)
+    expect(
+      score(
+        { ebitda_keur: 23_000 },
+        {
+          target_revenue_min_meur: null,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: 20_000,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ).score,
+    ).toBe(50)
   })
 
   it("uses the exact continuous EBITDA margin curve and deterministic zero threshold", () => {
@@ -76,45 +189,203 @@ describe("calculateOpportunityMatchScore — Matching 2.1", () => {
     expect(marginOnly(10).score).toBe(60)
     expect(marginOnly(15).score).toBe(80)
     expect(marginOnly(20).score).toBe(100)
-    expect(marginOnly(8.99999)).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(marginOnly(8.99999)).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
     expect(marginOnly(0, { target_ebitda_margin_min_pct: 0 }).score).toBe(100)
-    expect(marginOnly(-0.00001, { target_ebitda_margin_min_pct: 0 })).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(
+      marginOnly(-0.00001, { target_ebitda_margin_min_pct: 0 }),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
   })
 
   it("keeps headcount non-excluding with range, one-sided and zero-width decay", () => {
     expect(headcountOnly(0).score).toBe(50)
     expect(headcountOnly(40).score).toBe(50)
     expect(headcountOnly(50).score).toBe(0)
-    expect(headcountOnly(5, { target_staff_size_min: 10, target_staff_size_max: null }).score).toBe(50)
-    expect(headcountOnly(0, { target_staff_size_min: 10, target_staff_size_max: null }).score).toBe(0)
-    expect(headcountOnly(10, { target_staff_size_min: 10, target_staff_size_max: 10 }).score).toBe(100)
-    expect(headcountOnly(11, { target_staff_size_min: 10, target_staff_size_max: 10 }).score).toBe(0)
+    expect(
+      headcountOnly(5, {
+        target_staff_size_min: 10,
+        target_staff_size_max: null,
+      }).score,
+    ).toBe(50)
+    expect(
+      headcountOnly(0, {
+        target_staff_size_min: 10,
+        target_staff_size_max: null,
+      }).score,
+    ).toBe(0)
+    expect(
+      headcountOnly(10, {
+        target_staff_size_min: 10,
+        target_staff_size_max: 10,
+      }).score,
+    ).toBe(100)
+    expect(
+      headcountOnly(11, {
+        target_staff_size_min: 10,
+        target_staff_size_max: 10,
+      }).score,
+    ).toBe(0)
+    expect(
+      headcountOnly(30, {
+        target_staff_size_min: null,
+        target_staff_size_max: 30,
+      }).score,
+    ).toBe(100)
+    expect(
+      headcountOnly(45, {
+        target_staff_size_min: null,
+        target_staff_size_max: 30,
+      }).score,
+    ).toBe(50)
   })
 
   it("omits buyer-undefined criteria, caps targeted missing evidence, and never invents a fit", () => {
-    expect(score({}, {
-      target_revenue_min_meur: null, target_revenue_max_meur: null,
-      target_ebitda_min_keur: null, target_ebitda_max_keur: null,
-      target_ebitda_margin_min_pct: null, target_staff_size_min: null, target_staff_size_max: null,
-    })).toMatchObject({ score: 0, recommendation: "not_fit" })
-    expect(score({ revenue_meur: null })).toMatchObject({ score: 70, recommendation: "possible_fit" })
-    expect(score({}, { target_revenue_min_meur: 200, target_revenue_max_meur: 100 })).toMatchObject({ score: 70, recommendation: "possible_fit" })
+    expect(
+      score(
+        {},
+        {
+          target_revenue_min_meur: null,
+          target_revenue_max_meur: null,
+          target_ebitda_min_keur: null,
+          target_ebitda_max_keur: null,
+          target_ebitda_margin_min_pct: null,
+          target_staff_size_min: null,
+          target_staff_size_max: null,
+        },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(score({ revenue_meur: null })).toMatchObject({
+      score: 70,
+      recommendation: "possible_fit",
+    })
+    expect(
+      score({}, { target_revenue_min_meur: 200, target_revenue_max_meur: 100 }),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
   })
 
   it("makes known sector, geography, financial and namespace exclusions unambiguous not_fit", () => {
-    expect(score({}, { q13_target_sectors_v2: ["healthcare"] })).toMatchObject({ score: 0, recommendation: "not_fit" })
-    expect(score({ geography_node_id: "idf", geography_path_stable_keys: ["fr-idf", "france"] }, {
-      target_geography_paths_stable_keys: [["fr-bretagne", "france"]],
-    })).toMatchObject({ score: 0, recommendation: "not_fit" })
-    expect(score({ is_demo: true })).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(score({}, { q13_target_sectors_v2: ["healthcare"] })).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: ["fr-idf", "france"],
+        },
+        {
+          target_geography_paths_stable_keys: [["fr-bretagne", "france"]],
+        },
+      ),
+    ).toMatchObject({ score: 0, recommendation: "not_fit" })
+    expect(score({ is_demo: true })).toMatchObject({
+      score: 0,
+      recommendation: "not_fit",
+    })
   })
 
   it("keeps unknown sector and geography as review, and ignores WHO/WHEN/tags/freshness", () => {
     const baseline = score()
-    expect(score({}, { q13_target_sectors_v2: null, q12_geo_zones: null })).toMatchObject({ score: 70, recommendation: "possible_fit" })
-    expect(score({}, {
-      who_score: 0, when_score: 0, scoring_flags: ["review"],
-      thesis_tags: ["ignored"], skills: ["ignored"], profile_freshness: "stale",
-    })).toEqual(baseline)
+    expect(
+      score({}, { q13_target_sectors_v2: null, q12_geo_zones: null }),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
+    expect(
+      score(
+        {},
+        {
+          who_score: 0,
+          when_score: 0,
+          scoring_flags: ["review"],
+          thesis_tags: ["ignored"],
+          skills: ["ignored"],
+          profile_freshness: "stale",
+        },
+      ),
+    ).toEqual(baseline)
+  })
+
+  it("keeps the published recommendation thresholds", () => {
+    expect(revenueOnly(98)).toMatchObject({
+      score: 80,
+      recommendation: "strong_fit",
+    })
+    expect(revenueOnly(96.5)).toMatchObject({
+      score: 65,
+      recommendation: "possible_fit",
+    })
+    expect(revenueOnly(94.5)).toMatchObject({
+      score: 45,
+      recommendation: "weak_fit",
+    })
+    expect(revenueOnly(94)).toMatchObject({
+      score: 40,
+      recommendation: "not_fit",
+    })
+  })
+
+  it("keeps canonical geography compatibility and legacy sector aliases", () => {
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: ["fr-region-ile-de-france", "france"],
+        },
+        {
+          target_geography_paths_stable_keys: [["france"]],
+        },
+      ).score,
+    ).toBe(92)
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: [
+            "fr-region-ile-de-france",
+            "fr-macro-ile-de-france",
+            "france",
+          ],
+        },
+        {
+          target_geography_paths_stable_keys: [
+            ["fr-macro-ile-de-france", "france"],
+          ],
+        },
+      ).score,
+    ).toBe(92)
+    expect(
+      score(
+        {
+          geography_node_id: "france",
+          geography_path_stable_keys: ["france"],
+        },
+        {
+          target_geography_paths_stable_keys: [
+            ["fr-region-ile-de-france", "france"],
+          ],
+        },
+      ),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
+    expect(
+      score(
+        {
+          geography_node_id: "idf",
+          geography_path_stable_keys: ["fr-idf", "france"],
+        },
+        {
+          target_geography_paths_stable_keys: null,
+        },
+      ),
+    ).toMatchObject({ score: 70, recommendation: "possible_fit" })
+    expect(
+      score(
+        { sector: "Digital/IT services" },
+        {
+          q13_target_sectors_v2: ["Tech & Digital"],
+        },
+      ).score,
+    ).toBe(92)
   })
 })
