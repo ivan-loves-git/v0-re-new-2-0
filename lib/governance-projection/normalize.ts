@@ -570,6 +570,8 @@ function validateIssueShape(issue: GithubIssueFact) {
     throw new Error(`issue #${issue.number} has unsupported Decision state`);
   if (issue.kind === "Decision" && issue.decisionState == null)
     throw new Error(`Decision #${issue.number} lacks Decision state`);
+  if ((issue.kind === "Ticket" || issue.kind === "Bug") && issue.decisionState != null)
+    throw new Error(`${issue.kind} #${issue.number} cannot own Decision state`);
   if (issue.marker) {
     const marker = issue.marker as Record<string, unknown>;
     const allowed = new Set([
@@ -654,11 +656,6 @@ function safeProvenance(issue: GithubIssueFact): GovernanceProvenance | undefine
     }
     return Object.keys(metadata).length ? { state: "unverified", ...metadata } : undefined;
   }
-  if (marker.publication === "direct-github") {
-    if (pdrReference || pdrWorkCardId || pdrStrategicItemId)
-      throw new Error(`Product Change #${issue.number} direct GitHub provenance conflicts with PDR source fields`);
-    return { state: "direct_github", ...metadata };
-  }
   if (hasPdrWorkCard) {
     if (pdrStrategicItemId)
       throw new Error(`Product Change #${issue.number} has conflicting PDR source fields`);
@@ -669,6 +666,10 @@ function safeProvenance(issue: GithubIssueFact): GovernanceProvenance | undefine
       throw new Error(`Product Change #${issue.number} has conflicting PDR source fields`);
     return { state: "pdr_strategic_item", ...metadata };
   }
+  if (hasPartialPdrWorkCard && marker.publication === "direct-github")
+    throw new Error(`Product Change #${issue.number} direct GitHub provenance has partial PDR source fields`);
+  if (marker.publication === "direct-github")
+    return { state: "direct_github", ...metadata };
   return { state: "unverified", ...metadata };
 }
 function validateLegacyExclusions(

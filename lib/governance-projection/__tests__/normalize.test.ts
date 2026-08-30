@@ -137,13 +137,21 @@ describe("governance projection normalization", () => {
     Object.assign(pdr.issues[2].marker as Record<string, unknown>, { publication: "manual", bootstrap: "manual", pdr_reference: "W-158", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000" });
     expect(createGovernanceProjection(pdr).issues.find((entry) => entry.number === 23)?.provenance).toMatchObject({ state: "pdr_work_card", pdrReference: "W-158", pdrWorkCardId: "123e4567-e89b-42d3-a456-426614174000" });
   });
-  it("keeps partial source metadata unverified and rejects contradictory markers", () => {
+  it("keeps partial source metadata unverified and retains direct GitHub authorization with exact Work Card context", () => {
     const partial = source();
     (partial.issues[2].marker as Record<string, unknown>).pdr_reference = "W-158";
     expect(createGovernanceProjection(partial).issues.find((entry) => entry.number === 23)?.provenance).toMatchObject({ state: "unverified", pdrReference: "W-158" });
-    const conflicting = source();
-    Object.assign(conflicting.issues[2].marker as Record<string, unknown>, { publication: "direct-github", pdr_reference: "W-158", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000" });
-    expect(() => createGovernanceProjection(conflicting)).toThrow("conflicts with PDR source");
+    const directWithWorkCard = source();
+    Object.assign(directWithWorkCard.issues[2].marker as Record<string, unknown>, { publication: "direct-github", pdr_reference: "W-081", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000" });
+    expect(createGovernanceProjection(directWithWorkCard).issues.find((entry) => entry.number === 23)?.provenance).toMatchObject({ state: "pdr_work_card", publication: "direct-github", pdrReference: "W-081", pdrWorkCardId: "123e4567-e89b-42d3-a456-426614174000" });
+    const invalid = source();
+    Object.assign(invalid.issues[2].marker as Record<string, unknown>, { publication: "direct-github", pdr_reference: "W-158" });
+    expect(() => createGovernanceProjection(invalid)).toThrow("partial PDR source fields");
+  });
+  it("retains direct GitHub authorization with type-valid strategic-item context", () => {
+    const directWithStrategicItem = source();
+    Object.assign(directWithStrategicItem.issues[2].marker as Record<string, unknown>, { publication: "direct-github", pdr_strategic_item_id: "123e4567-e89b-42d3-a456-426614174000" });
+    expect(createGovernanceProjection(directWithStrategicItem).issues.find((entry) => entry.number === 23)?.provenance).toMatchObject({ state: "pdr_strategic_item", publication: "direct-github", pdrStrategicItemId: "123e4567-e89b-42d3-a456-426614174000" });
   });
   it("retains Genesis Decision-style strategic-item provenance", () => {
     const genesis = source();
@@ -154,6 +162,11 @@ describe("governance projection normalization", () => {
     const invalid = source();
     invalid.issues.push({ ...issue(39, kind), parentNumber: 23, marker: { publication: "direct-github" } });
     expect(() => createGovernanceProjection(invalid)).toThrow("cannot own provenance fields");
+  });
+  it.each(["Ticket", "Bug"] as const)("does not allow %s to own a Decision state", (kind) => {
+    const invalid = source();
+    invalid.issues.push({ ...issue(39, kind), parentNumber: 23, decisionState: "Decided" });
+    expect(() => createGovernanceProjection(invalid)).toThrow("cannot own Decision state");
   });
   it("rejects unsupported Decision provenance combinations", () => {
     const direct = source();

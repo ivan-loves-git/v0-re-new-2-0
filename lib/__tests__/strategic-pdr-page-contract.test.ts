@@ -13,6 +13,7 @@ describe("Strategic PDR page contract", () => {
     expect(page).toContain("pdr_work_card");
     expect(page).toContain("/strategic-pdr/work-cards/");
     expect(page).toContain("Actual: unavailable");
+    expect(page).toContain("Direct GitHub scope, with verified historical PDR Work Card");
     expect(page).toContain('const GOVERNANCE_PROJECT_URL = "https://github.com/orgs/re-new-team/projects/1"');
   });
 

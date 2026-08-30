@@ -42,8 +42,8 @@ const provenance = z.object({
   const hasWorkCard = Boolean(value.pdrReference && value.pdrWorkCardId);
   const partialWorkCard = Boolean(value.pdrReference) !== Boolean(value.pdrWorkCardId);
   if (value.state === "direct_github" && (value.publication !== "direct-github" || value.pdrReference || value.pdrWorkCardId || value.pdrStrategicItemId)) ctx.addIssue({ code: "custom", message: "invalid direct GitHub provenance" });
-  if (value.state === "pdr_work_card" && (!hasWorkCard || value.pdrStrategicItemId || value.publication === "direct-github")) ctx.addIssue({ code: "custom", message: "invalid PDR Work Card provenance" });
-  if (value.state === "pdr_strategic_item" && (!value.pdrStrategicItemId || value.pdrReference || value.pdrWorkCardId || value.publication === "direct-github")) ctx.addIssue({ code: "custom", message: "invalid PDR strategic item provenance" });
+  if (value.state === "pdr_work_card" && (!hasWorkCard || value.pdrStrategicItemId)) ctx.addIssue({ code: "custom", message: "invalid PDR Work Card provenance" });
+  if (value.state === "pdr_strategic_item" && (!value.pdrStrategicItemId || value.pdrReference || value.pdrWorkCardId)) ctx.addIssue({ code: "custom", message: "invalid PDR strategic item provenance" });
   if (value.state === "unverified" && (value.publication === "direct-github" || hasWorkCard || value.pdrStrategicItemId)) ctx.addIssue({ code: "custom", message: "invalid unverified provenance" });
   if (value.state === "unverified" && partialWorkCard === false && (value.pdrReference || value.pdrWorkCardId) && !hasWorkCard) ctx.addIssue({ code: "custom", message: "invalid partial PDR provenance" });
 });
@@ -111,7 +111,7 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
   for (const item of projection.issues) {
     if (item.url !== `https://github.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/${item.number}` || item.parentNumber === item.number) return null;
     if (item.kind === "Decision" && (!emptyPlacement(item.placement) || item.decisionState === null || (item.provenance?.state === "pdr_strategic_item" && item.provenance.bootstrap !== "manual") || item.provenance?.state === "direct_github" || item.provenance?.state === "pdr_work_card")) return null;
-    if (item.kind !== "Decision" && item.decisionState !== null) return null;
+    if ((item.kind === "Ticket" || item.kind === "Bug") && item.decisionState !== null) return null;
     if (item.dependencyNumbers.some((number) => !issues.has(number) || exclusions.has(number))) return null;
     if (item.placement.decisionNumber !== null && !decided(issues.get(item.placement.decisionNumber))) return null;
     if (item.kind === "Ticket" || item.kind === "Bug") {
