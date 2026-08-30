@@ -65,6 +65,8 @@ BEGIN
   BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('initiated_by_user_id','actor-sequential'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'rate_limit_not_enforced'; EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END;
   BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('feature','email_draft','reasoning_effort','low'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'non_pdr_low_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
   BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('reasoning_effort','max'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'pdr_v2_max_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
+  BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('prompt_version','pdr-screening-v1'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'pdr_v1_low_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
+  BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('prompt_version','pdr-screening-v999'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'unknown_pdr_low_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
 END $$;
 SQL
 # A rehearsal-only trigger keeps the first INSERT inside the function long

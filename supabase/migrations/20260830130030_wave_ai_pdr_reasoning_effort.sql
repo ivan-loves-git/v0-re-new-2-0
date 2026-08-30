@@ -10,8 +10,8 @@ ALTER TABLE public.ai_generation_runs
 ALTER TABLE public.ai_generation_runs
   ADD CONSTRAINT ai_generation_runs_reasoning_effort_check CHECK (
     (feature <> 'pdr_screening' AND reasoning_effort = 'max')
-    OR (feature = 'pdr_screening' AND reasoning_effort = 'low')
     OR (feature = 'pdr_screening' AND prompt_version = 'pdr-screening-v1' AND reasoning_effort = 'max')
+    OR (feature = 'pdr_screening' AND prompt_version = 'pdr-screening-v2' AND reasoning_effort = 'low')
   );
 
 COMMIT;
