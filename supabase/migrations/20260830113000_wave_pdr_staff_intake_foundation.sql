@@ -28,9 +28,10 @@ CREATE TABLE IF NOT EXISTS public.wave_pdr_governance_capabilities (
   granted_by TEXT NOT NULL CHECK (NULLIF(BTRIM(granted_by),'') IS NOT NULL)
 );
 
-CREATE TABLE IF NOT EXISTS public.wave_pdr_request_attachments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  proposal_id UUID NOT NULL REFERENCES public.pdr_proposals(id) ON DELETE RESTRICT,
+CREATE TABLE IF NOT EXISTS public.wave_pdr_history_attachments (
+  id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
+  proposal_id UUID REFERENCES public.pdr_proposals(id) ON DELETE RESTRICT,
+  work_card_id UUID REFERENCES public.pdr_work_cards(id) ON DELETE RESTRICT,
   storage_bucket TEXT NOT NULL DEFAULT 'pdr-intake-attachments' CHECK (storage_bucket='pdr-intake-attachments'),
   storage_path TEXT NOT NULL UNIQUE CHECK (NULLIF(BTRIM(storage_path),'') IS NOT NULL AND storage_path !~ '(^|/)\\.\\.?(/|$)'),
   original_filename TEXT NOT NULL CHECK (CHAR_LENGTH(original_filename) BETWEEN 1 AND 255),
@@ -39,12 +40,15 @@ CREATE TABLE IF NOT EXISTS public.wave_pdr_request_attachments (
   uploaded_by_user_id TEXT NOT NULL CHECK (NULLIF(BTRIM(uploaded_by_user_id),'') IS NOT NULL),
   content_sha256 TEXT CHECK (content_sha256 IS NULL OR content_sha256 ~ '^[0-9a-f]{64}$'),
   legacy_source_fingerprint TEXT CHECK (legacy_source_fingerprint IS NULL OR legacy_source_fingerprint ~ '^[0-9a-f]{64}$'),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  CONSTRAINT wave_pdr_history_attachments_one_parent CHECK ((proposal_id IS NOT NULL)::integer + (work_card_id IS NOT NULL)::integer = 1)
 );
-CREATE INDEX IF NOT EXISTS wave_pdr_request_attachments_proposal_idx
-  ON public.wave_pdr_request_attachments(proposal_id, created_at ASC);
-CREATE UNIQUE INDEX IF NOT EXISTS wave_pdr_request_attachments_legacy_fingerprint_unique
-  ON public.wave_pdr_request_attachments(legacy_source_fingerprint) WHERE legacy_source_fingerprint IS NOT NULL;
+CREATE INDEX IF NOT EXISTS wave_pdr_history_attachments_proposal_idx
+  ON public.wave_pdr_history_attachments(proposal_id, created_at ASC) WHERE proposal_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS wave_pdr_history_attachments_work_card_idx
+  ON public.wave_pdr_history_attachments(work_card_id, created_at ASC) WHERE work_card_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS wave_pdr_history_attachments_legacy_fingerprint_unique
+  ON public.wave_pdr_history_attachments(legacy_source_fingerprint) WHERE legacy_source_fingerprint IS NOT NULL;
 
 INSERT INTO storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('pdr-intake-attachments','pdr-intake-attachments',FALSE,20971520,
@@ -55,8 +59,8 @@ ON CONFLICT (id) DO UPDATE SET public=FALSE, file_size_limit=20971520,
 -- New #43 metadata is server-only; existing legacy tables keep their current
 -- grants until the separately-gated final retirement migration.
 ALTER TABLE public.wave_pdr_governance_capabilities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.wave_pdr_request_attachments ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.wave_pdr_governance_capabilities, public.wave_pdr_request_attachments FROM PUBLIC, anon, authenticated;
-GRANT ALL ON TABLE public.wave_pdr_governance_capabilities, public.wave_pdr_request_attachments TO service_role;
+ALTER TABLE public.wave_pdr_history_attachments ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.wave_pdr_governance_capabilities, public.wave_pdr_history_attachments FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.wave_pdr_governance_capabilities, public.wave_pdr_history_attachments TO service_role;
 
 NOTIFY pgrst, 'reload schema';

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { safePdrFilename } from "@/lib/pdr/attachment-path"
 
 export const PDR_ATTACHMENT_BUCKET = "pdr-intake-attachments"
 export const PDR_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024
@@ -31,7 +32,7 @@ export type PdrHistoryRequest = {
   attachments: PdrHistoryAttachment[]
   provenance: "proposal" | "request"
 }
-export type PdrHistoricalWorkCard = { id: string; referenceNumber: number; title: string; notes: string; status: string; owner: string; createdAt: string; updatedAt: string }
+export type PdrHistoricalWorkCard = { id: string; referenceNumber: number; title: string; notes: string; status: string; owner: string; createdAt: string; updatedAt: string; attachments: PdrHistoryAttachment[] }
 
 export type PdrHistoryAttachment = {
   id: string
@@ -71,17 +72,19 @@ function projectRequest(row: RequestRow): PdrHistoryRequest {
   return { id: row.id, title: row.title, originalText: row.description, conversation: asArray(row.challenge_prompts), screening: { proposalType: "legacy_request", problemStatement: row.title, aiRationale: `Challenge score: ${row.challenge_score}`, status: row.status }, requester: { displayName: null, userId: null, legacyLabel: row.created_by }, disposition: { kind: null, byUserId: null, at: null, note: row.decision_note }, createdAt: row.created_at, updatedAt: row.updated_at, attachments: [], provenance: "request" }
 }
 
-async function attachmentsFor(proposalIds: string[]) {
-  if (!proposalIds.length) return new Map<string, PdrHistoryAttachment[]>()
-  const { data, error } = await createAdminClient().from("wave_pdr_request_attachments")
-    .select("id, proposal_id, original_filename, content_type, size_bytes, created_at").in("proposal_id", proposalIds)
+async function attachmentsFor(parentColumn: "proposal_id" | "work_card_id", parentIds: string[]) {
+  if (!parentIds.length) return new Map<string, PdrHistoryAttachment[]>()
+  const { data, error } = await createAdminClient().from("wave_pdr_history_attachments")
+    .select("id, proposal_id, work_card_id, original_filename, content_type, size_bytes, created_at").in(parentColumn, parentIds)
     .order("created_at", { ascending: true })
   if (error) throw new Error("PDR history is temporarily unavailable.")
   const output = new Map<string, PdrHistoryAttachment[]>()
   for (const row of data ?? []) {
-    const items = output.get(row.proposal_id) ?? []
+    const parentId = row[parentColumn]
+    if (!parentId) continue
+    const items = output.get(parentId) ?? []
     items.push({ id: row.id, originalFilename: row.original_filename, contentType: row.content_type, sizeBytes: row.size_bytes, createdAt: row.created_at })
-    output.set(row.proposal_id, items)
+    output.set(parentId, items)
   }
   return output
 }
@@ -95,7 +98,7 @@ export async function listPdrRequestHistory(): Promise<PdrHistoryRequest[]> {
   const requestResult = await supabase.from("pdr_requests").select("id, title, description, challenge_prompts, challenge_score, status, decision_note, created_by, created_at, updated_at").order("created_at", { ascending: false })
   if (error || requestResult.error) throw new Error("PDR history is temporarily unavailable.")
   const rows = (data ?? []) as ProposalRow[]
-  const attachments = await attachmentsFor(rows.map((row) => row.id))
+  const attachments = await attachmentsFor("proposal_id", rows.map((row) => row.id))
   return [...rows.map((row) => projectProposal(row, attachments.get(row.id) ?? [])), ...((requestResult.data ?? []) as RequestRow[]).map(projectRequest)].sort((a,b) => b.createdAt.localeCompare(a.createdAt))
 }
 
@@ -106,7 +109,7 @@ export async function getPdrRequestHistory(id: string): Promise<PdrHistoryReques
   if (error) throw new Error("PDR history is temporarily unavailable.")
   if (!data) { const { data: legacy, error: legacyError } = await supabase.from("pdr_requests").select("id, title, description, challenge_prompts, challenge_score, status, decision_note, created_by, created_at, updated_at").eq("id",id).maybeSingle(); if (legacyError) throw new Error("PDR history is temporarily unavailable."); return legacy ? projectRequest(legacy as RequestRow) : null }
   const row = data as ProposalRow
-  const attachments = await attachmentsFor([row.id])
+  const attachments = await attachmentsFor("proposal_id", [row.id])
   return projectProposal(row, attachments.get(row.id) ?? [])
 }
 
@@ -120,7 +123,8 @@ export async function canDispositionPdr(userId: string) {
 export async function listHistoricalPdrWorkCards(): Promise<PdrHistoricalWorkCard[]> {
   const { data, error } = await createAdminClient().from("pdr_work_cards").select("id, reference_number, title, notes, status, owner, created_at, updated_at").order("reference_number", { ascending: false })
   if (error) throw new Error("PDR Work Card history is temporarily unavailable.")
-  return (data ?? []).map((row) => ({ id: row.id, referenceNumber: row.reference_number, title: row.title, notes: row.notes, status: row.status, owner: row.owner, createdAt: row.created_at, updatedAt: row.updated_at }))
+  const attachments = await attachmentsFor("work_card_id", (data ?? []).map((row) => row.id))
+  return (data ?? []).map((row) => ({ id: row.id, referenceNumber: row.reference_number, title: row.title, notes: row.notes, status: row.status, owner: row.owner, createdAt: row.created_at, updatedAt: row.updated_at, attachments: attachments.get(row.id) ?? [] }))
 }
 
 export function assertPdrAttachment(file: File) {
@@ -130,6 +134,6 @@ export function assertPdrAttachment(file: File) {
 }
 
 export function pdrAttachmentPath(proposalId: string, filename: string) {
-  const safe = filename.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "attachment"
+  const safe = safePdrFilename(filename)
   return `${proposalId}/${crypto.randomUUID()}-${safe}`
 }

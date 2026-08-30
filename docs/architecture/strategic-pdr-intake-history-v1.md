@@ -12,9 +12,10 @@ Decisions, Tickets, discussion and delivery state.
   attachment JSON, or signed storage URL.
 - New attachments are saved in the private `pdr-intake-attachments` bucket and
   streamed only from the staff-authorized attachment route.
-- Old attachment JSON is preserved in place as historical evidence but is not
-  exposed as a link. It must be individually reconciled and privately
-  registered before it is downloadable from WAVE.
+- Old proposal and Work Card attachment JSON is preserved in place as historical
+  evidence but is not exposed as a link. Each entry must be privately copied,
+  hash-verified and registered in `wave_pdr_history_attachments` with exactly
+  one parent before it is downloadable from WAVE.
 - Historical PDR Work Cards remain presentation-only and are not read as
   current delivery authority. The cutover migration freezes their table.
 
@@ -47,6 +48,11 @@ follows arbitrary HTTPS URLs nor exposes source locations in its output. An
 immediate rerun must report `noOp: true` after verifying the exact private
 objects and metadata. The final migration independently refuses to retire when
 any attachment JSON entry lacks its registered source fingerprint.
+
+Run `PDR_STANDALONE_ORIGIN=<bare-https-origin> pnpm pdr:reconcile-history`
+before retirement. It compares counts and non-identifying identifier digests
+from the live standalone `/api/pdr` with the database and fails on any mismatch.
+`--db-only-incomplete` is diagnostic only and cannot satisfy this release gate.
 
 Before the migration, reconcile record counts and immutable identifiers for
 `pdr_proposals`, `pdr_requests`, `pdr_feedback`, and `pdr_work_cards` against

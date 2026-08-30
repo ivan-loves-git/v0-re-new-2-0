@@ -11,7 +11,7 @@ describe("Strategic PDR intake/history boundary", () => {
     expect(adapter).toContain('import "server-only"')
     expect(adapter).not.toContain(".select(\"*\")")
     expect(adapter).not.toContain("data.attachments")
-    expect(adapter).toContain("wave_pdr_request_attachments")
+    expect(adapter).toContain("wave_pdr_history_attachments")
   })
 
   it("enforces staff access and the explicit Ivan capability independently of UI", () => {

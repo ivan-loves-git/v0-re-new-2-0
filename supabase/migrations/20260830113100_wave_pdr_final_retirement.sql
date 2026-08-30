@@ -6,14 +6,22 @@ DECLARE
   missing_count integer;
 BEGIN
   SELECT count(*) INTO missing_count
-  FROM public.pdr_proposals proposal
-  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(proposal.attachments, '[]'::jsonb)) attachment
+  FROM (
+    SELECT 'proposal'::text AS owner_kind, proposal.id AS owner_id, attachment
+    FROM public.pdr_proposals proposal
+    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(proposal.attachments, '[]'::jsonb)) attachment
+    UNION ALL
+    SELECT 'work_card'::text AS owner_kind, card.id AS owner_id, attachment
+    FROM public.pdr_work_cards card
+    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(card.attachments, '[]'::jsonb)) attachment
+  ) legacy
   WHERE NOT EXISTS (
     SELECT 1
-    FROM public.wave_pdr_request_attachments private_attachment
-    WHERE private_attachment.proposal_id = proposal.id
+    FROM public.wave_pdr_history_attachments private_attachment
+    WHERE ((legacy.owner_kind = 'proposal' AND private_attachment.proposal_id = legacy.owner_id)
+       OR (legacy.owner_kind = 'work_card' AND private_attachment.work_card_id = legacy.owner_id))
       AND private_attachment.legacy_source_fingerprint = encode(
-        digest(proposal.id::text || ':' || (attachment->>'url'), 'sha256'),
+        extensions.digest(convert_to(legacy.owner_kind || ':' || legacy.owner_id::text || ':' || (legacy.attachment->>'url'), 'UTF8'), 'sha256'),
         'hex'
       )
   );
