@@ -20,7 +20,7 @@ const timestamp = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z
 const refs = z.array(nonEmpty).min(1).refine(unique, "duplicate values");
 const issueUrl = z.string().regex(new RegExp(`^https://github\\.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/[1-9]\\d*$`));
 const login = z.string().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37})?$/);
-const projectStatus = z.enum(["Unrouted", "Ready", "Todo", "In Progress", "Review", "Done"]);
+const projectStatus = z.enum(["Unrouted", "Ready", "Todo", "In Progress", "Review", "Done", "Cancelled / Superseded"]);
 const decisionState = z.enum(["Proposed", "Needs Ivan", "Decided", "Superseded"]).nullable();
 const kind = z.enum(["Product Change", "Decision", "Ticket", "Bug"]);
 const placement = z.object({
@@ -69,7 +69,7 @@ const issue = z.object({
   pullRequests: z.array(z.object({ url: z.string().regex(/^https:\/\/github\.com\/(?:ivan-loves-git\/v0-re-new-2-0|re-new-team\/renew-governance)\/pull\/[1-9]\d*$/), state: z.enum(["OPEN", "CLOSED", "MERGED"]) }).strict()).refine((items) => unique(items.map((item) => item.url)), "duplicate pull request"),
   placement, provenance: provenance.optional(),
 }).strict();
-const legacy = z.object({ number: issueNumber, title: nonEmpty, url: issueUrl, state: z.literal("CLOSED"), projectStatus: z.literal("Done"), parentNumber: issueNumber, reason: z.enum(["legacy_missing_issue_type", "legacy_non_product_change_parent"]), nativeKind: z.enum(["Ticket", "Bug"]).optional() }).strict();
+const legacy = z.object({ number: issueNumber, title: nonEmpty, url: issueUrl, state: z.literal("CLOSED"), projectStatus: z.enum(["Done", "Cancelled / Superseded"]), parentNumber: issueNumber, reason: z.enum(["legacy_missing_issue_type", "legacy_non_product_change_parent"]), nativeKind: z.enum(["Ticket", "Bug"]).optional() }).strict();
 const projectionSchema = z.object({
   schemaVersion: z.literal(GOVERNANCE_PROJECTION_SCHEMA_VERSION), sourceRepository: z.literal(GOVERNANCE_SOURCE_REPOSITORY), sourceCommit: z.string().regex(/^[0-9a-f]{40}$/), registryRevision: nonEmpty, retrievedAt: timestamp, snapshotAt: timestamp,
   registry, issues: z.array(issue), legacyExclusions: z.array(legacy),
@@ -110,6 +110,7 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
   if (!decided(issues.get(projection.registry.governanceDecision)) || !decided(issues.get(projection.registry.approval.decision))) return null;
   for (const item of projection.issues) {
     if (item.url !== `https://github.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/${item.number}` || item.parentNumber === item.number) return null;
+    if (item.projectStatus === "Cancelled / Superseded" && item.state !== "CLOSED") return null;
     if (item.kind === "Decision" && (!emptyPlacement(item.placement) || item.decisionState === null || (item.provenance?.state === "pdr_strategic_item" && item.provenance.bootstrap !== "manual") || item.provenance?.state === "direct_github" || item.provenance?.state === "pdr_work_card")) return null;
     if ((item.kind === "Ticket" || item.kind === "Bug") && item.decisionState !== null) return null;
     if (item.dependencyNumbers.some((number) => !issues.has(number) || exclusions.has(number))) return null;
@@ -137,7 +138,7 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
     if (item.url !== `https://github.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/${item.number}` || item.parentNumber === item.number) return null;
     const parent = issues.get(item.parentNumber);
     if (!parent || parent.state !== "CLOSED") return null;
-    if (item.reason === "legacy_missing_issue_type" ? parent.kind !== "Product Change" || item.nativeKind !== undefined : (item.nativeKind !== "Ticket" && item.nativeKind !== "Bug") || parent.kind === "Product Change") return null;
+    if (item.reason === "legacy_missing_issue_type" ? item.projectStatus !== "Done" || parent.kind !== "Product Change" || item.nativeKind !== undefined : (item.nativeKind !== "Ticket" && item.nativeKind !== "Bug") || parent.kind === "Product Change") return null;
   }
   return projection as GovernanceProjection;
 }

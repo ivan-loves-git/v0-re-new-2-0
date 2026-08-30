@@ -207,8 +207,8 @@ function collect(): GovernanceSourceModel {
   const byNumber = new Map(issues.map((entry) => [entry.number, entry]));
   for (const entry of issues) {
     const parent = entry.parentNumber ? byNumber.get(entry.parentNumber) : undefined;
-    if ((entry.kind === "Ticket" || entry.kind === "Bug") && entry.state === "CLOSED" && entry.projectStatus === "Done" && parent && parent.kind !== "Product Change" && parent.state === "CLOSED" && !entry.marker) {
-      legacyExclusions.push({ number: entry.number, title: entry.title, url: entry.url, state: "CLOSED", projectStatus: "Done", parentNumber: entry.parentNumber, reason: "legacy_non_product_change_parent", nativeKind: entry.kind });
+    if ((entry.kind === "Ticket" || entry.kind === "Bug") && entry.state === "CLOSED" && (entry.projectStatus === "Done" || entry.projectStatus === "Cancelled / Superseded") && parent && parent.kind !== "Product Change" && parent.state === "CLOSED" && !entry.marker) {
+      legacyExclusions.push({ number: entry.number, title: entry.title, url: entry.url, state: "CLOSED", projectStatus: entry.projectStatus, parentNumber: entry.parentNumber, reason: "legacy_non_product_change_parent", nativeKind: entry.kind });
     }
   }
   return {

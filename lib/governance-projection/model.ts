@@ -13,7 +13,8 @@ export type ProjectStatus =
   | "Todo"
   | "In Progress"
   | "Review"
-  | "Done";
+  | "Done"
+  | "Cancelled / Superseded";
 export type DecisionState =
   | "Proposed"
   | "Needs Ivan"
@@ -70,7 +71,7 @@ export interface LegacyExclusion {
   title: string;
   url: string;
   state: "CLOSED";
-  projectStatus: "Done";
+  projectStatus: "Done" | "Cancelled / Superseded";
   parentNumber: number;
   reason:
     | "legacy_missing_issue_type"

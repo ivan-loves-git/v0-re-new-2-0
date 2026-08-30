@@ -46,10 +46,13 @@ SQL
 "${p[@]}" -f "$root/scripts/prestage-pdr-storage-guard.sql" >/dev/null
 "${p[@]}" -f "$root/supabase/migrations/20260830113100_wave_pdr_final_retirement.sql" >/dev/null
 "${p[@]}" -f "$root/supabase/migrations/20260830113100_wave_pdr_final_retirement.sql" >/dev/null
+"${p[@]}" -f "$root/supabase/migrations/20260830222500_wave_pdr_trigger_search_path_hardening.sql" >/dev/null
+"${p[@]}" -f "$root/supabase/migrations/20260830222500_wave_pdr_trigger_search_path_hardening.sql" >/dev/null
 "${p[@]}" <<'SQL'
 DO $$ DECLARE t text; r text; BEGIN
 FOREACH t IN ARRAY ARRAY['pdr_feedback','pdr_goals','pdr_milestones','pdr_proposals','pdr_requests','pdr_work_cards'] LOOP FOREACH r IN ARRAY ARRAY['anon','authenticated'] LOOP IF has_table_privilege(r,'public.'||t,'SELECT') THEN RAISE EXCEPTION 'legacy grant remained'; END IF; END LOOP; END LOOP;
 IF (SELECT public FROM storage.buckets WHERE id='pdr-attachments') THEN RAISE EXCEPTION 'bucket remained public'; END IF;
+IF (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('wave_pdr_proposal_intake_provenance_immutable','wave_pdr_historical_work_cards_read_only') AND p.proconfig @> ARRAY['search_path=""']) <> 2 THEN RAISE EXCEPTION 'PDR trigger search path remained mutable'; END IF;
 BEGIN INSERT INTO pdr_work_cards DEFAULT VALUES; RAISE EXCEPTION 'insert allowed'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='insert allowed' THEN RAISE; END IF; END;
 BEGIN UPDATE pdr_work_cards SET id=id; RAISE EXCEPTION 'update allowed'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='update allowed' THEN RAISE; END IF; END;
 BEGIN DELETE FROM pdr_work_cards; RAISE EXCEPTION 'delete allowed'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='delete allowed' THEN RAISE; END IF; END;

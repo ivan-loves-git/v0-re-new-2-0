@@ -122,6 +122,36 @@ describe("current governance projection reader", () => {
     }
   });
 
+  it("accepts the explicit cancelled or superseded terminal status", async () => {
+    const projection = structuredClone(validProjection());
+    const productChange = projection.issues.find((item) => item.number === 23);
+    if (!productChange) throw new Error("test fixture missing Product Change");
+    productChange.projectStatus = "Cancelled / Superseded";
+    maybeSingle.mockResolvedValueOnce({ data: { snapshot_id: "id", snapshot_digest: governanceProjectionDigest(projection), payload: projection }, error: null });
+    const { readCurrentGovernanceProjection } = await import("@/lib/governance-projection/server");
+    const result = await readCurrentGovernanceProjection();
+    expect(result.state).toBe("available");
+    if (result.state === "available") expect(result.projection.issues.find((item) => item.number === 23)?.projectStatus).toBe("Cancelled / Superseded");
+  });
+
+  it("accepts a cancelled legacy Ticket exclusion under a closed Decision", async () => {
+    const projection = structuredClone(validProjection());
+    projection.legacyExclusions.push({
+      number: 39,
+      title: "Retired legacy Ticket",
+      url: `https://github.com/${repo}/issues/39`,
+      state: "CLOSED",
+      projectStatus: "Cancelled / Superseded",
+      parentNumber: 36,
+      reason: "legacy_non_product_change_parent",
+      nativeKind: "Ticket",
+    });
+    maybeSingle.mockResolvedValueOnce({ data: { snapshot_id: "id", snapshot_digest: governanceProjectionDigest(projection), payload: projection }, error: null });
+    const { readCurrentGovernanceProjection } = await import("@/lib/governance-projection/server");
+    const result = await readCurrentGovernanceProjection();
+    expect(result.state).toBe("available");
+  });
+
   it("accepts direct GitHub authorization with an exact PDR Work Card context", async () => {
     const projection = structuredClone(validProjection());
     const productChange = projection.issues.find((item) => item.number === 23);

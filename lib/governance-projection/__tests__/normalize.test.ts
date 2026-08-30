@@ -127,6 +127,12 @@ describe("governance projection normalization", () => {
     expect(JSON.stringify(result)).not.toContain("approval_keys");
     expect(result.issues.find((entry) => entry.number === 23)?.provenance).toEqual({ state: "unverified" });
   });
+  it("preserves the explicit cancelled or superseded terminal status", () => {
+    const cancelled = source();
+    cancelled.issues[2].state = "CLOSED";
+    cancelled.issues[2].projectStatus = "Cancelled / Superseded";
+    expect(createGovernanceProjection(cancelled).issues.find((entry) => entry.number === 23)?.projectStatus).toBe("Cancelled / Superseded");
+  });
   it("projects direct GitHub scope only from its exact marker", () => {
     const direct = source();
     (direct.issues[2].marker as Record<string, unknown>).publication = "direct-github";
@@ -219,6 +225,35 @@ describe("governance projection normalization", () => {
     expect(() => createGovernanceProjection(legacy)).toThrow(
       "legacy exclusion",
     );
+  });
+  it("excludes a cancelled legacy Ticket parented by a closed Decision", () => {
+    const legacy = source();
+    legacy.issues.push({
+      ...issue(39, "Ticket"),
+      state: "CLOSED",
+      projectStatus: "Cancelled / Superseded",
+      parentNumber: 36,
+    });
+    legacy.legacyExclusions = [{
+      number: 39,
+      title: "Issue 39",
+      url: `https://github.com/${repo}/issues/39`,
+      state: "CLOSED",
+      projectStatus: "Cancelled / Superseded",
+      parentNumber: 36,
+      reason: "legacy_non_product_change_parent",
+      nativeKind: "Ticket",
+    }];
+    const projection = createGovernanceProjection(legacy);
+    expect(projection.issues.some((entry) => entry.number === 39)).toBe(false);
+    expect(projection.legacyExclusions).toContainEqual(expect.objectContaining({
+      number: 39,
+      projectStatus: "Cancelled / Superseded",
+      reason: "legacy_non_product_change_parent",
+    }));
+
+    legacy.legacyExclusions[0].projectStatus = "Done";
+    expect(() => createGovernanceProjection(legacy)).toThrow("legacy exclusion");
   });
   it("keeps a digest stable across recollection timestamps", () => {
     const first = createGovernanceProjection(source());
