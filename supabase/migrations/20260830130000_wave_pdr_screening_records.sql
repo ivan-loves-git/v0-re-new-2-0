@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS public.wave_pdr_screening_records (
   id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
   proposal_id UUID NOT NULL REFERENCES public.pdr_proposals(id) ON DELETE RESTRICT,
+  generation_id UUID NOT NULL UNIQUE REFERENCES public.ai_generation_runs(generation_id) ON DELETE RESTRICT,
   created_by_user_id TEXT NOT NULL CHECK (char_length(btrim(created_by_user_id)) BETWEEN 1 AND 160),
   output JSONB NOT NULL,
   governance_snapshot_id UUID NOT NULL,

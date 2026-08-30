@@ -7,7 +7,6 @@ const boundedText = (min: number, max: number) => z.string().trim().min(min).max
 
 /** Deliberately small: this is advisory editing, not a delivery instruction. */
 export const pdrScreeningDraftSchema = z.object({
-  preservedOriginalWording: boundedText(10, 4_000),
   clarificationQuestions: z.array(boundedText(4, 240)).min(1).max(5)
     .superRefine((items, context) => {
       if (new Set(items.map((item) => item.toLocaleLowerCase())).size !== items.length) {
@@ -40,12 +39,5 @@ export type PdrScreeningContext = {
 
 export const pdrScreeningSaveSchema = z.object({
   requestId: z.string().uuid(),
-  draft: pdrScreeningDraftSchema,
-  context: z.object({
-    snapshotId: z.string().uuid(),
-    digest: z.string().regex(/^[a-f0-9]{64}$/),
-    registryRevision: boundedText(1, 160),
-    snapshotAt: z.string().datetime(),
-    freshness: z.enum(["fresh", "stale"]),
-  }).strict(),
+  previewToken: z.string().min(40).max(16_000),
 }).strict()

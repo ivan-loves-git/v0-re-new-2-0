@@ -19,7 +19,7 @@ import {
 import type { WaveAiTokenUsage } from "@/lib/ai/usage"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-export type WaveAiFeature = "email_draft" | "next_action" | "match_review"
+export type WaveAiFeature = "email_draft" | "next_action" | "match_review" | "pdr_screening"
 
 function runtimeEnvironment() {
   if (process.env.NODE_ENV === "test") return "test" as const

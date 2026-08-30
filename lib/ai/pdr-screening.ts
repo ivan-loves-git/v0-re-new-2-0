@@ -29,17 +29,18 @@ function allowedContext(current: Extract<CurrentGovernanceProjection, { state: "
 
 function screeningInstructions(freshness: "fresh" | "stale") {
   return `You are WAVE AI's staff-only request editor. Produce an advisory screening preview, never an approval, prioritisation, disposition, delivery decision, GitHub record, or implementation instruction.
-Preserve the request wording verbatim in preservedOriginalWording. Use only supplied request wording and compact allowlisted context. Do not mention data sources, attachments, people, URLs, repository internals, or hidden identifiers.
+Use only supplied request wording and compact allowlisted context. Do not restate the request verbatim. Do not mention data sources, attachments, people, URLs, repository internals, or hidden identifiers.
 ${freshness === "fresh"
   ? "Fresh strategy context is available. You may suggest a Goal, Milestone, Product Change overlaps, and a cautious technical-impact note only when directly supported by the supplied context."
   : "Strategy context is stale. Ask clarifying questions and frame the problem only. Set suggestedGoalId and suggestedMilestoneId to null, overlappingProductChangeNumbers to [], and technicalImpact to null."}
 If uncertain, say so in unknowns and lower confidence. Return only the requested structured output.`
 }
 
-export function validatePdrScreeningDraft(draft: unknown, current: Extract<CurrentGovernanceProjection, { state: "available" }>, originalText: string, freshness: "fresh" | "stale"): PdrScreeningDraft {
+export function validatePdrScreeningDraft(draft: unknown, current: Extract<CurrentGovernanceProjection, { state: "available" }>, freshness: "fresh" | "stale"): PdrScreeningDraft {
   const parsed = pdrScreeningDraftSchema.safeParse(draft)
-  if (!parsed.success || parsed.data.preservedOriginalWording !== originalText) throw new SyntaxError("Invalid PDR screening output")
+  if (!parsed.success) throw new SyntaxError("Invalid PDR screening output")
   const value = parsed.data
+  if (Boolean(value.suggestedGoalId) !== Boolean(value.suggestedMilestoneId)) throw new SyntaxError("Goal and Milestone must be suggested together")
   if (freshness === "stale") {
     if (value.suggestedGoalId || value.suggestedMilestoneId || value.overlappingProductChangeNumbers.length || value.technicalImpact) throw new SyntaxError("Stale screening exceeded advisory limits")
     return value
@@ -64,10 +65,10 @@ export async function generatePdrScreening(input: { request: RequestSource; curr
     store: false, parallel_tool_calls: false, max_output_tokens: 2_400,
     safety_identifier: input.safetyIdentifier.slice(0, 64),
     instructions: screeningInstructions(freshness),
-    input: JSON.stringify({ request: { title: input.request.title, originalWording: input.request.originalText }, context: allowedContext(input.current) }),
+    input: JSON.stringify({ request: { title: input.request.title, originalWording: input.request.originalText }, context: freshness === "fresh" ? allowedContext(input.current) : { registryRevision: input.current.projection.registryRevision, mode: "stale" } }),
     text: { format: zodTextFormat(pdrScreeningDraftSchema, "pdr_screening_preview"), verbosity: "low" },
   })
-  const draft = validatePdrScreeningDraft(response.output_parsed, input.current, input.request.originalText, freshness)
+  const draft = validatePdrScreeningDraft(response.output_parsed, input.current, freshness)
   return { draft, context, usage: response.usage }
 }
 
