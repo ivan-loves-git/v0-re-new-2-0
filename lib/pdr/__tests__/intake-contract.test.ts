@@ -21,6 +21,7 @@ describe("Strategic PDR intake/history boundary", () => {
     expect(actions).toContain("Only Ivan can disposition Strategic PDR intake.")
     expect(actions).toContain('eq("status", PDR_DISPOSITIONABLE_PROPOSAL_STATUS)')
     expect(actions).toContain('eq("requester_actor", "Staff")')
+    expect(actions).toContain('eq("intake_provenance", PDR_WAVE_STAFF_INTAKE_PROVENANCE)')
   })
 
   it("uses the same narrow disposition eligibility gate in the request UI", () => {
@@ -46,5 +47,15 @@ describe("Strategic PDR intake/history boundary", () => {
     expect(retirement).toContain("FROM PUBLIC, anon, authenticated")
     expect(retirement).toContain("wave_pdr_historical_work_cards_are_read_only")
     expect(retirement).toContain("pdr_legacy_attachments_not_fully_private")
+  })
+
+  it("makes authenticated WAVE intake provenance explicit and immutable without rewriting legacy history", () => {
+    const provenance = source("supabase/migrations/20260830113050_wave_pdr_intake_provenance.sql")
+    expect(provenance).toContain("ADD COLUMN IF NOT EXISTS intake_provenance TEXT")
+    expect(provenance).toContain("intake_provenance = 'wave_staff_v1'")
+    expect(provenance).toContain("requester_actor = 'Staff'")
+    expect(provenance).toContain("wave_pdr_intake_provenance_immutable")
+    expect(provenance).toContain("BEFORE UPDATE OF intake_provenance")
+    expect(provenance).not.toContain("UPDATE public.pdr_proposals")
   })
 })

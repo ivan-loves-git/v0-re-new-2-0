@@ -44,6 +44,7 @@ describe("Strategic PDR disposition action", () => {
       ["eq", "status", "draft"],
       ["eq", "requester_actor", "Staff"],
       ["not", "requester_user_id", "is", null],
+      ["eq", "intake_provenance", "wave_staff_v1"],
       ["is", "disposition_kind", null],
     ]))
   })

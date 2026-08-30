@@ -6,6 +6,7 @@ const freshDraft = {
   status: "draft",
   requesterActor: "Staff",
   requesterUserId: "staff-user-id",
+  intakeProvenance: "wave_staff_v1",
   dispositionKind: null,
 }
 
@@ -19,6 +20,7 @@ describe("Strategic PDR disposition eligibility", () => {
   })
 
   it("does not infer eligibility for legacy or already disposed draft rows", () => {
+    expect(isDispositionEligiblePdrRequest({ ...freshDraft, intakeProvenance: null })).toBe(false)
     expect(isDispositionEligiblePdrRequest({ ...freshDraft, requesterActor: "Colin" })).toBe(false)
     expect(isDispositionEligiblePdrRequest({ ...freshDraft, requesterUserId: null })).toBe(false)
     expect(isDispositionEligiblePdrRequest({ ...freshDraft, dispositionKind: "approved" })).toBe(false)
