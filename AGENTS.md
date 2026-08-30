@@ -6,7 +6,7 @@
 
 Codex is the single accountable development owner. Ivan is the product owner and is not expected to translate requests into developer language, supervise pull requests, follow deployment internals, or coordinate AI tools.
 
-Codex must understand the request, clarify only material ambiguity, align scope with the PDR, implement once, check it works, ship it, and report the result in plain language.
+Codex must understand the request, clarify only material ambiguity, align scope with the current GitHub authority, implement once, check it works, release only through the separately authorised gates, and report the result in plain language.
 
 Use one agent at a time on this repository. Running Codex, Cursor and others against the same branches in parallel produced days of duplicated and conflicting work in August 2026. If another tool is genuinely needed for a self-contained job, give it one bounded task and merge the result before starting anything else.
 
@@ -71,17 +71,30 @@ To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true
 
 ## Current implementation authority
 
-The live WAVE Strategic PDR at `https://codex-sites-test-flight-20260715.ivanpaudice.chatgpt.site/` is the source of truth for scope, Work Cards, status and decisions. `docs/data-models/ma-advisory-data-model-v1.md` is the business and data contract for M&A records.
+The binding governance decisions are [D-GOV-002](https://github.com/re-new-team/renew-governance/issues/27) and [D-GOV-003](https://github.com/re-new-team/renew-governance/issues/36). GitHub is the canonical product-development authority; WAVE's Strategic PDR is an authenticated intake, history, and read-only presentation surface. It does not own delivery status or current specifications.
 
-`.planning/`, `TASKS.md`, old PDR drafts, dated backlogs, proposals and action plans are historical only. Do not execute or update them.
+Before changing a Product Change, Decision, Ticket, Bug, strategy mapping, data contract, or implementation, read in this order:
 
-Notion and Linear are inactive for Re-New product planning. Do not consult, update, mirror to, or link them unless Ivan explicitly reactivates one of them.
+1. [`re-new-team/renew-governance` `CONTEXT.md`](https://github.com/re-new-team/renew-governance/blob/main/CONTEXT.md) for the governance boundary and current operating rules.
+2. The GitHub [`strategy/registry.yaml`](https://github.com/re-new-team/renew-governance/blob/main/strategy/registry.yaml) for canonical Goals, Outcome Milestones, KPI definitions/targets, guardrails, and their stable IDs.
+3. The target GitHub Product Change and its linked active Decisions for the authorised current scope, dependencies, and strategic mapping.
+4. `docs/data-models/ma-advisory-data-model-v1.md` for the released M&A business and data contract, including confidentiality, visibility, retention, and cutover mapping.
+5. This file and the applicable platform technical documentation for security, QA, release, and implementation guardrails.
+6. The current code, migrations, and production evidence.
 
-A proposal or `Ready for decision` item is not authority to build. It has to be accepted first.
+If sources conflict, are unavailable, or do not identify a valid current authority, stop and report the conflict to Ivan. Do not reconcile it by copying status into PDR, inferring a decision from Slack/email/meeting notes, or choosing the most convenient source.
 
-Founder calls, emails and supplied documents are important evidence inputs, but they change current scope only after the decision is recorded in the PDR and, for a material data or operating rule, in the canonical artifact.
+A Strategy Registry with status `proposed` is review-only: it must not authorise work, determine a current Product Change placement, or be presented to a model as an approved strategic claim. Only a registry with status `accepted` and its recorded approval may supply those current governance facts.
 
-Cross-session Pushapp commitments may still be surfaced through `/to-COS`, but product scope and delivery state remain in the PDR.
+### Authority boundaries
+
+- GitHub `re-new-team/renew-governance` owns the Strategy Registry, Product Changes, Decisions, Tickets, Bugs, current specifications, discussion, delivery status, assignees, dependencies, pull-request links, tests, and release evidence.
+- WAVE Strategic PDR owns founder/staff request intake, original wording, AI screening, Ivan's disposition, intake attachments, and the historical proposal record. Its delivery view is a timestamped, read-only projection of GitHub; it cannot be used to advance delivery.
+- An Ivan-authorised Product Change may be created directly in GitHub without a PDR record. An unapproved direct GitHub request remains `Unrouted` until Ivan explicitly authorises it.
+- If GitHub cannot be reached or its required record cannot be verified, stop the affected delivery work and warn Ivan. Never create or advance a PDR Work Card as a fallback execution record.
+- Build, merge, deployment, and production verification are separate gates. A decision or approved Product Change authorises only the scope it explicitly covers; it does not silently authorise release.
+- `.planning/`, `TASKS.md`, old PDR Work Cards, dated backlogs, proposals, launch plans, and action plans are historical evidence only unless a current GitHub Product Change explicitly cites them.
+- Notion and Linear are inactive for Re-New product planning. Do not consult, update, mirror to, or link them unless Ivan explicitly reactivates one of them.
 
 ## shadcn UI
 
@@ -101,7 +114,7 @@ For dashboards and operational pages, prefer shadcn `Card`, `Table`, `Badge`, `T
 
 ## External decisions
 
-Current founder and operator decisions live only in PDR Work Cards or decision items with a named owner. Do not rely on a static question list in this repository, and do not infer approval from an old meeting note, email, Notion page or completed implementation card.
+Slack, email, meeting notes, and supplied documents are evidence inputs, not canonical decisions. A material product, data, operating-model, or governance decision is closed only when its canonical specification or qualifying Decision is updated in GitHub, affected Product Changes and Tickets link to it, and acceptance tests trace back to it. Do not infer approval from an old message, a completed implementation card, or a PDR status.
 
 ## Data Model Summary
 
