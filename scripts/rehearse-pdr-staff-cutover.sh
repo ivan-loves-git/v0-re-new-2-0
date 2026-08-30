@@ -23,8 +23,20 @@ INSERT INTO pdr_proposals(requester_actor) VALUES ('Bertrand'),('Colin'),('Dev t
 SQL
 "${p[@]}" -f "$root/supabase/migrations/20260830113000_wave_pdr_staff_intake_foundation.sql" >/dev/null
 "${p[@]}" -f "$root/supabase/migrations/20260830113000_wave_pdr_staff_intake_foundation.sql" >/dev/null
+"${p[@]}" -f "$root/supabase/migrations/20260830113050_wave_pdr_intake_provenance.sql" >/dev/null
+"${p[@]}" -f "$root/supabase/migrations/20260830113050_wave_pdr_intake_provenance.sql" >/dev/null
 "${p[@]}" -c "DO \$\$ BEGIN IF (SELECT count(*) FROM pdr_proposals WHERE requester_actor IN ('Bertrand','Colin','Dev team')) <> 3 THEN RAISE EXCEPTION 'legacy actor lost'; END IF; BEGIN INSERT INTO pdr_proposals(requester_actor) VALUES ('unknown'); RAISE EXCEPTION 'unknown actor allowed'; EXCEPTION WHEN check_violation THEN NULL; WHEN raise_exception THEN IF SQLERRM='unknown actor allowed' THEN RAISE; END IF; END; END \$\$;" >/dev/null
 "${p[@]}" <<'SQL'
+DO $$
+DECLARE marked_id uuid;
+BEGIN
+  INSERT INTO pdr_proposals(requester_actor, requester_user_id, status, intake_provenance)
+  VALUES ('Staff', 'staff-user', 'draft', 'wave_staff_v1')
+  RETURNING id INTO marked_id;
+  IF (SELECT intake_provenance FROM pdr_proposals WHERE id = marked_id) <> 'wave_staff_v1' THEN RAISE EXCEPTION 'marked intake missing'; END IF;
+  BEGIN UPDATE pdr_proposals SET intake_provenance = NULL WHERE id = marked_id; RAISE EXCEPTION 'provenance mutation allowed'; EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'wave_pdr_intake_provenance_immutable' THEN RAISE; END IF; END;
+  BEGIN INSERT INTO pdr_proposals(requester_actor, requester_user_id, status, intake_provenance) VALUES ('Staff', '', 'draft', 'wave_staff_v1'); RAISE EXCEPTION 'blank actor identity allowed'; EXCEPTION WHEN check_violation THEN NULL; WHEN raise_exception THEN IF SQLERRM='blank actor identity allowed' THEN RAISE; END IF; END;
+END $$;
 INSERT INTO wave_pdr_governance_capabilities(singleton,actor_user_id,granted_by) VALUES(true,'ivan','test');
 DO $$ BEGIN BEGIN INSERT INTO wave_pdr_governance_capabilities(singleton,actor_user_id,granted_by) VALUES(true,'other','test'); RAISE EXCEPTION 'singleton allowed'; EXCEPTION WHEN unique_violation THEN NULL; END; END $$;
 WITH p AS (INSERT INTO pdr_proposals(attachments) VALUES ('[{"url":"https://example.invalid/a","name":"a.pdf"}]') RETURNING id) INSERT INTO wave_pdr_history_attachments(proposal_id,storage_path,original_filename,content_type,size_bytes,uploaded_by_user_id,legacy_source_fingerprint) SELECT id,'legacy/a.pdf','a.pdf','application/pdf',1,'cutover',encode(extensions.digest(convert_to('proposal:' || id::text || ':https://example.invalid/a','UTF8'),'sha256'),'hex') FROM p;

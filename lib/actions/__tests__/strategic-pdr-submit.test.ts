@@ -27,6 +27,7 @@ describe("Strategic PDR submission", () => {
     form.append("attachments", new File(["private"], "brief.pdf", { type: "application/pdf" }))
     await expect(submitStrategicPdrRequest(form)).rejects.toThrow("redirect:/strategic-pdr/requests/123e4567-e89b-42d3-a456-426614174000")
     expect(state.uploads).toHaveLength(1)
+    expect(state.inserted.find((entry) => entry.table === "pdr_proposals")?.value).toMatchObject({ intake_provenance: "wave_staff_v1" })
     expect(state.inserted.find((entry) => entry.table === "wave_pdr_history_attachments")?.value).toMatchObject({ proposal_id: "123e4567-e89b-42d3-a456-426614174000", uploaded_by_user_id: "staff-1" })
   })
 })
