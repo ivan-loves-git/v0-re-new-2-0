@@ -22,7 +22,8 @@
     "data-model:check": "node scripts/check-ma-data-model-sync.mjs",
     "w098:source-preflight": "node scripts/verify-w098-source-workbook.mjs",
     "w163:titles": "tsx scripts/reconcile-w163-platform-titles.ts",
-    "governance:refresh": "tsx scripts/refresh-governance-projection.ts"
+    "governance:refresh": "tsx scripts/refresh-governance-projection.ts",
+    "pdr:screening:rehearse": "bash scripts/rehearse-wave-pdr-screening-security.sh"
     ,"pdr:reconcile-history": "tsx scripts/reconcile-pdr-history.ts"
     ,"pdr:cutover-legacy-attachments": "tsx scripts/cutover-pdr-legacy-attachments.ts"
     ,"pdr:grant-ivan-capability": "tsx scripts/grant-pdr-ivan-capability.ts"

@@ -43,6 +43,10 @@ export type PdrHistoryAttachment = {
   sizeBytes: number
   createdAt: string
 }
+export type PdrSavedScreening = {
+  id: string; createdAt: string; createdByUserId: string; output: unknown
+  registryRevision: string; snapshotAt: string; digest: string; freshness: "fresh" | "stale"
+}
 
 type ProposalRow = {
   id: string; original_text: string; conversation: unknown
@@ -121,6 +125,19 @@ export async function canDispositionPdr(userId: string) {
     .select("actor_user_id").eq("singleton", true).eq("actor_user_id", userId).eq("can_disposition", true).maybeSingle()
   if (error) throw new Error("PDR governance capability is unavailable.")
   return Boolean(data)
+}
+
+/** Server-only history; attachment rows are intentionally never joined here. */
+export async function listPdrSavedScreenings(proposalId: string): Promise<PdrSavedScreening[]> {
+  const { data, error } = await createAdminClient().from("wave_pdr_screening_records")
+    .select("id, created_at, created_by_user_id, output, registry_revision, governance_snapshot_at, governance_snapshot_digest, freshness")
+    .eq("proposal_id", proposalId).order("created_at", { ascending: false })
+  if (error) throw new Error("Saved screening history is temporarily unavailable.")
+  return (data ?? []).map((row) => ({
+    id: row.id, createdAt: row.created_at, createdByUserId: row.created_by_user_id, output: row.output,
+    registryRevision: row.registry_revision, snapshotAt: row.governance_snapshot_at,
+    digest: row.governance_snapshot_digest, freshness: row.freshness === "stale" ? "stale" : "fresh",
+  }))
 }
 
 export async function listHistoricalPdrWorkCards(): Promise<PdrHistoricalWorkCard[]> {

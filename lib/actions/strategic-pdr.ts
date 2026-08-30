@@ -3,10 +3,19 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requireStaffAccess } from "@/lib/access-control"
-import { assertPdrAttachment, canDispositionPdr, pdrAttachmentPath, PDR_ATTACHMENT_BUCKET } from "@/lib/pdr/intake-server"
+import { assertPdrAttachment, canDispositionPdr, getPdrRequestHistory, pdrAttachmentPath, PDR_ATTACHMENT_BUCKET } from "@/lib/pdr/intake-server"
 import { PDR_DISPOSITIONABLE_PROPOSAL_STATUS, PDR_WAVE_STAFF_INTAKE_PROVENANCE } from "@/lib/pdr/disposition-eligibility"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
+import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server"
+import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness"
+import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, generatePdrScreening, validatePdrScreeningDraft } from "@/lib/ai/pdr-screening"
+import { pdrScreeningAnswersSchema, pdrScreeningSaveSchema, type PdrScreeningContext, type PdrScreeningDraft } from "@/lib/ai/pdr-screening-contract"
+import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
+import { classifyWaveAiError } from "@/lib/ai/errors"
+import { estimateWaveAiCostUsd, normalizeWaveAiUsage } from "@/lib/ai/usage"
+import { createPdrScreeningPreviewToken, pdrScreeningDraftDigest, validatePdrScreeningPreviewToken } from "@/lib/ai/pdr-screening-preview-token"
+import { getOpaqueTelemetryUserId } from "@/lib/telemetry/identity"
 
 const text = (form: FormData, key: string, max: number) => {
   const value = form.get(key)
@@ -67,4 +76,78 @@ export async function dispositionStrategicPdrRequest(formData: FormData) {
   if (error || data?.length !== 1) throw new Error("The request was not found or was already disposed.")
   revalidatePath("/strategic-pdr/requests")
   revalidatePath(`/strategic-pdr/requests/${requestId}`)
+}
+
+function screeningRequestId(formData: FormData) {
+  const requestId = text(formData, "request_id", 80)
+  if (!isUuid(requestId)) throw new Error("This request is invalid.")
+  return requestId
+}
+
+async function loadScreenableRequest(requestId: string) {
+  const request = await getPdrRequestHistory(requestId)
+  if (!request || request.provenance !== "proposal" || request.intakeProvenance !== PDR_WAVE_STAFF_INTAKE_PROVENANCE || request.requester.actor !== "Staff" || !request.requester.userId || request.screening.status !== "draft" || request.disposition.kind) {
+    throw new Error("Only authenticated WAVE staff requests can be screened here.")
+  }
+  return request
+}
+
+/** Preview only. It never writes PDR evidence or delivery records. */
+export async function generateStrategicPdrScreening(formData: FormData): Promise<{ draft: PdrScreeningDraft; context: PdrScreeningContext; previewToken: string }> {
+  const access = await requireStaffAccess()
+  const requestId = screeningRequestId(formData)
+  const current = await readCurrentGovernanceProjection()
+  if (current.state !== "available") throw new Error("The GitHub governance snapshot is unavailable. No AI request was made.")
+  const request = await loadScreenableRequest(requestId)
+  const rawAnswers = text(formData, "clarification_answers", 5000)
+  let answers: Array<{ question: string; answer: string }> | undefined
+  if (rawAnswers) { try {
+    const parsed = pdrScreeningAnswersSchema.safeParse(JSON.parse(rawAnswers)); const rawDraft = text(formData, "prior_draft", 12_000); const priorToken = text(formData, "prior_preview_token", 16_000)
+    const priorDraft = JSON.parse(rawDraft) as unknown; const priorDigest = pdrScreeningDraftDigest(pdrScreeningSaveSchema.shape.draft.parse(priorDraft))
+    const prior = validatePdrScreeningPreviewToken(priorToken, { actor: access.user.id, requestId, draftDigest: priorDigest })
+    const sameSnapshot = prior && prior.context.snapshotId === current.snapshotId && prior.context.digest === current.digest && prior.context.registryRevision === current.projection.registryRevision && prior.context.snapshotAt === current.projection.snapshotAt && prior.context.freshness === (isGovernanceProjectionStale(current.projection.snapshotAt) ? "stale" : "fresh")
+    if (!parsed.success || !prior || !sameSnapshot || !Array.isArray((priorDraft as PdrScreeningDraft).clarificationQuestions) || parsed.data.some((item) => !(priorDraft as PdrScreeningDraft).clarificationQuestions.includes(item.question))) throw new Error()
+    answers = parsed.data
+  } catch { throw new Error("Clarification answers are invalid or no longer match the preview.") } }
+  const startedAt = Date.now()
+  let run: Awaited<ReturnType<typeof startWaveAiRun>> | null = null
+  try {
+    run = await startWaveAiRun({ actorUserId: access.user.id, feature: "pdr_screening", workflow: "pdr_screening_preview", surface: "/strategic-pdr/requests" , promptVersion: PDR_SCREENING_PROMPT_VERSION, outputSchemaVersion: PDR_SCREENING_OUTPUT_SCHEMA_VERSION })
+    const result = await generatePdrScreening({ request: { id: request.id, title: request.title, originalText: request.originalText }, current, answers, safetyIdentifier: getOpaqueTelemetryUserId(access.user.id) })
+    const usage = normalizeWaveAiUsage(result.usage)
+    await completeWaveAiRun({ generationId: run.generationId, usage, estimatedCostUsd: estimateWaveAiCostUsd(usage), latencyMs: Date.now() - startedAt })
+    return { draft: result.draft, context: result.context, previewToken: createPdrScreeningPreviewToken({ generationId: run.generationId, requestId, context: result.context, draftDigest: pdrScreeningDraftDigest(result.draft) }, access.user.id) }
+  } catch (cause) {
+    // Accounting failure must never replace the safe, generic staff-facing
+    // result of a provider or validation failure.
+    if (run) {
+      try { await failWaveAiRun({ generationId: run.generationId, code: classifyWaveAiError(cause), latencyMs: Date.now() - startedAt }) } catch { /* best-effort audit trail */ }
+    }
+    throw new Error("The screening preview could not be generated. No screening was saved.")
+  }
+}
+
+/** Explicit human save: revalidates the exact immutable request and snapshot. */
+export async function saveStrategicPdrScreening(input: unknown) {
+  const access = await requireStaffAccess()
+  const parsed = pdrScreeningSaveSchema.safeParse(input)
+  if (!parsed.success) throw new Error("The screening preview is invalid.")
+  const current = await readCurrentGovernanceProjection()
+  if (current.state !== "available") throw new Error("The GitHub governance snapshot is unavailable. Nothing was saved.")
+  const freshness = isGovernanceProjectionStale(current.projection.snapshotAt) ? "stale" : "fresh"
+  const preview = validatePdrScreeningPreviewToken(parsed.data.previewToken, { actor: access.user.id, requestId: parsed.data.requestId, draftDigest: pdrScreeningDraftDigest(parsed.data.draft) })
+  if (!preview) throw new Error("The screening preview expired or is invalid. Generate a new preview.")
+  if (current.snapshotId !== preview.context.snapshotId || current.digest !== preview.context.digest || current.projection.registryRevision !== preview.context.registryRevision || current.projection.snapshotAt !== preview.context.snapshotAt || freshness !== preview.context.freshness) {
+    throw new Error("The governance context changed. Generate a new preview before saving.")
+  }
+  const request = await loadScreenableRequest(parsed.data.requestId)
+  const draft = validatePdrScreeningDraft(parsed.data.draft, current, freshness)
+  const { error } = await createAdminClient().from("wave_pdr_screening_records").insert({
+    proposal_id: request.id, created_by_user_id: access.user.id, output: draft,
+    governance_snapshot_id: current.snapshotId, governance_snapshot_digest: current.digest,
+    registry_revision: current.projection.registryRevision, governance_snapshot_at: current.projection.snapshotAt,
+    freshness, prompt_version: PDR_SCREENING_PROMPT_VERSION, output_schema_version: PDR_SCREENING_OUTPUT_SCHEMA_VERSION, generation_id: preview.generationId,
+  })
+  if (error) throw new Error(error.code === "23505" ? "This preview was already saved. Generate a new preview." : "The screening could not be saved.")
+  revalidatePath(`/strategic-pdr/requests/${request.id}`)
 }

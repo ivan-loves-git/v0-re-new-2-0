@@ -19,7 +19,7 @@ import {
 import type { WaveAiTokenUsage } from "@/lib/ai/usage"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-export type WaveAiFeature = "email_draft" | "next_action" | "match_review"
+export type WaveAiFeature = "email_draft" | "next_action" | "match_review" | "pdr_screening"
 
 function runtimeEnvironment() {
   if (process.env.NODE_ENV === "test") return "test" as const
@@ -50,18 +50,7 @@ export async function startWaveAiRun(input: {
 }): Promise<StartedWaveAiRun> {
   const supabase = createAdminClient()
   const rateLimitStart = new Date(Date.now() - WAVE_AI_RATE_LIMIT.windowMs).toISOString()
-  const { count, error: countError } = await supabase
-    .from("ai_generation_runs")
-    .select("generation_id", { count: "exact", head: true })
-    .eq("initiated_by_user_id", input.actorUserId)
-    .gte("started_at", rateLimitStart)
-
-  if (countError) throw new WaveAiLedgerError()
-  if ((count ?? 0) >= WAVE_AI_RATE_LIMIT.requests) throw new WaveAiRateLimitError()
-
-  const { data, error } = await supabase
-    .from("ai_generation_runs")
-    .insert({
+  const payload = {
       initiated_by_user_id: input.actorUserId,
       app_role: "staff",
       feature: input.feature,
@@ -76,15 +65,17 @@ export async function startWaveAiRun(input: {
       environment: runtimeEnvironment(),
       release: runtimeRelease(),
       is_test: process.env.NODE_ENV === "test",
-    })
-    .select("generation_id, trace_id, started_at")
-    .single()
+    }
+  const { data, error } = await (supabase as unknown as { rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: { generation_id: string; trace_id: string; started_at: string }[] | null; error: { message?: string } | null }> }).rpc("admit_wave_ai_run", {
+    payload, window_started_at: rateLimitStart, request_limit: WAVE_AI_RATE_LIMIT.requests,
+  })
 
-  if (error || !data) throw new WaveAiLedgerError()
+  if (error?.message?.includes("wave_ai_rate_limited")) throw new WaveAiRateLimitError()
+  if (error || !data?.[0]) throw new WaveAiLedgerError()
   return {
-    generationId: data.generation_id,
-    traceId: data.trace_id,
-    startedAt: data.started_at,
+    generationId: data[0].generation_id,
+    traceId: data[0].trace_id,
+    startedAt: data[0].started_at,
   }
 }
 
