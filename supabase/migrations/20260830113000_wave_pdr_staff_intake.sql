@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.wave_pdr_request_attachments (
   storage_path TEXT NOT NULL UNIQUE CHECK (NULLIF(BTRIM(storage_path),'') IS NOT NULL AND storage_path !~ '(^|/)\\.\\.?(/|$)'),
   original_filename TEXT NOT NULL CHECK (CHAR_LENGTH(original_filename) BETWEEN 1 AND 255),
   content_type TEXT NOT NULL CHECK (NULLIF(BTRIM(content_type),'') IS NOT NULL),
-  size_bytes BIGINT NOT NULL CHECK (size_bytes BETWEEN 1 AND 4194304),
+  size_bytes BIGINT NOT NULL CHECK (size_bytes BETWEEN 1 AND 20971520),
   uploaded_by_user_id TEXT NOT NULL CHECK (NULLIF(BTRIM(uploaded_by_user_id),'') IS NOT NULL),
   content_sha256 TEXT CHECK (content_sha256 IS NULL OR content_sha256 ~ '^[0-9a-f]{64}$'),
   legacy_source_fingerprint TEXT CHECK (legacy_source_fingerprint IS NULL OR legacy_source_fingerprint ~ '^[0-9a-f]{64}$'),
@@ -44,9 +44,9 @@ CREATE INDEX IF NOT EXISTS wave_pdr_request_attachments_proposal_idx
   ON public.wave_pdr_request_attachments(proposal_id, created_at ASC);
 
 INSERT INTO storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('pdr-intake-attachments','pdr-intake-attachments',FALSE,4194304,
+VALUES ('pdr-intake-attachments','pdr-intake-attachments',FALSE,20971520,
   ARRAY['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','text/plain','image/jpeg','image/png']::TEXT[])
-ON CONFLICT (id) DO UPDATE SET public=FALSE, file_size_limit=4194304,
+ON CONFLICT (id) DO UPDATE SET public=FALSE, file_size_limit=20971520,
   allowed_mime_types=EXCLUDED.allowed_mime_types;
 
 -- No browser role can read PDR data or storage metadata. WAVE uses the service
