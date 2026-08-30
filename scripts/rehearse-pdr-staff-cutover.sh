@@ -19,9 +19,11 @@ CREATE TABLE pdr_proposals(id uuid primary key default extensions.gen_random_uui
 CREATE TABLE pdr_work_cards(id uuid primary key default extensions.gen_random_uuid(), attachments jsonb default '[]');
 CREATE TABLE pdr_requests(id uuid primary key default extensions.gen_random_uuid()); CREATE TABLE pdr_feedback(id uuid primary key default extensions.gen_random_uuid()); CREATE TABLE pdr_goals(id uuid primary key default extensions.gen_random_uuid()); CREATE TABLE pdr_milestones(id uuid primary key default extensions.gen_random_uuid());
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon,authenticated;
+INSERT INTO pdr_proposals(requester_actor) VALUES ('Bertrand'),('Colin'),('Dev team');
 SQL
 "${p[@]}" -f "$root/supabase/migrations/20260830113000_wave_pdr_staff_intake_foundation.sql" >/dev/null
 "${p[@]}" -f "$root/supabase/migrations/20260830113000_wave_pdr_staff_intake_foundation.sql" >/dev/null
+"${p[@]}" -c "DO \$\$ BEGIN IF (SELECT count(*) FROM pdr_proposals WHERE requester_actor IN ('Bertrand','Colin','Dev team')) <> 3 THEN RAISE EXCEPTION 'legacy actor lost'; END IF; BEGIN INSERT INTO pdr_proposals(requester_actor) VALUES ('unknown'); RAISE EXCEPTION 'unknown actor allowed'; EXCEPTION WHEN check_violation THEN NULL; WHEN raise_exception THEN IF SQLERRM='unknown actor allowed' THEN RAISE; END IF; END; END \$\$;" >/dev/null
 "${p[@]}" <<'SQL'
 INSERT INTO wave_pdr_governance_capabilities(singleton,actor_user_id,granted_by) VALUES(true,'ivan','test');
 DO $$ BEGIN BEGIN INSERT INTO wave_pdr_governance_capabilities(singleton,actor_user_id,granted_by) VALUES(true,'other','test'); RAISE EXCEPTION 'singleton allowed'; EXCEPTION WHEN unique_violation THEN NULL; END; END $$;

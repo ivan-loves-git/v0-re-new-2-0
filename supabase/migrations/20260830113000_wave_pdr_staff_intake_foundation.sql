@@ -13,7 +13,7 @@ ALTER TABLE public.pdr_proposals
   DROP CONSTRAINT IF EXISTS pdr_proposals_disposition_kind_check,
   DROP CONSTRAINT IF EXISTS pdr_proposals_disposition_audit_check,
   ADD CONSTRAINT pdr_proposals_requester_actor_check
-    CHECK (requester_actor IN ('Dev team','qa_person','Colin','Staff')),
+    CHECK (requester_actor IN ('Bertrand','Colin','Dev team','Staff')),
   ADD CONSTRAINT pdr_proposals_disposition_kind_check
     CHECK (disposition_kind IS NULL OR disposition_kind IN ('approved','declined')),
   ADD CONSTRAINT pdr_proposals_disposition_audit_check
