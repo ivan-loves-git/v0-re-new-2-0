@@ -40,7 +40,10 @@ the following are ready in the same protected cutover:
 3. `pnpm pdr:cutover-legacy-attachments` has previewed the exact candidate
    `count:digest`, then its matching `--apply --confirm=<count:digest>` has
    copied, hash-verified and registered every candidate; and
-4. the public standalone PDR retirement gate is explicitly passed.
+4. the exact policy in `scripts/prestage-pdr-storage-guard.sql` has been applied
+   through Supabase's provider-managed SQL migration surface and its verification
+   block has passed; and
+5. the public standalone PDR retirement gate is explicitly passed.
 
 The attachment operator accepts only legacy public-object URLs on the configured
 Supabase origin and downloads them through service-role Storage; it neither
@@ -60,12 +63,23 @@ the existing standalone PDR. Do not rewrite historical rows to make the counts
 fit. A failed PDR query is surfaced as unavailable; WAVE must not substitute a
 PDR Work Card or create a GitHub item as a fallback.
 
+After the migration, load the production environment without printing it and
+run `pnpm pdr:verify-final-retirement`. The verifier chooses an existing legacy
+object path privately through the direct database connection, then proves that
+its public Storage HTTP URL, its anonymous authenticated-object URL and
+anonymous Data API reads are all non-success responses. It prints statuses
+only, never the object path, response body or credentials.
+
 ## Rollback boundary
 
 Before public retirement, use the exact SQL in
 `scripts/rollback-pdr-final-retirement.sql`: it restores the former `SELECT`
-grants for `anon` and `authenticated`, makes only the legacy attachment bucket
-public again, and removes the Work Card freeze trigger/function. It does not
+grants for `anon` and `authenticated` and removes the Work Card freeze
+trigger/function. It deliberately keeps the legacy attachment bucket private
+and retains the provider-owned restrictive legacy-bucket policy, so neither a
+known public object URL nor a future broad browser policy can silently reopen
+the bucket. Restoring browser attachment access would require a separate
+explicit provider-side policy decision. The SQL rollback does not
 undo the additive foundation, delete private copied attachment records/objects,
 or delete the singleton capability; those remain cutover evidence. The
 disposable PostgreSQL rehearsal applies both migrations twice and exercises the

@@ -1,6 +1,6 @@
 # Commit Style
 
-GitHub is the permanent source for implementation history. The PDR owns product scope and status, and canonical contracts own durable business rules. A commit message should let a non-developer reading it months later understand what changed and why.
+GitHub is the permanent source for approved product scope, decisions, delivery status and implementation history. The WAVE PDR owns founder-request intake, AI screening, Ivan's disposition and the historical proposal record; it is not a delivery tracker. Canonical contracts own durable business rules. A commit message should let a non-developer reading it months later understand what changed and why.
 
 ## When to commit
 
