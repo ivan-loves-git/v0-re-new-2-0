@@ -20,4 +20,10 @@ describe("Strategic PDR page contract", () => {
   it("keeps Strategic PDR as a Project navigation entry", () => {
     expect(source("components/app-sidebar.tsx")).toContain('name: "Strategic PDR"');
   });
+
+  it("closes the AI screening affordance after an Ivan disposition while retaining its saved history", () => {
+    const page = source("app/(dashboard)/strategic-pdr/requests/[requestId]/page.tsx");
+    expect(page).toContain('dispositionEligible ? <PdrScreeningEditor requestId={request.id}/> : request.disposition.kind ? <p className="text-muted-foreground">AI screening is closed after Ivan’s disposition.</p>');
+    expect(page).toContain("Saved AI screening history");
+  });
 });
