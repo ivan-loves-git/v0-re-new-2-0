@@ -58,6 +58,6 @@ SQL
 "${p[@]}" -c "SET ROLE authenticated; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *0$'
 "${p[@]}" -c "SET ROLE service_role; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *1$'
 "${p[@]}" -f "$root/scripts/rollback-pdr-final-retirement.sql" >/dev/null
-"${p[@]}" -c "DO \$\$ BEGIN IF NOT has_table_privilege('anon','pdr_proposals','SELECT') OR NOT (SELECT public FROM storage.buckets WHERE id='pdr-attachments') OR EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='wave_pdr_historical_work_cards_read_only') OR (SELECT count(*) FROM wave_pdr_history_attachments) <> 2 THEN RAISE EXCEPTION 'rollback retention failed'; END IF; END \$\$;" >/dev/null
-"${p[@]}" -c "SET ROLE anon; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *1$'
+"${p[@]}" -c "DO \$\$ BEGIN IF NOT has_table_privilege('anon','pdr_proposals','SELECT') OR NOT (SELECT public FROM storage.buckets WHERE id='pdr-attachments') OR EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='wave_pdr_historical_work_cards_read_only') OR NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND policyname='wave_pdr_retire_legacy_attachment_browser_access' AND permissive='RESTRICTIVE') OR (SELECT count(*) FROM wave_pdr_history_attachments) <> 2 THEN RAISE EXCEPTION 'rollback retention failed'; END IF; END \$\$;" >/dev/null
+"${p[@]}" -c "SET ROLE anon; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *0$'
 echo 'PDR #43 disposable migration and rollback rehearsal passed'

@@ -12,7 +12,9 @@ describe("project document routing", () => {
 
   it("keeps current authority separate from public-safe delivery material, private evidence and archives", () => {
     for (const rule of [
-      "The PDR is the only current source for goals, cards, decisions, owners and delivery status.",
+      "The private `re-new-team/renew-governance` repository and its `Re-New Product Delivery` Project own approved product scope",
+      "The protected WAVE Strategic PDR owns founder-request intake, original wording, AI screening, Ivan's disposition",
+      "it does not own or mirror delivery state",
       "Public-safe delivery communication and release reporting",
       "The existing private Pushapp project repository",
       "legacy source locations, not approval to keep sensitive content public",

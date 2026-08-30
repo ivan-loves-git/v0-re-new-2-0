@@ -64,8 +64,12 @@ PDR Work Card or create a GitHub item as a fallback.
 
 Before public retirement, use the exact SQL in
 `scripts/rollback-pdr-final-retirement.sql`: it restores the former `SELECT`
-grants for `anon` and `authenticated`, makes only the legacy attachment bucket
-public again, and removes the Work Card freeze trigger/function. It does not
+grants for `anon` and `authenticated`, restores the legacy attachment bucket's
+public metadata flag, and removes the Work Card freeze trigger/function. It
+retains the provider-owned restrictive legacy-bucket policy, so browser object
+access remains blocked and a future broad browser policy cannot silently reopen
+the bucket. Restoring that browser access would require a separate explicit
+provider-side policy decision. The SQL rollback does not
 undo the additive foundation, delete private copied attachment records/objects,
 or delete the singleton capability; those remain cutover evidence. The
 disposable PostgreSQL rehearsal applies both migrations twice and exercises the
