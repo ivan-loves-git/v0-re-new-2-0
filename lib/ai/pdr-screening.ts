@@ -8,6 +8,7 @@ import { WAVE_AI_MODEL, WAVE_AI_REASONING_EFFORT } from "@/lib/ai/config"
 import { getWaveAiOpenAiClient } from "@/lib/ai/openai-client"
 import { PDR_CAPABILITY_CATALOGUE, PDR_CAPABILITY_CATALOGUE_VERSION } from "@/lib/ai/pdr-capability-catalogue"
 import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, pdrScreeningDraftSchema, type PdrScreeningContext, type PdrScreeningDraft } from "@/lib/ai/pdr-screening-contract"
+import { PdrScreeningOutputError } from "@/lib/ai/pdr-screening-output-error"
 
 type RequestSource = { id: string; title: string; originalText: string }
 
@@ -45,20 +46,20 @@ If uncertain, say so in unknowns and lower confidence. Return only the requested
 
 export function validatePdrScreeningDraft(draft: unknown, current: Extract<CurrentGovernanceProjection, { state: "available" }>, freshness: "fresh" | "stale"): PdrScreeningDraft {
   const parsed = pdrScreeningDraftSchema.safeParse(draft)
-  if (!parsed.success) throw new SyntaxError("Invalid PDR screening output")
+  if (!parsed.success) throw new PdrScreeningOutputError("schema_mismatch")
   const value = parsed.data
-  if (Boolean(value.suggestedGoalId) !== Boolean(value.suggestedMilestoneId)) throw new SyntaxError("Goal and Milestone must be suggested together")
+  if (Boolean(value.suggestedGoalId) !== Boolean(value.suggestedMilestoneId)) throw new PdrScreeningOutputError("goal_milestone_pair")
   if (freshness === "stale") {
-    if (value.suggestedGoalId || value.suggestedMilestoneId || value.overlappingProductChangeNumbers.length || value.technicalImpact) throw new SyntaxError("Stale screening exceeded advisory limits")
+    if (value.suggestedGoalId || value.suggestedMilestoneId || value.overlappingProductChangeNumbers.length || value.technicalImpact) throw new PdrScreeningOutputError("stale_policy")
     return value
   }
   const goals = new Set(current.projection.registry.goals.map((item) => item.id))
   const milestones = new Map(current.projection.registry.milestones.filter((item) => item.lifecycle === "active").map((item) => [item.id, item.goalId]))
   const productChanges = new Set(current.projection.issues.filter((item) => item.kind === "Product Change").map((item) => item.number))
-  if (value.suggestedGoalId && !goals.has(value.suggestedGoalId)) throw new SyntaxError("Unknown Goal")
-  if (value.suggestedMilestoneId && !milestones.has(value.suggestedMilestoneId)) throw new SyntaxError("Unknown Milestone")
-  if (value.suggestedGoalId && value.suggestedMilestoneId && milestones.get(value.suggestedMilestoneId) !== value.suggestedGoalId) throw new SyntaxError("Goal and Milestone do not match")
-  if (value.overlappingProductChangeNumbers.some((number) => !productChanges.has(number))) throw new SyntaxError("Overlap must be a Product Change")
+  if (value.suggestedGoalId && !goals.has(value.suggestedGoalId)) throw new PdrScreeningOutputError("unknown_goal")
+  if (value.suggestedMilestoneId && !milestones.has(value.suggestedMilestoneId)) throw new PdrScreeningOutputError("unknown_milestone")
+  if (value.suggestedGoalId && value.suggestedMilestoneId && milestones.get(value.suggestedMilestoneId) !== value.suggestedGoalId) throw new PdrScreeningOutputError("goal_milestone_mismatch")
+  if (value.overlappingProductChangeNumbers.some((number) => !productChanges.has(number))) throw new PdrScreeningOutputError("invalid_overlap")
   return value
 }
 
@@ -71,14 +72,26 @@ export async function generatePdrScreening(input: { request: RequestSource; curr
     ? { request: { title: cap(input.request.title, 140), originalWording: cap(input.request.originalText, 4000), clarificationAnswers: input.answers ?? [] }, context: allowedContext(input.current) }
     : { request: { title: cap(input.request.title, 140), originalWording: cap(input.request.originalText, 4000), clarificationAnswers: input.answers ?? [] }, context: { mode: "stale" } }
   if (Buffer.byteLength(JSON.stringify(modelInput), "utf8") > MAX_CONTEXT_BYTES) throw new Error("The governance context is too large to screen safely.")
-  const response = await client.responses.parse({
-    model: WAVE_AI_MODEL, reasoning: { effort: WAVE_AI_REASONING_EFFORT, context: "current_turn" },
-    store: false, parallel_tool_calls: false, max_output_tokens: 2_400,
-    safety_identifier: input.safetyIdentifier.slice(0, 64),
-    instructions: screeningInstructions(freshness),
-    input: JSON.stringify(modelInput),
-    text: { format: zodTextFormat(pdrScreeningDraftSchema, "pdr_screening_preview"), verbosity: "low" },
-  })
+  let response
+  try {
+    response = await client.responses.parse({
+      model: WAVE_AI_MODEL, reasoning: { effort: WAVE_AI_REASONING_EFFORT, context: "current_turn" },
+      store: false, parallel_tool_calls: false, max_output_tokens: 2_400,
+      safety_identifier: input.safetyIdentifier.slice(0, 64),
+      instructions: screeningInstructions(freshness),
+      input: JSON.stringify(modelInput),
+      text: { format: zodTextFormat(pdrScreeningDraftSchema, "pdr_screening_preview"), verbosity: "low" },
+    })
+  } catch (cause) {
+    if (cause instanceof SyntaxError) throw new PdrScreeningOutputError("provider_parse_failure")
+    throw cause
+  }
+  if (response.status === "incomplete") {
+    const reason = response.incomplete_details?.reason
+    throw new PdrScreeningOutputError(reason === "max_output_tokens" ? "provider_incomplete_max_output_tokens" : reason === "content_filter" ? "provider_incomplete_content_filter" : "provider_incomplete_unknown")
+  }
+  if (response.status && response.status !== "completed") throw new PdrScreeningOutputError("provider_failed")
+  if (!response.output_parsed) throw new PdrScreeningOutputError("provider_unparsed")
   const draft = validatePdrScreeningDraft(response.output_parsed, input.current, freshness)
   return { draft, context, usage: response.usage }
 }

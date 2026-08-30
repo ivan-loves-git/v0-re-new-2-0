@@ -18,7 +18,7 @@ const state = vi.hoisted(() => ({
   started: { generationId: "323e4567-e89b-42d3-a456-426614174000", traceId: "trace", startedAt: "2026-08-30T00:00:00.000Z" } as any,
   startError: null as unknown,
   failError: null as unknown,
-  calls: { history: 0, projection: 0, generate: [] as any[], start: 0, complete: 0, fail: 0, inserts: [] as any[], revalidate: [] as string[] },
+  calls: { history: 0, projection: 0, generate: [] as any[], start: 0, complete: 0, fail: [] as any[], inserts: [] as any[], revalidate: [] as string[] },
   insertError: null as any,
 }))
 
@@ -40,7 +40,7 @@ vi.mock("@/lib/ai/pdr-screening", async () => {
 vi.mock("@/lib/ai/ledger", () => ({
   startWaveAiRun: vi.fn(async () => { state.calls.start++; if (state.startError) throw state.startError; return state.started }),
   completeWaveAiRun: vi.fn(async () => { state.calls.complete++ }),
-  failWaveAiRun: vi.fn(async () => { state.calls.fail++; if (state.failError) throw state.failError }),
+  failWaveAiRun: vi.fn(async (input: unknown) => { state.calls.fail.push(input); if (state.failError) throw state.failError }),
 }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({ from: (table: string) => ({ insert: async (value: unknown) => { state.calls.inserts.push({ table, value }); return { error: state.insertError } } }) })) }))
 vi.mock("@/lib/telemetry/identity", () => ({ getOpaqueTelemetryUserId: vi.fn(() => "opaque-telemetry-id") }))
@@ -49,6 +49,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn((path: string) => state.cal
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }))
 
 import { generateStrategicPdrScreening, saveStrategicPdrScreening } from "@/lib/actions/strategic-pdr"
+import { PdrScreeningOutputError } from "@/lib/ai/pdr-screening-output-error"
 
 function form(extra: Record<string, string> = {}) { const value = new FormData(); value.set("request_id", requestId); for (const [key, item] of Object.entries(extra)) value.set(key, item); return value }
 function current(snapshotAt = "2026-08-30T00:00:00.000Z") { return { state: "available", snapshotId, digest: "a".repeat(64), projection: { registryRevision: "r1", snapshotAt, registry: { goals: [{ id: "G-001" }], milestones: [{ id: "M-001", goalId: "G-001", lifecycle: "active" }] }, issues: [{ number: 12, kind: "Product Change" }] } } }
@@ -59,7 +60,7 @@ beforeEach(() => {
   state.access = { user: { id: "staff-user" }, role: "staff" }; state.current = current(); state.request = request()
   state.generated = { draft: { ...draft }, context: { snapshotId, digest: "a".repeat(64), registryRevision: "r1", snapshotAt: "2026-08-30T00:00:00.000Z", freshness: "fresh" }, usage: undefined }
   state.generateError = null; state.startError = null; state.failError = null; state.insertError = null
-  state.calls = { history: 0, projection: 0, generate: [], start: 0, complete: 0, fail: 0, inserts: [], revalidate: [] }
+  state.calls = { history: 0, projection: 0, generate: [], start: 0, complete: 0, fail: [], inserts: [], revalidate: [] }
 })
 
 describe("Strategic PDR AI screening actions", () => {
@@ -110,6 +111,19 @@ describe("Strategic PDR AI screening actions", () => {
     state.startError = new Error("rate limited")
     await expect(generateStrategicPdrScreening(form())).rejects.toThrow("The screening preview could not be generated. No screening was saved.")
     expect(state.calls.inserts).toEqual([])
+  })
+
+  it("records only the allowlisted PDR output-failure category", async () => {
+    state.generateError = new PdrScreeningOutputError("provider_incomplete_max_output_tokens")
+    await expect(generateStrategicPdrScreening(form())).rejects.toThrow("The screening preview could not be generated. No screening was saved.")
+    expect(state.calls.fail).toEqual([expect.objectContaining({ generationId, code: "invalid_output_provider_incomplete_max_output_tokens" })])
+    expect(JSON.stringify(state.calls.fail)).not.toContain("Original wording")
+  })
+
+  it("keeps a failed provider response separate from invalid model output", async () => {
+    state.generateError = new PdrScreeningOutputError("provider_failed")
+    await expect(generateStrategicPdrScreening(form())).rejects.toThrow("The screening preview could not be generated. No screening was saved.")
+    expect(state.calls.fail).toEqual([expect.objectContaining({ code: "provider_response_failed" })])
   })
 
   it("binds refinement answers to the signed prior questions and current snapshot", async () => {

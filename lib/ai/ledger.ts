@@ -11,6 +11,7 @@ import {
   WAVE_AI_REASONING_EFFORT,
 } from "@/lib/ai/config"
 import { WaveAiLedgerError, WaveAiRateLimitError, type WaveAiErrorCode } from "@/lib/ai/errors"
+import type { PdrScreeningLedgerErrorCode } from "@/lib/ai/pdr-screening-output-error"
 import {
   summarizeWaveAiMetrics,
   type WaveAiEventMetricRow,
@@ -110,7 +111,7 @@ export async function completeWaveAiRun(input: {
 
 export async function failWaveAiRun(input: {
   generationId: string
-  code: WaveAiErrorCode
+  code: WaveAiErrorCode | PdrScreeningLedgerErrorCode
   latencyMs: number
 }) {
   const completedAt = new Date().toISOString()
