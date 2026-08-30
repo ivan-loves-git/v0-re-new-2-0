@@ -23,6 +23,7 @@ import {
   User,
   Waves,
   Sparkles,
+  ScrollText,
   Palette,
   ListTree,
   UsersRound,
@@ -106,6 +107,7 @@ const projectNavigation: NavigationItem[] = [
   },
   { name: "Guidelines", href: "/guide/guidelines", icon: BookOpenCheck },
   { name: "Design system", href: "/guide/design-system", icon: Palette },
+  { name: "Strategic PDR", href: "/strategic-pdr", icon: ScrollText },
 ]
 
 // External users section removed - dead routes cleaned up

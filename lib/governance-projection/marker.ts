@@ -69,7 +69,10 @@ export function parseGovernanceMarker(body: string | null | undefined): GithubMa
   const bootstrap = text("bootstrap");
   if (bootstrap && bootstrap !== "manual") throw new Error("governance marker bootstrap is unsupported");
   return {
-    kind, strategy_revision: text("strategy_revision"), goal_id: text("goal_id"), milestone_id: text("milestone_id"),
+    kind, publication: publication as "manual" | "direct-github" | undefined,
+    bootstrap: bootstrap as "manual" | undefined, pdr_reference: pdrRef,
+    pdr_work_card_id: text("pdr_work_card_id"), pdr_strategic_item_id: text("pdr_strategic_item_id"),
+    strategy_revision: text("strategy_revision"), goal_id: text("goal_id"), milestone_id: text("milestone_id"),
     kpi_ids: ids("kpi_ids"), guardrail_ids: ids("guardrail_ids"), placement_decision: issueNumber("placement_decision"),
     approval_keys: ids("approval_keys"), approved_by: text("approved_by"), decision_state: text("decision_state"),
     decision_key: text("decision_key"), strategic_placement: text("strategic_placement"),

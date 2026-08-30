@@ -72,6 +72,40 @@ describe("current governance projection reader", () => {
     await expect(readCurrentGovernanceProjection()).resolves.toEqual({ state: "unavailable", reason: "read_failed" });
   });
 
+  it("accepts validated Genesis Decision strategic-item provenance", async () => {
+    const projection = structuredClone(validProjection());
+    projection.issues[0].provenance = {
+      state: "pdr_strategic_item",
+      bootstrap: "manual",
+      pdrStrategicItemId: "123e4567-e89b-42d3-a456-426614174000",
+    };
+    maybeSingle.mockResolvedValueOnce({
+      data: {
+        snapshot_id: "id",
+        snapshot_digest: governanceProjectionDigest(projection),
+        payload: projection,
+      },
+      error: null,
+    });
+    const { readCurrentGovernanceProjection } =
+      await import("@/lib/governance-projection/server");
+    await expect(readCurrentGovernanceProjection()).resolves.toMatchObject({
+      state: "available",
+      projection: {
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            number: 36,
+            provenance: {
+              state: "pdr_strategic_item",
+              bootstrap: "manual",
+              pdrStrategicItemId: "123e4567-e89b-42d3-a456-426614174000",
+            },
+          }),
+        ]),
+      },
+    });
+  });
+
   it.each([
     ["unknown fields", (value: Record<string, unknown>) => { value.unexpected = true; }],
     ["duplicate issue", (value: Record<string, unknown>) => { (value.issues as unknown[]).push(structuredClone((value.issues as unknown[])[0])); }],

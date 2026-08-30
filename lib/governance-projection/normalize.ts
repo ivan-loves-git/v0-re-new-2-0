@@ -4,6 +4,7 @@ import {
   type DecisionState,
   type GithubIssueFact,
   type GovernanceIssueKind,
+  type GovernanceProvenance,
   type GovernanceProjection,
   type GovernanceSourceModel,
   type LegacyExclusion,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/governance-projection/model";
 
 const SHA = /^[0-9a-f]{40}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STAMP = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
 const ISSUE_URL =
@@ -571,16 +573,26 @@ function validateIssueShape(issue: GithubIssueFact) {
   if (issue.marker) {
     const marker = issue.marker as Record<string, unknown>;
     const allowed = new Set([
-      "kind", "strategy_revision", "goal_id", "milestone_id", "kpi_ids",
+      "kind", "publication", "bootstrap", "pdr_reference", "pdr_work_card_id", "pdr_strategic_item_id",
+      "strategy_revision", "goal_id", "milestone_id", "kpi_ids",
       "guardrail_ids", "placement_decision", "approval_keys", "approved_by",
       "decision_state", "decision_key", "strategic_placement",
     ]);
     for (const key of Object.keys(marker))
       if (!allowed.has(key))
         throw new Error(`issue #${issue.number} marker has unknown field`);
-    for (const key of ["strategy_revision", "goal_id", "milestone_id", "approved_by", "decision_state", "decision_key", "strategic_placement"])
+    for (const key of ["pdr_reference", "strategy_revision", "goal_id", "milestone_id", "approved_by", "decision_state", "decision_key", "strategic_placement"])
       if (marker[key] != null && (typeof marker[key] !== "string" || !marker[key]?.trim()))
         throw new Error(`issue #${issue.number} marker ${key} is malformed`);
+    if (marker.pdr_reference != null && !/^W-\d{3}$/.test(marker.pdr_reference as string))
+      throw new Error(`issue #${issue.number} marker pdr_reference is malformed`);
+    for (const key of ["pdr_work_card_id", "pdr_strategic_item_id"])
+      if (marker[key] != null && (typeof marker[key] !== "string" || !UUID.test(marker[key] as string)))
+        throw new Error(`issue #${issue.number} marker ${key} is malformed`);
+    if (marker.publication != null && marker.publication !== "manual" && marker.publication !== "direct-github")
+      throw new Error(`issue #${issue.number} marker publication is malformed`);
+    if (marker.bootstrap != null && marker.bootstrap !== "manual")
+      throw new Error(`issue #${issue.number} marker bootstrap is malformed`);
     if (marker.placement_decision != null && (!Number.isInteger(marker.placement_decision) || (marker.placement_decision as number) < 1))
       throw new Error(`issue #${issue.number} marker placement_decision is malformed`);
     for (const key of ["kpi_ids", "guardrail_ids", "approval_keys"])
@@ -596,6 +608,8 @@ function validateIssueShape(issue: GithubIssueFact) {
   for (const list of [issue.marker?.kpi_ids, issue.marker?.guardrail_ids, issue.marker?.approval_keys])
     if (list && new Set(list).size !== list.length)
       throw new Error(`issue #${issue.number} governance marker contains duplicates`);
+  if ((issue.kind === "Ticket" || issue.kind === "Bug") && issue.marker && ["publication", "bootstrap", "pdr_reference", "pdr_work_card_id", "pdr_strategic_item_id"].some((key) => (issue.marker as Record<string, unknown>)[key] != null))
+    throw new Error(`${issue.kind} #${issue.number} cannot own provenance fields`);
   const dependencyNumbers = (issue.dependencies ?? []).map((d) => d.number);
   if (new Set(dependencyNumbers).size !== dependencyNumbers.length)
     throw new Error(`issue #${issue.number} has duplicate dependencies`);
@@ -613,6 +627,49 @@ function validateIssueShape(issue: GithubIssueFact) {
   for (const pr of issue.pullRequests ?? [])
     if (!PR_URL.test(pr.url) || !PR_STATES.has(pr.state))
       throw new Error(`issue #${issue.number} has invalid pull request reference`);
+}
+
+function safeProvenance(issue: GithubIssueFact): GovernanceProvenance | undefined {
+  if (issue.kind !== "Product Change" && issue.kind !== "Decision") return undefined;
+  const marker = issue.marker ?? {};
+  const pdrReference = marker.pdr_reference;
+  const pdrWorkCardId = marker.pdr_work_card_id;
+  const pdrStrategicItemId = marker.pdr_strategic_item_id;
+  const hasPdrWorkCard = Boolean(pdrReference && pdrWorkCardId);
+  const hasPartialPdrWorkCard = Boolean(pdrReference) !== Boolean(pdrWorkCardId);
+  const metadata = {
+    ...(marker.publication ? { publication: marker.publication } : {}),
+    ...(marker.bootstrap ? { bootstrap: marker.bootstrap } : {}),
+    ...(pdrReference ? { pdrReference } : {}),
+    ...(pdrWorkCardId ? { pdrWorkCardId } : {}),
+    ...(pdrStrategicItemId ? { pdrStrategicItemId } : {}),
+  };
+  if (issue.kind === "Decision") {
+    if (marker.publication === "direct-github" || pdrReference || pdrWorkCardId)
+      throw new Error(`Decision #${issue.number} has unsupported source provenance`);
+    if (pdrStrategicItemId) {
+      if (marker.bootstrap !== "manual")
+        throw new Error(`Decision #${issue.number} strategic-item provenance requires manual bootstrap`);
+      return { state: "pdr_strategic_item", ...metadata };
+    }
+    return Object.keys(metadata).length ? { state: "unverified", ...metadata } : undefined;
+  }
+  if (marker.publication === "direct-github") {
+    if (pdrReference || pdrWorkCardId || pdrStrategicItemId)
+      throw new Error(`Product Change #${issue.number} direct GitHub provenance conflicts with PDR source fields`);
+    return { state: "direct_github", ...metadata };
+  }
+  if (hasPdrWorkCard) {
+    if (pdrStrategicItemId)
+      throw new Error(`Product Change #${issue.number} has conflicting PDR source fields`);
+    return { state: "pdr_work_card", ...metadata };
+  }
+  if (pdrStrategicItemId) {
+    if (hasPartialPdrWorkCard)
+      throw new Error(`Product Change #${issue.number} has conflicting PDR source fields`);
+    return { state: "pdr_strategic_item", ...metadata };
+  }
+  return { state: "unverified", ...metadata };
 }
 function validateLegacyExclusions(
   exclusions: LegacyExclusion[],
@@ -669,6 +726,7 @@ function safeIssue(
   issue: GithubIssueFact,
   placement: SafeGovernanceIssue["placement"],
 ): SafeGovernanceIssue {
+  const provenance = safeProvenance(issue);
   return {
     number: issue.number,
     title: issue.title.trim(),
@@ -690,5 +748,6 @@ function safeIssue(
       }))
       .sort((a, b) => a.url.localeCompare(b.url)),
     placement,
+    ...(provenance ? { provenance } : {}),
   };
 }
