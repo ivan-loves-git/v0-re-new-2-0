@@ -9,7 +9,9 @@ function signature(body: string, actor: string, key: string) { return createHmac
 function key() { return process.env.BETTER_AUTH_SECRET?.trim() || null }
 export function createPdrScreeningPreviewToken(input: Omit<Payload, "v" | "exp">, actor: string, now = Date.now()) {
   const secret = key(); if (!secret) throw new Error("Screening preview correlation unavailable.")
-  const body = Buffer.from(JSON.stringify({ ...input, v: 1, exp: now + 10 * 60_000 })).toString("base64url")
+  // The body deliberately contains only opaque correlation values.  The actor
+  // is bound into the MAC, rather than being disclosed to the browser.
+  const body = Buffer.from(JSON.stringify({ ...input, v: 2, exp: now + 10 * 60_000 })).toString("base64url")
   return `${body}.${signature(body, actor, secret)}`
 }
 export function validatePdrScreeningPreviewToken(token: string, expected: { actor: string; requestId: string; draftDigest: string }, now = Date.now()): Payload | null {

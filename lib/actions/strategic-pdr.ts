@@ -10,7 +10,7 @@ import { isUuid } from "@/lib/uuid"
 import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server"
 import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness"
 import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, generatePdrScreening, validatePdrScreeningDraft } from "@/lib/ai/pdr-screening"
-import { pdrScreeningSaveSchema, type PdrScreeningContext, type PdrScreeningDraft } from "@/lib/ai/pdr-screening-contract"
+import { pdrScreeningAnswersSchema, pdrScreeningSaveSchema, type PdrScreeningContext, type PdrScreeningDraft } from "@/lib/ai/pdr-screening-contract"
 import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
 import { classifyWaveAiError } from "@/lib/ai/errors"
 import { estimateWaveAiCostUsd, normalizeWaveAiUsage } from "@/lib/ai/usage"
@@ -99,11 +99,20 @@ export async function generateStrategicPdrScreening(formData: FormData): Promise
   const current = await readCurrentGovernanceProjection()
   if (current.state !== "available") throw new Error("The GitHub governance snapshot is unavailable. No AI request was made.")
   const request = await loadScreenableRequest(requestId)
+  const rawAnswers = text(formData, "clarification_answers", 5000)
+  let answers: Array<{ question: string; answer: string }> | undefined
+  if (rawAnswers) { try {
+    const parsed = pdrScreeningAnswersSchema.safeParse(JSON.parse(rawAnswers)); const rawDraft = text(formData, "prior_draft", 12_000); const priorToken = text(formData, "prior_preview_token", 16_000)
+    const priorDraft = JSON.parse(rawDraft) as unknown; const priorDigest = pdrScreeningDraftDigest(pdrScreeningSaveSchema.shape.draft.parse(priorDraft))
+    const prior = validatePdrScreeningPreviewToken(priorToken, { actor: access.user.id, requestId, draftDigest: priorDigest })
+    if (!parsed.success || !prior || !Array.isArray((priorDraft as PdrScreeningDraft).clarificationQuestions) || parsed.data.some((item) => !(priorDraft as PdrScreeningDraft).clarificationQuestions.includes(item.question))) throw new Error()
+    answers = parsed.data
+  } catch { throw new Error("Clarification answers are invalid or no longer match the preview.") } }
   const startedAt = Date.now()
   let run: Awaited<ReturnType<typeof startWaveAiRun>> | null = null
   try {
     run = await startWaveAiRun({ actorUserId: access.user.id, feature: "pdr_screening", workflow: "pdr_screening_preview", surface: "/strategic-pdr/requests" , promptVersion: PDR_SCREENING_PROMPT_VERSION, outputSchemaVersion: PDR_SCREENING_OUTPUT_SCHEMA_VERSION })
-    const result = await generatePdrScreening({ request: { id: request.id, title: request.title, originalText: request.originalText }, current, safetyIdentifier: getOpaqueTelemetryUserId(access.user.id) })
+    const result = await generatePdrScreening({ request: { id: request.id, title: request.title, originalText: request.originalText }, current, answers, safetyIdentifier: getOpaqueTelemetryUserId(access.user.id) })
     const usage = normalizeWaveAiUsage(result.usage)
     await completeWaveAiRun({ generationId: run.generationId, usage, estimatedCostUsd: estimateWaveAiCostUsd(usage), latencyMs: Date.now() - startedAt })
     return { draft: result.draft, context: result.context, previewToken: createPdrScreeningPreviewToken({ generationId: run.generationId, requestId, context: result.context, draftDigest: pdrScreeningDraftDigest(result.draft) }, access.user.id) }
@@ -134,6 +143,6 @@ export async function saveStrategicPdrScreening(input: unknown) {
     registry_revision: current.projection.registryRevision, governance_snapshot_at: current.projection.snapshotAt,
     freshness, prompt_version: PDR_SCREENING_PROMPT_VERSION, output_schema_version: PDR_SCREENING_OUTPUT_SCHEMA_VERSION, generation_id: preview.generationId,
   })
-  if (error) throw new Error("The screening could not be saved.")
+  if (error) throw new Error(error.code === "23505" ? "This preview was already saved. Generate a new preview." : "The screening could not be saved.")
   revalidatePath(`/strategic-pdr/requests/${request.id}`)
 }

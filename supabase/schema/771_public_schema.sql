@@ -8827,7 +8827,7 @@ CREATE TABLE "public"."ai_generation_runs" (
     CONSTRAINT "ai_generation_runs_environment_check" CHECK (("environment" = ANY (ARRAY['development'::"text", 'preview'::"text", 'production'::"text", 'test'::"text"]))),
     CONSTRAINT "ai_generation_runs_error_code_check" CHECK (("char_length"("error_code") <= 80)),
     CONSTRAINT "ai_generation_runs_estimated_cost_usd_check" CHECK (("estimated_cost_usd" >= (0)::numeric)),
-    CONSTRAINT "ai_generation_runs_feature_check" CHECK (("feature" = ANY (ARRAY['email_draft'::"text", 'next_action'::"text", 'match_review'::"text"]))),
+    CONSTRAINT "ai_generation_runs_feature_check" CHECK (("feature" = ANY (ARRAY['email_draft'::"text", 'next_action'::"text", 'match_review'::"text", 'pdr_screening'::"text"]))),
     CONSTRAINT "ai_generation_runs_initiated_by_user_id_check" CHECK ((("char_length"("initiated_by_user_id") >= 1) AND ("char_length"("initiated_by_user_id") <= 160))),
     CONSTRAINT "ai_generation_runs_input_tokens_check" CHECK (("input_tokens" >= 0)),
     CONSTRAINT "ai_generation_runs_latency_ms_check" CHECK ((("latency_ms" IS NULL) OR ("latency_ms" >= 0))),

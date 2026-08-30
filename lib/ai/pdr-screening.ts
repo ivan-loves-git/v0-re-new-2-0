@@ -11,20 +11,27 @@ import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, pdrS
 
 type RequestSource = { id: string; title: string; originalText: string }
 
+const MAX_CONTEXT_BYTES = 24_000
+const cap = (value: string, max: number) => value.trim().slice(0, max)
+
 function allowedContext(current: Extract<CurrentGovernanceProjection, { state: "available" }>) {
   const { projection } = current
+  const activeMilestones = projection.registry.milestones.filter((item) => item.lifecycle === "active")
+  const activeGuardrails = projection.registry.guardrails.filter((item) => item.lifecycle === "active")
+  const productChanges = projection.issues.filter((item) => item.kind === "Product Change")
+  if (projection.registry.goals.length > 30 || activeMilestones.length > 60 || activeGuardrails.length > 40 || productChanges.length > 80) throw new Error("The governance context cannot be compacted safely.")
   return {
     registryRevision: projection.registryRevision,
-    goals: projection.registry.goals.map(({ id, title, statement }) => ({ id, title, statement })),
-    milestones: projection.registry.milestones.filter((item) => item.lifecycle === "active").map(({ id, goalId, title, outcome }) => ({ id, goalId, title, outcome })),
-    guardrails: projection.registry.guardrails.filter((item) => item.lifecycle === "active").map(({ id, title, rule }) => ({ id, title, rule })),
-    productChanges: projection.issues.filter((item) => item.kind === "Product Change").map((item) => ({
-      number: item.number, title: item.title, status: item.projectStatus,
+    goals: projection.registry.goals.slice(0, 30).map(({ id, title, statement }) => ({ id, title: cap(title, 160), statement: cap(statement, 700) })),
+    milestones: activeMilestones.map(({ id, goalId, title, outcome }) => ({ id, goalId, title: cap(title, 160), outcome: cap(outcome, 700) })),
+    guardrails: activeGuardrails.map(({ id, title, rule }) => ({ id, title: cap(title, 160), rule: cap(rule, 700) })),
+    productChanges: productChanges.map((item) => ({
+      number: item.number, title: cap(item.title, 200), status: item.projectStatus,
       goalId: item.placement.goalId, milestoneId: item.placement.milestoneId,
       provenance: item.provenance?.state ?? "unverified",
     })),
     capabilityCatalogue: { version: PDR_CAPABILITY_CATALOGUE_VERSION, entries: PDR_CAPABILITY_CATALOGUE },
-  }
+  } as const
 }
 
 function screeningInstructions(freshness: "fresh" | "stale") {
@@ -55,17 +62,21 @@ export function validatePdrScreeningDraft(draft: unknown, current: Extract<Curre
   return value
 }
 
-export async function generatePdrScreening(input: { request: RequestSource; current: CurrentGovernanceProjection; safetyIdentifier: string }): Promise<{ draft: PdrScreeningDraft; context: PdrScreeningContext; usage: ResponseUsage | undefined }> {
+export async function generatePdrScreening(input: { request: RequestSource; current: CurrentGovernanceProjection; safetyIdentifier: string; answers?: Array<{ question: string; answer: string }> }): Promise<{ draft: PdrScreeningDraft; context: PdrScreeningContext; usage: ResponseUsage | undefined }> {
   if (input.current.state !== "available") throw new Error("Governance context is unavailable")
   const freshness = isGovernanceProjectionStale(input.current.projection.snapshotAt) ? "stale" : "fresh"
   const context: PdrScreeningContext = { snapshotId: input.current.snapshotId, digest: input.current.digest, registryRevision: input.current.projection.registryRevision, snapshotAt: input.current.projection.snapshotAt, freshness }
   const client = getWaveAiOpenAiClient()
+  const modelInput = freshness === "fresh"
+    ? { request: { title: cap(input.request.title, 140), originalWording: cap(input.request.originalText, 4000), clarificationAnswers: input.answers ?? [] }, context: allowedContext(input.current) }
+    : { request: { title: cap(input.request.title, 140), originalWording: cap(input.request.originalText, 4000), clarificationAnswers: input.answers ?? [] }, context: { mode: "stale" } }
+  if (Buffer.byteLength(JSON.stringify(modelInput), "utf8") > MAX_CONTEXT_BYTES) throw new Error("The governance context is too large to screen safely.")
   const response = await client.responses.parse({
     model: WAVE_AI_MODEL, reasoning: { effort: WAVE_AI_REASONING_EFFORT, context: "current_turn" },
     store: false, parallel_tool_calls: false, max_output_tokens: 2_400,
     safety_identifier: input.safetyIdentifier.slice(0, 64),
     instructions: screeningInstructions(freshness),
-    input: JSON.stringify({ request: { title: input.request.title, originalWording: input.request.originalText }, context: freshness === "fresh" ? allowedContext(input.current) : { registryRevision: input.current.projection.registryRevision, mode: "stale" } }),
+    input: JSON.stringify(modelInput),
     text: { format: zodTextFormat(pdrScreeningDraftSchema, "pdr_screening_preview"), verbosity: "low" },
   })
   const draft = validatePdrScreeningDraft(response.output_parsed, input.current, freshness)
