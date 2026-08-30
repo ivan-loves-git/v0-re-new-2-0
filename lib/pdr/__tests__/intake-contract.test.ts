@@ -58,4 +58,12 @@ describe("Strategic PDR intake/history boundary", () => {
     expect(provenance).toContain("BEFORE UPDATE OF intake_provenance")
     expect(provenance).not.toContain("UPDATE public.pdr_proposals")
   })
+
+  it("projects only the optional canonical GitHub Product Change link", () => {
+    const adapter = source("lib/pdr/intake-server.ts")
+    expect(adapter).toContain("github_product_change_number, github_product_change_url")
+    expect(adapter).toContain("githubProductChange")
+    expect(adapter).toContain("githubProductChange: null")
+    expect(adapter).not.toContain("github_product_change_correlation_id, github_product_change_linked_at")
+  })
 })
