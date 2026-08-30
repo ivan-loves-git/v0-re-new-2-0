@@ -9,13 +9,20 @@ export type GovernanceIssueKind =
   | "Bug";
 export type ProjectStatus =
   | "Unrouted"
+  | "Ready"
   | "Todo"
   | "In Progress"
   | "Review"
   | "Done"
   | null;
-export type DecisionState = "Proposed" | "Decided" | "Superseded" | null;
+export type DecisionState =
+  | "Proposed"
+  | "Needs Ivan"
+  | "Decided"
+  | "Superseded"
+  | null;
 export interface GithubMarker {
+  kind?: GovernanceIssueKind;
   strategy_revision?: string;
   goal_id?: string;
   milestone_id?: string;

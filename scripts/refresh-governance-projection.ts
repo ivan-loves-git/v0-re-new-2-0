@@ -7,10 +7,9 @@
 import { execFileSync } from "node:child_process";
 import { parse } from "yaml";
 import { createClient } from "@supabase/supabase-js";
-import { createGovernanceProjection } from "@/lib/governance-projection/normalize";
+import { refreshGovernanceProjection } from "@/lib/governance-projection/refresh";
 import {
-  governanceProjectionDigest,
-  stableProjectionText,
+  type LegacyExclusion,
   type GithubIssueFact,
   type GovernanceSourceModel,
 } from "@/lib/governance-projection/model";
@@ -26,62 +25,42 @@ function gh(args: string[]) {
 function marker(body: string | null | undefined) {
   const yaml = body?.match(/<!--\s*renew-governance\s*\n([\s\S]*?)-->/)?.[1];
   if (!yaml) return undefined;
-  const raw = parse(yaml) as Record<string, unknown>;
-  const number = (value: unknown) =>
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && /^#?\d+$/.test(value)
-        ? Number(value.replace("#", ""))
-        : undefined;
+  const raw = parse(yaml);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    throw new Error("governance marker must be an object");
+  const values = raw as Record<string, unknown>;
+  const allowed = new Set(["schema", "kind", "correlation_id", "pdr_reference", "pdr_work_card_id", "pdr_strategic_item_id", "publication", "bootstrap", "strategy_revision", "goal_id", "milestone_id", "kpi_ids", "guardrail_ids", "placement_decision", "approval_keys", "approved_by", "decision_state", "decision_key", "strategic_placement"]);
+  if (values.schema !== 1) throw new Error("governance marker schema must equal 1");
+  for (const key of Object.keys(values)) if (!allowed.has(key)) throw new Error(`unknown governance marker field: ${key}`);
+  const text = (key: string) => {
+    const value = values[key];
+    if (value == null) return undefined;
+    if (typeof value !== "string" || !value.trim()) throw new Error(`governance marker ${key} must be a non-empty string`);
+    return value.trim();
+  };
+  const ids = (key: string) => {
+    const value = values[key];
+    if (value == null) return undefined;
+    if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string" || !entry.trim())) throw new Error(`governance marker ${key} must be a string array`);
+    if (new Set(value).size !== value.length) throw new Error(`governance marker ${key} contains duplicates`);
+    return value.map((entry) => entry.trim());
+  };
+  const issueNumber = (key: string) => {
+    const value = values[key];
+    if (value == null) return undefined;
+    if (typeof value !== "string" || !/^#[1-9]\d*$/.test(value)) throw new Error(`governance marker ${key} must be an exact issue reference`);
+    return Number(value.slice(1));
+  };
   return {
-    strategy_revision:
-      typeof raw.strategy_revision === "string"
-        ? raw.strategy_revision
-        : undefined,
-    goal_id: typeof raw.goal_id === "string" ? raw.goal_id : undefined,
-    milestone_id:
-      typeof raw.milestone_id === "string" ? raw.milestone_id : undefined,
-    kpi_ids: Array.isArray(raw.kpi_ids)
-      ? raw.kpi_ids.filter((x): x is string => typeof x === "string")
-      : undefined,
-    guardrail_ids: Array.isArray(raw.guardrail_ids)
-      ? raw.guardrail_ids.filter((x): x is string => typeof x === "string")
-      : undefined,
-    placement_decision:
-      number(raw.placement_decision) ??
-      number(yaml.match(/^placement_decision:\s*(#?\d+)/m)?.[1]),
-    approval_keys: Array.isArray(raw.approval_keys)
-      ? raw.approval_keys.filter((x): x is string => typeof x === "string")
-      : typeof raw.approval_keys === "string"
-        ? raw.approval_keys
-            .split(",")
-            .map((key) => key.trim())
-            .filter(Boolean)
-        : undefined,
-    approved_by:
-      typeof raw.approved_by === "string" ? raw.approved_by : undefined,
-    decision_state:
-      typeof raw.decision_state === "string" ? raw.decision_state : undefined,
-    decision_key:
-      typeof raw.decision_key === "string" ? raw.decision_key : undefined,
-    strategic_placement:
-      typeof raw.strategic_placement === "string"
-        ? raw.strategic_placement
-        : undefined,
+    kind: ({ decision: "Decision", "product-change": "Product Change", ticket: "Ticket", bug: "Bug" } as const)[text("kind") ?? ""],
+    strategy_revision: text("strategy_revision"), goal_id: text("goal_id"), milestone_id: text("milestone_id"),
+    kpi_ids: ids("kpi_ids"), guardrail_ids: ids("guardrail_ids"), placement_decision: issueNumber("placement_decision"),
+    approval_keys: ids("approval_keys"), approved_by: text("approved_by"), decision_state: text("decision_state"),
+    decision_key: text("decision_key"), strategic_placement: text("strategic_placement"),
   };
 }
 
-function collect(): GovernanceSourceModel & {
-  legacyExclusions: {
-    number: number;
-    title: string;
-    url: string;
-    state: "CLOSED";
-    projectStatus: "Done";
-    parentNumber: number;
-    reason: "legacy_missing_issue_type";
-  }[];
-} {
+function collect(): GovernanceSourceModel {
   const sourceCommit = gh([
     "api",
     `repos/${repo}/commits/main`,
@@ -156,15 +135,7 @@ function collect(): GovernanceSourceModel & {
     if (page.pageInfo?.hasNextPage && !cursor)
       throw new Error("GitHub GraphQL governance pagination is incomplete");
   } while (cursor);
-  const legacyExclusions: {
-    number: number;
-    title: string;
-    url: string;
-    state: "CLOSED";
-    projectStatus: "Done";
-    parentNumber: number;
-    reason: "legacy_missing_issue_type";
-  }[] = [];
+  const legacyExclusions: LegacyExclusion[] = [];
   const issues: GithubIssueFact[] = items.flatMap((item) => {
     const issue = item.content as Record<string, unknown> | null;
     if (
@@ -287,66 +258,44 @@ function collect(): GovernanceSourceModel & {
 }
 
 async function main() {
-  const collected = collect();
-  const projection = createGovernanceProjection(collected);
-  const digest = governanceProjectionDigest(projection);
-  const confirmation = `${projection.registryRevision}:${digest}`;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const client = apply && url && key ? createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  }) : null;
+  const requireClient = () => {
+    if (!client) throw new Error("credentialed operator environment is required");
+    return client;
+  };
+  const receipt = await refreshGovernanceProjection({
+    collect: async () => collect(),
+    currentDigest: async () => {
+      const { data, error } = await requireClient().from("wave_governance_projection_current").select("snapshot_digest").eq("projection_key", "current").maybeSingle();
+      if (error) throw new Error("cannot read current snapshot");
+      return data?.snapshot_digest ?? "";
+    },
+    apply: async ({ projection, digest, canonicalText, expectedDigest }) => {
+      const { data, error } = await requireClient().rpc("apply_wave_governance_snapshot", {
+        p_source_commit: projection.sourceCommit, p_registry_revision: projection.registryRevision,
+        p_retrieved_at: projection.retrievedAt, p_snapshot_at: projection.snapshotAt,
+        p_payload: projection, p_validation: { result: "valid", schema_version: projection.schemaVersion },
+        p_canonical_text: canonicalText, p_snapshot_digest: digest,
+        p_expected_current_digest: expectedDigest, p_actor: "codex-manual-governance-refresh",
+      });
+      if (error || !data) throw new Error("snapshot apply failed");
+      return { digest, applied: Boolean(data) };
+    },
+    readback: async () => {
+      const { data, error } = await requireClient().from("wave_governance_projection_current").select("snapshot_digest").eq("projection_key", "current").single();
+      if (error || !data?.snapshot_digest) throw new Error("snapshot readback failed");
+      return data.snapshot_digest;
+    },
+  }, { apply, confirm: valueAfter("--confirm") });
   console.log(
     JSON.stringify(
       {
-        mode: apply ? "apply" : "dry-run",
-        registryRevision: projection.registryRevision,
-        sourceCommit: projection.sourceCommit,
-        digest,
-        confirmation,
-        issueCount: projection.issues.length,
+        ...receipt,
       },
-      null,
-      2,
-    ),
-  );
-  if (!apply) return;
-  if (valueAfter("--confirm") !== confirmation)
-    throw new Error(
-      "--apply requires --confirm with the exact revision:digest printed by dry-run",
-    );
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key)
-    throw new Error("credentialed operator environment is required");
-  const client = createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data: current, error: currentError } = await client
-    .from("wave_governance_projection_current")
-    .select("snapshot_digest")
-    .eq("projection_key", "current")
-    .maybeSingle();
-  if (currentError)
-    throw new Error(`cannot read current snapshot: ${currentError.message}`);
-  const { data, error } = await client.rpc("apply_wave_governance_snapshot", {
-    p_source_commit: projection.sourceCommit,
-    p_registry_revision: projection.registryRevision,
-    p_retrieved_at: projection.retrievedAt,
-    p_snapshot_at: projection.snapshotAt,
-    p_payload: projection,
-    p_validation: { result: "valid", schema_version: projection.schemaVersion },
-    p_canonical_text: stableProjectionText(projection),
-    p_snapshot_digest: digest,
-    p_expected_current_digest: current?.snapshot_digest ?? "",
-    p_actor: "codex-manual-governance-refresh",
-  });
-  if (error) throw new Error(`snapshot apply failed: ${error.message}`);
-  const { data: readback, error: readbackError } = await client
-    .from("wave_governance_projection_current")
-    .select("snapshot_digest")
-    .eq("projection_key", "current")
-    .single();
-  if (readbackError || readback?.snapshot_digest !== digest)
-    throw new Error("snapshot apply did not read back the expected digest");
-  console.log(
-    JSON.stringify(
-      { applied: data, digest, readback: readback.snapshot_digest },
       null,
       2,
     ),

@@ -24,6 +24,9 @@ const kinds = new Set<GovernanceIssueKind>([
   "Ticket",
   "Bug",
 ]);
+const LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37})?$/;
+const PR_URL = /^https:\/\/github\.com\/ivan-loves-git\/v0-re-new-2-0\/pull\/[1-9]\d*$/;
+const PR_STATES = new Set(["OPEN", "CLOSED", "MERGED"]);
 const statuses = new Set([
   "Unrouted",
   "Ready",
@@ -393,12 +396,13 @@ export function createGovernanceProjection(
     if (issue.kind !== "Product Change") continue;
     const marker = issue.marker ?? {};
     const exception = marker.strategic_placement === "needs-strategic-home";
-    const mapped = Boolean(
-      marker.goal_id ||
-      marker.milestone_id ||
-      marker.kpi_ids?.length ||
-      marker.guardrail_ids?.length,
-    );
+    const mapped = [
+      marker.strategy_revision,
+      marker.goal_id,
+      marker.milestone_id,
+      marker.kpi_ids,
+      marker.guardrail_ids,
+    ].some((value) => value != null);
     if (exception && mapped)
       throw new Error(
         `Product Change #${issue.number} mixes temporary exception and placement`,
@@ -474,8 +478,8 @@ export function createGovernanceProjection(
     placements.set(issue.number, {
       goalId: marker.goal_id,
       milestoneId: marker.milestone_id,
-      kpiIds: [...new Set(marker.kpi_ids ?? [])].sort(),
-      guardrailIds: [...new Set(marker.guardrail_ids ?? [])].sort(),
+      kpiIds: marker.kpi_ids ?? [],
+      guardrailIds: marker.guardrail_ids ?? [],
       decisionNumber: marker.placement_decision,
       temporaryException: false,
     });
@@ -561,6 +565,14 @@ function validateIssueShape(issue: GithubIssueFact) {
     throw new Error(
       `issue #${issue.number} marker is inconsistent with native type`,
     );
+  if (issue.marker?.kind && issue.marker.kind !== issue.kind)
+    throw new Error(`issue #${issue.number} marker kind is inconsistent with native type`);
+  for (const list of [issue.marker?.kpi_ids, issue.marker?.guardrail_ids, issue.marker?.approval_keys])
+    if (list && new Set(list).size !== list.length)
+      throw new Error(`issue #${issue.number} governance marker contains duplicates`);
+  const dependencyNumbers = (issue.dependencies ?? []).map((d) => d.number);
+  if (new Set(dependencyNumbers).size !== dependencyNumbers.length)
+    throw new Error(`issue #${issue.number} has duplicate dependencies`);
   for (const d of issue.dependencies ?? [])
     if (
       d.repository !== GOVERNANCE_SOURCE_REPOSITORY ||
@@ -569,6 +581,12 @@ function validateIssueShape(issue: GithubIssueFact) {
       throw new Error(
         `issue #${issue.number} has external or ambiguous dependency`,
       );
+  for (const login of issue.assigneeLogins ?? [])
+    if (typeof login !== "string" || !LOGIN.test(login))
+      throw new Error(`issue #${issue.number} has invalid assignee login`);
+  for (const pr of issue.pullRequests ?? [])
+    if (!PR_URL.test(pr.url) || !PR_STATES.has(pr.state))
+      throw new Error(`issue #${issue.number} has invalid pull request reference`);
 }
 function validateLegacyExclusions(
   exclusions: LegacyExclusion[],
@@ -588,6 +606,8 @@ function validateLegacyExclusions(
       issue.state !== "CLOSED" ||
       issue.projectStatus !== "Done" ||
       issue.parentNumber !== item.parentNumber ||
+      item.title !== issue.title ||
+      item.url !== issue.url ||
       !ISSUE_URL.test(item.url)
     )
       throw new Error(`legacy exclusion #${item.number} is not safe`);
@@ -629,10 +649,10 @@ function safeIssue(
     projectStatus: (issue.projectStatus ?? null) as ProjectStatus,
     decisionState: (issue.decisionState ?? null) as DecisionState,
     updatedAt: timestamp(issue.updatedAt, `#${issue.number}.updatedAt`),
-    assigneeLogins: [...new Set(issue.assigneeLogins ?? [])].sort(),
+    assigneeLogins: [...(issue.assigneeLogins ?? [])].sort(),
     parentNumber: issue.parentNumber ?? null,
     dependencyNumbers: [
-      ...new Set((issue.dependencies ?? []).map((x) => x.number)),
+      ...(issue.dependencies ?? []).map((x) => x.number),
     ].sort((a, b) => a - b),
     pullRequests: [...(issue.pullRequests ?? [])]
       .map((x) => ({

@@ -1,7 +1,12 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { GovernanceProjection } from "@/lib/governance-projection/model";
+import {
+  GOVERNANCE_PROJECTION_SCHEMA_VERSION,
+  GOVERNANCE_SOURCE_REPOSITORY,
+  governanceProjectionDigest,
+  type GovernanceProjection,
+} from "@/lib/governance-projection/model";
 
 export type CurrentGovernanceProjection =
   | { state: "unavailable"; reason: "no_snapshot" | "read_failed" }
@@ -24,10 +29,21 @@ export async function readCurrentGovernanceProjection(): Promise<CurrentGovernan
     .maybeSingle();
   if (error) return { state: "unavailable", reason: "read_failed" };
   if (!data) return { state: "unavailable", reason: "no_snapshot" };
+  const projection = data.payload as GovernanceProjection;
+  if (
+    !projection ||
+    projection.schemaVersion !== GOVERNANCE_PROJECTION_SCHEMA_VERSION ||
+    projection.sourceRepository !== GOVERNANCE_SOURCE_REPOSITORY ||
+    !Array.isArray(projection.issues) ||
+    !Array.isArray(projection.legacyExclusions) ||
+    typeof data.snapshot_digest !== "string" ||
+    governanceProjectionDigest(projection) !== data.snapshot_digest
+  )
+    return { state: "unavailable", reason: "read_failed" };
   return {
     state: "available",
     snapshotId: data.snapshot_id as string,
     digest: data.snapshot_digest as string,
-    projection: data.payload as GovernanceProjection,
+    projection,
   };
 }
