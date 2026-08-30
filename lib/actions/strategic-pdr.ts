@@ -14,7 +14,7 @@ import { pdrScreeningSaveSchema, type PdrScreeningContext, type PdrScreeningDraf
 import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
 import { classifyWaveAiError } from "@/lib/ai/errors"
 import { estimateWaveAiCostUsd, normalizeWaveAiUsage } from "@/lib/ai/usage"
-import { createPdrScreeningPreviewToken, validatePdrScreeningPreviewToken } from "@/lib/ai/pdr-screening-preview-token"
+import { createPdrScreeningPreviewToken, pdrScreeningDraftDigest, validatePdrScreeningPreviewToken } from "@/lib/ai/pdr-screening-preview-token"
 import { getOpaqueTelemetryUserId } from "@/lib/telemetry/identity"
 
 const text = (form: FormData, key: string, max: number) => {
@@ -106,7 +106,7 @@ export async function generateStrategicPdrScreening(formData: FormData): Promise
     const result = await generatePdrScreening({ request: { id: request.id, title: request.title, originalText: request.originalText }, current, safetyIdentifier: getOpaqueTelemetryUserId(access.user.id) })
     const usage = normalizeWaveAiUsage(result.usage)
     await completeWaveAiRun({ generationId: run.generationId, usage, estimatedCostUsd: estimateWaveAiCostUsd(usage), latencyMs: Date.now() - startedAt })
-    return { draft: result.draft, context: result.context, previewToken: createPdrScreeningPreviewToken({ generationId: run.generationId, userId: access.user.id, requestId, context: result.context, draft: result.draft }) }
+    return { draft: result.draft, context: result.context, previewToken: createPdrScreeningPreviewToken({ generationId: run.generationId, requestId, context: result.context, draftDigest: pdrScreeningDraftDigest(result.draft) }, access.user.id) }
   } catch (cause) {
     if (run) await failWaveAiRun({ generationId: run.generationId, code: classifyWaveAiError(cause), latencyMs: Date.now() - startedAt })
     throw new Error("The screening preview could not be generated. No screening was saved.")
@@ -121,13 +121,13 @@ export async function saveStrategicPdrScreening(input: unknown) {
   const current = await readCurrentGovernanceProjection()
   if (current.state !== "available") throw new Error("The GitHub governance snapshot is unavailable. Nothing was saved.")
   const freshness = isGovernanceProjectionStale(current.projection.snapshotAt) ? "stale" : "fresh"
-  const preview = validatePdrScreeningPreviewToken(parsed.data.previewToken, { userId: access.user.id, requestId: parsed.data.requestId })
+  const preview = validatePdrScreeningPreviewToken(parsed.data.previewToken, { actor: access.user.id, requestId: parsed.data.requestId, draftDigest: pdrScreeningDraftDigest(parsed.data.draft) })
   if (!preview) throw new Error("The screening preview expired or is invalid. Generate a new preview.")
   if (current.snapshotId !== preview.context.snapshotId || current.digest !== preview.context.digest || current.projection.registryRevision !== preview.context.registryRevision || current.projection.snapshotAt !== preview.context.snapshotAt || freshness !== preview.context.freshness) {
     throw new Error("The governance context changed. Generate a new preview before saving.")
   }
   const request = await loadScreenableRequest(parsed.data.requestId)
-  const draft = validatePdrScreeningDraft(preview.draft, current, freshness)
+  const draft = validatePdrScreeningDraft(parsed.data.draft, current, freshness)
   const { error } = await createAdminClient().from("wave_pdr_screening_records").insert({
     proposal_id: request.id, created_by_user_id: access.user.id, output: draft,
     governance_snapshot_id: current.snapshotId, governance_snapshot_digest: current.digest,

@@ -40,4 +40,5 @@ export type PdrScreeningContext = {
 export const pdrScreeningSaveSchema = z.object({
   requestId: z.string().uuid(),
   previewToken: z.string().min(40).max(16_000),
+  draft: pdrScreeningDraftSchema,
 }).strict()

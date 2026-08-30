@@ -19,7 +19,7 @@ export function PdrScreeningEditor({ requestId }: { requestId: string }) {
   const save = () => startTransition(async () => {
     if (!preview) return
     setError(null)
-    try { await saveStrategicPdrScreening({ requestId, previewToken: preview.previewToken }); setPreview(null); setSaved(true) } catch (cause) { setError(cause instanceof Error ? cause.message : "Screening could not be saved.") }
+    try { await saveStrategicPdrScreening({ requestId, previewToken: preview.previewToken, draft: preview.draft }); setPreview(null); setSaved(true) } catch (cause) { setError(cause instanceof Error ? cause.message : "Screening could not be saved.") }
   })
   return <Card><CardHeader><CardTitle>AI screening preview</CardTitle></CardHeader><CardContent className="space-y-4 text-sm">
     <p className="text-muted-foreground">Advisory only. It cannot approve the request, change delivery, or create GitHub work. A preview is saved only when you explicitly save it.</p>
