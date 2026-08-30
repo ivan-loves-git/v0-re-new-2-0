@@ -25,7 +25,7 @@ const kinds = new Set<GovernanceIssueKind>([
   "Bug",
 ]);
 const LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37})?$/;
-const PR_URL = /^https:\/\/github\.com\/ivan-loves-git\/v0-re-new-2-0\/pull\/[1-9]\d*$/;
+const PR_URL = /^https:\/\/github\.com\/(?:ivan-loves-git\/v0-re-new-2-0|re-new-team\/renew-governance)\/pull\/[1-9]\d*$/;
 const PR_STATES = new Set(["OPEN", "CLOSED", "MERGED"]);
 const statuses = new Set([
   "Unrouted",
@@ -374,6 +374,10 @@ export function createGovernanceProjection(
     byNumber,
   );
   const excluded = new Set(exclusions.map((x) => x.number));
+  for (const issue of source.issues)
+    for (const dependency of issue.dependencies ?? [])
+      if (!byNumber.has(dependency.number) || excluded.has(dependency.number))
+        throw new Error(`issue #${issue.number} has unresolved or excluded dependency`);
   const activeDependencyTargets = new Set(
     source.issues
       .filter((issue) => issue.state === "OPEN")
@@ -505,8 +509,11 @@ export function createGovernanceProjection(
         );
       if (
         issue.marker &&
-        Object.values(issue.marker).some(
-          (v) => v != null && (!Array.isArray(v) || v.length),
+        Object.entries(issue.marker).some(
+          ([key, value]) =>
+            key !== "kind" &&
+            value != null &&
+            (!Array.isArray(value) || value.length),
         )
       )
         throw new Error(
@@ -617,8 +624,11 @@ function validateLegacyExclusions(
       (item.reason === "legacy_non_product_change_parent" && (!parent || parent.kind === "Product Change" || parent.state !== "CLOSED")) ||
       item.parentNumber === item.number ||
       (issue.marker &&
-        Object.values(issue.marker).some(
-          (v) => v != null && (!Array.isArray(v) || v.length),
+        Object.entries(issue.marker).some(
+          ([key, value]) =>
+            key !== "kind" &&
+            value != null &&
+            (!Array.isArray(value) || value.length),
         ))
     )
       throw new Error(

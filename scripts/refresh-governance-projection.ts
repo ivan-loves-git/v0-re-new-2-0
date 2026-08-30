@@ -46,13 +46,27 @@ function marker(body: string | null | undefined) {
     return value.map((entry) => entry.trim());
   };
   const issueNumber = (key: string) => {
-    const value = values[key];
+    const value = values[key] ?? yaml.match(new RegExp(`^${key}:\\s*(#[1-9]\\d*)\\s*$`, "m"))?.[1];
     if (value == null) return undefined;
     if (typeof value !== "string" || !/^#[1-9]\d*$/.test(value)) throw new Error(`governance marker ${key} must be an exact issue reference`);
     return Number(value.slice(1));
   };
+  const kindText = text("kind");
+  const kind = ({ decision: "Decision", "product-change": "Product Change", ticket: "Ticket", bug: "Bug" } as const)[kindText ?? ""];
+  if (kindText && !kind) throw new Error("governance marker kind is unsupported");
+  const uuid = (key: string) => {
+    const value = text(key);
+    if (value && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new Error(`governance marker ${key} must be a UUID`);
+  };
+  const pdrRef = text("pdr_reference");
+  if (pdrRef && !/^W-\d{3}$/.test(pdrRef)) throw new Error("governance marker pdr_reference must be a work-card reference");
+  uuid("pdr_work_card_id"); uuid("pdr_strategic_item_id");
+  const publication = text("publication");
+  if (publication && publication !== "manual" && publication !== "direct-github") throw new Error("governance marker publication is unsupported");
+  const bootstrap = text("bootstrap");
+  if (bootstrap && bootstrap !== "manual") throw new Error("governance marker bootstrap is unsupported");
   return {
-    kind: ({ decision: "Decision", "product-change": "Product Change", ticket: "Ticket", bug: "Bug" } as const)[text("kind") ?? ""],
+    kind,
     strategy_revision: text("strategy_revision"), goal_id: text("goal_id"), milestone_id: text("milestone_id"),
     kpi_ids: ids("kpi_ids"), guardrail_ids: ids("guardrail_ids"), placement_decision: issueNumber("placement_decision"),
     approval_keys: ids("approval_keys"), approved_by: text("approved_by"), decision_state: text("decision_state"),
