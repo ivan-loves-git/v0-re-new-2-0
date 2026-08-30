@@ -36,7 +36,9 @@ const statuses = new Set([
   "In Progress",
   "Review",
   "Done",
+  "Cancelled / Superseded",
 ]);
+const legacyTerminalStatuses = new Set(["Done", "Cancelled / Superseded"]);
 const decisionStates = new Set([
   "Proposed",
   "Needs Ivan",
@@ -566,6 +568,8 @@ function validateIssueShape(issue: GithubIssueFact) {
     throw new Error(`typed issue #${issue.number} lacks Project status`);
   if (issue.projectStatus != null && !statuses.has(issue.projectStatus))
     throw new Error(`issue #${issue.number} has unsupported Project status`);
+  if (issue.projectStatus === "Cancelled / Superseded" && issue.state !== "CLOSED")
+    throw new Error(`issue #${issue.number} has non-terminal cancelled status`);
   if (issue.decisionState != null && !decisionStates.has(issue.decisionState))
     throw new Error(`issue #${issue.number} has unsupported Decision state`);
   if (issue.kind === "Decision" && issue.decisionState == null)
@@ -681,14 +685,15 @@ function validateLegacyExclusions(
     if (seen.has(item.number)) throw new Error("duplicate legacy exclusion");
     seen.add(item.number);
     const issue = byNumber.get(item.number);
+    const missingType = item.reason === "legacy_missing_issue_type";
     if (
       !issue ||
-      (item.reason === "legacy_missing_issue_type" ? issue.kind : !issue.kind || (issue.kind !== "Ticket" && issue.kind !== "Bug") || item.nativeKind !== issue.kind) ||
+      (missingType ? issue.kind : !issue.kind || (issue.kind !== "Ticket" && issue.kind !== "Bug") || item.nativeKind !== issue.kind) ||
       item.state !== "CLOSED" ||
-      item.projectStatus !== "Done" ||
       (item.reason !== "legacy_missing_issue_type" && item.reason !== "legacy_non_product_change_parent") ||
       issue.state !== "CLOSED" ||
-      issue.projectStatus !== "Done" ||
+      item.projectStatus !== issue.projectStatus ||
+      (missingType ? item.projectStatus !== "Done" : !legacyTerminalStatuses.has(item.projectStatus)) ||
       issue.parentNumber !== item.parentNumber ||
       item.title !== issue.title ||
       item.url !== issue.url ||
@@ -716,7 +721,7 @@ function validateLegacyExclusions(
       title: string(item.title, "legacy title"),
       url: item.url,
       state: "CLOSED" as const,
-      projectStatus: "Done" as const,
+      projectStatus: item.projectStatus,
       parentNumber: item.parentNumber,
       reason: item.reason,
       ...(item.nativeKind ? { nativeKind: item.nativeKind } : {}),

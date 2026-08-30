@@ -21,7 +21,7 @@ function displayDate(value: string) {
 }
 
 function deliveryTone(status: SafeGovernanceIssue["projectStatus"]) {
-  if (status === "Done") return "secondary" as const;
+  if (status === "Done" || status === "Cancelled / Superseded") return "secondary" as const;
   if (status === "Review") return "outline" as const;
   return "default" as const;
 }
