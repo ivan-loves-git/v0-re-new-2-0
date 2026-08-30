@@ -10,6 +10,7 @@ import { isUuid } from "@/lib/uuid"
 import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server"
 import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness"
 import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, generatePdrScreening, validatePdrScreeningDraft } from "@/lib/ai/pdr-screening"
+import { pdrScreeningLedgerErrorCode } from "@/lib/ai/pdr-screening-output-error"
 import { pdrScreeningAnswersSchema, pdrScreeningSaveSchema, type PdrScreeningContext, type PdrScreeningDraft } from "@/lib/ai/pdr-screening-contract"
 import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
 import { classifyWaveAiError } from "@/lib/ai/errors"
@@ -121,7 +122,7 @@ export async function generateStrategicPdrScreening(formData: FormData): Promise
     // Accounting failure must never replace the safe, generic staff-facing
     // result of a provider or validation failure.
     if (run) {
-      try { await failWaveAiRun({ generationId: run.generationId, code: classifyWaveAiError(cause), latencyMs: Date.now() - startedAt }) } catch { /* best-effort audit trail */ }
+      try { await failWaveAiRun({ generationId: run.generationId, code: pdrScreeningLedgerErrorCode(cause) ?? classifyWaveAiError(cause), latencyMs: Date.now() - startedAt }) } catch { /* best-effort audit trail */ }
     }
     throw new Error("The screening preview could not be generated. No screening was saved.")
   }
