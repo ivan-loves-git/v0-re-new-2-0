@@ -8,7 +8,7 @@ vi.mock("@/lib/ai/config", () => ({ WAVE_AI_MODEL: "test-model", WAVE_AI_REASONI
 vi.mock("@/lib/ai/pdr-capability-catalogue", () => ({ PDR_CAPABILITY_CATALOGUE_VERSION: "test", PDR_CAPABILITY_CATALOGUE: [{ id: "capability-a", title: "Allowed capability" }] }))
 vi.mock("@/lib/ai/openai-client", () => ({ getWaveAiOpenAiClient: vi.fn(() => ({ responses: { parse: vi.fn(async (input: unknown) => { state.calls.push(input); if (state.parseError) throw state.parseError; return state.response ?? { status: "completed", incomplete_details: null, output_parsed: state.stale ? { ...draft, suggestedGoalId: null, suggestedMilestoneId: null, overlappingProductChangeNumbers: [], technicalImpact: null } : draft, usage: undefined } }) } })) }))
 
-import { generatePdrScreening } from "@/lib/ai/pdr-screening"
+import { generatePdrScreening, PDR_SCREENING_MAX_OUTPUT_TOKENS } from "@/lib/ai/pdr-screening"
 
 function current() { return { state: "available" as const, snapshotId: "123e4567-e89b-42d3-a456-426614174000", digest: "a".repeat(64), projection: { registryRevision: "r1", snapshotAt: "2026-08-30T00:00:00.000Z", registry: { goals: [{ id: "G-001", title: "Goal title", statement: "Allowed strategy statement" }], milestones: [{ id: "M-001", goalId: "G-001", title: "Milestone", outcome: "Allowed outcome", lifecycle: "active" }], guardrails: [{ title: "Guardrail", rule: "Allowed rule", lifecycle: "active" }] }, issues: [{ number: 12, kind: "Product Change", title: "Allowed product change", projectStatus: "Todo", placement: { goalId: "G-001", milestoneId: "M-001" }, provenance: { state: "verified" }, body: "This must never be sent", assignees: ["private"] }] } } as any }
 
@@ -18,7 +18,8 @@ describe("PDR screening provider contract", () => {
   it("sends only compact allowlisted request and governance fields with an opaque safety id", async () => {
     await generatePdrScreening({ request: { id: "private-request-id", title: "Useful request", originalText: "Original request wording" }, current: current(), safetyIdentifier: "opaque-telemetry-id" })
     const call = state.calls[0]
-    expect(call).toMatchObject({ model: "test-model", store: false, parallel_tool_calls: false, safety_identifier: "opaque-telemetry-id" })
+    expect(PDR_SCREENING_MAX_OUTPUT_TOKENS).toBe(4_800)
+    expect(call).toMatchObject({ model: "test-model", reasoning: { effort: "max", context: "current_turn" }, store: false, parallel_tool_calls: false, max_output_tokens: 4_800, safety_identifier: "opaque-telemetry-id" })
     const input = JSON.parse(call.input)
     expect(input).toMatchObject({ request: { title: "Useful request", originalWording: "Original request wording" }, context: { registryRevision: "r1", goals: [{ id: "G-001" }], productChanges: [{ number: 12 }] } })
     expect(JSON.stringify(input)).not.toContain("private-request-id")
