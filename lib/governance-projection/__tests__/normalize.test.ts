@@ -70,7 +70,7 @@ const registry = {
 };
 const issue = (
   number: number,
-  kind: "Decision" | "Product Change" | "Ticket",
+  kind: "Decision" | "Product Change" | "Ticket" | "Bug",
   marker?: Record<string, unknown>,
 ) => ({
   number,
@@ -145,11 +145,23 @@ describe("governance projection normalization", () => {
     Object.assign(conflicting.issues[2].marker as Record<string, unknown>, { publication: "direct-github", pdr_reference: "W-158", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000" });
     expect(() => createGovernanceProjection(conflicting)).toThrow("conflicts with PDR source");
   });
-  it("does not allow Tickets to define Product Change provenance", () => {
+  it("retains Genesis Decision-style strategic-item provenance", () => {
+    const genesis = source();
+    Object.assign(genesis.issues[0].marker as Record<string, unknown>, { bootstrap: "manual", pdr_strategic_item_id: "123e4567-e89b-42d3-a456-426614174000" });
+    expect(createGovernanceProjection(genesis).issues.find((entry) => entry.number === 36)?.provenance).toMatchObject({ state: "pdr_strategic_item", bootstrap: "manual", pdrStrategicItemId: "123e4567-e89b-42d3-a456-426614174000" });
+  });
+  it.each(["Ticket", "Bug"] as const)("does not allow %s to own provenance", (kind) => {
     const invalid = source();
-    (invalid.issues[3].marker as Record<string, unknown> | undefined) ??= {};
-    (invalid.issues[3].marker as Record<string, unknown>).publication = "direct-github";
-    expect(() => createGovernanceProjection(invalid)).toThrow("cannot own governance marker fields");
+    invalid.issues.push({ ...issue(39, kind), parentNumber: 23, marker: { publication: "direct-github" } });
+    expect(() => createGovernanceProjection(invalid)).toThrow("cannot own provenance fields");
+  });
+  it("rejects unsupported Decision provenance combinations", () => {
+    const direct = source();
+    (direct.issues[0].marker as Record<string, unknown>).publication = "direct-github";
+    expect(() => createGovernanceProjection(direct)).toThrow("Decision #36 has unsupported source provenance");
+    const workCard = source();
+    Object.assign(workCard.issues[0].marker as Record<string, unknown>, { pdr_reference: "W-158", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000" });
+    expect(() => createGovernanceProjection(workCard)).toThrow("Decision #36 has unsupported source provenance");
   });
   it("requires exactly accepted KPI contracts and strict registry records", () => {
     const invalid = source();

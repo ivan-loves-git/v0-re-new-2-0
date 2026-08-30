@@ -110,7 +110,7 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
   if (!decided(issues.get(projection.registry.governanceDecision)) || !decided(issues.get(projection.registry.approval.decision))) return null;
   for (const item of projection.issues) {
     if (item.url !== `https://github.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/${item.number}` || item.parentNumber === item.number) return null;
-    if (item.kind === "Decision" && (!emptyPlacement(item.placement) || item.decisionState === null)) return null;
+    if (item.kind === "Decision" && (!emptyPlacement(item.placement) || item.decisionState === null || (item.provenance?.state === "pdr_strategic_item" && item.provenance.bootstrap !== "manual") || item.provenance?.state === "direct_github" || item.provenance?.state === "pdr_work_card")) return null;
     if (item.kind !== "Decision" && item.decisionState !== null) return null;
     if (item.dependencyNumbers.some((number) => !issues.has(number) || exclusions.has(number))) return null;
     if (item.placement.decisionNumber !== null && !decided(issues.get(item.placement.decisionNumber))) return null;

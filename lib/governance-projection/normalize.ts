@@ -608,6 +608,8 @@ function validateIssueShape(issue: GithubIssueFact) {
   for (const list of [issue.marker?.kpi_ids, issue.marker?.guardrail_ids, issue.marker?.approval_keys])
     if (list && new Set(list).size !== list.length)
       throw new Error(`issue #${issue.number} governance marker contains duplicates`);
+  if ((issue.kind === "Ticket" || issue.kind === "Bug") && issue.marker && ["publication", "bootstrap", "pdr_reference", "pdr_work_card_id", "pdr_strategic_item_id"].some((key) => (issue.marker as Record<string, unknown>)[key] != null))
+    throw new Error(`${issue.kind} #${issue.number} cannot own provenance fields`);
   const dependencyNumbers = (issue.dependencies ?? []).map((d) => d.number);
   if (new Set(dependencyNumbers).size !== dependencyNumbers.length)
     throw new Error(`issue #${issue.number} has duplicate dependencies`);
@@ -628,7 +630,7 @@ function validateIssueShape(issue: GithubIssueFact) {
 }
 
 function safeProvenance(issue: GithubIssueFact): GovernanceProvenance | undefined {
-  if (issue.kind !== "Product Change") return undefined;
+  if (issue.kind !== "Product Change" && issue.kind !== "Decision") return undefined;
   const marker = issue.marker ?? {};
   const pdrReference = marker.pdr_reference;
   const pdrWorkCardId = marker.pdr_work_card_id;
@@ -642,6 +644,16 @@ function safeProvenance(issue: GithubIssueFact): GovernanceProvenance | undefine
     ...(pdrWorkCardId ? { pdrWorkCardId } : {}),
     ...(pdrStrategicItemId ? { pdrStrategicItemId } : {}),
   };
+  if (issue.kind === "Decision") {
+    if (marker.publication === "direct-github" || pdrReference || pdrWorkCardId)
+      throw new Error(`Decision #${issue.number} has unsupported source provenance`);
+    if (pdrStrategicItemId) {
+      if (marker.bootstrap !== "manual")
+        throw new Error(`Decision #${issue.number} strategic-item provenance requires manual bootstrap`);
+      return { state: "pdr_strategic_item", ...metadata };
+    }
+    return Object.keys(metadata).length ? { state: "unverified", ...metadata } : undefined;
+  }
   if (marker.publication === "direct-github") {
     if (pdrReference || pdrWorkCardId || pdrStrategicItemId)
       throw new Error(`Product Change #${issue.number} direct GitHub provenance conflicts with PDR source fields`);

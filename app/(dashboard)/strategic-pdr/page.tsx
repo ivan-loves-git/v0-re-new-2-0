@@ -11,6 +11,8 @@ import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshne
 import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server";
 import { listPdrRequestHistory } from "@/lib/pdr/intake-server";
 
+const GOVERNANCE_PROJECT_URL = "https://github.com/orgs/re-new-team/projects/1";
+
 function displayDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
@@ -96,7 +98,7 @@ export default async function StrategicPdrPage() {
   ]);
 
   if (current.state === "unavailable") {
-    return <div className="space-y-6"><header className="space-y-2"><p className="wave-micro-label">Strategic PDR</p><h1 className="text-2xl font-semibold">Strategy, delivery and requests</h1></header><Card className="border-destructive/40"><CardHeader><CardTitle>Governance projection unavailable</CardTitle><CardDescription>GitHub is the delivery authority. Its last validated projection is not available in WAVE, so no strategy or delivery relationship is shown.</CardDescription></CardHeader><CardContent><Button asChild variant="outline"><a href="https://github.com/re-new-team/renew-governance/projects" target="_blank" rel="noreferrer">Open GitHub delivery board <ExternalLink className="size-3.5" /></a></Button></CardContent></Card></div>;
+    return <div className="space-y-6"><header className="space-y-2"><p className="wave-micro-label">Strategic PDR</p><h1 className="text-2xl font-semibold">Strategy, delivery and requests</h1></header><Card className="border-destructive/40"><CardHeader><CardTitle>Governance projection unavailable</CardTitle><CardDescription>GitHub is the delivery authority. Its last validated projection is not available in WAVE, so no strategy or delivery relationship is shown.</CardDescription></CardHeader><CardContent><Button asChild variant="outline"><a href={GOVERNANCE_PROJECT_URL} target="_blank" rel="noreferrer">Open GitHub delivery board <ExternalLink className="size-3.5" /></a></Button></CardContent></Card></div>;
   }
 
   const { projection } = current;
@@ -115,7 +117,7 @@ export default async function StrategicPdrPage() {
     <header className="space-y-3">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="space-y-2"><p className="wave-micro-label">Strategic PDR</p><h1 className="text-2xl font-semibold">Strategy, delivery and requests</h1><p className="max-w-3xl text-sm text-muted-foreground">WAVE holds request intake and the readable strategic view. GitHub is the authoritative place for current product decisions, delivery status and discussion.</p></div>
-        <Button asChild variant="outline"><a href="https://github.com/re-new-team/renew-governance/projects" target="_blank" rel="noreferrer">Open delivery board <ExternalLink className="size-3.5" /></a></Button>
+        <Button asChild variant="outline"><a href={GOVERNANCE_PROJECT_URL} target="_blank" rel="noreferrer">Open delivery board <ExternalLink className="size-3.5" /></a></Button>
       </div>
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground"><span>GitHub revision <code>{projection.sourceCommit.slice(0, 12)}</code></span><span>Registry {projection.registryRevision}</span><span><RefreshCw className="mr-1 inline size-3" />Refreshed {displayDate(projection.snapshotAt)}</span></div>
       {isStale ? <p className="rounded-md border border-amber-500/40 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">This WAVE projection is stale. Check GitHub before making a delivery decision.</p> : null}
