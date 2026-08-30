@@ -76,6 +76,14 @@ describe("WAVE AI runtime contract", () => {
     expect(migration).toContain("GRANT SELECT, INSERT ON TABLE public.ai_generation_events TO service_role")
   })
 
+  it("allows only the explicit PDR prompt and reasoning pairs while preserving accurate v1 ledger history", () => {
+    const migration = source("supabase/migrations/20260830130030_wave_ai_pdr_reasoning_effort.sql")
+    expect(migration).toContain("DROP CONSTRAINT IF EXISTS ai_generation_runs_reasoning_effort_check")
+    expect(migration).toContain("feature <> 'pdr_screening' AND reasoning_effort = 'max'")
+    expect(migration).toContain("prompt_version = 'pdr-screening-v1' AND reasoning_effort = 'max'")
+    expect(migration).toContain("prompt_version = 'pdr-screening-v2' AND reasoning_effort = 'low'")
+  })
+
   it("bounds requests and enforces allowlisted feedback without free text", () => {
     const validRequest = waveAiEmailDraftRequestSchema.safeParse({
       repreneurId: "8d00a3f2-2d4a-45fe-ae39-5cba0d2134fd",
