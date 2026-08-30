@@ -13,6 +13,11 @@ import { PdrScreeningOutputError } from "@/lib/ai/pdr-screening-output-error"
 type RequestSource = { id: string; title: string; originalText: string }
 
 const MAX_CONTEXT_BYTES = 24_000
+// The structured preview can contain five clarifications plus several bounded
+// advisory fields. 2,400 tokens was observed to truncate a valid live request;
+// 4,800 keeps the single-attempt contract while leaving enough room to complete
+// the strict schema. This is intentionally scoped to PDR screening.
+export const PDR_SCREENING_MAX_OUTPUT_TOKENS = 4_800
 const cap = (value: string, max: number) => value.trim().slice(0, max)
 
 function allowedContext(current: Extract<CurrentGovernanceProjection, { state: "available" }>) {
@@ -76,7 +81,7 @@ export async function generatePdrScreening(input: { request: RequestSource; curr
   try {
     response = await client.responses.parse({
       model: WAVE_AI_MODEL, reasoning: { effort: WAVE_AI_REASONING_EFFORT, context: "current_turn" },
-      store: false, parallel_tool_calls: false, max_output_tokens: 2_400,
+      store: false, parallel_tool_calls: false, max_output_tokens: PDR_SCREENING_MAX_OUTPUT_TOKENS,
       safety_identifier: input.safetyIdentifier.slice(0, 64),
       instructions: screeningInstructions(freshness),
       input: JSON.stringify(modelInput),
