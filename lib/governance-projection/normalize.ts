@@ -568,6 +568,25 @@ function validateIssueShape(issue: GithubIssueFact) {
     throw new Error(`issue #${issue.number} has unsupported Decision state`);
   if (issue.kind === "Decision" && issue.decisionState == null)
     throw new Error(`Decision #${issue.number} lacks Decision state`);
+  if (issue.marker) {
+    const marker = issue.marker as Record<string, unknown>;
+    const allowed = new Set([
+      "kind", "strategy_revision", "goal_id", "milestone_id", "kpi_ids",
+      "guardrail_ids", "placement_decision", "approval_keys", "approved_by",
+      "decision_state", "decision_key", "strategic_placement",
+    ]);
+    for (const key of Object.keys(marker))
+      if (!allowed.has(key))
+        throw new Error(`issue #${issue.number} marker has unknown field`);
+    for (const key of ["strategy_revision", "goal_id", "milestone_id", "approved_by", "decision_state", "decision_key", "strategic_placement"])
+      if (marker[key] != null && (typeof marker[key] !== "string" || !marker[key]?.trim()))
+        throw new Error(`issue #${issue.number} marker ${key} is malformed`);
+    if (marker.placement_decision != null && (!Number.isInteger(marker.placement_decision) || (marker.placement_decision as number) < 1))
+      throw new Error(`issue #${issue.number} marker placement_decision is malformed`);
+    for (const key of ["kpi_ids", "guardrail_ids", "approval_keys"])
+      if (marker[key] != null && (!Array.isArray(marker[key]) || marker[key].some((entry) => typeof entry !== "string" || !entry.trim())))
+        throw new Error(`issue #${issue.number} marker ${key} is malformed`);
+  }
   if (issue.marker?.decision_key && issue.kind !== "Decision")
     throw new Error(
       `issue #${issue.number} marker is inconsistent with native type`,

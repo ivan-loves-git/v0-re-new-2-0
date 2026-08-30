@@ -179,4 +179,32 @@ describe("governance projection normalization", () => {
       governanceProjectionDigest(createGovernanceProjection(second)),
     );
   });
+
+  it("rejects malformed native markers, dependencies, and legacy source facts", () => {
+    const wrongKind = source();
+    (wrongKind.issues[2].marker as Record<string, unknown>).kind = "Ticket";
+    expect(() => createGovernanceProjection(wrongKind)).toThrow("marker kind");
+
+    const unknownMetadata = source();
+    (unknownMetadata.issues[2].marker as Record<string, unknown>).ignored = "not safe";
+    expect(() => createGovernanceProjection(unknownMetadata)).toThrow("unknown field");
+
+    const unresolved = source();
+    unresolved.issues[3].dependencies = [{ number: 999, repository: repo }];
+    expect(() => createGovernanceProjection(unresolved)).toThrow("unresolved");
+
+    const malformedLegacy = source();
+    malformedLegacy.issues.push({ number: 21, title: "Historic", url: `https://github.com/${repo}/issues/21`, repository: repo, state: "CLOSED", projectStatus: "Done", updatedAt: "2026-08-30T00:00:00.000Z", parentNumber: 23 });
+    malformedLegacy.legacyExclusions = [{ number: 21, title: "Different", url: `https://github.com/${repo}/issues/21`, state: "CLOSED", projectStatus: "Done", parentNumber: 23, reason: "legacy_missing_issue_type" }];
+    expect(() => createGovernanceProjection(malformedLegacy)).toThrow("legacy exclusion");
+  });
+
+  it("rejects any placement field mixed with a temporary exception", () => {
+    const invalid = source();
+    (invalid.issues[2].marker as Record<string, unknown>).strategic_placement = "needs-strategic-home";
+    (invalid.issues[2].marker as Record<string, unknown>).goal_id = undefined;
+    (invalid.issues[2].marker as Record<string, unknown>).milestone_id = undefined;
+    (invalid.issues[2].marker as Record<string, unknown>).strategy_revision = registry.revision;
+    expect(() => createGovernanceProjection(invalid)).toThrow("mixes temporary exception");
+  });
 });

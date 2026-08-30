@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import { parse } from "yaml";
 import { createClient } from "@supabase/supabase-js";
 import { refreshGovernanceProjection } from "@/lib/governance-projection/refresh";
+import { createProjectionOperatorAdapters } from "@/lib/governance-projection/operator-adapters";
 import {
   type LegacyExclusion,
   type GithubIssueFact,
@@ -277,34 +278,14 @@ async function main() {
   const client = apply && url && key ? createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   }) : null;
-  const requireClient = () => {
-    if (!client) throw new Error("credentialed operator environment is required");
-    return client;
-  };
-  const receipt = await refreshGovernanceProjection({
-    collect: async () => collect(),
-    currentDigest: async () => {
-      const { data, error } = await requireClient().from("wave_governance_projection_current").select("snapshot_digest").eq("projection_key", "current").maybeSingle();
-      if (error) throw new Error("cannot read current snapshot");
-      return data?.snapshot_digest ?? "";
-    },
-    apply: async ({ projection, digest, canonicalText, expectedDigest }) => {
-      const { data, error } = await requireClient().rpc("apply_wave_governance_snapshot", {
-        p_source_commit: projection.sourceCommit, p_registry_revision: projection.registryRevision,
-        p_retrieved_at: projection.retrievedAt, p_snapshot_at: projection.snapshotAt,
-        p_payload: projection, p_validation: { result: "valid", schema_version: projection.schemaVersion },
-        p_canonical_text: canonicalText, p_snapshot_digest: digest,
-        p_expected_current_digest: expectedDigest, p_actor: "codex-manual-governance-refresh",
-      });
-      if (error || !data) throw new Error("snapshot apply failed");
-      return { digest, applied: Boolean(data) };
-    },
-    readback: async () => {
-      const { data, error } = await requireClient().from("wave_governance_projection_current").select("snapshot_digest").eq("projection_key", "current").single();
-      if (error || !data?.snapshot_digest) throw new Error("snapshot readback failed");
-      return data.snapshot_digest;
-    },
-  }, { apply, confirm: valueAfter("--confirm") });
+  if (!client && apply)
+    throw new Error("credentialed operator environment is required");
+  const receipt = await refreshGovernanceProjection(
+    apply
+      ? createProjectionOperatorAdapters(client!, async () => collect())
+      : { collect: async () => collect(), currentDigest: async () => "", apply: async () => ({ digest: "", applied: false }), readback: async () => "" },
+    { apply, confirm: valueAfter("--confirm") },
+  );
   console.log(
     JSON.stringify(
       {
