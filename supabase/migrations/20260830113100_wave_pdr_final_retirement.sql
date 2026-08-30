@@ -34,6 +34,14 @@ END $$;
 REVOKE ALL ON TABLE public.pdr_feedback, public.pdr_goals, public.pdr_milestones, public.pdr_proposals, public.pdr_requests, public.pdr_work_cards FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.pdr_feedback, public.pdr_goals, public.pdr_milestones, public.pdr_proposals, public.pdr_requests, public.pdr_work_cards TO service_role;
 UPDATE storage.buckets SET public=FALSE WHERE id='pdr-attachments';
+-- A restrictive policy keeps a later permissive storage.objects policy from
+-- reopening the retired bucket to browser roles. service_role bypasses RLS.
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS wave_pdr_retire_legacy_attachment_browser_access ON storage.objects;
+CREATE POLICY wave_pdr_retire_legacy_attachment_browser_access ON storage.objects
+  AS RESTRICTIVE FOR ALL TO anon, authenticated
+  USING (bucket_id <> 'pdr-attachments')
+  WITH CHECK (bucket_id <> 'pdr-attachments');
 CREATE OR REPLACE FUNCTION public.wave_pdr_historical_work_cards_read_only() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'wave_pdr_historical_work_cards_are_read_only'; END; $$;
 DROP TRIGGER IF EXISTS wave_pdr_historical_work_cards_read_only ON public.pdr_work_cards;
 CREATE TRIGGER wave_pdr_historical_work_cards_read_only BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON public.pdr_work_cards FOR EACH STATEMENT EXECUTE FUNCTION public.wave_pdr_historical_work_cards_read_only();

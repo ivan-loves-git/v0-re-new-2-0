@@ -6,9 +6,15 @@ cleanup(){ [ -f "$dir/postmaster.pid" ] && "$bin/pg_ctl" -D "$dir" -m immediate 
 p=("$bin/psql" -v ON_ERROR_STOP=1 -p "$port" -d pdr43)
 "${p[@]}" <<'SQL'
 CREATE SCHEMA extensions; CREATE EXTENSION pgcrypto WITH SCHEMA extensions; CREATE SCHEMA storage;
+CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
 CREATE TABLE storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 INSERT INTO storage.buckets VALUES('pdr-attachments','pdr-attachments',true,20971520,NULL);
-CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
+CREATE TABLE storage.objects(id uuid primary key default extensions.gen_random_uuid(),bucket_id text not null,name text not null,owner_id text);
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+GRANT USAGE ON SCHEMA storage TO anon,authenticated,service_role;
+GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO anon,authenticated,service_role;
+CREATE POLICY deliberately_permissive ON storage.objects FOR ALL TO anon,authenticated USING (true) WITH CHECK (true);
+INSERT INTO storage.objects(bucket_id,name) VALUES('pdr-attachments','legacy-object');
 CREATE TABLE pdr_proposals(id uuid primary key default extensions.gen_random_uuid(), requester_actor text default 'Dev team', attachments jsonb default '[]', original_text text default '', conversation jsonb default '[]', proposal_type text default '', problem_statement text default '', ai_rationale text default '', status text default '', created_by text default '', reviewer_note text default '', created_at timestamptz default now(),updated_at timestamptz default now());
 CREATE TABLE pdr_work_cards(id uuid primary key default extensions.gen_random_uuid(), attachments jsonb default '[]');
 CREATE TABLE pdr_requests(id uuid primary key default extensions.gen_random_uuid()); CREATE TABLE pdr_feedback(id uuid primary key default extensions.gen_random_uuid()); CREATE TABLE pdr_goals(id uuid primary key default extensions.gen_random_uuid()); CREATE TABLE pdr_milestones(id uuid primary key default extensions.gen_random_uuid());
@@ -34,6 +40,10 @@ BEGIN DELETE FROM pdr_work_cards; RAISE EXCEPTION 'delete allowed'; EXCEPTION WH
 BEGIN TRUNCATE pdr_work_cards CASCADE; RAISE EXCEPTION 'truncate allowed'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='truncate allowed' THEN RAISE; END IF; END;
 END $$;
 SQL
+"${p[@]}" -c "SET ROLE anon; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *0$'
+"${p[@]}" -c "SET ROLE authenticated; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *0$'
+"${p[@]}" -c "SET ROLE service_role; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *1$'
 "${p[@]}" -f "$root/scripts/rollback-pdr-final-retirement.sql" >/dev/null
 "${p[@]}" -c "DO \$\$ BEGIN IF NOT has_table_privilege('anon','pdr_proposals','SELECT') OR NOT (SELECT public FROM storage.buckets WHERE id='pdr-attachments') OR EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='wave_pdr_historical_work_cards_read_only') OR (SELECT count(*) FROM wave_pdr_history_attachments) <> 2 THEN RAISE EXCEPTION 'rollback retention failed'; END IF; END \$\$;" >/dev/null
+"${p[@]}" -c "SET ROLE anon; SELECT count(*) FROM storage.objects WHERE bucket_id='pdr-attachments'; RESET ROLE;" | grep -q '^ *1$'
 echo 'PDR #43 disposable migration and rollback rehearsal passed'

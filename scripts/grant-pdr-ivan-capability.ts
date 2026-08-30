@@ -18,6 +18,12 @@ async function main() {
   const { data: existing, error: existingError } = await db.from("wave_pdr_governance_capabilities").select("actor_user_id").eq("singleton",true).maybeSingle()
   if (existingError) throw new Error("Capability preflight failed.")
   if (existing && existing.actor_user_id !== data.id) throw new Error("Singleton capability already belongs to another actor.")
-  if (!existing) { const { error: insertError } = await db.from("wave_pdr_governance_capabilities").insert({ singleton: true, actor_user_id: data.id, can_disposition: true, granted_by: "cutover-operator" }); if (insertError) throw new Error("Capability grant failed.") }
+  if (!existing) {
+    const { error: insertError } = await db.from("wave_pdr_governance_capabilities").insert({ singleton: true, actor_user_id: data.id, can_disposition: true, granted_by: "cutover-operator" })
+    if (insertError) {
+      const { data: concurrent, error: rereadError } = await db.from("wave_pdr_governance_capabilities").select("actor_user_id").eq("singleton", true).maybeSingle()
+      if (rereadError || !concurrent || concurrent.actor_user_id !== data.id) throw new Error("Capability grant failed.")
+    }
+  }
 }
 main().catch((error: unknown) => { console.error(error instanceof Error ? error.message : "Capability grant failed."); process.exitCode = 1 })

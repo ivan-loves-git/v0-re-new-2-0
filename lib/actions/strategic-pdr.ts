@@ -32,7 +32,7 @@ export async function submitStrategicPdrRequest(formData: FormData) {
       const path = pdrAttachmentPath(proposal.id, file.name)
       const { error: uploadError } = await supabase.storage.from(PDR_ATTACHMENT_BUCKET).upload(path, Buffer.from(await file.arrayBuffer()), { contentType: file.type, upsert: false })
       if (uploadError) throw new Error("Attachment upload failed.")
-      const { error: recordError } = await supabase.from("wave_pdr_request_attachments").insert({
+      const { error: recordError } = await supabase.from("wave_pdr_history_attachments").insert({
         proposal_id: proposal.id, storage_path: path, original_filename: file.name, content_type: file.type,
         size_bytes: file.size, uploaded_by_user_id: access.user.id,
       })
