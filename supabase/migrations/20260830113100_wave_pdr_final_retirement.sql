@@ -33,8 +33,9 @@ END $$;
 
 -- Hosted Supabase owns storage.objects as supabase_storage_admin. A hosted
 -- release must therefore pre-stage this exact custom policy through Supabase's
--- supported migration surface. Disposable databases owned by the migration
--- role may create it here. Either way, retirement fails closed unless the
+-- supported migration surface using scripts/prestage-pdr-storage-guard.sql.
+-- Disposable databases owned by the migration role may create it here. Either
+-- way, retirement fails closed unless the
 -- provider-owned guard reads back exactly before browser grants are revoked.
 DO $$
 DECLARE

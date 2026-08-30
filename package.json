@@ -27,6 +27,7 @@
     ,"pdr:reconcile-history": "tsx scripts/reconcile-pdr-history.ts"
     ,"pdr:cutover-legacy-attachments": "tsx scripts/cutover-pdr-legacy-attachments.ts"
     ,"pdr:grant-ivan-capability": "tsx scripts/grant-pdr-ivan-capability.ts"
+    ,"pdr:verify-final-retirement": "bash scripts/verify-pdr-final-retirement.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
