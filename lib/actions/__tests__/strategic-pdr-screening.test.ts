@@ -18,7 +18,7 @@ const state = vi.hoisted(() => ({
   started: { generationId: "323e4567-e89b-42d3-a456-426614174000", traceId: "trace", startedAt: "2026-08-30T00:00:00.000Z" } as any,
   startError: null as unknown,
   failError: null as unknown,
-  calls: { history: 0, projection: 0, generate: [] as any[], start: 0, complete: 0, fail: [] as any[], inserts: [] as any[], revalidate: [] as string[] },
+  calls: { history: 0, projection: 0, generate: [] as any[], start: [] as any[], complete: 0, fail: [] as any[], inserts: [] as any[], revalidate: [] as string[] },
   insertError: null as any,
 }))
 
@@ -38,7 +38,7 @@ vi.mock("@/lib/ai/pdr-screening", async () => {
   }) }
 })
 vi.mock("@/lib/ai/ledger", () => ({
-  startWaveAiRun: vi.fn(async () => { state.calls.start++; if (state.startError) throw state.startError; return state.started }),
+  startWaveAiRun: vi.fn(async (input: unknown) => { state.calls.start.push(input); if (state.startError) throw state.startError; return state.started }),
   completeWaveAiRun: vi.fn(async () => { state.calls.complete++ }),
   failWaveAiRun: vi.fn(async (input: unknown) => { state.calls.fail.push(input); if (state.failError) throw state.failError }),
 }))
@@ -60,20 +60,20 @@ beforeEach(() => {
   state.access = { user: { id: "staff-user" }, role: "staff" }; state.current = current(); state.request = request()
   state.generated = { draft: { ...draft }, context: { snapshotId, digest: "a".repeat(64), registryRevision: "r1", snapshotAt: "2026-08-30T00:00:00.000Z", freshness: "fresh" }, usage: undefined }
   state.generateError = null; state.startError = null; state.failError = null; state.insertError = null
-  state.calls = { history: 0, projection: 0, generate: [], start: 0, complete: 0, fail: [], inserts: [], revalidate: [] }
+  state.calls = { history: 0, projection: 0, generate: [], start: [], complete: 0, fail: [], inserts: [], revalidate: [] }
 })
 
 describe("Strategic PDR AI screening actions", () => {
   it("authenticates before reading governance, request history, ledger, or provider", async () => {
     state.access = null as any
     await expect(generateStrategicPdrScreening(form())).rejects.toThrow()
-    expect(state.calls).toMatchObject({ projection: 0, history: 0, start: 0 })
+    expect(state.calls).toMatchObject({ projection: 0, history: 0, start: [] })
   })
 
   it("fails closed on an unavailable governance projection before request, ledger, or provider", async () => {
     state.current = { state: "unavailable" }
     await expect(generateStrategicPdrScreening(form())).rejects.toThrow("GitHub governance snapshot is unavailable")
-    expect(state.calls).toMatchObject({ history: 0, start: 0 })
+    expect(state.calls).toMatchObject({ history: 0, start: [] })
     expect(state.calls.generate).toEqual([])
   })
 
@@ -87,14 +87,14 @@ describe("Strategic PDR AI screening actions", () => {
   ])("enforces the exact screenable eligibility contract for %s", async (_label, override) => {
     state.request = request(override)
     await expect(generateStrategicPdrScreening(form())).rejects.toThrow("Only authenticated WAVE staff requests")
-    expect(state.calls).toMatchObject({ start: 0 })
+    expect(state.calls).toMatchObject({ start: [] })
     expect(state.calls.generate).toEqual([])
   })
 
   it("starts only a PDR screening run and sends the opaque telemetry identifier to the allowlisted generator", async () => {
     const result = await generateStrategicPdrScreening(form())
     expect(result.previewToken).toMatch(/^v3\./)
-    expect(state.calls.start).toBe(1)
+    expect(state.calls.start).toEqual([expect.objectContaining({ feature: "pdr_screening", reasoningEffort: "low" })])
     expect(state.calls.generate[0]).toMatchObject({ safetyIdentifier: "opaque-telemetry-id", request: { id: requestId, title: "Useful request" } })
     expect(state.calls.generate[0]).not.toHaveProperty("attachments")
     expect(state.calls.complete).toBe(1)
