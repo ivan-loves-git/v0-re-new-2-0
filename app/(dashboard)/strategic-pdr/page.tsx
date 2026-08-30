@@ -40,8 +40,8 @@ function IssueActions({ issue }: { issue: SafeGovernanceIssue }) {
 
 function ProvenanceSummary({ provenance }: { provenance: GovernanceProvenance | undefined }) {
   if (provenance?.state === "direct_github") return <p className="text-sm text-muted-foreground">Direct GitHub scope. No PDR source is expected.</p>;
-  if (provenance?.state === "pdr_work_card") return <p className="text-sm text-muted-foreground">Verified PDR historical Work Card {provenance.pdrReference}.</p>;
-  if (provenance?.state === "pdr_strategic_item") return <p className="text-sm text-muted-foreground">Verified PDR strategic-item metadata is recorded, but no internal detail route exists for it yet.</p>;
+  if (provenance?.state === "pdr_work_card") return <p className="text-sm text-muted-foreground">{provenance.publication === "direct-github" ? `Direct GitHub scope, with verified historical PDR Work Card ${provenance.pdrReference} context.` : `Verified PDR historical Work Card ${provenance.pdrReference}.`}</p>;
+  if (provenance?.state === "pdr_strategic_item") return <p className="text-sm text-muted-foreground">{provenance.publication === "direct-github" ? "Direct GitHub scope, with verified PDR strategic-item context. No internal detail route exists for it yet." : "Verified PDR strategic-item metadata is recorded, but no internal detail route exists for it yet."}</p>;
   return <p className="text-sm text-muted-foreground">Source provenance is unavailable or unverified in the governance projection.</p>;
 }
 
