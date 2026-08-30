@@ -29,7 +29,9 @@ export type PdrHistoryRequest = {
   createdAt: string
   updatedAt: string
   attachments: PdrHistoryAttachment[]
+  provenance: "proposal" | "request"
 }
+export type PdrHistoricalWorkCard = { id: string; referenceNumber: number; title: string; notes: string; status: string; owner: string; createdAt: string; updatedAt: string }
 
 export type PdrHistoryAttachment = {
   id: string
@@ -46,6 +48,7 @@ type ProposalRow = {
   disposition_kind?: string | null; disposition_by_user_id?: string | null; disposition_at?: string | null
   reviewer_note: string; created_at: string; updated_at: string
 }
+type RequestRow = { id: string; title: string; description: string; challenge_prompts: unknown; challenge_score: number; status: string; decision_note: string; created_by: string; created_at: string; updated_at: string }
 
 function asArray(value: unknown): unknown[] { return Array.isArray(value) ? value : [] }
 
@@ -61,8 +64,11 @@ function projectProposal(row: ProposalRow, attachments: PdrHistoryAttachment[]):
       kind: row.disposition_kind === "approved" || row.disposition_kind === "declined" ? row.disposition_kind : null,
       byUserId: row.disposition_by_user_id ?? null, at: row.disposition_at ?? null, note: row.reviewer_note,
     },
-    createdAt: row.created_at, updatedAt: row.updated_at, attachments,
+    createdAt: row.created_at, updatedAt: row.updated_at, attachments, provenance: "proposal",
   }
+}
+function projectRequest(row: RequestRow): PdrHistoryRequest {
+  return { id: row.id, title: row.title, originalText: row.description, conversation: asArray(row.challenge_prompts), screening: { proposalType: "legacy_request", problemStatement: row.title, aiRationale: `Challenge score: ${row.challenge_score}`, status: row.status }, requester: { displayName: null, userId: null, legacyLabel: row.created_by }, disposition: { kind: null, byUserId: null, at: null, note: row.decision_note }, createdAt: row.created_at, updatedAt: row.updated_at, attachments: [], provenance: "request" }
 }
 
 async function attachmentsFor(proposalIds: string[]) {
@@ -82,21 +88,23 @@ async function attachmentsFor(proposalIds: string[]) {
 
 /** Server-only adapter. It never returns legacy attachment JSON/URLs to a browser. */
 export async function listPdrRequestHistory(): Promise<PdrHistoryRequest[]> {
-  const { data, error } = await createAdminClient().from("pdr_proposals")
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.from("pdr_proposals")
     .select("id, original_text, conversation, proposal_type, problem_statement, ai_rationale, status, created_by, requester_user_id, requester_display_name, disposition_kind, disposition_by_user_id, disposition_at, reviewer_note, created_at, updated_at")
     .order("created_at", { ascending: false })
-  if (error) throw new Error("PDR history is temporarily unavailable.")
+  const requestResult = await supabase.from("pdr_requests").select("id, title, description, challenge_prompts, challenge_score, status, decision_note, created_by, created_at, updated_at").order("created_at", { ascending: false })
+  if (error || requestResult.error) throw new Error("PDR history is temporarily unavailable.")
   const rows = (data ?? []) as ProposalRow[]
   const attachments = await attachmentsFor(rows.map((row) => row.id))
-  return rows.map((row) => projectProposal(row, attachments.get(row.id) ?? []))
+  return [...rows.map((row) => projectProposal(row, attachments.get(row.id) ?? [])), ...((requestResult.data ?? []) as RequestRow[]).map(projectRequest)].sort((a,b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 export async function getPdrRequestHistory(id: string): Promise<PdrHistoryRequest | null> {
-  const { data, error } = await createAdminClient().from("pdr_proposals")
+  const supabase = createAdminClient(); const { data, error } = await supabase.from("pdr_proposals")
     .select("id, original_text, conversation, proposal_type, problem_statement, ai_rationale, status, created_by, requester_user_id, requester_display_name, disposition_kind, disposition_by_user_id, disposition_at, reviewer_note, created_at, updated_at")
     .eq("id", id).maybeSingle()
   if (error) throw new Error("PDR history is temporarily unavailable.")
-  if (!data) return null
+  if (!data) { const { data: legacy, error: legacyError } = await supabase.from("pdr_requests").select("id, title, description, challenge_prompts, challenge_score, status, decision_note, created_by, created_at, updated_at").eq("id",id).maybeSingle(); if (legacyError) throw new Error("PDR history is temporarily unavailable."); return legacy ? projectRequest(legacy as RequestRow) : null }
   const row = data as ProposalRow
   const attachments = await attachmentsFor([row.id])
   return projectProposal(row, attachments.get(row.id) ?? [])
@@ -104,9 +112,15 @@ export async function getPdrRequestHistory(id: string): Promise<PdrHistoryReques
 
 export async function canDispositionPdr(userId: string) {
   const { data, error } = await createAdminClient().from("wave_pdr_governance_capabilities")
-    .select("actor_user_id").eq("actor_user_id", userId).eq("can_disposition", true).maybeSingle()
+    .select("actor_user_id").eq("singleton", true).eq("actor_user_id", userId).eq("can_disposition", true).maybeSingle()
   if (error) throw new Error("PDR governance capability is unavailable.")
   return Boolean(data)
+}
+
+export async function listHistoricalPdrWorkCards(): Promise<PdrHistoricalWorkCard[]> {
+  const { data, error } = await createAdminClient().from("pdr_work_cards").select("id, reference_number, title, notes, status, owner, created_at, updated_at").order("reference_number", { ascending: false })
+  if (error) throw new Error("PDR Work Card history is temporarily unavailable.")
+  return (data ?? []).map((row) => ({ id: row.id, referenceNumber: row.reference_number, title: row.title, notes: row.notes, status: row.status, owner: row.owner, createdAt: row.created_at, updatedAt: row.updated_at }))
 }
 
 export function assertPdrAttachment(file: File) {

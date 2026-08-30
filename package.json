@@ -23,6 +23,9 @@
     "w098:source-preflight": "node scripts/verify-w098-source-workbook.mjs",
     "w163:titles": "tsx scripts/reconcile-w163-platform-titles.ts",
     "governance:refresh": "tsx scripts/refresh-governance-projection.ts"
+    ,"pdr:reconcile-history": "tsx scripts/reconcile-pdr-history.ts"
+    ,"pdr:cutover-legacy-attachments": "tsx scripts/cutover-pdr-legacy-attachments.ts"
+    ,"pdr:grant-ivan-capability": "tsx scripts/grant-pdr-ivan-capability.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

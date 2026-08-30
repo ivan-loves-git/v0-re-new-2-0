@@ -20,7 +20,8 @@ ALTER TABLE public.pdr_proposals
        OR (disposition_kind IS NOT NULL AND disposition_by_user_id IS NOT NULL AND disposition_at IS NOT NULL));
 
 CREATE TABLE IF NOT EXISTS public.wave_pdr_governance_capabilities (
-  actor_user_id TEXT PRIMARY KEY CHECK (NULLIF(BTRIM(actor_user_id),'') IS NOT NULL),
+  singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),
+  actor_user_id TEXT NOT NULL UNIQUE CHECK (NULLIF(BTRIM(actor_user_id),'') IS NOT NULL),
   can_disposition BOOLEAN NOT NULL DEFAULT TRUE CHECK (can_disposition),
   granted_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
   granted_by TEXT NOT NULL CHECK (NULLIF(BTRIM(granted_by),'') IS NOT NULL)
@@ -35,6 +36,8 @@ CREATE TABLE IF NOT EXISTS public.wave_pdr_request_attachments (
   content_type TEXT NOT NULL CHECK (NULLIF(BTRIM(content_type),'') IS NOT NULL),
   size_bytes BIGINT NOT NULL CHECK (size_bytes BETWEEN 1 AND 4194304),
   uploaded_by_user_id TEXT NOT NULL CHECK (NULLIF(BTRIM(uploaded_by_user_id),'') IS NOT NULL),
+  content_sha256 TEXT CHECK (content_sha256 IS NULL OR content_sha256 ~ '^[0-9a-f]{64}$'),
+  legacy_source_fingerprint TEXT CHECK (legacy_source_fingerprint IS NULL OR legacy_source_fingerprint ~ '^[0-9a-f]{64}$'),
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 CREATE INDEX IF NOT EXISTS wave_pdr_request_attachments_proposal_idx

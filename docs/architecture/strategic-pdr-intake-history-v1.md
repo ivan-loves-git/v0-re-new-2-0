@@ -41,3 +41,11 @@ Before the migration, reconcile record counts and immutable identifiers for
 the existing standalone PDR. Do not rewrite historical rows to make the counts
 fit. A failed PDR query is surfaced as unavailable; WAVE must not substitute a
 PDR Work Card or create a GitHub item as a fallback.
+
+## Rollback boundary
+
+Before public retirement, rollback means restore only the former table grants,
+remove the Work Card freeze trigger and the added proposal constraints. Do not
+delete private copied attachment records/objects or the singleton capability:
+they are immutable cutover evidence. Once public retirement is accepted,
+rollback requires a new governance decision rather than restoring a public PDR.
