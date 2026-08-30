@@ -8,9 +8,16 @@ describe("GitHub governance marker parser", () => {
   it("accepts the live unquoted placement decision and array approval keys", () => {
     expect(parseGovernanceMarker(body("schema: 1\nkind: decision\nplacement_decision: #36\napproval_keys:\n  - strategy-registry:2026-08-30-initial-1"))).toEqual({
       kind: "Decision", strategy_revision: undefined, goal_id: undefined, milestone_id: undefined,
+      publication: undefined, bootstrap: undefined, pdr_reference: undefined, pdr_work_card_id: undefined, pdr_strategic_item_id: undefined,
       kpi_ids: undefined, guardrail_ids: undefined, placement_decision: 36,
       approval_keys: ["strategy-registry:2026-08-30-initial-1"], approved_by: undefined,
       decision_state: undefined, decision_key: undefined, strategic_placement: undefined,
+    });
+  });
+
+  it("retains bounded Product Change source metadata", () => {
+    expect(parseGovernanceMarker(body("schema: 1\nkind: product-change\npublication: manual\nbootstrap: manual\npdr_reference: W-158\npdr_work_card_id: 123e4567-e89b-42d3-a456-426614174000"))).toMatchObject({
+      kind: "Product Change", publication: "manual", bootstrap: "manual", pdr_reference: "W-158", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000",
     });
   });
 

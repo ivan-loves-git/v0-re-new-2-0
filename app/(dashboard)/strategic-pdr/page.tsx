@@ -1,17 +1,15 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { ExternalLink, FileText, GitPullRequest, Inbox, RefreshCw } from "lucide-react";
+import { ExternalLink, FileText, Inbox, RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireStaffAccess } from "@/lib/access-control";
-import { type SafeGovernanceIssue } from "@/lib/governance-projection/model";
-import { verifiedPdrRequestByGovernanceIssue } from "@/lib/governance-projection/pdr-source";
+import { type GovernanceProvenance, type SafeGovernanceIssue } from "@/lib/governance-projection/model";
+import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness";
 import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server";
 import { listPdrRequestHistory } from "@/lib/pdr/intake-server";
-
-const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
 function displayDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -26,7 +24,7 @@ function deliveryTone(status: SafeGovernanceIssue["projectStatus"]) {
   return "default" as const;
 }
 
-function IssueActions({ issue, pdrRequest }: { issue: SafeGovernanceIssue; pdrRequest?: { id: string; title: string } }) {
+function IssueActions({ issue }: { issue: SafeGovernanceIssue }) {
   return (
     <div className="flex flex-wrap gap-2">
       <Button asChild size="sm" variant="outline">
@@ -34,18 +32,25 @@ function IssueActions({ issue, pdrRequest }: { issue: SafeGovernanceIssue; pdrRe
           Open / Discuss in GitHub <ExternalLink className="size-3.5" />
         </a>
       </Button>
-      {pdrRequest ? (
-        <Button asChild size="sm" variant="ghost">
-          <Link href={`/strategic-pdr/requests/${pdrRequest.id}`}>
-            <FileText className="size-3.5" /> Original PDR request
-          </Link>
-        </Button>
-      ) : null}
     </div>
   );
 }
 
-function ProductChangeCard({ issue, pdrRequest, children }: { issue: SafeGovernanceIssue; pdrRequest?: { id: string; title: string }; children: SafeGovernanceIssue[] }) {
+function ProvenanceSummary({ provenance }: { provenance: GovernanceProvenance | undefined }) {
+  if (provenance?.state === "direct_github") return <p className="text-sm text-muted-foreground">Direct GitHub scope. No PDR source is expected.</p>;
+  if (provenance?.state === "pdr_work_card") return <p className="text-sm text-muted-foreground">Verified PDR historical Work Card {provenance.pdrReference}.</p>;
+  if (provenance?.state === "pdr_strategic_item") return <p className="text-sm text-muted-foreground">Verified PDR strategic-item metadata is recorded, but no internal detail route exists for it yet.</p>;
+  return <p className="text-sm text-muted-foreground">Source provenance is unavailable or unverified in the governance projection.</p>;
+}
+
+function ProductChangeTitle({ issue }: { issue: SafeGovernanceIssue }) {
+  if (issue.provenance?.state === "pdr_work_card" && issue.provenance.pdrWorkCardId) {
+    return <h3 className="font-medium leading-snug"><Link className="inline-flex items-center gap-1 underline underline-offset-4" href={`/strategic-pdr/work-cards/${issue.provenance.pdrWorkCardId}`}>{issue.title}<FileText className="size-3.5" /></Link></h3>;
+  }
+  return <h3 className="font-medium leading-snug">{issue.title}</h3>;
+}
+
+function ProductChangeCard({ issue, linkedIssues }: { issue: SafeGovernanceIssue; linkedIssues: SafeGovernanceIssue[] }) {
   return (
     <article className="space-y-3 rounded-lg border bg-background p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -54,26 +59,22 @@ function ProductChangeCard({ issue, pdrRequest, children }: { issue: SafeGoverna
             <Badge variant={deliveryTone(issue.projectStatus)}>{issue.projectStatus}</Badge>
             <span className="wave-micro-label">Product Change #{issue.number}</span>
           </div>
-          <h3 className="font-medium leading-snug">{issue.title}</h3>
-          <p className="text-sm text-muted-foreground">
-            {pdrRequest
-              ? `Request-sourced: ${pdrRequest.title}`
-              : "PDR source link is not recorded in the governance projection."}
-          </p>
+          <ProductChangeTitle issue={issue} />
+          <ProvenanceSummary provenance={issue.provenance} />
         </div>
-        <IssueActions issue={issue} pdrRequest={pdrRequest} />
+        <IssueActions issue={issue} />
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div><dt className="wave-micro-label">Owner</dt><dd>{issue.assigneeLogins.length ? issue.assigneeLogins.join(", ") : "Unassigned"}</dd></div>
         <div><dt className="wave-micro-label">Dependencies</dt><dd>{issue.dependencyNumbers.length ? issue.dependencyNumbers.map((item) => `#${item}`).join(", ") : "None recorded"}</dd></div>
-        <div><dt className="wave-micro-label">Delivery</dt><dd>{children.length ? `${children.length} linked ticket${children.length === 1 ? "" : "s"}` : "No linked tickets"}</dd></div>
+        <div><dt className="wave-micro-label">Delivery</dt><dd>{linkedIssues.length ? `${linkedIssues.length} linked ticket${linkedIssues.length === 1 ? "" : "s"}` : "No linked tickets"}</dd></div>
         <div><dt className="wave-micro-label">Updated</dt><dd>{displayDate(issue.updatedAt)}</dd></div>
       </dl>
-      {children.length ? (
+      {linkedIssues.length ? (
         <div className="border-t pt-3">
           <p className="wave-micro-label mb-2">Delivery tickets</p>
           <ul className="space-y-2 text-sm">
-            {children.map((child) => (
+            {linkedIssues.map((child) => (
               <li key={child.number} className="flex flex-wrap items-center justify-between gap-2">
                 <span><Badge variant={deliveryTone(child.projectStatus)} className="mr-2">{child.projectStatus}</Badge>#{child.number} · {child.title}</span>
                 <a className="inline-flex items-center gap-1 underline underline-offset-4" href={child.url} target="_blank" rel="noreferrer">Discuss <ExternalLink className="size-3" /></a>
@@ -99,8 +100,7 @@ export default async function StrategicPdrPage() {
   }
 
   const { projection } = current;
-  const isStale = Date.now() - new Date(projection.snapshotAt).valueOf() > STALE_AFTER_MS;
-  const pdrByIssue = verifiedPdrRequestByGovernanceIssue(requestResult.requests);
+  const isStale = isGovernanceProjectionStale(projection.snapshotAt);
   const productChanges = projection.issues.filter((issue) => issue.kind === "Product Change");
   const childrenByParent = new Map<number, SafeGovernanceIssue[]>();
   for (const issue of projection.issues) {
@@ -128,13 +128,13 @@ export default async function StrategicPdrPage() {
           const milestones = projection.registry.milestones.filter((item) => item.goalId === goal.id && item.lifecycle === "active");
           return <Card key={goal.id}><CardHeader><CardTitle>{goal.id} · {goal.title}</CardTitle><CardDescription>{goal.statement}</CardDescription></CardHeader><CardContent className="space-y-5">
             <div className="grid gap-3 lg:grid-cols-2">{goal.kpiIds.map((kpiId) => { const kpi = projection.registry.kpis.find((item) => item.id === kpiId); return kpi ? <div key={kpi.id} className="rounded-md border p-3"><p className="wave-micro-label">{kpi.id} · KPI</p><p className="font-medium">{kpi.title}</p><p className="mt-1 text-sm text-muted-foreground">Actual: unavailable{ kpi.target.value !== null ? ` · target: ${kpi.target.value} ${kpi.unit}` : " · target: unavailable" }</p></div> : null })}</div>
-            {milestones.map((milestone) => { const changes = productChanges.filter((item) => item.placement.goalId === goal.id && item.placement.milestoneId === milestone.id); return <div key={milestone.id} className="space-y-3 border-t pt-5"><div><p className="wave-micro-label">Outcome milestone · {milestone.id} · {milestone.outcomeState.replaceAll("_", " ")}</p><h3 className="font-medium">{milestone.title}</h3><p className="text-sm text-muted-foreground">{milestone.outcome}</p></div>{changes.length ? changes.map((issue) => <ProductChangeCard key={issue.number} issue={issue} pdrRequest={pdrByIssue.get(issue.number)} children={childrenByParent.get(issue.number) ?? []} />) : <p className="text-sm text-muted-foreground">No current Product Change is mapped to this milestone in the validated projection.</p>}</div> })}
+            {milestones.map((milestone) => { const changes = productChanges.filter((item) => item.placement.goalId === goal.id && item.placement.milestoneId === milestone.id); return <div key={milestone.id} className="space-y-3 border-t pt-5"><div><p className="wave-micro-label">Outcome milestone · {milestone.id} · {milestone.outcomeState.replaceAll("_", " ")}</p><h3 className="font-medium">{milestone.title}</h3><p className="text-sm text-muted-foreground">{milestone.outcome}</p></div>{changes.length ? changes.map((issue) => <ProductChangeCard key={issue.number} issue={issue} linkedIssues={childrenByParent.get(issue.number) ?? []} />) : <p className="text-sm text-muted-foreground">No current Product Change is mapped to this milestone in the validated projection.</p>}</div> })}
           </CardContent></Card>
         })}
       </div>
     </section>
 
-    <section className="space-y-4" aria-labelledby="unmapped-heading"><div><p className="wave-micro-label">Delivery</p><h2 id="unmapped-heading" className="text-xl font-semibold">Product Changes without a current strategic placement</h2></div><Card><CardContent className="space-y-3 pt-6">{productChanges.filter((issue) => issue.placement.goalId === null).map((issue) => <ProductChangeCard key={issue.number} issue={issue} pdrRequest={pdrByIssue.get(issue.number)} children={childrenByParent.get(issue.number) ?? []} />)}{!productChanges.some((issue) => issue.placement.goalId === null) ? <p className="text-sm text-muted-foreground">Every current Product Change has a validated strategic placement.</p> : null}</CardContent></Card></section>
+    <section className="space-y-4" aria-labelledby="unmapped-heading"><div><p className="wave-micro-label">Delivery</p><h2 id="unmapped-heading" className="text-xl font-semibold">Product Changes without a current strategic placement</h2></div><Card><CardContent className="space-y-3 pt-6">{productChanges.filter((issue) => issue.placement.goalId === null).map((issue) => <ProductChangeCard key={issue.number} issue={issue} linkedIssues={childrenByParent.get(issue.number) ?? []} />)}{!productChanges.some((issue) => issue.placement.goalId === null) ? <p className="text-sm text-muted-foreground">Every current Product Change has a validated strategic placement.</p> : null}</CardContent></Card></section>
 
     <section aria-labelledby="requests-heading"><Card><CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="wave-micro-label">Requests</p><CardTitle id="requests-heading">Founder and staff intake</CardTitle><CardDescription>Original requests, AI screening and historical evidence stay in WAVE. They do not change GitHub delivery status.</CardDescription></div><Button asChild size="sm"><Link href="/strategic-pdr/requests"><Inbox className="size-3.5" />Open request intake</Link></Button></div></CardHeader><CardContent className="text-sm text-muted-foreground">{requestResult.state === "available" ? `${requestResult.requests.length} request records are available to staff. A request opens as a Product Change only when a verified handoff link is recorded; otherwise it remains intake evidence, not delivery scope.` : "Request history is temporarily unavailable. GitHub delivery data remains separate and is shown above."}</CardContent></Card></section>
   </div>;

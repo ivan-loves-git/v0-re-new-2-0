@@ -31,6 +31,22 @@ const placement = z.object({
   decisionNumber: issueNumber.nullable(),
   temporaryException: z.boolean(),
 }).strict();
+const provenance = z.object({
+  state: z.enum(["direct_github", "pdr_work_card", "pdr_strategic_item", "unverified"]),
+  publication: z.enum(["manual", "direct-github"]).optional(),
+  bootstrap: z.literal("manual").optional(),
+  pdrReference: z.string().regex(/^W-\d{3}$/).optional(),
+  pdrWorkCardId: z.string().uuid().optional(),
+  pdrStrategicItemId: z.string().uuid().optional(),
+}).strict().superRefine((value, ctx) => {
+  const hasWorkCard = Boolean(value.pdrReference && value.pdrWorkCardId);
+  const partialWorkCard = Boolean(value.pdrReference) !== Boolean(value.pdrWorkCardId);
+  if (value.state === "direct_github" && (value.publication !== "direct-github" || value.pdrReference || value.pdrWorkCardId || value.pdrStrategicItemId)) ctx.addIssue({ code: "custom", message: "invalid direct GitHub provenance" });
+  if (value.state === "pdr_work_card" && (!hasWorkCard || value.pdrStrategicItemId || value.publication === "direct-github")) ctx.addIssue({ code: "custom", message: "invalid PDR Work Card provenance" });
+  if (value.state === "pdr_strategic_item" && (!value.pdrStrategicItemId || value.pdrReference || value.pdrWorkCardId || value.publication === "direct-github")) ctx.addIssue({ code: "custom", message: "invalid PDR strategic item provenance" });
+  if (value.state === "unverified" && (value.publication === "direct-github" || hasWorkCard || value.pdrStrategicItemId)) ctx.addIssue({ code: "custom", message: "invalid unverified provenance" });
+  if (value.state === "unverified" && partialWorkCard === false && (value.pdrReference || value.pdrWorkCardId) && !hasWorkCard) ctx.addIssue({ code: "custom", message: "invalid partial PDR provenance" });
+});
 const goal = z.object({ id: z.string().regex(/^G-\d{3}$/), title: nonEmpty, statement: nonEmpty, sourceRefs: refs, kpiIds: z.array(z.string().regex(/^KPI-\d{3}$/)).refine(unique) }).strict();
 const milestone = z.object({ id: z.string().regex(/^M-\d{3}$/), goalId: z.string().regex(/^G-\d{3}$/), title: nonEmpty, outcome: nonEmpty, lifecycle: z.enum(["active", "retired"]), outcomeState: z.enum(["unassessed", "in_progress", "achieved", "not_achieved"]), sourceRefs: refs }).strict();
 const kpi = z.object({
@@ -51,7 +67,7 @@ const issue = z.object({
   number: issueNumber, title: nonEmpty, url: issueUrl, kind, state: z.enum(["OPEN", "CLOSED"]), projectStatus, decisionState, updatedAt: timestamp,
   assigneeLogins: z.array(login).refine(unique, "duplicate assignee"), parentNumber: issueNumber.nullable(), dependencyNumbers: z.array(issueNumber).refine(unique, "duplicate dependency"),
   pullRequests: z.array(z.object({ url: z.string().regex(/^https:\/\/github\.com\/(?:ivan-loves-git\/v0-re-new-2-0|re-new-team\/renew-governance)\/pull\/[1-9]\d*$/), state: z.enum(["OPEN", "CLOSED", "MERGED"]) }).strict()).refine((items) => unique(items.map((item) => item.url)), "duplicate pull request"),
-  placement,
+  placement, provenance: provenance.optional(),
 }).strict();
 const legacy = z.object({ number: issueNumber, title: nonEmpty, url: issueUrl, state: z.literal("CLOSED"), projectStatus: z.literal("Done"), parentNumber: issueNumber, reason: z.enum(["legacy_missing_issue_type", "legacy_non_product_change_parent"]), nativeKind: z.enum(["Ticket", "Bug"]).optional() }).strict();
 const projectionSchema = z.object({
@@ -100,9 +116,10 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
     if (item.placement.decisionNumber !== null && !decided(issues.get(item.placement.decisionNumber))) return null;
     if (item.kind === "Ticket" || item.kind === "Bug") {
       const parent = item.parentNumber === null ? undefined : issues.get(item.parentNumber);
-      if (!parent || parent.kind !== "Product Change" || JSON.stringify(item.placement) !== JSON.stringify(parent.placement)) return null;
+      if (!parent || parent.kind !== "Product Change" || item.provenance !== undefined || JSON.stringify(item.placement) !== JSON.stringify(parent.placement)) return null;
     }
     if (item.kind === "Product Change") {
+      if (item.provenance !== undefined && item.provenance.state === "pdr_work_card" && (!item.provenance.pdrReference || !item.provenance.pdrWorkCardId)) return null;
       const p = item.placement;
       if (p.temporaryException) {
         if (p.goalId !== null || p.milestoneId !== null || p.kpiIds.length || p.guardrailIds.length || p.decisionNumber === null) return null;

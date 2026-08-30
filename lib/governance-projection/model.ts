@@ -22,6 +22,11 @@ export type DecisionState =
   | null;
 export interface GithubMarker {
   kind?: GovernanceIssueKind;
+  publication?: "manual" | "direct-github";
+  bootstrap?: "manual";
+  pdr_reference?: string;
+  pdr_work_card_id?: string;
+  pdr_strategic_item_id?: string;
   strategy_revision?: string;
   goal_id?: string;
   milestone_id?: string;
@@ -34,6 +39,14 @@ export interface GithubMarker {
   decision_key?: string;
   strategic_placement?: string;
 }
+export type GovernanceProvenance = {
+  state: "direct_github" | "pdr_work_card" | "pdr_strategic_item" | "unverified";
+  publication?: "manual" | "direct-github";
+  bootstrap?: "manual";
+  pdrReference?: string;
+  pdrWorkCardId?: string;
+  pdrStrategicItemId?: string;
+};
 export interface GithubIssueFact {
   number: number;
   title: string;
@@ -146,6 +159,8 @@ export interface SafeGovernanceIssue {
   parentNumber: number | null;
   dependencyNumbers: number[];
   pullRequests: { url: string; state: string }[];
+  /** Absent only in pre-provenance v1 snapshots; never inferred from PDR text. */
+  provenance?: GovernanceProvenance;
   placement: {
     goalId: string | null;
     milestoneId: string | null;

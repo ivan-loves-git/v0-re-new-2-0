@@ -125,6 +125,31 @@ describe("governance projection normalization", () => {
       decisionNumber: 46,
     });
     expect(JSON.stringify(result)).not.toContain("approval_keys");
+    expect(result.issues.find((entry) => entry.number === 23)?.provenance).toEqual({ state: "unverified" });
+  });
+  it("projects direct GitHub scope only from its exact marker", () => {
+    const direct = source();
+    (direct.issues[2].marker as Record<string, unknown>).publication = "direct-github";
+    expect(createGovernanceProjection(direct).issues.find((entry) => entry.number === 23)?.provenance).toEqual({ state: "direct_github", publication: "direct-github" });
+  });
+  it("projects a complete bootstrap PDR Work Card source without guessing", () => {
+    const pdr = source();
+    Object.assign(pdr.issues[2].marker as Record<string, unknown>, { publication: "manual", bootstrap: "manual", pdr_reference: "W-158", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000" });
+    expect(createGovernanceProjection(pdr).issues.find((entry) => entry.number === 23)?.provenance).toMatchObject({ state: "pdr_work_card", pdrReference: "W-158", pdrWorkCardId: "123e4567-e89b-42d3-a456-426614174000" });
+  });
+  it("keeps partial source metadata unverified and rejects contradictory markers", () => {
+    const partial = source();
+    (partial.issues[2].marker as Record<string, unknown>).pdr_reference = "W-158";
+    expect(createGovernanceProjection(partial).issues.find((entry) => entry.number === 23)?.provenance).toMatchObject({ state: "unverified", pdrReference: "W-158" });
+    const conflicting = source();
+    Object.assign(conflicting.issues[2].marker as Record<string, unknown>, { publication: "direct-github", pdr_reference: "W-158", pdr_work_card_id: "123e4567-e89b-42d3-a456-426614174000" });
+    expect(() => createGovernanceProjection(conflicting)).toThrow("conflicts with PDR source");
+  });
+  it("does not allow Tickets to define Product Change provenance", () => {
+    const invalid = source();
+    (invalid.issues[3].marker as Record<string, unknown> | undefined) ??= {};
+    (invalid.issues[3].marker as Record<string, unknown>).publication = "direct-github";
+    expect(() => createGovernanceProjection(invalid)).toThrow("cannot own governance marker fields");
   });
   it("requires exactly accepted KPI contracts and strict registry records", () => {
     const invalid = source();
