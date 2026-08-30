@@ -21,7 +21,8 @@
     "design:check": "node scripts/check-wave-visual-policy.mjs && node .agents/skills/impeccable/scripts/detect.mjs app components styles",
     "data-model:check": "node scripts/check-ma-data-model-sync.mjs",
     "w098:source-preflight": "node scripts/verify-w098-source-workbook.mjs",
-    "w163:titles": "tsx scripts/reconcile-w163-platform-titles.ts"
+    "w163:titles": "tsx scripts/reconcile-w163-platform-titles.ts",
+    "governance:refresh": "tsx scripts/refresh-governance-projection.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
@@ -87,7 +88,8 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "yaml": "2.8.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
