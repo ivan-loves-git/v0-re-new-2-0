@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server"
 import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness"
-import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, generatePdrScreening, validatePdrScreeningDraft } from "@/lib/ai/pdr-screening"
+import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, PDR_SCREENING_REASONING_EFFORT, generatePdrScreening, validatePdrScreeningDraft } from "@/lib/ai/pdr-screening"
 import { pdrScreeningLedgerErrorCode } from "@/lib/ai/pdr-screening-output-error"
 import { pdrScreeningAnswersSchema, pdrScreeningSaveSchema, type PdrScreeningContext, type PdrScreeningDraft } from "@/lib/ai/pdr-screening-contract"
 import { completeWaveAiRun, failWaveAiRun, startWaveAiRun } from "@/lib/ai/ledger"
@@ -113,7 +113,7 @@ export async function generateStrategicPdrScreening(formData: FormData): Promise
   const startedAt = Date.now()
   let run: Awaited<ReturnType<typeof startWaveAiRun>> | null = null
   try {
-    run = await startWaveAiRun({ actorUserId: access.user.id, feature: "pdr_screening", workflow: "pdr_screening_preview", surface: "/strategic-pdr/requests" , promptVersion: PDR_SCREENING_PROMPT_VERSION, outputSchemaVersion: PDR_SCREENING_OUTPUT_SCHEMA_VERSION })
+    run = await startWaveAiRun({ actorUserId: access.user.id, feature: "pdr_screening", workflow: "pdr_screening_preview", surface: "/strategic-pdr/requests" , promptVersion: PDR_SCREENING_PROMPT_VERSION, outputSchemaVersion: PDR_SCREENING_OUTPUT_SCHEMA_VERSION, reasoningEffort: PDR_SCREENING_REASONING_EFFORT })
     const result = await generatePdrScreening({ request: { id: request.id, title: request.title, originalText: request.originalText }, current, answers, safetyIdentifier: getOpaqueTelemetryUserId(access.user.id) })
     const usage = normalizeWaveAiUsage(result.usage)
     await completeWaveAiRun({ generationId: run.generationId, usage, estimatedCostUsd: estimateWaveAiCostUsd(usage), latencyMs: Date.now() - startedAt })

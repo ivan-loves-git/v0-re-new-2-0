@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const PDR_SCREENING_PROMPT_VERSION = "pdr-screening-v1" as const
+export const PDR_SCREENING_PROMPT_VERSION = "pdr-screening-v2" as const
 export const PDR_SCREENING_OUTPUT_SCHEMA_VERSION = "pdr-screening-v1" as const
 
 const boundedText = (min: number, max: number) => z.string().trim().min(min).max(max)

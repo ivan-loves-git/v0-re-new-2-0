@@ -4,7 +4,7 @@ import { zodTextFormat } from "openai/helpers/zod"
 import type { ResponseUsage } from "openai/resources/responses/responses"
 import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness"
 import type { CurrentGovernanceProjection } from "@/lib/governance-projection/server"
-import { WAVE_AI_MODEL, WAVE_AI_REASONING_EFFORT } from "@/lib/ai/config"
+import { WAVE_AI_MODEL } from "@/lib/ai/config"
 import { getWaveAiOpenAiClient } from "@/lib/ai/openai-client"
 import { PDR_CAPABILITY_CATALOGUE, PDR_CAPABILITY_CATALOGUE_VERSION } from "@/lib/ai/pdr-capability-catalogue"
 import { PDR_SCREENING_OUTPUT_SCHEMA_VERSION, PDR_SCREENING_PROMPT_VERSION, pdrScreeningDraftSchema, type PdrScreeningContext, type PdrScreeningDraft } from "@/lib/ai/pdr-screening-contract"
@@ -18,6 +18,10 @@ const MAX_CONTEXT_BYTES = 24_000
 // 4,800 keeps the single-attempt contract while leaving enough room to complete
 // the strict schema. This is intentionally scoped to PDR screening.
 export const PDR_SCREENING_MAX_OUTPUT_TOKENS = 4_800
+// PDR screening is an advisory, staff-only edit with an explicit save gate.
+// Its concise structured output does not need the global maximum-reasoning
+// budget used by the broader WAVE AI features.
+export const PDR_SCREENING_REASONING_EFFORT = "low" as const
 const cap = (value: string, max: number) => value.trim().slice(0, max)
 
 function allowedContext(current: Extract<CurrentGovernanceProjection, { state: "available" }>) {
@@ -46,7 +50,7 @@ Use only supplied request wording and compact allowlisted context. Do not restat
 ${freshness === "fresh"
   ? "Fresh strategy context is available. You may suggest a Goal, Milestone, Product Change overlaps, and a cautious technical-impact note only when directly supported by the supplied context."
   : "Strategy context is stale. Ask clarifying questions and frame the problem only. Set suggestedGoalId and suggestedMilestoneId to null, overlappingProductChangeNumbers to [], and technicalImpact to null."}
-If uncertain, say so in unknowns and lower confidence. Return only the requested structured output.`
+Keep affectedUsers, desiredOutcome, successSignal, problemFraming, and technicalImpact to one concise sentence each. Keep every clarification question, constraint/non-goal, success criterion, and unknown as one short list item. If uncertain, say so in unknowns and lower confidence. Return only the requested structured output.`
 }
 
 export function validatePdrScreeningDraft(draft: unknown, current: Extract<CurrentGovernanceProjection, { state: "available" }>, freshness: "fresh" | "stale"): PdrScreeningDraft {
@@ -80,7 +84,7 @@ export async function generatePdrScreening(input: { request: RequestSource; curr
   let response
   try {
     response = await client.responses.parse({
-      model: WAVE_AI_MODEL, reasoning: { effort: WAVE_AI_REASONING_EFFORT, context: "current_turn" },
+      model: WAVE_AI_MODEL, reasoning: { effort: PDR_SCREENING_REASONING_EFFORT, context: "current_turn" },
       store: false, parallel_tool_calls: false, max_output_tokens: PDR_SCREENING_MAX_OUTPUT_TOKENS,
       safety_identifier: input.safetyIdentifier.slice(0, 64),
       instructions: screeningInstructions(freshness),
