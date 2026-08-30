@@ -2,11 +2,10 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  GOVERNANCE_PROJECTION_SCHEMA_VERSION,
-  GOVERNANCE_SOURCE_REPOSITORY,
   governanceProjectionDigest,
   type GovernanceProjection,
 } from "@/lib/governance-projection/model";
+import { parseGovernanceProjection } from "@/lib/governance-projection/projection-validator";
 
 export type CurrentGovernanceProjection =
   | { state: "unavailable"; reason: "no_snapshot" | "read_failed" }
@@ -17,7 +16,7 @@ export type CurrentGovernanceProjection =
       projection: GovernanceProjection;
     };
 
-function isProjection(value: unknown): value is GovernanceProjection {
+/*function isProjection(value: unknown): value is GovernanceProjection {
   if (!value || typeof value !== "object") return false;
   const projection = value as Record<string, unknown>;
   const text = (input: unknown) => typeof input === "string" && input.trim().length > 0;
@@ -54,7 +53,7 @@ function isProjection(value: unknown): value is GovernanceProjection {
     const placement = issue.placement as Record<string, unknown> | null;
     return Number.isInteger(issue.number) && text(issue.title) && issueUrl(issue.url) && issue.url === `https://github.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/${issue.number}` && ["Product Change", "Decision", "Ticket", "Bug"].includes(issue.kind as string) && ["OPEN", "CLOSED"].includes(issue.state as string) && ["Unrouted", "Ready", "Todo", "In Progress", "Review", "Done", null].includes(issue.projectStatus as string | null) && ["Proposed", "Needs Ivan", "Decided", "Superseded", null].includes(issue.decisionState as string | null) && stamp(issue.updatedAt) && strings(issue.assigneeLogins) && Array.isArray(issue.dependencyNumbers) && issue.dependencyNumbers.every((number) => Number.isInteger(number) && (number as number) > 0) && new Set(issue.dependencyNumbers).size === issue.dependencyNumbers.length && Array.isArray(issue.pullRequests) && issue.pullRequests.every((pr) => pr && typeof pr === "object" && prUrl((pr as Record<string, unknown>).url) && ["OPEN", "CLOSED", "MERGED"].includes((pr as Record<string, unknown>).state as string)) && !!placement && typeof placement === "object" && [null, "string"].includes((placement as Record<string, unknown>).goalId == null ? null : typeof (placement as Record<string, unknown>).goalId) && [null, "string"].includes((placement as Record<string, unknown>).milestoneId == null ? null : typeof (placement as Record<string, unknown>).milestoneId) && ids((placement as Record<string, unknown>).kpiIds, /^KPI-\d{3}$/) && ids((placement as Record<string, unknown>).guardrailIds, /^GR-\d{3}$/) && ((placement as Record<string, unknown>).decisionNumber == null || Number.isInteger((placement as Record<string, unknown>).decisionNumber)) && typeof (placement as Record<string, unknown>).temporaryException === "boolean";
   });
-}
+}*/
 
 /** The sole WAVE/AI read seam. It never contacts GitHub or falls back to PDR. */
 export async function readCurrentGovernanceProjection(): Promise<CurrentGovernanceProjection> {
@@ -68,9 +67,9 @@ export async function readCurrentGovernanceProjection(): Promise<CurrentGovernan
     .maybeSingle();
   if (error) return { state: "unavailable", reason: "read_failed" };
   if (!data) return { state: "unavailable", reason: "no_snapshot" };
-  const projection = data.payload as GovernanceProjection;
+  const projection = parseGovernanceProjection(data.payload);
   if (
-    !isProjection(projection) ||
+    !projection ||
     typeof data.snapshot_digest !== "string" ||
     governanceProjectionDigest(projection) !== data.snapshot_digest
   )

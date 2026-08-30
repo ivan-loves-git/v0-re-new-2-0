@@ -69,4 +69,18 @@ describe("current governance projection reader", () => {
     const { readCurrentGovernanceProjection } = await import("@/lib/governance-projection/server");
     await expect(readCurrentGovernanceProjection()).resolves.toEqual({ state: "unavailable", reason: "read_failed" });
   });
+
+  it.each([
+    ["unknown fields", (value: Record<string, unknown>) => { value.unexpected = true; }],
+    ["duplicate issue", (value: Record<string, unknown>) => { (value.issues as unknown[]).push(structuredClone((value.issues as unknown[])[0])); }],
+    ["invalid login", (value: Record<string, unknown>) => { (value.issues as { assigneeLogins: string[] }[])[0].assigneeLogins = ["not valid!"]; }],
+    ["bad registry cross reference", (value: Record<string, unknown>) => { ((value.registry as { goals: { kpiIds: string[] }[] }).goals[0]).kpiIds = ["KPI-999"]; }],
+    ["invalid legacy exclusion", (value: Record<string, unknown>) => { value.legacyExclusions = [{ number: 99, title: "Old", url: `https://github.com/${repo}/issues/99`, state: "CLOSED", projectStatus: "Done", parentNumber: 36, reason: "legacy_missing_issue_type" }]; }],
+  ])("rejects a digest-valid tampered snapshot with %s", async (_label, corrupt) => {
+    const projection = structuredClone(validProjection()) as unknown as Record<string, unknown>;
+    corrupt(projection);
+    maybeSingle.mockResolvedValueOnce({ data: { snapshot_id: "id", snapshot_digest: governanceProjectionDigest(projection as unknown as ReturnType<typeof validProjection>), payload: projection }, error: null });
+    const { readCurrentGovernanceProjection } = await import("@/lib/governance-projection/server");
+    await expect(readCurrentGovernanceProjection()).resolves.toEqual({ state: "unavailable", reason: "read_failed" });
+  });
 });
