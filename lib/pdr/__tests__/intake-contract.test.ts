@@ -19,6 +19,14 @@ describe("Strategic PDR intake/history boundary", () => {
     expect(actions.match(/requireStaffAccess\(\)/g)?.length).toBeGreaterThanOrEqual(2)
     expect(actions).toContain("canDispositionPdr(access.user.id)")
     expect(actions).toContain("Only Ivan can disposition Strategic PDR intake.")
+    expect(actions).toContain('eq("status", PDR_DISPOSITIONABLE_PROPOSAL_STATUS)')
+    expect(actions).toContain('eq("requester_actor", "Staff")')
+  })
+
+  it("uses the same narrow disposition eligibility gate in the request UI", () => {
+    const detail = source("app/(dashboard)/strategic-pdr/requests/[requestId]/page.tsx")
+    expect(detail).toContain("isDispositionEligiblePdrRequest")
+    expect(detail).toContain("canDisposition && dispositionEligible")
   })
 
   it("uses a server-proxied private attachment download", () => {

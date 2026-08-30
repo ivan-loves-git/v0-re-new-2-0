@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requireStaffAccess } from "@/lib/access-control"
 import { assertPdrAttachment, canDispositionPdr, pdrAttachmentPath, PDR_ATTACHMENT_BUCKET } from "@/lib/pdr/intake-server"
+import { PDR_DISPOSITIONABLE_PROPOSAL_STATUS } from "@/lib/pdr/disposition-eligibility"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 
@@ -56,7 +57,12 @@ export async function dispositionStrategicPdrRequest(formData: FormData) {
   if (!await canDispositionPdr(access.user.id)) throw new Error("Only Ivan can disposition Strategic PDR intake.")
   const { data, error } = await createAdminClient().from("pdr_proposals").update({
     disposition_kind: disposition, disposition_by_user_id: access.user.id, disposition_at: new Date().toISOString(), reviewer_note: note,
-  }).eq("id", requestId).is("disposition_kind", null).select("id")
+  }).eq("id", requestId)
+    .eq("status", PDR_DISPOSITIONABLE_PROPOSAL_STATUS)
+    .eq("requester_actor", "Staff")
+    .not("requester_user_id", "is", null)
+    .is("disposition_kind", null)
+    .select("id")
   if (error || data?.length !== 1) throw new Error("The request was not found or was already disposed.")
   revalidatePath("/strategic-pdr/requests")
   revalidatePath(`/strategic-pdr/requests/${requestId}`)
