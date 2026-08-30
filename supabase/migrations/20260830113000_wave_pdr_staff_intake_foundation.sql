@@ -1,6 +1,5 @@
--- Governance #43: the legacy PDR becomes server-mediated staff intake/history.
--- Apply only during the protected WAVE cutover: revoking the old public reads
--- intentionally makes the standalone public PDR unable to read these records.
+-- Governance #43 additive foundation. It deliberately keeps legacy public PDR
+-- reads intact until #42 final retirement after protected WAVE UAT.
 
 ALTER TABLE public.pdr_proposals
   ADD COLUMN IF NOT EXISTS requester_user_id TEXT,
@@ -11,6 +10,8 @@ ALTER TABLE public.pdr_proposals
 
 ALTER TABLE public.pdr_proposals
   DROP CONSTRAINT IF EXISTS pdr_proposals_requester_actor_check,
+  DROP CONSTRAINT IF EXISTS pdr_proposals_disposition_kind_check,
+  DROP CONSTRAINT IF EXISTS pdr_proposals_disposition_audit_check,
   ADD CONSTRAINT pdr_proposals_requester_actor_check
     CHECK (requester_actor IN ('Dev team','qa_person','Colin','Staff')),
   ADD CONSTRAINT pdr_proposals_disposition_kind_check
@@ -42,6 +43,8 @@ CREATE TABLE IF NOT EXISTS public.wave_pdr_request_attachments (
 );
 CREATE INDEX IF NOT EXISTS wave_pdr_request_attachments_proposal_idx
   ON public.wave_pdr_request_attachments(proposal_id, created_at ASC);
+CREATE UNIQUE INDEX IF NOT EXISTS wave_pdr_request_attachments_legacy_fingerprint_unique
+  ON public.wave_pdr_request_attachments(legacy_source_fingerprint) WHERE legacy_source_fingerprint IS NOT NULL;
 
 INSERT INTO storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('pdr-intake-attachments','pdr-intake-attachments',FALSE,20971520,
@@ -49,29 +52,11 @@ VALUES ('pdr-intake-attachments','pdr-intake-attachments',FALSE,20971520,
 ON CONFLICT (id) DO UPDATE SET public=FALSE, file_size_limit=20971520,
   allowed_mime_types=EXCLUDED.allowed_mime_types;
 
--- No browser role can read PDR data or storage metadata. WAVE uses the service
--- role only after Better Auth role/capability checks in server code.
+-- New #43 metadata is server-only; existing legacy tables keep their current
+-- grants until the separately-gated final retirement migration.
 ALTER TABLE public.wave_pdr_governance_capabilities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wave_pdr_request_attachments ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.pdr_feedback, public.pdr_goals, public.pdr_milestones,
-  public.pdr_proposals, public.pdr_requests, public.pdr_work_cards,
-  public.wave_pdr_governance_capabilities, public.wave_pdr_request_attachments
-  FROM PUBLIC, anon, authenticated;
-GRANT ALL ON TABLE public.pdr_feedback, public.pdr_goals, public.pdr_milestones,
-  public.pdr_proposals, public.pdr_requests, public.pdr_work_cards,
-  public.wave_pdr_governance_capabilities, public.wave_pdr_request_attachments TO service_role;
-
--- Old Work Cards are historical evidence only. No new delivery state can be
--- written through their former table after the protected cutover.
-CREATE OR REPLACE FUNCTION public.wave_pdr_historical_work_cards_read_only()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-BEGIN
-  RAISE EXCEPTION 'wave_pdr_historical_work_cards_are_read_only';
-END;
-$$;
-DROP TRIGGER IF EXISTS wave_pdr_historical_work_cards_read_only ON public.pdr_work_cards;
-CREATE TRIGGER wave_pdr_historical_work_cards_read_only
-  BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON public.pdr_work_cards
-  FOR EACH STATEMENT EXECUTE FUNCTION public.wave_pdr_historical_work_cards_read_only();
+REVOKE ALL ON TABLE public.wave_pdr_governance_capabilities, public.wave_pdr_request_attachments FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.wave_pdr_governance_capabilities, public.wave_pdr_request_attachments TO service_role;
 
 NOTIFY pgrst, 'reload schema';

@@ -29,11 +29,14 @@ describe("Strategic PDR intake/history boundary", () => {
     expect(route).toContain("proxyPrivateSignedStorageDownload")
   })
 
-  it("makes the protected cutover revoke public reads and freeze Work Cards", () => {
-    const migration = source("supabase/migrations/20260830113000_wave_pdr_staff_intake.sql")
-    expect(migration).toContain("REVOKE ALL ON TABLE public.pdr_feedback")
-    expect(migration).toContain("FROM PUBLIC, anon, authenticated")
-    expect(migration).toContain("wave_pdr_historical_work_cards_are_read_only")
-    expect(migration).toContain("wave_pdr_governance_capabilities")
+  it("keeps non-breaking foundation separate from the final PDR retirement gate", () => {
+    const foundation = source("supabase/migrations/20260830113000_wave_pdr_staff_intake_foundation.sql")
+    const retirement = source("supabase/migrations/20260830113100_wave_pdr_final_retirement.sql")
+    expect(foundation).toContain("wave_pdr_governance_capabilities")
+    expect(foundation).toContain("pdr-intake-attachments")
+    expect(retirement).toContain("REVOKE ALL ON TABLE public.pdr_feedback")
+    expect(retirement).toContain("FROM PUBLIC, anon, authenticated")
+    expect(retirement).toContain("wave_pdr_historical_work_cards_are_read_only")
+    expect(retirement).toContain("pdr_legacy_attachments_not_fully_private")
   })
 })

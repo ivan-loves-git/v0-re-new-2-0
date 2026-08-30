@@ -54,10 +54,10 @@ export async function dispositionStrategicPdrRequest(formData: FormData) {
   const note = text(formData, "reviewer_note", 2000)
   if (!isUuid(requestId) || !["approved", "declined"].includes(disposition)) throw new Error("This request or disposition is invalid.")
   if (!await canDispositionPdr(access.user.id)) throw new Error("Only Ivan can disposition Strategic PDR intake.")
-  const { error } = await createAdminClient().from("pdr_proposals").update({
+  const { data, error } = await createAdminClient().from("pdr_proposals").update({
     disposition_kind: disposition, disposition_by_user_id: access.user.id, disposition_at: new Date().toISOString(), reviewer_note: note,
-  }).eq("id", requestId).is("disposition_kind", null)
-  if (error) throw new Error("The disposition could not be recorded.")
+  }).eq("id", requestId).is("disposition_kind", null).select("id")
+  if (error || data?.length !== 1) throw new Error("The request was not found or was already disposed.")
   revalidatePath("/strategic-pdr/requests")
   revalidatePath(`/strategic-pdr/requests/${requestId}`)
 }
