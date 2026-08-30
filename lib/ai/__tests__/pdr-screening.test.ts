@@ -22,14 +22,20 @@ describe("PDR screening validation", () => {
     expect(() => validatePdrScreeningDraft(valid, current, "stale")).toThrow()
     expect(validatePdrScreeningDraft({ ...valid, suggestedGoalId: null, suggestedMilestoneId: null, overlappingProductChangeNumbers: [], technicalImpact: null }, current, "stale").suggestedGoalId).toBeNull()
   })
-  it("binds a compact preview token to actor, request, draft and expiry", () => {
+  it("seals a preview token to actor, request, draft and expiry", () => {
     const previous = process.env.BETTER_AUTH_SECRET
     process.env.BETTER_AUTH_SECRET = "test-secret"
     const token = createPdrScreeningPreviewToken({ generationId: "11111111-1111-4111-8111-111111111111", requestId: "22222222-2222-4222-8222-222222222222", context: { snapshotId: "33333333-3333-4333-8333-333333333333", digest: "b".repeat(64), registryRevision: "r1", snapshotAt: "2026-08-30T00:00:00.000Z", freshness: "fresh" }, draftDigest: pdrScreeningDraftDigest(valid) }, "actor-a", 10)
+    expect(token).toMatch(/^v3\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
     expect(token).not.toContain("actor-a")
+    expect(token).not.toContain("G-001")
+    expect(token).not.toContain("22222222-2222-4222-8222-222222222222")
     expect(validatePdrScreeningPreviewToken(token, { actor: "actor-a", requestId: "22222222-2222-4222-8222-222222222222", draftDigest: pdrScreeningDraftDigest(valid) }, 20)?.generationId).toBe("11111111-1111-4111-8111-111111111111")
     expect(validatePdrScreeningPreviewToken(token, { actor: "actor-b", requestId: "22222222-2222-4222-8222-222222222222", draftDigest: pdrScreeningDraftDigest(valid) }, 20)).toBeNull()
     expect(validatePdrScreeningPreviewToken(`${token}x`, { actor: "actor-a", requestId: "22222222-2222-4222-8222-222222222222", draftDigest: pdrScreeningDraftDigest(valid) }, 20)).toBeNull()
+    expect(validatePdrScreeningPreviewToken(token, { actor: "actor-a", requestId: "44444444-4444-4444-8444-444444444444", draftDigest: pdrScreeningDraftDigest(valid) }, 20)).toBeNull()
+    expect(validatePdrScreeningPreviewToken(token, { actor: "actor-a", requestId: "22222222-2222-4222-8222-222222222222", draftDigest: "c".repeat(64) }, 20)).toBeNull()
+    expect(validatePdrScreeningPreviewToken("v3.bad.tag.cipher", { actor: "actor-a", requestId: "22222222-2222-4222-8222-222222222222", draftDigest: pdrScreeningDraftDigest(valid) }, 20)).toBeNull()
     expect(validatePdrScreeningPreviewToken(token, { actor: "actor-a", requestId: "22222222-2222-4222-8222-222222222222", draftDigest: pdrScreeningDraftDigest(valid) }, 601_000)).toBeNull()
     process.env.BETTER_AUTH_SECRET = previous
   })
