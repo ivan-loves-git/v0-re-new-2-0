@@ -17,10 +17,10 @@ const timestamp = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z
   (value) => !Number.isNaN(new Date(value).valueOf()) && new Date(value).toISOString() === value,
   "invalid ISO timestamp",
 );
-const refs = z.array(nonEmpty).refine(unique, "duplicate values");
+const refs = z.array(nonEmpty).min(1).refine(unique, "duplicate values");
 const issueUrl = z.string().regex(new RegExp(`^https://github\\.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/[1-9]\\d*$`));
 const login = z.string().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37})?$/);
-const projectStatus = z.enum(["Unrouted", "Ready", "Todo", "In Progress", "Review", "Done"]).nullable();
+const projectStatus = z.enum(["Unrouted", "Ready", "Todo", "In Progress", "Review", "Done"]);
 const decisionState = z.enum(["Proposed", "Needs Ivan", "Decided", "Superseded"]).nullable();
 const kind = z.enum(["Product Change", "Decision", "Ticket", "Bug"]);
 const placement = z.object({
@@ -82,7 +82,9 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
   if ([...goals.values()].some((item) => item.kpiIds.some((id) => kpis.get(id)?.goalId !== item.id))) return null;
   for (const item of kpis.values()) {
     const measured = item.measurement.sourceStatus === "defined";
-    if (measured !== Boolean(item.measurement.sourceRef && item.measurement.cadence && item.measurement.baselineDate)) return null;
+    const hasMeasurementValues = Boolean(item.measurement.sourceRef && item.measurement.cadence && item.measurement.baselineDate);
+    if (measured !== hasMeasurementValues) return null;
+    if (!measured && (item.measurement.sourceRef !== null || item.measurement.cadence !== null || item.measurement.baselineDate !== null)) return null;
     if (item.target.status === "unset" && (item.target.value !== null || item.target.targetDate !== null)) return null;
     if (item.target.status === "accepted" && (item.target.value === null || item.target.targetDate === null)) return null;
   }

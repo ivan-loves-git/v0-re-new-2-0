@@ -13,8 +13,7 @@ export type ProjectStatus =
   | "Todo"
   | "In Progress"
   | "Review"
-  | "Done"
-  | null;
+  | "Done";
 export type DecisionState =
   | "Proposed"
   | "Needs Ivan"
@@ -139,6 +138,7 @@ export interface SafeGovernanceIssue {
   url: string;
   kind: GovernanceIssueKind;
   state: "OPEN" | "CLOSED";
+  /** Every persisted safe issue is typed in GitHub and therefore has a status. */
   projectStatus: ProjectStatus;
   decisionState: DecisionState;
   updatedAt: string;

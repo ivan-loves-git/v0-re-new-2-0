@@ -17,7 +17,9 @@ const validProjection = () =>
     registry: {
       schema_version: 1, registry_id: "renew-strategy", revision: "2026-08-30-initial-1", status: "accepted", governance_decision: "#36", governance_decision_key: "governance-key", observed_at: "2026-08-30",
       approval: { state: "approved", decision: "#46", approved_by: "Ivan", approved_at: "2026-08-30T00:00:00.000Z" },
-      goals: [{ id: "G-001", title: "Goal", statement: "Statement", source_refs: ["#36"], kpi_ids: [] }], milestones: [], kpis: [], guardrails: [],
+      goals: [{ id: "G-001", title: "Goal", statement: "Statement", source_refs: ["#36"], kpi_ids: ["KPI-001"] }], milestones: [],
+      kpis: [{ id: "KPI-001", goal_id: "G-001", title: "KPI", definition: "Definition", definition_status: "accepted", unit: "count", measurement: { source_status: "defined", source_ref: "#36", cadence: "weekly", baseline_date: "2026-08-30" }, target: { status: "accepted", value: 1, target_date: "2026-09-30" }, source_refs: ["#36"] }],
+      guardrails: [],
     },
     issues: [
       { number: 36, title: "Decision", url: `https://github.com/${repo}/issues/36`, repository: repo, kind: "Decision", state: "CLOSED", projectStatus: "Done", decisionState: "Decided", updatedAt: "2026-08-30T00:00:00.000Z", marker: { decision_state: "decided", approved_by: "Ivan", approval_keys: ["governance-key"] } },
@@ -75,6 +77,14 @@ describe("current governance projection reader", () => {
     ["duplicate issue", (value: Record<string, unknown>) => { (value.issues as unknown[]).push(structuredClone((value.issues as unknown[])[0])); }],
     ["invalid login", (value: Record<string, unknown>) => { (value.issues as { assigneeLogins: string[] }[])[0].assigneeLogins = ["not valid!"]; }],
     ["bad registry cross reference", (value: Record<string, unknown>) => { ((value.registry as { goals: { kpiIds: string[] }[] }).goals[0]).kpiIds = ["KPI-999"]; }],
+    ["partially unset measurement", (value: Record<string, unknown>) => {
+      const measurement = (value.registry as { kpis: { measurement: { sourceStatus: string; cadence: string | null; baselineDate: string | null } }[] }).kpis[0].measurement;
+      measurement.sourceStatus = "unset";
+      measurement.cadence = null;
+      measurement.baselineDate = null;
+    }],
+    ["empty source references", (value: Record<string, unknown>) => { ((value.registry as { goals: { sourceRefs: string[] }[] }).goals[0]).sourceRefs = []; }],
+    ["null typed issue project status", (value: Record<string, unknown>) => { ((value.issues as { projectStatus: unknown }[])[0]).projectStatus = null; }],
     ["invalid legacy exclusion", (value: Record<string, unknown>) => { value.legacyExclusions = [{ number: 99, title: "Old", url: `https://github.com/${repo}/issues/99`, state: "CLOSED", projectStatus: "Done", parentNumber: 36, reason: "legacy_missing_issue_type" }]; }],
   ])("rejects a digest-valid tampered snapshot with %s", async (_label, corrupt) => {
     const projection = structuredClone(validProjection()) as unknown as Record<string, unknown>;

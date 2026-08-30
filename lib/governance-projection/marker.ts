@@ -12,7 +12,12 @@ const allowedFields = new Set([
 
 /** Parses only the bounded metadata block used by the GitHub collector. */
 export function parseGovernanceMarker(body: string | null | undefined): GithubMarker | undefined {
-  const yaml = body?.match(/<!--\s*renew-governance\s*\n([\s\S]*?)-->/)?.[1];
+  const source = body ?? "";
+  const blocks = [...source.matchAll(/<!--\s*renew-governance\s*\n([\s\S]*?)-->/g)];
+  if (blocks.length > 1) throw new Error("multiple governance marker blocks");
+  if (blocks.length === 0 && source.includes("<!-- renew-governance"))
+    throw new Error("malformed governance marker block");
+  const yaml = blocks[0]?.[1];
   if (!yaml) return undefined;
   const raw = parse(yaml);
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
@@ -57,6 +62,7 @@ export function parseGovernanceMarker(body: string | null | undefined): GithubMa
   };
   const pdrRef = text("pdr_reference");
   if (pdrRef && !/^W-\d{3}$/.test(pdrRef)) throw new Error("governance marker pdr_reference must be a work-card reference");
+  text("correlation_id");
   uuid("pdr_work_card_id"); uuid("pdr_strategic_item_id");
   const publication = text("publication");
   if (publication && publication !== "manual" && publication !== "direct-github") throw new Error("governance marker publication is unsupported");

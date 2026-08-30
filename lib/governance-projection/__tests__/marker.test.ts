@@ -20,4 +20,26 @@ describe("GitHub governance marker parser", () => {
     expect(() => parseGovernanceMarker(body("schema: 1\nunknown: value"))).toThrow("unknown governance marker field");
     expect(() => parseGovernanceMarker(body("schema: 1\nkind:\n  nested: value"))).toThrow("non-empty string");
   });
+
+  it.each([
+    ["object", "correlation_id:\n  nested: value"],
+    ["array", "correlation_id:\n  - value"],
+    ["empty", "correlation_id: '   '"],
+  ])("rejects a %s correlation ID", (_label, correlationId) => {
+    expect(() => parseGovernanceMarker(body(`schema: 1\n${correlationId}`))).toThrow(
+      "correlation_id must be a non-empty string",
+    );
+  });
+
+  it("rejects multiple governance marker blocks", () => {
+    expect(() => parseGovernanceMarker(`${body("schema: 1")}\n${body("schema: 1")}`)).toThrow(
+      "multiple governance marker blocks",
+    );
+  });
+
+  it("rejects an unterminated governance marker block", () => {
+    expect(() => parseGovernanceMarker("<!-- renew-governance\nschema: 1")).toThrow(
+      "malformed governance marker block",
+    );
+  });
 });

@@ -675,7 +675,7 @@ function safeIssue(
     url: issue.url,
     kind: issue.kind!,
     state: issue.state,
-    projectStatus: (issue.projectStatus ?? null) as ProjectStatus,
+    projectStatus: issue.projectStatus as ProjectStatus,
     decisionState: (issue.decisionState ?? null) as DecisionState,
     updatedAt: timestamp(issue.updatedAt, `#${issue.number}.updatedAt`),
     assigneeLogins: [...(issue.assigneeLogins ?? [])].sort(),
