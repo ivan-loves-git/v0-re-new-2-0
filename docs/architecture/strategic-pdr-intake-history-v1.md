@@ -64,11 +64,18 @@ fit. A failed PDR query is surfaced as unavailable; WAVE must not substitute a
 PDR Work Card or create a GitHub item as a fallback.
 
 After the migration, load the production environment without printing it and
-run `pnpm pdr:verify-final-retirement`. The verifier chooses an existing legacy
+run `pnpm pdr:purge-legacy-storage-cache`. A direct SQL update of the bucket's
+`public` flag does not invoke the Storage service's CDN invalidation hook, so a
+previously cached public URL can otherwise remain available. Supabase documents
+that bucket-wide invalidation can take up to 60 seconds to propagate; do not
+accept retirement until the next verifier passes. Then run
+`pnpm pdr:verify-final-retirement`. The verifier chooses an existing legacy
 object path privately through the direct database connection, then proves that
 its public Storage HTTP URL, its anonymous authenticated-object URL and
 anonymous Data API reads are all non-success responses. It prints statuses
 only, never the object path, response body or credentials.
+
+Provider reference: [Purge CDN Cache](https://supabase.com/docs/guides/storage/cdn/purge-cdn-cache).
 
 ## Rollback boundary
 

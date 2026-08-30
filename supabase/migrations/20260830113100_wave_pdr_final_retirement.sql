@@ -99,6 +99,9 @@ END $$;
 
 REVOKE ALL ON TABLE public.pdr_feedback, public.pdr_goals, public.pdr_milestones, public.pdr_proposals, public.pdr_requests, public.pdr_work_cards FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.pdr_feedback, public.pdr_goals, public.pdr_milestones, public.pdr_proposals, public.pdr_requests, public.pdr_work_cards TO service_role;
+-- Direct SQL does not invoke the Storage service's public-to-private CDN purge.
+-- Run pnpm pdr:purge-legacy-storage-cache after this transaction and require
+-- pnpm pdr:verify-final-retirement to pass before accepting the retirement.
 UPDATE storage.buckets SET public=FALSE WHERE id='pdr-attachments';
 CREATE OR REPLACE FUNCTION public.wave_pdr_historical_work_cards_read_only() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'wave_pdr_historical_work_cards_are_read_only'; END; $$;
 DROP TRIGGER IF EXISTS wave_pdr_historical_work_cards_read_only ON public.pdr_work_cards;

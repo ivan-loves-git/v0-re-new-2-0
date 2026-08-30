@@ -27,6 +27,7 @@
     ,"pdr:reconcile-history": "tsx scripts/reconcile-pdr-history.ts"
     ,"pdr:cutover-legacy-attachments": "tsx scripts/cutover-pdr-legacy-attachments.ts"
     ,"pdr:grant-ivan-capability": "tsx scripts/grant-pdr-ivan-capability.ts"
+    ,"pdr:purge-legacy-storage-cache": "bash scripts/purge-pdr-legacy-storage-cache.sh"
     ,"pdr:verify-final-retirement": "bash scripts/verify-pdr-final-retirement.sh"
   },
   "dependencies": {
