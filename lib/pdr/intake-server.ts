@@ -29,6 +29,7 @@ export type PdrHistoryRequest = {
   requester: { displayName: string | null; userId: string | null; actor: string; legacyLabel: string }
   intakeProvenance: string | null
   disposition: { kind: PdrDisposition | null; byUserId: string | null; at: string | null; note: string }
+  githubProductChange: { number: number; url: string } | null
   createdAt: string
   updatedAt: string
   attachments: PdrHistoryAttachment[]
@@ -54,6 +55,7 @@ type ProposalRow = {
   created_by: string; requester_actor: string; requester_user_id?: string | null; requester_display_name?: string | null; intake_provenance?: string | null
   disposition_kind?: string | null; disposition_by_user_id?: string | null; disposition_at?: string | null
   reviewer_note: string; created_at: string; updated_at: string
+  github_product_change_number?: number | null; github_product_change_url?: string | null
 }
 type RequestRow = { id: string; title: string; description: string; challenge_prompts: unknown; challenge_score: number; status: string; decision_note: string; created_by: string; created_at: string; updated_at: string }
 
@@ -72,11 +74,14 @@ function projectProposal(row: ProposalRow, attachments: PdrHistoryAttachment[]):
       kind: row.disposition_kind === "approved" || row.disposition_kind === "declined" ? row.disposition_kind : null,
       byUserId: row.disposition_by_user_id ?? null, at: row.disposition_at ?? null, note: row.reviewer_note,
     },
+    githubProductChange: row.github_product_change_number && row.github_product_change_url
+      ? { number: row.github_product_change_number, url: row.github_product_change_url }
+      : null,
     createdAt: row.created_at, updatedAt: row.updated_at, attachments, provenance: "proposal",
   }
 }
 function projectRequest(row: RequestRow): PdrHistoryRequest {
-  return { id: row.id, title: row.title, originalText: row.description, conversation: asArray(row.challenge_prompts), screening: { proposalType: "legacy_request", problemStatement: row.title, aiRationale: `Challenge score: ${row.challenge_score}`, status: row.status }, requester: { displayName: null, userId: null, actor: "", legacyLabel: row.created_by }, intakeProvenance: null, disposition: { kind: null, byUserId: null, at: null, note: row.decision_note }, createdAt: row.created_at, updatedAt: row.updated_at, attachments: [], provenance: "request" }
+  return { id: row.id, title: row.title, originalText: row.description, conversation: asArray(row.challenge_prompts), screening: { proposalType: "legacy_request", problemStatement: row.title, aiRationale: `Challenge score: ${row.challenge_score}`, status: row.status }, requester: { displayName: null, userId: null, actor: "", legacyLabel: row.created_by }, intakeProvenance: null, disposition: { kind: null, byUserId: null, at: null, note: row.decision_note }, githubProductChange: null, createdAt: row.created_at, updatedAt: row.updated_at, attachments: [], provenance: "request" }
 }
 
 async function attachmentsFor(parentColumn: "proposal_id" | "work_card_id", parentIds: string[]) {
@@ -100,7 +105,7 @@ async function attachmentsFor(parentColumn: "proposal_id" | "work_card_id", pare
 export async function listPdrRequestHistory(): Promise<PdrHistoryRequest[]> {
   const supabase = createAdminClient()
   const { data, error } = await supabase.from("pdr_proposals")
-    .select("id, original_text, conversation, proposal_type, problem_statement, ai_rationale, status, created_by, requester_actor, requester_user_id, requester_display_name, intake_provenance, disposition_kind, disposition_by_user_id, disposition_at, reviewer_note, created_at, updated_at")
+    .select("id, original_text, conversation, proposal_type, problem_statement, ai_rationale, status, created_by, requester_actor, requester_user_id, requester_display_name, intake_provenance, disposition_kind, disposition_by_user_id, disposition_at, reviewer_note, github_product_change_number, github_product_change_url, created_at, updated_at")
     .order("created_at", { ascending: false })
   const requestResult = await supabase.from("pdr_requests").select("id, title, description, challenge_prompts, challenge_score, status, decision_note, created_by, created_at, updated_at").order("created_at", { ascending: false })
   if (error || requestResult.error) throw new Error("PDR history is temporarily unavailable.")
@@ -111,7 +116,7 @@ export async function listPdrRequestHistory(): Promise<PdrHistoryRequest[]> {
 
 export async function getPdrRequestHistory(id: string): Promise<PdrHistoryRequest | null> {
   const supabase = createAdminClient(); const { data, error } = await supabase.from("pdr_proposals")
-    .select("id, original_text, conversation, proposal_type, problem_statement, ai_rationale, status, created_by, requester_actor, requester_user_id, requester_display_name, intake_provenance, disposition_kind, disposition_by_user_id, disposition_at, reviewer_note, created_at, updated_at")
+    .select("id, original_text, conversation, proposal_type, problem_statement, ai_rationale, status, created_by, requester_actor, requester_user_id, requester_display_name, intake_provenance, disposition_kind, disposition_by_user_id, disposition_at, reviewer_note, github_product_change_number, github_product_change_url, created_at, updated_at")
     .eq("id", id).maybeSingle()
   if (error) throw new Error("PDR history is temporarily unavailable.")
   if (!data) { const { data: legacy, error: legacyError } = await supabase.from("pdr_requests").select("id, title, description, challenge_prompts, challenge_score, status, decision_note, created_by, created_at, updated_at").eq("id",id).maybeSingle(); if (legacyError) throw new Error("PDR history is temporarily unavailable."); return legacy ? projectRequest(legacy as RequestRow) : null }

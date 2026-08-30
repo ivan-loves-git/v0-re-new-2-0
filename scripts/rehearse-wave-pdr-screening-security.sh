@@ -51,6 +51,7 @@ fi
 # server-only service role correctly cannot bypass forced RLS for direct writes.
 "${psql[@]}" -c "INSERT INTO public.ai_generation_runs(initiated_by_user_id,app_role,feature,workflow,surface,prompt_version,output_schema_version,provider,model,reasoning_effort,pricing_version,environment,is_test) VALUES ('historical-pdr-v1','staff','pdr_screening','test','/test','pdr-screening-v1','v1','openai','gpt-5.6-luna','max','v1','test',true);" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260830130030_wave_ai_pdr_reasoning_effort.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260830130040_wave_pdr_github_product_change_provenance.sql" >/dev/null
 
 "${psql[@]}" <<'SQL' >/dev/null
 DO $$
@@ -91,5 +92,58 @@ rm -f "$independent_output"
 INSERT INTO public.pdr_proposals(id, original_text, created_by, requester_actor, problem_statement, status) VALUES ('11111111-1111-4111-8111-111111111111','fixture request','rehearsal','Staff','fixture','draft');
 INSERT INTO public.wave_pdr_screening_records(proposal_id,generation_id,created_by_user_id,output,governance_snapshot_id,governance_snapshot_digest,registry_revision,governance_snapshot_at,freshness,prompt_version,output_schema_version) SELECT '11111111-1111-4111-8111-111111111111',generation_id,'actor-sequential','{}','22222222-2222-4222-8222-222222222222',repeat('a',64),'r1',clock_timestamp(),'fresh','v1','v1' FROM public.ai_generation_runs WHERE initiated_by_user_id='actor-sequential' LIMIT 1;
 DO $$ DECLARE g uuid; BEGIN SELECT generation_id INTO g FROM public.wave_pdr_screening_records LIMIT 1; BEGIN INSERT INTO public.wave_pdr_screening_records(proposal_id,generation_id,created_by_user_id,output,governance_snapshot_id,governance_snapshot_digest,registry_revision,governance_snapshot_at,freshness,prompt_version,output_schema_version) VALUES ('11111111-1111-4111-8111-111111111111',g,'actor-a','{}','22222222-2222-4222-8222-222222222222',repeat('a',64),'r1',clock_timestamp(),'fresh','v1','v1'); RAISE EXCEPTION 'generation_replay_allowed'; EXCEPTION WHEN unique_violation THEN NULL; END; END $$;
+DO $$
+DECLARE proposal_id uuid := '11111111-1111-4111-8111-111111111111';
+BEGIN
+  IF NOT has_table_privilege('anon','public.pdr_proposals','select')
+    OR has_table_privilege('anon','public.pdr_proposals','insert')
+    OR has_table_privilege('anon','public.pdr_proposals','update')
+    OR has_table_privilege('anon','public.pdr_proposals','delete')
+    OR NOT has_table_privilege('authenticated','public.pdr_proposals','select')
+    OR has_table_privilege('authenticated','public.pdr_proposals','insert')
+    OR has_table_privilege('authenticated','public.pdr_proposals','update')
+    OR has_table_privilege('authenticated','public.pdr_proposals','delete')
+    OR NOT has_table_privilege('service_role','public.pdr_proposals','update') THEN
+    RAISE EXCEPTION 'pdr_proposal_provenance_grants';
+  END IF;
+  UPDATE public.pdr_proposals
+  SET github_product_change_number = 47,
+      github_product_change_url = 'https://github.com/re-new-team/renew-governance/issues/47',
+      github_product_change_correlation_id = 'wave-pdr-proposal:' || proposal_id::text,
+      github_product_change_linked_at = clock_timestamp(),
+      github_product_change_linked_by = 'rehearsal'
+  WHERE id = proposal_id;
+  BEGIN
+    UPDATE public.pdr_proposals SET github_product_change_linked_by = 'changed' WHERE id = proposal_id;
+    RAISE EXCEPTION 'pdr_product_change_provenance_mutable';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'wave_pdr_product_change_provenance_immutable' THEN RAISE; END IF;
+  END;
+END $$;
+DO $$
+DECLARE
+  proposal_id uuid;
+  missing_field text;
+BEGIN
+  -- A legacy all-null row is already inserted above. Each possible omission
+  -- below must fail: PostgreSQL CHECK conditions that evaluate NULL otherwise
+  -- pass, so this guards the all-null/all-present invariant directly.
+  FOREACH missing_field IN ARRAY ARRAY['number', 'url', 'correlation', 'linked_at', 'linked_by'] LOOP
+    proposal_id := extensions.gen_random_uuid();
+    INSERT INTO public.pdr_proposals(id, original_text, created_by, requester_actor, problem_statement, status)
+    VALUES (proposal_id, 'partial fixture', 'rehearsal', 'Staff', 'partial', 'draft');
+    BEGIN
+      UPDATE public.pdr_proposals SET
+        github_product_change_number = CASE WHEN missing_field = 'number' THEN NULL ELSE 48 END,
+        github_product_change_url = CASE WHEN missing_field = 'url' THEN NULL ELSE 'https://github.com/re-new-team/renew-governance/issues/48' END,
+        github_product_change_correlation_id = CASE WHEN missing_field = 'correlation' THEN NULL ELSE 'wave-pdr-proposal:' || proposal_id::text END,
+        github_product_change_linked_at = CASE WHEN missing_field = 'linked_at' THEN NULL ELSE clock_timestamp() END,
+        github_product_change_linked_by = CASE WHEN missing_field = 'linked_by' THEN NULL ELSE 'rehearsal' END
+      WHERE id = proposal_id;
+      RAISE EXCEPTION 'pdr_product_change_partial_provenance_allowed:%', missing_field;
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+  END LOOP;
+END $$;
 SQL
-echo "PDR screening migration, privilege, replay and atomic-admission rehearsal passed"
+echo "PDR screening, Product Change provenance, privilege, replay and atomic-admission rehearsal passed"
