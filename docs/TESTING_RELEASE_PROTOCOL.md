@@ -6,8 +6,10 @@
 
 D-GOV-004 and GitHub Decision #70 establish the normal delivery authority. A
 Product Change may proceed without a fresh Ivan approval when its scope
-authority is recorded, it and its unblocked Ticket are both `Ready` and
-`ready-for-agent`, and neither record asks for a narrower checkpoint. This
+authority is recorded, it is `Ready` and `ready-for-agent`, and it does not
+ask for a narrower checkpoint. An implementation Ticket may be created and
+advanced during autonomous shaping; it must be linked to that Product Change,
+bounded, unblocked, and claimed under the parent's inherited authority. This
 authorises the complete routine loop below: build, test, pull request, merge,
 automatic deployment, live verification, GitHub closure, and one standard
 Slack product-update-card message after live proof.
