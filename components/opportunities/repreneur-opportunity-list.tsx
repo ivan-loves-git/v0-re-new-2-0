@@ -71,9 +71,13 @@ function filterOptions(
     if (value) values.set(value.toLowerCase(), value)
   }
 
-  return Array.from(values, ([value, label]) => ({ value, label })).sort((first, second) =>
+  return Array.from(values, ([, label]) => ({ value: label, label })).sort((first, second) =>
     first.label.localeCompare(second.label, "fr"),
   )
+}
+
+export function canonicalSectorFilterOptions(opportunities: RepreneurOpportunityListItem[]) {
+  return filterOptions(opportunities, (opportunity) => opportunity.canonical_sector)
 }
 
 export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportunityListItem[]) {
@@ -98,7 +102,7 @@ function discoveryFilterDefinitions(opportunities: RepreneurOpportunityListItem[
     {
       key: "sector",
       label: "Sector",
-      options: filterOptions(opportunities, (opportunity) => opportunity.canonical_sector),
+      options: canonicalSectorFilterOptions(opportunities),
     },
   ]
 }
