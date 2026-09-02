@@ -24,9 +24,9 @@ export function resolvePortalPreviewRepreneur<T extends PortalPreviewRepreneurOp
   return options.find((option) => option.email === "myworkmail4@gmail.com") ?? options[0] ?? null
 }
 
-function portalPreviewHref(repreneurId: string, matchId?: string) {
+function portalPreviewHref(repreneurId: string, dealId?: string) {
   const params = new URLSearchParams({ repreneurId })
-  if (matchId) params.set("matchId", matchId)
+  if (dealId) params.set("dealId", dealId)
   return `/portal-preview?${params.toString()}`
 }
 
@@ -37,11 +37,11 @@ export function createPortalPreviewDealHrefMap(
   return Object.fromEntries(
     opportunities.map((opportunity) => [
       opportunity.matchId ?? opportunity.opportunityId,
-      portalPreviewHref(repreneurId, opportunity.matchId ?? undefined),
+      portalPreviewHref(repreneurId, opportunity.matchId ?? opportunity.opportunityId),
     ]),
   )
 }
 
-export function createPortalPreviewHref(repreneurId: string, matchId?: string) {
-  return portalPreviewHref(repreneurId, matchId)
+export function createPortalPreviewHref(repreneurId: string, dealId?: string) {
+  return portalPreviewHref(repreneurId, dealId)
 }

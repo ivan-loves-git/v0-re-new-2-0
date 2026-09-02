@@ -12,8 +12,8 @@ describe("portal preview deal routes", () => {
     ])
 
     expect(hrefs).toStrictEqual({
-      "match one": "/portal-preview?repreneurId=repreneur+%26+one&matchId=match+one",
-      "opportunity-2": "/portal-preview?repreneurId=repreneur+%26+one",
+      "match one": "/portal-preview?repreneurId=repreneur+%26+one&dealId=match+one",
+      "opportunity-2": "/portal-preview?repreneurId=repreneur+%26+one&dealId=opportunity-2",
     })
     expect(Object.values(hrefs).every((href) => typeof href === "string")).toBe(true)
   })

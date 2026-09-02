@@ -27,6 +27,7 @@ import { isUuid } from "@/lib/uuid"
 interface StaffPortalPreviewPageProps {
   searchParams: Promise<{
     repreneurId?: string
+    dealId?: string
     matchId?: string
     view?: string
   }>
@@ -39,13 +40,14 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   const selectedOption = resolvePortalPreviewRepreneur(options, requestedRepreneurId)
   const selectedRepreneurId = selectedOption?.id ?? null
   const hasUnknownRepreneur = requestedRepreneurId !== undefined && !selectedOption
-  const selectedMatchId = params.matchId && isUuid(params.matchId) ? params.matchId : null
+  const requestedDealId = params.dealId ?? params.matchId
+  const selectedDealId = requestedDealId && isUuid(requestedDealId) ? requestedDealId : null
 
   const [profileData, opportunityData, selectedOpportunity] = selectedRepreneurId
     ? await Promise.all([
         getStaffPortalPreviewProfile(selectedRepreneurId),
         listStaffPortalPreviewOpportunities(selectedRepreneurId),
-        selectedMatchId ? getStaffPortalPreviewOpportunity(selectedRepreneurId, selectedMatchId) : Promise.resolve(null),
+        selectedDealId ? getStaffPortalPreviewOpportunity(selectedRepreneurId, selectedDealId) : Promise.resolve(null),
       ])
     : [
         { repreneur: null },
@@ -118,7 +120,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         </Alert>
       )}
 
-      {selectedRepreneurId && selectedMatchId && selectedOpportunity && (
+      {selectedRepreneurId && selectedDealId && selectedOpportunity && (
         <div className="flex flex-col gap-6">
           <Button asChild variant="ghost" className="w-fit">
             <Link href={createPortalPreviewHref(selectedRepreneurId)}>
@@ -137,7 +139,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         </div>
       )}
 
-      {selectedRepreneurId && selectedMatchId && !selectedOpportunity && (
+      {selectedRepreneurId && selectedDealId && !selectedOpportunity && (
         <Alert>
           <Eye />
           <AlertTitle>Deal not visible in portal preview</AlertTitle>
@@ -145,7 +147,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         </Alert>
       )}
 
-      {selectedRepreneurId && !selectedMatchId && (
+      {selectedRepreneurId && !selectedDealId && (
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="deals">Deals</TabsTrigger>
