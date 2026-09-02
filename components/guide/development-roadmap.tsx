@@ -25,6 +25,34 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 2, 2026",
+    version: "0.9.63",
+    title: "Deal Flow is easier and safer to explore",
+    isCompleted: true,
+    events: [
+      {
+        title: "Search and filters now match how repreneurs explore deals",
+        type: "feature",
+        description: "Repreneurs can search the safe anonymized teaser, filter by the agreed geography and sector taxonomies, and use revenue, EBITDA margin and employee ranges. The visible revenue sort label is now accurate.",
+      },
+      {
+        title: "The active opportunity catalogue uses one shared taxonomy",
+        type: "fix",
+        description: "All active real opportunities now use the 16 agreed sector labels, and three incomplete geography records use their existing canonical regions. Every correction is bounded and reversible.",
+      },
+      {
+        title: "Unverified source identities fail safely",
+        type: "decision",
+        description: "Three opportunities with inherited test-source details remain available through their anonymized Deal Flow view, while staff see a verification warning and source-dependent actions stay blocked until real provenance is confirmed.",
+      },
+      {
+        title: "External Pursuit guidance is shorter",
+        type: "style",
+        description: "The pursuit workspace now explains in one concise sentence that private external dossiers are separate from Re-New Deal Flow.",
+      },
+    ],
+  },
+  {
     period: "Aug 30, 2026",
     version: "0.9.62",
     title: "Reviewed opportunity titles are live",
