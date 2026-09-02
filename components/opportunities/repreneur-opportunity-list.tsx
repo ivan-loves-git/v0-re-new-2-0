@@ -76,19 +76,24 @@ function filterOptions(
   )
 }
 
+export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportunityListItem[]) {
+  const optionsByNodeId = new Map<string, string>()
+  for (const opportunity of opportunities) {
+    if (!opportunity.geography_node_id || !opportunity.geography_label) continue
+    optionsByNodeId.set(opportunity.geography_node_id, opportunity.geography_label)
+  }
+
+  return Array.from(optionsByNodeId, ([value, label]) => ({ value, label })).sort((first, second) =>
+    first.label.localeCompare(second.label, "fr"),
+  )
+}
+
 function discoveryFilterDefinitions(opportunities: RepreneurOpportunityListItem[]): CollectionFilterDefinition[] {
   return [
     {
       key: "geography",
       label: "Geography",
-      options: filterOptions(opportunities, (opportunity) =>
-        opportunity.geography_node_id && opportunity.location
-          ? `${opportunity.geography_node_id}::${opportunity.location}`
-          : null,
-      ).map(({ value, label }) => ({
-        value: value.split("::", 1)[0] ?? value,
-        label: label.split("::").slice(1).join("::") || label,
-      })),
+      options: canonicalGeographyFilterOptions(opportunities),
     },
     {
       key: "sector",
@@ -98,33 +103,53 @@ function discoveryFilterDefinitions(opportunities: RepreneurOpportunityListItem[
   ]
 }
 
-function DealRangeFilters({
+export function DealRangeFilters({
   filters,
   onChange,
+  onClearFilters,
+  onReset,
 }: {
   filters: RepreneurDealDiscoveryFilters
   onChange: (key: keyof RepreneurDealDiscoveryFilters, value: string) => void
+  onClearFilters: () => void
+  onReset: () => void
 }) {
+  const hasNumericFilters = [
+    filters.revenueMin,
+    filters.revenueMax,
+    filters.ebitdaMarginMin,
+    filters.employeesMin,
+    filters.employeesMax,
+  ].some((value) => value.trim().length > 0)
+
   return (
-    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 text-sm lg:grid-cols-[1.5fr_1fr_1.5fr]">
-      <fieldset className="grid gap-1.5">
-        <legend className="text-xs font-medium text-muted-foreground">Revenue (M EUR)</legend>
-        <div className="grid grid-cols-2 gap-2">
-          <Input aria-label="Minimum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMin} onChange={(event) => onChange("revenueMin", event.target.value)} placeholder="Min" />
-          <Input aria-label="Maximum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMax} onChange={(event) => onChange("revenueMax", event.target.value)} placeholder="Max" />
+    <div className="space-y-3 rounded-lg border bg-muted/20 p-3 text-sm">
+      <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1.5fr]">
+        <fieldset className="grid gap-1.5">
+          <legend className="text-xs font-medium text-muted-foreground">Revenue (M EUR)</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <Input aria-label="Minimum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMin} onChange={(event) => onChange("revenueMin", event.target.value)} placeholder="Min" />
+            <Input aria-label="Maximum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMax} onChange={(event) => onChange("revenueMax", event.target.value)} placeholder="Max" />
+          </div>
+        </fieldset>
+        <label className="grid gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">Minimum EBITDA margin</span>
+          <Input aria-label="Minimum EBITDA margin" inputMode="decimal" min="0" type="number" value={filters.ebitdaMarginMin} onChange={(event) => onChange("ebitdaMarginMin", event.target.value)} placeholder="%" />
+        </label>
+        <fieldset className="grid gap-1.5">
+          <legend className="text-xs font-medium text-muted-foreground">Employees</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <Input aria-label="Minimum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMin} onChange={(event) => onChange("employeesMin", event.target.value)} placeholder="Min" />
+            <Input aria-label="Maximum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMax} onChange={(event) => onChange("employeesMax", event.target.value)} placeholder="Max" />
+          </div>
+        </fieldset>
+      </div>
+      {hasNumericFilters ? (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="ghost" size="sm" aria-label="Clear Deal Flow filters" onClick={onClearFilters}>Clear filters</Button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Reset Deal Flow search and filters" onClick={onReset}>Reset all</Button>
         </div>
-      </fieldset>
-      <label className="grid gap-1.5">
-        <span className="text-xs font-medium text-muted-foreground">Minimum EBITDA margin</span>
-        <Input aria-label="Minimum EBITDA margin" inputMode="decimal" min="0" type="number" value={filters.ebitdaMarginMin} onChange={(event) => onChange("ebitdaMarginMin", event.target.value)} placeholder="%" />
-      </label>
-      <fieldset className="grid gap-1.5">
-        <legend className="text-xs font-medium text-muted-foreground">Employees</legend>
-        <div className="grid grid-cols-2 gap-2">
-          <Input aria-label="Minimum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMin} onChange={(event) => onChange("employeesMin", event.target.value)} placeholder="Min" />
-          <Input aria-label="Maximum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMax} onChange={(event) => onChange("employeesMax", event.target.value)} placeholder="Max" />
-        </div>
-      </fieldset>
+      ) : null}
     </div>
   )
 }
@@ -360,6 +385,11 @@ export function RepreneurOpportunityList({
       <DealRangeFilters
         filters={filters}
         onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+        onClearFilters={() => setFilters(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS)}
+        onReset={() => {
+          setSearch("")
+          setFilters(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS)
+        }}
       />
 
       {filteredOpportunities.length === 0 ? (

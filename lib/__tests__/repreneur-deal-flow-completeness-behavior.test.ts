@@ -22,14 +22,17 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: mocks.from.mockImplementation((table: string) => {
       const response = mocks.responses.get(table)?.shift()
-      if (!response) throw new Error(`Missing ${table} test response`)
+      if (!response && !["geography_nodes", "repreneur_geography_targets"].includes(table)) {
+        throw new Error(`Missing ${table} test response`)
+      }
+      const resolvedResponse = response ?? { data: [], error: null }
       const builder: Record<string, unknown> = {}
       for (const method of ["select", "eq", "in", "neq", "order", "limit"]) {
         builder[method] = () => builder
       }
-      builder.maybeSingle = () => Promise.resolve(response)
+      builder.maybeSingle = () => Promise.resolve(resolvedResponse)
       builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
-        Promise.resolve(response).then(resolve, reject)
+        Promise.resolve(resolvedResponse).then(resolve, reject)
       return builder
     }),
     rpc: mocks.rpc.mockImplementation((name: string) => {

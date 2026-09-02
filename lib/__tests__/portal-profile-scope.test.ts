@@ -191,7 +191,9 @@ describe("repreneur portal profile scope", () => {
     expect(dealFlowGetter).toContain("const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)")
     expect(dealFlowGetter).not.toContain("isAcceptedPaidMatchingClient")
     expect(dealFlowGetter).toContain("const automaticMatching = thesisCompleteness")
-    expect(dealFlowGetter).toContain("toNeutralDealFlowOpportunity(opportunity)")
+    expect(dealFlowGetter).toMatch(
+      /automaticMatching\.complete[\s\S]*toDealFlowOpportunity[\s\S]*toNeutralDealFlowOpportunity\(withMatchingGeography\(opportunity, geography\)\)/,
+    )
     expect(dealFlowGetter).not.toContain("const liveDeals = automaticMatching.complete ?")
     expect(detailGetter).not.toContain("if (!thesisCompleteness.complete) return null")
     expect(dealsPage).toContain("Your current Re-New selections remain available")
@@ -254,5 +256,32 @@ describe("repreneur portal profile scope", () => {
     expect(staffPreview).toContain('opportunity:opportunities!inner(is_demo,status)')
     expect(staffPreview).toContain('if (opportunity.status !== "active") continue')
     expect(opportunityList).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped"')
+  })
+
+  it("feeds Portal Preview the same safe canonical fields used by Deal Flow filters", () => {
+    const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
+    const normalizePreview = staffPreview.slice(
+      staffPreview.indexOf("function normalizeExposure"),
+      staffPreview.indexOf("async function getActivePursuitOwners"),
+    )
+    const previewList = staffPreview.slice(
+      staffPreview.indexOf("async function listVisibleOpportunitiesForRepreneur"),
+      staffPreview.indexOf("export async function listStaffPortalPreviewOptions"),
+    )
+    const portalExposureTypes = source("lib/types/opportunity.ts").slice(
+      source("lib/types/opportunity.ts").indexOf("export interface RepreneurOpportunityExposure"),
+      source("lib/types/opportunity.ts").indexOf("export function getOpportunityStatusLabel"),
+    )
+
+    expect(normalizePreview).toContain("geography_node_id: opportunity.geography_node_id")
+    expect(normalizePreview).toContain("canonical_sector: normalizeOpportunitySector(opportunity.sector)")
+    expect(previewList).toContain("withRepreneurGeographyLabel(exposure, geography)")
+    expect(previewList).toContain("loadMatchingGeographyContext(supabase, [repreneur.id])")
+    expect(portalExposureTypes).toContain("geography_node_id")
+    expect(portalExposureTypes).toContain("geography_label")
+    expect(portalExposureTypes).toContain("canonical_sector")
+    for (const rawOrInternalField of ["description", "internal_notes", "source_id", "source_label"]) {
+      expect(portalExposureTypes).not.toContain(rawOrInternalField)
+    }
   })
 })

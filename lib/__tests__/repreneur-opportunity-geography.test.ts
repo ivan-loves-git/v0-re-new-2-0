@@ -23,11 +23,12 @@ describe("Matching v2 geography context", () => {
     const from = vi.fn((table: string) => {
       if (table === "geography_nodes") {
         return queryResult([
-          { id: "fr", stable_key: "france", parent_id: null },
-          { id: "west", stable_key: "fr-macro-west", parent_id: "fr" },
+          { id: "fr", stable_key: "france", label: "France", parent_id: null },
+          { id: "west", stable_key: "fr-macro-west", label: "Grand Ouest", parent_id: "fr" },
           {
             id: "bretagne",
             stable_key: "fr-region-bretagne",
+            label: "Bretagne",
             parent_id: "west",
           },
         ])
@@ -55,6 +56,7 @@ describe("Matching v2 geography context", () => {
         "fr-macro-west",
         "france",
       ],
+      geography_label: "Bretagne",
     })
     expect(withMatchingGeographyTargets(
       { id: "repreneur-1" },
@@ -71,7 +73,7 @@ describe("Matching v2 geography context", () => {
     const from = vi.fn((table: string) => {
       if (table !== "geography_nodes") throw new Error(`Unexpected table ${table}`)
       return queryResult([
-        { id: "fr", stable_key: "france", parent_id: null },
+        { id: "fr", stable_key: "france", label: "France", parent_id: null },
       ])
     })
     const supabase = { from } as unknown as SupabaseClient
@@ -86,9 +88,9 @@ describe("Matching v2 geography context", () => {
     const from = vi.fn((table: string) => {
       if (table === "geography_nodes") {
         return queryResult([
-          { id: "orphan", stable_key: "fr-region-orphan", parent_id: "missing" },
-          { id: "cycle-a", stable_key: "cycle-a", parent_id: "cycle-b" },
-          { id: "cycle-b", stable_key: "cycle-b", parent_id: "cycle-a" },
+          { id: "orphan", stable_key: "fr-region-orphan", label: "Orphan", parent_id: "missing" },
+          { id: "cycle-a", stable_key: "cycle-a", label: "Cycle A", parent_id: "cycle-b" },
+          { id: "cycle-b", stable_key: "cycle-b", label: "Cycle B", parent_id: "cycle-a" },
         ])
       }
       if (table === "repreneur_geography_targets") return queryResult([])
