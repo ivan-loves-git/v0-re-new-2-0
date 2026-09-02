@@ -535,6 +535,8 @@ export interface OpportunityWithSource extends Opportunity {
   office_contacts?: OpportunityMaContact[]
   /** Staff-only computed W-064 review state; never project this to repreneurs. */
   source_review_required?: boolean
+  /** Staff-only marker for the three verified legacy-DEMO source chains. */
+  source_identity_to_verify?: boolean
 }
 
 export interface OpportunitySourceContact {
@@ -863,6 +865,12 @@ export interface RepreneurOpportunityExposure {
   reference: string
   public_title?: string | null
   teaser_summary?: string | null
+  /** Canonical staff-curated geography identity used by portal filters. */
+  geography_node_id?: string | null
+  /** Canonical geography label paired with the portal-safe node identity. */
+  geography_label?: string | null
+  /** Canonical 16-sector identity used by portal filters. */
+  canonical_sector?: string | null
   sector?: string | null
   activity?: string | null
   location?: string | null
@@ -896,6 +904,12 @@ export interface RepreneurDealFlowOpportunity {
   reference: string
   public_title?: string | null
   teaser_summary?: string | null
+  /** Canonical staff-curated geography identity used by portal filters. */
+  geography_node_id?: string | null
+  /** Canonical geography label paired with the portal-safe node identity. */
+  geography_label?: string | null
+  /** Canonical 16-sector identity used by portal filters. */
+  canonical_sector?: string | null
   sector?: string | null
   activity?: string | null
   location?: string | null

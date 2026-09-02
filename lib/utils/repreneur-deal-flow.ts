@@ -7,7 +7,8 @@ export type RepreneurDealFlowSortCandidate = RepreneurDealFlowOpportunity & {
 
 export const REPRENEUR_DEAL_SORT_OPTIONS = [
   { value: "relevance", label: "Relevance" },
-  { value: "deal_size", label: "Deal size" },
+  // Keep `deal_size` as the stable URL/API key while presenting its actual metric.
+  { value: "deal_size", label: "Revenue" },
   { value: "date_added", label: "Date added" },
 ] as const
 

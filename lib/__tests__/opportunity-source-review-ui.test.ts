@@ -17,6 +17,7 @@ describe("W-065 staff source review UI", () => {
     "components/opportunities/repreneur-opportunity-detail.tsx",
   );
   const reviewProjection = source("lib/data/provisional-source-review.ts");
+  const dashboardSnapshots = source("lib/data/dashboard-snapshots.ts");
   const intakeActions = source("lib/actions/opportunity-intake.ts");
   const closureControls = source("components/opportunities/opportunity-closure-controls.tsx");
   const legacyTable = source("components/opportunities/opportunity-table.tsx");
@@ -24,6 +25,7 @@ describe("W-065 staff source review UI", () => {
   it("renders the correction only for computed staff review state and uses the W-064 resolver", () => {
     expect(staffDetail).toContain("opportunity.source_review_required");
     expect(reviewPanel).toContain("Source review required");
+    expect(reviewPanel).toContain("Source identity to verify");
     expect(reviewPanel).toContain("source_review_reason");
     expect(reviewPanel).toContain("Save verified source");
   });
@@ -31,7 +33,9 @@ describe("W-065 staff source review UI", () => {
   it("shows a staff-list badge and filter without extending any repreneur surface", () => {
     expect(staffList).toContain('key: "sourceReview"');
     expect(staffList).toContain("Source review required");
+    expect(staffList).toContain("Source identity to verify");
     expect(portalDetail).not.toContain("source_review_required");
+    expect(portalDetail).not.toContain("source_identity_to_verify");
     expect(portalDetail).not.toContain("Source review required");
   });
 
@@ -48,6 +52,12 @@ describe("W-065 staff source review UI", () => {
       "ma_opportunity_source_review_required",
     );
     expect(reviewProjection).toContain("source_review_required:");
+    expect(dashboardSnapshots).toContain("source_identity_to_verify,");
+  });
+
+  it("does not offer the Acme-only correction form for a generic identity review", () => {
+    expect(reviewPanel).toContain("do not use the Acme correction workflow");
+    expect(reviewPanel).toContain("opportunity.source_identity_to_verify ? (");
   });
 
   it("keeps the provisional office out of ordinary intake and disables close while review is unresolved", () => {
@@ -56,5 +66,6 @@ describe("W-065 staff source review UI", () => {
     expect(closureControls).toContain("sourceReviewRequired");
     expect(closureControls).toContain("Close is unavailable until the provisional source is corrected");
     expect(legacyTable).toContain("Source review required before archive");
+    expect(legacyTable).toContain("Source identity must be verified before archive");
   });
 });

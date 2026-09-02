@@ -81,7 +81,7 @@ describe("W-039 Phase A/B and W-099 geography and references", () => {
     expect(rehearsal).toContain("w039_rehearsal_browser_privilege_exposed")
   })
 
-  it("does not leak the staff-only geography bridge into repreneur deal projections", () => {
+  it("projects only the canonical geography identity needed for Deal Flow filtering", () => {
     const automaticProjection = repreneurPortal.match(
       /function toDealFlowOpportunity[\s\S]*?\n}\n\nfunction withoutRelevanceScore/,
     )?.[0]
@@ -92,8 +92,10 @@ describe("W-039 Phase A/B and W-099 geography and references", () => {
     expect(repreneurPortal).toContain("geography_node_id")
     expect(automaticProjection).toBeTruthy()
     expect(publicProjection).toBeTruthy()
-    expect(automaticProjection).not.toContain("geography_node_id")
-    expect(publicProjection).not.toContain("geography_node_id")
+    expect(automaticProjection).toContain("geography_node_id: opportunity.geography_node_id")
+    expect(publicProjection).toContain("geography_node_id: opportunity.geography_node_id")
+    expect(automaticProjection).not.toContain("geography_path_stable_keys")
+    expect(publicProjection).not.toContain("geography_path_stable_keys")
     expect(repreneurPortal).not.toMatch(/from\("opportunities"\)[\s\S]{0,240}\.select\(\s*["']\*["']/)
   })
 

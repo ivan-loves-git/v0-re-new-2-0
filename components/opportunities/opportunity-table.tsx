@@ -199,7 +199,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                     </p>
                     {opportunity.source_review_required ? (
                       <Badge variant="outline" className="mt-1 border-amber-500/60 bg-amber-50 text-amber-900">
-                        Source review required
+                        {opportunity.source_identity_to_verify ? "Source identity to verify" : "Source review required"}
                       </Badge>
                     ) : null}
                     {opportunity.is_demo ? <OpportunityDemoBadge className="mt-1" /> : null}
@@ -261,7 +261,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                         {opportunity.source_review_required ? (
                           <DropdownMenuItem disabled>
                             <Archive className="size-4" />
-                            Source review required before archive
+                            {opportunity.source_identity_to_verify ? "Source identity must be verified before archive" : "Source review required before archive"}
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem

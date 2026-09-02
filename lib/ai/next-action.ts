@@ -70,7 +70,9 @@ export async function generateWaveAiNextActions(input: {
   const facts: Record<string, string> = {
     status: `Recorded opportunity status: ${opportunity.status}.`,
     source_review: opportunity.source_review_required
-      ? "Recorded source review is required."
+      ? opportunity.source_identity_to_verify
+        ? "Recorded source identity requires verification."
+        : "Recorded source review is required."
       : "Recorded source review is not required.",
     completeness: incomplete.length
       ? `Profile fields requiring staff review: ${incomplete.join(", ")}.`

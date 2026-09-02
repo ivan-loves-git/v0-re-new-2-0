@@ -18,6 +18,7 @@ import {
 } from "@/lib/repreneur-opportunity-geography"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
+import { normalizeOpportunitySector } from "@/lib/utils/opportunity-sector"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
   sortRepreneurDealFlow,
@@ -78,6 +79,7 @@ type RepreneurDealFlowOpportunityRow = {
   ebitda_keur: number | null
   headcount: number | null
   geography_node_id: string | null
+  geography_label?: string | null
   headcount_range: string | null
   date_added: string | null
   date_added_precision: "day" | "month" | null
@@ -123,6 +125,9 @@ function normalizeExposure(
       opportunity.teaser_summary,
       opportunity.description,
     ),
+    geography_node_id: opportunity.geography_node_id,
+    geography_label: opportunity.geography_label,
+    canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -280,7 +285,13 @@ function toDealFlowOpportunity(
     opportunity_id: opportunity.id,
     reference: "Confidential opportunity",
     public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
-    teaser_summary: opportunity.teaser_summary,
+    teaser_summary: safeRepreneurTeaserSummary(
+      opportunity.teaser_summary,
+      opportunity.description,
+    ),
+    geography_node_id: opportunity.geography_node_id,
+    geography_label: opportunity.geography_label,
+    canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -311,7 +322,13 @@ function toNeutralDealFlowOpportunity(
     opportunity_id: opportunity.id,
     reference: "Confidential opportunity",
     public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
-    teaser_summary: opportunity.teaser_summary,
+    teaser_summary: safeRepreneurTeaserSummary(
+      opportunity.teaser_summary,
+      opportunity.description,
+    ),
+    geography_node_id: opportunity.geography_node_id,
+    geography_label: opportunity.geography_label,
+    canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -345,6 +362,9 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     reference: opportunity.reference,
     public_title: opportunity.public_title,
     teaser_summary: opportunity.teaser_summary,
+    geography_node_id: opportunity.geography_node_id,
+    geography_label: opportunity.geography_label,
+    canonical_sector: opportunity.canonical_sector,
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -404,6 +424,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
         revenue_meur,
         ebitda_keur,
         headcount,
+        geography_node_id,
         headcount_range,
         date_added,
         date_added_precision
@@ -469,7 +490,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   // payment metadata must not silently remove the wider Deal Flow. A complete
   // acquisition project remains necessary for useful automatic recommendations.
   const automaticMatching = thesisCompleteness
-  const [matchesResult, opportunitiesResult] = await Promise.all([
+  const [matchesResult, opportunitiesResult, geography] = await Promise.all([
     supabase
       .from("opportunity_matches")
       .select(`
@@ -500,6 +521,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
           revenue_meur,
           ebitda_keur,
           headcount,
+          geography_node_id,
           headcount_range,
           date_added,
           date_added_precision
@@ -514,6 +536,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       p_repreneur_id: repreneur.id,
       p_opportunity_id: null,
     }),
+    loadMatchingGeographyContext(supabase, [repreneur.id]),
   ])
 
   if (matchesResult.error) throw new Error(matchesResult.error.message)
@@ -547,24 +570,20 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
       memo_availability: undefined,
     }))
     .map(withStaffRecommendation)
+    .map((opportunity) => withMatchingGeography(opportunity, geography))
     .map((opportunity) => withDealBucket(opportunity, false))
     .filter(isDefined)
   const statefulOpportunityIds = new Set(statefulDeals.map((opportunity) => opportunity.opportunity_id))
-  const geography = automaticMatching.complete
-    ? await loadMatchingGeographyContext(supabase, [repreneur.id])
-    : null
-  const geographyAwareRepreneur = geography
-    ? withMatchingGeographyTargets(repreneur, geography)
-    : repreneur
+  const geographyAwareRepreneur = withMatchingGeographyTargets(repreneur, geography)
   const liveInventory = allOpportunities
       .filter((opportunity) => !statefulOpportunityIds.has(opportunity.id))
       .map((opportunity) => ({
         ...(automaticMatching.complete
           ? toDealFlowOpportunity(
-              geography ? withMatchingGeography(opportunity, geography) : opportunity,
+              withMatchingGeography(opportunity, geography),
               geographyAwareRepreneur,
             )
-          : toNeutralDealFlowOpportunity(opportunity)),
+          : toNeutralDealFlowOpportunity(withMatchingGeography(opportunity, geography))),
         is_locked_for_other_repreneur: isLockedForOtherRepreneur(
           opportunity.id,
           repreneur.id,
@@ -637,6 +656,7 @@ export async function getMyRepreneurOpportunity(
           revenue_meur,
           ebitda_keur,
           headcount,
+          geography_node_id,
           headcount_range,
           date_added,
           date_added_precision

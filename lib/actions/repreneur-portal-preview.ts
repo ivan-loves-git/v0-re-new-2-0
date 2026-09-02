@@ -14,6 +14,11 @@ import {
   safeRepreneurTeaserSummary,
 } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
+import { normalizeOpportunitySector } from "@/lib/utils/opportunity-sector"
+import {
+  loadMatchingGeographyContext,
+  withRepreneurGeographyLabel,
+} from "@/lib/repreneur-opportunity-geography"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import type {
   OpportunityDeclineReasonCategory,
@@ -61,6 +66,7 @@ interface PreviewOpportunityRow {
   revenue_meur: number | null
   ebitda_keur: number | null
   headcount: number | null
+  geography_node_id: string | null
   headcount_range: string | null
   date_added: string | null
   date_added_precision: "day" | "month" | null
@@ -147,6 +153,8 @@ function normalizeExposure(
       opportunity.teaser_summary,
       opportunity.description,
     ),
+    geography_node_id: opportunity.geography_node_id,
+    canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -247,6 +255,7 @@ async function listVisibleOpportunitiesForRepreneur(
         revenue_meur,
         ebitda_keur,
         headcount,
+        geography_node_id,
         headcount_range,
         date_added,
         date_added_precision
@@ -269,17 +278,21 @@ async function listVisibleOpportunitiesForRepreneur(
     .map((row) => normalizeExposure(row as PreviewOpportunityMatchRow, repreneur))
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
 
-  const activeOwnerByOpportunity = await getActivePursuitOwners(
+  const [activeOwnerByOpportunity, geography] = await Promise.all([
+    getActivePursuitOwners(
     supabase,
     opportunities.map((opportunity) => opportunity.opportunity_id),
     repreneur.is_demo === true,
-  )
+    ),
+    loadMatchingGeographyContext(supabase, [repreneur.id]),
+  ])
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
     supabase,
     opportunities.map((opportunity) => opportunity.match_id),
   )
 
   return opportunities
+    .map((exposure) => withRepreneurGeographyLabel(exposure, geography))
     .map((exposure) => ({
       ...exposure,
       ...interestStateByMatch.get(exposure.match_id),

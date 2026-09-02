@@ -1,88 +1,81 @@
 import type {
   RepreneurDealFlowOpportunity,
   RepreneurOpportunityExposure,
-} from "@/lib/types/opportunity";
+} from "@/lib/types/opportunity"
 
 export type RepreneurDealDiscoveryOpportunity =
   | RepreneurOpportunityExposure
-  | RepreneurDealFlowOpportunity;
+  | RepreneurDealFlowOpportunity
 
+/**
+ * Deal Flow taxonomy filters are deliberately single-select. Numeric controls
+ * are inclusive bounds; a missing metric never satisfies an active criterion.
+ */
 export type RepreneurDealDiscoveryFilters = {
-  geography: string;
-  sector: string;
-  revenue: string;
-  ebitdaMargin: string;
-  employees: string;
-};
+  geography: string
+  sector: string
+  revenueMin: string
+  revenueMax: string
+  ebitdaMarginMin: string
+  employeesMin: string
+  employeesMax: string
+}
 
-export const EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS: RepreneurDealDiscoveryFilters =
-  {
-    geography: "",
-    sector: "",
-    revenue: "",
-    ebitdaMargin: "",
-    employees: "",
-  };
+export const EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS: RepreneurDealDiscoveryFilters = {
+  geography: "",
+  sector: "",
+  revenueMin: "",
+  revenueMax: "",
+  ebitdaMarginMin: "",
+  employeesMin: "",
+  employeesMax: "",
+}
 
-type RepreneurDealMetric = number | null | undefined;
+type RepreneurDealMetric = number | null | undefined
 
 function normalizeText(value: string | null | undefined) {
-  return value?.trim().toLowerCase() ?? "";
+  return value?.trim().toLowerCase() ?? ""
 }
 
 function hasNumericValue(value: RepreneurDealMetric): value is number {
-  return typeof value === "number" && Number.isFinite(value);
+  return typeof value === "number" && Number.isFinite(value)
+}
+
+function optionalBound(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const numeric = Number(trimmed)
+  return Number.isFinite(numeric) ? numeric : null
 }
 
 function employeeCount(opportunity: RepreneurDealDiscoveryOpportunity) {
-  if (hasNumericValue(opportunity.headcount)) return opportunity.headcount;
+  if (hasNumericValue(opportunity.headcount)) return opportunity.headcount
 
-  const rangeValues =
-    opportunity.headcount_range?.match(/\d+/g)?.map(Number) ?? [];
-  if (rangeValues.length === 1) return rangeValues[0];
-  if (rangeValues.length >= 2)
-    return Math.round((rangeValues[0] + rangeValues[1]) / 2);
-  return null;
+  const rangeValues = opportunity.headcount_range?.match(/\d+/g)?.map(Number) ?? []
+  if (rangeValues.length === 1) return rangeValues[0]
+  if (rangeValues.length >= 2) return Math.round((rangeValues[0] + rangeValues[1]) / 2)
+  return null
 }
 
-function isWithinBucket(
-  value: RepreneurDealMetric,
-  bucket: string,
-  thresholds: readonly number[],
-) {
-  if (!hasNumericValue(value)) return bucket === "unknown";
-
-  const [first, second, third] = thresholds;
-  switch (bucket) {
-    case "under-first":
-      return value < first;
-    case "first-to-second":
-      return value >= first && value <= second;
-    case "second-to-third":
-      return value > second && value <= third;
-    case "over-third":
-      return value > third;
-    default:
-      return true;
-  }
+function isWithinInclusiveRange(value: RepreneurDealMetric, minimum: string, maximum: string) {
+  const lowerBound = optionalBound(minimum)
+  const upperBound = optionalBound(maximum)
+  if (lowerBound === null && upperBound === null) return true
+  if (!hasNumericValue(value)) return false
+  return (lowerBound === null || value >= lowerBound)
+    && (upperBound === null || value <= upperBound)
 }
 
-export function getEbitdaMarginPercentage(
-  opportunity: RepreneurDealDiscoveryOpportunity,
-) {
-  if (
-    !hasNumericValue(opportunity.revenue_meur) ||
-    opportunity.revenue_meur <= 0
-  )
-    return null;
-  if (!hasNumericValue(opportunity.ebitda_keur)) return null;
+export function getEbitdaMarginPercentage(opportunity: RepreneurDealDiscoveryOpportunity) {
+  if (!hasNumericValue(opportunity.revenue_meur) || opportunity.revenue_meur <= 0) return null
+  if (!hasNumericValue(opportunity.ebitda_keur)) return null
 
-  return (opportunity.ebitda_keur / (opportunity.revenue_meur * 1000)) * 100;
+  return (opportunity.ebitda_keur / (opportunity.revenue_meur * 1000)) * 100
 }
 
 export function isStaffRecommended(opportunity: RepreneurDealDiscoveryOpportunity) {
-  if ("is_staff_recommended" in opportunity) return opportunity.is_staff_recommended;
-  return true;
+  if ("is_staff_recommended" in opportunity) return opportunity.is_staff_recommended
+  return true
 }
 
 /**
@@ -90,10 +83,8 @@ export function isStaffRecommended(opportunity: RepreneurDealDiscoveryOpportunit
  * existing not-fit signal in a separate, neutral section and never reorders
  * the source list within a section.
  */
-export function isOutsideCurrentCriteria(
-  opportunity: RepreneurDealDiscoveryOpportunity,
-) {
-  return "is_outside_current_criteria" in opportunity && opportunity.is_outside_current_criteria;
+export function isOutsideCurrentCriteria(opportunity: RepreneurDealDiscoveryOpportunity) {
+  return "is_outside_current_criteria" in opportunity && opportunity.is_outside_current_criteria
 }
 
 export function filterRepreneurDeals(
@@ -101,73 +92,70 @@ export function filterRepreneurDeals(
   search: string,
   filters: RepreneurDealDiscoveryFilters,
 ) {
-  const normalizedSearch = normalizeText(search);
+  const normalizedSearch = normalizeText(search)
 
   return opportunities.filter((opportunity) => {
-    const margin = getEbitdaMarginPercentage(opportunity);
-    const staff = employeeCount(opportunity);
-    const matchesSearch =
-      !normalizedSearch ||
-      [
-        opportunity.public_title,
-        opportunity.reference,
-        opportunity.location,
-        opportunity.sector,
-        opportunity.activity,
-        opportunity.revenue_meur?.toString(),
-        margin?.toFixed(1),
-        margin === null ? null : `${margin}%`,
-        staff?.toString(),
-        opportunity.headcount_range,
-      ].some((value) => normalizeText(value).includes(normalizedSearch));
+    const margin = getEbitdaMarginPercentage(opportunity)
+    const staff = employeeCount(opportunity)
+    const matchesSearch = !normalizedSearch || [
+      opportunity.public_title,
+      // The teaser is the already-sanitised portal projection. Never search
+      // or fall back to the staff-only description.
+      opportunity.teaser_summary,
+      opportunity.reference,
+      opportunity.location,
+      opportunity.sector,
+      opportunity.canonical_sector,
+      opportunity.activity,
+      opportunity.revenue_meur?.toString(),
+      margin?.toFixed(1),
+      margin === null ? null : `${margin}%`,
+      staff?.toString(),
+      opportunity.headcount_range,
+    ].some((value) => normalizeText(value).includes(normalizedSearch))
 
-    const matchesGeography =
-      !filters.geography ||
-      normalizeText(opportunity.location) === filters.geography;
-    const matchesSector =
-      !filters.sector ||
-      normalizeText(opportunity.sector) === filters.sector ||
-      normalizeText(opportunity.activity) === filters.sector;
-    const matchesRevenue =
-      !filters.revenue ||
-      isWithinBucket(opportunity.revenue_meur, filters.revenue, [1, 3, 5]);
-    const matchesMargin =
-      !filters.ebitdaMargin ||
-      isWithinBucket(margin, filters.ebitdaMargin, [10, 20, 30]);
-    const matchesEmployees =
-      !filters.employees ||
-      isWithinBucket(staff, filters.employees, [10, 50, 250]);
+    const matchesGeography = !filters.geography
+      || opportunity.geography_node_id === filters.geography
+    const matchesSector = !filters.sector
+      || opportunity.canonical_sector === filters.sector
+    const matchesRevenue = isWithinInclusiveRange(
+      opportunity.revenue_meur,
+      filters.revenueMin,
+      filters.revenueMax,
+    )
+    const matchesMargin = isWithinInclusiveRange(margin, filters.ebitdaMarginMin, "")
+    const matchesEmployees = isWithinInclusiveRange(
+      staff,
+      filters.employeesMin,
+      filters.employeesMax,
+    )
 
-    return (
-      matchesSearch &&
-      matchesGeography &&
-      matchesSector &&
-      matchesRevenue &&
-      matchesMargin &&
-      matchesEmployees
-    );
-  });
+    return matchesSearch
+      && matchesGeography
+      && matchesSector
+      && matchesRevenue
+      && matchesMargin
+      && matchesEmployees
+  })
 }
 
-export function partitionRepreneurDeals(
-  opportunities: RepreneurDealDiscoveryOpportunity[],
-) {
-  const staffRecommended: RepreneurDealDiscoveryOpportunity[] = [];
-  const remaining: RepreneurDealDiscoveryOpportunity[] = [];
-  const outsideCurrentCriteria: RepreneurDealDiscoveryOpportunity[] = [];
-  const declined: RepreneurDealDiscoveryOpportunity[] = [];
+export function partitionRepreneurDeals(opportunities: RepreneurDealDiscoveryOpportunity[]) {
+  const staffRecommended: RepreneurDealDiscoveryOpportunity[] = []
+  const remaining: RepreneurDealDiscoveryOpportunity[] = []
+  const outsideCurrentCriteria: RepreneurDealDiscoveryOpportunity[] = []
+  const declined: RepreneurDealDiscoveryOpportunity[] = []
 
   for (const opportunity of opportunities) {
     if (opportunity.match_status === "declined") {
-      declined.push(opportunity);
+      declined.push(opportunity)
     } else if (isStaffRecommended(opportunity)) {
-      staffRecommended.push(opportunity);
+      staffRecommended.push(opportunity)
     } else if (isOutsideCurrentCriteria(opportunity)) {
-      outsideCurrentCriteria.push(opportunity);
+      outsideCurrentCriteria.push(opportunity)
     } else {
-      remaining.push(opportunity);
+      remaining.push(opportunity)
     }
   }
 
-  return { staffRecommended, remaining, outsideCurrentCriteria, declined };
+  return { staffRecommended, remaining, outsideCurrentCriteria, declined }
 }

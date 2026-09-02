@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 type GeographyNodeRow = {
   id: string
   stable_key: string
+  label: string
   parent_id: string | null
 }
 
@@ -13,6 +14,7 @@ type GeographyTargetRow = {
 
 export type MatchingGeographyContext = {
   pathByNodeId: Map<string, string[]>
+  labelByNodeId: Map<string, string>
   targetPathsByRepreneurId: Map<string, string[][]>
 }
 
@@ -59,7 +61,7 @@ export async function loadMatchingGeographyContext(
 ): Promise<MatchingGeographyContext> {
   const uniqueRepreneurIds = [...new Set(repreneurIds.filter(Boolean))]
   const [nodesResult, targetsResult] = await Promise.all([
-    supabase.from("geography_nodes").select("id, stable_key, parent_id"),
+    supabase.from("geography_nodes").select("id, stable_key, label, parent_id"),
     uniqueRepreneurIds.length > 0
       ? supabase
           .from("repreneur_geography_targets")
@@ -74,6 +76,9 @@ export async function loadMatchingGeographyContext(
   const pathByNodeId = buildGeographyPaths(
     (nodesResult.data ?? []) as GeographyNodeRow[],
   )
+  const labelByNodeId = new Map(
+    ((nodesResult.data ?? []) as GeographyNodeRow[]).map((node) => [node.id, node.label]),
+  )
   const targetPathsByRepreneurId = new Map<string, string[][]>()
 
   for (const target of (targetsResult.data ?? []) as GeographyTargetRow[]) {
@@ -87,17 +92,32 @@ export async function loadMatchingGeographyContext(
     }
   }
 
-  return { pathByNodeId, targetPathsByRepreneurId }
+  return { pathByNodeId, labelByNodeId, targetPathsByRepreneurId }
 }
 
 export function withMatchingGeography<
   T extends { geography_node_id?: string | null },
 >(opportunity: T, context: MatchingGeographyContext) {
   return {
-    ...opportunity,
+    ...withRepreneurGeographyLabel(opportunity, context),
     geography_path_stable_keys: opportunity.geography_node_id
       ? context.pathByNodeId.get(opportunity.geography_node_id) ?? []
       : undefined,
+  }
+}
+
+/**
+ * The portal needs the approved taxonomy label for filtering, but never the
+ * matching hierarchy path or other staff-only geography context.
+ */
+export function withRepreneurGeographyLabel<
+  T extends { geography_node_id?: string | null },
+>(opportunity: T, context: MatchingGeographyContext) {
+  return {
+    ...opportunity,
+    geography_label: opportunity.geography_node_id
+      ? context.labelByNodeId.get(opportunity.geography_node_id) ?? null
+      : null,
   }
 }
 

@@ -1,5 +1,11 @@
 # Permanent private QA schema contract — release build 771 with W-147/W-148 overlays
 
+> Historical notice (2026-09-02): the permanent QA/fingerprint apparatus was
+> retired by `45ba2b23` / `6e3be920`. Follow
+> [`docs/TESTING_RELEASE_PROTOCOL.md`](../../docs/TESTING_RELEASE_PROTOCOL.md)
+> for current delivery. The retained files below are historical and disposable
+> rehearsal inputs only; do not extend them as a live release gate.
+
 ## Purpose
 
 This directory provides the deterministic, sanitized structure contract for Re-New's one persistent, isolated Supabase QA branch. It does not replace the production migration ledger and must never be applied to production or to a branch containing application, Auth or Storage object data.

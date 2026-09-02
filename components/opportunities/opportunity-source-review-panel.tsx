@@ -136,19 +136,27 @@ export function OpportunitySourceReviewPanel({
       data-source-review-required
     >
       <AlertTriangle className="size-4" />
-      <AlertTitle>Source review required</AlertTitle>
+      <AlertTitle>
+        {opportunity.source_identity_to_verify ? "Source identity to verify" : "Source review required"}
+      </AlertTitle>
       <AlertDescription className="flex flex-col gap-3 text-amber-900 dark:text-amber-100">
         <p>
-          This opportunity uses a provisional source. Draft, active, and paused
-          work may continue, but close, archive, cutover treatment, and external
-          intermediary email remain blocked until staff verifies the real office
-          and contacts.
+          {opportunity.source_identity_to_verify
+            ? "The recorded source identity needs independent verification. Source-dependent operations remain blocked; do not use the Acme correction workflow because it would create false source evidence."
+            : "This opportunity uses a provisional source. Draft, active, and paused work may continue, but close, archive, cutover treatment, and external intermediary email remain blocked until staff verifies the real office and contacts."}
         </p>
-        <div>
-          <Button type="button" size="sm" onClick={() => setOpen(true)}>
-            Review and correct source
-          </Button>
-        </div>
+        {opportunity.source_identity_to_verify ? (
+          <p className="text-sm">
+            After a real intermediary is independently verified, use the governed
+            staff source-correction route approved for that identity.
+          </p>
+        ) : (
+          <div>
+            <Button type="button" size="sm" onClick={() => setOpen(true)}>
+              Review and correct source
+            </Button>
+          </div>
+        )}
       </AlertDescription>
 
       <Dialog open={open} onOpenChange={setOpen}>
