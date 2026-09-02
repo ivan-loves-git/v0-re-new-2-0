@@ -865,6 +865,10 @@ export interface RepreneurOpportunityExposure {
   reference: string
   public_title?: string | null
   teaser_summary?: string | null
+  /** Canonical staff-curated geography identity used by portal filters. */
+  geography_node_id?: string | null
+  /** Canonical 16-sector identity used by portal filters. */
+  canonical_sector?: string | null
   sector?: string | null
   activity?: string | null
   location?: string | null
@@ -898,6 +902,10 @@ export interface RepreneurDealFlowOpportunity {
   reference: string
   public_title?: string | null
   teaser_summary?: string | null
+  /** Canonical staff-curated geography identity used by portal filters. */
+  geography_node_id?: string | null
+  /** Canonical 16-sector identity used by portal filters. */
+  canonical_sector?: string | null
   sector?: string | null
   activity?: string | null
   location?: string | null

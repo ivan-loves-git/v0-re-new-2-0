@@ -17,6 +17,9 @@ function opportunity(
     opportunity_id: "opportunity-1",
     reference: "RN-1001",
     public_title: "Precision engineering business",
+    teaser_summary: "A specialist operator serving industrial customers.",
+    geography_node_id: "geo-lyon",
+    canonical_sector: "Industrie manufacturière",
     sector: "Industry",
     activity: "Engineering",
     location: "Lyon",
@@ -41,6 +44,13 @@ describe("repreneur deal discovery", () => {
       filterRepreneurDeals(
         [deal],
         "Precision",
+        EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      ),
+    ).toEqual([deal]);
+    expect(
+      filterRepreneurDeals(
+        [deal],
+        "specialist operator",
         EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
       ),
     ).toEqual([deal]);
@@ -84,19 +94,53 @@ describe("repreneur deal discovery", () => {
     ).toEqual([deal]);
   });
 
-  it("calculates EBITDA margin and applies the deal filters", () => {
+  it("calculates EBITDA margin and applies canonical AND-combined filters", () => {
     const deal = opportunity();
 
     expect(getEbitdaMarginPercentage(deal)).toBe(15);
     expect(
       filterRepreneurDeals([deal], "", {
-        geography: "lyon",
-        sector: "industry",
-        revenue: "first-to-second",
-        ebitdaMargin: "first-to-second",
-        employees: "first-to-second",
+        geography: "geo-lyon",
+        sector: "Industrie manufacturière",
+        revenueMin: "3",
+        revenueMax: "3",
+        ebitdaMarginMin: "15",
+        employeesMin: "30",
+        employeesMax: "30",
       }),
     ).toEqual([deal]);
+  });
+
+  it("uses inclusive bounds and excludes missing metrics when a numeric filter is active", () => {
+    const deal = opportunity();
+    const missingMetrics = opportunity({
+      opportunity_id: "missing",
+      revenue_meur: null,
+      ebitda_keur: null,
+      headcount: null,
+      headcount_range: null,
+    });
+
+    expect(filterRepreneurDeals([deal], "", {
+      ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      revenueMin: "3",
+      revenueMax: "3",
+      ebitdaMarginMin: "15",
+      employeesMin: "30",
+      employeesMax: "30",
+    })).toEqual([deal]);
+    expect(filterRepreneurDeals([missingMetrics], "", {
+      ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      revenueMin: "1",
+    })).toEqual([]);
+    expect(filterRepreneurDeals([missingMetrics], "", {
+      ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      ebitdaMarginMin: "1",
+    })).toEqual([]);
+    expect(filterRepreneurDeals([missingMetrics], "", {
+      ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      employeesMin: "1",
+    })).toEqual([]);
   });
 
   it("keeps input order inside the decided presentation sections", () => {

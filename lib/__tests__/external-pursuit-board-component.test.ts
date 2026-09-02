@@ -65,7 +65,8 @@ describe("ExternalPursuitBoard component", () => {
       owners: [{ id: "owner-1", name: "Owner One" }],
     }))
 
-    expect(html).toContain("who can see all external dossier detail by default")
+    expect(html).toContain("External pursuits are private dossiers for you and authorised Re-New staff")
+    expect(html).toContain("They are separate from Re-New Deal Flow")
     expect(html).toContain("External")
     expect(html).toContain("Re-New · read-only")
     expect(html).toContain("Availability: unknown")

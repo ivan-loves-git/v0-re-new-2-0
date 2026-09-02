@@ -63,8 +63,8 @@ describe("W-106 pursuit board", () => {
   })
 
   it("makes provenance and the external boundary explicit on every item", () => {
-    expect(board).toContain("authorised Re-New staff, who can see all external dossier detail by default")
-    expect(board).toContain("never enter matching, source records, confidentiality gates, exports or Re-New KPIs")
+    expect(board).toContain("External pursuits are private dossiers for you and authorised Re-New staff")
+    expect(board).toContain("They are separate from Re-New Deal Flow")
     expect(board).toContain('Re-New · read-only')
     expect(board).toContain('External')
     expect(board).toContain('isStaff ? "Open canonical journey" : "See opportunity"')

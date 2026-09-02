@@ -390,9 +390,9 @@ export function ExternalPursuitBoard({
   return (
     <div className="space-y-5">
       <Alert>
-        <AlertTitle>External pursuits are separate from Re-New deal flow</AlertTitle>
+        <AlertTitle>External pursuits are private dossiers</AlertTitle>
         <AlertDescription>
-          External pursuits are visible to their owner and authorised Re-New staff, who can see all external dossier detail by default. They never enter matching, source records, confidentiality gates, exports or Re-New KPIs.
+          External pursuits are private dossiers for you and authorised Re-New staff. They are separate from Re-New Deal Flow.
         </AlertDescription>
       </Alert>
 

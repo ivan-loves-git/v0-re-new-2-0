@@ -18,6 +18,7 @@ import {
 } from "@/lib/repreneur-opportunity-geography"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
+import { normalizeOpportunitySector } from "@/lib/utils/opportunity-sector"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
   sortRepreneurDealFlow,
@@ -123,6 +124,8 @@ function normalizeExposure(
       opportunity.teaser_summary,
       opportunity.description,
     ),
+    geography_node_id: opportunity.geography_node_id,
+    canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -280,7 +283,12 @@ function toDealFlowOpportunity(
     opportunity_id: opportunity.id,
     reference: "Confidential opportunity",
     public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
-    teaser_summary: opportunity.teaser_summary,
+    teaser_summary: safeRepreneurTeaserSummary(
+      opportunity.teaser_summary,
+      opportunity.description,
+    ),
+    geography_node_id: opportunity.geography_node_id,
+    canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -311,7 +319,12 @@ function toNeutralDealFlowOpportunity(
     opportunity_id: opportunity.id,
     reference: "Confidential opportunity",
     public_title: safeRepreneurOpportunityTitle(opportunity.public_title),
-    teaser_summary: opportunity.teaser_summary,
+    teaser_summary: safeRepreneurTeaserSummary(
+      opportunity.teaser_summary,
+      opportunity.description,
+    ),
+    geography_node_id: opportunity.geography_node_id,
+    canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -345,6 +358,8 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     reference: opportunity.reference,
     public_title: opportunity.public_title,
     teaser_summary: opportunity.teaser_summary,
+    geography_node_id: opportunity.geography_node_id,
+    canonical_sector: opportunity.canonical_sector,
     sector: opportunity.sector,
     activity: opportunity.activity,
     location: opportunity.location,
@@ -404,6 +419,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
         revenue_meur,
         ebitda_keur,
         headcount,
+        geography_node_id,
         headcount_range,
         date_added,
         date_added_precision
@@ -500,6 +516,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
           revenue_meur,
           ebitda_keur,
           headcount,
+          geography_node_id,
           headcount_range,
           date_added,
           date_added_precision
@@ -637,6 +654,7 @@ export async function getMyRepreneurOpportunity(
           revenue_meur,
           ebitda_keur,
           headcount,
+          geography_node_id,
           headcount_range,
           date_added,
           date_added_precision

@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { WaveMicroLabel } from "@/components/wave/visual-foundations"
@@ -77,46 +78,55 @@ function filterOptions(
 
 function discoveryFilterDefinitions(opportunities: RepreneurOpportunityListItem[]): CollectionFilterDefinition[] {
   return [
-    { key: "geography", label: "Geography", options: filterOptions(opportunities, (opportunity) => opportunity.location) },
+    {
+      key: "geography",
+      label: "Geography",
+      options: filterOptions(opportunities, (opportunity) =>
+        opportunity.geography_node_id && opportunity.location
+          ? `${opportunity.geography_node_id}::${opportunity.location}`
+          : null,
+      ).map(({ value, label }) => ({
+        value: value.split("::", 1)[0] ?? value,
+        label: label.split("::").slice(1).join("::") || label,
+      })),
+    },
     {
       key: "sector",
       label: "Sector",
-      options: filterOptions(opportunities, (opportunity) => opportunity.sector ?? opportunity.activity),
-    },
-    {
-      key: "revenue",
-      label: "Revenue",
-      options: [
-        { value: "under-first", label: "Under €1M" },
-        { value: "first-to-second", label: "€1M–€3M" },
-        { value: "second-to-third", label: "€3M–€5M" },
-        { value: "over-third", label: "Over €5M" },
-        { value: "unknown", label: "Not available" },
-      ],
-    },
-    {
-      key: "ebitdaMargin",
-      label: "EBITDA margin",
-      options: [
-        { value: "under-first", label: "Under 10%" },
-        { value: "first-to-second", label: "10%–20%" },
-        { value: "second-to-third", label: "20%–30%" },
-        { value: "over-third", label: "Over 30%" },
-        { value: "unknown", label: "Not available" },
-      ],
-    },
-    {
-      key: "employees",
-      label: "Employees",
-      options: [
-        { value: "under-first", label: "Under 10" },
-        { value: "first-to-second", label: "10–50" },
-        { value: "second-to-third", label: "51–250" },
-        { value: "over-third", label: "Over 250" },
-        { value: "unknown", label: "Not available" },
-      ],
+      options: filterOptions(opportunities, (opportunity) => opportunity.canonical_sector),
     },
   ]
+}
+
+function DealRangeFilters({
+  filters,
+  onChange,
+}: {
+  filters: RepreneurDealDiscoveryFilters
+  onChange: (key: keyof RepreneurDealDiscoveryFilters, value: string) => void
+}) {
+  return (
+    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 text-sm lg:grid-cols-[1.5fr_1fr_1.5fr]">
+      <fieldset className="grid gap-1.5">
+        <legend className="text-xs font-medium text-muted-foreground">Revenue (M EUR)</legend>
+        <div className="grid grid-cols-2 gap-2">
+          <Input aria-label="Minimum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMin} onChange={(event) => onChange("revenueMin", event.target.value)} placeholder="Min" />
+          <Input aria-label="Maximum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMax} onChange={(event) => onChange("revenueMax", event.target.value)} placeholder="Max" />
+        </div>
+      </fieldset>
+      <label className="grid gap-1.5">
+        <span className="text-xs font-medium text-muted-foreground">Minimum EBITDA margin</span>
+        <Input aria-label="Minimum EBITDA margin" inputMode="decimal" min="0" type="number" value={filters.ebitdaMarginMin} onChange={(event) => onChange("ebitdaMarginMin", event.target.value)} placeholder="%" />
+      </label>
+      <fieldset className="grid gap-1.5">
+        <legend className="text-xs font-medium text-muted-foreground">Employees</legend>
+        <div className="grid grid-cols-2 gap-2">
+          <Input aria-label="Minimum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMin} onChange={(event) => onChange("employeesMin", event.target.value)} placeholder="Min" />
+          <Input aria-label="Maximum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMax} onChange={(event) => onChange("employeesMax", event.target.value)} placeholder="Max" />
+        </div>
+      </fieldset>
+    </div>
+  )
 }
 
 function DealCard({
@@ -333,7 +343,7 @@ export function RepreneurOpportunityList({
       <CollectionFilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search name, Re-New ref, geography, sector, or metrics"
+        searchPlaceholder="Search title, teaser, Re-New ref, geography, sector, or metrics"
         definitions={definitions}
         values={filters}
         onFilterChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
@@ -346,6 +356,10 @@ export function RepreneurOpportunityList({
         resultCount={filteredOpportunities.length}
         totalCount={opportunities.length}
         resultLabel="deal"
+      />
+      <DealRangeFilters
+        filters={filters}
+        onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
       />
 
       {filteredOpportunities.length === 0 ? (
