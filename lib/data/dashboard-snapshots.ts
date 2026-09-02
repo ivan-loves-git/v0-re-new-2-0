@@ -103,6 +103,7 @@ const OPPORTUNITY_LIST_FIELDS = `
   status,
   source_id,
   source_office_id,
+  source_identity_to_verify,
   source_label,
   sector,
   activity,

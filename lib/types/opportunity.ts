@@ -535,6 +535,8 @@ export interface OpportunityWithSource extends Opportunity {
   office_contacts?: OpportunityMaContact[]
   /** Staff-only computed W-064 review state; never project this to repreneurs. */
   source_review_required?: boolean
+  /** Staff-only marker for the three verified legacy-DEMO source chains. */
+  source_identity_to_verify?: boolean
 }
 
 export interface OpportunitySourceContact {

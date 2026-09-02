@@ -14,6 +14,7 @@ import type { OpportunityWorkSurfaceRecord } from "@/lib/types/opportunity"
 function opportunity(
   id: string,
   sourceReviewRequired: boolean,
+  sourceIdentityToVerify = false,
 ): OpportunityWorkSurfaceRecord {
   return {
     id,
@@ -25,6 +26,7 @@ function opportunity(
     updated_at: "2026-07-27T09:00:00.000Z",
     matches: [],
     source_review_required: sourceReviewRequired,
+    source_identity_to_verify: sourceIdentityToVerify,
   }
 }
 
@@ -37,6 +39,18 @@ describe("grouped opportunity source-review badge", () => {
       }),
     )
 
+    expect(html.match(/Source review required/g)).toHaveLength(1)
+  })
+
+  it("uses the neutral identity label only for the verified chain", () => {
+    const html = renderToStaticMarkup(
+      createElement(OpportunityWorkSurfaceTable, {
+        mode: "groups",
+        opportunities: [opportunity("001", true, true), opportunity("002", true)],
+      }),
+    )
+
+    expect(html.match(/Source identity to verify/g)).toHaveLength(1)
     expect(html.match(/Source review required/g)).toHaveLength(1)
   })
 })

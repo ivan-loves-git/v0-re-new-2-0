@@ -52,10 +52,15 @@ export async function withStaffSourceReviewState(
       .filter((assignment) => !resolvedAssignmentIds.has(assignment.id))
       .map((assignment) => assignment.opportunity_id),
   );
-  return opportunities.map((opportunity) => ({
-    ...opportunity,
-    source_review_required:
-      opportunity.source_office_id === context.office_id ||
-      unresolvedOpportunityIds.has(opportunity.id),
-  }));
+  return opportunities.map((opportunity) => {
+    const source_identity_to_verify = opportunity.source_identity_to_verify === true;
+    return {
+      ...opportunity,
+      source_identity_to_verify,
+      source_review_required:
+        source_identity_to_verify ||
+        opportunity.source_office_id === context.office_id ||
+        unresolvedOpportunityIds.has(opportunity.id),
+    };
+  });
 }
