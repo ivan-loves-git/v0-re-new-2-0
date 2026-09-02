@@ -4,9 +4,13 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
   canonicalGeographyFilterOptions,
+  canonicalSectorFilterOptions,
   DealRangeFilters,
 } from "@/components/opportunities/repreneur-opportunity-list"
-import { EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS } from "@/lib/utils/repreneur-deal-discovery"
+import {
+  EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+  filterRepreneurDeals,
+} from "@/lib/utils/repreneur-deal-discovery"
 
 const component = readFileSync(
   join(process.cwd(), "components/opportunities/repreneur-opportunity-list.tsx"),
@@ -55,6 +59,23 @@ describe("repreneur Deal Flow discovery controls", () => {
     ])).toEqual([
       { value: "geo-idf", label: "Île-de-France" },
     ])
+  })
+
+  it("passes the canonical sector label selected in the UI through to the Deal Flow predicate", () => {
+    const opportunity = {
+      ...deal(),
+      canonical_sector: "Industrie manufacturière",
+    }
+    const [option] = canonicalSectorFilterOptions([opportunity])
+
+    expect(option).toEqual({
+      value: "Industrie manufacturière",
+      label: "Industrie manufacturière",
+    })
+    expect(filterRepreneurDeals([opportunity], "", {
+      ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      sector: option.value,
+    })).toEqual([opportunity])
   })
 })
 
