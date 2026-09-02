@@ -1,6 +1,6 @@
 import "server-only"
 
-import { requirePortalAccess } from "@/lib/access-control"
+import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
@@ -199,6 +199,13 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
   if (!access.repreneurId) return null
 
   const supabase = createAdminClient()
+  return getRepreneurDealFlowProfileById(supabase, access.repreneurId)
+}
+
+async function getRepreneurDealFlowProfileById(
+  supabase: ReturnType<typeof createAdminClient>,
+  repreneurId: string,
+): Promise<RepreneurDealFlowProfile | null> {
   const { data: profile, error } = await supabase
     .from("repreneurs")
     .select(`
@@ -227,7 +234,7 @@ async function getCurrentRepreneurDealFlowProfile(): Promise<RepreneurDealFlowPr
       target_staff_size_min,
       target_staff_size_max
     `)
-    .eq("id", access.repreneurId)
+    .eq("id", repreneurId)
     .maybeSingle()
 
   if (error) throw new Error(error.message)
@@ -473,16 +480,28 @@ export async function listMyRepreneurOpportunities(): Promise<{
   }
 }
 
-export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<{
+type RepreneurDealFlowResult = {
   repreneur: RepreneurOpportunityProfile | null
   staffRecommended: RepreneurDealFlowOpportunity[]
   dealFlow: RepreneurDealFlowOpportunity[]
   deals: RepreneurDealFlowOpportunity[]
   automaticMatching: { complete: boolean; missing: string[] }
   demoProfile: boolean
-}> {
-  const repreneur = await getCurrentRepreneurDealFlowProfile()
-  if (!repreneur) return { repreneur: null, staffRecommended: [], dealFlow: [], deals: [], automaticMatching: { complete: false, missing: [] }, demoProfile: false }
+}
+
+const EMPTY_REPRENEUR_DEAL_FLOW: RepreneurDealFlowResult = {
+  repreneur: null,
+  staffRecommended: [],
+  dealFlow: [],
+  deals: [],
+  automaticMatching: { complete: false, missing: [] },
+  demoProfile: false,
+}
+
+async function listRepreneurDealFlowForProfile(
+  repreneur: RepreneurDealFlowProfile,
+  sort: RepreneurDealSort,
+): Promise<RepreneurDealFlowResult> {
 
   const supabase = createAdminClient()
   const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
@@ -606,6 +625,14 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     automaticMatching,
     demoProfile: repreneur.is_demo === true,
   }
+  return result
+}
+
+export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<RepreneurDealFlowResult> {
+  const repreneur = await getCurrentRepreneurDealFlowProfile()
+  if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
+
+  const result = await listRepreneurDealFlowForProfile(repreneur, sort)
   const access = await requirePortalAccess()
   queueM2RepreneurEvent({
     userId: access.user.id,
@@ -615,6 +642,21 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     outcome: "success",
   })
   return result
+}
+
+/** Staff-only preview uses the exact same Deal Flow projection as the portal. */
+export async function listStaffPreviewRepreneurDealFlow(
+  repreneurId: string,
+  sort: RepreneurDealSort = "relevance",
+): Promise<RepreneurDealFlowResult> {
+  await requireStaffAccess()
+  if (!isUuid(repreneurId)) return EMPTY_REPRENEUR_DEAL_FLOW
+
+  const supabase = createAdminClient()
+  const repreneur = await getRepreneurDealFlowProfileById(supabase, repreneurId)
+  if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
+
+  return listRepreneurDealFlowForProfile(repreneur, sort)
 }
 
 export async function getMyRepreneurOpportunity(

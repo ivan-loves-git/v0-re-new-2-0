@@ -16,16 +16,18 @@ import {
 import { WaveMicroLabel } from "@/components/wave/visual-foundations"
 import { MILESTONES } from "@/lib/constants/tier-config"
 import type { PortalRepreneurProfile } from "@/lib/data/portal-profile"
-import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity"
+import type { RepreneurDealFlowOpportunity, RepreneurOpportunityExposure } from "@/lib/types/opportunity"
 import { getEbitdaMarginPercentage } from "@/lib/utils/repreneur-deal-discovery"
 import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
 
 interface RepreneurProfileSummaryProps {
   repreneur: PortalRepreneurProfile | null
-  opportunities: RepreneurOpportunityExposure[]
+  opportunities: RepreneurOpportunityListItem[]
   dealsHref?: string
   detailHrefByOpportunityId?: Record<string, string>
 }
+
+type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
 
 const SECTOR_LABELS: Record<string, string> = {
   all: "All sectors",
@@ -110,7 +112,7 @@ function thesisFields(repreneur: PortalRepreneurProfile) {
   ]
 }
 
-function opportunityTitle(opportunity: RepreneurOpportunityExposure) {
+function opportunityTitle(opportunity: RepreneurOpportunityListItem) {
   return opportunity.public_title || opportunity.sector || "Opportunity"
 }
 
@@ -119,7 +121,7 @@ function formatOpportunityMetric(value: number | null | undefined, suffix: strin
   return `${formatNumber(value)} ${suffix}`
 }
 
-function formatOpportunityMargin(opportunity: RepreneurOpportunityExposure) {
+function formatOpportunityMargin(opportunity: RepreneurOpportunityListItem) {
   const margin = getEbitdaMarginPercentage(opportunity)
   return margin === null ? "—" : `${formatNumber(margin)}%`
 }
@@ -133,9 +135,9 @@ function DealGroup({
 }: {
   title: string
   description: string
-  opportunities: RepreneurOpportunityExposure[]
+  opportunities: RepreneurOpportunityListItem[]
   emptyMessage: string
-  detailHrefForOpportunity: (opportunity: RepreneurOpportunityExposure) => string
+  detailHrefForOpportunity: (opportunity: RepreneurOpportunityListItem) => string
 }) {
   return (
     <section aria-labelledby={`${title.toLowerCase().replaceAll(" ", "-")}-heading`} className="flex flex-col gap-3">
@@ -234,8 +236,9 @@ export function RepreneurProfileSummary({
   )
   const proposedDeals = opportunities.filter((opportunity) => opportunity.match_status === "proposed")
   const pursuedDeals = opportunities.filter((opportunity) => opportunity.match_status === "active_pursuit")
-  const opportunityDetailHref = (opportunity: RepreneurOpportunityExposure) =>
-    detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id] ?? `/portal/deals/${opportunity.match_id}`
+  const opportunityDetailHref = (opportunity: RepreneurOpportunityListItem) =>
+    detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id]
+      ?? (opportunity.match_id ? `/portal/deals/${opportunity.match_id}` : dealsHref)
 
   return (
     <div className="flex flex-col gap-6">

@@ -158,9 +158,9 @@ describe("repreneur portal profile scope", () => {
       portalOpportunities.indexOf("function normalizeExposure"),
       portalOpportunities.indexOf("async function getActivePursuitOwners"),
     )
-    const dealFlowGetter = portalOpportunities.slice(
+    const dealFlowProjection = portalOpportunities.slice(
+      portalOpportunities.indexOf("async function listRepreneurDealFlowForProfile"),
       portalOpportunities.indexOf("export async function listMyRepreneurDealFlow"),
-      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
     )
     const detailGetter = portalOpportunities.slice(
       portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
@@ -168,17 +168,17 @@ describe("repreneur portal profile scope", () => {
     )
 
     expect(normalizeExposureSource).not.toContain('opportunity.repreneur_exposure === "staff_only"')
-    expect(dealFlowGetter).toContain('supabase.rpc("w164_repreneur_live_inventory"')
-    expect(dealFlowGetter).not.toContain('.neq("repreneur_exposure", "staff_only")')
+    expect(dealFlowProjection).toContain('supabase.rpc("w164_repreneur_live_inventory"')
+    expect(dealFlowProjection).not.toContain('.neq("repreneur_exposure", "staff_only")')
     expect(detailGetter).toContain('.eq("repreneur_id", repreneur.id)')
     expect(detailGetter).not.toContain('.neq("repreneur_exposure", "staff_only")')
   })
 
   it("keeps neutral inventory visible while suppressing only personalized ranking for an incomplete thesis", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
-    const dealFlowGetter = portalOpportunities.slice(
+    const dealFlowProjection = portalOpportunities.slice(
+      portalOpportunities.indexOf("async function listRepreneurDealFlowForProfile"),
       portalOpportunities.indexOf("export async function listMyRepreneurDealFlow"),
-      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
     )
     const detailGetter = portalOpportunities.slice(
       portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
@@ -186,15 +186,15 @@ describe("repreneur portal profile scope", () => {
     )
     const dealsPage = source("app/portal/deals/page.tsx")
 
-    expect(dealFlowGetter).toContain("const statefulDeals = matchedOpportunities")
-    expect(dealFlowGetter).toContain('const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")')
-    expect(dealFlowGetter).toContain("const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)")
-    expect(dealFlowGetter).not.toContain("isAcceptedPaidMatchingClient")
-    expect(dealFlowGetter).toContain("const automaticMatching = thesisCompleteness")
-    expect(dealFlowGetter).toMatch(
+    expect(dealFlowProjection).toContain("const statefulDeals = matchedOpportunities")
+    expect(dealFlowProjection).toContain('const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")')
+    expect(dealFlowProjection).toContain("const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)")
+    expect(dealFlowProjection).not.toContain("isAcceptedPaidMatchingClient")
+    expect(dealFlowProjection).toContain("const automaticMatching = thesisCompleteness")
+    expect(dealFlowProjection).toMatch(
       /automaticMatching\.complete[\s\S]*toDealFlowOpportunity[\s\S]*toNeutralDealFlowOpportunity\(withMatchingGeography\(opportunity, geography\)\)/,
     )
-    expect(dealFlowGetter).not.toContain("const liveDeals = automaticMatching.complete ?")
+    expect(dealFlowProjection).not.toContain("const liveDeals = automaticMatching.complete ?")
     expect(detailGetter).not.toContain("if (!thesisCompleteness.complete) return null")
     expect(dealsPage).toContain("Your current Re-New selections remain available")
     expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
@@ -253,8 +253,8 @@ describe("repreneur portal profile scope", () => {
 
     expect(staffPreview).toContain('"active_pursuit", "dropped"')
     expect(normalizePreview).not.toContain('opportunity.repreneur_exposure === "staff_only"')
-    expect(staffPreview).toContain('opportunity:opportunities!inner(is_demo,status)')
-    expect(staffPreview).toContain('if (opportunity.status !== "active") continue')
+    expect(staffPreview).toContain("listStaffPreviewRepreneurDealFlow(repreneurId)")
+    expect(staffPreview).toContain('supabase.rpc("w164_repreneur_live_inventory"')
     expect(opportunityList).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped"')
   })
 

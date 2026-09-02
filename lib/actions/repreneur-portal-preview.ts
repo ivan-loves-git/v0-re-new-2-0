@@ -20,9 +20,11 @@ import {
   withRepreneurGeographyLabel,
 } from "@/lib/repreneur-opportunity-geography"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
+import { listStaffPreviewRepreneurDealFlow } from "@/lib/actions/repreneur-opportunities"
 import type {
   OpportunityDeclineReasonCategory,
   OpportunityMatchStatus,
+  RepreneurDealFlowOpportunity,
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
@@ -88,14 +90,6 @@ interface PreviewOpportunityMatchRow {
   interest_notification_sent_at?: string | null
   updated_at: string
   opportunity: PreviewOpportunityRow | PreviewOpportunityRow[] | null
-}
-
-interface PreviewOpportunityCountRow {
-  repreneur_id: string
-  opportunity: Pick<PreviewOpportunityRow, "is_demo" | "status">
-    | Array<Pick<PreviewOpportunityRow, "is_demo" | "status">>
-    | null
-  repreneur: { is_demo: boolean } | Array<{ is_demo: boolean }> | null
 }
 
 export interface StaffPortalPreviewOption {
@@ -311,7 +305,7 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
   await requireStaffAccess()
 
   const supabase = createAdminClient()
-  const [repreneursResult, rolesResult, matchesResult] = await Promise.all([
+  const [repreneursResult, rolesResult] = await Promise.all([
     supabase
       .from("repreneurs")
       .select("id, first_name, last_name, email, lifecycle_status, is_demo")
@@ -321,34 +315,31 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
       .from("app_user_roles")
       .select("role, email, repreneur_id")
       .eq("role", "repreneur"),
-    supabase
-      .from("opportunity_matches")
-      .select("repreneur_id, status, opportunity:opportunities!inner(is_demo,status), repreneur:repreneurs!inner(is_demo)")
-      .in("status", VISIBLE_MATCH_STATUSES),
   ])
 
   if (repreneursResult.error) throw new Error(repreneursResult.error.message)
   if (rolesResult.error && rolesResult.error.code !== "42P01") throw new Error(rolesResult.error.message)
-  if (matchesResult.error) throw new Error(matchesResult.error.message)
-
   const roles = (rolesResult.data as PortalRoleRow[] | null) ?? []
   const roleRepreneurIds = new Set(roles.map((role) => role.repreneur_id).filter(Boolean))
   const roleEmails = new Set(roles.map((role) => normalizeEmail(role.email)).filter(Boolean))
-  const visibleCountByRepreneur = new Map<string, number>()
-
-  for (const match of (matchesResult.data ?? []) as PreviewOpportunityCountRow[]) {
-    const opportunity = Array.isArray(match.opportunity)
-      ? match.opportunity[0]
-      : match.opportunity
-    const repreneur = Array.isArray(match.repreneur)
-      ? match.repreneur[0]
-      : match.repreneur
-    if (!opportunity || !isOpportunityInRepreneurNamespace(opportunity, repreneur)) continue
-    if (opportunity.status !== "active") continue
-    visibleCountByRepreneur.set(match.repreneur_id, (visibleCountByRepreneur.get(match.repreneur_id) ?? 0) + 1)
+  const repreneurs = (repreneursResult.data as PreviewRepreneurRow[] | null) ?? []
+  const representativeByNamespace = new Map<boolean, string>()
+  for (const repreneur of repreneurs) {
+    if (!representativeByNamespace.has(repreneur.is_demo)) representativeByNamespace.set(repreneur.is_demo, repreneur.id)
   }
+  const inventoryCounts = await Promise.all(
+    Array.from(representativeByNamespace, async ([isDemo, repreneurId]) => {
+      const { data, error } = await supabase.rpc("w164_repreneur_live_inventory", {
+        p_repreneur_id: repreneurId,
+        p_opportunity_id: null,
+      })
+      if (error) throw new Error(error.message)
+      return [isDemo, data?.length ?? 0] as const
+    }),
+  )
+  const visibleCountByNamespace = new Map(inventoryCounts)
 
-  return ((repreneursResult.data as PreviewRepreneurRow[] | null) ?? []).map((repreneur) => {
+  return repreneurs.map((repreneur) => {
     const normalizedEmail = normalizeEmail(repreneur.email)
 
     return {
@@ -357,7 +348,7 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
       email: normalizedEmail,
       lifecycleStatus: repreneur.lifecycle_status,
       hasPortalAccess: roleRepreneurIds.has(repreneur.id) || Boolean(normalizedEmail && roleEmails.has(normalizedEmail)),
-      visibleOpportunityCount: visibleCountByRepreneur.get(repreneur.id) ?? 0,
+      visibleOpportunityCount: visibleCountByNamespace.get(repreneur.is_demo) ?? 0,
       isDemo: repreneur.is_demo,
     }
   })
@@ -381,30 +372,20 @@ export async function getStaffPortalPreviewProfile(repreneurId: string): Promise
 
 export async function listStaffPortalPreviewOpportunities(repreneurId: string): Promise<{
   repreneur: RepreneurOpportunityProfile | null
-  opportunities: RepreneurOpportunityExposure[]
+  opportunities: RepreneurDealFlowOpportunity[]
 }> {
   await requireStaffAccess()
-
-  const supabase = createAdminClient()
-  const repreneur = await getRepreneurProfileById(supabase, repreneurId)
-  if (!repreneur) return { repreneur: null, opportunities: [] }
-
-  return {
-    repreneur,
-    opportunities: await listVisibleOpportunitiesForRepreneur(supabase, repreneur),
-  }
+  const result = await listStaffPreviewRepreneurDealFlow(repreneurId)
+  return { repreneur: result.repreneur, opportunities: result.deals }
 }
 
 export async function getStaffPortalPreviewOpportunity(
   repreneurId: string,
-  matchId: string
-): Promise<RepreneurOpportunityExposure | null> {
+  dealId: string
+): Promise<RepreneurDealFlowOpportunity | null> {
   await requireStaffAccess()
-  if (!isUuid(repreneurId) || !isUuid(matchId)) return null
+  if (!isUuid(repreneurId) || !isUuid(dealId)) return null
 
-  const supabase = createAdminClient()
-  const repreneur = await getRepreneurProfileById(supabase, repreneurId)
-  if (!repreneur) return null
-  const opportunities = await listVisibleOpportunitiesForRepreneur(supabase, repreneur, matchId)
-  return opportunities[0] ?? null
+  const result = await listStaffPreviewRepreneurDealFlow(repreneurId)
+  return result.deals.find((deal) => deal.match_id === dealId || deal.opportunity_id === dealId) ?? null
 }
