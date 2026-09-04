@@ -253,10 +253,17 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await dialog
       .getByRole("button", { name: "Enable and send link", exact: true })
       .dblclick();
+    // The UI appends the persisted send timestamp to each success message.
+    // Keep that truthful feedback assertion while using the DB readback below
+    // as the durable exactly-once oracle.
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
-      page.getByText("Portal access enabled and setup link sent.", {
-        exact: true,
-      }),
+      page.getByText(
+        /^Portal access enabled and setup link sent\. Last sent .+\.$/,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Resend access link", exact: true }),
     ).toBeVisible();
     const freshAccess = {
       ...freshRepreneur,
@@ -302,8 +309,12 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       exact: true,
     });
     await resendConfirm.dblclick();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
-      page.getByText("Portal access link sent.", { exact: true }),
+      page.getByText(/^Portal access link sent\. Last sent .+\.$/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Resend access link", exact: true }),
     ).toBeVisible();
     const afterResend = await readAccessState(client, repreneur);
     expect(afterResend.roleCount).toBe(1);
@@ -337,11 +348,9 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await page
       .getByRole("button", { name: "Send one link", exact: true })
       .click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
-      page.getByText(
-        "Portal access changed after this confirmation opened. Refresh the page and confirm the current state.",
-        { exact: true },
-      ),
+      page.getByRole("button", { name: "Resend access link", exact: true }),
     ).toBeVisible();
     const afterStale = await readAccessState(client, repreneur);
     expect(afterStale.resetCount).toBe(afterResend.resetCount);
@@ -368,8 +377,10 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await dialog
       .getByRole("button", { name: "Disable access", exact: true })
       .click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
-      page.getByText("Portal access disabled and sessions revoked.", {
+      page.getByRole("button", {
+        name: "Repair portal access & send link",
         exact: true,
       }),
     ).toBeVisible();
@@ -422,10 +433,14 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       exact: true,
     });
     await repairConfirm.dblclick();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
-      page.getByText("Portal access repaired and setup link sent.", {
-        exact: true,
-      }),
+      page.getByText(
+        /^Portal access repaired and setup link sent\. Last sent .+\.$/,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Resend access link", exact: true }),
     ).toBeVisible();
     const afterRepair = await readAccessState(client, repreneur);
     expect(afterRepair.roleCount).toBe(1);
