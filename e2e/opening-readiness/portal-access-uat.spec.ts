@@ -152,6 +152,8 @@ async function expectInvalidPortalLink(page: Page, token: string) {
   await expect(
     page.getByRole("link", { name: "Demander un nouveau lien", exact: true }),
   ).toHaveAttribute("href", "/auth/forgot-password?intent=portal");
+  await expect(page.locator("#password")).toHaveCount(0);
+  await expect(page.locator("#confirmPassword")).toHaveCount(0);
 }
 
 test("staff portal-access confirmations have safe exactly-once consequences and one-use recovery", async ({
@@ -483,7 +485,12 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     });
     expect(replay.status()).toBe(400);
     expect(await replay.json()).toMatchObject({ code: "INVALID_TOKEN" });
-    evidence.setup = { validLinkConsumedOnce: true, replayRejected: true };
+    await expectInvalidPortalLink(setupPage, setupToken);
+    evidence.setup = {
+      validLinkConsumedOnce: true,
+      replayRejected: true,
+      consumedBrowserRecovery: true,
+    };
 
     // A repreneur session cannot reach the staff record or its mutation UI.
     // The server action separately calls requireStaffAccess; the existing
@@ -519,6 +526,8 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
         exact: true,
       }),
     ).toBeVisible();
+    await expect(setupPage.locator("#password")).toHaveCount(0);
+    await expect(setupPage.locator("#confirmPassword")).toHaveCount(0);
     await setupPage.reload();
     await expect(
       setupPage.getByRole("heading", {
@@ -526,7 +535,17 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
         exact: true,
       }),
     ).toBeVisible();
+    await expect(setupPage.locator("#password")).toHaveCount(0);
+    await expect(setupPage.locator("#confirmPassword")).toHaveCount(0);
     await setupPage.goBack();
+    await expect(
+      setupPage.getByRole("heading", {
+        name: "Lien d'acces indisponible",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(setupPage.locator("#password")).toHaveCount(0);
+    await expect(setupPage.locator("#confirmPassword")).toHaveCount(0);
     await setupPage.goForward();
     await expect(
       setupPage.getByRole("heading", {
@@ -534,6 +553,8 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
         exact: true,
       }),
     ).toBeVisible();
+    await expect(setupPage.locator("#password")).toHaveCount(0);
+    await expect(setupPage.locator("#confirmPassword")).toHaveCount(0);
     evidence.recovery = {
       expiredRejected: true,
       malformedRejected: true,

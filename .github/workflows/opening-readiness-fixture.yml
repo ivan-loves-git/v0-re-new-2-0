@@ -146,11 +146,49 @@ jobs:
             exit 1
           fi
 
+      - name: Assemble aggregate-safe evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          working_dir="$RUNNER_TEMP/opening-readiness-evidence"
+          published_dir="$RUNNER_TEMP/opening-readiness-published"
+          mkdir -p "$published_dir"
+
+          # CI working evidence includes raw JSONL and may contain synthetic
+          # identifiers. The only retained artifact is this explicit,
+          # aggregate-only allowlist; never upload Playwright output, reports,
+          # traces, error context, raw JSONL, synthetic emails or identifiers.
+          portal_access='null'
+          if [[ -f "$working_dir/portal-access-uat.json" ]]; then
+            portal_access=$(jq -c '{
+              ticket97, ticket98, ticket89,
+              productionData, productionCredentials, outboundProvider,
+              mailTransport,
+              freshEnable, resend, staleConfirmation, disable, repair, setup,
+              nonStaff, recovery, mailBoundary
+            }' "$working_dir/portal-access-uat.json")
+          fi
+          teardown='null'
+          if [[ -f "$working_dir/teardown.json" ]]; then
+            teardown=$(jq -c '{
+              productionData, productionCredentials, cleanupBoundary,
+              preJourneyRowCleanupRerunPassed, stackDestroySucceeded,
+              residue: {containers, volumes, networks, databaseReachable}
+            }' "$working_dir/teardown.json")
+          fi
+          jq -n \
+            --arg releaseSha "$OPENING_FIXTURE_RELEASE_SHA" \
+            --argjson portalAccess "$portal_access" \
+            --argjson teardown "$teardown" \
+            '{releaseSha: $releaseSha, artifactPolicy: "aggregate-safe allowlist only", portalAccessUat: $portalAccess, teardown: $teardown}' \
+            > "$published_dir/aggregate-summary.json"
+
       - name: Upload privacy-safe evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: opening-readiness-${{ github.run_id }}
-          path: ${{ runner.temp }}/opening-readiness-evidence
+          path: ${{ runner.temp }}/opening-readiness-published/aggregate-summary.json
           if-no-files-found: warn
           retention-days: 7
