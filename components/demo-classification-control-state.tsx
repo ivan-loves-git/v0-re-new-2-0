@@ -11,6 +11,10 @@ function formatAuditTimestamp(value: string) {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
     timeStyle: "short",
+    // Server rendering runs in UTC while staff browsers use local time. An
+    // explicit product timezone keeps the initial HTML and hydration text
+    // identical and still presents the French operating team's local time.
+    timeZone: "Europe/Paris",
   }).format(date)
 }
 

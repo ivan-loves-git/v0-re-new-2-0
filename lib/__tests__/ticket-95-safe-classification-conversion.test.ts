@@ -67,6 +67,7 @@ describe("safe REAL/DEMO classification conversion", () => {
     expect(html).toContain("match history")
     expect(html).toContain("separately reviewed data-treatment plan")
     expect(html).toContain("staff-member")
+    expect(html).toContain("Sep 4, 2026, 3:00 PM")
     expect(html).toContain('dateTime="2026-09-04T13:00:00.000Z"')
     expect(html).not.toContain("<button")
   })
