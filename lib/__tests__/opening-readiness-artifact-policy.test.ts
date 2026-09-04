@@ -175,6 +175,35 @@ describe("opening-readiness artifact policy", () => {
     expect(await readdir(published)).toEqual(["aggregate-summary.json"]);
   });
 
+  it("publishes teardown-only evidence when access UAT is not part of the run", async () => {
+    const root = await temporaryDirectory();
+    const published = join(root, "published");
+    await writeFile(
+      join(root, "teardown.json"),
+      JSON.stringify(validTeardownEvidence()),
+    );
+
+    execFileSync("bash", [assemblerPath], {
+      env: {
+        ...process.env,
+        OPENING_READINESS_EVIDENCE_DIR: root,
+        OPENING_READINESS_PUBLISHED_DIR: published,
+        OPENING_FIXTURE_RELEASE_SHA: "candidate-sha",
+      },
+    });
+
+    const artifact = JSON.parse(
+      await readFile(join(published, "aggregate-summary.json"), "utf8"),
+    ) as Record<string, unknown>;
+    expect(artifact).toMatchObject({
+      releaseSha: "candidate-sha",
+      accessUat: null,
+      teardown: { stackDestroySucceeded: true },
+    });
+    expect(hasForbiddenArtifactField(artifact)).toBe(false);
+    expect(await readdir(published)).toEqual(["aggregate-summary.json"]);
+  });
+
   it("fails closed before publication when selected aggregate fields are not typed", async () => {
     const invalidValues: Array<[string[], unknown]> = [
       [["freshEnable", "confirmedDeliveries"], "token-must-not-retain"],
