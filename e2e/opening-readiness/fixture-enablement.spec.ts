@@ -49,7 +49,7 @@ async function login(
   await page.goto("/auth/login");
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(loginPassword);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(destination, { timeout: 30_000 });
 }
 
