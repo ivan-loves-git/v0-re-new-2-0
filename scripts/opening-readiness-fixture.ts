@@ -508,12 +508,16 @@ async function cleanup() {
   output({ command: "cleanup", runLabel, releaseSha, residue });
 }
 
-await client.connect();
-try {
-  await requireCurrentSchema();
-  if (command === "setup") await setup();
-  if (command === "readback") await readback();
-  if (command === "cleanup") await cleanup();
-} finally {
-  await client.end();
+async function main() {
+  await client.connect();
+  try {
+    await requireCurrentSchema();
+    if (command === "setup") await setup();
+    if (command === "readback") await readback();
+    if (command === "cleanup") await cleanup();
+  } finally {
+    await client.end();
+  }
 }
+
+void main();
