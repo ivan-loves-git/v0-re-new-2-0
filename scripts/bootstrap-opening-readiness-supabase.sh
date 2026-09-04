@@ -58,6 +58,15 @@ VALUES
 ON CONFLICT (id) DO UPDATE SET public = false;
 SQL
 
+# The current PDR-retirement migration deliberately fails unless this exact
+# restrictive policy is already owned by Supabase Storage. Local Supabase has
+# the same provider-owned table boundary, so stage it through that role before
+# replaying the additive migration ledger.
+"${psql_safe[@]}" \
+  -c 'SET ROLE supabase_storage_admin' \
+  -f scripts/prestage-pdr-storage-guard.sql \
+  -c 'RESET ROLE'
+
 while IFS= read -r migration; do
   "${psql_safe[@]}" -f "$migration"
 done < <(
