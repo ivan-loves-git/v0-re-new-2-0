@@ -1,5 +1,3 @@
-"use server"
-
 import { randomBytes } from "crypto"
 import { Pool, type PoolClient } from "pg"
 import { hashPassword } from "better-auth/crypto"
