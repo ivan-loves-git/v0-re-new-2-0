@@ -34,6 +34,57 @@ function hasForbiddenArtifactField(value: unknown): boolean {
   return typeof value === "string" && forbidden.test(value);
 }
 
+function validPortalAccessEvidence() {
+  return {
+    freshEnable: {
+      cancelNoOp: true,
+      confirmedDeliveries: 1,
+      oneNewRole: true,
+      activeSessions: 0,
+    },
+    resend: {
+      cancelNoOp: true,
+      confirmedDeliveries: 1,
+      activeSessionsRetained: true,
+      observedUnusedResetRecordsAfterOneResend: 2,
+    },
+    staleConfirmation: { rejected: true, extraDeliveries: 0 },
+    disable: {
+      cancelNoOp: true,
+      roleRemoved: true,
+      activeSessionsRevoked: true,
+      unusedResetLinksRevoked: true,
+    },
+    repair: {
+      cancelNoOp: true,
+      confirmedDeliveries: 1,
+      oneRole: true,
+      priorSessionsRevoked: true,
+    },
+    setup: {
+      validLinkConsumedOnce: true,
+      replayRejected: true,
+      consumedBrowserRecovery: true,
+    },
+    recovery: {
+      expiredRejected: true,
+      malformedRejected: true,
+      missingRejected: true,
+      missingRefreshAndBackForwardSafe: true,
+      disableRevokedRejected: true,
+    },
+    nonStaff: { staffRouteDenied: true, staffActionUiAbsent: true },
+  };
+}
+
+function validTeardownEvidence() {
+  return {
+    cleanupBoundary: "whole disposable stack",
+    stackDestroySucceeded: true,
+    residue: { containers: 0, volumes: 0, networks: 0 },
+  };
+}
+
 afterEach(async () => {
   await Promise.all(
     temporaryDirectories
@@ -74,44 +125,7 @@ describe("opening-readiness artifact policy", () => {
     await writeFile(
       join(root, "portal-access-uat.json"),
       JSON.stringify({
-        freshEnable: {
-          cancelNoOp: true,
-          confirmedDeliveries: 1,
-          oneNewRole: true,
-          activeSessions: 0,
-        },
-        resend: {
-          cancelNoOp: true,
-          confirmedDeliveries: 1,
-          activeSessionsRetained: true,
-          observedUnusedResetRecordsAfterOneResend: 2,
-        },
-        staleConfirmation: { rejected: true, extraDeliveries: 0 },
-        disable: {
-          cancelNoOp: true,
-          roleRemoved: true,
-          activeSessionsRevoked: true,
-          unusedResetLinksRevoked: true,
-        },
-        repair: {
-          cancelNoOp: true,
-          confirmedDeliveries: 1,
-          oneRole: true,
-          priorSessionsRevoked: true,
-        },
-        setup: {
-          validLinkConsumedOnce: true,
-          replayRejected: true,
-          consumedBrowserRecovery: true,
-        },
-        recovery: {
-          expiredRejected: true,
-          malformedRejected: true,
-          missingRejected: true,
-          missingRefreshAndBackForwardSafe: true,
-          disableRevokedRejected: true,
-        },
-        nonStaff: { staffRouteDenied: true, staffActionUiAbsent: true },
+        ...validPortalAccessEvidence(),
         email: "qa-opening@example.invalid",
         passwordHash: "must-not-retain",
         credentialReadback: "must-not-retain",
@@ -130,14 +144,7 @@ describe("opening-readiness artifact policy", () => {
     await writeFile(
       join(root, "teardown.json"),
       JSON.stringify({
-        cleanupBoundary: "whole disposable stack",
-        stackDestroySucceeded: true,
-        residue: {
-          containers: 0,
-          volumes: 0,
-          networks: 0,
-          databaseReachable: false,
-        },
+        ...validTeardownEvidence(),
         databaseId: "must-not-retain",
       }),
     );
@@ -166,5 +173,55 @@ describe("opening-readiness artifact policy", () => {
     });
     expect(hasForbiddenArtifactField(artifact)).toBe(false);
     expect(await readdir(published)).toEqual(["aggregate-summary.json"]);
+  });
+
+  it("fails closed before publication when selected aggregate fields are not typed", async () => {
+    const invalidValues: Array<[string[], unknown]> = [
+      [["freshEnable", "confirmedDeliveries"], "token-must-not-retain"],
+      [["resend", "activeSessionsRetained"], "person@example.invalid"],
+      [
+        ["staleConfirmation", "rejected"],
+        "93000000-0000-4000-8000-000000000099",
+      ],
+      [["disable", "roleRemoved"], "https://example.invalid/?token=nope"],
+      [["repair", "confirmedDeliveries"], { credential: "must-not-retain" }],
+      [["setup", "replayRejected"], "password-hash-must-not-retain"],
+      [["recovery", "expiredRejected"], "request-context-must-not-retain"],
+      [["nonStaff", "staffRouteDenied"], "provider-mail-must-not-retain"],
+      [["teardown", "residue", "containers"], { id: "must-not-retain" }],
+    ];
+
+    for (const [path, invalidValue] of invalidValues) {
+      const root = await temporaryDirectory();
+      const published = join(root, "published");
+      const portal = validPortalAccessEvidence() as Record<string, unknown>;
+      const teardown = validTeardownEvidence() as Record<string, unknown>;
+      const target = path[0] === "teardown" ? teardown : portal;
+      let selected: Record<string, unknown> = target;
+      for (const key of path.slice(path[0] === "teardown" ? 1 : 0, -1)) {
+        selected = selected[key] as Record<string, unknown>;
+      }
+      selected[path.at(-1)!] = invalidValue;
+      await writeFile(
+        join(root, "portal-access-uat.json"),
+        JSON.stringify(portal),
+      );
+      await writeFile(join(root, "teardown.json"), JSON.stringify(teardown));
+
+      expect(() =>
+        execFileSync("bash", [assemblerPath], {
+          env: {
+            ...process.env,
+            OPENING_READINESS_EVIDENCE_DIR: root,
+            OPENING_READINESS_PUBLISHED_DIR: published,
+            OPENING_FIXTURE_RELEASE_SHA: "candidate-sha",
+          },
+          stdio: "pipe",
+        }),
+      ).toThrow();
+      await expect(
+        readFile(join(published, "aggregate-summary.json")),
+      ).rejects.toThrow();
+    }
   });
 });
