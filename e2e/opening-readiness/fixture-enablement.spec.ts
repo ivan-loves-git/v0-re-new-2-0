@@ -111,21 +111,35 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
 
   await logout(page);
   await login(page, fixture.repreneurs.real.email, /\/portal\/deals/);
+  const realLiveOpportunities = page.getByRole("region", {
+    name: "Live Opportunities",
+  });
   await expect(
-    page.getByText("QA OPENING REAL — SYNTHETIC", { exact: true }),
+    realLiveOpportunities.getByText("QA OPENING REAL — SYNTHETIC", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
-    page.getByText("QA OPENING DEMO — SYNTHETIC", { exact: true }),
+    realLiveOpportunities.getByText("QA OPENING DEMO — SYNTHETIC", {
+      exact: true,
+    }),
   ).toHaveCount(0);
 
   await logout(page);
   await login(page, fixture.repreneurs.demo.email, /\/portal\/deals/);
   await expect(page.getByText("Demo profile", { exact: true })).toBeVisible();
+  const demoLiveOpportunities = page.getByRole("region", {
+    name: "Live Opportunities",
+  });
   await expect(
-    page.getByText("QA OPENING DEMO — SYNTHETIC", { exact: true }),
+    demoLiveOpportunities.getByText("QA OPENING DEMO — SYNTHETIC", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
-    page.getByText("QA OPENING REAL — SYNTHETIC", { exact: true }),
+    demoLiveOpportunities.getByText("QA OPENING REAL — SYNTHETIC", {
+      exact: true,
+    }),
   ).toHaveCount(0);
 
   await logout(page);
