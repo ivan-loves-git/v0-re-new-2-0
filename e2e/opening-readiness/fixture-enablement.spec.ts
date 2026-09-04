@@ -226,7 +226,9 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
       resetPassword,
     );
     await expect(
-      page.getByText("QA OPENING REAL — SYNTHETIC", { exact: true }),
+      realLiveOpportunities.getByText("QA OPENING REAL — SYNTHETIC", {
+        exact: true,
+      }),
     ).toBeVisible();
     await logout(page);
     await page.goto(
