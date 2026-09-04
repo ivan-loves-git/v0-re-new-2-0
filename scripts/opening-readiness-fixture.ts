@@ -78,10 +78,16 @@ async function requireCurrentSchema() {
       EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='opportunities' AND column_name='is_demo') AS "opportunityIsDemo",
       EXISTS(SELECT 1 FROM pg_proc WHERE proname='w164_match_has_same_namespace') AS "namespaceGuard",
       EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='private_upload_intents') AS "directUploads",
-      EXISTS(SELECT 1 FROM pg_proc WHERE proname='record_opportunity_closure') AS "currentClosure"
+      EXISTS(SELECT 1 FROM pg_proc WHERE proname='close_opportunity_with_reason') AS "currentClosure"
   `);
-  if (!Object.values(rows[0] ?? {}).every(Boolean)) {
-    throw new Error("Opening fixture requires the current application schema.");
+  const schema = rows[0];
+  const missing = Object.entries(schema ?? {})
+    .filter(([, present]) => !present)
+    .map(([contract]) => contract);
+  if (missing.length > 0) {
+    throw new Error(
+      `Opening fixture requires the current application schema: ${missing.join(", ")}.`,
+    );
   }
 }
 
