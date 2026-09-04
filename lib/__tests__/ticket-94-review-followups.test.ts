@@ -29,4 +29,20 @@ describe("Ticket #94 review follow-ups", () => {
     expect(concurrency).toContain("117_explicit_demo_real_creation.sql")
     expect(concurrency).toContain("'w109-race-staff-a','w109-race-convert-a'")
   })
+
+  it("has a separately rehearsed post-deploy cutover and ordered rollback", () => {
+    const rehearsal = source("scripts/rehearse-external-pursuit-conversion.sql")
+    const cutover = source("scripts/118_ticket_94_strict_creation_cutover.sql")
+    const rollback = source("scripts/118_ticket_94_strict_creation_cutover_rollback.sql")
+    const externalContract = source("docs/data-models/external-pursuit-data-model-v1.md")
+
+    expect(rehearsal).toContain("118_ticket_94_strict_creation_cutover.sql")
+    expect(rehearsal).toContain("w164_final_cutover_left_legacy_endpoint_callable")
+    expect(rehearsal).toContain("118_ticket_94_strict_creation_cutover_rollback.sql")
+    expect(cutover).toContain("create_opportunity_with_office_context_legacy_118")
+    expect(cutover).toContain("convert_external_pursuit_to_opportunity_legacy_118")
+    expect(rollback).toContain("Run this first, then restore the prior application")
+    expect(externalContract).toContain("explicitly\n    choose REAL or DEMO")
+    expect(externalContract).toContain("create_opportunity_with_office_context_v2")
+  })
 })

@@ -97,3 +97,34 @@ BEGIN
 END $$;
 
 ROLLBACK;
+
+-- Post-deploy final cutover: the candidate is already proven above; remove
+-- both omission-capable endpoints and prove v2 remains fail-closed.
+\ir 118_ticket_94_strict_creation_cutover.sql
+DO $$
+BEGIN
+  IF to_regprocedure('public.create_opportunity_with_office_context(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)') IS NOT NULL
+     OR to_regprocedure('public.convert_external_pursuit_to_opportunity(uuid,text,uuid,uuid,uuid,text,text)') IS NOT NULL THEN
+    RAISE EXCEPTION 'w164_final_cutover_left_legacy_endpoint_callable';
+  END IF;
+  IF NOT has_function_privilege('service_role','public.create_opportunity_with_office_context_v2(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)','EXECUTE') THEN
+    RAISE EXCEPTION 'w164_final_cutover_removed_candidate_creator';
+  END IF;
+  BEGIN
+    PERFORM public.create_opportunity_with_office_context_v2('',NULL,ARRAY[]::UUID[],NULL,NULL,'draft','conversion-staff-user','{}'::JSONB);
+    RAISE EXCEPTION 'w164_final_cutover_v2_accepted_omission';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'opportunity_demo_classification_required' THEN RAISE; END IF;
+  END;
+END $$;
+
+-- Rollback is ordered: restore the compatibility endpoints first, then the
+-- prior app. The disposable rehearsal proves both names return.
+\ir 118_ticket_94_strict_creation_cutover_rollback.sql
+DO $$
+BEGIN
+  IF to_regprocedure('public.create_opportunity_with_office_context(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)') IS NULL
+     OR to_regprocedure('public.convert_external_pursuit_to_opportunity(uuid,text,uuid,uuid,uuid,text,text)') IS NULL THEN
+    RAISE EXCEPTION 'w164_final_cutover_rollback_did_not_restore_legacy_endpoints';
+  END IF;
+END $$;
