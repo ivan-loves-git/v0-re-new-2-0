@@ -1,6 +1,7 @@
 import "server-only"
 import { Pool, type PoolClient } from "pg"
 import { env } from "@/lib/env"
+import { postgresSslForConnection } from "@/lib/postgres-ssl"
 
 const BETTER_AUTH_RESET_TOKEN_PATTERN = /^[A-Za-z0-9]{24}$/
 
@@ -12,7 +13,7 @@ function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: postgresSslForConnection(env.DATABASE_URL),
       max: 2,
     })
   }

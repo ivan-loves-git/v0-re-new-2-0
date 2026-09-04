@@ -6,6 +6,7 @@ import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { authorizePasswordResetDelivery } from "@/lib/password-reset-link"
+import { postgresSslForConnection } from "@/lib/postgres-ssl"
 
 /**
  * Database connection pool singleton
@@ -17,9 +18,7 @@ function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, // Required for Supabase
-      },
+      ssl: postgresSslForConnection(env.DATABASE_URL),
       max: 5, // Limit connections for serverless
     })
   }

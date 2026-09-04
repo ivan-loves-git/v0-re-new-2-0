@@ -14,6 +14,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
 import { passwordResetUserLockKey } from "@/lib/password-reset-link"
+import { postgresSslForConnection } from "@/lib/postgres-ssl"
 
 export interface RepreneurPortalAccessStatus {
   repreneurId: string
@@ -64,7 +65,7 @@ function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: postgresSslForConnection(env.DATABASE_URL),
       max: 3,
     })
   }
