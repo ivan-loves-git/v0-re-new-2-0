@@ -261,7 +261,8 @@ function DealCard({
   )
 }
 
-function DealSection({
+export function DealSection({
+  sectionKey,
   title,
   description,
   opportunities,
@@ -270,6 +271,7 @@ function DealSection({
   readOnly,
   compact,
 }: {
+  sectionKey: "recommended" | "declined" | "in-progress" | "live-opportunities"
   title: string
   description: string
   opportunities: RepreneurDealDiscoveryOpportunity[]
@@ -280,10 +282,12 @@ function DealSection({
 }) {
   if (opportunities.length === 0) return null
 
+  const headingId = `deal-section-${sectionKey}`
+
   return (
-    <section className="flex flex-col gap-3" aria-labelledby={`deal-section-${title}`}>
+    <section className="flex flex-col gap-3" aria-labelledby={headingId}>
       <div className="flex flex-col gap-1">
-        <h2 id={`deal-section-${title}`} className="text-base font-semibold tracking-tight">{title}</h2>
+        <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="grid gap-3">
@@ -404,10 +408,10 @@ export function RepreneurOpportunityList({
         </Alert>
       ) : (
         <div className="flex flex-col gap-6">
-          <DealSection title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
-          <DealSection title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
-          <DealSection title="In Progress" description="Interest sent to Re-New or a validated active pursuit." opportunities={sections.inProgress} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
-          <DealSection title="Live Opportunities" description="Other live opportunities available for you to review." opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
+          <DealSection sectionKey="recommended" title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
+          <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
+          <DealSection sectionKey="in-progress" title="In Progress" description="Interest sent to Re-New or a validated active pursuit." opportunities={sections.inProgress} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
+          <DealSection sectionKey="live-opportunities" title="Live Opportunities" description="Other live opportunities available for you to review." opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
         </div>
       )}
     </div>

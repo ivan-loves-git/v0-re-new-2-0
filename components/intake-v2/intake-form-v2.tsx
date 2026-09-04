@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { INTAKE_STEPS } from '@/lib/config/questionnaire-v2'
 import { SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import { useLanguage } from '@/lib/i18n/language-context'
+import type { Language } from '@/lib/i18n/translations'
 import {
   StepContact,
   StepWho,
@@ -43,6 +44,66 @@ const STEP_TITLES: Record<number, { fr: string; en: string }> = {
 function scrollToTop() {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+}
+
+export function IntakeProgress({ currentStep, language }: { currentStep: number; language: Language }) {
+  const stepLabel = language === 'fr' ? 'Étape' : 'Step'
+  const ofLabel = language === 'fr' ? 'sur' : 'of'
+  const accessibleName = language === 'fr' ? 'Progression du formulaire' : 'Form progress'
+  const accessibleValue = `${stepLabel} ${currentStep} ${ofLabel} ${INTAKE_STEPS.length}`
+
+  return (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm text-muted-foreground">
+          {accessibleValue}
+        </span>
+        <span className="text-sm font-medium">
+          {STEP_TITLES[currentStep][language]}
+        </span>
+      </div>
+      <Progress
+        value={currentStep}
+        max={INTAKE_STEPS.length}
+        aria-label={accessibleName}
+        aria-valuemin={1}
+        aria-valuetext={accessibleValue}
+        className="h-2"
+      />
+
+      <div className="flex justify-between mt-4">
+        {INTAKE_STEPS.map((step, index) => {
+          const stepNum = index + 1
+          const isCompleted = stepNum < currentStep
+          const isCurrent = stepNum === currentStep
+
+          return (
+            <div
+              key={step.id}
+              className={`flex flex-col items-center ${
+                index > 0 ? 'flex-1' : ''
+              }`}
+            >
+              <div
+                className={`size-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                  isCompleted
+                    ? 'bg-primary text-primary-foreground'
+                    : isCurrent
+                    ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {isCompleted ? '✓' : stepNum}
+              </div>
+              <span className="text-xs mt-1 text-muted-foreground hidden sm:block">
+                {STEP_TITLES[stepNum][language]}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 /**
@@ -181,9 +242,6 @@ export function IntakeFormV2() {
     }
   }, [data, router, language])
 
-  // Calculate progress percentage
-  const progressPercent = (currentStep / INTAKE_STEPS.length) * 100
-
   // Render current step
   const renderStep = () => {
     const commonProps = {
@@ -269,8 +327,6 @@ export function IntakeFormV2() {
     }
   }
 
-  const stepLabel = language === 'fr' ? 'Étape' : 'Step'
-  const ofLabel = language === 'fr' ? 'sur' : 'of'
   const contactLabel = language === 'fr' ? 'Des questions ? Contactez-nous à' : 'Questions? Contact us at'
   const uploadRestoreMessage = language === 'fr'
     ? 'Vos réponses ont été restaurées. Pour votre confidentialité, les documents ne sont pas conservés dans ce brouillon : ajoutez à nouveau votre CV avant de continuer. Toute lettre de cadrage facultative doit aussi être ajoutée de nouveau si vous souhaitez la joindre.'
@@ -303,51 +359,7 @@ export function IntakeFormV2() {
         </div>
       )}
 
-      {/* Header with progress */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">
-            {stepLabel} {currentStep} {ofLabel} {INTAKE_STEPS.length}
-          </span>
-          <span className="text-sm font-medium">
-            {STEP_TITLES[currentStep][language]}
-          </span>
-        </div>
-        <Progress value={progressPercent} className="h-2" />
-
-        {/* Step indicators */}
-        <div className="flex justify-between mt-4">
-          {INTAKE_STEPS.map((step, index) => {
-            const stepNum = index + 1
-            const isCompleted = stepNum < currentStep
-            const isCurrent = stepNum === currentStep
-
-            return (
-              <div
-                key={step.id}
-                className={`flex flex-col items-center ${
-                  index > 0 ? 'flex-1' : ''
-                }`}
-              >
-                <div
-                  className={`size-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                    isCompleted
-                      ? 'bg-primary text-primary-foreground'
-                      : isCurrent
-                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {isCompleted ? '✓' : stepNum}
-                </div>
-                <span className="text-xs mt-1 text-muted-foreground hidden sm:block">
-                  {STEP_TITLES[stepNum][language]}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      <IntakeProgress currentStep={currentStep} language={language} />
 
       {/* Error display */}
       {state.submitResult?.error && (
