@@ -29,13 +29,30 @@ describe("PDR screening validation", () => {
   })
 
   it("rejects a clarification that requests a secret or unnecessary personal detail", () => {
-    for (const question of ["What is the affected user's password?", "What is the affected user's email address?"]) {
+    for (const question of [
+      "What is the affected user's password?",
+      "What is the affected user's email address?",
+      "Please upload the raw client records.",
+      "What colour should the page be?",
+    ]) {
       try {
         validatePdrScreeningDraft({ ...completeBug, clarificationQuestions: [question] }, current, "fresh")
         throw new Error("unsafe question was accepted")
       } catch (error) {
         expect(error).toMatchObject({ reason: "unsafe_clarification_question" })
       }
+    }
+  })
+
+  it("allows only the approved bug diagnostic fact categories", () => {
+    for (const question of [
+      "What did you observe instead of the expected behaviour?",
+      "Which page or workflow step shows the issue?",
+      "Which staff role sees the issue?",
+      "How often does it recur?",
+      "Can you share a redacted screenshot or error code?",
+    ]) {
+      expect(validatePdrScreeningDraft({ ...completeBug, clarificationQuestions: [question] }, current, "fresh").clarificationQuestions).toEqual([question])
     }
   })
 

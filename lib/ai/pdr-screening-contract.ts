@@ -9,7 +9,12 @@ const boundedText = (min: number, max: number) => z.string().trim().min(min).max
 // Questions are the only model-authored text that staff are invited to act on.
 // Keep the boundary narrow: reproduction facts can be useful, but secrets,
 // raw records and personal/contact information must never be requested here.
-const unsafeQuestionPattern = /\b(?:credential|password|passcode|secret|api\s*key|access\s*token|authentication\s*code|auth\s*code|one[\s-]*time\s*code|\botp\b|\bmfa\b|two[\s-]*factor|raw\s+(?:client|customer)\s+(?:data|record)|confidential\s+(?:document|file)|private\s+(?:document|file)|full\s+name|email\s+address|phone\s+number|home\s+address)\b/i
+const unsafeQuestionPattern = /\b(?:credential|password|passcode|secret|api\s*key|access\s*token|authentication\s*code|auth\s*code|one[\s-]*time\s*code|\botp\b|\bmfa\b|two[\s-]*factor|raw\s+(?:client|customer)\s+(?:data|records?)|(?:client|customer|contact|user)\s+(?:data|records?|details?|information)|confidential\s+(?:document|file)|private\s+(?:document|file)|full\s+name|email\s+address|phone\s+number|home\s+address|\b(?:log|logs|record|records|export|dump|attachment|file|document)\b)\b/i
+
+// This is deliberately an allowlist, not a keyword match. A bug question
+// needs to ask for one of the five approved diagnostic facts, rather than
+// merely contain a word such as "page" or "staff".
+const bugDiagnosticQuestionPattern = /(?:\b(?:what\s+(?:did|do|happens?|is)|which|how)\b[^?]{0,120}\b(?:observ(?:ed|e)|expected|instead|happen(?:s|ed|ing)?|show(?:s|n)?)\b|\b(?:which|what)\s+(?:page|screen|route|workflow|step|button|form)\b|\b(?:on|at)\s+(?:which|what)\s+(?:page|screen|route|workflow|step|button|form)\b|\b(?:which|what)\s+(?:(?:staff|repreneur|founder|admin)\s+)?(?:role|user\s+group|team)\b|\b(?:when|how\s+often)\b[^?]{0,120}\b(?:recur(?:s|red|rence|ring)?|intermittent|timing|first\s+(?:occur|happen)|happen(?:s|ed|ing)?)\b|\b(?:can|could|please)\b[^?]{0,120}\b(?:redacted\s+screenshot|safe\s+screenshot|error\s+(?:reference|message|code))\b)/i
 
 const clarificationQuestion = boundedText(4, 240).superRefine((question, context) => {
   if (unsafeQuestionPattern.test(question)) {
@@ -17,9 +22,15 @@ const clarificationQuestion = boundedText(4, 240).superRefine((question, context
   }
 })
 
+const bugClarificationQuestion = clarificationQuestion.superRefine((question, context) => {
+  if (!bugDiagnosticQuestionPattern.test(question)) {
+    context.addIssue({ code: "custom", message: "Bug clarification questions must target an approved diagnostic fact." })
+  }
+})
+
 function questionsForClassification(classification: "product_change" | "bug" | "research" | "operational_question" | "needs_clarification") {
   return classification === "bug"
-    ? z.array(clarificationQuestion).max(2)
+    ? z.array(bugClarificationQuestion).max(2)
     : z.array(clarificationQuestion).min(1).max(5)
 }
 

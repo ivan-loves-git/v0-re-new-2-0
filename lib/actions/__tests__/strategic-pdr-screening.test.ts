@@ -145,6 +145,20 @@ describe("Strategic PDR AI screening actions", () => {
     expect(state.calls.revalidate).toContain(`/strategic-pdr/requests/${requestId}`)
   })
 
+  it("accepts a zero-question bug preview while refusing an unsafe bug question before persistence", async () => {
+    const completeBug = { ...draft, classification: "bug", clarificationQuestions: [] }
+    state.generated = { ...state.generated, draft: completeBug }
+    const safePreview = await generateStrategicPdrScreening(form())
+    await saveStrategicPdrScreening({ requestId, previewToken: safePreview.previewToken, draft: completeBug })
+    expect(state.calls.inserts).toHaveLength(1)
+
+    const unsafeBug = { ...completeBug, clarificationQuestions: ["Please upload the raw client records."] }
+    state.generated = { ...state.generated, draft: unsafeBug }
+    const unsafePreview = await generateStrategicPdrScreening(form())
+    await expect(saveStrategicPdrScreening({ requestId, previewToken: unsafePreview.previewToken, draft: unsafeBug })).rejects.toThrow("The screening preview is invalid.")
+    expect(state.calls.inserts).toHaveLength(1)
+  })
+
   it("authenticates save before governance, history, or database access", async () => {
     state.access = null as any
     await expect(saveStrategicPdrScreening({ requestId, previewToken: "not-a-valid-preview-token-but-long-enough", draft })).rejects.toThrow()
