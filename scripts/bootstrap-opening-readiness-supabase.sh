@@ -128,15 +128,44 @@ done < <(
     | awk -F/ '$NF >= "20260830113100"'
 )
 
-# The sanitized structure snapshot deliberately contains no real Acme/Bertrand
-# singleton row, while this production-specific trigger requires that private
-# row on every opportunity write. The opening fixture exercises only its own
-# non-Acme synthetic offices, so disable exactly this unrelated trigger in the
-# disposable loopback database. All general lifecycle and source-office guards
-# remain enabled.
+# The sanitized structure snapshot deliberately omits the real Acme/Bertrand
+# singleton while retaining its redacted integrity function. Reconstruct the
+# established synthetic support context used by the W-169 rehearsal so every
+# opportunity trigger remains enabled without copying private production data.
 "${psql_safe[@]}" <<'SQL'
+SET session_replication_role = replica;
+INSERT INTO public.ma_firms(id,name,status,created_by) VALUES
+  ('93000000-0000-4000-8000-000000000081','Acme Co.','active','qa-opening-schema-support');
+INSERT INTO public.ma_offices(id,firm_id,name,status,is_default,city,created_by) VALUES
+  ('93000000-0000-4000-8000-000000000082','93000000-0000-4000-8000-000000000081','Acme Paris','active',false,'Paris','qa-opening-schema-support');
+INSERT INTO public.ma_contacts(id,first_name,display_name,status,email,created_by) VALUES
+  ('93000000-0000-4000-8000-000000000083','Schema','TEST-schema-redacted-person','active','test-schema-redacted-003','qa-opening-schema-support'),
+  ('93000000-0000-4000-8000-000000000084','Email','QA OPENING SCHEMA EMAIL — SYNTHETIC','active','test-schema-redacted-001','qa-opening-schema-support');
+INSERT INTO public.ma_contact_office_affiliations(
+  id,contact_id,office_id,is_active,created_by
+) VALUES (
+  '93000000-0000-4000-8000-000000000085',
+  '93000000-0000-4000-8000-000000000083',
+  '93000000-0000-4000-8000-000000000082',
+  true,
+  'qa-opening-schema-support'
+);
+INSERT INTO public.ma_provisional_source_contexts(
+  context_key,firm_id,office_id,contact_id,affiliation_id
+) VALUES (
+  'acme_co_paris',
+  '93000000-0000-4000-8000-000000000081',
+  '93000000-0000-4000-8000-000000000082',
+  '93000000-0000-4000-8000-000000000083',
+  '93000000-0000-4000-8000-000000000085'
+);
+INSERT INTO public.app_user_roles(id,email,role) VALUES
+  ('93000000-0000-4000-8000-000000000086','test-schema-redacted-002','staff');
+RESET session_replication_role;
+
 DO $$
 BEGIN
+  PERFORM public.assert_ma_provisional_source_context_integrity();
   IF NOT EXISTS (
     SELECT 1
     FROM pg_trigger trigger
@@ -146,14 +175,60 @@ BEGIN
       AND relation.relname='opportunities'
       AND trigger.tgname='enforce_ma_provisional_source_review_on_opportunity'
       AND NOT trigger.tgisinternal
-      AND trigger.tgenabled <> 'D'
+      AND trigger.tgenabled = 'O'
   ) THEN
     RAISE EXCEPTION 'opening_fixture_acme_trigger_missing_or_disabled';
   END IF;
 END
 $$;
-ALTER TABLE public.opportunities
-  DISABLE TRIGGER enforce_ma_provisional_source_review_on_opportunity;
+
+INSERT INTO public.opportunities(
+  id,reference,status,description,source_identity_to_verify,created_by
+) VALUES (
+  '93000000-0000-4000-8000-000000000087',
+  'QA-OPENING-SOURCE-GUARD',
+  'draft',
+  'Synthetic generic source-review guard proof',
+  true,
+  'qa-opening-schema-support'
+);
+
+DO $$
+BEGIN
+  IF NOT public.ma_opportunity_source_review_required(
+    '93000000-0000-4000-8000-000000000087'
+  ) THEN
+    RAISE EXCEPTION 'opening_fixture_generic_source_flag_not_gated';
+  END IF;
+
+  BEGIN
+    UPDATE public.opportunities
+    SET status='closed'
+    WHERE id='93000000-0000-4000-8000-000000000087';
+    SET CONSTRAINTS ALL IMMEDIATE;
+    RAISE EXCEPTION 'opening_fixture_flagged_close_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ma_provisional_source_review_blocks_opportunity_lifecycle_exit' THEN
+      RAISE;
+    END IF;
+  END;
+
+  BEGIN
+    UPDATE public.opportunities
+    SET status='archived'
+    WHERE id='93000000-0000-4000-8000-000000000087';
+    SET CONSTRAINTS ALL IMMEDIATE;
+    RAISE EXCEPTION 'opening_fixture_flagged_archive_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ma_provisional_source_review_blocks_opportunity_lifecycle_exit' THEN
+      RAISE;
+    END IF;
+  END;
+END
+$$;
+
+DELETE FROM public.opportunities
+WHERE id='93000000-0000-4000-8000-000000000087';
 SQL
 
 "${psql_safe[@]}" <<'SQL'
