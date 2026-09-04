@@ -4,7 +4,11 @@ import {
   consumeRequestRateLimit,
   requestFingerprint,
 } from "@/lib/security/intake-upload"
-import { withPasswordResetAuthority } from "@/lib/password-reset-link"
+import {
+  validatePasswordResetLink,
+  withPasswordResetAuthority,
+} from "@/lib/password-reset-link"
+import { PASSWORD_RESET_PREFLIGHT_PATH } from "@/lib/password-reset-token"
 
 /**
  * Better Auth API route handler
@@ -22,6 +26,7 @@ const AUTH_RATE_LIMITS: Record<string, { max: number; window: number }> = {
   "/api/auth/sign-in/email": { max: 5, window: 15 * 60 },
   "/api/auth/request-password-reset": { max: 3, window: 15 * 60 },
   "/api/auth/reset-password": { max: 5, window: 15 * 60 },
+  [PASSWORD_RESET_PREFLIGHT_PATH]: { max: 5, window: 15 * 60 },
   "/api/auth/sign-up/email": { max: 1, window: 60 * 60 },
 }
 
@@ -46,10 +51,11 @@ function withResetLinkPrivacyHeaders(response: Response) {
 
 export async function GET(request: Request) {
   const pathname = new URL(request.url).pathname
+  if (pathname.startsWith("/api/auth/reset-password/")) {
+    return withResetLinkPrivacyHeaders(invalidResetTokenResponse())
+  }
   const response = await handlers.GET(request)
-  return pathname.startsWith("/api/auth/reset-password/")
-    ? withResetLinkPrivacyHeaders(response)
-    : response
+  return response
 }
 
 function invalidResetTokenResponse() {
@@ -67,12 +73,17 @@ async function resetTokenFromRequest(request: Request) {
     // Better Auth returns the same privacy-safe invalid-token result below.
   }
 
-  return new URL(request.url).searchParams.get("token")
+  return null
 }
 
 export async function POST(request: Request) {
   const pathname = new URL(request.url).pathname
   const rule = AUTH_RATE_LIMITS[pathname]
+  const isResetRequest =
+    pathname === "/api/auth/reset-password" ||
+    pathname === PASSWORD_RESET_PREFLIGHT_PATH
+  const protectResetResponse = (response: Response) =>
+    isResetRequest ? withResetLinkPrivacyHeaders(response) : response
 
   if (rule) {
     try {
@@ -83,21 +94,31 @@ export async function POST(request: Request) {
         rule.window,
       )
       if (!limit.allowed) {
-        return Response.json(
-          { message: "Too many requests. Please try again later." },
-          {
-            status: 429,
-            headers: { "Retry-After": String(limit.retryAfter) },
-          },
+        return protectResetResponse(
+          Response.json(
+            { message: "Too many requests. Please try again later." },
+            {
+              status: 429,
+              headers: { "Retry-After": String(limit.retryAfter) },
+            },
+          ),
         )
       }
     } catch (error) {
       console.error("Authentication rate limit unavailable", error)
-      return Response.json(
-        { message: "Authentication is temporarily unavailable." },
-        { status: 503 },
+      return protectResetResponse(
+        Response.json(
+          { message: "Authentication is temporarily unavailable." },
+          { status: 503 },
+        ),
       )
     }
+  }
+
+  if (pathname === PASSWORD_RESET_PREFLIGHT_PATH) {
+    const token = await resetTokenFromRequest(request)
+    const valid = await validatePasswordResetLink(token)
+    return protectResetResponse(Response.json({ valid }))
   }
 
   if (pathname === "/api/auth/reset-password") {
@@ -106,15 +127,19 @@ export async function POST(request: Request) {
       const guarded = await withPasswordResetAuthority(token, () =>
         handlers.POST(request),
       )
-      return guarded.authorized ? guarded.result : invalidResetTokenResponse()
+      return protectResetResponse(
+        guarded.authorized ? guarded.result : invalidResetTokenResponse(),
+      )
     } catch {
       console.error("Password reset authority was unavailable.")
-      return Response.json(
-        {
-          code: "RESET_AUTHORITY_UNAVAILABLE",
-          message: "Password reset is temporarily unavailable.",
-        },
-        { status: 503 },
+      return protectResetResponse(
+        Response.json(
+          {
+            code: "RESET_AUTHORITY_UNAVAILABLE",
+            message: "Password reset is temporarily unavailable.",
+          },
+          { status: 503 },
+        ),
       )
     }
   }

@@ -5,6 +5,7 @@ import { trustedAuthOrigins } from "@/lib/auth-origin-policy"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { buildPasswordResetBrowserUrl } from "@/lib/password-reset-browser-url"
 import { authorizePasswordResetDelivery } from "@/lib/password-reset-link"
 import { postgresSslForConnection } from "@/lib/postgres-ssl"
 
@@ -125,6 +126,11 @@ export const auth = betterAuth({
         }
 
         const isPortalAccessSetup = isPortalAccessSetupUrl(url)
+        const browserUrl = buildPasswordResetBrowserUrl(
+          env.BETTER_AUTH_URL,
+          token,
+          isPortalAccessSetup,
+        )
         const { error } = await resend.emails.send({
           from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: user.email,
@@ -132,8 +138,8 @@ export const auth = betterAuth({
             ? "Bienvenue sur la plateforme Re-New"
             : "Reset your password",
           html: isPortalAccessSetup
-            ? renderPortalAccessSetupEmail(user.name, url)
-            : renderPasswordResetEmail(user.name, url),
+            ? renderPortalAccessSetupEmail(user.name, browserUrl)
+            : renderPasswordResetEmail(user.name, browserUrl),
         })
         if (error) {
           trace.failure("provider_rejected")

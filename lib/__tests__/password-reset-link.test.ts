@@ -20,11 +20,11 @@ vi.mock("@/lib/env", () => ({
 
 import {
   authorizePasswordResetDelivery,
-  isPasswordResetToken,
   passwordResetUserLockKey,
   validatePasswordResetLink,
   withPasswordResetAuthority,
 } from "@/lib/password-reset-link"
+import { isPasswordResetToken } from "@/lib/password-reset-token"
 
 describe("password reset link validation", () => {
   beforeEach(() => {
@@ -45,11 +45,14 @@ describe("password reset link validation", () => {
     "abcdefghijklmnopqrstuvw_",
     "abcdefghijklmnopqrstuvwé",
     "abcdefghijklmnopqrstuvwxy",
-  ])("rejects malformed token %s without querying the database", async (token) => {
-    expect(isPasswordResetToken(token)).toBe(false)
-    await expect(validatePasswordResetLink(token)).resolves.toBe(false)
-    expect(mocks.query).not.toHaveBeenCalled()
-  })
+  ])(
+    "rejects malformed token %s without querying the database",
+    async (token) => {
+      expect(isPasswordResetToken(token)).toBe(false)
+      await expect(validatePasswordResetLink(token)).resolves.toBe(false)
+      expect(mocks.query).not.toHaveBeenCalled()
+    },
+  )
 
   it("accepts the exact Better Auth token shape", () => {
     expect(isPasswordResetToken("aB3dE5gH7jK9mN2pQ4sT6vX8")).toBe(true)
@@ -68,13 +71,11 @@ describe("password reset link validation", () => {
     expect(sql).toContain('"identifier" = $1')
     expect(sql).toContain('"expiresAt" >')
     expect(sql).toContain("FROM public.app_user_roles")
-    expect(sql).toContain("role.user_id::text = verification.\"value\"")
+    expect(sql).toContain('role.user_id::text = verification."value"')
     expect(sql).toContain("role.role::text IN ('staff', 'repreneur')")
     expect(sql).toMatch(/^SELECT 1 AS valid/)
     expect(sql).not.toMatch(/\b(?:insert|update|delete)\b/i)
-    expect(parameters).toEqual([
-      "reset-password:aB3dE5gH7jK9mN2pQ4sT6vX8",
-    ])
+    expect(parameters).toEqual(["reset-password:aB3dE5gH7jK9mN2pQ4sT6vX8"])
   })
 
   it.each([
@@ -131,19 +132,16 @@ describe("password reset link validation", () => {
     })
 
     await expect(
-      withPasswordResetAuthority(
-        "aB3dE5gH7jK9mN2pQ4sT6vX8",
-        action,
-      ),
+      withPasswordResetAuthority("aB3dE5gH7jK9mN2pQ4sT6vX8", action),
     ).resolves.toEqual({ authorized: true, result: "native-response" })
 
     expect(action).toHaveBeenCalledTimes(1)
-    expect(calls.findIndex((call) => call.includes("pg_advisory"))).toBeLessThan(
+    expect(
+      calls.findIndex((call) => call.includes("pg_advisory")),
+    ).toBeLessThan(calls.findIndex((call) => call.includes("app_user_roles")))
+    expect(
       calls.findIndex((call) => call.includes("app_user_roles")),
-    )
-    expect(calls.findIndex((call) => call.includes("app_user_roles"))).toBeLessThan(
-      calls.indexOf("BETTER_AUTH_RESET"),
-    )
+    ).toBeLessThan(calls.indexOf("BETTER_AUTH_RESET"))
     expect(mocks.clientQuery).toHaveBeenCalledWith(
       expect.stringContaining("pg_advisory_xact_lock"),
       ["password-reset-user:user-1"],
@@ -166,10 +164,7 @@ describe("password reset link validation", () => {
     const action = vi.fn()
 
     await expect(
-      withPasswordResetAuthority(
-        "aB3dE5gH7jK9mN2pQ4sT6vX8",
-        action,
-      ),
+      withPasswordResetAuthority("aB3dE5gH7jK9mN2pQ4sT6vX8", action),
     ).resolves.toEqual({ authorized: false })
 
     expect(verificationReads).toBe(1)
@@ -192,12 +187,9 @@ describe("password reset link validation", () => {
     })
 
     await expect(
-      withPasswordResetAuthority(
-        "aB3dE5gH7jK9mN2pQ4sT6vX8",
-        async () => {
-          throw new Error("native reset failed")
-        },
-      ),
+      withPasswordResetAuthority("aB3dE5gH7jK9mN2pQ4sT6vX8", async () => {
+        throw new Error("native reset failed")
+      }),
     ).rejects.toThrow("native reset failed")
 
     expect(mocks.clientQuery).toHaveBeenCalledWith("ROLLBACK")
@@ -215,10 +207,7 @@ describe("password reset link validation", () => {
     })
 
     await expect(
-      authorizePasswordResetDelivery(
-        "user-1",
-        "aB3dE5gH7jK9mN2pQ4sT6vX8",
-      ),
+      authorizePasswordResetDelivery("user-1", "aB3dE5gH7jK9mN2pQ4sT6vX8"),
     ).resolves.toBe(true)
 
     expect(mocks.clientQuery).toHaveBeenCalledWith(
@@ -250,10 +239,7 @@ describe("password reset link validation", () => {
     )
 
     await expect(
-      authorizePasswordResetDelivery(
-        "user-1",
-        "aB3dE5gH7jK9mN2pQ4sT6vX8",
-      ),
+      authorizePasswordResetDelivery("user-1", "aB3dE5gH7jK9mN2pQ4sT6vX8"),
     ).resolves.toBe(false)
 
     expect(

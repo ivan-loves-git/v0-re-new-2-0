@@ -1,5 +1,6 @@
 import { execFileSync } from "child_process"
 import { RELEASE_BUILD_NUMBER } from "./lib/release-build.mjs"
+import { sensitiveRequestLogPatterns } from "./lib/sensitive-request-log-policy.mjs"
 
 // Vercel builds from a shallow checkout, so the release number is committed
 // rather than derived from history depth. The short hash is build provenance.
@@ -24,6 +25,13 @@ try {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   cacheComponents: true,
+  // Reset tokens are credentials. Suppress both the browser callback and the
+  // Better Auth callback route before Next.js formats an incoming-request log.
+  logging: {
+    incomingRequests: {
+      ignore: sensitiveRequestLogPatterns,
+    },
+  },
   images: {
     remotePatterns: [
       {

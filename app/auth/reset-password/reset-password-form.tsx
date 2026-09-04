@@ -1,31 +1,78 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { CheckCircle, XCircle } from "lucide-react"
+import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
+import {
+  isPasswordResetToken,
+  PASSWORD_RESET_BROWSER_PATH,
+  PASSWORD_RESET_PREFLIGHT_PATH,
+  PASSWORD_RESET_TOKEN_STORAGE_KEY,
+} from "@/lib/password-reset-token"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 interface ResetPasswordFormProps {
-  token: string | null
-  isLinkValid: boolean
   portalSetup: boolean
 }
 
+type LinkState = "validating" | "valid" | "invalid"
+
 function scrubResetTokenFromUrl() {
   const url = new URL(window.location.href)
-  if (!url.searchParams.has("token")) return
-
+  if (url.pathname !== PASSWORD_RESET_BROWSER_PATH) return
   url.searchParams.delete("token")
+  url.hash = ""
   window.history.replaceState(
     window.history.state,
     "",
-    `${url.pathname}${url.search}${url.hash}`,
+    `${url.pathname}${url.search}`,
   )
+}
+
+function clearStoredResetToken() {
+  try {
+    window.sessionStorage.removeItem(PASSWORD_RESET_TOKEN_STORAGE_KEY)
+  } catch {
+    // The URL is still scrubbed and the flow fails closed below.
+  }
+}
+
+function captureResetToken() {
+  const url = new URL(window.location.href)
+  const fragmentToken = new URLSearchParams(url.hash.slice(1)).get("token")
+
+  // Query-token links are intentionally retired. A production preflight
+  // confirmed there were no unexpired legacy links at cutover.
+  const hasRetiredQueryToken = url.searchParams.has("token")
+  let storedToken: string | null = null
+  try {
+    storedToken = window.sessionStorage.getItem(
+      PASSWORD_RESET_TOKEN_STORAGE_KEY,
+    )
+  } catch {
+    storedToken = null
+  }
+
+  const token = hasRetiredQueryToken ? null : (fragmentToken ?? storedToken)
+  scrubResetTokenFromUrl()
+
+  if (!isPasswordResetToken(token)) {
+    clearStoredResetToken()
+    return null
+  }
+
+  try {
+    window.sessionStorage.setItem(PASSWORD_RESET_TOKEN_STORAGE_KEY, token)
+  } catch {
+    clearStoredResetToken()
+    return null
+  }
+
+  return token
 }
 
 function InvalidLink({ portalSetup }: { portalSetup: boolean }) {
@@ -63,39 +110,96 @@ function InvalidLink({ portalSetup }: { portalSetup: boolean }) {
   )
 }
 
-export function ResetPasswordForm({
-  token,
-  isLinkValid,
-  portalSetup,
-}: ResetPasswordFormProps) {
-  const router = useRouter()
+export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
+  const [token, setToken] = useState<string | null>(null)
+  const [linkState, setLinkState] = useState<LinkState>("validating")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [linkFailed, setLinkFailed] = useState(false)
+  const preflightStarted = useRef(false)
+  const componentActive = useRef(false)
+  const invalidateLink = useCallback(() => {
+    clearStoredResetToken()
+    scrubResetTokenFromUrl()
+    setToken(null)
+    setLinkState("invalid")
+  }, [])
 
   useEffect(() => {
-    // Keep a valid, unconsumed token available for an ordinary reload. Once
-    // the server has rejected it, remove it from browser history as well.
-    if (!isLinkValid) scrubResetTokenFromUrl()
-
-    const refreshAfterHistoryRestore = (event: PageTransitionEvent) => {
-      if (event.persisted) router.refresh()
+    componentActive.current = true
+    const deactivate = () => {
+      componentActive.current = false
     }
-    window.addEventListener("pageshow", refreshAfterHistoryRestore)
-    return () =>
-      window.removeEventListener("pageshow", refreshAfterHistoryRestore)
-  }, [isLinkValid, router])
 
-  if (!isLinkValid || !token || linkFailed) {
+    // React development mode replays effects once. Keep the preflight
+    // non-consuming and single-shot without persisting anything cross-tab.
+    if (preflightStarted.current) return deactivate
+    preflightStarted.current = true
+
+    const candidate = captureResetToken()
+    if (!candidate) {
+      queueMicrotask(() => {
+        if (componentActive.current) invalidateLink()
+      })
+      return deactivate
+    }
+
+    void (async () => {
+      try {
+        const response = await fetch(PASSWORD_RESET_PREFLIGHT_PATH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: candidate }),
+          cache: "no-store",
+          credentials: "same-origin",
+          referrerPolicy: "no-referrer",
+        })
+        const result = (await response.json()) as { valid?: unknown }
+        if (!componentActive.current) return
+        if (!response.ok || result.valid !== true) {
+          invalidateLink()
+          return
+        }
+        setToken(candidate)
+        setLinkState("valid")
+      } catch {
+        if (componentActive.current) invalidateLink()
+      }
+    })()
+    return deactivate
+  }, [invalidateLink])
+
+  if (linkState === "validating") {
+    return (
+      <main
+        id="main-content"
+        className="flex min-h-svh items-center justify-center bg-background p-4"
+      >
+        <div className="w-full max-w-md">
+          <div className="rounded-lg border bg-card p-8 text-center">
+            <Loader2 className="mx-auto size-8 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Validation du lien...</p>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  if (!success && (linkState === "invalid" || !token)) {
     return <InvalidLink portalSetup={portalSetup} />
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError(null)
+    const submittedToken = token
+
+    if (!submittedToken) {
+      invalidateLink()
+      return
+    }
 
     if (password !== confirmPassword) {
       setError(
@@ -120,13 +224,12 @@ export function ResetPasswordForm({
     try {
       const result = await authClient.resetPassword({
         newPassword: password,
-        token,
+        token: submittedToken,
       })
 
       if (result.error) {
         if (result.error.code === "INVALID_TOKEN") {
-          scrubResetTokenFromUrl()
-          setLinkFailed(true)
+          invalidateLink()
           return
         }
 
@@ -138,7 +241,9 @@ export function ResetPasswordForm({
         return
       }
 
+      clearStoredResetToken()
       scrubResetTokenFromUrl()
+      setToken(null)
       setSuccess(true)
     } catch {
       setError(
@@ -182,9 +287,7 @@ export function ResetPasswordForm({
             <>
               <p className="wave-eyebrow mb-2">WAVE access</p>
               <h1 className="mb-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
-                {portalSetup
-                  ? "Creer votre mot de passe"
-                  : "Set new password"}
+                {portalSetup ? "Creer votre mot de passe" : "Set new password"}
               </h1>
               <p className="mb-6 text-muted-foreground">
                 {portalSetup
@@ -212,10 +315,7 @@ export function ResetPasswordForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="confirmPassword"
-                    className="text-foreground"
-                  >
+                  <Label htmlFor="confirmPassword" className="text-foreground">
                     {portalSetup
                       ? "Confirmer le mot de passe"
                       : "Confirm password"}
@@ -227,9 +327,7 @@ export function ResetPasswordForm({
                     autoComplete="new-password"
                     placeholder="Repeat your password"
                     value={confirmPassword}
-                    onChange={(event) =>
-                      setConfirmPassword(event.target.value)
-                    }
+                    onChange={(event) => setConfirmPassword(event.target.value)}
                     required
                     disabled={loading}
                     className="h-11"
