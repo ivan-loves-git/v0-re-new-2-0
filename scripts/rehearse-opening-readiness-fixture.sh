@@ -6,7 +6,8 @@ bash scripts/bootstrap-opening-readiness-supabase.sh
 evidence_dir="${RUNNER_TEMP:-/tmp}/opening-readiness-evidence"
 mkdir -p "$evidence_dir"
 
-pnpm tsx scripts/verify-opening-readiness-mail.ts \
+NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--conditions=react-server" \
+  pnpm tsx scripts/verify-opening-readiness-mail.ts \
   | tee "$evidence_dir/mail-boundary.jsonl"
 pnpm tsx scripts/create-opening-readiness-inputs.ts \
   | tee "$evidence_dir/document-inputs.jsonl"

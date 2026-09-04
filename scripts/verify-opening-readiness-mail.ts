@@ -21,30 +21,34 @@ if (
   );
 }
 
-const recipients = [
-  OPENING_READINESS_FIXTURE.repreneurs.real.email,
-  OPENING_READINESS_FIXTURE.repreneurs.demo.email,
-];
+async function main() {
+  const recipients = [
+    OPENING_READINESS_FIXTURE.repreneurs.real.email,
+    OPENING_READINESS_FIXTURE.repreneurs.demo.email,
+  ];
 
-for (const recipient of recipients) {
-  const result = await resend.emails.send({
-    from: `${FROM_NAME} <${FROM_EMAIL}>`,
-    to: recipient,
-    subject: "QA OPENING SYNTHETIC — NO DELIVERY",
-    text: "Synthetic fixture mail-boundary proof.",
-  });
-  if (result.error || result.data?.id !== "qa-allowlist-accepted") {
-    throw new Error(
-      "Opening fixture mail adapter did not use the protected no-send path.",
-    );
+  for (const recipient of recipients) {
+    const result = await resend.emails.send({
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      to: recipient,
+      subject: "QA OPENING SYNTHETIC — NO DELIVERY",
+      text: "Synthetic fixture mail-boundary proof.",
+    });
+    if (result.error || result.data?.id !== "qa-allowlist-accepted") {
+      throw new Error(
+        "Opening fixture mail adapter did not use the protected no-send path.",
+      );
+    }
   }
+
+  process.stdout.write(
+    `${JSON.stringify({
+      mode: "protected-allowlist",
+      providerCredentialPresent: false,
+      providerNetworkCall: false,
+      acceptedSyntheticEnvelopes: recipients.length,
+    })}\n`,
+  );
 }
 
-process.stdout.write(
-  `${JSON.stringify({
-    mode: "protected-allowlist",
-    providerCredentialPresent: false,
-    providerNetworkCall: false,
-    acceptedSyntheticEnvelopes: recipients.length,
-  })}\n`,
-);
+void main();
