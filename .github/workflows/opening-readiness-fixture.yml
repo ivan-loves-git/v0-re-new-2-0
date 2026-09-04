@@ -146,11 +146,16 @@ jobs:
             exit 1
           fi
 
+      - name: Assemble aggregate-safe evidence
+        if: always()
+        shell: bash
+        run: bash scripts/assemble-opening-readiness-artifact.sh
+
       - name: Upload privacy-safe evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: opening-readiness-${{ github.run_id }}
-          path: ${{ runner.temp }}/opening-readiness-evidence
+          path: ${{ runner.temp }}/opening-readiness-published/aggregate-summary.json
           if-no-files-found: warn
           retention-days: 7
