@@ -6,6 +6,7 @@ export const PDR_SCREENING_OUTPUT_FAILURE_REASONS = [
   "provider_failed",
   "provider_unparsed",
   "schema_mismatch",
+  "unsafe_clarification_question",
   "goal_milestone_pair",
   "stale_policy",
   "unknown_goal",

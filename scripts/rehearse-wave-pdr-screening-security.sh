@@ -51,11 +51,12 @@ fi
 # server-only service role correctly cannot bypass forced RLS for direct writes.
 "${psql[@]}" -c "INSERT INTO public.ai_generation_runs(initiated_by_user_id,app_role,feature,workflow,surface,prompt_version,output_schema_version,provider,model,reasoning_effort,pricing_version,environment,is_test) VALUES ('historical-pdr-v1','staff','pdr_screening','test','/test','pdr-screening-v1','v1','openai','gpt-5.6-luna','max','v1','test',true);" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260830130030_wave_ai_pdr_reasoning_effort.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260904093000_wave_ai_pdr_bug_screening_v3.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260830130040_wave_pdr_github_product_change_provenance.sql" >/dev/null
 
 "${psql[@]}" <<'SQL' >/dev/null
 DO $$
-DECLARE p jsonb := jsonb_build_object('initiated_by_user_id','actor-a','app_role','staff','feature','pdr_screening','workflow','test','surface','/test','prompt_version','pdr-screening-v2','output_schema_version','v1','provider','openai','model','gpt-5.6-luna','reasoning_effort','low','pricing_version','v1','environment','test','release','','is_test',true);
+DECLARE p jsonb := jsonb_build_object('initiated_by_user_id','actor-a','app_role','staff','feature','pdr_screening','workflow','test','surface','/test','prompt_version','pdr-screening-v3','output_schema_version','pdr-screening-v2','provider','openai','model','gpt-5.6-luna','reasoning_effort','low','pricing_version','v1','environment','test','release','','is_test',true);
 BEGIN
   IF has_table_privilege('anon','public.wave_pdr_screening_records','select') OR has_table_privilege('anon','public.wave_pdr_screening_records','insert') OR has_table_privilege('anon','public.wave_pdr_screening_records','update') OR has_table_privilege('anon','public.wave_pdr_screening_records','delete') OR has_table_privilege('authenticated','public.wave_pdr_screening_records','select') OR has_table_privilege('authenticated','public.wave_pdr_screening_records','insert') OR has_table_privilege('authenticated','public.wave_pdr_screening_records','update') OR has_table_privilege('authenticated','public.wave_pdr_screening_records','delete') THEN RAISE EXCEPTION 'browser_role_screening_access'; END IF;
   IF NOT has_table_privilege('service_role','public.wave_pdr_screening_records','select') OR NOT has_table_privilege('service_role','public.wave_pdr_screening_records','insert') OR has_table_privilege('service_role','public.wave_pdr_screening_records','update') OR has_table_privilege('service_role','public.wave_pdr_screening_records','delete') THEN RAISE EXCEPTION 'service_role_screening_grants'; END IF;
@@ -67,6 +68,9 @@ BEGIN
   BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('feature','email_draft','reasoning_effort','low'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'non_pdr_low_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
   BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('reasoning_effort','max'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'pdr_v2_max_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
   BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('prompt_version','pdr-screening-v1'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'pdr_v1_low_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
+  -- v2 is historical-but-valid low-reasoning ledger evidence; v3 is the
+  -- current bug-aware pair used by the remaining admission checks below.
+  PERFORM public.admit_wave_ai_run(p || jsonb_build_object('initiated_by_user_id','actor-v2-history','prompt_version','pdr-screening-v2'),clock_timestamp() - interval '1 hour',2);
   BEGIN PERFORM public.admit_wave_ai_run(p || jsonb_build_object('prompt_version','pdr-screening-v999'),clock_timestamp() - interval '1 hour',2); RAISE EXCEPTION 'unknown_pdr_low_reasoning_allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
 END $$;
 SQL
@@ -74,11 +78,11 @@ SQL
 # enough that separately launched clients demonstrably overlap at its actor
 # lock. It is never part of a tracked migration or production schema.
 "${psql[@]}" -c "CREATE FUNCTION public.rehearsal_hold_ai_admission() RETURNS trigger LANGUAGE plpgsql AS \$\$ BEGIN PERFORM pg_sleep(0.35); RETURN NEW; END \$\$; CREATE TRIGGER rehearsal_hold_ai_admission BEFORE INSERT ON public.ai_generation_runs FOR EACH ROW EXECUTE FUNCTION public.rehearsal_hold_ai_admission();" >/dev/null
-admission_sql="SET ROLE service_role; SELECT * FROM public.admit_wave_ai_run(jsonb_build_object('initiated_by_user_id','actor-concurrent','app_role','staff','feature','pdr_screening','workflow','test','surface','/test','prompt_version','pdr-screening-v2','output_schema_version','v1','provider','openai','model','gpt-5.6-luna','reasoning_effort','low','pricing_version','v1','environment','test','release','','is_test',true),clock_timestamp() - interval '1 hour',2);"
+admission_sql="SET ROLE service_role; SELECT * FROM public.admit_wave_ai_run(jsonb_build_object('initiated_by_user_id','actor-concurrent','app_role','staff','feature','pdr_screening','workflow','test','surface','/test','prompt_version','pdr-screening-v3','output_schema_version','pdr-screening-v2','provider','openai','model','gpt-5.6-luna','reasoning_effort','low','pricing_version','v1','environment','test','release','','is_test',true),clock_timestamp() - interval '1 hour',2);"
 concurrent_outputs=()
 for index in 1 2 3 4; do output_file="$(mktemp "${TMPDIR:-/tmp}/renew-pdr-admission.XXXXXX")"; concurrent_outputs+=("$output_file"); "${psql[@]}" -c "$admission_sql" >"$output_file" 2>&1 & done
 independent_output="$(mktemp "${TMPDIR:-/tmp}/renew-pdr-admission.XXXXXX")"
-"${psql[@]}" -c "SET ROLE service_role; SELECT * FROM public.admit_wave_ai_run(jsonb_build_object('initiated_by_user_id','actor-independent','app_role','staff','feature','pdr_screening','workflow','test','surface','/test','prompt_version','pdr-screening-v2','output_schema_version','v1','provider','openai','model','gpt-5.6-luna','reasoning_effort','low','pricing_version','v1','environment','test','release','','is_test',true),clock_timestamp() - interval '1 hour',2);" >"$independent_output" 2>&1 &
+"${psql[@]}" -c "SET ROLE service_role; SELECT * FROM public.admit_wave_ai_run(jsonb_build_object('initiated_by_user_id','actor-independent','app_role','staff','feature','pdr_screening','workflow','test','surface','/test','prompt_version','pdr-screening-v3','output_schema_version','pdr-screening-v2','provider','openai','model','gpt-5.6-luna','reasoning_effort','low','pricing_version','v1','environment','test','release','','is_test',true),clock_timestamp() - interval '1 hour',2);" >"$independent_output" 2>&1 &
 for pid in $(jobs -p); do wait "$pid" || true; done
 successes=0; failures=0
 for output_file in "${concurrent_outputs[@]}"; do if grep -Eq 'wave_ai_rate_limited' "$output_file"; then failures=$((failures + 1)); elif grep -Eq '[0-9a-f]{8}-[0-9a-f-]{27}' "$output_file"; then successes=$((successes + 1)); else cat "$output_file" >&2; exit 1; fi; rm -f "$output_file"; done

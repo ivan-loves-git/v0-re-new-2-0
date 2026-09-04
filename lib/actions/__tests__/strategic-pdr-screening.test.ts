@@ -94,7 +94,7 @@ describe("Strategic PDR AI screening actions", () => {
   it("starts only a PDR screening run and sends the opaque telemetry identifier to the allowlisted generator", async () => {
     const result = await generateStrategicPdrScreening(form())
     expect(result.previewToken).toMatch(/^v3\./)
-    expect(state.calls.start).toEqual([expect.objectContaining({ feature: "pdr_screening", reasoningEffort: "low" })])
+    expect(state.calls.start).toEqual([expect.objectContaining({ feature: "pdr_screening", reasoningEffort: "low", promptVersion: "pdr-screening-v3", outputSchemaVersion: "pdr-screening-v2" })])
     expect(state.calls.generate[0]).toMatchObject({ safetyIdentifier: "opaque-telemetry-id", request: { id: requestId, title: "Useful request" } })
     expect(state.calls.generate[0]).not.toHaveProperty("attachments")
     expect(state.calls.complete).toBe(1)
@@ -141,7 +141,7 @@ describe("Strategic PDR AI screening actions", () => {
     const inserted = state.calls.inserts[0]
     expect(inserted.table).toBe("wave_pdr_screening_records")
     expect(JSON.stringify(inserted.value)).not.toContain("Original wording must stay only")
-    expect(inserted.value).toMatchObject({ proposal_id: requestId, generation_id: generationId })
+    expect(inserted.value).toMatchObject({ proposal_id: requestId, generation_id: generationId, prompt_version: "pdr-screening-v3", output_schema_version: "pdr-screening-v2" })
     expect(state.calls.revalidate).toContain(`/strategic-pdr/requests/${requestId}`)
   })
 
