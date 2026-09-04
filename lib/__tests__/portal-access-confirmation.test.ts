@@ -92,6 +92,9 @@ describe("portal access confirmation", () => {
 
     expect(copy.title).toBe("Disable portal access?")
     expect(copy.confirmLabel).toBe("Disable access")
+    expect(copy.description).toContain(
+      "Portal access for alex@example.com will be disabled.",
+    )
     expect(copy.description).toContain("No email will be sent")
     expect(copy.description).toContain("3 active sessions will be revoked")
     expect(copy.description).toContain(
