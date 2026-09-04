@@ -95,6 +95,9 @@ describe("portal access confirmation", () => {
     expect(copy.description).toContain("No email will be sent")
     expect(copy.description).toContain("3 active sessions will be revoked")
     expect(copy.description).toContain(
+      "Outstanding unused access and password-reset links will stop working",
+    )
+    expect(copy.description).toContain(
       "login identity and password record will be retained",
     )
   })

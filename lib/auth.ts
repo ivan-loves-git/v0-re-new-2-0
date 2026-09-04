@@ -5,6 +5,7 @@ import { trustedAuthOrigins } from "@/lib/auth-origin-policy"
 import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { authorizePasswordResetDelivery } from "@/lib/password-reset-link"
 
 /**
  * Database connection pool singleton
@@ -112,9 +113,18 @@ export const auth = betterAuth({
     // an attacker preclaim a repreneur email before the legitimate invitation.
     disableSignUp: true,
     minPasswordLength: 8,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, url, token }) => {
       const trace = startCriticalOperation("email.password_reset_send")
       try {
+        const deliveryAuthorized = await authorizePasswordResetDelivery(
+          user.id,
+          token,
+        )
+        if (!deliveryAuthorized) {
+          trace.success()
+          return
+        }
+
         const isPortalAccessSetup = isPortalAccessSetupUrl(url)
         const { error } = await resend.emails.send({
           from: `${FROM_NAME} <${FROM_EMAIL}>`,
@@ -174,7 +184,7 @@ export const auth = betterAuth({
     max: 60,
     customRules: {
       "/sign-in/email": { window: 15 * 60, max: 5 },
-      "/forget-password": { window: 15 * 60, max: 3 },
+      "/request-password-reset": { window: 15 * 60, max: 3 },
       "/reset-password": { window: 15 * 60, max: 5 },
       "/sign-up/email": { window: 60 * 60, max: 1 },
     },
