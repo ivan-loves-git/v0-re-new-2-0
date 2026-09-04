@@ -10,7 +10,7 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   outputDir: process.env.RUNNER_TEMP
-    ? `${process.env.RUNNER_TEMP}/opening-readiness-evidence/playwright`
+    ? `${process.env.RUNNER_TEMP}/opening-readiness-playwright`
     : "test-results/opening-readiness",
   reporter: [["line"]],
   use: {
