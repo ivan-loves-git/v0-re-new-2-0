@@ -14,12 +14,13 @@ describe("password reset page contract", () => {
   const authRoute = source("app/api/auth/[...all]/route.ts")
   const auth = source("lib/auth.ts")
 
-  it("validates on the server before exposing the password form", () => {
+  it("keeps the credential out of the server-rendered page", () => {
     expect(page).not.toContain('"use client"')
     expect(page).toContain("await connection()")
-    expect(page).toContain("validatePasswordResetLink")
-    expect(page).toContain("isLinkValid={isLinkValid}")
-    expect(form.indexOf("if (!isLinkValid)")).toBeLessThan(
+    expect(page).not.toContain("validatePasswordResetLink")
+    expect(page).not.toContain("params.token")
+    expect(page).toContain("<ResetPasswordForm portalSetup={portalSetup} />")
+    expect(form.indexOf('linkState === "valid"')).toBeLessThan(
       form.indexOf("<form"),
     )
   })
@@ -34,15 +35,22 @@ describe("password reset page contract", () => {
     expect(form).not.toContain("err?.message")
   })
 
-  it("keeps a valid token through reload, then scrubs it after use or rejection", () => {
-    expect(form).toContain("if (!isLinkValid) scrubResetTokenFromUrl()")
-    expect(form).toContain('result.error.code === "INVALID_TOKEN"')
-    expect(form).toContain("scrubResetTokenFromUrl()")
+  it("moves a fragment token into same-tab storage and scrubs browser history", () => {
+    expect(form).toContain("new URLSearchParams(url.hash.slice(1))")
+    expect(form).toContain("PASSWORD_RESET_TOKEN_STORAGE_KEY")
+    expect(form).toContain("window.sessionStorage.setItem")
+    expect(form).toContain("window.sessionStorage.getItem")
+    expect(form).toContain("window.sessionStorage.removeItem")
+    expect(form).toContain('url.searchParams.delete("token")')
+    expect(form).toContain('url.hash = ""')
     expect(form).toContain("window.history.replaceState")
-    expect(form).toContain('window.addEventListener("pageshow"')
-    expect(form).toContain("router.refresh()")
-    expect(form).not.toContain('result.error.message')
+    expect(form).toContain("PASSWORD_RESET_PREFLIGHT_PATH")
+    expect(form).toContain('method: "POST"')
+    expect(form).toContain('cache: "no-store"')
+    expect(form).toContain('referrerPolicy: "no-referrer"')
+    expect(form).toContain('result.error.code === "INVALID_TOKEN"')
     expect(form).toContain("Impossible de terminer maintenant")
+    expect(form).not.toContain("result.error.message")
   })
 
   it("preserves portal recovery intent with localized, non-enumerating copy", () => {
@@ -71,6 +79,8 @@ describe("password reset page contract", () => {
 
   it("guards the native reset mutation with current role and revocation authority", () => {
     expect(authRoute).toContain('pathname === "/api/auth/reset-password"')
+    expect(authRoute).toContain("PASSWORD_RESET_PREFLIGHT_PATH")
+    expect(authRoute).toContain("validatePasswordResetLink")
     expect(authRoute).toContain('"/api/auth/request-password-reset"')
     expect(authRoute).toContain("withPasswordResetAuthority")
     expect(authRoute).toContain(
@@ -87,6 +97,11 @@ describe("password reset page contract", () => {
     expect(resetHook).toBeGreaterThanOrEqual(0)
     expect(deliveryAuthority).toBeGreaterThan(resetHook)
     expect(deliveryAuthority).toBeLessThan(providerSend)
+    expect(auth).toContain("buildPasswordResetBrowserUrl")
+    expect(auth).toContain("browserUrl")
+    expect(auth.slice(resetHook, providerSend)).not.toContain(
+      "renderPasswordResetEmail(user.name, url)",
+    )
     expect(auth).toContain('"/request-password-reset"')
     expect(auth).not.toContain('"/forget-password"')
   })

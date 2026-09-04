@@ -1,9 +1,8 @@
 import "server-only"
 import { Pool, type PoolClient } from "pg"
 import { env } from "@/lib/env"
+import { isPasswordResetToken } from "@/lib/password-reset-token"
 import { postgresSslForConnection } from "@/lib/postgres-ssl"
-
-const BETTER_AUTH_RESET_TOKEN_PATTERN = /^[A-Za-z0-9]{24}$/
 
 let pool: Pool | null = null
 
@@ -18,12 +17,6 @@ function getPool() {
     })
   }
   return pool
-}
-
-export function isPasswordResetToken(
-  token: string | null | undefined,
-): token is string {
-  return Boolean(token && BETTER_AUTH_RESET_TOKEN_PATTERN.test(token))
 }
 
 export function passwordResetUserLockKey(userId: string) {

@@ -19,7 +19,7 @@ export default defineConfig({
     // Reset-link tokens must never be retained in a CI trace artifact. The
     // fixture writes its own privacy-safe state evidence after each assertion.
     trace: "off",
-    screenshot: "only-on-failure",
+    screenshot: "off",
     video: "off",
   },
   webServer: {

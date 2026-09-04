@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   authPost: vi.fn(),
   consumeRequestRateLimit: vi.fn(),
   requestFingerprint: vi.fn(),
+  validatePasswordResetLink: vi.fn(),
   withPasswordResetAuthority: vi.fn(),
 }))
 
@@ -23,6 +24,7 @@ vi.mock("@/lib/security/intake-upload", () => ({
 }))
 
 vi.mock("@/lib/password-reset-link", () => ({
+  validatePasswordResetLink: mocks.validatePasswordResetLink,
   withPasswordResetAuthority: mocks.withPasswordResetAuthority,
 }))
 
@@ -48,6 +50,7 @@ describe("password reset API authority", () => {
     mocks.requestFingerprint.mockReturnValue("test-fingerprint")
     mocks.authGet.mockResolvedValue(new Response(null, { status: 204 }))
     mocks.authPost.mockResolvedValue(Response.json({ status: true }))
+    mocks.validatePasswordResetLink.mockResolvedValue(true)
   })
 
   it("invokes Better Auth only inside the current-role reset guard", async () => {
@@ -66,6 +69,10 @@ describe("password reset API authority", () => {
       expect.any(Function),
     )
     expect(mocks.authPost).toHaveBeenCalledTimes(1)
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, no-store, max-age=0",
+    )
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer")
   })
 
   it("returns the native privacy-safe invalid-token shape when access is revoked", async () => {
@@ -104,7 +111,7 @@ describe("password reset API authority", () => {
     errorSpy.mockRestore()
   })
 
-  it("protects the raw-token callback redirect before the browser reaches the form", async () => {
+  it("retires raw-token callback URLs without invoking Better Auth", async () => {
     mocks.authGet.mockResolvedValue(
       new Response(null, {
         status: 302,
@@ -120,8 +127,12 @@ describe("password reset API authority", () => {
       ),
     )
 
-    expect(response.status).toBe(302)
-    expect(response.headers.get("Location")).toContain(token)
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      code: "INVALID_TOKEN",
+      message: "Invalid token",
+    })
+    expect(mocks.authGet).not.toHaveBeenCalled()
     expect(response.headers.get("Cache-Control")).toBe(
       "private, no-store, max-age=0",
     )
@@ -130,6 +141,47 @@ describe("password reset API authority", () => {
     expect(response.headers.get("X-Robots-Tag")).toBe(
       "noindex, nofollow, noarchive",
     )
+  })
+
+  it("validates a body credential through the non-consuming preflight", async () => {
+    const response = await POST(
+      new Request("https://app.re-new.team/api/auth/reset-password/preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ valid: true })
+    expect(mocks.validatePasswordResetLink).toHaveBeenCalledWith(token)
+    expect(mocks.authPost).not.toHaveBeenCalled()
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, no-store, max-age=0",
+    )
+    expect(response.headers.get("Pragma")).toBe("no-cache")
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer")
+  })
+
+  it("does not accept a reset credential from a query string", async () => {
+    mocks.withPasswordResetAuthority.mockResolvedValue({ authorized: false })
+    const response = await POST(
+      new Request(
+        `https://app.re-new.team/api/auth/reset-password?token=${token}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newPassword: "safe-password" }),
+        },
+      ),
+    )
+
+    expect(response.status).toBe(400)
+    expect(mocks.withPasswordResetAuthority).toHaveBeenCalledWith(
+      null,
+      expect.any(Function),
+    )
+    expect(mocks.authPost).not.toHaveBeenCalled()
   })
 
   it("does not add reset-token headers to unrelated Better Auth GETs", async () => {

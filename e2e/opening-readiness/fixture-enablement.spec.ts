@@ -8,6 +8,10 @@ import {
   OPENING_READINESS_FIXTURE,
   openingReadinessRunLabel,
 } from "../../lib/opening-readiness-fixture";
+import {
+  PASSWORD_RESET_PREFLIGHT_PATH,
+  PASSWORD_RESET_TOKEN_STORAGE_KEY,
+} from "../../lib/password-reset-token";
 
 const fixture = OPENING_READINESS_FIXTURE;
 const password = process.env.OPENING_FIXTURE_PASSWORD;
@@ -169,13 +173,90 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
     ).toBeGreaterThanOrEqual(24);
     const resetToken = resetRows[0]!.identifier.replace("reset-password:", "");
     const resetPassword = `${password}-reset`;
+    const resetNetwork = {
+      fragmentObserved: false,
+      queryTokenObserved: false,
+      pathTokenObserved: false,
+      preflightRequests: 0,
+    };
+    const observeResetNetwork = (request: {
+      url(): string;
+      method(): string;
+    }) => {
+      const requestUrl = new URL(request.url());
+      if (requestUrl.pathname.includes("reset-password")) {
+        resetNetwork.fragmentObserved ||= requestUrl.hash.length > 0;
+        resetNetwork.queryTokenObserved ||=
+          requestUrl.searchParams.has("token");
+        resetNetwork.pathTokenObserved ||=
+          requestUrl.pathname.includes(resetToken);
+      }
+      if (
+        requestUrl.pathname === PASSWORD_RESET_PREFLIGHT_PATH &&
+        request.method() === "POST"
+      ) {
+        resetNetwork.preflightRequests += 1;
+      }
+    };
+    page.on("request", observeResetNetwork);
+
+    const firstPreflight = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === PASSWORD_RESET_PREFLIGHT_PATH &&
+        response.request().method() === "POST",
+    );
 
     await page.goto(
-      `/auth/reset-password?token=${encodeURIComponent(resetToken)}`,
+      `/auth/reset-password#token=${encodeURIComponent(resetToken)}`,
     );
     await expect(
       page.getByRole("heading", { name: "Set new password" }),
     ).toBeVisible();
+    const initialPreflightResponse = await firstPreflight;
+    expect(initialPreflightResponse.status()).toBe(200);
+    expect(initialPreflightResponse.headers()["cache-control"]).toBe(
+      "private, no-store, max-age=0",
+    );
+    expect(initialPreflightResponse.headers()["referrer-policy"]).toBe(
+      "no-referrer",
+    );
+    expect(new URL(page.url()).pathname).toBe("/auth/reset-password");
+    expect(new URL(page.url()).search).toBe("");
+    expect(new URL(page.url()).hash).toBe("");
+    expect(
+      await page.evaluate(
+        ([key, expected]) => sessionStorage.getItem(key) === expected,
+        [PASSWORD_RESET_TOKEN_STORAGE_KEY, resetToken],
+      ),
+    ).toBe(true);
+    expect(resetNetwork.fragmentObserved).toBe(false);
+    expect(resetNetwork.queryTokenObserved).toBe(false);
+    expect(resetNetwork.pathTokenObserved).toBe(false);
+    expect(resetNetwork.preflightRequests).toBe(1);
+
+    const { rows: preflightResetRows } = await client.query<{
+      count: number;
+    }>(
+      `SELECT count(*)::int AS count
+       FROM public."verification"
+       WHERE "identifier"=$1`,
+      [`reset-password:${resetToken}`],
+    );
+    expect(preflightResetRows[0]?.count).toBe(1);
+
+    const reloadPreflight = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === PASSWORD_RESET_PREFLIGHT_PATH &&
+        response.request().method() === "POST",
+    );
+    await page.reload();
+    await reloadPreflight;
+    await expect(
+      page.getByRole("heading", { name: "Set new password" }),
+    ).toBeVisible();
+    expect(new URL(page.url()).search).toBe("");
+    expect(new URL(page.url()).hash).toBe("");
+    expect(resetNetwork.preflightRequests).toBe(2);
     await page.locator("#password").fill(resetPassword);
     await page.locator("#confirmPassword").fill(resetPassword);
     await page.getByRole("button", { name: "Reset password" }).click();
@@ -218,6 +299,29 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
         password,
       }),
     ).toBe(false);
+    expect(
+      await page.evaluate(
+        (key) => sessionStorage.getItem(key) === null,
+        PASSWORD_RESET_TOKEN_STORAGE_KEY,
+      ),
+    ).toBe(true);
+
+    await page.evaluate(
+      ([key, value]) => sessionStorage.setItem(key, value),
+      [PASSWORD_RESET_TOKEN_STORAGE_KEY, resetToken],
+    );
+    await page.reload();
+    await expect(
+      page.getByRole("heading", { name: "Invalid link" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        (key) => sessionStorage.getItem(key) === null,
+        PASSWORD_RESET_TOKEN_STORAGE_KEY,
+      ),
+    ).toBe(true);
+    expect(new URL(page.url()).search).toBe("");
+    expect(new URL(page.url()).hash).toBe("");
 
     await login(
       page,
@@ -231,12 +335,6 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
       }),
     ).toBeVisible();
     await logout(page);
-    await page.goto(
-      `/auth/reset-password?token=${encodeURIComponent(resetToken)}`,
-    );
-    await expect(
-      page.getByRole("heading", { name: "Invalid link" }),
-    ).toBeVisible();
 
     const { rows: documentRows } = await client.query<{
       id: string;
@@ -350,34 +448,41 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
       });
     }
     await mkdir(evidenceDirectory, { recursive: true });
+    const browserEvidence = JSON.stringify(
+      {
+        runLabel: openingReadinessRunLabel(releaseSha),
+        releaseSha,
+        syntheticPersonasAuthenticated: ["staff", "REAL", "DEMO"],
+        namespaceInventory: { realOnly: true, demoOnly: true },
+        documents: {
+          registered: documentRows.map((row) => row.document_type),
+          inputs: manifest.files,
+          privateStorageReadback: storageReadback,
+          directAnonymousAccessDenied: true,
+        },
+        passwordReset: {
+          protectedNoSendAdapter: true,
+          fragmentCredentialNeverObservedOnNetwork: true,
+          cleanUrlAfterBootstrap: true,
+          sameTabReloadRecovered: true,
+          preflightDidNotConsume: true,
+          tokenConsumedOnce: true,
+          replayRejected: true,
+          changedCredentialAuthenticated: true,
+          tokenRecorded: false,
+        },
+        productionCredentials: false,
+        productionData: false,
+      },
+      null,
+      2,
+    );
+    expect(browserEvidence.includes(resetToken)).toBe(false);
     await writeFile(
       join(evidenceDirectory, "browser-enablement.json"),
-      `${JSON.stringify(
-        {
-          runLabel: openingReadinessRunLabel(releaseSha),
-          releaseSha,
-          syntheticPersonasAuthenticated: ["staff", "REAL", "DEMO"],
-          namespaceInventory: { realOnly: true, demoOnly: true },
-          documents: {
-            registered: documentRows.map((row) => row.document_type),
-            inputs: manifest.files,
-            privateStorageReadback: storageReadback,
-            directAnonymousAccessDenied: true,
-          },
-          passwordReset: {
-            protectedNoSendAdapter: true,
-            tokenConsumedOnce: true,
-            replayRejected: true,
-            changedCredentialAuthenticated: true,
-            tokenRecorded: false,
-          },
-          productionCredentials: false,
-          productionData: false,
-        },
-        null,
-        2,
-      )}\n`,
+      `${browserEvidence}\n`,
     );
+    page.off("request", observeResetNetwork);
   } finally {
     await client.end();
   }

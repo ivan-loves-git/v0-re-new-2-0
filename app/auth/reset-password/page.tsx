@@ -1,12 +1,10 @@
 import { Suspense } from "react"
 import { Loader2 } from "lucide-react"
 import { connection } from "next/server"
-import { validatePasswordResetLink } from "@/lib/password-reset-link"
 import { ResetPasswordForm } from "./reset-password-form"
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
-    token?: string | string[]
     intent?: string | string[]
   }>
 }
@@ -15,23 +13,13 @@ function singleSearchParam(value: string | string[] | undefined) {
   return typeof value === "string" ? value : null
 }
 
-async function ResetPasswordContent({
-  searchParams,
-}: ResetPasswordPageProps) {
+async function ResetPasswordContent({ searchParams }: ResetPasswordPageProps) {
   await connection()
 
   const params = await searchParams
-  const token = singleSearchParam(params.token)
   const portalSetup = singleSearchParam(params.intent) === "portal"
-  const isLinkValid = await validatePasswordResetLink(token)
 
-  return (
-    <ResetPasswordForm
-      token={isLinkValid ? token : null}
-      isLinkValid={isLinkValid}
-      portalSetup={portalSetup}
-    />
-  )
+  return <ResetPasswordForm portalSetup={portalSetup} />
 }
 
 function LoadingFallback() {
