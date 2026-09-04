@@ -93,7 +93,7 @@ async function readAccessState(
 }
 
 async function detail(page: Page, repreneurId = repreneur.id) {
-  await page.goto(`/repreneurs/${repreneurId}`);
+  await page.goto(`/repreneurs/${repreneurId}?tab=engagement`);
   await expect(
     page.getByRole("heading", { name: "Portal Access", exact: true }),
   ).toBeVisible();
