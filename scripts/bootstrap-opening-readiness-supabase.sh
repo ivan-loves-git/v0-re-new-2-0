@@ -59,13 +59,22 @@ ON CONFLICT (id) DO UPDATE SET public = false;
 SQL
 
 # The current PDR-retirement migration deliberately fails unless this exact
-# restrictive policy is already owned by Supabase Storage. Local Supabase has
-# the same provider-owned table boundary, so stage it through that role before
-# replaying the additive migration ledger.
-"${psql_safe[@]}" \
-  -c 'SET ROLE supabase_storage_admin' \
-  -f scripts/prestage-pdr-storage-guard.sql \
-  -c 'RESET ROLE'
+# restrictive policy is already staged by Supabase Storage. PostgreSQL rightly
+# prevents the application `postgres` role from assuming that provider role,
+# so execute only the reviewed policy through the disposable database
+# container as its fixed local storage owner.
+mapfile -t storage_db_containers < <(
+  docker ps --format '{{.Names}}' \
+    | grep -x 'supabase_db_renew-opening-fixture' \
+    || true
+)
+if [[ "${#storage_db_containers[@]}" -ne 1 ]]; then
+  echo "Opening fixture refused: disposable Supabase database container was not unique." >&2
+  exit 1
+fi
+docker exec -i -e PGPASSWORD=postgres "${storage_db_containers[0]}" \
+  psql -X -v ON_ERROR_STOP=1 -U supabase_storage_admin -d postgres \
+  < scripts/prestage-pdr-storage-guard.sql
 
 while IFS= read -r migration; do
   "${psql_safe[@]}" -f "$migration"
