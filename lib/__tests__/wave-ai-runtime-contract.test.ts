@@ -76,12 +76,15 @@ describe("WAVE AI runtime contract", () => {
     expect(migration).toContain("GRANT SELECT, INSERT ON TABLE public.ai_generation_events TO service_role")
   })
 
-  it("allows only the explicit PDR prompt and reasoning pairs while preserving accurate v1 ledger history", () => {
-    const migration = source("supabase/migrations/20260830130030_wave_ai_pdr_reasoning_effort.sql")
-    expect(migration).toContain("DROP CONSTRAINT IF EXISTS ai_generation_runs_reasoning_effort_check")
-    expect(migration).toContain("feature <> 'pdr_screening' AND reasoning_effort = 'max'")
-    expect(migration).toContain("prompt_version = 'pdr-screening-v1' AND reasoning_effort = 'max'")
-    expect(migration).toContain("prompt_version = 'pdr-screening-v2' AND reasoning_effort = 'low'")
+  it("allows only the explicit PDR prompt and reasoning pairs while preserving accurate ledger history", () => {
+    const v2Migration = source("supabase/migrations/20260830130030_wave_ai_pdr_reasoning_effort.sql")
+    const v3Migration = source("supabase/migrations/20260904093000_wave_ai_pdr_bug_screening_v3.sql")
+    expect(v2Migration).toContain("DROP CONSTRAINT IF EXISTS ai_generation_runs_reasoning_effort_check")
+    expect(v2Migration).toContain("feature <> 'pdr_screening' AND reasoning_effort = 'max'")
+    expect(v2Migration).toContain("prompt_version = 'pdr-screening-v1' AND reasoning_effort = 'max'")
+    expect(v2Migration).toContain("prompt_version = 'pdr-screening-v2' AND reasoning_effort = 'low'")
+    expect(v3Migration).toContain("'pdr-screening-v2', 'pdr-screening-v3'")
+    expect(v3Migration).toContain("reasoning_effort = 'low'")
   })
 
   it("bounds requests and enforces allowlisted feedback without free text", () => {

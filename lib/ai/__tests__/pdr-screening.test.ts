@@ -11,6 +11,51 @@ const current = { state: "available" as const, snapshotId: "11111111-1111-4111-8
 const valid: PdrScreeningDraft = { classification: "needs_clarification", affectedUsers: "Staff members", desiredOutcome: "A clear request", successSignal: "Staff can understand the request.", clarificationQuestions: ["Which users are in scope?"], problemFraming: "Clarify the request before deciding delivery scope.", constraintsAndNonGoals: [], successCriteria: ["A staff member can understand the request."], confidence: "medium", unknowns: [], suggestedGoalId: "G-001", suggestedMilestoneId: "M-001", overlappingProductChangeNumbers: [12], technicalImpact: "Potential staff workflow impact only." }
 
 describe("PDR screening validation", () => {
+  const completeBug: PdrScreeningDraft = { ...valid, classification: "bug", clarificationQuestions: [], problemFraming: "The portal intermittently fails after a valid staff action." }
+
+  it("accepts a complete bug without a forced clarification", () => {
+    expect(validatePdrScreeningDraft(completeBug, current, "fresh").clarificationQuestions).toEqual([])
+  })
+
+  it("allows no more than two relevant bug questions and retains the non-bug minimum", () => {
+    const roleSpecificIntermittentBug = {
+      ...completeBug,
+      clarificationQuestions: ["Which staff role sees the issue?", "How often does it recur?"],
+    }
+    expect(validatePdrScreeningDraft(roleSpecificIntermittentBug, current, "fresh").clarificationQuestions).toHaveLength(2)
+    expect(() => validatePdrScreeningDraft({ ...completeBug, clarificationQuestions: ["Which page shows the issue?", "What did you expect to happen?", "When did it first occur?"] }, current, "fresh")).toThrow()
+    // An unclear product request keeps the existing 1–5 clarification path.
+    expect(() => validatePdrScreeningDraft({ ...valid, clarificationQuestions: [] }, current, "fresh")).toThrow()
+  })
+
+  it("rejects a clarification that requests a secret or unnecessary personal detail", () => {
+    for (const question of [
+      "What is the affected user's password?",
+      "What is the affected user's email address?",
+      "Please upload the raw client records.",
+      "What colour should the page be?",
+    ]) {
+      try {
+        validatePdrScreeningDraft({ ...completeBug, clarificationQuestions: [question] }, current, "fresh")
+        throw new Error("unsafe question was accepted")
+      } catch (error) {
+        expect(error).toMatchObject({ reason: "unsafe_clarification_question" })
+      }
+    }
+  })
+
+  it("allows only the approved bug diagnostic fact categories", () => {
+    for (const question of [
+      "What did you observe instead of the expected behaviour?",
+      "Which page or workflow step shows the issue?",
+      "Which staff role sees the issue?",
+      "How often does it recur?",
+      "Can you share a redacted screenshot or error code?",
+    ]) {
+      expect(validatePdrScreeningDraft({ ...completeBug, clarificationQuestions: [question] }, current, "fresh").clarificationQuestions).toEqual([question])
+    }
+  })
+
   it("rejects duplicate questions", () => {
     expect(() => validatePdrScreeningDraft({ ...valid, clarificationQuestions: [valid.clarificationQuestions[0], valid.clarificationQuestions[0]] }, current, "fresh")).toThrow()
   })
