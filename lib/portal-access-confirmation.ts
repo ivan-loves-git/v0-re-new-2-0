@@ -125,7 +125,7 @@ export function getPortalAccessConfirmationCopy(
       title: "Disable portal access?",
       confirmLabel: "Disable access",
       recipient,
-      description: `No email will be sent. The portal role will be removed. ${activeSessionText(status.activeSessionCount, "revoke")} Outstanding unused access and password-reset links will stop working. The login identity and password record will be retained for a future safe re-enable.`,
+      description: `Portal access for ${recipient} will be disabled. No email will be sent. The portal role will be removed. ${activeSessionText(status.activeSessionCount, "revoke")} Outstanding unused access and password-reset links will stop working. The login identity and password record will be retained for a future safe re-enable.`,
     }
   }
 
