@@ -51,6 +51,7 @@ function activeForm() {
   formData.set("description", "A valid internal opportunity record.")
   formData.set("public_title", "An anonymized opportunity title")
   formData.set("teaser_summary", "An anonymized opportunity summary.")
+  formData.set("demo_classification", "real")
   return formData
 }
 

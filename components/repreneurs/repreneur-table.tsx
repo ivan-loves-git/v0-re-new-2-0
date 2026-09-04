@@ -39,6 +39,7 @@ import { deriveJourneyStage, countMilestones, extractMilestones } from "@/lib/ut
 import { getStageConfig } from "@/lib/constants/tier-config"
 import { MissingFieldsBadge } from "./missing-fields-badge"
 import { NeedsCompletionBadge } from "./needs-completion-badge"
+import { RepreneurClassificationBadge } from "./repreneur-demo-control"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { formatDisplayDate } from "@/lib/utils/display-date-time"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
@@ -316,6 +317,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
     { key: "journey", label: "Journey", options: JOURNEY_OPTIONS },
     { key: "persona", label: "Persona", options: PERSONA_OPTIONS },
     { key: "recommendation", label: "Recommendation", options: RECOMMENDATION_OPTIONS },
+    { key: "classification", label: "Classification", options: [{ value: "real", label: "REAL" }, { value: "demo", label: "DEMO" }] },
     {
       key: "interview",
       label: "Interview",
@@ -337,6 +339,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
   const personaFilter = (filters.values.persona || "all") as PersonaType | "all"
   const recommendationFilter = filters.values.recommendation || ""
   const interviewFilter = (filters.values.interview || "all") as "all" | "booked" | "none"
+  const classificationFilter = (filters.values.classification || "all") as "all" | "real" | "demo"
 
   const filtered = repreneurs.filter((r) => {
     const matchesSearch =
@@ -376,6 +379,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
         : interviewFilter === "booked"
           ? Boolean(r.has_scheduled_interview)
           : !r.has_scheduled_interview
+    const matchesClassification = classificationFilter === "all" || r.is_demo === (classificationFilter === "demo")
 
     return (
       matchesSearch &&
@@ -388,6 +392,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
       matchesPersona &&
       matchesRecommendation &&
       matchesInterview
+      && matchesClassification
     )
   })
 
@@ -712,6 +717,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                         <span className="font-medium text-foreground truncate">
                           {repreneur.first_name} {repreneur.last_name}
                         </span>
+                        <RepreneurClassificationBadge isDemo={Boolean(repreneur.is_demo)} />
                         <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
                         {repreneur.has_scheduled_interview && (
                           <CalendarCheck className="size-3.5 text-emerald-600 shrink-0" aria-label="Interview booked">
@@ -852,6 +858,7 @@ export const RepreneurTable = forwardRef<RepreneurTableRef, RepreneurTableProps>
                               <span className="truncate font-semibold text-foreground">
                                 {repreneur.first_name} {repreneur.last_name}
                               </span>
+                              <RepreneurClassificationBadge isDemo={Boolean(repreneur.is_demo)} />
                               <MissingFieldsBadge repreneur={repreneur} variant="icon-only" />
                               {repreneur.has_scheduled_interview && (
                                 <CalendarCheck

@@ -59,7 +59,7 @@ import { WhoScoreEditor } from "@/components/repreneurs/who-score-editor"
 import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { ScoringAccuracy } from "@/components/repreneurs/scoring-accuracy"
 import { StaffRepreneurTargetThesisEditor } from "@/components/repreneurs/repreneur-target-thesis-editor"
-import { RepreneurDemoBadge, RepreneurDemoControl } from "@/components/repreneurs/repreneur-demo-control"
+import { RepreneurClassificationBadge, RepreneurDemoControl } from "@/components/repreneurs/repreneur-demo-control"
 import { SECTORS } from "@/lib/constants/sectors"
 import { WHO_QUESTIONS, WHEN_QUESTIONS, NEEDS_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
@@ -503,7 +503,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
               </div>
             </div>
             <MissingFieldsBadge repreneur={repreneur} />
-            {profile.is_demo ? <RepreneurDemoBadge /> : null}
+            <RepreneurClassificationBadge isDemo={Boolean(profile.is_demo)} />
             {profile.needs_data_completion && (
               <NeedsCompletionBadge repreneurId={id} compact />
             )}

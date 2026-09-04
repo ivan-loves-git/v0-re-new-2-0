@@ -16,6 +16,7 @@ import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 import { repreneurWriteErrorMessage } from "@/lib/repreneur-write-error"
+import { parseExplicitDemoClassification } from "@/lib/demo-classification"
 
 function optionalWebUrl(value: FormDataEntryValue | null) {
   const normalized = String(value ?? "").trim()
@@ -44,6 +45,8 @@ function optionalWebUrl(value: FormDataEntryValue | null) {
 export async function createRepreneur(formData: FormData) {
   const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
+  const classification = parseExplicitDemoClassification(formData.get("demo_classification"))
+  if (classification.error) return { success: false as const, message: classification.error }
 
   // Parse sector preferences (now sent as JSON array)
   const sectorPrefsRaw = formData.get("sector_preferences") as string
@@ -102,6 +105,7 @@ export async function createRepreneur(formData: FormData) {
     consent_timestamp: marketingConsent ? new Date().toISOString() : undefined,
     consent_source: (formData.get("consent_source") as string) || "manual",
     created_by: user.id,
+    is_demo: classification.value === true,
   }
 
   const { data, error } = await supabase.from("repreneurs").insert(repreneur).select().single()

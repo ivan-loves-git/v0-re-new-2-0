@@ -30,6 +30,10 @@ export function RepreneurDemoBadge() {
   )
 }
 
+export function RepreneurClassificationBadge({ isDemo }: { isDemo: boolean }) {
+  return isDemo ? <RepreneurDemoBadge /> : <Badge variant="secondary">REAL</Badge>
+}
+
 /** Staff-only control. It changes no lifecycle, portal role or retained history. */
 export function RepreneurDemoControl({
   repreneurId,

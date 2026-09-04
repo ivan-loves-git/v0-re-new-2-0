@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { Repreneur } from "@/lib/types/repreneur"
 import { SOURCE_OPTIONS, PERSONA_OPTIONS } from "@/lib/types/repreneur"
 import { formatDisplayDate } from "@/lib/utils/display-date-time"
@@ -34,6 +35,7 @@ function mapSubmissionError(message: string) {
   if (normalizedMessage.includes("last name") || normalizedMessage.includes("surname")) fieldErrors.last_name = message
   if (normalizedMessage.includes("email")) fieldErrors.email = message
   if (normalizedMessage.includes("linkedin") || normalizedMessage.includes("web address")) fieldErrors.linkedin_url = message
+  if (normalizedMessage.includes("real or demo")) fieldErrors.demo_classification = message
   return { fieldErrors, submissionError: Object.keys(fieldErrors).length > 0 ? undefined : message }
 }
 
@@ -61,6 +63,7 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
     const lastName = String(formData.get("last_name") ?? "").trim()
     const email = String(formData.get("email") ?? "").trim()
     const linkedinUrl = String(formData.get("linkedin_url") ?? "").trim()
+    if (!repreneur && !["real", "demo"].includes(String(formData.get("demo_classification") ?? ""))) nextErrors.demo_classification = "Choose REAL or DEMO before creating this record."
 
     if (!firstName) nextErrors.first_name = "Enter a first name."
     if (!lastName) nextErrors.last_name = "Enter a last name."
@@ -123,10 +126,20 @@ export function RepreneurForm({ repreneur, action, submitLabel = "Save" }: Repre
           <ValidationSummary
             ref={summaryRef}
             errors={errors}
-            labels={{ first_name: "First name", last_name: "Last name", email: "Email", linkedin_url: "LinkedIn URL" }}
+            labels={{ first_name: "First name", last_name: "Last name", email: "Email", linkedin_url: "LinkedIn URL", demo_classification: "Classification" }}
           />
           {submissionError ? <p role="alert" className="text-sm text-destructive">{submissionError}</p> : null}
           <section className="grid gap-5 rounded-lg border bg-muted/20 p-5 md:grid-cols-2">
+            {!repreneur ? (
+              <div className="space-y-2 md:col-span-2">
+                <FormFieldLabel requirement="required">Classification</FormFieldLabel>
+                <RadioGroup name="demo_classification" aria-describedby={errors.demo_classification ? "demo_classification-error" : undefined}>
+                  <label className="flex items-start gap-3 rounded-md border p-3"><RadioGroupItem value="real" /><span><span className="font-medium">REAL</span><span className="block text-sm text-muted-foreground">Normal operating record and reporting namespace.</span></span></label>
+                  <label className="flex items-start gap-3 rounded-md border p-3"><RadioGroupItem value="demo" /><span><span className="font-medium">DEMO</span><span className="block text-sm text-muted-foreground">Controlled QA record, isolated from the REAL namespace.</span></span></label>
+                </RadioGroup>
+                <FieldError id="demo_classification" message={errors.demo_classification} />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <FormFieldLabel htmlFor="first_name" requirement="required">First name</FormFieldLabel>
               <Input id="first_name" name="first_name" defaultValue={repreneur?.first_name} required {...fieldErrorProps("first_name", errors.first_name)} onChange={() => setErrors(current => ({ ...current, first_name: "" }))} />

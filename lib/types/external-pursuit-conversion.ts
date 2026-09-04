@@ -10,6 +10,8 @@ export interface ExternalPursuitConversionInput {
   readonly geographyNodeId: string
   readonly sourceOfficeId: string
   readonly primaryAffiliationId: string
+  /** Deliberate target namespace; never inferred from the dossier. */
+  readonly isDemo: boolean | null
 }
 
 export interface ExternalPursuitConversionResult {

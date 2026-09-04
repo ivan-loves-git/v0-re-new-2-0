@@ -39,7 +39,7 @@ import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
-import { OpportunityDemoBadge } from "@/components/opportunities/opportunity-demo-control"
+import { OpportunityClassificationBadge } from "@/components/opportunities/opportunity-demo-control"
 import {
   formatOpportunitySourceDate,
   formatOpportunitySourceMonth,
@@ -73,6 +73,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<OpportunityStatus | "all">("all")
   const [sourceReview, setSourceReview] = useState<"all" | "required" | "clear">("all")
+  const [classification, setClassification] = useState<"all" | "real" | "demo">("all")
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim()
@@ -80,6 +81,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
     return opportunities.filter((opportunity) => {
       const matchesStatus = status === "all" || opportunity.status === status
       if (!matchesStatus) return false
+      if (classification !== "all" && opportunity.is_demo !== (classification === "demo")) return false
       if (sourceReview === "required" && !opportunity.source_review_required) return false
       if (sourceReview === "clear" && opportunity.source_review_required) return false
       if (!query) return true
@@ -97,7 +99,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query))
     })
-  }, [opportunities, search, sourceReview, status])
+  }, [classification, opportunities, search, sourceReview, status])
 
   async function handleArchive(id: string) {
     await archiveOpportunity(id)
@@ -148,6 +150,10 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                 <SelectItem value="clear">Source review clear</SelectItem>
               </SelectGroup>
             </SelectContent>
+          </Select>
+          <Select value={classification} onValueChange={(value) => setClassification(value as "all" | "real" | "demo")}>
+            <SelectTrigger className="w-full sm:w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectGroup><SelectItem value="all">REAL + DEMO</SelectItem><SelectItem value="real">REAL</SelectItem><SelectItem value="demo">DEMO</SelectItem></SelectGroup></SelectContent>
           </Select>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -202,7 +208,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
                         {opportunity.source_identity_to_verify ? "Source identity to verify" : "Source review required"}
                       </Badge>
                     ) : null}
-                    {opportunity.is_demo ? <OpportunityDemoBadge className="mt-1" /> : null}
+                    <OpportunityClassificationBadge isDemo={opportunity.is_demo} className="mt-1" />
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[220px]">

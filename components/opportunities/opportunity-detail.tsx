@@ -28,7 +28,7 @@ import { OpportunityPursuitPanel } from "@/components/opportunities/opportunity-
 import { OpportunitySourceReviewPanel } from "@/components/opportunities/opportunity-source-review-panel"
 import { OpportunityAiNextActions } from "@/components/opportunities/opportunity-ai-next-actions"
 import {
-  OpportunityDemoBadge,
+  OpportunityClassificationBadge,
   OpportunityDemoControl,
 } from "@/components/opportunities/opportunity-demo-control"
 import { OpportunityBroadDiscoveryControl } from "@/components/opportunities/opportunity-broad-discovery-control"
@@ -222,7 +222,7 @@ export function OpportunityDetail({
             <OpportunityVisibilityBadge
               visibility={opportunity.repreneur_exposure}
             />
-            {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
+            <OpportunityClassificationBadge isDemo={opportunity.is_demo} />
           </div>
           <div>
             <p className="font-mono text-xs text-muted-foreground">
