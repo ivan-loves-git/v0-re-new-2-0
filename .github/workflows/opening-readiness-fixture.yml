@@ -27,7 +27,6 @@ jobs:
       RESEND_FROM_EMAIL: onboarding@resend.dev
       BETTER_AUTH_SECRET: opening-fixture-only-secret-2026-not-for-production
       BETTER_AUTH_URL: http://127.0.0.1:3000
-      BETTER_AUTH_TRUSTED_ORIGINS: http://127.0.0.1:3000
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       CRON_SECRET: opening-fixture-only-cron-secret
     steps:
