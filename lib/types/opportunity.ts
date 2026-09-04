@@ -424,6 +424,9 @@ export interface Opportunity {
   reference: string
   /** Staff-only namespace flag. DEMO opportunities pair only with DEMO repreneurs. */
   is_demo: boolean
+  /** Last deliberate post-creation namespace change, kept staff-only. */
+  demo_classification_updated_at?: string | null
+  demo_classification_updated_by?: string | null
   /** Canonical staff-only W-039 geography identity; literal location remains reader-facing. */
   geography_node_id?: string | null
   status: OpportunityStatus

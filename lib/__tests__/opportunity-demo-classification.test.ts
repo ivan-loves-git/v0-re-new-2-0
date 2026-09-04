@@ -22,7 +22,9 @@ describe("staff DEMO opportunity classification", () => {
     expect(action.indexOf("requireStaffAccess")).toBeLessThan(
       action.indexOf("createAdminClient"),
     )
-    expect(action).toContain(".update({ is_demo: isDemo })")
+    expect(action).toContain('.rpc("set_zero_match_demo_classification"')
+    expect(action).toContain('p_entity_type: "opportunity"')
+    expect(action).toContain("p_actor: user.id")
     expect(action).not.toContain("repreneur_exposure")
     expect(action).not.toContain("status:")
     expect(action).toContain('revalidatePath("/portal")')
@@ -39,7 +41,9 @@ describe("staff DEMO opportunity classification", () => {
     )
 
     expect(control).toContain("AlertDialog")
-    expect(control).toContain("eligible for repreneur access again")
+    expect(control).toContain("REAL Deal Flow and production reporting")
+    expect(control).toContain("DEMO-only Deal Flow")
+    expect(control).toContain("DemoClassificationLockNotice")
     expect(control).toContain("Mark DEMO")
     expect(control).toContain("Remove DEMO")
   })
