@@ -128,6 +128,34 @@ done < <(
     | awk -F/ '$NF >= "20260830113100"'
 )
 
+# The sanitized structure snapshot deliberately contains no real Acme/Bertrand
+# singleton row, while this production-specific trigger requires that private
+# row on every opportunity write. The opening fixture exercises only its own
+# non-Acme synthetic offices, so disable exactly this unrelated trigger in the
+# disposable loopback database. All general lifecycle and source-office guards
+# remain enabled.
+"${psql_safe[@]}" <<'SQL'
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_trigger trigger
+    JOIN pg_class relation ON relation.oid=trigger.tgrelid
+    JOIN pg_namespace namespace ON namespace.oid=relation.relnamespace
+    WHERE namespace.nspname='public'
+      AND relation.relname='opportunities'
+      AND trigger.tgname='enforce_ma_provisional_source_review_on_opportunity'
+      AND NOT trigger.tgisinternal
+      AND trigger.tgenabled <> 'D'
+  ) THEN
+    RAISE EXCEPTION 'opening_fixture_acme_trigger_missing_or_disabled';
+  END IF;
+END
+$$;
+ALTER TABLE public.opportunities
+  DISABLE TRIGGER enforce_ma_provisional_source_review_on_opportunity;
+SQL
+
 "${psql_safe[@]}" <<'SQL'
 NOTIFY pgrst, 'reload schema';
 DO $$
