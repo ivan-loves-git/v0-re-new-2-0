@@ -99,9 +99,15 @@ describe("opening readiness fixture operator", () => {
       repreneurs: 0,
       opportunities: 0,
       matches: 0,
+      firms: 0,
       offices: 0,
       contacts: 0,
+      affiliations: 0,
+      opportunityContacts: 0,
+      emailLogs: 0,
       documents: 0,
+      uploadIntents: 0,
+      uploadCleanupQueue: 0,
       storageObjects: 0,
     };
     expect(fixtureResidueIsZero(empty)).toBe(true);

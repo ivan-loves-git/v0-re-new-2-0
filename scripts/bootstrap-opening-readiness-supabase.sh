@@ -41,6 +41,14 @@ psql_safe=(psql -X -v ON_ERROR_STOP=1 "${OPENING_FIXTURE_DATABASE_URL}")
 "${psql_safe[@]}" -f supabase/schema/771_preview_cleanup.sql
 "${psql_safe[@]}" -f supabase/schema/771_public_schema.sql
 
+# Build 771 predates three shipped application overlays that production already
+# had before the first retained additive migration. Replaying these immutable,
+# data-free schema inputs reconstructs that release boundary; it does not
+# restore the retired persistent-QA control plane that once consumed them.
+"${psql_safe[@]}" -f supabase/schema/822_demo_opportunity_quarantine.sql
+"${psql_safe[@]}" -f supabase/schema/823_staff_ma_relationship_corrections.sql
+"${psql_safe[@]}" -f supabase/schema/824_w128_draft_opportunity_activation.sql
+
 "${psql_safe[@]}" <<'SQL'
 INSERT INTO storage.buckets (id, name, public)
 VALUES

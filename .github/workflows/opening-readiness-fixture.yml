@@ -67,7 +67,7 @@ jobs:
       - name: Start disposable local Supabase
         run: >-
           supabase start
-          --exclude gotrue,realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          --exclude realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
       - name: Export local-only connection values
         shell: bash
@@ -76,6 +76,26 @@ jobs:
           set -a
           source "$RUNNER_TEMP/supabase-status.env"
           set +a
+          for value in API_URL DB_URL JWT_SECRET ANON_KEY SERVICE_ROLE_KEY; do
+            if [[ -z "${!value:-}" ]]; then
+              echo "$value missing from disposable Supabase status." >&2
+              exit 1
+            fi
+          done
+          [[ "$API_URL" == "http://127.0.0.1:54321" ]] || {
+            echo "Disposable Supabase API was not loopback." >&2
+            exit 1
+          }
+          case "$DB_URL" in
+            postgresql://postgres:*@127.0.0.1:54322/postgres) ;;
+            *) echo "Disposable Supabase database was not loopback." >&2; exit 1 ;;
+          esac
+          [[ "$ANON_KEY" != "$SERVICE_ROLE_KEY" ]] || {
+            echo "Disposable Supabase API roles did not receive distinct keys." >&2
+            exit 1
+          }
+          curl --fail --silent --show-error "$API_URL/auth/v1/health" \
+            -H "apikey: $ANON_KEY" >/dev/null
           echo "::add-mask::$ANON_KEY"
           echo "::add-mask::$SERVICE_ROLE_KEY"
           echo "::add-mask::$DB_URL"

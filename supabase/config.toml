@@ -53,7 +53,15 @@ max_buckets = 10
 max_indexes = 5
 
 [auth]
-enabled = false
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000", "http://127.0.0.1:3000/auth/reset-password"]
+enable_signup = false
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
 
 [edge_runtime]
 enabled = false

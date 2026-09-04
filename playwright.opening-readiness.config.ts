@@ -16,7 +16,9 @@ export default defineConfig({
   use: {
     ...devices["Desktop Chrome"],
     baseURL,
-    trace: "retain-on-failure",
+    // Reset-link tokens must never be retained in a CI trace artifact. The
+    // fixture writes its own privacy-safe state evidence after each assertion.
+    trace: "off",
     screenshot: "only-on-failure",
     video: "off",
   },

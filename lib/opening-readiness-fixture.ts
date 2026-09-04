@@ -7,9 +7,15 @@ export type OpeningFixtureCounts = {
   repreneurs: number;
   opportunities: number;
   matches: number;
+  firms: number;
   offices: number;
   contacts: number;
+  affiliations: number;
+  opportunityContacts: number;
+  emailLogs: number;
   documents: number;
+  uploadIntents: number;
+  uploadCleanupQueue: number;
   storageObjects: number;
 };
 
@@ -98,7 +104,6 @@ export const OPENING_READINESS_FIXTURE = {
     "qa-opening-real-contact@re-new.invalid",
     "qa-opening-demo-contact@re-new.invalid",
   ],
-  storagePrefix: "qa-opening/",
   documentUploadSlots: ["blank NDA", "Information Memorandum"] as const,
   retention:
     "one disposable CI run; the entire local Supabase stack is destroyed after proof",

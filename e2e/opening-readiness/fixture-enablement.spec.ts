@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { verifyPassword } from "better-auth/crypto";
 import { Client } from "pg";
 import {
   OPENING_READINESS_FIXTURE,
@@ -14,6 +16,7 @@ const releaseSha = process.env.OPENING_FIXTURE_RELEASE_SHA;
 const runnerTemp = process.env.RUNNER_TEMP;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (
   !password ||
@@ -22,6 +25,7 @@ if (
   !runnerTemp ||
   !supabaseUrl ||
   !anonKey ||
+  !serviceRoleKey ||
   process.env.CI !== "true" ||
   process.env.GITHUB_ACTIONS !== "true" ||
   process.env.QA_FIXTURE_MODE !== "local" ||
@@ -36,10 +40,15 @@ if (
 const inputDirectory = join(runnerTemp, "opening-readiness-inputs");
 const evidenceDirectory = join(runnerTemp, "opening-readiness-evidence");
 
-async function login(page: Page, email: string, destination: RegExp) {
+async function login(
+  page: Page,
+  email: string,
+  destination: RegExp,
+  loginPassword = password,
+) {
   await page.goto("/auth/login");
   await page.locator("#email").fill(email);
-  await page.locator("#password").fill(password);
+  await page.locator("#password").fill(loginPassword);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(destination, { timeout: 30_000 });
 }
@@ -144,17 +153,93 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
     expect(
       resetRows[0]?.identifier.replace("reset-password:", "").length,
     ).toBeGreaterThanOrEqual(24);
+    const resetToken = resetRows[0]!.identifier.replace("reset-password:", "");
+    const resetPassword = `${password}-reset`;
+
+    await page.goto(
+      `/auth/reset-password?token=${encodeURIComponent(resetToken)}`,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Set new password" }),
+    ).toBeVisible();
+    await page.locator("#password").fill(resetPassword);
+    await page.locator("#confirmPassword").fill(resetPassword);
+    await page.getByRole("button", { name: "Reset password" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Password reset" }),
+    ).toBeVisible();
+
+    const replay = await page.request.post("/api/auth/reset-password", {
+      data: { newPassword: `${resetPassword}-replay`, token: resetToken },
+      headers: { Origin: "http://127.0.0.1:3000" },
+    });
+    expect(replay.status()).toBe(400);
+    expect(await replay.json()).toMatchObject({ code: "INVALID_TOKEN" });
+
+    const { rows: consumedResetRows } = await client.query<{ count: number }>(
+      `SELECT count(*)::int AS count
+       FROM public."verification"
+       WHERE "identifier"=$1`,
+      [`reset-password:${resetToken}`],
+    );
+    expect(consumedResetRows[0]?.count).toBe(0);
+
+    const { rows: updatedCredentialRows } = await client.query<{
+      password: string;
+    }>(
+      `SELECT password FROM public."account"
+       WHERE "userId"=$1 AND "providerId"='credential'`,
+      [fixture.repreneurs.real.userId],
+    );
+    expect(updatedCredentialRows).toHaveLength(1);
+    expect(
+      await verifyPassword({
+        hash: updatedCredentialRows[0]!.password,
+        password: resetPassword,
+      }),
+    ).toBe(true);
+    expect(
+      await verifyPassword({
+        hash: updatedCredentialRows[0]!.password,
+        password,
+      }),
+    ).toBe(false);
+
+    await login(
+      page,
+      fixture.repreneurs.real.email,
+      /\/portal\/deals/,
+      resetPassword,
+    );
+    await expect(
+      page.getByText("QA OPENING REAL — SYNTHETIC", { exact: true }),
+    ).toBeVisible();
+    await logout(page);
+    await page.goto(
+      `/auth/reset-password?token=${encodeURIComponent(resetToken)}`,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Invalid link" }),
+    ).toBeVisible();
 
     const { rows: documentRows } = await client.query<{
       id: string;
       document_type: string;
       storage_bucket: string;
       storage_path: string;
+      size_bytes: string;
+      content_sha256: string;
     }>(
-      `SELECT id, document_type, storage_bucket, storage_path
-       FROM public.opportunity_documents
-       WHERE opportunity_id=$1
-       ORDER BY document_type`,
+      `SELECT document.id, document.document_type, document.storage_bucket,
+              document.storage_path, document.size_bytes::text,
+              intent.content_sha256
+       FROM public.opportunity_documents document
+       JOIN public.private_upload_intents intent
+         ON intent.bucket_id=document.storage_bucket
+        AND intent.storage_path=document.storage_path
+        AND intent.status='finalized'
+       WHERE document.opportunity_id=$1
+       ORDER BY document.document_type`,
       [fixture.ids.realOpportunity],
     );
     expect(documentRows.map((row) => row.document_type).sort()).toEqual([
@@ -192,7 +277,30 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
       ),
     ).rejects.toThrow(/w164_cross_namespace_match_denied/);
 
+    const manifest = JSON.parse(
+      await readFile(join(inputDirectory, "manifest.json"), "utf8"),
+    ) as {
+      files: Record<string, { sha256: string; bytes: number }>;
+    };
+    const expectedByDocumentType = {
+      deal_book: manifest.files.informationMemorandum,
+      nda: manifest.files.blankNda,
+    } as const;
+    const storageReadback: Array<{
+      type: string;
+      bytes: number;
+      sha256Matched: true;
+    }> = [];
+
     for (const document of documentRows) {
+      const expected =
+        expectedByDocumentType[
+          document.document_type as keyof typeof expectedByDocumentType
+        ];
+      expect(expected).toBeDefined();
+      expect(Number(document.size_bytes)).toBe(expected!.bytes);
+      expect(document.content_sha256).toBe(expected!.sha256);
+
       const directResponse = await page.request.get(
         `${supabaseUrl}/storage/v1/object/${document.storage_bucket}/${document.storage_path}`,
         {
@@ -203,11 +311,28 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
         },
       );
       expect(directResponse.status()).not.toBe(200);
-    }
 
-    const manifest = JSON.parse(
-      await readFile(join(inputDirectory, "manifest.json"), "utf8"),
-    ) as { files: Record<string, { sha256: string; bytes: number }> };
+      const serviceReadback = await page.request.get(
+        `${supabaseUrl}/storage/v1/object/${document.storage_bucket}/${document.storage_path}`,
+        {
+          headers: {
+            apikey: serviceRoleKey,
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+        },
+      );
+      expect(serviceReadback.status()).toBe(200);
+      const storedBytes = await serviceReadback.body();
+      expect(storedBytes.byteLength).toBe(expected!.bytes);
+      expect(createHash("sha256").update(storedBytes).digest("hex")).toBe(
+        expected!.sha256,
+      );
+      storageReadback.push({
+        type: document.document_type,
+        bytes: storedBytes.byteLength,
+        sha256Matched: true,
+      });
+    }
     await mkdir(evidenceDirectory, { recursive: true });
     await writeFile(
       join(evidenceDirectory, "browser-enablement.json"),
@@ -220,11 +345,14 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
           documents: {
             registered: documentRows.map((row) => row.document_type),
             inputs: manifest.files,
+            privateStorageReadback: storageReadback,
             directAnonymousAccessDenied: true,
           },
           passwordReset: {
             protectedNoSendAdapter: true,
-            retrievableOneUseToken: true,
+            tokenConsumedOnce: true,
+            replayRejected: true,
+            changedCredentialAuthenticated: true,
             tokenRecorded: false,
           },
           productionCredentials: false,
