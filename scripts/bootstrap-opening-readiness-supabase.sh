@@ -58,30 +58,74 @@ VALUES
 ON CONFLICT (id) DO UPDATE SET public = false;
 SQL
 
-# The current PDR-retirement migration deliberately fails unless this exact
-# restrictive policy is already staged by Supabase Storage. PostgreSQL rightly
-# prevents the application `postgres` role from assuming that provider role,
-# so execute only the reviewed policy through the disposable database
-# container as its fixed local storage owner.
-mapfile -t storage_db_containers < <(
-  docker ps --format '{{.Names}}' \
-    | grep -x 'supabase_db_renew-opening-fixture' \
-    || true
+while IFS= read -r migration; do
+  "${psql_safe[@]}" -f "$migration"
+done < <(
+  find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
+    | LC_ALL=C sort \
+    | awk -F/ '$NF >= "20260824093456" && $NF < "20260830113100"'
 )
-if [[ "${#storage_db_containers[@]}" -ne 1 ]]; then
-  echo "Opening fixture refused: disposable Supabase database container was not unique." >&2
-  exit 1
-fi
-docker exec -i -e PGPASSWORD=postgres "${storage_db_containers[0]}" \
-  psql -X -v ON_ERROR_STOP=1 -U supabase_storage_admin -d postgres \
-  < scripts/prestage-pdr-storage-guard.sql
+
+# The final PDR-retirement migration deliberately fails unless this exact
+# restrictive policy is already staged by Supabase Storage. Local Supabase
+# exposes that provider owner as a separate login on the same fixed loopback
+# database; change only the username and preserve the ephemeral local password.
+case "$OPENING_FIXTURE_DATABASE_URL" in
+  postgresql://postgres:*)
+    storage_owner_url="postgresql://supabase_storage_admin:${OPENING_FIXTURE_DATABASE_URL#postgresql://postgres:}"
+    ;;
+  postgres://postgres:*)
+    storage_owner_url="postgres://supabase_storage_admin:${OPENING_FIXTURE_DATABASE_URL#postgres://postgres:}"
+    ;;
+  *)
+    echo "Opening fixture refused: local storage-owner URL could not be derived." >&2
+    exit 1
+    ;;
+esac
+case "$storage_owner_url" in
+  postgresql://supabase_storage_admin:*@127.0.0.1:54322/postgres | postgres://supabase_storage_admin:*@127.0.0.1:54322/postgres) ;;
+  *)
+    echo "Opening fixture refused: storage owner is not the fixed loopback database." >&2
+    exit 1
+    ;;
+esac
+psql -X -v ON_ERROR_STOP=1 "$storage_owner_url" \
+  -f scripts/prestage-pdr-storage-guard.sql
+
+"${psql_safe[@]}" <<'SQL'
+DO $$
+BEGIN
+  IF (
+    SELECT pg_get_userbyid(relation.relowner)
+    FROM pg_class relation
+    JOIN pg_namespace namespace ON namespace.oid=relation.relnamespace
+    WHERE namespace.nspname='storage' AND relation.relname='objects'
+  ) IS DISTINCT FROM 'supabase_storage_admin' THEN
+    RAISE EXCEPTION 'opening_fixture_storage_owner_mismatch';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='storage'
+      AND tablename='objects'
+      AND policyname='wave_pdr_retire_legacy_attachment_browser_access'
+      AND permissive='RESTRICTIVE'
+      AND roles=ARRAY['anon','authenticated']::name[]
+      AND cmd='ALL'
+      AND qual='(bucket_id <> ''pdr-attachments''::text)'
+      AND with_check='(bucket_id <> ''pdr-attachments''::text)'
+  ) THEN
+    RAISE EXCEPTION 'opening_fixture_storage_guard_mismatch';
+  END IF;
+END
+$$;
+SQL
 
 while IFS= read -r migration; do
   "${psql_safe[@]}" -f "$migration"
 done < <(
   find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
     | LC_ALL=C sort \
-    | awk -F/ '$NF >= "20260824093456"'
+    | awk -F/ '$NF >= "20260830113100"'
 )
 
 "${psql_safe[@]}" <<'SQL'
