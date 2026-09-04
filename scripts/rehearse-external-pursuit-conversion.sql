@@ -36,7 +36,7 @@ VALUES ('00000000-0000-4000-8000-000000010988','00000000-0000-4000-8000-00000001
 ON CONFLICT (id) DO NOTHING;
 
 DO $$
-DECLARE dossier UUID; legacy_dossier UUID; default_dossier UUID; acme_dossier UUID; deletion_dossier UUID; acme_office UUID; acme_affiliation UUID; converted UUID; legacy_converted UUID; repeated UUID; opportunity public.opportunities%ROWTYPE; before_matches BIGINT; before_pursuits BIGINT; before_ndas BIGINT;
+DECLARE dossier UUID; legacy_dossier UUID; default_dossier UUID; acme_dossier UUID; deletion_dossier UUID; acme_office UUID; acme_affiliation UUID; converted UUID; legacy_converted UUID; direct_real UUID; direct_demo UUID; repeated UUID; opportunity public.opportunities%ROWTYPE; before_matches BIGINT; before_pursuits BIGINT; before_ndas BIGINT;
 BEGIN
   IF NOT has_function_privilege('service_role','public.convert_external_pursuit_to_opportunity(uuid,text,uuid,uuid,uuid,boolean,text,text)','EXECUTE')
      OR NOT has_function_privilege('service_role','public.prepare_external_pursuit_deletion_fulfillment(uuid,text)','EXECUTE')
@@ -58,6 +58,19 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.opportunities WHERE id=legacy_converted AND is_demo=FALSE) THEN RAISE EXCEPTION 'w164_legacy_conversion_compatibility_failed'; END IF;
   -- Candidate-only v2 cannot infer REAL when classification is omitted.
   BEGIN PERFORM public.create_opportunity_with_office_context_v2('',NULL,ARRAY[]::UUID[],NULL,NULL,'draft','conversion-staff-user','{}'::JSONB); RAISE EXCEPTION 'w164_strict_creator_accepted_omission'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'opportunity_demo_classification_required' THEN RAISE; END IF; END;
+  SELECT id INTO direct_real FROM public.create_opportunity_with_office_context_v2('',NULL,ARRAY[]::UUID[],NULL,NULL,'draft','conversion-staff-user',jsonb_build_object('geography_node_id','00000000-0000-4092-8000-000000000001','public_title','Direct REAL rehearsal','is_demo',FALSE));
+  SELECT id INTO direct_demo FROM public.create_opportunity_with_office_context_v2('',NULL,ARRAY[]::UUID[],NULL,NULL,'draft','conversion-staff-user',jsonb_build_object('geography_node_id','00000000-0000-4092-8000-000000000001','public_title','Direct DEMO rehearsal','is_demo',TRUE));
+  IF NOT EXISTS (SELECT 1 FROM public.opportunities WHERE id=direct_real AND is_demo=FALSE AND demo_classification_created_by='conversion-staff-user' AND demo_classification_created_at IS NOT NULL)
+     OR NOT EXISTS (SELECT 1 FROM public.opportunities WHERE id=direct_demo AND is_demo=TRUE AND demo_classification_created_by='conversion-staff-user' AND demo_classification_created_at IS NOT NULL) THEN
+    RAISE EXCEPTION 'w164_direct_v2_real_demo_creation_failed';
+  END IF;
+  BEGIN
+    PERFORM public.save_opportunity_office_context(direct_real,NULL,ARRAY[]::UUID[],NULL,NULL,'draft','conversion-staff-user',jsonb_build_object('is_demo',TRUE));
+    RAISE EXCEPTION 'w164_edit_accepted_demo_classification';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'opportunity_demo_classification_create_only' THEN RAISE; END IF;
+  END;
+  IF NOT EXISTS (SELECT 1 FROM public.opportunities WHERE id=direct_real AND is_demo=FALSE) THEN RAISE EXCEPTION 'w164_edit_changed_demo_classification'; END IF;
   dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Never copy this dossier title','meetings','available',NULL,'Never copy this note','Never copy staff note','conversion-staff-user','conversion-fixture-create');
   BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Unknown actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',FALSE,'missing-w109-user','missing-actor-convert'); RAISE EXCEPTION 'w109_unknown_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
   BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Missing actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',FALSE,NULL,'missing-actor-convert'); RAISE EXCEPTION 'w109_missing_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_actor_and_key_required' THEN RAISE; END IF; END;
