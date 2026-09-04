@@ -40,7 +40,7 @@ import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
 } from "@/components/opportunities/opportunity-status-badge"
-import { OpportunityDemoBadge } from "@/components/opportunities/opportunity-demo-control"
+import { OpportunityClassificationBadge } from "@/components/opportunities/opportunity-demo-control"
 import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { useCollectionFilters } from "@/hooks/use-collection-filters"
 import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
@@ -309,7 +309,7 @@ function OpportunityRow({
                 {opportunity.source_identity_to_verify ? "Source identity to verify" : "Source review required"}
               </Badge>
             ) : null}
-            {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
+            <OpportunityClassificationBadge isDemo={opportunity.is_demo} />
           </div>
         </TableCell>
         <TableCell className="w-[12%]">
@@ -355,7 +355,7 @@ function OpportunityRow({
           <span className="text-xs text-muted-foreground">
             {opportunity.reference}
           </span>
-          {opportunity.is_demo ? <OpportunityDemoBadge /> : null}
+          <OpportunityClassificationBadge isDemo={opportunity.is_demo} />
         </div>
       </TableCell>
       <TableCell>{opportunity.location ?? "-"}</TableCell>
@@ -460,6 +460,10 @@ export function OpportunityWorkSurfaceTable({
         label: "Visibility",
         options: OPPORTUNITY_VISIBILITY_OPTIONS,
       },
+      {
+        key: "classification", label: "Classification",
+        options: [{ value: "real", label: "REAL" }, { value: "demo", label: "DEMO" }],
+      },
       { key: "sector", label: "Sector", options: SECTOR_OPTIONS },
       {
         key: "location",
@@ -520,6 +524,7 @@ export function OpportunityWorkSurfaceTable({
   const visibilityFilter = (filters.values.visibility || "all") as
     | OpportunityVisibility
     | "all"
+  const classificationFilter = (filters.values.classification || "all") as "all" | "real" | "demo"
   const sectorFilter = filters.values.sector || "all"
   const locationFilter = filters.values.location || "all"
   const sourceFirmFilter = filters.values.sourceFirm || "all"
@@ -542,6 +547,7 @@ export function OpportunityWorkSurfaceTable({
         opportunity.repreneur_exposure !== visibilityFilter
       )
         return false
+      if (classificationFilter !== "all" && opportunity.is_demo !== (classificationFilter === "demo")) return false
       if (
         sectorFilter !== "all" &&
         !opportunityMatchesSectorFilter(
@@ -583,6 +589,7 @@ export function OpportunityWorkSurfaceTable({
     })
   }, [
     activePursuitFilter,
+    classificationFilter,
     freshnessFilter,
     journeyFilter,
     locationFilter,

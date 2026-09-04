@@ -131,12 +131,12 @@ export function ExternalPursuitConversionPanel({
       {errors.form ? <p className="text-sm text-destructive" role="alert">{errors.form}</p> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
-          <Label>Classification</Label>
-          <RadioGroup value={isDemo === null ? "" : isDemo ? "demo" : "real"} onValueChange={(value) => setIsDemo(value === "demo" ? true : value === "real" ? false : null)} disabled={fieldsLocked}>
+          <Label id="external-conversion-classification-label">Classification</Label>
+          <RadioGroup aria-labelledby="external-conversion-classification-label" aria-invalid={Boolean(errors.classification)} aria-describedby={errors.classification ? "external-conversion-classification-error" : undefined} value={isDemo === null ? "" : isDemo ? "demo" : "real"} onValueChange={(value) => setIsDemo(value === "demo" ? true : value === "real" ? false : null)} disabled={fieldsLocked}>
             <label className="flex items-start gap-3 rounded-md border p-3"><RadioGroupItem value="real" /><span><span className="font-medium">REAL</span><span className="block text-sm text-muted-foreground">A normal operating Draft in the REAL namespace.</span></span></label>
             <label className="flex items-start gap-3 rounded-md border p-3"><RadioGroupItem value="demo" /><span><span className="font-medium">DEMO</span><span className="block text-sm text-muted-foreground">A controlled QA Draft isolated to the DEMO namespace.</span></span></label>
           </RadioGroup>
-          {errors.classification ? <p className="text-sm text-destructive" role="alert">{errors.classification}</p> : null}
+          {errors.classification ? <p id="external-conversion-classification-error" className="text-sm text-destructive" role="alert">{errors.classification}</p> : null}
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="external-conversion-public-title">Safe public title</Label>

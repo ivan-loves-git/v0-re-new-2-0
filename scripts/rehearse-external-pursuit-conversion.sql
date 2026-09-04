@@ -2,6 +2,7 @@
 -- released schema through 094 and W-039/W-099 migration 092 applied.
 \set ON_ERROR_STOP on
 \ir 098_external_pursuit_opportunity_conversion.sql
+\ir 117_explicit_demo_real_creation.sql
 BEGIN;
 
 INSERT INTO public.repreneurs (id,first_name,last_name,email)
@@ -35,11 +36,11 @@ VALUES ('00000000-0000-4000-8000-000000010988','00000000-0000-4000-8000-00000001
 ON CONFLICT (id) DO NOTHING;
 
 DO $$
-DECLARE dossier UUID; default_dossier UUID; acme_dossier UUID; deletion_dossier UUID; acme_office UUID; acme_affiliation UUID; converted UUID; repeated UUID; opportunity public.opportunities%ROWTYPE; before_matches BIGINT; before_pursuits BIGINT; before_ndas BIGINT;
+DECLARE dossier UUID; legacy_dossier UUID; default_dossier UUID; acme_dossier UUID; deletion_dossier UUID; acme_office UUID; acme_affiliation UUID; converted UUID; legacy_converted UUID; repeated UUID; opportunity public.opportunities%ROWTYPE; before_matches BIGINT; before_pursuits BIGINT; before_ndas BIGINT;
 BEGIN
-  IF NOT has_function_privilege('service_role','public.convert_external_pursuit_to_opportunity(uuid,text,uuid,uuid,uuid,text,text)','EXECUTE')
+  IF NOT has_function_privilege('service_role','public.convert_external_pursuit_to_opportunity(uuid,text,uuid,uuid,uuid,boolean,text,text)','EXECUTE')
      OR NOT has_function_privilege('service_role','public.prepare_external_pursuit_deletion_fulfillment(uuid,text)','EXECUTE')
-     OR has_function_privilege('authenticated','public.convert_external_pursuit_to_opportunity(uuid,text,uuid,uuid,uuid,text,text)','EXECUTE')
+     OR has_function_privilege('authenticated','public.convert_external_pursuit_to_opportunity(uuid,text,uuid,uuid,uuid,boolean,text,text)','EXECUTE')
      OR has_function_privilege('authenticated','public.prepare_external_pursuit_deletion_fulfillment(uuid,text)','EXECUTE')
      OR has_function_privilege('service_role','public.assert_external_pursuit_not_converted(uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'w109_direct_api_privilege_boundary_failed';
@@ -50,33 +51,40 @@ BEGIN
   SELECT count(*) INTO before_matches FROM public.opportunity_matches;
   SELECT count(*) INTO before_pursuits FROM public.opportunity_pursuit_evidence;
   SELECT count(*) INTO before_ndas FROM public.opportunity_nda_artifacts;
+  -- Baseline app compatibility: migration 117 must not break the released
+  -- seven-argument endpoint needed for ordered deployment and rollback.
+  legacy_dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Legacy endpoint remains available','meetings','available',NULL,NULL,NULL,'conversion-staff-user','conversion-legacy-create');
+  SELECT opportunity_id INTO legacy_converted FROM public.convert_external_pursuit_to_opportunity(legacy_dossier,'Legacy endpoint title','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','conversion-staff-user','conversion-legacy-convert');
+  IF NOT EXISTS (SELECT 1 FROM public.opportunities WHERE id=legacy_converted AND is_demo=FALSE) THEN RAISE EXCEPTION 'w164_legacy_conversion_compatibility_failed'; END IF;
+  -- Candidate-only v2 cannot infer REAL when classification is omitted.
+  BEGIN PERFORM public.create_opportunity_with_office_context_v2('',NULL,ARRAY[]::UUID[],NULL,NULL,'draft','conversion-staff-user','{}'::JSONB); RAISE EXCEPTION 'w164_strict_creator_accepted_omission'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'opportunity_demo_classification_required' THEN RAISE; END IF; END;
   dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Never copy this dossier title','meetings','available',NULL,'Never copy this note','Never copy staff note','conversion-staff-user','conversion-fixture-create');
-  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Unknown actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','missing-w109-user','missing-actor-convert'); RAISE EXCEPTION 'w109_unknown_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
-  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Missing actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',NULL,'missing-actor-convert'); RAISE EXCEPTION 'w109_missing_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_actor_and_key_required' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Unknown actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',FALSE,'missing-w109-user','missing-actor-convert'); RAISE EXCEPTION 'w109_unknown_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Missing actor must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',FALSE,NULL,'missing-actor-convert'); RAISE EXCEPTION 'w109_missing_conversion_actor_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_actor_and_key_required' THEN RAISE; END IF; END;
   SELECT opportunity_id INTO converted FROM public.convert_external_pursuit_to_opportunity(
-    dossier,'Anonymous regional industrial specialist','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','conversion-staff-user','conversion-fixture-convert');
+    dossier,'Anonymous regional industrial specialist','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',TRUE,'conversion-staff-user','conversion-fixture-convert');
   SELECT opportunity_id INTO repeated FROM public.convert_external_pursuit_to_opportunity(
-    dossier,'Changed title must be ignored','00000000-0000-4092-8000-000000000211','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','conversion-staff-user','conversion-fixture-convert');
+    dossier,'Changed title must be ignored','00000000-0000-4092-8000-000000000211','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',TRUE,'conversion-staff-user','conversion-fixture-convert');
   IF converted <> repeated THEN RAISE EXCEPTION 'w109_exact_replay_failed'; END IF;
   SELECT * INTO opportunity FROM public.opportunities WHERE id=converted;
-  IF opportunity.status <> 'draft' OR opportunity.repreneur_exposure <> 'staff_only' OR opportunity.public_title <> 'Anonymous regional industrial specialist' OR opportunity.geography_node_id <> '00000000-0000-4092-8000-000000000001'::UUID OR opportunity.reference !~ '^Re-New - FR - [0-9]+$' THEN RAISE EXCEPTION 'w109_canonical_draft_fields_failed'; END IF;
+  IF opportunity.status <> 'draft' OR opportunity.is_demo <> TRUE OR opportunity.demo_classification_created_by <> 'conversion-staff-user' OR opportunity.demo_classification_created_at IS NULL OR opportunity.repreneur_exposure <> 'staff_only' OR opportunity.public_title <> 'Anonymous regional industrial specialist' OR opportunity.geography_node_id <> '00000000-0000-4092-8000-000000000001'::UUID OR opportunity.reference !~ '^Re-New - FR - [0-9]+$' THEN RAISE EXCEPTION 'w109_canonical_draft_fields_failed'; END IF;
   IF opportunity.description IS NOT NULL OR opportunity.internal_notes IS NOT NULL OR opportunity.source_office_id <> '00000000-0000-4000-8000-000000010983'::UUID OR (SELECT count(*) FROM public.opportunity_ma_contacts WHERE opportunity_id=converted AND is_active AND is_primary) <> 1 THEN RAISE EXCEPTION 'w109_copy_or_contact_boundary_failed'; END IF;
   IF (SELECT count(*) FROM public.external_pursuit_opportunity_conversions WHERE external_pursuit_id=dossier AND opportunity_id=converted) <> 1 THEN RAISE EXCEPTION 'w109_immutable_link_missing'; END IF;
   IF (SELECT count(*) FROM public.opportunity_matches) <> before_matches OR (SELECT count(*) FROM public.opportunity_pursuit_evidence) <> before_pursuits OR (SELECT count(*) FROM public.opportunity_nda_artifacts) <> before_ndas THEN RAISE EXCEPTION 'w109_match_or_gate_changed'; END IF;
-  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Second copy','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','conversion-other-staff-user','different-key'); RAISE EXCEPTION 'w109_second_conversion_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_already_converted' THEN RAISE; END IF; END;
-  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Owner conversion','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985','conversion-owner-user','owner-key'); RAISE EXCEPTION 'w109_owner_conversion_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Second copy','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',TRUE,'conversion-other-staff-user','different-key'); RAISE EXCEPTION 'w109_second_conversion_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_already_converted' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(dossier,'Owner conversion','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010983','00000000-0000-4000-8000-000000010985',TRUE,'conversion-owner-user','owner-key'); RAISE EXCEPTION 'w109_owner_conversion_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'External Pursuit access denied.' THEN RAISE; END IF; END;
   BEGIN PERFORM public.prepare_external_pursuit_deletion_fulfillment(dossier,'conversion-staff-user'); RAISE EXCEPTION 'w109_converted_preflight_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_already_converted' THEN RAISE; END IF; END;
   BEGIN PERFORM public.request_external_pursuit_deletion(dossier,'conversion-staff-user','staff-cannot-request'); RAISE EXCEPTION 'w109_staff_delete_request_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Only the owner repreneur may request deletion.' THEN RAISE; END IF; END;
   BEGIN PERFORM public.request_external_pursuit_deletion(dossier,'conversion-owner-user','conversion-delete-request'); RAISE EXCEPTION 'w109_converted_delete_request_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_already_converted' THEN RAISE; END IF; END;
   BEGIN PERFORM public.fulfill_external_pursuit_deletion(dossier,'conversion-staff-user','conversion-delete-fulfill'); RAISE EXCEPTION 'w109_converted_deletion_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_already_converted' THEN RAISE; END IF; END;
 
   default_dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Default-office rejection','meetings','available',NULL,NULL,NULL,'conversion-staff-user','conversion-default-create');
-  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(default_dossier,'Default office must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010986','00000000-0000-4000-8000-000000010988','conversion-staff-user','conversion-default-convert'); RAISE EXCEPTION 'w109_default_office_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_requires_active_real_office' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(default_dossier,'Default office must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010986','00000000-0000-4000-8000-000000010988',FALSE,'conversion-staff-user','conversion-default-convert'); RAISE EXCEPTION 'w109_default_office_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_requires_active_real_office' THEN RAISE; END IF; END;
 
   SELECT office_id, affiliation_id INTO acme_office, acme_affiliation
   FROM public.ma_provisional_source_contexts WHERE context_key='acme_co_paris';
   acme_dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Acme rejection','meetings','available',NULL,NULL,NULL,'conversion-staff-user','conversion-acme-create');
-  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(acme_dossier,'Acme must fail','00000000-0000-4092-8000-000000000001',acme_office,acme_affiliation,'conversion-staff-user','conversion-acme-convert'); RAISE EXCEPTION 'w109_acme_office_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_rejects_acme_source' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.convert_external_pursuit_to_opportunity(acme_dossier,'Acme must fail','00000000-0000-4092-8000-000000000001',acme_office,acme_affiliation,FALSE,'conversion-staff-user','conversion-acme-convert'); RAISE EXCEPTION 'w109_acme_office_was_allowed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'external_pursuit_conversion_rejects_acme_source' THEN RAISE; END IF; END;
 
   deletion_dossier := public.create_external_pursuit('00000000-0000-4000-8000-000000010981','Deletion preflight','meetings','available',NULL,NULL,NULL,'conversion-staff-user','conversion-preflight-create');
   PERFORM public.request_external_pursuit_deletion(deletion_dossier,'conversion-owner-user','conversion-preflight-request');

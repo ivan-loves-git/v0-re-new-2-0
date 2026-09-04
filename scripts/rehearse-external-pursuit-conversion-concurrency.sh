@@ -45,6 +45,7 @@ psql_run -c "
 psql_run -f "$root/079_provisional_acme_source_foundation.sql" >/dev/null
 psql_run -f "$root/092_france_geography_and_mandate_references.sql" >/dev/null
 psql_run -f "$root/098_external_pursuit_opportunity_conversion.sql" >/dev/null
+psql_run -f "$root/117_explicit_demo_real_creation.sql" >/dev/null
 psql_run -c "
   INSERT INTO public.repreneurs (id,first_name,last_name,email) VALUES ('00000000-0000-4000-8000-000000010991','Race','Owner','w109-race-owner@example.test') ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.app_user_roles (user_id,email,role,repreneur_id) VALUES ('w109-race-owner','w109-race-owner@example.test','repreneur','00000000-0000-4000-8000-000000010991'),('w109-race-staff-a','w109-race-staff-a@example.test','staff',NULL),('w109-race-staff-b','w109-race-staff-b@example.test','staff',NULL) ON CONFLICT DO NOTHING;
@@ -56,10 +57,10 @@ psql_run -c "
 dossier="$(psql_run -Atq -c "SELECT public.create_external_pursuit('00000000-0000-4000-8000-000000010991','Race source dossier','meetings','available',NULL,NULL,NULL,'w109-race-staff-a','w109-race-create');")"
 lock="hashtextextended('${dossier}', 0)"
 
-psql_run -Atq -c "BEGIN; SELECT pg_advisory_xact_lock(${lock}); SELECT pg_sleep(1); SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${dossier}','Race-safe anonymous title','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995','w109-race-staff-a','w109-race-convert-a'); COMMIT;" >"$tmpdir/a" &
+psql_run -Atq -c "BEGIN; SELECT pg_advisory_xact_lock(${lock}); SELECT pg_sleep(1); SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${dossier}','Race-safe anonymous title','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995',FALSE,'w109-race-staff-a','w109-race-convert-a'); COMMIT;" >"$tmpdir/a" &
 a=$!
 sleep 0.2
-if psql_run -Atq -c "SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${dossier}','Second conversion must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995','w109-race-staff-b','w109-race-convert-b');" >"$tmpdir/b" 2>"$tmpdir/b.err"; then
+if psql_run -Atq -c "SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${dossier}','Second conversion must fail','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995',FALSE,'w109-race-staff-b','w109-race-convert-b');" >"$tmpdir/b" 2>"$tmpdir/b.err"; then
   echo "W-109 race incorrectly allowed a second conversion" >&2
   exit 1
 fi
@@ -79,7 +80,7 @@ conversion_wins="$(psql_run -Atq -c "SELECT public.create_external_pursuit('0000
 PGAPPNAME="w109-counter-blocker" psql -X "$db" -v ON_ERROR_STOP=1 -Atq -c "BEGIN; SELECT reference_code FROM public.opportunity_mandate_reference_counters WHERE reference_code='FR' FOR UPDATE; SELECT pg_advisory_xact_lock(hashtextextended('w109-counter-blocker-ready',0)); SELECT pg_sleep(3); COMMIT;" >"$tmpdir/counter-blocker" &
 counter_blocker_pid=$!
 wait_for_advisory_lock "w109-counter-blocker"
-PGAPPNAME="w109-conversion-wins" psql -X "$db" -v ON_ERROR_STOP=1 -Atq -c "SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${conversion_wins}','Conversion-wins title','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995','w109-race-staff-a','w109-conversion-wins-key');" >"$tmpdir/conversion-wins" &
+PGAPPNAME="w109-conversion-wins" psql -X "$db" -v ON_ERROR_STOP=1 -Atq -c "SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${conversion_wins}','Conversion-wins title','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995',FALSE,'w109-race-staff-a','w109-conversion-wins-key');" >"$tmpdir/conversion-wins" &
 conversion_pid=$!
 wait_for_advisory_lock "w109-conversion-wins"
 if psql_run -Atq -c "SELECT public.request_external_pursuit_deletion('${conversion_wins}','w109-race-owner','w109-delete-loses-key');" >"$tmpdir/delete-loses" 2>"$tmpdir/delete-loses.err"; then
@@ -102,7 +103,7 @@ wait_for_advisory_lock "w109-dossier-row-blocker"
 PGAPPNAME="w109-deletion-wins" psql -X "$db" -v ON_ERROR_STOP=1 -Atq -c "SELECT public.request_external_pursuit_deletion('${deletion_wins}','w109-race-owner','w109-deletion-wins-key');" >"$tmpdir/deletion-wins" &
 deletion_pid=$!
 wait_for_advisory_lock "w109-deletion-wins"
-if psql_run -Atq -c "SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${deletion_wins}','Conversion must lose','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995','w109-race-staff-a','w109-conversion-loses-key');" >"$tmpdir/conversion-loses" 2>"$tmpdir/conversion-loses.err"; then
+if psql_run -Atq -c "SELECT opportunity_id FROM public.convert_external_pursuit_to_opportunity('${deletion_wins}','Conversion must lose','00000000-0000-4092-8000-000000000001','00000000-0000-4000-8000-000000010993','00000000-0000-4000-8000-000000010995',FALSE,'w109-race-staff-a','w109-conversion-loses-key');" >"$tmpdir/conversion-loses" 2>"$tmpdir/conversion-loses.err"; then
   echo "W-109 conversion/delete race incorrectly converted a delete-requested dossier" >&2
   exit 1
 fi

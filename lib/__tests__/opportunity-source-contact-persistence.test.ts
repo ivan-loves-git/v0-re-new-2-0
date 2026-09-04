@@ -122,7 +122,7 @@ describe("canonical opportunity contact persistence", () => {
       opportunityId: "opportunity-created",
     })
 
-    expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
+    expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context_v2", {
       p_reference: "OPP-001",
       p_source_office_id: OFFICE_ID,
       p_affiliation_ids: [AFFILIATION_ID],

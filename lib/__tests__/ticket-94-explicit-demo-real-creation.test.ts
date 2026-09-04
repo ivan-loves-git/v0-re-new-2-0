@@ -11,7 +11,8 @@ describe("Ticket #94 explicit REAL/DEMO creation boundary", () => {
   it("requires a boolean classification on canonical opportunity creation and rejects it on edit", () => {
     expect(migration).toContain("opportunity_demo_classification_required")
     expect(migration).toContain("opportunity_demo_classification_create_only")
-    expect(migration).toContain("ARRAY['geography_node_id','date_added_confirm_day','is_demo']")
+    expect(migration).toContain("p_opportunity_fields - 'is_demo'")
+    expect(source("lib/actions/opportunity-intake.ts")).toContain('rpc("create_opportunity_with_office_context_v2"')
   })
 
   it("persists the selected namespace and its initial actor/time before commit", () => {
@@ -22,6 +23,12 @@ describe("Ticket #94 explicit REAL/DEMO creation boundary", () => {
     expect(migration).toContain("p_is_demo BOOLEAN")
     expect(migration).toContain("'is_demo',p_is_demo")
     expect(source("lib/actions/external-pursuit-conversion.ts")).toContain("p_is_demo: input.isDemo")
+  })
+
+  it("keeps baseline endpoints available while adding strict candidate-only endpoints", () => {
+    expect(migration).toContain("CREATE OR REPLACE FUNCTION public.create_opportunity_with_office_context_v2")
+    expect(migration).toContain("CREATE OR REPLACE FUNCTION public.convert_external_pursuit_to_opportunity(")
+    expect(migration).not.toContain("DROP FUNCTION public.convert_external_pursuit_to_opportunity(UUID,TEXT,UUID,UUID,UUID,TEXT,TEXT)")
   })
 
   it("renders no preselected classification control in each staff creation surface", () => {

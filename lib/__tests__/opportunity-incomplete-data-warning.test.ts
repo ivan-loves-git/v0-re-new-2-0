@@ -69,7 +69,7 @@ describe("opportunity intake draft rules", () => {
       opportunityReference: "Re-New - FR - 001",
     })
 
-    expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
+    expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context_v2", {
       p_reference: "",
       p_source_office_id: null,
       p_affiliation_ids: [],
