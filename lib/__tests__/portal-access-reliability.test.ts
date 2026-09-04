@@ -633,6 +633,7 @@ describe("repreneur portal access reliability", () => {
       }
       if (sql.startsWith('UPDATE "account"')) return { rows: [] }
       if (sql.startsWith('DELETE FROM "session"')) return { rows: [] }
+      if (sql.includes('DELETE FROM public."verification"')) return { rows: [] }
       if (sql.includes("UPDATE public.app_user_roles")) {
         return { rows: [{ id: "role-1" }] }
       }
@@ -654,6 +655,11 @@ describe("repreneur portal access reliability", () => {
     expect(
       mocks.clientQuery.mock.calls.some(([sql]) =>
         String(sql).startsWith('DELETE FROM "session"'),
+      ),
+    ).toBe(true)
+    expect(
+      mocks.clientQuery.mock.calls.some(([sql]) =>
+        String(sql).includes('DELETE FROM public."verification"'),
       ),
     ).toBe(true)
     expect(
@@ -781,6 +787,7 @@ describe("repreneur portal access reliability", () => {
       }
       if (sql.includes("DELETE FROM public.app_user_roles")) return { rows: [] }
       if (sql.includes('DELETE FROM "session"')) return { rows: [] }
+      if (sql.includes('DELETE FROM public."verification"')) return { rows: [] }
       throw new Error(`Unexpected transaction SQL in test: ${sql}`)
     })
 
@@ -798,6 +805,20 @@ describe("repreneur portal access reliability", () => {
         String(sql).includes('DELETE FROM "session"'),
       ),
     ).toBe(true)
+    const verificationDelete = mocks.clientQuery.mock.calls.find(([sql]) =>
+      String(sql).includes('DELETE FROM public."verification"'),
+    )
+    expect(mocks.clientQuery).toHaveBeenCalledWith(
+      expect.stringContaining("pg_advisory_xact_lock"),
+      ["password-reset-user:auth-current"],
+    )
+    expect(verificationDelete?.[0]).toContain(
+      '"identifier" LIKE \'reset-password:%\'',
+    )
+    expect(verificationDelete?.[0]).toContain(
+      '"value" = ANY($1::text[])',
+    )
+    expect(verificationDelete?.[1]).toEqual([["auth-current"]])
   })
 
   it("refuses a resend that would cross the staff role boundary", async () => {

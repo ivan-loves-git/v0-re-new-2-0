@@ -13,6 +13,7 @@ import {
 } from "@/lib/portal-access-reconciliation"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { env } from "@/lib/env"
+import { passwordResetUserLockKey } from "@/lib/password-reset-link"
 
 export interface RepreneurPortalAccessStatus {
   repreneurId: string
@@ -176,6 +177,20 @@ async function rotateCredentialAndSessions(
     [passwordHash, userId, "credential"],
   )
   await executor.query('DELETE FROM "session" WHERE "userId" = $1', [userId])
+  await revokePasswordResetLinks(executor, [userId])
+}
+
+async function revokePasswordResetLinks(
+  executor: QueryExecutor,
+  userIds: string[],
+) {
+  if (userIds.length === 0) return
+  await executor.query(
+    `DELETE FROM public."verification"
+     WHERE "identifier" LIKE 'reset-password:%'
+       AND "value" = ANY($1::text[])`,
+    [userIds],
+  )
 }
 
 async function createAuthUser(
@@ -277,6 +292,10 @@ async function provisionPortalAccess({
     const existingAuthUser = authUsers[0] ?? null
     const authUser =
       existingAuthUser ?? (await createAuthUser(client, email, name))
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+      [passwordResetUserLockKey(authUser.id)],
+    )
     const roles = await listPortalRoles(
       client,
       repreneurId,
@@ -669,7 +688,14 @@ export async function disableRepreneurPortalAccess(repreneurId: string) {
           .map((role) => role.user_id)
           .filter((value): value is string => Boolean(value)),
       ),
-    )
+    ).sort()
+
+    for (const userId of userIds) {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [passwordResetUserLockKey(userId)],
+      )
+    }
 
     if (removableRoles.length > 0) {
       await client.query(
@@ -683,6 +709,7 @@ export async function disableRepreneurPortalAccess(repreneurId: string) {
         'DELETE FROM "session" WHERE "userId" = ANY($1::text[])',
         [userIds],
       )
+      await revokePasswordResetLinks(client, userIds)
     }
 
     await client.query("COMMIT")
