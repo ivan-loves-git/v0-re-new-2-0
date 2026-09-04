@@ -9,7 +9,9 @@ import { requireStaffAccess } from "@/lib/access-control";
 import { type GovernanceProvenance, type SafeGovernanceIssue } from "@/lib/governance-projection/model";
 import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness";
 import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server";
-import { listPdrRequestHistory } from "@/lib/pdr/intake-server";
+import { listHistoricalPdrWorkCards, listPdrRequestHistory } from "@/lib/pdr/intake-server";
+import { parseHistoricalWorkCardReference, resolveHistoricalWorkCardReference } from "@/lib/pdr/historical-card-reference";
+import { redirect } from "next/navigation";
 
 const GOVERNANCE_PROJECT_URL = "https://github.com/orgs/re-new-team/projects/1";
 
@@ -89,9 +91,17 @@ function ProductChangeCard({ issue, linkedIssues }: { issue: SafeGovernanceIssue
   );
 }
 
-export default async function StrategicPdrPage() {
+export default async function StrategicPdrPage({ searchParams }: { searchParams: Promise<{ card?: string | string[] }> }) {
   await connection();
   await requireStaffAccess();
+  const legacyCardQuery = (await searchParams).card;
+  const legacyReference = parseHistoricalWorkCardReference(legacyCardQuery);
+  const legacyCard = legacyReference === null
+    ? null
+    : await listHistoricalPdrWorkCards()
+      .then((cards) => resolveHistoricalWorkCardReference(legacyReference, cards))
+      .catch(() => null);
+  if (legacyCard) redirect(`/strategic-pdr/work-cards/${legacyCard.id}`);
   const [current, requestResult] = await Promise.all([
     readCurrentGovernanceProjection(),
     listPdrRequestHistory().then((requests) => ({ state: "available" as const, requests })).catch(() => ({ state: "unavailable" as const, requests: [] })),
@@ -115,6 +125,7 @@ export default async function StrategicPdrPage() {
 
   return <div className="space-y-8">
     <header className="space-y-3">
+      {legacyCardQuery ? <p className="rounded-md border px-3 py-2 text-sm text-muted-foreground">The requested historical record is unavailable. This does not indicate whether a record exists.</p> : null}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="space-y-2"><p className="wave-micro-label">Strategic PDR</p><h1 className="text-2xl font-semibold">Strategy, delivery and requests</h1><p className="max-w-3xl text-sm text-muted-foreground">WAVE holds request intake and the readable strategic view. GitHub is the authoritative place for current product decisions, delivery status and discussion.</p></div>
         <Button asChild variant="outline"><a href={GOVERNANCE_PROJECT_URL} target="_blank" rel="noreferrer">Open delivery board <ExternalLink className="size-3.5" /></a></Button>
