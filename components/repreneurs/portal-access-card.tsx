@@ -1,18 +1,43 @@
 "use client"
 
-import { useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { AlertCircle, KeyRound, Mail, Power, RefreshCw, ShieldCheck, ShieldOff } from "lucide-react"
+import {
+  AlertCircle,
+  KeyRound,
+  Mail,
+  Power,
+  RefreshCw,
+  ShieldCheck,
+  ShieldOff,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  enableRepreneurPortalAccess,
-  resendRepreneurPortalAccessLink,
-  disableRepreneurPortalAccess,
-  type RepreneurPortalAccessStatus,
-} from "@/lib/actions/portal-access"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import type { RepreneurPortalAccessStatus } from "@/lib/actions/portal-access"
+import { confirmRepreneurPortalAccessAction } from "@/lib/actions/portal-access-confirmation"
+import {
+  createPortalAccessSnapshot,
+  getPortalAccessConfirmationCopy,
+  type PortalAccessAction,
+  type PortalAccessConfirmationInput,
+} from "@/lib/portal-access-confirmation"
 
 interface PortalAccessCardProps {
   repreneurId: string
@@ -73,15 +98,49 @@ function getPortalRecoveryMessage(status: RepreneurPortalAccessStatus) {
   return null
 }
 
-export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps) {
+export function PortalAccessCard({
+  repreneurId,
+  status,
+}: PortalAccessCardProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [activeAction, setActiveAction] = useState<PortalAccessAction | null>(
+    null,
+  )
+  const [confirmation, setConfirmation] =
+    useState<PortalAccessConfirmationInput | null>(null)
+  const actionInFlight = useRef(false)
 
-  function runAction(action: () => Promise<PortalAccessActionResponse | unknown>, successMessage: string, fallbackErrorMessage: string) {
+  function openConfirmation(action: PortalAccessAction) {
+    if (actionInFlight.current) return
+    setConfirmation({
+      action,
+      operationKey: crypto.randomUUID(),
+      snapshot: createPortalAccessSnapshot(status),
+    })
+  }
+
+  function runConfirmedAction() {
+    if (!confirmation || actionInFlight.current) return
+    const submittedConfirmation = confirmation
+    actionInFlight.current = true
+    setActiveAction(submittedConfirmation.action)
     startTransition(async () => {
       try {
-        const result = await action()
-        const actionResult = result && typeof result === "object" ? (result as PortalAccessActionResponse) : null
+        const result = await confirmRepreneurPortalAccessAction(
+          repreneurId,
+          submittedConfirmation,
+        )
+        const actionResult =
+          result && typeof result === "object"
+            ? (result as PortalAccessActionResponse)
+            : null
+        const successMessage =
+          submittedConfirmation.action === "disable"
+            ? "Portal access disabled and sessions revoked."
+            : submittedConfirmation.action === "resend"
+              ? "Portal access link sent."
+              : "Portal access enabled and setup link sent."
         const message = actionResult?.lastAccessEmailSentAt
           ? `${actionResult.message ?? successMessage} Last sent ${formatDate(actionResult.lastAccessEmailSentAt)}.`
           : (actionResult?.message ?? successMessage)
@@ -90,10 +149,19 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
         } else {
           toast.success(message)
         }
+        setConfirmation(null)
         router.refresh()
       } catch (error) {
-        const message = error instanceof Error ? error.message : fallbackErrorMessage
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Portal access could not be changed. Refresh the page and retry."
         toast.error(message)
+        setConfirmation(null)
+        router.refresh()
+      } finally {
+        actionInFlight.current = false
+        setActiveAction(null)
       }
     })
   }
@@ -104,9 +172,9 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
   const canEnable = hasValidPortalEmail && !status.enabled && status.repairable
   const hasExistingPortalAccess = Boolean(
     status.roleId ||
-      status.linkedUserId ||
-      status.hasAuthUser ||
-      status.hasCredentialAccount,
+    status.linkedUserId ||
+    status.hasAuthUser ||
+    status.hasCredentialAccount,
   )
   const needsRecoveryRepair =
     !status.enabled && status.repairable && hasExistingPortalAccess
@@ -115,9 +183,18 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
   const enableButtonLabel = needsRecoveryRepair
     ? "Repair portal access & send link"
     : "Enable portal access"
+  const confirmationCopy = confirmation
+    ? getPortalAccessConfirmationCopy(confirmation.action, status)
+    : null
+  const pendingLabel =
+    activeAction === "disable"
+      ? "Disabling access…"
+      : activeAction === "resend"
+        ? "Sending one link…"
+        : "Enabling access…"
 
   return (
-    <Card>
+    <Card aria-busy={Boolean(activeAction)}>
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -125,9 +202,14 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
               <KeyRound className="size-5" />
               Portal Access
             </CardTitle>
-            <CardDescription>Staff-controlled login for the external repreneur portal.</CardDescription>
+            <CardDescription>
+              Staff-controlled login for the external repreneur portal.
+            </CardDescription>
           </div>
-          <Badge variant={status.enabled ? "default" : "secondary"} className="w-fit">
+          <Badge
+            variant={status.enabled ? "default" : "secondary"}
+            className="w-fit"
+          >
             {status.portalEmailValidationError ? (
               <>
                 <AlertCircle data-icon="inline-start" />
@@ -203,13 +285,7 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
             <Button
               type="button"
               disabled={!canEnable || isPending}
-              onClick={() =>
-                runAction(
-                  () => enableRepreneurPortalAccess(repreneurId),
-                  "Portal access enabled and setup link sent.",
-                  "Portal access could not be enabled. Check the repreneur email and retry."
-                )
-              }
+              onClick={() => openConfirmation("enable")}
             >
               <Power data-icon="inline-start" />
               {enableButtonLabel}
@@ -220,15 +296,13 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
               type="button"
               variant="outline"
               disabled={!canResend || isPending}
-              onClick={() =>
-                runAction(
-                  () => resendRepreneurPortalAccessLink(repreneurId),
-                  "Portal access link sent.",
-                  "The access link could not be sent. Retry after checking the repreneur email."
-                )
-              }
+              onClick={() => openConfirmation("resend")}
             >
-              {isPending ? <RefreshCw data-icon="inline-start" className="animate-spin" /> : <Mail data-icon="inline-start" />}
+              {isPending ? (
+                <RefreshCw data-icon="inline-start" className="animate-spin" />
+              ) : (
+                <Mail data-icon="inline-start" />
+              )}
               Resend access link
             </Button>
           )}
@@ -239,18 +313,41 @@ export function PortalAccessCard({ repreneurId, status }: PortalAccessCardProps)
               (!status.enabled && !status.portalEmailValidationError) ||
               isPending
             }
-            onClick={() =>
-              runAction(
-                () => disableRepreneurPortalAccess(repreneurId),
-                "Portal access disabled and sessions revoked.",
-                "Portal access could not be disabled. Refresh the page and retry."
-              )
-            }
+            onClick={() => openConfirmation("disable")}
           >
             <ShieldOff data-icon="inline-start" />
             Disable portal access
           </Button>
         </div>
+
+        <AlertDialog
+          open={Boolean(confirmation)}
+          onOpenChange={(open) => {
+            if (!open && !actionInFlight.current) setConfirmation(null)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{confirmationCopy?.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmationCopy?.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+              <Button
+                type="button"
+                variant={
+                  confirmation?.action === "disable" ? "destructive" : "default"
+                }
+                disabled={isPending}
+                onClick={runConfirmedAction}
+              >
+                {isPending ? pendingLabel : confirmationCopy?.confirmLabel}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )

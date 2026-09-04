@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   requireStaffAccess: vi.fn(),
   createAdminClient: vi.fn(),
   requestPasswordReset: vi.fn(),
+  consumeRequestRateLimit: vi.fn(),
 }))
 
 vi.mock("pg", () => ({
@@ -45,12 +46,18 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
 }))
 
+vi.mock("@/lib/security/intake-upload", () => ({
+  consumeRequestRateLimit: mocks.consumeRequestRateLimit,
+}))
+
 import {
   disableRepreneurPortalAccess,
   enableRepreneurPortalAccess,
   getRepreneurPortalAccessStatus,
   resendRepreneurPortalAccessLink,
 } from "@/lib/actions/portal-access"
+import { confirmRepreneurPortalAccessAction } from "@/lib/actions/portal-access-confirmation"
+import { createPortalAccessSnapshot } from "@/lib/portal-access-confirmation"
 import { planPortalRoleReconciliation } from "@/lib/portal-access-reconciliation"
 
 const portalAccessCardSource = fs.readFileSync(
@@ -103,9 +110,7 @@ function mockHealthyPortalAccess(email = "current@example.com") {
     }
     if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
       return {
-        rows: [
-          { id: "auth-current", email, name: "Current Identity" },
-        ],
+        rows: [{ id: "auth-current", email, name: "Current Identity" }],
       }
     }
     if (sql.includes('FROM "account"')) {
@@ -125,6 +130,10 @@ describe("repreneur portal access reliability", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.requireStaffAccess.mockResolvedValue({ id: "staff-user" })
+    mocks.consumeRequestRateLimit.mockResolvedValue({
+      allowed: true,
+      retryAfter: 86_400,
+    })
     mocks.poolConnect.mockResolvedValue({
       query: mocks.clientQuery,
       release: mocks.clientRelease,
@@ -134,6 +143,248 @@ describe("repreneur portal access reliability", () => {
   it("renders access timestamps in one explicit timezone across server and browser", () => {
     expect(portalAccessCardSource).toContain('timeZone: "Europe/Paris"')
   })
+
+  it("routes staff controls through a confirmation boundary", () => {
+    expect(portalAccessCardSource).toContain("AlertDialog")
+    expect(portalAccessCardSource).toContain("getPortalAccessConfirmationCopy")
+    expect(portalAccessCardSource).toContain(
+      "confirmRepreneurPortalAccessAction",
+    )
+    expect(portalAccessCardSource).toContain("crypto.randomUUID()")
+  })
+
+  it("rejects a stale confirmation before consuming it or sending email", async () => {
+    mockHealthyPortalAccess()
+    const snapshot = createPortalAccessSnapshot({
+      repreneurEmail: "old@example.com",
+      portalEmailValidationError: null,
+      enabled: true,
+      repairable: true,
+      identityIssue: null,
+      authIdentityCount: 1,
+      hasAuthUser: true,
+      hasCredentialAccount: true,
+      linkedUserId: "auth-current",
+      roleId: "role-1",
+      roleEmail: "old@example.com",
+      roleRepreneurId: "repreneur-1",
+      accessEnabledAt: "2026-07-14T10:00:00.000Z",
+      lastAccessEmailSentAt: "2026-07-14T11:00:00.000Z",
+      activeSessionCount: 0,
+    })
+
+    await expect(
+      confirmRepreneurPortalAccessAction("repreneur-1", {
+        action: "resend",
+        operationKey: "00000000-0000-4000-8000-000000000097",
+        snapshot,
+      }),
+    ).rejects.toThrow("Portal access changed after this confirmation opened")
+
+    expect(mocks.consumeRequestRateLimit).not.toHaveBeenCalled()
+    expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+  })
+
+  it("consumes one confirmation once when the same resend is submitted twice", async () => {
+    mockHealthyPortalAccess()
+    const snapshot = createPortalAccessSnapshot({
+      repreneurEmail: "current@example.com",
+      portalEmailValidationError: null,
+      enabled: true,
+      repairable: true,
+      identityIssue: null,
+      authIdentityCount: 1,
+      hasAuthUser: true,
+      hasCredentialAccount: true,
+      linkedUserId: "auth-current",
+      roleId: "role-1",
+      roleEmail: "current@example.com",
+      roleRepreneurId: "repreneur-1",
+      accessEnabledAt: "2026-07-14T10:00:00.000Z",
+      lastAccessEmailSentAt: "2026-07-14T11:00:00.000Z",
+      activeSessionCount: 0,
+    })
+    mocks.consumeRequestRateLimit
+      .mockResolvedValueOnce({ allowed: true, retryAfter: 86_400 })
+      .mockResolvedValueOnce({ allowed: false, retryAfter: 86_399 })
+    const confirmation = {
+      action: "resend" as const,
+      operationKey: "00000000-0000-4000-8000-000000000097",
+      snapshot,
+    }
+
+    await expect(
+      confirmRepreneurPortalAccessAction("repreneur-1", confirmation),
+    ).resolves.toMatchObject({ emailSent: true, repaired: false })
+    await expect(
+      confirmRepreneurPortalAccessAction("repreneur-1", confirmation),
+    ).rejects.toThrow("already been submitted")
+
+    expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(1)
+  })
+
+  it("serializes competing confirmations and rejects the stale action after the winner commits", async () => {
+    const initialSentAt = "2026-07-14T11:00:00.000Z"
+    let lastSentAt = initialSentAt
+    mockRepreneur("current@example.com")
+    mocks.pgQuery.mockImplementation(
+      async (sql: string, parameters?: unknown[]) => {
+        if (sql.includes("FROM public.app_user_roles")) {
+          return {
+            rows: [
+              {
+                id: "role-1",
+                user_id: "auth-current",
+                email: "current@example.com",
+                role: "repreneur",
+                repreneur_id: "repreneur-1",
+                access_enabled_at: "2026-07-14T10:00:00.000Z",
+                last_access_email_sent_at: lastSentAt,
+              },
+            ],
+          }
+        }
+        if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
+          return {
+            rows: [
+              {
+                id: "auth-current",
+                email: "current@example.com",
+                name: "Current Identity",
+              },
+            ],
+          }
+        }
+        if (sql.includes('FROM "account"')) {
+          return { rows: [{ has_password: true }] }
+        }
+        if (sql.includes('FROM "session"')) {
+          return { rows: [{ count: "0" }] }
+        }
+        if (sql.includes("UPDATE public.app_user_roles")) {
+          lastSentAt = String(parameters?.[0])
+          return { rows: [{ id: "role-1" }] }
+        }
+        throw new Error(`Unexpected SQL in test: ${sql}`)
+      },
+    )
+
+    let lockHeld = false
+    const lockWaiters: Array<() => void> = []
+    const lockQueries: string[] = []
+    mocks.poolConnect.mockImplementation(async () => {
+      let ownsLock = false
+      return {
+        query: async (sql: string) => {
+          lockQueries.push(sql)
+          if (sql.includes("pg_advisory_xact_lock")) {
+            if (lockHeld) {
+              await new Promise<void>((resolve) => lockWaiters.push(resolve))
+            }
+            lockHeld = true
+            ownsLock = true
+          }
+          if ((sql === "COMMIT" || sql === "ROLLBACK") && ownsLock) {
+            ownsLock = false
+            lockHeld = false
+            lockWaiters.shift()?.()
+          }
+          return { rows: [] }
+        },
+        release: vi.fn(),
+      }
+    })
+
+    let releaseEmail!: () => void
+    mocks.requestPasswordReset.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (releaseEmail = resolve)),
+    )
+    const snapshot = createPortalAccessSnapshot({
+      repreneurEmail: "current@example.com",
+      portalEmailValidationError: null,
+      enabled: true,
+      repairable: true,
+      identityIssue: null,
+      authIdentityCount: 1,
+      hasAuthUser: true,
+      hasCredentialAccount: true,
+      linkedUserId: "auth-current",
+      roleId: "role-1",
+      roleEmail: "current@example.com",
+      roleRepreneurId: "repreneur-1",
+      accessEnabledAt: "2026-07-14T10:00:00.000Z",
+      lastAccessEmailSentAt: initialSentAt,
+      activeSessionCount: 0,
+    })
+
+    const resend = confirmRepreneurPortalAccessAction("repreneur-1", {
+      action: "resend",
+      operationKey: "00000000-0000-4000-8000-000000000097",
+      snapshot,
+    })
+    await vi.waitFor(() =>
+      expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(1),
+    )
+    const disable = confirmRepreneurPortalAccessAction("repreneur-1", {
+      action: "disable",
+      operationKey: "00000000-0000-4000-8000-000000000098",
+      snapshot,
+    })
+
+    releaseEmail()
+    await expect(resend).resolves.toMatchObject({ emailSent: true })
+    await expect(disable).rejects.toThrow(
+      "Portal access changed after this confirmation opened",
+    )
+
+    expect(mocks.poolConnect).toHaveBeenCalledTimes(2)
+    expect(
+      lockQueries.filter((sql) => sql.includes("pg_advisory_xact_lock")),
+    ).toHaveLength(2)
+    expect(
+      lockQueries.some((sql) =>
+        sql.includes("DELETE FROM public.app_user_roles"),
+      ),
+    ).toBe(false)
+    expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["enable", "resend", "disable"] as const)(
+    "denies %s confirmation before reading or changing portal state",
+    async (action) => {
+      mocks.requireStaffAccess.mockRejectedValueOnce(new Error("staff only"))
+
+      await expect(
+        confirmRepreneurPortalAccessAction("repreneur-1", {
+          action,
+          operationKey: "00000000-0000-4000-8000-000000000097",
+          snapshot: createPortalAccessSnapshot({
+            repreneurEmail: "current@example.com",
+            portalEmailValidationError: null,
+            enabled: action !== "enable",
+            repairable: true,
+            identityIssue: null,
+            authIdentityCount: 1,
+            hasAuthUser: true,
+            hasCredentialAccount: true,
+            linkedUserId: "auth-current",
+            roleId: "role-1",
+            roleEmail: "current@example.com",
+            roleRepreneurId: "repreneur-1",
+            accessEnabledAt: "2026-07-14T10:00:00.000Z",
+            lastAccessEmailSentAt: "2026-07-14T11:00:00.000Z",
+            activeSessionCount: 0,
+          }),
+        }),
+      ).rejects.toThrow("staff only")
+
+      expect(mocks.createAdminClient).not.toHaveBeenCalled()
+      expect(mocks.pgQuery).not.toHaveBeenCalled()
+      expect(mocks.poolConnect).not.toHaveBeenCalled()
+      expect(mocks.consumeRequestRateLimit).not.toHaveBeenCalled()
+      expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    },
+  )
 
   it("does not report access enabled when the linked auth identity uses a stale email", async () => {
     mockRepreneur("current@example.com")
