@@ -37,7 +37,6 @@ if (
 const repreneur = fixture.repreneurs.realNonOwner;
 const freshRepreneur = {
   id: "93000000-0000-4000-8000-000000000014",
-  userId: "qa-opening-fresh-access-uat-user",
   email: "qa-opening-fresh-access-uat@re-new.invalid",
 };
 const evidenceDirectory = join(runnerTemp, "opening-readiness-evidence");
@@ -59,8 +58,9 @@ async function login(page: Page, email: string, loginPassword = password) {
 
 async function readAccessState(
   client: Client,
-  target: { id: string; userId: string },
+  target: { id: string; userId?: string },
 ): Promise<AccessState> {
+  const userId = target.userId ?? "qa-opening-no-user-for-this-repreneur";
   const [role, session, reset, account] = await Promise.all([
     client.query<{ count: number; last_sent_at: string | null }>(
       `SELECT count(*)::int AS count, max(last_access_email_sent_at)::text AS last_sent_at
@@ -70,16 +70,16 @@ async function readAccessState(
     ),
     client.query<{ count: number }>(
       'SELECT count(*)::int AS count FROM public."session" WHERE "userId"=$1 AND "expiresAt">NOW()',
-      [target.userId],
+      [userId],
     ),
     client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM public."verification"
        WHERE "identifier" LIKE 'reset-password:%' AND "value"=$1`,
-      [target.userId],
+      [userId],
     ),
     client.query<{ password: string }>(
       'SELECT password FROM public."account" WHERE "userId"=$1 AND "providerId"=\'credential\'',
-      [target.userId],
+      [userId],
     ),
   ]);
   expect(account.rows.length).toBeLessThanOrEqual(1);
@@ -97,6 +97,18 @@ async function detail(page: Page, repreneurId = repreneur.id) {
   await expect(
     page.getByRole("heading", { name: "Portal Access", exact: true }),
   ).toBeVisible();
+}
+
+async function linkedPortalUserId(client: Client, repreneurId: string) {
+  const { rows } = await client.query<{ user_id: string }>(
+    `SELECT user_id
+     FROM public.app_user_roles
+     WHERE repreneur_id=$1 AND role='repreneur'`,
+    [repreneurId],
+  );
+  expect(rows).toHaveLength(1);
+  expect(rows[0]?.user_id).toBeTruthy();
+  return rows[0]!.user_id;
 }
 
 async function expectConfirmation(
@@ -236,7 +248,11 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
         exact: true,
       }),
     ).toBeVisible();
-    const afterFreshEnable = await readAccessState(client, freshRepreneur);
+    const freshAccess = {
+      ...freshRepreneur,
+      userId: await linkedPortalUserId(client, freshRepreneur.id),
+    };
+    const afterFreshEnable = await readAccessState(client, freshAccess);
     expect(afterFreshEnable.roleCount).toBe(1);
     expect(afterFreshEnable.sessionCount).toBe(0);
     expect(afterFreshEnable.resetCount).toBe(1);

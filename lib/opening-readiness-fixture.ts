@@ -117,6 +117,7 @@ export const OPENING_READINESS_FIXTURE = {
     "qa-opening-staff@re-new.invalid",
     "qa-opening-real@re-new.invalid",
     "qa-opening-real-non-owner@re-new.invalid",
+    "qa-opening-fresh-access-uat@re-new.invalid",
     "qa-opening-demo@re-new.invalid",
     "qa-opening-real-contact@re-new.invalid",
     "qa-opening-demo-contact@re-new.invalid",
