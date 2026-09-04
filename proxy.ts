@@ -9,6 +9,16 @@ export async function proxy(request: NextRequest) {
     request.cookies.get("better-auth.session_token")
   const isLoggedIn = !!sessionCookie?.value
   const { pathname } = request.nextUrl
+  const isStrategicPdr = pathname === "/strategic-pdr" || pathname.startsWith("/strategic-pdr/")
+  const applyStrategicPdrPrivacyHeaders = (response: NextResponse) => {
+    if (isStrategicPdr) {
+      response.headers.set("Cache-Control", "private, no-store, max-age=0")
+      response.headers.set("Pragma", "no-cache")
+      response.headers.set("Referrer-Policy", "no-referrer")
+      response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
+    }
+    return response
+  }
 
   if (pathname === "/my-opportunities" || pathname.startsWith("/my-opportunities/")) {
     const suffix = pathname.slice("/my-opportunities".length)
@@ -39,6 +49,7 @@ export async function proxy(request: NextRequest) {
     "/settings",
     "/scrapbook",
     "/tasks",
+    "/strategic-pdr",
   ]
   const isProtectedPath = protectedPaths.some((path) =>
     pathname.startsWith(path)
@@ -47,7 +58,7 @@ export async function proxy(request: NextRequest) {
   // Redirect to login if accessing protected route without auth
   if (isProtectedPath && !isLoggedIn) {
     const loginUrl = new URL("/auth/login", request.url)
-    return NextResponse.redirect(loginUrl)
+    return applyStrategicPdrPrivacyHeaders(NextResponse.redirect(loginUrl))
   }
 
   // Redirect root through role routing if logged in
@@ -71,7 +82,7 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  return NextResponse.next()
+  return applyStrategicPdrPrivacyHeaders(NextResponse.next())
 }
 
 export const config = {
