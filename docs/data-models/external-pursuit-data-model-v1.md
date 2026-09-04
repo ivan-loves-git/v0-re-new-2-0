@@ -256,12 +256,17 @@ exported or treated as dossier content; a different fulfillment key is rejected.
     reconciled. Other confirmed Storage API 4xx responses remain ordinary,
     unlocked failures.
 19. Only staff may convert an active, unfinished, non-deletion-requested External
-    Pursuit. The staff member must enter a safe anonymized public title and select
-    one canonical geography, an active real non-default non-Acme office and exactly one active
-    named primary affiliation. The database creates a new `staff_only` Draft
-    through `create_opportunity_with_office_context`, which allocates the immutable
-    reference atomically. It creates no match, pursuit, Gate, NDA, document,
-    repreneur assignment or disclosure.
+    Pursuit. The staff member must enter a safe anonymized public title, explicitly
+    choose REAL or DEMO, and select one canonical geography, an active real
+    non-default non-Acme office and exactly one active named primary affiliation.
+    The candidate application calls the strict
+    `create_opportunity_with_office_context_v2` path, which requires the Boolean
+    classification and creates a new `staff_only` Draft with its immutable
+    reference and initial classification actor/time atomically. It creates no match,
+    pursuit, Gate, NDA, document, repreneur assignment or disclosure. The temporary
+    seven-argument conversion compatibility endpoint is removed by the post-deploy
+    Ticket #94 cutover; it is restored only by the ordered application-and-database
+    rollback process.
 20. Conversion retains an immutable, one-way one-to-one identity link. The same
     staff actor and idempotency key return the original result; a different attempt
     fails rather than guessing or creating another opportunity. A converted dossier

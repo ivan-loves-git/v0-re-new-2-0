@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -180,6 +181,7 @@ export function OpportunityForm({
                 geography_node_id: "Canonical geography",
                 public_title: "Public title",
                 status: "Status",
+                demo_classification: "Classification",
                 source_office_id: "Operating office",
                 affiliation_ids: "Office contacts",
                 primary_affiliation_id: "Primary recipient",
@@ -219,6 +221,16 @@ export function OpportunityForm({
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
+                {!opportunity ? (
+                  <div className="space-y-2 md:col-span-2">
+                    <FormFieldLabel requirement="required">Classification</FormFieldLabel>
+                    <RadioGroup name="demo_classification" aria-describedby={fieldErrors.demo_classification ? "demo_classification-error" : undefined}>
+                      <label className="flex items-start gap-3 rounded-md border p-3"><RadioGroupItem value="real" /><span><span className="font-medium">REAL</span><span className="block text-sm text-muted-foreground">Available only to REAL repreneurs when the normal visibility rules allow it.</span></span></label>
+                      <label className="flex items-start gap-3 rounded-md border p-3"><RadioGroupItem value="demo" /><span><span className="font-medium">DEMO</span><span className="block text-sm text-muted-foreground">Active DEMO inventory is usable only inside the DEMO namespace for controlled QA.</span></span></label>
+                    </RadioGroup>
+                    <FieldError id="demo_classification" message={fieldErrors.demo_classification} />
+                  </div>
+                ) : null}
                 {opportunity ? (
                   <div className="space-y-2">
                     <FormFieldLabel htmlFor="reference" requirement="required">Ref. Mandat</FormFieldLabel>

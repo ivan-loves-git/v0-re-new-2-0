@@ -40,6 +40,7 @@ const input = {
   geographyNodeId: "00000000-0000-4092-8000-000000000001",
   sourceOfficeId: "00000000-0000-4000-8000-000000000021",
   primaryAffiliationId: "00000000-0000-4000-8000-000000000022",
+  isDemo: false,
 }
 
 describe("W-109 External Pursuit conversion", () => {
@@ -67,6 +68,7 @@ describe("W-109 External Pursuit conversion", () => {
       p_geography_node_id: input.geographyNodeId,
       p_source_office_id: input.sourceOfficeId,
       p_primary_affiliation_id: input.primaryAffiliationId,
+      p_is_demo: false,
       p_actor_user_id: "staff-1",
       p_idempotency_key: "00000000-0000-4000-8000-000000000024",
     })

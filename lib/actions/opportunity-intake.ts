@@ -24,6 +24,7 @@ import {
 } from "@/lib/utils/opportunity-incomplete-data"
 import { resolveNewOpportunitySector } from "@/lib/utils/opportunity-sector"
 import { isFranceGeographyMandatesEnabled } from "@/lib/opportunity-geography-release"
+import { parseExplicitDemoClassification } from "@/lib/demo-classification"
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -50,6 +51,7 @@ type IntakeOptionalFields = {
   public_title: string | null
   teaser_summary: string | null
   internal_notes: string | null
+  is_demo?: boolean
 }
 
 interface MaOfficeIntakeProjectionRow {
@@ -334,6 +336,7 @@ function parseOpportunityIntake(
     requirePublicTitle?: boolean
     requireReference?: boolean
     requireGeography?: boolean
+    requireClassification?: boolean
   },
 ): ParsedOpportunityIntake | OpportunityActionResult {
   const reference = readOpportunityFormString(formData, "reference")
@@ -347,6 +350,7 @@ function parseOpportunityIntake(
   const ebitda = parseOptionalNumber(formData, "ebitda_keur")
   const geographyNodeId = readOpportunityFormString(formData, "geography_node_id")
   const fieldErrors: Record<string, string> = {}
+  const classification = parseExplicitDemoClassification(formData.get("demo_classification"))
 
   if (options?.requireReference && !reference) fieldErrors.reference = "Ref. Mandat is required."
   if (options?.requireGeography && !geographyNodeId) {
@@ -360,6 +364,7 @@ function parseOpportunityIntake(
     fieldErrors.public_title =
       "A safe public title is required for a new opportunity."
   }
+  if (options?.requireClassification && classification.error) fieldErrors.demo_classification = classification.error
   if (!status || !INTAKE_STATUSES.has(status)) {
     fieldErrors.status = "Choose Draft, Active, or Paused."
   }
@@ -430,6 +435,7 @@ function parseOpportunityIntake(
       public_title: readOpportunityFormString(formData, "public_title"),
       teaser_summary: readOpportunityFormString(formData, "teaser_summary"),
       internal_notes: readOpportunityFormString(formData, "internal_notes"),
+      ...(options?.requireClassification ? { is_demo: classification.value! } : {}),
     },
   }
 }
@@ -560,6 +566,7 @@ export async function createOpportunityIntake(
       requirePublicTitle: true,
       requireReference: !isFranceGeographyMandatesEnabled(),
       requireGeography: isFranceGeographyMandatesEnabled(),
+      requireClassification: true,
     }),
   )
   if (isActionFailure(parsed)) {
@@ -570,7 +577,7 @@ export async function createOpportunityIntake(
   const { data, error } = await trace.failOnThrow(
     async () => {
       const supabase = createAdminClient()
-      return supabase.rpc("create_opportunity_with_office_context", {
+      return supabase.rpc("create_opportunity_with_office_context_v2", {
         p_reference: parsed.reference ?? "",
         p_source_office_id: parsed.sourceOfficeId,
         p_affiliation_ids: parsed.affiliationIds,

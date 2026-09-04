@@ -28,6 +28,10 @@ export function OpportunityDemoBadge({ className }: { className?: string }) {
   )
 }
 
+export function OpportunityClassificationBadge({ isDemo, className }: { isDemo: boolean; className?: string }) {
+  return isDemo ? <OpportunityDemoBadge className={className} /> : <Badge className={className} variant="secondary">REAL</Badge>
+}
+
 export function OpportunityDemoControl({
   isDemo,
   action,
@@ -65,7 +69,7 @@ export function OpportunityDemoControl({
     ? "Mark this opportunity DEMO?"
     : "Remove DEMO classification?"
   const description = nextIsDemo
-    ? "This keeps the opportunity and its history available to staff, while the server-side portal gate denies every repreneur access path."
+    ? "This keeps the opportunity and its history available to staff. An active DEMO opportunity is usable only by DEMO repreneurs for controlled QA."
     : "Removing DEMO classification can make this opportunity eligible for repreneur access again. Confirm that it is real, authorised, and ready for the normal visibility rules."
 
   return (

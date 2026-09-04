@@ -54,6 +54,7 @@ function fieldErrors(input: ExternalPursuitConversionInput) {
   if (!UUID_PATTERN.test(input.geographyNodeId ?? "")) errors.geographyNodeId = "Choose the canonical geography."
   if (!UUID_PATTERN.test(input.sourceOfficeId ?? "")) errors.sourceOfficeId = "Choose an active real operating office."
   if (!UUID_PATTERN.test(input.primaryAffiliationId ?? "")) errors.primaryAffiliationId = "Choose one named primary contact at that office."
+  if (typeof input.isDemo !== "boolean") errors.classification = "Choose REAL or DEMO before creating this record."
   return errors
 }
 
@@ -115,6 +116,7 @@ export async function convertExternalPursuitToOpportunity(
         p_geography_node_id: input.geographyNodeId,
         p_source_office_id: input.sourceOfficeId,
         p_primary_affiliation_id: input.primaryAffiliationId,
+        p_is_demo: input.isDemo,
         p_actor_user_id: user.id,
         p_idempotency_key: idempotencyKey.trim(),
       },

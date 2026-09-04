@@ -24,6 +24,7 @@ function validCreateForm(source?: string) {
   formData.set("first_name", "TEST")
   formData.set("last_name", "Staff Source")
   formData.set("email", "staff-source@example.invalid")
+  formData.set("demo_classification", "real")
   if (source) formData.set("source", source)
   return formData
 }

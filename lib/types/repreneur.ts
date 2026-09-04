@@ -358,6 +358,7 @@ export interface Repreneur_Insert {
   ldc_self_certified_at?: string | null
   advisory_team_self_certified_at?: string | null
   lifecycle_status?: LifecycleStatus
+  is_demo?: boolean
   journey_stage?: JourneyStage
   persona?: PersonaType
   source?: string

@@ -42,6 +42,7 @@ describe("opportunity intake draft rules", () => {
     formData.set("reference", "OPP-DRAFT-001")
     formData.set("geography_node_id", "00000000-0000-4092-8000-000000000001")
     formData.set("status", "draft")
+    formData.set("demo_classification", "real")
     await expect(createOpportunityIntake(formData)).resolves.toMatchObject({
       success: false,
       fieldErrors: { public_title: expect.any(String) },
@@ -54,6 +55,7 @@ describe("opportunity intake draft rules", () => {
     formData.set("geography_node_id", "00000000-0000-4092-8000-000000000001")
     formData.set("public_title", "Anonymized industrial services business")
     formData.set("status", "draft")
+    formData.set("demo_classification", "real")
     const rpc = vi.fn().mockResolvedValue({
       data: { id: "created-opportunity", reference: "Re-New - FR - 001" },
       error: null,
@@ -67,7 +69,7 @@ describe("opportunity intake draft rules", () => {
       opportunityReference: "Re-New - FR - 001",
     })
 
-    expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context", {
+    expect(rpc).toHaveBeenCalledWith("create_opportunity_with_office_context_v2", {
       p_reference: "",
       p_source_office_id: null,
       p_affiliation_ids: [],
@@ -80,6 +82,7 @@ describe("opportunity intake draft rules", () => {
         revenue_meur: null,
         ebitda_keur: null,
         headcount: null,
+        is_demo: false,
       }),
     })
   })
