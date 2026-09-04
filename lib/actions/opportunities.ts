@@ -11,6 +11,10 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import {
+  demoClassificationMutationRow,
+  demoClassificationWriteErrorMessage,
+} from "@/lib/demo-classification"
+import {
   isOpportunityClosureReason,
   isOpportunityPauseReason,
   type MaSource,
@@ -440,19 +444,39 @@ export async function setOpportunityDemoClassification(
   id: string,
   isDemo: boolean,
 ): Promise<OpportunityActionResult> {
-  await requireStaffAccess()
+  const { user } = await requireStaffAccess()
+  if (typeof isDemo !== "boolean") {
+    return { success: false, message: "Choose REAL or DEMO." }
+  }
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
-    .from("opportunities")
-    .update({ is_demo: isDemo })
-    .eq("id", id)
-    .select("id")
-    .maybeSingle()
+    .rpc("set_zero_match_demo_classification", {
+      p_entity_type: "opportunity",
+      p_entity_id: id,
+      p_is_demo: isDemo,
+      p_actor: user.id,
+    })
 
-  if (error) throw new Error(error.message)
-  if (!data) {
-    return { success: false, message: "This opportunity no longer exists." }
+  if (error) {
+    return {
+      success: false,
+      message: demoClassificationWriteErrorMessage(error, "opportunity"),
+    }
+  }
+
+  const changed = demoClassificationMutationRow(data)
+  if (
+    !changed ||
+    changed.entity_id !== id ||
+    changed.is_demo !== isDemo ||
+    (changed.changed && (!changed.changed_at || changed.changed_by !== user.id))
+  ) {
+    return {
+      success: false,
+      message: "We could not verify the saved opportunity classification. Please try again.",
+    }
   }
 
   revalidatePath("/opportunities")
@@ -468,9 +492,11 @@ export async function setOpportunityDemoClassification(
 
   return {
     success: true,
-    message: isDemo
-      ? "Opportunity marked DEMO and quarantined from repreneur access."
-      : "DEMO classification removed. The opportunity can be eligible for repreneur access again.",
+    message: changed.changed
+      ? isDemo
+        ? "Opportunity moved to DEMO-only Deal Flow and excluded from production reporting."
+        : "Opportunity moved to REAL Deal Flow and returned to production reporting."
+      : `This opportunity is already classified ${isDemo ? "DEMO" : "REAL"}.`,
   }
 }
 

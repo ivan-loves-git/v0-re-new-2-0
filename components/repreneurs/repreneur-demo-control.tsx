@@ -5,8 +5,13 @@ import { FlaskConical } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { setRepreneurDemoClassification } from "@/lib/actions/repreneurs"
+import {
+  DemoClassificationAuditLine,
+  DemoClassificationLockNotice,
+} from "@/components/demo-classification-control-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import type { DemoClassificationControlState } from "@/lib/demo-classification"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,9 +43,11 @@ export function RepreneurClassificationBadge({ isDemo }: { isDemo: boolean }) {
 export function RepreneurDemoControl({
   repreneurId,
   isDemo,
+  controlState,
 }: {
   repreneurId: string
   isDemo: boolean
+  controlState: DemoClassificationControlState
 }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -66,30 +73,37 @@ export function RepreneurDemoControl({
     }
   }
 
+  if (controlState.lockReason) {
+    return <DemoClassificationLockNotice state={controlState} />
+  }
+
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button type="button" variant={isDemo ? "destructive" : "outline"} size="sm">
-          <FlaskConical data-icon="inline-start" />
-          {isDemo ? "Remove DEMO" : "Mark DEMO"}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{nextIsDemo ? "Mark this repreneur DEMO?" : "Remove DEMO classification?"}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {nextIsDemo
-              ? "This retains the profile and its history for staff, while excluding it and its activity from production reporting and automatic matching."
-              : "This returns the profile to normal reporting and matching rules. Confirm that this is a real operating profile."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={isSubmitting} onClick={() => void confirm()}>
-            {isSubmitting ? "Updating..." : nextIsDemo ? "Mark DEMO" : "Remove DEMO"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <div className="space-y-1.5">
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant={isDemo ? "destructive" : "outline"} size="sm">
+            <FlaskConical data-icon="inline-start" />
+            {isDemo ? "Remove DEMO" : "Mark DEMO"}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{nextIsDemo ? "Mark this repreneur DEMO?" : "Remove DEMO classification?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {nextIsDemo
+                ? "This moves the profile into the DEMO-only workspace and excludes it from REAL recommendations and production reporting."
+                : "This returns the profile to the REAL workspace, production reporting, and normal recommendation rules. Confirm that this is a real operating profile."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={isSubmitting} onClick={() => void confirm()}>
+              {isSubmitting ? "Updating..." : nextIsDemo ? "Mark DEMO" : "Remove DEMO"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <DemoClassificationAuditLine state={controlState} />
+    </div>
   )
 }

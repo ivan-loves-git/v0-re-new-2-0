@@ -17,6 +17,7 @@ describe("W-160 production reporting boundary", () => {
     const externalPursuits = source("lib/actions/external-pursuits.ts")
     const relationshipLedger = source("lib/data/ma-relationship-ledger.ts")
     const repreneurActions = source("lib/actions/repreneurs.ts")
+    const conversionMigration = source("scripts/120_ticket_95_safe_classification_conversion.sql")
 
     expect(opportunityKpis).toContain("opportunity.is_demo")
     expect(opportunityKpis).toContain("repreneur?.is_demo")
@@ -42,8 +43,9 @@ describe("W-160 production reporting boundary", () => {
     expect(externalPursuits).toContain('.eq("is_demo", false)')
     expect(relationshipLedger).toContain('.eq("opportunity.is_demo", false)')
     expect(relationshipLedger).toContain('.eq("repreneur.is_demo", false)')
-    expect(repreneurActions).toContain("demo_classification_updated_at")
-    expect(repreneurActions).toContain("demo_classification_updated_by")
+    expect(repreneurActions).toContain('rpc("set_zero_match_demo_classification"')
+    expect(conversionMigration).toContain("demo_classification_updated_at")
+    expect(conversionMigration).toContain("demo_classification_updated_by")
   })
 
   it("refreshes scores only within the same REAL or DEMO namespace", () => {

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { OpportunityDetail } from "@/components/opportunities/opportunity-detail"
+import { readOpportunityDemoClassificationControl } from "@/lib/data/demo-classification-control"
 import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments, listPendingUnusedRetainedDocumentCleanups } from "@/lib/actions/opportunity-documents"
 import { listOpportunityNdaArtifacts } from "@/lib/actions/opportunity-nda-artifacts"
@@ -73,6 +74,7 @@ async function OpportunityDetailContent({
     pauseHistory,
     ndaArtifacts,
     pendingCleanups,
+    demoClassificationControl,
   ] = await Promise.all([
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
@@ -83,6 +85,11 @@ async function OpportunityDetailContent({
     getOpportunityPauseHistory(id),
     listOpportunityNdaArtifacts(id),
     listPendingUnusedRetainedDocumentCleanups(id),
+    readOpportunityDemoClassificationControl(
+      id,
+      opportunity.demo_classification_updated_at,
+      opportunity.demo_classification_updated_by,
+    ),
   ])
 
   const geographyMandatesEnabled = isFranceGeographyMandatesEnabled()
@@ -154,6 +161,7 @@ async function OpportunityDetailContent({
         closeAction={closeAction}
         pauseAction={pauseAction}
         demoClassificationAction={demoClassificationAction}
+        demoClassificationControl={demoClassificationControl}
         officeOptions={officeOptions}
         geographyOptions={geographyOptions}
         geographyMandatesEnabled={geographyMandatesEnabled}

@@ -16,7 +16,11 @@ import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 import { repreneurWriteErrorMessage } from "@/lib/repreneur-write-error"
-import { parseExplicitDemoClassification } from "@/lib/demo-classification"
+import {
+  demoClassificationMutationRow,
+  demoClassificationWriteErrorMessage,
+  parseExplicitDemoClassification,
+} from "@/lib/demo-classification"
 
 function optionalWebUrl(value: FormDataEntryValue | null) {
   const normalized = String(value ?? "").trim()
@@ -329,20 +333,38 @@ export async function updateRepreneurIdentity(id: string, firstName: string, las
  */
 export async function setRepreneurDemoClassification(id: string, isDemo: boolean) {
   const { user } = await requireStaffAccess()
+  if (typeof isDemo !== "boolean") {
+    return { success: false as const, message: "Choose REAL or DEMO." }
+  }
+
   const supabase = createAdminClient()
   const { data, error } = await supabase
-    .from("repreneurs")
-    .update({
-      is_demo: isDemo,
-      demo_classification_updated_at: new Date().toISOString(),
-      demo_classification_updated_by: user.id,
+    .rpc("set_zero_match_demo_classification", {
+      p_entity_type: "repreneur",
+      p_entity_id: id,
+      p_is_demo: isDemo,
+      p_actor: user.id,
     })
-    .eq("id", id)
-    .select("id")
-    .maybeSingle()
 
-  if (error) throw new Error(repreneurWriteErrorMessage(error))
-  if (!data) return { success: false as const, message: "This repreneur no longer exists." }
+  if (error) {
+    return {
+      success: false as const,
+      message: demoClassificationWriteErrorMessage(error, "repreneur"),
+    }
+  }
+
+  const changed = demoClassificationMutationRow(data)
+  if (
+    !changed ||
+    changed.entity_id !== id ||
+    changed.is_demo !== isDemo ||
+    (changed.changed && (!changed.changed_at || changed.changed_by !== user.id))
+  ) {
+    return {
+      success: false as const,
+      message: "We could not verify the saved repreneur classification. Please try again.",
+    }
+  }
 
   revalidatePath("/repreneurs")
   revalidatePath("/repreneurs/explore")
@@ -361,9 +383,11 @@ export async function setRepreneurDemoClassification(id: string, isDemo: boolean
 
   return {
     success: true as const,
-    message: isDemo
-      ? "Repreneur marked DEMO and excluded from production reporting and automatic matching."
-      : "DEMO classification removed. Normal reporting and matching rules now apply.",
+    message: changed.changed
+      ? isDemo
+        ? "Repreneur moved to the DEMO-only workspace and excluded from production reporting."
+        : "Repreneur moved to the REAL workspace and returned to production reporting."
+      : `This repreneur is already classified ${isDemo ? "DEMO" : "REAL"}.`,
   }
 }
 

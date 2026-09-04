@@ -54,6 +54,7 @@ import type {
   OpportunityPursuitEvent,
   OpportunityWithSource,
 } from "@/lib/types/opportunity"
+import type { DemoClassificationControlState } from "@/lib/demo-classification"
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
@@ -97,6 +98,7 @@ interface OpportunityDetailProps {
   demoClassificationAction: (
     isDemo: boolean,
   ) => Promise<OpportunityActionResult>
+  demoClassificationControl: DemoClassificationControlState
   officeOptions: MaOfficeIntakeOffice[]
   geographyOptions: OpportunityGeographyOption[]
   geographyMandatesEnabled: boolean
@@ -163,6 +165,7 @@ export function OpportunityDetail({
   closeAction,
   pauseAction,
   demoClassificationAction,
+  demoClassificationControl,
   officeOptions,
   geographyOptions,
   geographyMandatesEnabled,
@@ -258,6 +261,7 @@ export function OpportunityDetail({
           <OpportunityDemoControl
             isDemo={opportunity.is_demo}
             action={demoClassificationAction}
+            controlState={demoClassificationControl}
           />
           <Button asChild variant="outline" size="sm">
             <Link href={`/opportunities/${opportunity.id}?tab=edit`}>

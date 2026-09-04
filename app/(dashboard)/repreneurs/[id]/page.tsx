@@ -60,6 +60,7 @@ import { WhenScoreEditor } from "@/components/repreneurs/when-score-editor"
 import { ScoringAccuracy } from "@/components/repreneurs/scoring-accuracy"
 import { StaffRepreneurTargetThesisEditor } from "@/components/repreneurs/repreneur-target-thesis-editor"
 import { RepreneurClassificationBadge, RepreneurDemoControl } from "@/components/repreneurs/repreneur-demo-control"
+import { readRepreneurDemoClassificationControl } from "@/lib/data/demo-classification-control"
 import { SECTORS } from "@/lib/constants/sectors"
 import { WHO_QUESTIONS, WHEN_QUESTIONS, NEEDS_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import type { Note, Activity, Repreneur } from "@/lib/types/repreneur"
@@ -342,12 +343,17 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
   }
 
   // Fetch leadership assessment data
-  const [leadershipAssessment, pendingAssessment, portalAccessStatus, opportunityMatches, opportunityCandidates] = await Promise.all([
+  const [leadershipAssessment, pendingAssessment, portalAccessStatus, opportunityMatches, opportunityCandidates, demoClassificationControl] = await Promise.all([
     getLatestAssessment(id),
     getPendingAssessment(id),
     getRepreneurPortalAccessStatus(id),
     listOpportunityMatchesForRepreneur(id),
     listOpportunityCandidatesForRepreneur(id),
+    readRepreneurDemoClassificationControl(
+      id,
+      profile.demo_classification_updated_at,
+      profile.demo_classification_updated_by,
+    ),
   ])
 
   // Build user email map
@@ -536,6 +542,7 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
             <RepreneurDemoControl
               repreneurId={id}
               isDemo={Boolean(profile.is_demo)}
+              controlState={demoClassificationControl}
             />
           </div>
         </div>

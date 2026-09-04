@@ -4,8 +4,13 @@ import { useState } from "react"
 import { FlaskConical } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import {
+  DemoClassificationAuditLine,
+  DemoClassificationLockNotice,
+} from "@/components/demo-classification-control-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import type { DemoClassificationControlState } from "@/lib/demo-classification"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,9 +40,11 @@ export function OpportunityClassificationBadge({ isDemo, className }: { isDemo: 
 export function OpportunityDemoControl({
   isDemo,
   action,
+  controlState,
 }: {
   isDemo: boolean
   action: (isDemo: boolean) => Promise<OpportunityActionResult>
+  controlState: DemoClassificationControlState
 }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -69,29 +76,36 @@ export function OpportunityDemoControl({
     ? "Mark this opportunity DEMO?"
     : "Remove DEMO classification?"
   const description = nextIsDemo
-    ? "This keeps the opportunity and its history available to staff. An active DEMO opportunity is usable only by DEMO repreneurs for controlled QA."
-    : "Removing DEMO classification can make this opportunity eligible for repreneur access again. Confirm that it is real, authorised, and ready for the normal visibility rules."
+    ? "This moves the opportunity into DEMO-only Deal Flow, removes it from REAL discovery and production reporting, and keeps the record available to staff."
+    : "This moves the opportunity into REAL Deal Flow and production reporting. If it is Active, it can become visible to REAL repreneurs under the normal lifecycle rule."
+
+  if (controlState.lockReason) {
+    return <DemoClassificationLockNotice state={controlState} />
+  }
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button type="button" variant={isDemo ? "destructive" : "outline"} size="sm">
-          <FlaskConical data-icon="inline-start" />
-          {isDemo ? "Remove DEMO" : "Mark DEMO"}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={isSubmitting} onClick={() => void confirm()}>
-            {isSubmitting ? "Updating..." : nextIsDemo ? "Mark DEMO" : "Remove DEMO"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <div className="space-y-1.5">
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant={isDemo ? "destructive" : "outline"} size="sm">
+            <FlaskConical data-icon="inline-start" />
+            {isDemo ? "Remove DEMO" : "Mark DEMO"}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={isSubmitting} onClick={() => void confirm()}>
+              {isSubmitting ? "Updating..." : nextIsDemo ? "Mark DEMO" : "Remove DEMO"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <DemoClassificationAuditLine state={controlState} />
+    </div>
   )
 }
