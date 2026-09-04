@@ -176,6 +176,12 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
   let setupContext: Awaited<ReturnType<Browser["newContext"]>> | null = null;
   let invalidContext: Awaited<ReturnType<Browser["newContext"]>> | null = null;
   try {
+    // The fixture runs several independent browser journeys through the same
+    // local server. Stable documentation-range client addresses isolate the
+    // server's real per-client auth-rate-limit contract without weakening it.
+    await page.context().setExtraHTTPHeaders({
+      "x-forwarded-for": "203.0.113.201",
+    });
     // A separate, unmistakably synthetic profile starts with no auth identity,
     // credential, role, session or reset record. This is the genuine fresh
     // Enable path; the established non-owner fixture covers Repair later.
@@ -202,7 +208,9 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
 
     // Establish the precondition that Resend keeps a currently signed-in
     // repreneur signed in; the fixture's initial state itself has no session.
-    portalContext = await browser.newContext();
+    portalContext = await browser.newContext({
+      extraHTTPHeaders: { "x-forwarded-for": "203.0.113.202" },
+    });
     const portalPage = await portalContext.newPage();
     await login(portalPage, repreneur.email);
     await expect(portalPage).toHaveURL(/\/portal\/deals/);
@@ -378,7 +386,9 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       credentialRetained: afterDisable.passwordHash === initial.passwordHash,
     };
 
-    invalidContext = await browser.newContext();
+    invalidContext = await browser.newContext({
+      extraHTTPHeaders: { "x-forwarded-for": "203.0.113.203" },
+    });
     await expectInvalidPortalLink(await invalidContext.newPage(), revokedToken);
 
     // Re-enable is correctly labelled Repair because it preserves the login
@@ -435,7 +445,9 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     // in memory and is never written to the evidence artifact.
     const setupToken = await resetTokenForCurrentRole(client);
     const setupPassword = `${password}-access-uat`;
-    setupContext = await browser.newContext();
+    setupContext = await browser.newContext({
+      extraHTTPHeaders: { "x-forwarded-for": "203.0.113.204" },
+    });
     const setupPage = await setupContext.newPage();
     await setupPage.goto(
       `/auth/reset-password?intent=portal#token=${encodeURIComponent(setupToken)}`,
