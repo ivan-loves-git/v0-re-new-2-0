@@ -1,0 +1,146 @@
+name: Opening readiness fixture
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opening-readiness-fixture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fixture:
+    name: Disposable Supabase fixture
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QA_FIXTURE_MODE: local
+      QA_CONTRACT_MODE: protected
+      QA_MAIL_MODE: allowlist
+      QA_EMAIL_FROM: onboarding@resend.dev
+      QA_EMAIL_RECIPIENT: qa-opening-real@re-new.invalid,qa-opening-demo@re-new.invalid,qa-opening-real-contact@re-new.invalid,qa-opening-demo-contact@re-new.invalid
+      RESEND_FROM_EMAIL: onboarding@resend.dev
+      BETTER_AUTH_SECRET: opening-fixture-only-secret-2026-not-for-production
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      CRON_SECRET: opening-fixture-only-cron-secret
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.28.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.116.0
+
+      - name: Prepare ephemeral credentials
+        shell: bash
+        run: |
+          fixture_password=$(openssl rand -hex 24)
+          echo "::add-mask::$fixture_password"
+          echo "OPENING_FIXTURE_PASSWORD=$fixture_password" >> "$GITHUB_ENV"
+          echo "OPENING_FIXTURE_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Start disposable local Supabase
+        run: >-
+          supabase start
+          --exclude realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Export local-only connection values
+        shell: bash
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-status.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-status.env"
+          set +a
+          for value in API_URL DB_URL JWT_SECRET ANON_KEY SERVICE_ROLE_KEY; do
+            if [[ -z "${!value:-}" ]]; then
+              echo "$value missing from disposable Supabase status." >&2
+              exit 1
+            fi
+          done
+          [[ "$API_URL" == "http://127.0.0.1:54321" ]] || {
+            echo "Disposable Supabase API was not loopback." >&2
+            exit 1
+          }
+          case "$DB_URL" in
+            postgresql://postgres:*@127.0.0.1:54322/postgres) ;;
+            *) echo "Disposable Supabase database was not loopback." >&2; exit 1 ;;
+          esac
+          [[ "$ANON_KEY" != "$SERVICE_ROLE_KEY" ]] || {
+            echo "Disposable Supabase API roles did not receive distinct keys." >&2
+            exit 1
+          }
+          curl --fail --silent --show-error "$API_URL/auth/v1/health" \
+            -H "apikey: $ANON_KEY" >/dev/null
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          echo "::add-mask::$DB_URL"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "OPENING_FIXTURE_DATABASE_URL=$DB_URL"
+            echo "DATABASE_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Rehearse setup, readback, and rerunnable cleanup
+        run: bash scripts/rehearse-opening-readiness-fixture.sh
+
+      - name: Install the fixture browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Prove the fixture through the running product
+        run: pnpm exec playwright test --config playwright.opening-readiness.config.ts
+
+      - name: Upload privacy-safe evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: opening-readiness-${{ github.run_id }}
+          path: ${{ runner.temp }}/opening-readiness-evidence
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Destroy disposable Supabase stack
+        if: always()
+        shell: bash
+        run: |
+          supabase stop --no-backup
+          if docker ps -a --format '{{.Names}}' | grep -Fq 'renew-opening-fixture'; then
+            echo "Disposable Supabase containers remain after teardown." >&2
+            exit 1
+          fi
+          if docker volume ls --format '{{.Name}}' | grep -Fq 'renew-opening-fixture'; then
+            echo "Disposable Supabase volumes remain after teardown." >&2
+            exit 1
+          fi
+          if docker network ls --format '{{.Name}}' | grep -Fq 'renew-opening-fixture'; then
+            echo "Disposable Supabase networks remain after teardown." >&2
+            exit 1
+          fi
+          if pg_isready --dbname "$OPENING_FIXTURE_DATABASE_URL" --timeout 2 >/dev/null 2>&1; then
+            echo "Disposable Supabase database still accepts connections after teardown." >&2
+            exit 1
+          fi

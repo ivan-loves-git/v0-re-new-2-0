@@ -15,6 +15,7 @@ import {
 } from "@/lib/portal-access-confirmation"
 import { consumeRequestRateLimit } from "@/lib/security/intake-upload"
 import { env } from "@/lib/env"
+import { postgresSslForConnection } from "@/lib/postgres-ssl"
 
 const PORTAL_ACCESS_CONFIRMATION_TTL_SECONDS = 24 * 60 * 60
 const UUID_PATTERN =
@@ -28,7 +29,7 @@ function getConfirmationLockPool() {
   if (!confirmationLockPool) {
     confirmationLockPool = new Pool({
       connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: postgresSslForConnection(env.DATABASE_URL),
       max: 1,
     })
   }
