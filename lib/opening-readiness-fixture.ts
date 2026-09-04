@@ -17,6 +17,7 @@ export type OpeningFixtureCounts = {
   uploadIntents: number;
   uploadCleanupQueue: number;
   storageObjects: number;
+  journeySettingEnabledRows: number;
 };
 
 export type OpeningFixtureReadback = {
@@ -25,17 +26,22 @@ export type OpeningFixtureReadback = {
   realRepreneur: number;
   realAuthUser: number;
   realPortalRole: number;
+  realNonOwnerRepreneur: number;
+  realNonOwnerAuthUser: number;
+  realNonOwnerPortalRole: number;
   demoRepreneur: number;
   demoAuthUser: number;
   demoPortalRole: number;
   realOpportunity: number;
   demoOpportunity: number;
   crossNamespaceMatch: number;
+  journeyEnabled: boolean;
 };
 
 const UUIDS = {
   realRepreneur: "93000000-0000-4000-8000-000000000011",
   demoRepreneur: "93000000-0000-4000-8000-000000000012",
+  realNonOwnerRepreneur: "93000000-0000-4000-8000-000000000013",
   realOpportunity: "93000000-0000-4000-8000-000000000021",
   demoOpportunity: "93000000-0000-4000-8000-000000000022",
   realFirm: "93000000-0000-4000-8000-000000000041",
@@ -51,15 +57,18 @@ const UUIDS = {
   staffRole: "93000000-0000-4000-8000-000000000090",
   realPortalRole: "93000000-0000-4000-8000-000000000091",
   demoPortalRole: "93000000-0000-4000-8000-000000000092",
+  realNonOwnerPortalRole: "93000000-0000-4000-8000-000000000093",
 } as const;
 
 const AUTH_IDS = {
   staffUser: "qa-opening-staff-user",
   realUser: "qa-opening-real-user",
   demoUser: "qa-opening-demo-user",
+  realNonOwnerUser: "qa-opening-real-non-owner-user",
   staffAccount: "qa-opening-staff-account",
   realAccount: "qa-opening-real-account",
   demoAccount: "qa-opening-demo-account",
+  realNonOwnerAccount: "qa-opening-real-non-owner-account",
 } as const;
 
 export const OPENING_READINESS_FIXTURE = {
@@ -77,6 +86,12 @@ export const OPENING_READINESS_FIXTURE = {
       id: UUIDS.realRepreneur,
       userId: AUTH_IDS.realUser,
       email: "qa-opening-real@re-new.invalid",
+      isDemo: false,
+    },
+    realNonOwner: {
+      id: UUIDS.realNonOwnerRepreneur,
+      userId: AUTH_IDS.realNonOwnerUser,
+      email: "qa-opening-real-non-owner@re-new.invalid",
       isDemo: false,
     },
     demo: {
@@ -99,12 +114,19 @@ export const OPENING_READINESS_FIXTURE = {
     },
   },
   mailRecipients: [
+    "qa-opening-staff@re-new.invalid",
     "qa-opening-real@re-new.invalid",
+    "qa-opening-real-non-owner@re-new.invalid",
     "qa-opening-demo@re-new.invalid",
     "qa-opening-real-contact@re-new.invalid",
     "qa-opening-demo-contact@re-new.invalid",
   ],
-  documentUploadSlots: ["blank NDA", "Information Memorandum"] as const,
+  documentUploadSlots: [
+    "blank NDA",
+    "Re-New signed NDA",
+    "repreneur signed NDA",
+    "Information Memorandum",
+  ] as const,
   retention:
     "one disposable CI run; the entire local Supabase stack is destroyed after proof",
 } as const;
@@ -113,6 +135,25 @@ export function openingReadinessRunLabel(releaseSha: string): string {
   if (!/^[a-f0-9]{40}$/i.test(releaseSha))
     throw new Error("Opening fixture requires a full application SHA.");
   return `qa-opening-${releaseSha.slice(0, 8).toLowerCase()}`;
+}
+
+export function assertOpeningReadinessJourneySetting(
+  result: {
+    rowCount: number | null;
+    rows: Array<{ enabled: boolean }>;
+  },
+  expectedEnabled: boolean,
+): void {
+  if (result.rowCount !== 1 || result.rows.length !== 1) {
+    throw new Error(
+      "Opening fixture requires exactly one disposable journey setting row.",
+    );
+  }
+  if (result.rows[0]?.enabled !== expectedEnabled) {
+    throw new Error(
+      "Opening fixture journey setting did not reach the expected state.",
+    );
+  }
 }
 
 function parseLocalUrl(value: string, label: string): URL {
@@ -141,6 +182,11 @@ export function assertOpeningReadinessFixtureEnvironment(
   }
   if (env.QA_CONTRACT_MODE !== "protected") {
     throw new Error("Opening fixture requires QA_CONTRACT_MODE=protected.");
+  }
+  if (env.QA_EXECUTION_MODE !== "github-runner") {
+    throw new Error(
+      "Opening fixture execution mode must be QA_EXECUTION_MODE=github-runner.",
+    );
   }
   if (env.RESEND_API_KEY) {
     throw new Error(
@@ -202,12 +248,16 @@ export function fixtureReadbackIsHealthy(
     readback.realRepreneur === 1 &&
     readback.realAuthUser === 1 &&
     readback.realPortalRole === 1 &&
+    readback.realNonOwnerRepreneur === 1 &&
+    readback.realNonOwnerAuthUser === 1 &&
+    readback.realNonOwnerPortalRole === 1 &&
     readback.demoRepreneur === 1 &&
     readback.demoAuthUser === 1 &&
     readback.demoPortalRole === 1 &&
     readback.realOpportunity === 1 &&
     readback.demoOpportunity === 1 &&
-    readback.crossNamespaceMatch === 0
+    readback.crossNamespaceMatch === 0 &&
+    readback.journeyEnabled === true
   );
 }
 

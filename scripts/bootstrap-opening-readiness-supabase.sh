@@ -16,6 +16,7 @@ require_exact GITHUB_ACTIONS true
 require_exact QA_FIXTURE_MODE local
 require_exact QA_CONTRACT_MODE protected
 require_exact QA_MAIL_MODE allowlist
+require_exact QA_EXECUTION_MODE github-runner
 
 if [[ -n "${RESEND_API_KEY-}" ]]; then
   echo "Opening fixture refused: outbound provider credentials are present." >&2
@@ -231,10 +232,107 @@ DELETE FROM public.opportunities
 WHERE id='93000000-0000-4000-8000-000000000087';
 SQL
 
+# The structure snapshot intentionally contains no business rows. Add only the
+# public France root needed to exercise the released canonical-geography create
+# path, and make the database release control agree with the GitHub-runner UI.
 "${psql_safe[@]}" <<'SQL'
+INSERT INTO public.geography_nodes(
+  id,stable_key,code,label,node_level,parent_id
+) VALUES (
+  '00000000-0000-4092-8000-000000000001','france','FR','France','country',NULL
+);
+INSERT INTO public.ma_w039_release_control(
+  singleton,enforce_new_opportunity_geography,activated_by,activated_at
+) VALUES (
+  TRUE,TRUE,'qa-opening-schema-support',clock_timestamp()
+);
+SQL
+
+# The sanitized snapshot and additive migrations predate the final ordered
+# Ticket #94 cutover. Reconstruct the same strict creation endpoint used by the
+# current application: the additive v2 writer must exist, while its omission-
+# capable predecessor remains private for rollback only.
+"${psql_safe[@]}" -f scripts/117_explicit_demo_real_creation.sql
+"${psql_safe[@]}" -f scripts/118_ticket_94_strict_creation_cutover.sql
+"${psql_safe[@]}" -f scripts/120_ticket_95_safe_classification_conversion.sql
+
+# Script 119 is a sealed, manifest-bound production data treatment. The
+# disposable database contains no historical cross-namespace rows, so replaying
+# that one-time authority surface would add scope without improving this
+# current-runtime lifecycle proof.
+
+"${psql_safe[@]}" <<'SQL'
+INSERT INTO public.wave_journey_settings(
+  singleton,enabled,updated_at,updated_by
+) VALUES (
+  TRUE,FALSE,clock_timestamp(),'qa-opening-schema-support'
+)
+ON CONFLICT (singleton) DO NOTHING;
+
 NOTIFY pgrst, 'reload schema';
 DO $$
 BEGIN
+  IF (SELECT count(*) FROM public.wave_journey_settings WHERE singleton) <> 1
+    OR (SELECT enabled FROM public.wave_journey_settings WHERE singleton)
+  THEN
+    RAISE EXCEPTION 'opening_fixture_journey_baseline_mismatch';
+  END IF;
+  IF to_regprocedure(
+    'public.create_opportunity_with_office_context_v2(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)'
+  ) IS NULL
+    OR to_regprocedure(
+      'public.create_opportunity_with_office_context_legacy_118(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)'
+    ) IS NULL
+    OR to_regprocedure(
+      'public.create_opportunity_with_office_context(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)'
+    ) IS NOT NULL
+  THEN
+    RAISE EXCEPTION 'opening_fixture_strict_opportunity_creator_missing';
+  END IF;
+  IF NOT has_function_privilege(
+      'service_role',
+      'public.create_opportunity_with_office_context_v2(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'anon',
+      'public.create_opportunity_with_office_context_v2(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'authenticated',
+      'public.create_opportunity_with_office_context_v2(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'service_role',
+      'public.create_opportunity_with_office_context_legacy_118(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb)',
+      'EXECUTE'
+    )
+  THEN
+    RAISE EXCEPTION 'opening_fixture_strict_opportunity_creator_authority_mismatch';
+  END IF;
+  IF to_regprocedure(
+      'public.set_zero_match_demo_classification(text,uuid,boolean,text)'
+    ) IS NULL
+    OR NOT has_function_privilege(
+      'service_role',
+      'public.set_zero_match_demo_classification(text,uuid,boolean,text)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'anon',
+      'public.set_zero_match_demo_classification(text,uuid,boolean,text)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'authenticated',
+      'public.set_zero_match_demo_classification(text,uuid,boolean,text)',
+      'EXECUTE'
+    )
+  THEN
+    RAISE EXCEPTION 'opening_fixture_classification_correction_authority_mismatch';
+  END IF;
   IF current_database() <> 'postgres'
     OR EXISTS (SELECT 1 FROM public.repreneurs)
     OR EXISTS (SELECT 1 FROM public.opportunities)
