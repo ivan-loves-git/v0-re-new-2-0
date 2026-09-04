@@ -148,7 +148,7 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
 
   await logout(page);
   await page.goto("/auth/forgot-password");
-  await page.locator("#email").fill(fixture.repreneurs.real.email);
+  await page.locator("#email").fill(fixture.repreneurs.demo.email);
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(
     page.getByRole("heading", { name: "Check your email" }),
@@ -165,7 +165,7 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
        FROM public."verification"
        WHERE "identifier" LIKE 'reset-password:%' AND "value"=$1
        ORDER BY "createdAt" DESC`,
-      [fixture.repreneurs.real.userId],
+      [fixture.repreneurs.demo.userId],
     );
     expect(resetRows).toHaveLength(1);
     expect(
@@ -284,7 +284,7 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
     }>(
       `SELECT password FROM public."account"
        WHERE "userId"=$1 AND "providerId"='credential'`,
-      [fixture.repreneurs.real.userId],
+      [fixture.repreneurs.demo.userId],
     );
     expect(updatedCredentialRows).toHaveLength(1);
     expect(
@@ -325,12 +325,12 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
 
     await login(
       page,
-      fixture.repreneurs.real.email,
+      fixture.repreneurs.demo.email,
       /\/portal\/deals/,
       resetPassword,
     );
     await expect(
-      realLiveOpportunities.getByText("QA OPENING REAL — SYNTHETIC", {
+      demoLiveOpportunities.getByText("QA OPENING DEMO — SYNTHETIC", {
         exact: true,
       }),
     ).toBeVisible();

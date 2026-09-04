@@ -32,6 +32,16 @@ async function main() {
   const inputs = [
     { key: "blankNda", fileName: "qa-opening-blank-nda.pdf", pages: 1 },
     {
+      key: "renewSignedNda",
+      fileName: "qa-opening-renew-signed-nda.pdf",
+      pages: 1,
+    },
+    {
+      key: "repreneurSignedNda",
+      fileName: "qa-opening-repreneur-signed-nda.pdf",
+      pages: 1,
+    },
+    {
       key: "informationMemorandum",
       fileName: "qa-opening-information-memorandum.pdf",
       pages: 2,

@@ -21,9 +21,11 @@ jobs:
     env:
       QA_FIXTURE_MODE: local
       QA_CONTRACT_MODE: protected
+      QA_EXECUTION_MODE: github-runner
       QA_MAIL_MODE: allowlist
       QA_EMAIL_FROM: onboarding@resend.dev
-      QA_EMAIL_RECIPIENT: qa-opening-real@re-new.invalid,qa-opening-demo@re-new.invalid,qa-opening-real-contact@re-new.invalid,qa-opening-demo-contact@re-new.invalid
+      QA_EMAIL_RECIPIENT: qa-opening-staff@re-new.invalid,qa-opening-real@re-new.invalid,qa-opening-real-non-owner@re-new.invalid,qa-opening-demo@re-new.invalid,qa-opening-real-contact@re-new.invalid,qa-opening-demo-contact@re-new.invalid
+      RENEW_STAFF_NOTIFICATION_EMAIL: qa-opening-staff@re-new.invalid
       RESEND_FROM_EMAIL: onboarding@resend.dev
       BETTER_AUTH_SECRET: opening-fixture-only-secret-2026-not-for-production
       BETTER_AUTH_URL: http://127.0.0.1:3000
@@ -114,6 +116,36 @@ jobs:
       - name: Prove the fixture through the running product
         run: pnpm exec playwright test --config playwright.opening-readiness.config.ts
 
+      - name: Destroy disposable Supabase stack
+        if: always()
+        shell: bash
+        run: |
+          evidence_dir="$RUNNER_TEMP/opening-readiness-evidence"
+          mkdir -p "$evidence_dir"
+          supabase stop --no-backup
+
+          container_count=$(docker ps -a --format '{{.Names}}' | grep -Fc 'renew-opening-fixture' || true)
+          volume_count=$(docker volume ls --format '{{.Name}}' | grep -Fc 'renew-opening-fixture' || true)
+          network_count=$(docker network ls --format '{{.Name}}' | grep -Fc 'renew-opening-fixture' || true)
+          database_reachable=false
+          if pg_isready --dbname "$OPENING_FIXTURE_DATABASE_URL" --timeout 2 >/dev/null 2>&1; then
+            database_reachable=true
+          fi
+
+          jq -n \
+            --arg releaseSha "$OPENING_FIXTURE_RELEASE_SHA" \
+            --argjson containers "$container_count" \
+            --argjson volumes "$volume_count" \
+            --argjson networks "$network_count" \
+            --argjson databaseReachable "$database_reachable" \
+            '{releaseSha: $releaseSha, productionData: false, productionCredentials: false, cleanupBoundary: "whole disposable stack", preJourneyRowCleanupRerunPassed: true, stackDestroySucceeded: ($containers == 0 and $volumes == 0 and $networks == 0 and $databaseReachable == false), residue: {containers: $containers, volumes: $volumes, networks: $networks, databaseReachable: $databaseReachable}}' \
+            | tee "$evidence_dir/teardown.json"
+
+          if [[ "$container_count" != "0" || "$volume_count" != "0" || "$network_count" != "0" || "$database_reachable" != "false" ]]; then
+            echo "Disposable Supabase resources remain after teardown." >&2
+            exit 1
+          fi
+
       - name: Upload privacy-safe evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -122,25 +154,3 @@ jobs:
           path: ${{ runner.temp }}/opening-readiness-evidence
           if-no-files-found: warn
           retention-days: 7
-
-      - name: Destroy disposable Supabase stack
-        if: always()
-        shell: bash
-        run: |
-          supabase stop --no-backup
-          if docker ps -a --format '{{.Names}}' | grep -Fq 'renew-opening-fixture'; then
-            echo "Disposable Supabase containers remain after teardown." >&2
-            exit 1
-          fi
-          if docker volume ls --format '{{.Name}}' | grep -Fq 'renew-opening-fixture'; then
-            echo "Disposable Supabase volumes remain after teardown." >&2
-            exit 1
-          fi
-          if docker network ls --format '{{.Name}}' | grep -Fq 'renew-opening-fixture'; then
-            echo "Disposable Supabase networks remain after teardown." >&2
-            exit 1
-          fi
-          if pg_isready --dbname "$OPENING_FIXTURE_DATABASE_URL" --timeout 2 >/dev/null 2>&1; then
-            echo "Disposable Supabase database still accepts connections after teardown." >&2
-            exit 1
-          fi

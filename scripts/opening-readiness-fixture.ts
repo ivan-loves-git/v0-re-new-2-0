@@ -12,6 +12,7 @@ import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { Client } from "pg";
 import {
   OPENING_READINESS_FIXTURE,
+  assertOpeningReadinessJourneySetting,
   assertOpeningReadinessFixtureEnvironment,
   fixtureReadbackIsHealthy,
   fixtureResidueIsZero,
@@ -45,15 +46,18 @@ const fixture = OPENING_READINESS_FIXTURE;
 const syntheticUserIds = [
   fixture.authIds.staffUser,
   fixture.authIds.realUser,
+  fixture.authIds.realNonOwnerUser,
   fixture.authIds.demoUser,
 ];
 const syntheticEmails = [
   fixture.staff.email,
   fixture.repreneurs.real.email,
+  fixture.repreneurs.realNonOwner.email,
   fixture.repreneurs.demo.email,
 ];
 const syntheticRepreneurIds = [
   fixture.ids.realRepreneur,
+  fixture.ids.realNonOwnerRepreneur,
   fixture.ids.demoRepreneur,
 ];
 const syntheticOpportunityIds = [
@@ -72,13 +76,18 @@ async function requireCurrentSchema() {
     namespaceGuard: boolean;
     directUploads: boolean;
     currentClosure: boolean;
+    journeyControl: boolean;
+    journeySingleton: boolean;
   }>(`
     SELECT
       EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='repreneurs' AND column_name='is_demo') AS "repreneurIsDemo",
       EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='opportunities' AND column_name='is_demo') AS "opportunityIsDemo",
       EXISTS(SELECT 1 FROM pg_proc WHERE proname='w164_match_has_same_namespace') AS "namespaceGuard",
       EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='private_upload_intents') AS "directUploads",
-      EXISTS(SELECT 1 FROM pg_proc WHERE proname='close_opportunity_with_reason') AS "currentClosure"
+      EXISTS(SELECT 1 FROM pg_proc WHERE proname='close_opportunity_with_reason') AS "currentClosure",
+      EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='wave_journey_settings')
+        AND EXISTS(SELECT 1 FROM pg_proc WHERE proname='wave_journey_is_enabled') AS "journeyControl",
+      (SELECT count(*) = 1 FROM public.wave_journey_settings WHERE singleton) AS "journeySingleton"
   `);
   const schema = rows[0];
   const missing = Object.entries(schema ?? {})
@@ -117,6 +126,11 @@ async function assertFixtureHasNoImmutableJourneyHistory() {
 
 async function cleanupRows() {
   const ids = fixture.ids;
+  const journeySetting = await client.query<{ enabled: boolean }>(
+    "UPDATE public.wave_journey_settings SET enabled=FALSE, updated_at=clock_timestamp(), updated_by=$1 WHERE singleton RETURNING enabled",
+    [`${runLabel}:cleanup`],
+  );
+  assertOpeningReadinessJourneySetting(journeySetting, false);
   await client.query(
     "DELETE FROM public.email_logs WHERE repreneur_id = ANY($1::uuid[])",
     [syntheticRepreneurIds],
@@ -177,9 +191,18 @@ async function setup() {
   const ids = fixture.ids;
   const passwordHash = await hashPassword(password);
   await assertFixtureHasNoImmutableJourneyHistory();
+  const journeyBaseline = await client.query<{ enabled: boolean }>(
+    "SELECT enabled FROM public.wave_journey_settings WHERE singleton",
+  );
+  assertOpeningReadinessJourneySetting(journeyBaseline, false);
   await client.query("BEGIN");
   try {
     await cleanupRows();
+    const journeySetting = await client.query<{ enabled: boolean }>(
+      "UPDATE public.wave_journey_settings SET enabled=TRUE, updated_at=clock_timestamp(), updated_by=$1 WHERE singleton RETURNING enabled",
+      [`${runLabel}:setup`],
+    );
+    assertOpeningReadinessJourneySetting(journeySetting, true);
     await client.query(
       `INSERT INTO public.ma_firms(id,name,status,created_by) VALUES
         ($1,$2,'active',$3),($4,$5,'active',$3)`,
@@ -208,8 +231,8 @@ async function setup() {
         id,first_name,last_name,display_name,status,email,
         campaign_email_suppressed,campaign_email_suppression_reason,created_by
       ) VALUES
-        ($1,'QA','Real','QA OPENING REAL CONTACT — SYNTHETIC','active',$2,true,'synthetic opening fixture',$3),
-        ($4,'QA','Demo','QA OPENING DEMO CONTACT — SYNTHETIC','active',$5,true,'synthetic opening fixture',$3)`,
+        ($1,'QA OPENING REAL CONTACT','— SYNTHETIC','QA OPENING REAL CONTACT — SYNTHETIC','active',$2,true,'synthetic opening fixture',$3),
+        ($4,'QA OPENING DEMO CONTACT','— SYNTHETIC','QA OPENING DEMO CONTACT — SYNTHETIC','active',$5,true,'synthetic opening fixture',$3)`,
       [
         ids.realContact,
         "qa-opening-real-contact@re-new.invalid",
@@ -242,20 +265,25 @@ async function setup() {
         ($1,$2,'QA','OPENING REAL — SYNTHETIC','client','execution',$3,false,
          '["all-france"]','["Tech & Digital"]','["3-5M"]','["majority_without_fund"]','>450',
          10,50,2000,5000,6,10,250,clock_timestamp(),false),
-        ($4,$5,'QA','OPENING DEMO — SYNTHETIC','client','execution',$3,true,
+        ($4,$5,'QA','OPENING REAL NON-OWNER — SYNTHETIC','client','execution',$3,false,
+         '["all-france"]','["Tech & Digital"]','["3-5M"]','["majority_without_fund"]','>450',
+         10,50,2000,5000,6,10,250,clock_timestamp(),false),
+        ($6,$7,'QA','OPENING DEMO — SYNTHETIC','client','execution',$3,true,
          '["all-france"]','["Tech & Digital"]','["3-5M"]','["majority_without_fund"]','>450',
          10,50,2000,5000,6,10,250,clock_timestamp(),false)`,
       [
         ids.realRepreneur,
         fixture.repreneurs.real.email,
         fixture.staff.id,
+        ids.realNonOwnerRepreneur,
+        fixture.repreneurs.realNonOwner.email,
         ids.demoRepreneur,
         fixture.repreneurs.demo.email,
       ],
     );
     await client.query(
       `INSERT INTO public."user"(id,name,email,"emailVerified") VALUES
-        ($1,$2,$3,true),($4,$5,$6,true),($7,$8,$9,true)`,
+        ($1,$2,$3,true),($4,$5,$6,true),($7,$8,$9,true),($10,$11,$12,true)`,
       [
         fixture.staff.id,
         fixture.staff.name,
@@ -263,6 +291,9 @@ async function setup() {
         fixture.repreneurs.real.userId,
         "QA OPENING REAL — SYNTHETIC",
         fixture.repreneurs.real.email,
+        fixture.repreneurs.realNonOwner.userId,
+        "QA OPENING REAL NON-OWNER — SYNTHETIC",
+        fixture.repreneurs.realNonOwner.email,
         fixture.repreneurs.demo.userId,
         "QA OPENING DEMO — SYNTHETIC",
         fixture.repreneurs.demo.email,
@@ -272,14 +303,17 @@ async function setup() {
       `INSERT INTO public."account"(
         id,"userId","accountId","providerId",password
       ) VALUES
-        ($1,$2,$2,'credential',$7),
-        ($3,$4,$4,'credential',$7),
-        ($5,$6,$6,'credential',$7)`,
+        ($1,$2,$2,'credential',$9),
+        ($3,$4,$4,'credential',$9),
+        ($5,$6,$6,'credential',$9),
+        ($7,$8,$8,'credential',$9)`,
       [
         fixture.authIds.staffAccount,
         fixture.staff.id,
         fixture.authIds.realAccount,
         fixture.repreneurs.real.userId,
+        fixture.authIds.realNonOwnerAccount,
+        fixture.repreneurs.realNonOwner.userId,
         fixture.authIds.demoAccount,
         fixture.repreneurs.demo.userId,
         passwordHash,
@@ -291,7 +325,8 @@ async function setup() {
       ) VALUES
         ($1,$2,$3,'staff',NULL,clock_timestamp()),
         ($4,$5,$6,'repreneur',$7,clock_timestamp()),
-        ($8,$9,$10,'repreneur',$11,clock_timestamp())`,
+        ($8,$9,$10,'repreneur',$11,clock_timestamp()),
+        ($12,$13,$14,'repreneur',$15,clock_timestamp())`,
       [
         ids.staffRole,
         fixture.staff.id,
@@ -300,6 +335,10 @@ async function setup() {
         fixture.repreneurs.real.userId,
         fixture.repreneurs.real.email,
         ids.realRepreneur,
+        ids.realNonOwnerPortalRole,
+        fixture.repreneurs.realNonOwner.userId,
+        fixture.repreneurs.realNonOwner.email,
+        ids.realNonOwnerRepreneur,
         ids.demoPortalRole,
         fixture.repreneurs.demo.userId,
         fixture.repreneurs.demo.email,
@@ -360,16 +399,20 @@ async function readback(outputCommand: "setup" | "readback" = "readback") {
       (SELECT count(*)::int FROM public.repreneurs WHERE id=$4 AND is_demo=false) AS "realRepreneur",
       (SELECT count(*)::int FROM public."user" WHERE id=$5 AND lower(email)=lower($6)) AS "realAuthUser",
       (SELECT count(*)::int FROM public.app_user_roles WHERE id=$7 AND user_id=$5 AND repreneur_id=$4 AND role='repreneur') AS "realPortalRole",
-      (SELECT count(*)::int FROM public.repreneurs WHERE id=$8 AND is_demo=true) AS "demoRepreneur",
-      (SELECT count(*)::int FROM public."user" WHERE id=$9 AND lower(email)=lower($10)) AS "demoAuthUser",
-      (SELECT count(*)::int FROM public.app_user_roles WHERE id=$11 AND user_id=$9 AND repreneur_id=$8 AND role='repreneur') AS "demoPortalRole",
-      (SELECT count(*)::int FROM public.opportunities WHERE id=$12 AND is_demo=false AND status='active' AND repreneur_exposure='anonymized') AS "realOpportunity",
-      (SELECT count(*)::int FROM public.opportunities WHERE id=$13 AND is_demo=true AND status='active' AND repreneur_exposure='anonymized') AS "demoOpportunity",
+      (SELECT count(*)::int FROM public.repreneurs WHERE id=$8 AND is_demo=false) AS "realNonOwnerRepreneur",
+      (SELECT count(*)::int FROM public."user" WHERE id=$9 AND lower(email)=lower($10)) AS "realNonOwnerAuthUser",
+      (SELECT count(*)::int FROM public.app_user_roles WHERE id=$11 AND user_id=$9 AND repreneur_id=$8 AND role='repreneur') AS "realNonOwnerPortalRole",
+      (SELECT count(*)::int FROM public.repreneurs WHERE id=$12 AND is_demo=true) AS "demoRepreneur",
+      (SELECT count(*)::int FROM public."user" WHERE id=$13 AND lower(email)=lower($14)) AS "demoAuthUser",
+      (SELECT count(*)::int FROM public.app_user_roles WHERE id=$15 AND user_id=$13 AND repreneur_id=$12 AND role='repreneur') AS "demoPortalRole",
+      (SELECT count(*)::int FROM public.opportunities WHERE id=$16 AND is_demo=false AND status='active' AND repreneur_exposure='anonymized') AS "realOpportunity",
+      (SELECT count(*)::int FROM public.opportunities WHERE id=$17 AND is_demo=true AND status='active' AND repreneur_exposure='anonymized') AS "demoOpportunity",
       (SELECT count(*)::int FROM public.opportunity_matches match
         JOIN public.opportunities opportunity ON opportunity.id=match.opportunity_id
         JOIN public.repreneurs repreneur ON repreneur.id=match.repreneur_id
-        WHERE (match.opportunity_id = ANY($14::uuid[]) OR match.repreneur_id = ANY($15::uuid[]))
-          AND opportunity.is_demo <> repreneur.is_demo) AS "crossNamespaceMatch"`,
+        WHERE (match.opportunity_id = ANY($18::uuid[]) OR match.repreneur_id = ANY($19::uuid[]))
+          AND opportunity.is_demo <> repreneur.is_demo) AS "crossNamespaceMatch",
+      (SELECT enabled FROM public.wave_journey_settings WHERE singleton) AS "journeyEnabled"`,
     [
       fixture.staff.id,
       fixture.staff.email,
@@ -378,6 +421,10 @@ async function readback(outputCommand: "setup" | "readback" = "readback") {
       fixture.repreneurs.real.userId,
       fixture.repreneurs.real.email,
       ids.realPortalRole,
+      ids.realNonOwnerRepreneur,
+      fixture.repreneurs.realNonOwner.userId,
+      fixture.repreneurs.realNonOwner.email,
+      ids.realNonOwnerPortalRole,
       ids.demoRepreneur,
       fixture.repreneurs.demo.userId,
       fixture.repreneurs.demo.email,
@@ -450,7 +497,7 @@ async function readback(outputCommand: "setup" | "readback" = "readback") {
     authIds: fixture.authIds,
     readback: state,
     matching: score,
-    credentialReadback: "two synthetic credentials verified",
+    credentialReadback: `${syntheticUserIds.length} synthetic credentials verified`,
     mail: {
       mode: "intercepted allowlist",
       providerCredentialPresent: false,
@@ -494,7 +541,8 @@ async function cleanup() {
       (SELECT count(*)::int FROM public.private_upload_cleanup_queue queue
         JOIN public.private_upload_intents intent ON intent.id=queue.intent_id
         WHERE intent.resource_id = ANY($3::uuid[])) AS "uploadCleanupQueue",
-      (SELECT count(*)::int FROM storage.objects) AS "storageObjects"`,
+      (SELECT count(*)::int FROM storage.objects) AS "storageObjects",
+      (SELECT count(*)::int FROM public.wave_journey_settings WHERE singleton AND enabled) AS "journeySettingEnabledRows"`,
     [
       syntheticUserIds,
       syntheticRepreneurIds,

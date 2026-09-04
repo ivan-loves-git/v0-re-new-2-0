@@ -18,11 +18,11 @@ pnpm tsx scripts/opening-readiness-fixture.ts readback \
   | tee "$evidence_dir/readback.jsonl"
 
 service_code=$(curl --silent --output "$evidence_dir/service-role-readback.json" --write-out '%{http_code}' \
-  "${NEXT_PUBLIC_SUPABASE_URL}/rest/v1/repreneurs?id=in.(93000000-0000-4000-8000-000000000011,93000000-0000-4000-8000-000000000012)&select=id,is_demo" \
+  "${NEXT_PUBLIC_SUPABASE_URL}/rest/v1/repreneurs?id=in.(93000000-0000-4000-8000-000000000011,93000000-0000-4000-8000-000000000012,93000000-0000-4000-8000-000000000013)&select=id,is_demo" \
   -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
   -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
 if [[ "$service_code" != "200" ]] \
-  || [[ "$(jq 'length' "$evidence_dir/service-role-readback.json")" != "2" ]]; then
+  || [[ "$(jq 'length' "$evidence_dir/service-role-readback.json")" != "3" ]]; then
   echo "Opening fixture service-role readback failed." >&2
   exit 1
 fi
