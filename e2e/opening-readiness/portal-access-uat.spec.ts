@@ -350,6 +350,12 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       .click();
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
+      page.getByText(
+        "Portal access changed after this confirmation opened. Refresh the page and confirm the current state.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
       page.getByRole("button", { name: "Resend access link", exact: true }),
     ).toBeVisible();
     const afterStale = await readAccessState(client, repreneur);
@@ -378,6 +384,11 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       .getByRole("button", { name: "Disable access", exact: true })
       .click();
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(
+      page.getByText("Portal access disabled and sessions revoked.", {
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", {
         name: "Repair portal access & send link",
