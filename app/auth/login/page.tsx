@@ -21,8 +21,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [requestSubmitted, setRequestSubmitted] = useState(false)
   const [accessDenied, setAccessDenied] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
+    setHydrated(true)
     setAccessDenied(
       new URLSearchParams(window.location.search).get("reason") === "access_denied",
     )
@@ -30,6 +32,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!hydrated) return
     setError(null)
     setLoading(true)
     captureWaveEvent("wave_action_started", {
@@ -231,7 +234,7 @@ export default function LoginPage() {
               )}
 
               {/* Sign In Form */}
-              <form onSubmit={handleLogin} className="flex flex-col gap-4">
+              <form method="post" onSubmit={handleLogin} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="email" className="text-foreground">
                     Email
@@ -284,10 +287,15 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className="h-11 w-full"
-                  disabled={loading}
+                  disabled={!hydrated || loading}
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
+                {!hydrated && (
+                  <p className="text-sm text-muted-foreground" role="status">
+                    Preparing secure sign-in. If this continues, enable JavaScript and reload.
+                  </p>
+                )}
               </form>
 
               {/* Toggle to Request Access */}

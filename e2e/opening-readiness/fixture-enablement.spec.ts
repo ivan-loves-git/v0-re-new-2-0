@@ -323,6 +323,9 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
     expect(new URL(page.url()).search).toBe("");
     expect(new URL(page.url()).hash).toBe("");
 
+    // Earlier sign-ins prove desktop; exercise this existing post-reset login
+    // and logout on mobile without adding attempts to the real auth budget.
+    await page.setViewportSize({ width: 390, height: 844 });
     await login(
       page,
       fixture.repreneurs.demo.email,
