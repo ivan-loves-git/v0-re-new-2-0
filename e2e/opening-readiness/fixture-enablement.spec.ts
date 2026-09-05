@@ -62,19 +62,6 @@ async function logout(page: Page) {
   await expect(page).toHaveURL(/\/auth\/login/);
 }
 
-test("hydrated sign-in and logout work on desktop and mobile", async ({ page }) => {
-  // Separate this controlled client from the recovery journey's rate-limit
-  // budget; keep the real five-attempt authentication rule enabled.
-  await page.setExtraHTTPHeaders({ "x-forwarded-for": "203.0.113.206" });
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: 900 });
-    await login(page, fixture.staff.email, /\/dashboard_re/);
-    await logout(page);
-    await page.goto("/dashboard_re");
-    await expect(page).toHaveURL(/\/auth\/login/);
-  }
-});
-
 test("synthetic personas, private documents, safe mail, and namespaces are product-runnable", async ({
   page,
 }) => {
@@ -336,6 +323,9 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
     expect(new URL(page.url()).search).toBe("");
     expect(new URL(page.url()).hash).toBe("");
 
+    // Earlier sign-ins prove desktop; exercise this existing post-reset login
+    // and logout on mobile without adding attempts to the real auth budget.
+    await page.setViewportSize({ width: 390, height: 844 });
     await login(
       page,
       fixture.repreneurs.demo.email,
