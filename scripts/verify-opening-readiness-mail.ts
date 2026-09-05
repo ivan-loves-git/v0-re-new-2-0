@@ -24,6 +24,7 @@ if (
 async function main() {
   const recipients = [
     OPENING_READINESS_FIXTURE.repreneurs.real.email,
+    "qa-opening-fresh-access-uat@re-new.invalid",
     OPENING_READINESS_FIXTURE.repreneurs.demo.email,
   ];
 

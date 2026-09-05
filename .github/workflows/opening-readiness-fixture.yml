@@ -24,7 +24,7 @@ jobs:
       QA_EXECUTION_MODE: github-runner
       QA_MAIL_MODE: allowlist
       QA_EMAIL_FROM: onboarding@resend.dev
-      QA_EMAIL_RECIPIENT: qa-opening-staff@re-new.invalid,qa-opening-real@re-new.invalid,qa-opening-real-non-owner@re-new.invalid,qa-opening-demo@re-new.invalid,qa-opening-real-contact@re-new.invalid,qa-opening-demo-contact@re-new.invalid
+      QA_EMAIL_RECIPIENT: qa-opening-staff@re-new.invalid,qa-opening-real@re-new.invalid,qa-opening-real-non-owner@re-new.invalid,qa-opening-fresh-access-uat@re-new.invalid,qa-opening-demo@re-new.invalid,qa-opening-real-contact@re-new.invalid,qa-opening-demo-contact@re-new.invalid
       RENEW_STAFF_NOTIFICATION_EMAIL: qa-opening-staff@re-new.invalid
       RESEND_FROM_EMAIL: onboarding@resend.dev
       BETTER_AUTH_SECRET: opening-fixture-only-secret-2026-not-for-production

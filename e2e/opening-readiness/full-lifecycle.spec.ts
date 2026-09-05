@@ -97,9 +97,15 @@ async function createDraftOpportunity(
   },
 ) {
   await page.goto("/opportunities/new");
-  await page
-    .locator('button[role="radio"][value="' + input.classification + '"]')
-    .click();
+  const form = page.locator("form#opportunity-form");
+  await expect(form).toHaveCount(1);
+  const classification = form.locator('[data-slot="radio-group"]');
+  await expect(classification).toHaveCount(1);
+  const classificationChoice = classification.locator(
+    'button[role="radio"][value="' + input.classification + '"]',
+  );
+  await expect(classificationChoice).toHaveCount(1);
+  await classificationChoice.click();
   await expect(page.locator("#generated-reference")).toBeDisabled();
   await chooseOption(page, "#geography_node_id", /^France · FR$/);
   await chooseOption(page, "#sector_choice", "Tech & Digital");
