@@ -62,6 +62,16 @@ async function logout(page: Page) {
   await expect(page).toHaveURL(/\/auth\/login/);
 }
 
+test("hydrated sign-in and logout work on desktop and mobile", async ({ page }) => {
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await login(page, fixture.staff.email, /\/dashboard_re/);
+    await logout(page);
+    await page.goto("/dashboard_re");
+    await expect(page).toHaveURL(/\/auth\/login/);
+  }
+});
+
 test("synthetic personas, private documents, safe mail, and namespaces are product-runnable", async ({
   page,
 }) => {
