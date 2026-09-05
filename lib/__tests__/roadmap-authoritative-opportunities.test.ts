@@ -230,7 +230,7 @@ describe("authoritative opportunity roadmap entry", () => {
   })
 
   it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-09-02")')
+    expect(roadmapStatus).toContain('new Date("2026-09-05")')
     expect(roadmap).toContain('version: "0.9.63"')
     expect(roadmap).toContain("Deal Flow is easier and safer to explore")
     expect(roadmap).toContain("current production build")

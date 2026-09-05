@@ -13,7 +13,7 @@ function source(relativePath: string) {
 
 describe("W-072 purpose-aware M&A contact email suppression", () => {
   const migration = source("scripts/083_ma_contact_email_suppression.sql")
-  const workflowAction = source("lib/actions/ma-workflows.ts")
+  const workflowAction = source("lib/ma-workflows.ts")
   const workflowPanel = source(
     "components/opportunities/opportunity-ma-workflow-panel.tsx",
   )

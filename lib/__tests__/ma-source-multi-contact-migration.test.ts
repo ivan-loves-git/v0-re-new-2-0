@@ -70,7 +70,7 @@ describe("canonical multi-contact M&A intake", () => {
   })
 
   it("uses canonical contacts and interaction persistence for workflow email evidence", () => {
-    const workflowActions = source("lib/actions/ma-workflows.ts")
+    const workflowActions = source("lib/ma-workflows.ts")
 
     expect(workflowActions).toContain("office_contacts:opportunity_ma_contacts")
     expect(workflowActions).toContain("source_office:ma_offices")

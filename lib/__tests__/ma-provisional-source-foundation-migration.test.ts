@@ -13,7 +13,7 @@ describe("W-064 provisional Acme source foundation", () => {
     "scripts/076_ma_office_identity_and_activation_foundation.sql",
   )
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
-  const workflowAction = source("lib/actions/ma-workflows.ts")
+  const workflowAction = source("lib/ma-workflows.ts")
   const emailActions = source("lib/actions/emails.ts")
   const manualEmailSurface = source(
     "app/(dashboard)/emails/components/manual-send.tsx",

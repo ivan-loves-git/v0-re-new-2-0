@@ -73,9 +73,11 @@ async function submitAuthorizedSignedNda(
   }
   // PostgreSQL repeats this check while holding the match lock. This early
   // check is only a truthful UX shortcut, never the authority boundary.
-  const { data: gate, error: gateError } = await supabase.rpc("journey_current_gate_1_event", { p_match_id: matchId })
-  if (gateError || !gate) {
-    trace.failure(gateError ? "persistence_failed" : "precondition_failed")
+  const { data: authorized, error: authorizationError } = await supabase.rpc(
+    "journey_repreneur_authorized_template", { p_match_id: matchId, p_repreneur_id: access.repreneurId },
+  )
+  if (authorizationError || !Array.isArray(authorized) || authorized.length !== 1) {
+    trace.failure(authorizationError ? "persistence_failed" : "precondition_failed")
     capture("failure", "unavailable")
     return { success: false, message: "The NDA is not ready for your signature yet." }
   }

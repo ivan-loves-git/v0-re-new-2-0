@@ -9,7 +9,7 @@ function source(relativePath: string) {
 
 describe("W-062 canonical interaction persistence", () => {
   const migration = source("scripts/080_ma_interaction_persistence.sql")
-  const workflow = source("lib/actions/ma-workflows.ts")
+  const workflow = source("lib/ma-workflows.ts")
   const sendRoute = source(
     "app/api/opportunities/[id]/ma-workflow/send/route.ts",
   )

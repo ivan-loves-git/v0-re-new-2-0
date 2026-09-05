@@ -207,14 +207,14 @@ export function RepreneurOpportunityDetail({
                     ? "The confidential journey is not enabled for this opportunity. Re-New will tell you when the next action is available."
                     : journey.revoked
                       ? "Confidential access has been revoked for this pursuit."
-                      : journey.gate1Passed
-                        ? "Your signed copy can now be reviewed by Re-New. The Information Memorandum remains locked until Gate 2, manual intermediary handoff, and an explicit grant."
-                        : "Re-New is preparing the NDA journey. The template becomes available after Gate 1."}
+                      : journey.ndaReadyNotified
+                        ? "Your NDA is ready. Upload your signed copy for Re-New review. The Information Memorandum remains locked until the signed NDA handoff and staff approval are complete."
+                        : "Re-New is preparing your NDA. We will notify you when it is ready to download and sign."}
                 </AlertDescription>
               </Alert>
             )}
 
-            {journey?.enabled && journey.gate1Passed && !journey.revoked ? <>
+            {journey?.enabled && journey.ndaReadyNotified && !journey.revoked ? <>
               <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">NDA template</p><p className="text-xs text-muted-foreground">Use this exact validated template for your signed copy.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/nda-template`}><Download data-icon="inline-start" />Download template</a></Button></div>
               {!journey.gate2Passed && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
             </> : null}

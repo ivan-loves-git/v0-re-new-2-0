@@ -22,7 +22,7 @@ describe("W-066 staff relationship workspace", () => {
     "components/opportunities/ma-relationship-workspace.tsx",
   )
   const page = source("app/(dashboard)/opportunities/ma/page.tsx")
-  const workflow = source("lib/actions/ma-workflows.ts")
+  const workflow = source("lib/ma-workflows.ts")
   const contract = source("docs/data-models/ma-advisory-data-model-v1.md")
   const rehearsal = source("scripts/rehearse-ma-relationship-workspace.sql")
   const verifier = source("scripts/verify-ma-data-model-schema.sql")

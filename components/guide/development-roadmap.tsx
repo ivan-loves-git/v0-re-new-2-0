@@ -25,6 +25,16 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 5, 2026",
+    version: "0.9.64",
+    title: "NDA handoffs follow the approved pursuit",
+    isCompleted: true,
+    events: [
+      { title: "Qualification and signed NDA requests are delivered and recorded", type: "fix", description: "Staff can send the required qualification request and the exact two signed NDA copies to the opportunity contact. Delivery retries retain their original evidence and avoid duplicate accepted sends." },
+      { title: "Repreneurs receive a notice before signing", type: "feature", description: "The NDA becomes available after staff validation and its readiness notice. Staff explicitly approves the selected information memorandum before granting that repreneur access." },
+    ],
+  },
+  {
     period: "Sep 2, 2026",
     version: "0.9.63",
     title: "Deal Flow is easier and safer to explore",

@@ -25,6 +25,7 @@ export interface ResendDeliveryRequest {
   subject: string
   html: string
   text: string
+  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>
 }
 
 export type ResendDeliveryOutcome =
@@ -54,15 +55,18 @@ export function classifyResendDeliveryOutcome(
 
 export function fingerprintResendDeliveryRequest(
   request: ResendDeliveryRequest,
+  scope?: string,
 ): string {
   return createHash("sha256")
     .update(
       JSON.stringify({
+        ...(scope ? { scope } : {}),
         from: request.from,
         to: request.to,
         subject: request.subject,
         html: request.html,
         text: request.text,
+        attachments: request.attachments?.map((attachment) => ({ filename: attachment.filename, contentType: attachment.contentType, sha256: createHash("sha256").update(attachment.content).digest("hex"), size: attachment.content.length })),
       }),
     )
     .digest("hex")

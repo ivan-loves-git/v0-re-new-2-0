@@ -44,7 +44,7 @@ describe("W-113 critical operation boundaries", () => {
     expect(source("lib/auth.ts")).toContain(
       'startCriticalOperation("email.password_reset_send")',
     )
-    expect(source("lib/actions/ma-workflows.ts")).toContain(
+    expect(source("lib/ma-workflows.ts")).toContain(
       'startCriticalOperation("email.ma_source_send")',
     )
     expect(source("lib/actions/opportunity-pursuit-journey.ts")).toContain(
