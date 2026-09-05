@@ -128,7 +128,6 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   ]),
   "lib/actions/ma-relationships.ts": boundary("staff", ["getMaRelationshipWorkspace", "createMaRelationshipInteraction", "verifyMaRelationshipInteractionOwner"]),
   "lib/actions/ma-sources.ts": boundary("staff", ["listMaSourceDirectory", "listMaSourceContactsDirectory"]),
-  "lib/actions/ma-workflows.ts": boundary("staff", ["getMaOpportunityWorkflow", "sendMaSourceWorkflowEmail", "sendMaSourceWorkflowEmailPayload"]),
   "lib/actions/offers.ts": boundary("staff", ["createOffer", "updateOffer", "toggleOfferActive", "assignOfferToRepreneur", "retryOfferReceivedNotification", "updateRepreneurOfferStatus", "deleteRepreneurOffer", "createMilestone", "toggleMilestoneComplete", "retryMilestoneCompletionNotification", "updateMilestone", "deleteMilestone", "getAllClientOffers"]),
   "lib/actions/opportunities.ts": boundary("staff", [
     "listOpportunities",
@@ -147,7 +146,8 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "lib/actions/opportunity-intake.ts": boundary("staff", ["listOpportunityGeographyOptions", "listMaOfficeIntakeOptions", "listMaCanonicalContactOptions", "createOpportunityIntake", "updateOpportunityIntake", "resolveAcmeProvisionalSource", "createMaFirmOfficeContext", "createMaOfficeForExistingFirm", "createMaOfficeContact"]),
   "lib/actions/opportunity-matches.ts": boundary("staff", ["listOpportunityMatches", "listOpportunityMatchesForRepreneur", "listOpportunityPursuitEvents", "listOpportunityMatchResponses", "listOpportunityMatchCandidates", "listOpportunityCandidatesForRepreneur", "saveOpportunityMatch", "removeOpportunityMatch", "markOpportunityMatchReviewed", "validateOpportunityPursuit", "dropOpportunityPursuit", "reopenDroppedOpportunityMatch"]),
   "lib/actions/opportunity-nda-artifacts.ts": boundary("staff", ["listOpportunityNdaArtifacts", "registerOpportunityNdaArtifact"]),
-  "lib/actions/opportunity-pursuit-journey.ts": boundary("staff", ["qualifyOpportunityPursuit", "requestOpportunityPursuitQualification", "passOpportunityPursuitGate1", "passOpportunityPursuitGate2", "grantOpportunityPursuitConfidentialAccess", "validateOpportunityPursuitTemplate", "validateOpportunityPursuitSignedCopy", "recordOpportunityPursuitDispatch", "transitionOpportunityPursuit", "runOpportunityPursuitJourneyAction", "startOpportunityPursuit"]),
+  "lib/actions/opportunity-pursuit-handoffs.ts": boundary("staff", ["sendPursuitIntermediaryHandoff", "sendPursuitNdaReadyNotice"]),
+  "lib/actions/opportunity-pursuit-journey.ts": boundary("staff", ["qualifyOpportunityPursuit", "requestOpportunityPursuitQualification", "passOpportunityPursuitGate1", "passOpportunityPursuitGate2", "grantOpportunityPursuitConfidentialAccess", "validateOpportunityPursuitTemplate", "validateOpportunityPursuitSignedCopy", "recordOpportunityPursuitDispatch", "sendOpportunityPursuitNdaReady", "transitionOpportunityPursuit", "runOpportunityPursuitJourneyAction", "startOpportunityPursuit"]),
   "lib/actions/pipeline.ts": boundary("staff", ["updateRepreneurStatusPipeline"]),
   "lib/actions/portal-access.ts": boundary("staff", ["getRepreneurPortalAccessStatus", "enableRepreneurPortalAccess", "disableRepreneurPortalAccess", "resendRepreneurPortalAccessLink"]),
   "lib/actions/portal-pursuit-nda.ts": boundary("portal_owner", ["submitPortalPursuitSignedNda"]),
@@ -642,6 +642,13 @@ describe("W-149 CRM authorization boundaries", () => {
         functionName,
       )
     }
+  })
+
+  it("keeps the extracted M&A email wrappers staff-only", () => {
+    for (const name of ["getMaOpportunityWorkflow", "sendMaSourceWorkflowEmail", "sendMaSourceWorkflowEmailPayload"]) {
+      expectExportBoundary("lib/actions/ma-workflows.ts", name, "staff")
+    }
+    expect(source("lib/ma-workflows.ts")).toContain('import "server-only"')
   })
 
   it("classifies every browser-reachable service-role export and fails closed for new ones", () => {

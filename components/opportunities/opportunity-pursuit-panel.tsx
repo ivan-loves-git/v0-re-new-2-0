@@ -33,6 +33,8 @@ import {
   transitionOpportunityPursuit,
   validateOpportunityPursuitSignedCopy,
   validateOpportunityPursuitTemplate,
+  sendOpportunityPursuitNdaReady,
+  startOpportunityPursuit,
 } from "@/lib/actions/opportunity-pursuit-journey"
 import type { StaffCurrentPursuit } from "@/lib/data/current-pursuit"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
@@ -58,14 +60,17 @@ interface OpportunityPursuitPanelProps {
 
 const EVENT_LABELS: Record<string, string> = {
   mutual_interest_validated: "Mutual interest validated",
-  qualification_requested: "Qualification requested",
+  e4_qualification_requested: "Qualification and blank-NDA request sent",
   intermediary_qualified: "Intermediary qualified",
   template_validated: "Blank template validated",
   gate_1_passed: "Gate 1 passed",
   renew_signed_copy_validated: "Re-New signed copy validated",
   repreneur_signed_copy_validated: "Repreneur signed copy validated",
   gate_2_passed: "Gate 2 passed",
-  manual_package_dispatched: "Signed package sent to intermediary",
+  e6_nda_ready_notified: "NDA-ready notice sent",
+  e7_signed_copies_and_memo_requested: "Signed copies and memo request sent",
+  memo_approved: "Information memorandum approved",
+  e8_memo_enabled_completed: "Memo access enabled",
   confidential_access_granted: "Confidential access granted",
   access_revoked: "Access revoked",
   continued: "Continue recorded",
@@ -115,6 +120,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
 
   const nextAction = projection?.nextAction
   const hasLiveGrant = Boolean(projection?.hasLiveConfidentialGrant)
+  const needsRevalidation = Boolean(activeMatch && projection?.currentCycleId && !hasLiveGrant && typeof projection.entries.find((event) => event.id === projection.currentCycleId)?.metadata?.blank_nda_present_at_validation !== "boolean")
   const canDrop = projection?.allowedActions.includes("drop") ?? false
   const canContinue = projection?.allowedActions.includes("continue") ?? false
   const canComplete = projection?.allowedActions.includes("complete") ?? false
@@ -136,14 +142,16 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
           {projection?.blockers.length ? <Alert><LockKeyhole /><AlertTitle>Current blockers</AlertTitle><AlertDescription><ul className="list-disc space-y-1 pl-5">{projection.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul></AlertDescription></Alert> : null}
           {message ? <p role={message.tone === "error" ? "alert" : "status"} className={message.tone === "error" ? "text-sm text-destructive" : "text-sm text-emerald-700 dark:text-emerald-400"}>{message.text}</p> : null}
           {activeMatch && projection ? <div className="flex flex-wrap gap-2">
-            {nextAction === "request_qualification" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => requestOpportunityPursuitQualification(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Recording..." : "Record qualification request"}</Button> : null}
+            {needsRevalidation ? <div className="space-y-2"><p className="text-sm text-muted-foreground">This pursuit predates the delivery record. Revalidate mutual interest to begin the current checklist; sending remains a separate action.</p><Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => startOpportunityPursuit(activeMatch.id))}>Revalidate mutual interest</Button></div> : null}
+            {!needsRevalidation && nextAction === "request_qualification" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => requestOpportunityPursuitQualification(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Recording..." : "Send qualification and NDA request"}</Button> : null}
             {nextAction === "qualify" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => qualifyOpportunityPursuit(activeMatch.id))}><CheckCircle2 data-icon="inline-start" />{pending ? "Recording..." : "Record intermediary qualification"}</Button> : null}
             {nextAction === "validate_template" ? <Button disabled={pending || !currentTemplate} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => currentTemplate && run(() => validateOpportunityPursuitTemplate(activeMatch.id, currentTemplate.id))}><FileCheck2 data-icon="inline-start" />{pending ? "Validating..." : "Validate blank template"}</Button> : null}
             {nextAction === "pass_gate_1" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => passOpportunityPursuitGate1(activeMatch.id))}><ShieldCheck data-icon="inline-start" />{pending ? "Recording..." : "Pass Gate 1"}</Button> : null}
+            {nextAction === "send_nda_ready" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => sendOpportunityPursuitNdaReady(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Sending..." : "Send NDA-ready notice"}</Button> : null}
             {nextAction === "validate_renew_copy" ? <Button disabled={pending || !currentRenew} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => currentRenew && run(() => validateOpportunityPursuitSignedCopy(activeMatch.id, "renew", currentRenew.id))}><FileCheck2 data-icon="inline-start" />{pending ? "Validating..." : "Validate Re-New copy"}</Button> : null}
             {nextAction === "validate_repreneur_copy" ? <Button disabled={pending || !currentRepreneur} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => currentRepreneur && run(() => validateOpportunityPursuitSignedCopy(activeMatch.id, "repreneur", currentRepreneur.id))}><FileCheck2 data-icon="inline-start" />{pending ? "Validating..." : "Validate repreneur copy"}</Button> : null}
             {nextAction === "pass_gate_2" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => passOpportunityPursuitGate2(activeMatch.id))}><ShieldCheck data-icon="inline-start" />{pending ? "Recording..." : "Pass Gate 2"}</Button> : null}
-            {nextAction === "record_dispatch" ? <Button disabled={pending} variant="outline" data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => recordOpportunityPursuitDispatch(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Recording..." : "Record manual dispatch"}</Button> : null}
+            {nextAction === "record_dispatch" ? <Button disabled={pending} variant="outline" data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => recordOpportunityPursuitDispatch(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Recording..." : "Send signed copies and memo request"}</Button> : null}
           </div> : null}
           {activeMatch && canDrop ? <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-drop-reason">Choose why this pursuit is ending</Label><Select value={dropReason} onValueChange={(value) => setDropReason(value as OpportunityPursuitDropReason)}><SelectTrigger id="pursuit-drop-reason"><SelectValue placeholder="Choose a Drop reason" /></SelectTrigger><SelectContent><SelectGroup>{OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent></Select></div><Button disabled={pending || !dropReason} variant="destructive" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "drop", dropReason))}>Drop pursuit</Button></div> : null}
         </CardContent>
@@ -162,7 +170,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
       </Card>
 
       {activeMatch && projection?.gate2Passed && projection.dispatched ? <Card>
-        <CardHeader><CardTitle>Confidential access and outcome</CardTitle><CardDescription>Grant one exact Information Memorandum only after Gate 2 and manual intermediary handoff.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Confidential access and outcome</CardTitle><CardDescription>Approve the selected Information Memorandum for this repreneur and grant access only after Gate 2 and the sent intermediary handoff.</CardDescription></CardHeader>
         <CardContent className="flex flex-col gap-4">
           {!hasLiveGrant && <form action={(formData) => {
             const documentId = String(formData.get("document_id") ?? "")
@@ -171,7 +179,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
           }} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(180px,0.45fr)_auto] sm:items-end" data-wave-action="confirm" data-wave-workflow="portal_pursuit">
             <div className="space-y-2"><Label htmlFor="journey-im">Information memorandum</Label><select id="journey-im" name="document_id" className="border-input flex h-9 w-full rounded-md border bg-card px-3 text-sm" defaultValue="" required> <option value="" disabled>Select the exact IM</option>{imDocuments.map((document) => <option key={document.id} value={document.id}>{document.title}</option>)}</select></div>
             <div className="space-y-2"><Label htmlFor="journey-nda-expiry">NDA access expires</Label><Input id="journey-nda-expiry" name="nda_expires_at" type="datetime-local" required /></div>
-            <OpportunityReviewSubmitButton label="Grant confidential access" pendingLabel="Granting..." disabled={imDocuments.length === 0} />
+            <OpportunityReviewSubmitButton label="Approve IM and grant access" pendingLabel="Granting..." disabled={imDocuments.length === 0} />
           </form>}
           {!hasLiveGrant && projection.confidentialGrant ? <Alert><LockKeyhole /><AlertTitle>Confidential access is no longer live</AlertTitle><AlertDescription>The prior grant is revoked, expired, or no longer bound to the current evidence. Select the IM and set a new expiry to grant access again.</AlertDescription></Alert> : null}
           {hasLiveGrant ? <div className="flex flex-col gap-3"><div className="flex flex-wrap gap-2"><Badge variant="secondary">Access granted</Badge>{canContinue ? <Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "continue"))}>Record Continue</Button> : null}<Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => runOpportunityPursuitJourneyAction({ matchId: activeMatch.id, action: "revoke_access", reason: outcomeReason || "staff_revocation" }))}>Revoke access</Button></div>{canComplete ? <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-complete-reason">Reason required to complete</Label><Input id="pursuit-complete-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "complete", outcomeReason.trim()))}>Complete pursuit</Button></div> : null}</div> : null}

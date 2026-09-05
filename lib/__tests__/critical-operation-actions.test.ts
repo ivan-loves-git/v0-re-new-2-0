@@ -267,7 +267,7 @@ describe("critical server action traces", () => {
     })
     mocks.createAdminClient.mockReturnValue({
       from,
-      rpc: vi.fn().mockResolvedValue({ data: "gate-private-1", error: null }),
+      rpc: vi.fn().mockResolvedValue({ data: [{ document_id: "template-private-1" }], error: null }),
     })
     const formData = new FormData()
     formData.set("match_id", "match-private-1")

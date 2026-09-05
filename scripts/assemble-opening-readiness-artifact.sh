@@ -67,6 +67,16 @@ if [[ -f "$working_dir/portal-access-uat.json" ]]; then
   }' "$working_dir/portal-access-uat.json")
 fi
 
+handoff_summary='null'
+if [[ -f "$working_dir/pursuit-handoffs.json" ]]; then
+  handoff_summary=$(jq -ce '
+    def flag: if type == "boolean" then . else error("expected aggregate boolean") end;
+    {e4: {exactValidation: (.e4.exactValidation|flag), frozenBlankNdaRequest: (.e4.frozenBlankNdaRequest|flag)},
+     e6: {persistedNotice: (.e6.persistedNotice|flag), portalDeniedBeforeNotice: (.e6.portalDeniedBeforeNotice|flag), mobileAction: (.e6.mobileAction|flag)},
+     e7: {canonicalInteraction: (.e7.canonicalInteraction|flag), exactAttachments: (if .e7.exactAttachments == 2 then 2 else error("expected two signed copies") end)},
+     e8: {memoApproval: (.e8.memoApproval|flag), completed: (.e8.completed|flag)}}' "$working_dir/pursuit-handoffs.json")
+fi
+
 teardown_summary='null'
 if [[ -f "$working_dir/teardown.json" ]]; then
   teardown_summary=$(jq -ce '
@@ -93,5 +103,6 @@ jq -n \
   --arg releaseSha "$OPENING_FIXTURE_RELEASE_SHA" \
   --argjson access "$access_summary" \
   --argjson teardown "$teardown_summary" \
-  '{releaseSha: $releaseSha, artifactPolicy: "aggregate-safe allowlist only", accessUat: $access, teardown: $teardown}' \
+  --argjson handoffs "$handoff_summary" \
+  '{releaseSha: $releaseSha, artifactPolicy: "aggregate-safe allowlist only", accessUat: $access, pursuitHandoffs: $handoffs, teardown: $teardown}' \
   > "$published_dir/aggregate-summary.json"

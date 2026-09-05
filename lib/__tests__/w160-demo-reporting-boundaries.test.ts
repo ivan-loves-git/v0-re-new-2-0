@@ -58,7 +58,7 @@ describe("W-160 production reporting boundary", () => {
     for (const file of [
       "lib/actions/opportunities.ts",
       "lib/data/dashboard-snapshots.ts",
-      "lib/actions/ma-workflows.ts",
+      "lib/ma-workflows.ts",
       "lib/actions/opportunity-matches.ts",
       "lib/actions/opportunity-nda-artifacts.ts",
       "app/(dashboard)/opportunities/[id]/nda-artifacts/[artifactId]/route.ts",

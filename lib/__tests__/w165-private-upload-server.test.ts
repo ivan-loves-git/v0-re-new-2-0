@@ -255,6 +255,28 @@ describe("W-165 server upload authority", () => {
     })
   })
 
+  it.each(["stale_notice", "no_notice", "rpc_error"])("denies portal upload intent before Storage when current NDA authorization is %s", async (state) => {
+    const buyerId = "00000000-0000-4000-8000-000000000022"
+    const matchId = "00000000-0000-4000-8000-000000000023"
+    mocks.getCurrentUserAccess.mockResolvedValue({ role: "repreneur", repreneurId: buyerId, user: { id: "portal-user", email: "buyer@example.test" } })
+    const createSignedUploadUrl = vi.fn()
+    const insert = vi.fn()
+    const rpc = vi.fn().mockResolvedValue({ data: [], error: state === "rpc_error" ? { message: "unavailable" } : null })
+    const row = { id: matchId, opportunity_id: opportunityId, status: "active_pursuit", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } }
+    const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data: row, error: null }) }
+    mocks.createAdminClient.mockReturnValue({
+      from: (table: string) => table === "opportunity_matches" ? q : { insert }, rpc,
+      storage: { from: () => ({ createSignedUploadUrl }) },
+    })
+    await expect(createPrivateUploadIntent(request({}), {
+      kind: "portal_signed_nda", resourceId: matchId, relatedId: null, fileName: "signed.pdf", contentType: "application/pdf", sizeBytes: 1024,
+      metadata: { title: "Signed NDA" }, idempotencyKey: "00000000-0000-4000-8000-000000000024",
+    })).rejects.toMatchObject({ status: 409, message: "The NDA is not ready for signature yet." })
+    expect(rpc).toHaveBeenCalledWith("journey_repreneur_authorized_template", { p_match_id: matchId, p_repreneur_id: buyerId })
+    expect(insert).not.toHaveBeenCalled()
+    expect(createSignedUploadUrl).not.toHaveBeenCalled()
+  })
+
   it("verifies the private object and atomically finalizes the same intent", async () => {
     const bytes = new TextEncoder().encode("%PDF-1.4\n%%EOF\n")
     const digest = createHash("sha256").update(bytes).digest("hex")

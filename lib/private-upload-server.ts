@@ -327,8 +327,12 @@ async function authorizeIntent(
     if (error || !match || match.status!=="active_pursuit" || opportunity?.status!=="active" || opportunity?.is_demo!==repreneur?.is_demo) {
       throw new PrivateUploadError("This NDA is not available for upload.", 403)
     }
-    const { data: gate } = await supabase.rpc("journey_current_gate_1_event",{p_match_id:matchId})
-    if (!gate) throw new PrivateUploadError("The NDA is not ready for signature yet.",409)
+    const { data: authorized, error: authorizationError } = await supabase.rpc(
+      "journey_repreneur_authorized_template", { p_match_id: matchId, p_repreneur_id: actor.actorRepreneurId },
+    )
+    if (authorizationError || !Array.isArray(authorized) || authorized.length !== 1) {
+      throw new PrivateUploadError("The NDA is not ready for signature yet.",409)
+    }
     return {
       ...actor,resourceId:matchId,relatedId:actor.actorRepreneurId,
       metadata:{ ...input.metadata, opportunity_id:match.opportunity_id },

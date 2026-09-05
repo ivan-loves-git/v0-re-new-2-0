@@ -676,7 +676,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       step: "staff circulated source-side NDA and IM request",
       surface: "mail",
       result:
-        "durable source-request evidence through allowlisted no-send adapter; no E4, E6 or E7 event claimed",
+        "generic source-request evidence through allowlisted no-send adapter",
     });
 
     await page.goto(
@@ -740,8 +740,16 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(blankSection.getByText("Version 1 recorded.")).toBeVisible();
 
     await page
-      .getByRole("button", { name: "Record qualification request" })
+      .getByRole("button", { name: "Send qualification and NDA request" })
       .click();
+    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Qualification request sent." })).toBeVisible();
+    const e4 = await one<{ delivery_status: string; request_included: boolean; current_blank_exists: boolean; exact_validation: boolean }>(client,
+      `SELECT d.delivery_status,position('modèle de NDA' in i.body_markdown)>0 AS request_included,
+       EXISTS(SELECT 1 FROM public.opportunity_nda_artifacts a WHERE a.opportunity_id=$2 AND a.artifact_role='blank_template') AS current_blank_exists,
+       i.client_operation_key=d.operation_key AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text AS exact_validation
+       FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id
+       WHERE d.match_id=$1 AND d.handoff_type='e4'`, [savedMatch.id, desktopOpportunityId]);
+    expect(e4).toEqual({ delivery_status: "sent", request_included: true, current_blank_exists: true, exact_validation: true });
     await expect(
       page.getByRole("button", {
         name: "Record intermediary qualification",
@@ -760,6 +768,19 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       page.getByRole("button", { name: "Pass Gate 1" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Pass Gate 1" }).click();
+    // Gate 1 alone cannot expose the template or accept a portal upload.
+    await realPage.goto("/portal/deals/" + savedMatch.id);
+    await expect(realPage.getByRole("link", { name: "Download template" })).toHaveCount(0);
+    await expect(realPage.locator("#signed-nda-file")).toHaveCount(0);
+    expect((await realPage.request.get(baseURL + "/portal/deals/" + savedMatch.id + "/nda-template")).status()).toBe(404);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole("button", { name: "Send NDA-ready notice" })).toBeVisible();
+    await page.getByRole("button", { name: "Send NDA-ready notice" }).click();
+    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "NDA-ready notice sent." })).toBeVisible();
+    const e6 = await one<{ delivery_status: string; provider_message_id: string; evidence: boolean }>(client,
+      "SELECT d.delivery_status,d.provider_message_id,(e.id IS NOT NULL AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text) AS evidence FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.match_id=$1 AND d.handoff_type='e6'", [savedMatch.id]);
+    expect(e6).toEqual({ delivery_status: "sent", provider_message_id: "qa-allowlist-accepted", evidence: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
 
     const renewSection = page
       .getByRole("heading", { name: "Re-New-signed copy" })
@@ -813,14 +834,23 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     ).toBeVisible();
     await page.getByRole("button", { name: "Pass Gate 2" }).click();
     await expect(
-      page.getByRole("button", { name: "Record manual dispatch" }),
+      page.getByRole("button", { name: "Send signed copies and memo request" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Record manual dispatch" }).click();
+    await page.getByRole("button", { name: "Send signed copies and memo request" }).click();
+    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Signed copies and memo request sent." })).toBeVisible();
+    const e7 = await one<{ delivery_status: string; exact_interaction: boolean; attachment_snapshot: Array<{ content_sha256: string; size_bytes: number }> }>(client,
+      "SELECT d.delivery_status,i.client_operation_key=d.operation_key AND i.provider_request_fingerprint=d.request_fingerprint AS exact_interaction,d.attachment_snapshot FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id WHERE d.match_id=$1 AND d.handoff_type='e7'", [savedMatch.id]);
+    expect(e7.delivery_status).toBe("sent");
+    expect(e7.exact_interaction).toBe(true);
+    expect(e7.attachment_snapshot.map((a) => [a.content_sha256, Number(a.size_bytes)])).toEqual([
+      [manifest.files.renewSignedNda.sha256, manifest.files.renewSignedNda.bytes],
+      [manifest.files.repreneurSignedNda.sha256, manifest.files.repreneurSignedNda.bytes],
+    ]);
     await record({
-      step: "implemented NDA gates and manual handoff completed",
+      step: "canonical NDA gates and signed-copy handoff completed",
       surface: "desktop",
       result:
-        "Gate 1, both current signatures, Gate 2 and manual dispatch; no E6 or E7 event claimed",
+        "Gate 1, E6, both current signatures, Gate 2 and E7 delivered through the safe mail adapter",
     });
 
     await page.locator("#journey-im").selectOption(memo.id);
@@ -829,7 +859,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       .slice(0, 16);
     await page.locator("#journey-nda-expiry").fill(expiry);
     await page
-      .getByRole("button", { name: "Grant confidential access" })
+      .getByRole("button", { name: "Approve IM and grant access" })
       .click();
     await expect(
       page
@@ -1091,19 +1121,33 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     );
     expect(lifecycleEvidence.rows.map((row) => row.event_type)).toEqual([
       "mutual_interest_validated",
-      "qualification_requested",
+      "e4_qualification_requested",
       "intermediary_qualified",
       "template_validated",
       "gate_1_passed",
+      "e6_nda_ready_notified",
       "renew_signed_copy_validated",
       "repreneur_signed_copy_validated",
       "gate_2_passed",
-      "manual_package_dispatched",
+      "e7_signed_copies_and_memo_requested",
+      "memo_approved",
       "confidential_access_granted",
+      "e8_memo_enabled_completed",
       "continued",
       "access_revoked",
       "completed",
     ]);
+
+    const completion = await one<{ approved: boolean; completed: boolean }>(client,
+      `SELECT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence a WHERE a.match_id=$1 AND a.event_type='memo_approved' AND a.document_id=$2 AND NULLIF(btrim(a.actor),'') IS NOT NULL) AS approved,
+      EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence e JOIN public.opportunity_pursuit_evidence a ON a.id::text=e.metadata->>'memo_approval_evidence_id' AND a.event_type='memo_approved' WHERE e.match_id=$1 AND e.event_type='e8_memo_enabled_completed' AND e.document_id=$2) AS completed`, [savedMatch.id, memo.id]);
+    expect(completion).toEqual({ approved: true, completed: true });
+    await writeFile(join(evidenceDirectory, "pursuit-handoffs.json"), JSON.stringify({
+      releaseSha, e4: { exactValidation: e4.exact_validation, frozenBlankNdaRequest: e4.request_included },
+      e6: { persistedNotice: e6.evidence, portalDeniedBeforeNotice: true, mobileAction: true },
+      e7: { canonicalInteraction: e7.exact_interaction, exactAttachments: e7.attachment_snapshot.length },
+      e8: { memoApproval: completion.approved, completed: completion.completed },
+    }));
 
     const revocation = await one<{
       revoked_closed_and_history_retained: boolean;

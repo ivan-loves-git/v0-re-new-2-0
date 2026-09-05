@@ -47,6 +47,7 @@ export interface StaffCurrentPursuit {
   currentRenewSignedCopy: PursuitArtifactProjection | null
   currentRepreneurSignedCopy: PursuitArtifactProjection | null
   gate1Passed: boolean
+  ndaReadyNotified: boolean
   gate2Passed: boolean
   dispatched: boolean
   currentCycleId: string | null
@@ -75,6 +76,7 @@ export interface PortalCurrentPursuit {
   matchId: string
   enabled: boolean
   gate1Passed: boolean
+  ndaReadyNotified: boolean
   gate2Passed: boolean
   dispatched: boolean
   confidentialGrant: PortalPursuitConfidentialGrant | null
@@ -203,6 +205,7 @@ async function loadCurrentPursuit(
     enabled: Boolean(settingsResult.data?.enabled),
     status: match.status,
     events: entries,
+    currentTemplateArtifactId: templateResult.data?.[0]?.id ?? null,
     currentRenewArtifactId: renew?.id,
     currentRepreneurArtifactId: repreneur?.id,
     currentGate1EventId: (gate1Result.data as string | null) ?? null,
@@ -288,6 +291,7 @@ async function loadCurrentPursuit(
     currentRenewSignedCopy: renew,
     currentRepreneurSignedCopy: repreneur,
     gate1Passed: projection.gate1Passed,
+    ndaReadyNotified: projection.ndaReadyNotified,
     gate2Passed: projection.gate2Passed,
     dispatched: projection.dispatched,
     currentCycleId: projection.currentCycleId,
@@ -339,6 +343,7 @@ function toPortalCurrentPursuit(
     matchId: pursuit.matchId,
     enabled: pursuit.enabled,
     gate1Passed: pursuit.gate1Passed,
+    ndaReadyNotified: pursuit.ndaReadyNotified,
     gate2Passed: pursuit.gate2Passed,
     dispatched: pursuit.dispatched,
     confidentialGrant,

@@ -101,8 +101,8 @@ function portalClient(options: { existing?: boolean; demo?: boolean } = {}) {
     throw new Error(`Unexpected portal table: ${table}`)
   })
   const rpc = vi.fn(async (name: string) => {
-    if (name === "journey_current_gate_1_event") {
-      return { data: "gate-synthetic-1", error: null }
+    if (name === "journey_repreneur_authorized_template") {
+      return { data: [{ document_id: "template-synthetic-1" }], error: null }
     }
     if (name === "journey_submit_repreneur_signed_copy_v2") {
       return {
@@ -220,7 +220,7 @@ describe("W-152 PDF evidence action boundary", () => {
     })
     expect(portal.upload).toHaveBeenCalledOnce()
     expect(portal.rpc.mock.calls.map(([name]) => name)).toEqual([
-      "journey_current_gate_1_event",
+      "journey_repreneur_authorized_template",
       "journey_submit_repreneur_signed_copy_v2",
     ])
   })
@@ -238,7 +238,7 @@ describe("W-152 PDF evidence action boundary", () => {
     expect(portal.upload).not.toHaveBeenCalled()
     expect(portal.remove).not.toHaveBeenCalled()
     expect(portal.rpc.mock.calls.map(([name]) => name)).toEqual([
-      "journey_current_gate_1_event",
+      "journey_repreneur_authorized_template",
     ])
   })
 

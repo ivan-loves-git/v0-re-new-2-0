@@ -8,6 +8,7 @@ import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-me
 import { queueM2StaffPursuitEvent } from "@/lib/telemetry/m2-repreneur"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
+import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
 
 export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string } | { success: false; message: string }
 
@@ -78,6 +79,8 @@ export async function runOpportunityPursuitJourneyAction(input: {
       const { data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt })
       if (error) throw error
       const notificationTrace = startCriticalOperation("email.memo_notification")
+      let notificationSent = false
+      try {
       await notificationTrace.failOnThrow(async () => {
         const { data: match, error: matchError } = await supabase
           .from("opportunity_matches")
@@ -93,13 +96,15 @@ export async function runOpportunityPursuitJourneyAction(input: {
             opportunityId: match.opportunity_id,
             matchId: input.matchId,
           })
+          notificationSent = delivered
           if (delivered) notificationTrace.success()
           else notificationTrace.failure("provider_unavailable")
         }
       }, "persistence_failed")
+      } catch { /* Approval and grant already committed; notification remains retryable. */ }
       trace.success()
       capture("success")
-      return { success: true, message: "Confidential access granted.", eventId: data }
+      return { success: true, message: notificationSent ? "IM approved and confidential access granted." : "IM approved and access granted. The memo notification remains pending.", eventId: data }
     }
     if (input.action === "revoke_access") {
       const { data, error } = await supabase.rpc("journey_revoke_confidential_access", { p_match_id: input.matchId, p_actor: actor, p_reason: input.reason ?? "staff_revocation", p_idempotency_key: key })
@@ -114,6 +119,27 @@ export async function runOpportunityPursuitJourneyAction(input: {
       trace.success()
       capture("success")
       return { success: true, message: `Pursuit ${input.action} recorded.`, eventId: data }
+    }
+    if (input.action === "request_qualification") {
+      const result = await sendPursuitIntermediaryHandoff(input.matchId, "e4")
+      if (!result.success) throw new Error(result.message)
+      trace.success()
+      capture("success")
+      return { success: true, message: result.message, eventId: result.eventId }
+    }
+    if (input.action === "send_nda_ready") {
+      const result = await sendPursuitNdaReadyNotice(input.matchId)
+      if (!result.success) throw new Error(result.message)
+      trace.success()
+      capture("success")
+      return { success: true, message: result.message, eventId: result.eventId }
+    }
+    if (input.action === "record_dispatch") {
+      const result = await sendPursuitIntermediaryHandoff(input.matchId, "e7")
+      if (!result.success) throw new Error(result.message)
+      trace.success()
+      capture("success")
+      return { success: true, message: result.message, eventId: result.eventId }
     }
     const eventType = evidenceAction[input.action]
     if (!eventType) {
@@ -152,7 +178,7 @@ export async function startOpportunityPursuit(matchId: string, evidenceReference
     })
     if (error) trace.failure("persistence_failed")
     else trace.success()
-    return error ? { success: false, message: error.message } : { success: true, message: "Active pursuit started.", eventId: data }
+    return error ? { success: false, message: error.message } : { success: true, message: "Mutual interest validated.", eventId: data }
   }, "persistence_failed")
 }
 export async function validateOpportunityPursuitTemplate(matchId: string, artifactId: string, idempotencyKey?: string) {
@@ -176,3 +202,5 @@ export async function grantOpportunityPursuitConfidentialAccess(matchId: string,
 export async function transitionOpportunityPursuit(matchId: string, action: Extract<OpportunityPursuitJourneyAction, "continue" | "drop" | "reopen" | "complete">, reason?: string, idempotencyKey?: string) {
   return runOpportunityPursuitJourneyAction({ matchId, action, reason, idempotencyKey })
 }
+
+export async function sendOpportunityPursuitNdaReady(matchId: string) { return runOpportunityPursuitJourneyAction({ matchId, action: "send_nda_ready" }) }
