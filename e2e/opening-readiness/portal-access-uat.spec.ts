@@ -176,6 +176,9 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
   await client.connect();
   let portalContext: Awaited<ReturnType<Browser["newContext"]>> | null = null;
   let setupContext: Awaited<ReturnType<Browser["newContext"]>> | null = null;
+  let consumedSetupContext: Awaited<
+    ReturnType<Browser["newContext"]>
+  > | null = null;
   let invalidContext: Awaited<ReturnType<Browser["newContext"]>> | null = null;
   try {
     // The fixture runs several independent browser journeys through the same
@@ -372,6 +375,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await expect(dialog).toContainText("No email will be sent.");
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     const beforeDisable = await readAccessState(client, repreneur);
+    expect(beforeDisable).toStrictEqual(afterStale);
     expect(beforeDisable.roleCount).toBe(1);
     expect(beforeDisable.resetCount).toBe(afterResend.resetCount);
 
@@ -382,7 +386,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     dialog = await expectConfirmation(page, "Disable portal access?");
     await dialog
       .getByRole("button", { name: "Disable access", exact: true })
-      .click();
+      .dblclick();
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
       page.getByText("Portal access disabled and sessions revoked.", {
@@ -396,10 +400,18 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       }),
     ).toBeVisible();
     const afterDisable = await readAccessState(client, repreneur);
+    expect(beforeDisable.roleCount - afterDisable.roleCount).toBe(1);
     expect(afterDisable.roleCount).toBe(0);
     expect(afterDisable.sessionCount).toBe(0);
     expect(afterDisable.resetCount).toBe(0);
     expect(afterDisable.passwordHash).toBe(initial.passwordHash);
+    expect(afterDisable).toStrictEqual({
+      roleCount: 0,
+      sessionCount: 0,
+      resetCount: 0,
+      passwordHash: beforeDisable.passwordHash,
+      lastSentAt: null,
+    });
     await portalPage.goto("/portal/deals");
     await expect(portalPage).toHaveURL(/\/auth\/login/);
     evidence.disable = {
@@ -511,7 +523,16 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     });
     expect(replay.status()).toBe(400);
     expect(await replay.json()).toMatchObject({ code: "INVALID_TOKEN" });
-    await expectInvalidPortalLink(setupPage, setupToken);
+    // A fresh context is required here: the successful setup flow already
+    // removed the fragment from this page, so a same-path navigation would not
+    // prove that ResetPasswordForm remounts and rejects the consumed token.
+    consumedSetupContext = await browser.newContext({
+      extraHTTPHeaders: { "x-forwarded-for": "203.0.113.205" },
+    });
+    await expectInvalidPortalLink(
+      await consumedSetupContext.newPage(),
+      setupToken,
+    );
     evidence.setup = {
       validLinkConsumedOnce: true,
       replayRejected: true,
@@ -611,6 +632,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await Promise.all([
       portalContext?.close(),
       setupContext?.close(),
+      consumedSetupContext?.close(),
       invalidContext?.close(),
     ]);
     await client.end();
