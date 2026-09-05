@@ -63,6 +63,9 @@ async function logout(page: Page) {
 }
 
 test("hydrated sign-in and logout work on desktop and mobile", async ({ page }) => {
+  // Separate this controlled client from the recovery journey's rate-limit
+  // budget; keep the real five-attempt authentication rule enabled.
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": "203.0.113.206" });
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await login(page, fixture.staff.email, /\/dashboard_re/);
