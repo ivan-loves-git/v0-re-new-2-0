@@ -26,6 +26,16 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 11, 2026",
+    version: "0.9.66",
+    title: "More time to join and a clearer staff export",
+    isCompleted: true,
+    events: [
+      { title: "Staff setup invitations stay valid for seven days", type: "feature", description: "New portal setup links give repreneurs one week to create their password. Resending replaces the earlier setup link, while ordinary password recovery remains one hour and disabling access revokes outstanding links." },
+      { title: "The internal export supports reliable Excel reconciliation", type: "feature", description: "The staff CSV now includes each opportunity’s stable WAVE ID and public title. Existing columns, month-only dates and spreadsheet formula protection are preserved. Source names and private notes keep this a staff-only file." },
+    ],
+  },
+  {
+    period: "Sep 11, 2026",
     version: "0.9.65",
     title: "Clearer recommendations, matching and follow-up",
     isCompleted: true,

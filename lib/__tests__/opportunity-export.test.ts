@@ -85,6 +85,27 @@ describe("W-074 opportunity export", () => {
     expect(toOpportunityExportRows([candidate])[0].calculated_margin).toBe("")
   })
 
+  it("exports stable identity and the public title without falling back to private prose", () => {
+    const first = opportunity()
+    first.public_title = 'Énergie, services "régionaux"'
+    first.description = "Private source description"
+    first.teaser_summary = null
+    const second = { ...first, id: "opportunity-2", public_title: null }
+
+    const rows = toOpportunityExportRows([first, second])
+
+    expect(rows.map((row) => row.opportunity_id)).toEqual([
+      "opportunity-1",
+      "opportunity-2",
+    ])
+    expect(rows.map((row) => row.public_title)).toEqual([
+      'Énergie, services "régionaux"',
+      "",
+    ])
+    expect(rows[0].anonymized_description).toBe("")
+    expect(opportunityExportRowsToCsv(rows)).not.toContain("Private source description")
+  })
+
   it("escapes delimiters, line breaks, quotes and spreadsheet formulas", () => {
     const csv = opportunityExportRowsToCsv([{
       ref_mandat: "=1+1",
@@ -99,11 +120,14 @@ describe("W-074 opportunity export", () => {
       anonymized_description: "",
       source_firm_contact: "",
       internal_notes: "first line\nsecond,line",
+      opportunity_id: "stable-identity",
+      public_title: "  @SUM(1,2)",
     }])
     expect(csv).toContain("'=1+1")
     expect(csv).toContain('"A,B"')
     expect(csv).toContain('"say ""hi"""')
     expect(csv).toContain('"first line\nsecond,line"')
+    expect(csv).toContain('"\'  @SUM(1,2)"')
   })
 
   it("runs staff authorization before it reads export data", async () => {

@@ -58,6 +58,15 @@ describe("password reset link validation", () => {
     expect(isPasswordResetToken("aB3dE5gH7jK9mN2pQ4sT6vX8")).toBe(true)
   })
 
+  it("accepts only the exact staff setup token shape in addition to native recovery", () => {
+    const setupToken = `portal_setup_${"ab".repeat(24)}`
+    expect(isPasswordResetToken(setupToken)).toBe(true)
+    expect(isPasswordResetToken(`${setupToken}a`)).toBe(false)
+    expect(isPasswordResetToken(setupToken.slice(0, -1))).toBe(false)
+    expect(isPasswordResetToken(`portal_setup_${"z".repeat(48)}`)).toBe(false)
+    expect(isPasswordResetToken(`portalXsetupY${"a".repeat(48)}`)).toBe(false)
+  })
+
   it("returns true for one current reset verification without selecting account data", async () => {
     mocks.query.mockResolvedValue({ rows: [{ valid: 1 }] })
 

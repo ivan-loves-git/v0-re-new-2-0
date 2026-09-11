@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   clientRelease: vi.fn(),
   requireStaffAccess: vi.fn(),
   createAdminClient: vi.fn(),
-  requestPasswordReset: vi.fn(),
+  sendEmail: vi.fn(),
   consumeRequestRateLimit: vi.fn(),
 }))
 
@@ -29,12 +29,17 @@ vi.mock("better-auth/crypto", () => ({
 }))
 
 vi.mock("@/lib/env", () => ({
-  env: { DATABASE_URL: "postgres://test" },
+  env: {
+    DATABASE_URL: "postgres://test",
+    BETTER_AUTH_URL: "http://localhost:3000",
+    RESEND_API_KEY: "test-key",
+    RESEND_FROM_EMAIL: "noreply@test.invalid",
+  },
 }))
 
-vi.mock("@/lib/auth", () => ({
-  auth: {
-    api: { requestPasswordReset: mocks.requestPasswordReset },
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send: mocks.sendEmail }
   },
 }))
 
@@ -64,6 +69,19 @@ const portalAccessCardSource = fs.readFileSync(
   path.join(process.cwd(), "components/repreneurs/portal-access-card.tsx"),
   "utf8",
 )
+
+function setupInvitationQuery(sql: string) {
+  if (sql.includes("AS setup_user_id")) {
+    return { rows: [{ setup_user_id: "auth-current", email: "current@example.com", name: "Test Repreneur" }] }
+  }
+  if (sql.includes("AS user_id") && sql.includes('FROM public."verification"')) {
+    return { rows: [{ user_id: "auth-current" }] }
+  }
+  if (sql.includes("WITH issued AS") || (sql.includes('DELETE FROM public."verification"') && sql.includes("LEFT("))) {
+    return { rows: [] }
+  }
+  return null
+}
 
 function mockRepreneur(repreneurEmail: string) {
   const from = vi.fn((table: string) => {
@@ -129,6 +147,8 @@ function mockHealthyPortalAccess(email = "current@example.com") {
 describe("repreneur portal access reliability", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.sendEmail.mockReset().mockResolvedValue({ data: { id: "test-email" }, error: null })
+    mocks.clientQuery.mockImplementation(async (sql: string) => setupInvitationQuery(sql) ?? { rows: [] })
     mocks.requireStaffAccess.mockResolvedValue({ id: "staff-user" })
     mocks.consumeRequestRateLimit.mockResolvedValue({
       allowed: true,
@@ -182,7 +202,7 @@ describe("repreneur portal access reliability", () => {
     ).rejects.toThrow("Portal access changed after this confirmation opened")
 
     expect(mocks.consumeRequestRateLimit).not.toHaveBeenCalled()
-    expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
   })
 
   it("consumes one confirmation once when the same resend is submitted twice", async () => {
@@ -220,7 +240,7 @@ describe("repreneur portal access reliability", () => {
       confirmRepreneurPortalAccessAction("repreneur-1", confirmation),
     ).rejects.toThrow("already been submitted")
 
-    expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(1)
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1)
   })
 
   it("serializes competing confirmations and rejects the stale action after the winner commits", async () => {
@@ -275,9 +295,9 @@ describe("repreneur portal access reliability", () => {
     mocks.poolConnect.mockImplementation(async () => {
       let ownsLock = false
       return {
-        query: async (sql: string) => {
+        query: async (sql: string, parameters?: unknown[]) => {
           lockQueries.push(sql)
-          if (sql.includes("pg_advisory_xact_lock")) {
+          if (sql.includes("pg_advisory_xact_lock") && String(parameters?.[0]).startsWith("repreneur-portal-confirm:")) {
             if (lockHeld) {
               await new Promise<void>((resolve) => lockWaiters.push(resolve))
             }
@@ -289,15 +309,15 @@ describe("repreneur portal access reliability", () => {
             lockHeld = false
             lockWaiters.shift()?.()
           }
-          return { rows: [] }
+          return setupInvitationQuery(sql) ?? { rows: [] }
         },
         release: vi.fn(),
       }
     })
 
     let releaseEmail!: () => void
-    mocks.requestPasswordReset.mockImplementationOnce(
-      () => new Promise<void>((resolve) => (releaseEmail = resolve)),
+    mocks.sendEmail.mockImplementationOnce(
+      () => new Promise((resolve) => (releaseEmail = () => resolve({ data: { id: "test-email" }, error: null }))),
     )
     const snapshot = createPortalAccessSnapshot({
       repreneurEmail: "current@example.com",
@@ -323,7 +343,7 @@ describe("repreneur portal access reliability", () => {
       snapshot,
     })
     await vi.waitFor(() =>
-      expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(1),
+      expect(mocks.sendEmail).toHaveBeenCalledTimes(1),
     )
     const disable = confirmRepreneurPortalAccessAction("repreneur-1", {
       action: "disable",
@@ -337,16 +357,16 @@ describe("repreneur portal access reliability", () => {
       "Portal access changed after this confirmation opened",
     )
 
-    expect(mocks.poolConnect).toHaveBeenCalledTimes(2)
+    expect(mocks.poolConnect).toHaveBeenCalledTimes(4)
     expect(
       lockQueries.filter((sql) => sql.includes("pg_advisory_xact_lock")),
-    ).toHaveLength(2)
+    ).toHaveLength(5)
     expect(
       lockQueries.some((sql) =>
         sql.includes("DELETE FROM public.app_user_roles"),
       ),
     ).toBe(false)
-    expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(1)
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1)
   })
 
   it.each(["enable", "resend", "disable"] as const)(
@@ -382,7 +402,7 @@ describe("repreneur portal access reliability", () => {
       expect(mocks.pgQuery).not.toHaveBeenCalled()
       expect(mocks.poolConnect).not.toHaveBeenCalled()
       expect(mocks.consumeRequestRateLimit).not.toHaveBeenCalled()
-      expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+      expect(mocks.sendEmail).not.toHaveBeenCalled()
     },
   )
 
@@ -480,6 +500,8 @@ describe("repreneur portal access reliability", () => {
     })
 
     mocks.clientQuery.mockImplementation(async (sql: string) => {
+      const setup = setupInvitationQuery(sql)
+      if (setup) return setup
       if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
         return { rows: [] }
       }
@@ -528,12 +550,10 @@ describe("repreneur portal access reliability", () => {
       repaired: true,
     })
     expect(result.lastAccessEmailSentAt).toEqual(expect.any(String))
-    expect(mocks.requestPasswordReset).toHaveBeenCalledWith({
-      body: {
-        email: "current@example.com",
-        redirectTo: "/auth/reset-password?intent=portal",
-      },
-    })
+    expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      to: "current@example.com",
+      html: expect.stringContaining("7 jours"),
+    }))
     expect(
       mocks.clientQuery.mock.calls.some(([sql]) =>
         String(sql).startsWith('UPDATE "account"'),
@@ -600,6 +620,8 @@ describe("repreneur portal access reliability", () => {
     })
 
     mocks.clientQuery.mockImplementation(async (sql: string) => {
+      const setup = setupInvitationQuery(sql)
+      if (setup) return setup
       if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
         return { rows: [] }
       }
@@ -681,8 +703,8 @@ describe("repreneur portal access reliability", () => {
 
     expect(first).toMatchObject({ emailSent: true, repaired: false })
     expect(second).toMatchObject({ emailSent: true, repaired: false })
-    expect(mocks.requestPasswordReset).toHaveBeenCalledTimes(2)
-    expect(mocks.poolConnect).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(2)
+    expect(mocks.clientQuery.mock.calls.some(([sql]) => String(sql).startsWith('UPDATE "account"'))).toBe(false)
     expect(
       mocks.pgQuery.mock.calls.filter(([sql]) =>
         String(sql).trim().startsWith("UPDATE public.app_user_roles"),
@@ -703,7 +725,7 @@ describe("repreneur portal access reliability", () => {
     await expect(
       resendRepreneurPortalAccessLink("repreneur-1"),
     ).rejects.toThrow("Enable portal access before resending")
-    expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
     expect(mocks.poolConnect).not.toHaveBeenCalled()
   })
 
@@ -728,7 +750,7 @@ describe("repreneur portal access reliability", () => {
       expect(mocks.pgQuery).not.toHaveBeenCalled()
       expect(mocks.poolConnect).not.toHaveBeenCalled()
       expect(mocks.clientQuery).not.toHaveBeenCalled()
-      expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+      expect(mocks.sendEmail).not.toHaveBeenCalled()
     },
   )
 
@@ -744,7 +766,7 @@ describe("repreneur portal access reliability", () => {
       expect(mocks.pgQuery).not.toHaveBeenCalled()
       expect(mocks.poolConnect).not.toHaveBeenCalled()
       expect(mocks.clientQuery).not.toHaveBeenCalled()
-      expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+      expect(mocks.sendEmail).not.toHaveBeenCalled()
     },
   )
 
@@ -768,6 +790,8 @@ describe("repreneur portal access reliability", () => {
   it("still revokes existing portal access for a malformed canonical email", async () => {
     mockRepreneur(" Name.@Example.com ")
     mocks.clientQuery.mockImplementation(async (sql: string) => {
+      const setup = setupInvitationQuery(sql)
+      if (setup) return setup
       if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
         return { rows: [] }
       }
@@ -856,7 +880,7 @@ describe("repreneur portal access reliability", () => {
     await expect(
       resendRepreneurPortalAccessLink("repreneur-1"),
     ).rejects.toThrow("cannot be reconciled safely")
-    expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
     expect(mocks.poolConnect).not.toHaveBeenCalled()
   })
 
@@ -892,6 +916,8 @@ describe("repreneur portal access reliability", () => {
   it("does not rotate a staff credential while rejecting a staff email", async () => {
     mockRepreneur("staff@example.com")
     mocks.clientQuery.mockImplementation(async (sql: string) => {
+      const setup = setupInvitationQuery(sql)
+      if (setup) return setup
       if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [] }
       if (sql.includes("pg_advisory_xact_lock")) return { rows: [] }
       if (sql.includes('FROM "user"') && sql.includes("LOWER(email)")) {
@@ -925,6 +951,6 @@ describe("repreneur portal access reliability", () => {
         String(sql).startsWith('UPDATE "account"'),
       ),
     ).toBe(false)
-    expect(mocks.requestPasswordReset).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
   })
 })

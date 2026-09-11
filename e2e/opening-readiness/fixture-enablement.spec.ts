@@ -62,6 +62,36 @@ async function logout(page: Page) {
   await expect(page).toHaveURL(/\/auth\/login/);
 }
 
+test("staff reconciliation CSV downloads at desktop and mobile widths without portal exposure", async ({ page }) => {
+  await login(page, fixture.staff.email, /\/dashboard_re/);
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/opportunities");
+    const exportButton = page.getByRole("button", { name: "Export staff CSV", exact: true });
+    await expect(exportButton).toBeVisible();
+    await expect(exportButton).toHaveAttribute("title", /Internal staff export for Excel/);
+    const downloadPromise = page.waitForEvent("download");
+    await exportButton.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("wave-opportunities-internal.csv");
+    const stream = await download.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    const csv = Buffer.concat(chunks).toString("utf8");
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(csv.split("\n")[0]).toContain("internal_notes,opportunity_id,public_title");
+    expect(csv).toContain(fixture.ids.realOpportunity);
+    expect(csv).toContain("QA OPENING REAL — SYNTHETIC");
+  }
+  await logout(page);
+  await login(page, fixture.repreneurs.real.email, /\/portal\/deals/);
+  await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
+  await page.goto("/opportunities");
+  await expect(page).toHaveURL(/\/portal\/deals/);
+  await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
+  await logout(page);
+});
+
 test("synthetic personas, private documents, safe mail, and namespaces are product-runnable", async ({
   page,
 }) => {

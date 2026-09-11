@@ -2,7 +2,7 @@ import { randomBytes } from "crypto"
 import { Pool, type PoolClient } from "pg"
 import { hashPassword } from "better-auth/crypto"
 import { revalidatePath } from "next/cache"
-import { auth } from "@/lib/auth"
+import { sendRepreneurPortalSetupInvitation } from "@/lib/portal-setup-invitation"
 import { requireStaffAccess } from "@/lib/access-control"
 import {
   normalizePortalEmail,
@@ -227,16 +227,14 @@ async function countActiveSessions(userIds: string[]) {
   return Number(rows[0]?.count ?? 0)
 }
 
-async function sendAccessEmail(email: string, failureMessage: string) {
+async function sendAccessEmail(
+  identity: Parameters<typeof sendRepreneurPortalSetupInvitation>[0],
+  failureMessage: string,
+) {
   try {
-    await auth.api.requestPasswordReset({
-      body: {
-        email,
-        redirectTo: "/auth/reset-password?intent=portal",
-      },
-    })
-  } catch (error) {
-    console.error("Failed to send repreneur portal access email", error)
+    await sendRepreneurPortalSetupInvitation(identity)
+  } catch {
+    console.error("Failed to send repreneur portal access email")
     throw new Error(failureMessage)
   }
 }
@@ -518,7 +516,7 @@ export async function enableRepreneurPortalAccess(
 
   try {
     await sendAccessEmail(
-      email,
+      { repreneurId, roleId, userId: authUser.id, email },
       `Portal access is ${wasRepair ? "repaired" : "enabled"}, but the setup email could not be sent. Check email delivery before resending.`,
     )
   } catch (error) {
@@ -619,7 +617,7 @@ export async function resendRepreneurPortalAccessLink(
   }
 
   await sendAccessEmail(
-    email,
+    { repreneurId, roleId: status.roleId, userId: status.linkedUserId, email },
     "The access link could not be sent. Please retry in a moment.",
   )
 
